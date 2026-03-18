@@ -161,39 +161,29 @@
     {
       "id": "generar-temas-ia",
       "name": "🤖 Generar Temas con IA",
-      "type": "n8n-nodes-base.openAi",
-      "typeVersion": 1.7,
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
       "position": [1700, 300],
       "parameters": {
-        "resource": "chat",
-        "operation": "message",
         "modelId": {
           "__rl": true,
           "value": "gpt-4o",
           "mode": "list",
-          "cachedResultName": "gpt-4o"
+          "cachedResultName": "GPT-4O"
         },
-        "messages": {
+        "responses": {
           "values": [
             {
               "role": "system",
               "content": "Eres un estratega de contenido para redes sociales especializado en empresas de servicios industriales en Miami. Generas temas semanales relevantes, variados y orientados a conversión. Siempre respondes con JSON válido."
             },
             {
-              "role": "user",
               "content": "=Genera {{ $json.temas_a_generar }} temas nuevos para publicaciones semanales en redes sociales para esta empresa:\n\n**EMPRESA:** {{ $json.empresa_nombre }}\n**DESCRIPCIÓN:** {{ $json.empresa_descripcion }}\n**PROPUESTA DE VALOR:** {{ $json.empresa_propuesta_valor }}\n**CIUDAD:** {{ $json.empresa_ciudad }}\n**SERVICIOS:**\n{{ $json.servicios_resumen }}\n\n**TEMAS YA CREADOS (NO REPETIR):** {{ $json.temas_ya_creados }}\n\n---\nReglas:\n- Cada tema debe ser específico, relevante para el sector industrial/logístico en Miami\n- Variados: mezcla educativo, testimonial, behind-the-scenes, problema/solución, estacional\n- Orientados a generar engagement y leads B2B\n- NO repetir temas ya creados\n\nResponde con este JSON exacto:\n{\n  \"temas\": [\n    {\n      \"tema\": \"Título del tema corto y claro (máx 8 palabras)\",\n      \"descripcion\": \"Descripción de qué tratar en el post, contexto y ángulo (2-3 oraciones)\",\n      \"palabras_clave\": \"5-8 palabras clave separadas por coma\",\n      \"tipo\": \"educativo|testimonial|behind-the-scenes|problema-solucion|promocional|estacional\"\n    }\n  ]\n}\n\nResponde ÚNICAMENTE con el JSON."
             }
           ]
         },
-        "options": {
-          "temperature": 0.8,
-          "maxTokens": 2000,
-          "response": {
-            "response": {
-              "responseFormat": "json_object"
-            }
-          }
-        }
+        "builtInTools": {},
+        "options": {}
       },
       "credentials": {
         "openAiApi": {
@@ -209,7 +199,7 @@
       "typeVersion": 2,
       "position": [1940, 300],
       "parameters": {
-        "jsCode": "const aiResponse = $input.item.json.message?.content || $input.item.json.choices?.[0]?.message?.content || '{}';\nlet data;\ntry {\n  data = JSON.parse(aiResponse);\n} catch(e) {\n  const match = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  data = match ? JSON.parse(match[0]) : { temas: [] };\n}\n\nconst contexto = $('🔧 Preparar Contexto').item.json;\nconst temas = data.temas || [];\n\n// Crear un item por cada tema con su número de semana\nreturn temas.map((tema, i) => ({\n  json: {\n    tema: tema.tema,\n    descripcion: tema.descripcion,\n    palabras_clave: tema.palabras_clave,\n    tipo: tema.tipo,\n    semana_numero: contexto.proxima_semana + i,\n    empresa: contexto.empresa_nombre\n  }\n}));"
+        "jsCode": "// Soporta tanto n8n-nodes-base.openAi como @n8n/n8n-nodes-langchain.openAi\nconst raw = $input.item.json;\nconst aiResponse = raw.message?.content\n  || raw.choices?.[0]?.message?.content\n  || raw.text\n  || raw.content\n  || (typeof raw === 'string' ? raw : JSON.stringify(raw))\n  || '{}';\n\nlet data;\ntry {\n  const parsed = typeof aiResponse === 'object' ? aiResponse : JSON.parse(aiResponse);\n  data = parsed;\n} catch(e) {\n  const match = String(aiResponse).match(/\\{[\\s\\S]*\\}/);\n  try { data = match ? JSON.parse(match[0]) : { temas: [] }; }\n  catch(e2) { data = { temas: [] }; }\n}\n\nconst contexto = $('🔧 Preparar Contexto').item.json;\nconst temas = data.temas || [];\n\nif (temas.length === 0) {\n  // Devolver item de error para no romper el flujo\n  return [{ json: { error: true, raw: String(aiResponse).slice(0, 500) } }];\n}\n\nreturn temas.map((tema, i) => ({\n  json: {\n    tema: tema.tema,\n    descripcion: tema.descripcion,\n    palabras_clave: tema.palabras_clave,\n    tipo: tema.tipo,\n    semana_numero: contexto.proxima_semana + i,\n    empresa: contexto.empresa_nombre,\n    error: false\n  }\n}));"
       }
     },
     {
