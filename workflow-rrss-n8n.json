@@ -410,210 +410,6 @@
       }
     },
     {
-      "id": "canva-autofill",
-      "name": "🎨 Canva: Crear Diseño desde Plantilla",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        3800,
-        300
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.canva.com/rest/v1/autofills",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"brand_template_id\": \"DAHD9ElXhl0\",\n  \"title\": \"Post RRSS {{ $('🔍 Parsear Versiones Inglés').item.json.fecha_post }} - {{ $('🔍 Parsear Versiones Inglés').item.json.tema_texto.substring(0,30) }}\",\n  \"data\": {\n    \"titulo_post\": {\n      \"type\": \"text\",\n      \"text\": {{ JSON.stringify($('🔍 Parsear Versiones Inglés').item.json.texto_canva_titulo) }}\n    },\n    \"descripcion_post\": {\n      \"type\": \"text\",\n      \"text\": {{ JSON.stringify($('🔍 Parsear Versiones Inglés').item.json.texto_canva_subtitulo) }}\n    }\n  }\n}",
-        "options": {},
-        "authentication": "genericCredentialType",
-        "genericAuthType": "oAuth2Api"
-      },
-      "credentials": {
-        "oAuth2Api": {
-          "id": "CANVA_CREDENTIAL_ID",
-          "name": "Canva RRSS"
-        }
-      }
-    },
-    {
-      "id": "wait-canva-procesando",
-      "name": "⏳ Esperar Canva (15s)",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        4050,
-        300
-      ],
-      "parameters": {
-        "resume": "timeInterval",
-        "unit": "seconds",
-        "value": 15
-      },
-      "webhookId": "wait-canva-process"
-    },
-    {
-      "id": "check-canva-job",
-      "name": "✅ Verificar Job Canva",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        4300,
-        300
-      ],
-      "parameters": {
-        "method": "GET",
-        "url": "=https://api.canva.com/rest/v1/autofills/{{ $('🎨 Canva: Crear Diseño desde Plantilla').item.json.job.id }}",
-        "sendHeaders": false,
-        "options": {},
-        "authentication": "genericCredentialType",
-        "genericAuthType": "oAuth2Api"
-      },
-      "credentials": {
-        "oAuth2Api": {
-          "id": "CANVA_CREDENTIAL_ID",
-          "name": "Canva RRSS"
-        }
-      }
-    },
-    {
-      "id": "exportar-canva",
-      "name": "📤 Exportar Diseño Canva",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        4550,
-        300
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.canva.com/rest/v1/exports",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"design_id\": \"{{ $('✅ Verificar Job Canva').item.json.job.result.design?.id || $('🎨 Canva: Crear Diseño desde Plantilla').item.json.job.result.design?.id }}\",\n  \"format\": {\n    \"type\": \"png\",\n    \"export_quality\": \"pro\"\n  }\n}",
-        "options": {},
-        "authentication": "genericCredentialType",
-        "genericAuthType": "oAuth2Api"
-      },
-      "credentials": {
-        "oAuth2Api": {
-          "id": "CANVA_CREDENTIAL_ID",
-          "name": "Canva RRSS"
-        }
-      }
-    },
-    {
-      "id": "wait-export",
-      "name": "⏳ Esperar Export (10s)",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        4800,
-        300
-      ],
-      "parameters": {
-        "resume": "timeInterval",
-        "unit": "seconds",
-        "value": 10
-      },
-      "webhookId": "wait-export-process"
-    },
-    {
-      "id": "get-export-url",
-      "name": "🔗 Obtener URL de Export",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        5050,
-        300
-      ],
-      "parameters": {
-        "method": "GET",
-        "url": "=https://api.canva.com/rest/v1/exports/{{ $('📤 Exportar Diseño Canva').item.json.job.id }}",
-        "sendHeaders": false,
-        "options": {},
-        "authentication": "genericCredentialType",
-        "genericAuthType": "oAuth2Api"
-      },
-      "credentials": {
-        "oAuth2Api": {
-          "id": "CANVA_CREDENTIAL_ID",
-          "name": "Canva RRSS"
-        }
-      }
-    },
-    {
-      "id": "descargar-imagen",
-      "name": "⬇️ Descargar Imagen",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        5300,
-        300
-      ],
-      "parameters": {
-        "method": "GET",
-        "url": "={{ $json.job.result.urls[0] }}",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "file",
-              "outputPropertyName": "image_data"
-            }
-          }
-        }
-      }
-    },
-    {
-      "id": "subir-google-drive",
-      "name": "📁 Subir a Google Drive",
-      "type": "n8n-nodes-base.googleDrive",
-      "typeVersion": 3,
-      "position": [
-        5550,
-        300
-      ],
-      "parameters": {
-        "operation": "upload",
-        "name": "=Post_{{ $('🔍 Parsear Versiones Inglés').item.json.fecha_post }}_{{ $('🔍 Parsear Versiones Inglés').item.json.tema_texto.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30) }}.png",
-        "driveId": {
-          "__rl": true,
-          "value": "My Drive",
-          "mode": "list"
-        },
-        "folderId": {
-          "__rl": true,
-          "value": "10A-FlyJeHtO6Fi50o3uzabr9LseqIH1f",
-          "mode": "id"
-        },
-        "inputDataFieldName": "image_data",
-        "options": {}
-      },
-      "credentials": {
-        "googleDriveOAuth2Api": {
-          "id": "GDRIVE_CREDENTIAL_ID",
-          "name": "Google Drive RRSS"
-        }
-      }
-    },
-    {
       "id": "actualizar-urls-airtable",
       "name": "🔗 Actualizar URLs en Airtable",
       "type": "n8n-nodes-base.httpRequest",
@@ -971,6 +767,43 @@
         "width": 600,
         "color": 5
       }
+    },
+    {
+      "id": "drive-get-plantilla",
+      "name": "📁 Obtener PLANTILLA 1 de Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3800,
+        300
+      ],
+      "parameters": {
+        "operation": "search",
+        "queryString": "name = 'PLANTILLA 1'",
+        "limit": 1,
+        "options": {
+          "fields": "id,name,webContentLink,webViewLink"
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "google-drive-cred",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "id": "build-image-url",
+      "name": "🔗 Construir URL Imagen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4050,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const fileId = $input.first().json.id;\nconst imageUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;\n\nreturn [{\n  json: {\n    ...$input.first().json,\n    imagen_url: imageUrl,\n    imagen_url_fb: imageUrl,\n    imagen_url_ig: imageUrl\n  }\n}];"
+      }
     }
   ],
   "connections": {
@@ -1106,95 +939,7 @@
       "main": [
         [
           {
-            "node": "🎨 Canva: Crear Diseño desde Plantilla",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🎨 Canva: Crear Diseño desde Plantilla": {
-      "main": [
-        [
-          {
-            "node": "⏳ Esperar Canva (15s)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "⏳ Esperar Canva (15s)": {
-      "main": [
-        [
-          {
-            "node": "✅ Verificar Job Canva",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "✅ Verificar Job Canva": {
-      "main": [
-        [
-          {
-            "node": "📤 Exportar Diseño Canva",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📤 Exportar Diseño Canva": {
-      "main": [
-        [
-          {
-            "node": "⏳ Esperar Export (10s)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "⏳ Esperar Export (10s)": {
-      "main": [
-        [
-          {
-            "node": "🔗 Obtener URL de Export",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔗 Obtener URL de Export": {
-      "main": [
-        [
-          {
-            "node": "⬇️ Descargar Imagen",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "⬇️ Descargar Imagen": {
-      "main": [
-        [
-          {
-            "node": "📁 Subir a Google Drive",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📁 Subir a Google Drive": {
-      "main": [
-        [
-          {
-            "node": "🔗 Actualizar URLs en Airtable",
+            "node": "📁 Obtener PLANTILLA 1 de Drive",
             "type": "main",
             "index": 0
           }
@@ -1306,6 +1051,28 @@
         [
           {
             "node": "🏁 Tema → Completado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📁 Obtener PLANTILLA 1 de Drive": {
+      "main": [
+        [
+          {
+            "node": "🔗 Construir URL Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 Construir URL Imagen": {
+      "main": [
+        [
+          {
+            "node": "🔗 Actualizar URLs en Airtable",
             "type": "main",
             "index": 0
           }
