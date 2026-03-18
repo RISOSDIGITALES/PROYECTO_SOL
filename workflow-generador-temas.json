@@ -1,0 +1,312 @@
+{
+  "name": "RRSS - Generador de Temas Semanales",
+  "nodes": [
+    {
+      "id": "trigger-manual",
+      "name": "▶️ Ejecutar Manualmente",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "parameters": {}
+    },
+    {
+      "id": "trigger-scheduled",
+      "name": "⏰ Trigger Automático (Domingo 8am)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 460],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtDay": [0],
+              "triggerAtHour": 8,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "get-empresa",
+      "name": "📊 Obtener Perfil Empresa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/tblkmBqXrpmGcTNUM",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "maxRecords", "value": "1" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer AIRTABLE_TOKEN_PLACEHOLDER" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "get-servicios",
+      "name": "📦 Obtener Servicios Activos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [740, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/tbl2mwlJ149CLlMcd",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "filterByFormula", "value": "{activo}=\"Sí\"" },
+            { "name": "maxRecords", "value": "10" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer AIRTABLE_TOKEN_PLACEHOLDER" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "get-temas-existentes",
+      "name": "📋 Obtener Temas Existentes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [980, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/tblgrYurnqCg8uKtG",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "filterByFormula", "value": "{Estado}=\"Pendiente\"" },
+            { "name": "fields[]", "value": "Tema" },
+            { "name": "fields[]", "value": "Semana_Numero" },
+            { "name": "maxRecords", "value": "50" },
+            { "name": "sort[0][field]", "value": "Semana_Numero" },
+            { "name": "sort[0][direction]", "value": "desc" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer AIRTABLE_TOKEN_PLACEHOLDER" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "preparar-contexto",
+      "name": "🔧 Preparar Contexto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1220, 300],
+      "parameters": {
+        "jsCode": "const empresa = $('📊 Obtener Perfil Empresa').item.json.records[0]?.fields || {};\nconst serviciosData = $('📦 Obtener Servicios Activos').item.json.records || [];\nconst temasExistentes = $('📋 Obtener Temas Existentes').item.json.records || [];\n\nconst servicios = serviciosData\n  .map(p => `- ${p.fields['Nombre de Servicio']}: ${p.fields['Descripción comercial'] || ''}`.slice(0, 200))\n  .join('\\n');\n\nconst temasYaCreados = temasExistentes\n  .map(t => t.fields['Tema'])\n  .filter(Boolean)\n  .join(', ');\n\nconst pendientes = temasExistentes.length;\n\n// Calcular siguiente número de semana\nconst maxSemana = temasExistentes.length > 0\n  ? Math.max(...temasExistentes.map(t => t.fields['Semana_Numero'] || 0))\n  : 0;\n\n// Obtener también temas ya usados (completados/en proceso) para no repetir\nreturn [{\n  json: {\n    empresa_nombre: empresa['﻿nombre_empresa'] || 'Crating Express',\n    empresa_descripcion: empresa['descripción_corta'] || '',\n    empresa_propuesta_valor: empresa['propuesta_valor'] || '',\n    empresa_ciudad: empresa['ciudad base'] || 'Miami, FL',\n    empresa_web: empresa['sitio_web'] || 'cratingexpress.com',\n    servicios_resumen: servicios,\n    temas_pendientes: pendientes,\n    temas_ya_creados: temasYaCreados,\n    proxima_semana: maxSemana + 1,\n    temas_a_generar: Math.max(0, 6 - pendientes)\n  }\n}];"
+      }
+    },
+    {
+      "id": "check-necesita-temas",
+      "name": "🔍 ¿Necesita más temas?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1460, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "check-cantidad",
+              "leftValue": "={{ $json.temas_a_generar }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "ya-hay-suficientes",
+      "name": "✅ Ya hay suficientes temas",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [1700, 460],
+      "parameters": {
+        "sendTo": "risosadmi@gmail.com",
+        "subject": "✅ RRSS - Temas semanales OK",
+        "emailType": "html",
+        "message": "=<p>Ya hay <strong>{{ $('🔧 Preparar Contexto').item.json.temas_pendientes }} temas pendientes</strong> en la tabla TEMAS SEMANALES. No se necesitan nuevos temas por ahora.</p>",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TESHSjzjMCpCxBBk",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "id": "generar-temas-ia",
+      "name": "🤖 Generar Temas con IA",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.7,
+      "position": [1700, 300],
+      "parameters": {
+        "resource": "chat",
+        "operation": "message",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Eres un estratega de contenido para redes sociales especializado en empresas de servicios industriales en Miami. Generas temas semanales relevantes, variados y orientados a conversión. Siempre respondes con JSON válido."
+            },
+            {
+              "role": "user",
+              "content": "=Genera {{ $json.temas_a_generar }} temas nuevos para publicaciones semanales en redes sociales para esta empresa:\n\n**EMPRESA:** {{ $json.empresa_nombre }}\n**DESCRIPCIÓN:** {{ $json.empresa_descripcion }}\n**PROPUESTA DE VALOR:** {{ $json.empresa_propuesta_valor }}\n**CIUDAD:** {{ $json.empresa_ciudad }}\n**SERVICIOS:**\n{{ $json.servicios_resumen }}\n\n**TEMAS YA CREADOS (NO REPETIR):** {{ $json.temas_ya_creados }}\n\n---\nReglas:\n- Cada tema debe ser específico, relevante para el sector industrial/logístico en Miami\n- Variados: mezcla educativo, testimonial, behind-the-scenes, problema/solución, estacional\n- Orientados a generar engagement y leads B2B\n- NO repetir temas ya creados\n\nResponde con este JSON exacto:\n{\n  \"temas\": [\n    {\n      \"tema\": \"Título del tema corto y claro (máx 8 palabras)\",\n      \"descripcion\": \"Descripción de qué tratar en el post, contexto y ángulo (2-3 oraciones)\",\n      \"palabras_clave\": \"5-8 palabras clave separadas por coma\",\n      \"tipo\": \"educativo|testimonial|behind-the-scenes|problema-solucion|promocional|estacional\"\n    }\n  ]\n}\n\nResponde ÚNICAMENTE con el JSON."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.8,
+          "maxTokens": 2000,
+          "response": {
+            "response": {
+              "responseFormat": "json_object"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "lawpMAl8dns5Juf8",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "id": "parsear-temas",
+      "name": "🔍 Parsear Temas Generados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1940, 300],
+      "parameters": {
+        "jsCode": "const aiResponse = $input.item.json.message?.content || $input.item.json.choices?.[0]?.message?.content || '{}';\nlet data;\ntry {\n  data = JSON.parse(aiResponse);\n} catch(e) {\n  const match = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  data = match ? JSON.parse(match[0]) : { temas: [] };\n}\n\nconst contexto = $('🔧 Preparar Contexto').item.json;\nconst temas = data.temas || [];\n\n// Crear un item por cada tema con su número de semana\nreturn temas.map((tema, i) => ({\n  json: {\n    tema: tema.tema,\n    descripcion: tema.descripcion,\n    palabras_clave: tema.palabras_clave,\n    tipo: tema.tipo,\n    semana_numero: contexto.proxima_semana + i,\n    empresa: contexto.empresa_nombre\n  }\n}));"
+      }
+    },
+    {
+      "id": "crear-tema-airtable",
+      "name": "💾 Guardar Tema en Airtable",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2180, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/tblgrYurnqCg8uKtG",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer AIRTABLE_TOKEN_PLACEHOLDER" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"records\": [\n    {\n      \"fields\": {\n        \"Tema\": {{ JSON.stringify($json.tema) }},\n        \"Descripcion\": {{ JSON.stringify($json.descripcion) }},\n        \"Palabras_Clave\": {{ JSON.stringify($json.palabras_clave) }},\n        \"Estado\": \"Pendiente\",\n        \"Semana_Numero\": {{ $json.semana_numero }}\n      }\n    }\n  ]\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "notif-temas-creados",
+      "name": "📧 Notificar Temas Creados",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [2420, 300],
+      "parameters": {
+        "sendTo": "risosadmi@gmail.com",
+        "subject": "=🎯 RRSS - Nuevos temas generados: Semana {{ $json.fields.Semana_Numero }}",
+        "emailType": "html",
+        "message": "=<h2>🎯 Nuevo tema añadido a TEMAS SEMANALES</h2><table style='border-collapse:collapse;width:100%'><tr><td style='padding:8px;border:1px solid #ddd;background:#f5f5f5;font-weight:bold'>Semana</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.fields.Semana_Numero }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;background:#f5f5f5;font-weight:bold'>Tema</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.fields.Tema }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;background:#f5f5f5;font-weight:bold'>Descripción</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.fields.Descripcion }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;background:#f5f5f5;font-weight:bold'>Palabras clave</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.fields.Palabras_Clave }}</td></tr></table><p style='margin-top:20px'><a href='https://airtable.com/appUOYi54iBfaDcLn/tblgrYurnqCg8uKtG' style='background:#1a1a2e;color:white;padding:10px 20px;text-decoration:none;border-radius:5px'>Ver en Airtable →</a></p>",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TESHSjzjMCpCxBBk",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "id": "sticky-info",
+      "name": "📋 INFO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, 100],
+      "parameters": {
+        "content": "## 🎯 Generador de Temas Semanales\n\n**¿Qué hace?**\n1. Lee perfil de empresa + servicios de Airtable\n2. Verifica cuántos temas \"Pendiente\" hay\n3. Si hay menos de 6 → genera los faltantes con GPT-4o\n4. Los guarda en TEMAS SEMANALES con estado \"Pendiente\"\n5. Envía email con los temas creados\n\n**Ejecución:**\n- Manual: usar el trigger ▶️\n- Automático: cada domingo 8am\n\n**Tabla Airtable:** tblgrYurnqCg8uKtG",
+        "height": 300,
+        "width": 500,
+        "color": 4
+      }
+    }
+  ],
+  "connections": {
+    "▶️ Ejecutar Manualmente": {
+      "main": [[{ "node": "📊 Obtener Perfil Empresa", "type": "main", "index": 0 }]]
+    },
+    "⏰ Trigger Automático (Domingo 8am)": {
+      "main": [[{ "node": "📊 Obtener Perfil Empresa", "type": "main", "index": 0 }]]
+    },
+    "📊 Obtener Perfil Empresa": {
+      "main": [[{ "node": "📦 Obtener Servicios Activos", "type": "main", "index": 0 }]]
+    },
+    "📦 Obtener Servicios Activos": {
+      "main": [[{ "node": "📋 Obtener Temas Existentes", "type": "main", "index": 0 }]]
+    },
+    "📋 Obtener Temas Existentes": {
+      "main": [[{ "node": "🔧 Preparar Contexto", "type": "main", "index": 0 }]]
+    },
+    "🔧 Preparar Contexto": {
+      "main": [[{ "node": "🔍 ¿Necesita más temas?", "type": "main", "index": 0 }]]
+    },
+    "🔍 ¿Necesita más temas?": {
+      "main": [
+        [{ "node": "🤖 Generar Temas con IA", "type": "main", "index": 0 }],
+        [{ "node": "✅ Ya hay suficientes temas", "type": "main", "index": 0 }]
+      ]
+    },
+    "🤖 Generar Temas con IA": {
+      "main": [[{ "node": "🔍 Parsear Temas Generados", "type": "main", "index": 0 }]]
+    },
+    "🔍 Parsear Temas Generados": {
+      "main": [[{ "node": "💾 Guardar Tema en Airtable", "type": "main", "index": 0 }]]
+    },
+    "💾 Guardar Tema en Airtable": {
+      "main": [[{ "node": "📧 Notificar Temas Creados", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null
+}
