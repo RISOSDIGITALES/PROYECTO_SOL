@@ -47,7 +47,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer AIRTABLE_TOKEN_PLACEHOLDER" }
+            { "name": "Authorization", "value": "=Bearer {{ $vars.AIRTABLE_TOKEN }}" }
           ]
         },
         "options": {}
@@ -72,7 +72,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer AIRTABLE_TOKEN_PLACEHOLDER" }
+            { "name": "Authorization", "value": "=Bearer {{ $vars.AIRTABLE_TOKEN }}" }
           ]
         },
         "options": {}
@@ -101,7 +101,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer AIRTABLE_TOKEN_PLACEHOLDER" }
+            { "name": "Authorization", "value": "=Bearer {{ $vars.AIRTABLE_TOKEN }}" }
           ]
         },
         "options": {}
@@ -161,35 +161,66 @@
     {
       "id": "generar-temas-ia",
       "name": "🤖 Generar Temas con IA",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 2.1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [1700, 300],
       "parameters": {
-        "modelId": {
-          "__rl": true,
-          "value": "gpt-4o",
-          "mode": "list",
-          "cachedResultName": "GPT-4O"
-        },
-        "responses": {
-          "values": [
-            {
-              "role": "system",
-              "content": "Eres un estratega de contenido para redes sociales especializado en empresas de servicios industriales en Miami. Generas temas semanales relevantes, variados y orientados a conversión. Siempre respondes con JSON válido."
-            },
-            {
-              "content": "=Genera {{ $json.temas_a_generar }} temas nuevos para publicaciones semanales en redes sociales para esta empresa:\n\n**EMPRESA:** {{ $json.empresa_nombre }}\n**DESCRIPCIÓN:** {{ $json.empresa_descripcion }}\n**PROPUESTA DE VALOR:** {{ $json.empresa_propuesta_valor }}\n**CIUDAD:** {{ $json.empresa_ciudad }}\n**SERVICIOS:**\n{{ $json.servicios_resumen }}\n\n**TEMAS YA CREADOS (NO REPETIR):** {{ $json.temas_ya_creados }}\n\n---\nReglas:\n- Cada tema debe ser específico, relevante para el sector industrial/logístico en Miami\n- Variados: mezcla educativo, testimonial, behind-the-scenes, problema/solución, estacional\n- Orientados a generar engagement y leads B2B\n- NO repetir temas ya creados\n\nResponde con este JSON exacto:\n{\n  \"temas\": [\n    {\n      \"tema\": \"Título del tema corto y claro (máx 8 palabras)\",\n      \"descripcion\": \"Descripción de qué tratar en el post, contexto y ángulo (2-3 oraciones)\",\n      \"palabras_clave\": \"5-8 palabras clave separadas por coma\",\n      \"tipo\": \"educativo|testimonial|behind-the-scenes|problema-solucion|promocional|estacional\"\n    }\n  ]\n}\n\nResponde ÚNICAMENTE con el JSON."
-            }
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={{ $vars.GEMINI_API_KEY }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
           ]
         },
-        "builtInTools": {},
-        "options": {}
-      },
-      "credentials": {
-        "openAiApi": {
-          "id": "lawpMAl8dns5Juf8",
-          "name": "OpenAi account 2"
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"contents\": [{\"role\": \"user\", \"parts\": [{\"text\": {{ JSON.stringify(\"Genera \" + $json.temas_a_generar + \" temas nuevos para publicaciones semanales en redes sociales para esta empresa:\\n\\n**EMPRESA:** \" + $json.empresa_nombre + \"\\n**DESCRIPCIÓN:** \" + $json.empresa_descripcion + \"\\n**PROPUESTA DE VALOR:** \" + $json.empresa_propuesta_valor + \"\\n**CIUDAD:** \" + $json.empresa_ciudad + \"\\n**SERVICIOS:**\\n\" + $json.servicios_resumen + \"\\n\\n**TEMAS YA CREADOS (NO REPETIR):** \" + ($json.temas_ya_creados || 'ninguno') + \"\\n\\nReglas:\\n- Cada tema específico y relevante para el sector industrial/logístico en Miami\\n- Variados: mezcla educativo, testimonial, behind-the-scenes, problema/solución, estacional\\n- Orientados a leads B2B\\n- NO repetir temas ya creados\\n\\nDevuelve un JSON con campo temas (array) donde cada elemento tiene: tema (título máx 8 palabras), descripcion (2-3 oraciones), palabras_clave (5-8 separadas por coma), tipo (educativo|testimonial|behind-the-scenes|problema-solucion|promocional|estacional).\\n\\nResponde ÚNICAMENTE con el JSON.\") }}}]}], \"systemInstruction\": {\"parts\": [{\"text\": \"Eres un estratega de contenido para redes sociales especializado en empresas de servicios industriales en Miami. Generas temas semanales relevantes, variados y orientados a conversión. Siempre respondes con JSON válido.\"}]}, \"generationConfig\": {\"temperature\": 0.8, \"maxOutputTokens\": 2000, \"responseMimeType\": \"application/json\"}}",
+        "options": {},
+        "continueOnFail": true
+      }
+    },
+    {
+      "id": "if-gemini-ok-temas",
+      "name": "🔀 ¿Gemini OK? (Temas)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1940, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "check-gemini-temas",
+              "leftValue": "={{ $json.candidates?.length || 0 }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ],
+          "combinator": "and"
         }
+      }
+    },
+    {
+      "id": "grok-temas",
+      "name": "🤖 Grok: Temas (Fallback)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1940, 500],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.x.ai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $vars.GROK_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\": \"grok-3\", \"messages\": [{\"role\": \"system\", \"content\": \"Eres un estratega de contenido para redes sociales especializado en empresas de servicios industriales en Miami. Generas temas semanales relevantes, variados y orientados a conversión. Siempre respondes con JSON válido.\"}, {\"role\": \"user\", \"content\": {{ JSON.stringify(\"Genera \" + $('🔧 Preparar Contexto').item.json.temas_a_generar + \" temas nuevos para publicaciones semanales en redes sociales para esta empresa:\\n\\n**EMPRESA:** \" + $('🔧 Preparar Contexto').item.json.empresa_nombre + \"\\n**DESCRIPCIÓN:** \" + $('🔧 Preparar Contexto').item.json.empresa_descripcion + \"\\n**PROPUESTA DE VALOR:** \" + $('🔧 Preparar Contexto').item.json.empresa_propuesta_valor + \"\\n**CIUDAD:** \" + $('🔧 Preparar Contexto').item.json.empresa_ciudad + \"\\n**SERVICIOS:**\\n\" + $('🔧 Preparar Contexto').item.json.servicios_resumen + \"\\n\\n**TEMAS YA CREADOS (NO REPETIR):** \" + ($('🔧 Preparar Contexto').item.json.temas_ya_creados || 'ninguno') + \"\\n\\nDevuelve un JSON con campo temas (array) donde cada elemento tiene: tema (título máx 8 palabras), descripcion (2-3 oraciones), palabras_clave (5-8 separadas por coma), tipo (educativo|testimonial|behind-the-scenes|problema-solucion|promocional|estacional).\\n\\nResponde ÚNICAMENTE con el JSON.\") }}}], \"temperature\": 0.8, \"max_tokens\": 2000, \"response_format\": {\"type\": \"json_object\"}}",
+        "options": {}
       }
     },
     {
@@ -199,7 +230,7 @@
       "typeVersion": 2,
       "position": [1940, 300],
       "parameters": {
-        "jsCode": "// Soporta tanto n8n-nodes-base.openAi como @n8n/n8n-nodes-langchain.openAi\nconst raw = $input.item.json;\nconst aiResponse = raw.message?.content\n  || raw.choices?.[0]?.message?.content\n  || raw.text\n  || raw.content\n  || (typeof raw === 'string' ? raw : JSON.stringify(raw))\n  || '{}';\n\nlet data;\ntry {\n  const parsed = typeof aiResponse === 'object' ? aiResponse : JSON.parse(aiResponse);\n  data = parsed;\n} catch(e) {\n  const match = String(aiResponse).match(/\\{[\\s\\S]*\\}/);\n  try { data = match ? JSON.parse(match[0]) : { temas: [] }; }\n  catch(e2) { data = { temas: [] }; }\n}\n\nconst contexto = $('🔧 Preparar Contexto').item.json;\nconst temas = data.temas || [];\n\nif (temas.length === 0) {\n  // Devolver item de error para no romper el flujo\n  return [{ json: { error: true, raw: String(aiResponse).slice(0, 500) } }];\n}\n\nreturn temas.map((tema, i) => ({\n  json: {\n    tema: tema.tema,\n    descripcion: tema.descripcion,\n    palabras_clave: tema.palabras_clave,\n    tipo: tema.tipo,\n    semana_numero: contexto.proxima_semana + i,\n    empresa: contexto.empresa_nombre,\n    error: false\n  }\n}));"
+        "jsCode": "// Soporta Gemini, Grok y OpenAI\nconst raw = $input.item.json;\nconst aiResponse = raw.candidates?.[0]?.content?.parts?.[0]?.text\n  || raw.choices?.[0]?.message?.content\n  || raw.message?.content\n  || raw.text\n  || raw.content\n  || (typeof raw === 'string' ? raw : JSON.stringify(raw))\n  || '{}';\n\nlet data;\ntry {\n  const parsed = typeof aiResponse === 'object' ? aiResponse : JSON.parse(aiResponse);\n  data = parsed;\n} catch(e) {\n  const match = String(aiResponse).match(/\\{[\\s\\S]*\\}/);\n  try { data = match ? JSON.parse(match[0]) : { temas: [] }; }\n  catch(e2) { data = { temas: [] }; }\n}\n\nconst contexto = $('🔧 Preparar Contexto').item.json;\nconst temas = data.temas || [];\n\nif (temas.length === 0) {\n  // Devolver item de error para no romper el flujo\n  return [{ json: { error: true, raw: String(aiResponse).slice(0, 500) } }];\n}\n\nreturn temas.map((tema, i) => ({\n  json: {\n    tema: tema.tema,\n    descripcion: tema.descripcion,\n    palabras_clave: tema.palabras_clave,\n    tipo: tema.tipo,\n    semana_numero: contexto.proxima_semana + i,\n    empresa: contexto.empresa_nombre,\n    error: false\n  }\n}));"
       }
     },
     {
@@ -214,7 +245,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer AIRTABLE_TOKEN_PLACEHOLDER" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.AIRTABLE_TOKEN }}" },
             { "name": "Content-Type", "value": "application/json" }
           ]
         },
@@ -251,7 +282,7 @@
       "typeVersion": 1,
       "position": [0, 100],
       "parameters": {
-        "content": "## 🎯 Generador de Temas Semanales\n\n**¿Qué hace?**\n1. Lee perfil de empresa + servicios de Airtable\n2. Verifica cuántos temas \"Pendiente\" hay\n3. Si hay menos de 6 → genera los faltantes con GPT-4o\n4. Los guarda en TEMAS SEMANALES con estado \"Pendiente\"\n5. Envía email con los temas creados\n\n**Ejecución:**\n- Manual: usar el trigger ▶️\n- Automático: cada domingo 8am\n\n**Tabla Airtable:** tblgrYurnqCg8uKtG",
+        "content": "## 🎯 Generador de Temas Semanales\n\n**¿Qué hace?**\n1. Lee perfil de empresa + servicios de Airtable\n2. Verifica cuántos temas \"Pendiente\" hay\n3. Si hay menos de 6 → genera los faltantes con Gemini (Grok como fallback)\n4. Los guarda en TEMAS SEMANALES con estado \"Pendiente\"\n5. Envía email con los temas creados\n\n**Ejecución:**\n- Manual: usar el trigger ▶️\n- Automático: cada domingo 8am\n\n**Tabla Airtable:** tblgrYurnqCg8uKtG",
         "height": 300,
         "width": 500,
         "color": 4
@@ -284,6 +315,15 @@
       ]
     },
     "🤖 Generar Temas con IA": {
+      "main": [[{ "node": "🔀 ¿Gemini OK? (Temas)", "type": "main", "index": 0 }]]
+    },
+    "🔀 ¿Gemini OK? (Temas)": {
+      "main": [
+        [{ "node": "🔍 Parsear Temas Generados", "type": "main", "index": 0 }],
+        [{ "node": "🤖 Grok: Temas (Fallback)", "type": "main", "index": 0 }]
+      ]
+    },
+    "🤖 Grok: Temas (Fallback)": {
       "main": [[{ "node": "🔍 Parsear Temas Generados", "type": "main", "index": 0 }]]
     },
     "🔍 Parsear Temas Generados": {
