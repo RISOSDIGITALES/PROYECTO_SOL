@@ -102,6 +102,39 @@ Trigger Manual o Domingo 8am
 - **LinkedIn desactivado**: nodo `post-linkedin` tiene `"disabled": true` — se puede activar sin cambios de lógica añadiendo `LI_ACCESS_TOKEN` y `LI_COMPANY_ID` como variables
 - **Aprobación por email**: usa `$execution.resumeUrl` de n8n + nodo Wait con webhook para flujo pausado
 
+## n8n — Acceso
+
+- **URL:** https://n8n.mdarthurdigital.com
+- **API Token:** eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4MGQxYjQ2MS1kNGI3LTRjOGMtOGMwZi1kNTNkOWExMjRjNzMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiMmE1YmEyMDQtZDU5ZC00YzFiLTkxMjktZGM5NGNlNmM0MTk3IiwiaWF0IjoxNzczODUxMjg5fQ.RHRC3nRgvgn_fyJ8mflqsVrBxxncYc_EwWiepr127T8
+
+Para listar workflows: `GET /api/v1/workflows` con header `Authorization: Bearer <token>`
+
+## WhatsApp — Crating Express
+
+- **Número:** +1 786-788-0417 (comprado en Twilio, registrado en Meta WhatsApp Cloud API)
+- **Phone Number ID:** `1083260611538246`
+- **WABA ID:** `1449711680212677`
+- **OTP de Twilio:** completado
+- **Display Name:** Crating Express (aprobado)
+- **Workflow n8n:** `CE WhatsApp Engine - Sistema de Conversión` (ID: `eCOX3ogMjToxZsh9`)
+- **Webhook path:** `/whatsapp-ce`
+- **Cotizador app:** https://cratingcotiza.mdarthurdigital.com/cotizar-caja (API pendiente de recibir)
+- **Airtable tabla leads:** `WhatsApp_Leads` en base `appUOYi54iBfaDcLn`
+
+### Flujo actual del bot (v actual — paso rígido)
+1. Paso 0 (nuevo): bienvenida + Pregunta 1 (¿qué embalar?)
+2. Paso 1: guarda R1, pregunta 2 (¿para qué / cuándo?)
+3. Paso 2: guarda R2, pregunta 3 (medidas y peso)
+4. Paso 3: Groq clasifica lead (Frío/Tibio/Caliente) + genera respuesta con link cotizador
+5. Si Caliente → email al vendedor (tiene bug: variables no resueltas)
+
+### Pendiente / próximas mejoras
+- [ ] Corregir bug email "Lead Caliente" (variables `$json.telefono` etc. no se resuelven)
+- [ ] Rediseñar clasificación: Caliente debe ser DESPUÉS de la cotización, según respuesta del cliente
+- [ ] Agregar preguntas sobre tipo de cajón y protección extra ANTES de cotizar
+- [ ] Integrar API del cotizador cuando esté disponible
+- [ ] Migrar a conversación con IA (Gemini/Groq) para flujo más natural
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
