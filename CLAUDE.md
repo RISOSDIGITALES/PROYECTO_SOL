@@ -123,24 +123,44 @@ Para listar workflows: `GET /api/v1/workflows` con header `X-N8N-API-KEY: <token
 - **Cotizador app:** https://cratingcotiza.mdarthurdigital.com/cotizar-caja (API pendiente de recibir)
 - **Airtable tabla leads:** `WhatsApp_Leads` en base `appUOYi54iBfaDcLn`
 
-### Flujo actual del bot (v IA híbrida)
+### Flujo actual del bot (v IA híbrida + fallback triple)
 ```
 Webhook WhatsApp → Extraer Mensaje → Obtener Config Empresa
   → Buscar Lead Existente → Obtener Productos (Airtable PRODUCTOS Y SERVICIO)
   → Preparar Contexto IA (lee Respuesta_1/2/3 + Notas + saludoHora Miami)
-  → Groq llama-3.3-70b (conversación IA con catálogo real de productos)
-  → Parsear Respuesta IA
+  → Groq llama-3.3-70b (continueOnFail) → ¿Groq OK?
+      ✅ Sí → Parsear Respuesta IA
+      ❌ No → Gemini 2.0 Flash (continueOnFail) → ¿Gemini OK?
+                  ✅ Sí → Parsear Respuesta IA
+                  ❌ No → 🆘 Modo Contingencia (rule-based) → Parsear Respuesta IA
   → ¿Lead Caliente? → Notificar Vendedor (email con dirección si aplica)
   → Enviar Mensaje WhatsApp
   → ¿Crear o Actualizar? → POST / PATCH Airtable
 ```
 
-Datos recolectados: producto, medidas, fecha, tipo_cajón, proteccion_extra, dirección
+**Modo Contingencia** (si ambas IAs fallan): pregunta producto → medidas → fecha usando reglas simples, luego manda email al vendedor y le dice al cliente que será contactado.
+
+Datos recolectados: producto, medidas, fecha, tipo_cajon, proteccion_extra, direccion
 Campos Airtable: Respuesta_1 (producto), Respuesta_2 (medidas), Respuesta_3 (fecha), Notas (JSON: tipo_cajon, proteccion_extra, direccion)
+
+### Comportamiento de Alex (IA)
+- Saludo con hora Miami (UTC-4): buenos días 6-11, buenas tardes 12-18, buenas noches 19-5
+- Si el cliente da modelo específico → busca medidas en conocimiento interno antes de preguntar
+- Orden de recopilación: producto → medidas → fecha → tipo_cajón (pregunta preferencia primero) → protección extra (pregunta preferencia primero) → dirección (solo si acepta visita)
+- NUNCA repite datos ya confirmados en mensajes posteriores
+- Catálogo real de Airtable: Cajones cerrados, Jaulas, Palets a medida, Cunas, Plataformas en contenedor, Embalaje para ferias, Al por mayor
+- Gemini API key hardcodeada: `AIzaSyDgMayvXomDq8Mx3fwTVtYi9eDjU5cxGOU` (mismo que RRSS)
+- Groq credential ID en n8n: `jORffbRhRNohHT1B`
+
+### Límites de APIs (plan gratuito)
+- Groq llama-3.3-70b: 100,000 tokens/día — se resetea a medianoche Miami
+- Gemini 2.0 Flash: cuota diaria compartida con workflows RRSS
+- Si ambas se agotan en el mismo día → Modo Contingencia activa automáticamente
 
 ### Pendiente / próximas mejoras
 - [ ] Integrar API del cotizador cuando esté disponible (https://cratingcotiza.mdarthurdigital.com/cotizar-caja)
 - [ ] Activar LinkedIn en workflow RRSS cuando se tenga token
+- [ ] Probar conversación completa con Groq (después de medianoche cuando se resetee el límite)
 
 ## Error conocido
 
