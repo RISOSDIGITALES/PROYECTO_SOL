@@ -105,9 +105,11 @@ Trigger Manual o Domingo 8am
 ## n8n — Acceso
 
 - **URL:** https://n8n.mdarthurdigital.com
-- **API Token:** eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4MGQxYjQ2MS1kNGI3LTRjOGMtOGMwZi1kNTNkOWExMjRjNzMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiMmE1YmEyMDQtZDU5ZC00YzFiLTkxMjktZGM5NGNlNmM0MTk3IiwiaWF0IjoxNzczODUxMjg5fQ.RHRC3nRgvgn_fyJ8mflqsVrBxxncYc_EwWiepr127T8
+- **API Token:** eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4MGQxYjQ2MS1kNGI3LTRjOGMtOGMwZi1kNTNkOWExMjRjNzMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiZjg3ZGY5NzMtOTgzOC00ZjFmLWI1ZjktM2E5MzlmY2U5OTljIiwiaWF0IjoxNzc3NzQyNDMxfQ.o8WeA87-KQjr3gbWSoqMqqNpjaQN9rjYzO4Xuer-P7E
 
-Para listar workflows: `GET /api/v1/workflows` con header `Authorization: Bearer <token>`
+Para listar workflows: `GET /api/v1/workflows` con header `X-N8N-API-KEY: <token>`
+
+**Nota importante:** Usar siempre `X-N8N-API-KEY` como header (NO `Authorization: Bearer`). Si el PUT retorna 401 con GET funcionando, es porque el token anterior fue invalidado — generar uno nuevo en Settings → API.
 
 ## WhatsApp — Crating Express
 
@@ -121,19 +123,24 @@ Para listar workflows: `GET /api/v1/workflows` con header `Authorization: Bearer
 - **Cotizador app:** https://cratingcotiza.mdarthurdigital.com/cotizar-caja (API pendiente de recibir)
 - **Airtable tabla leads:** `WhatsApp_Leads` en base `appUOYi54iBfaDcLn`
 
-### Flujo actual del bot (v actual — paso rígido)
-1. Paso 0 (nuevo): bienvenida + Pregunta 1 (¿qué embalar?)
-2. Paso 1: guarda R1, pregunta 2 (¿para qué / cuándo?)
-3. Paso 2: guarda R2, pregunta 3 (medidas y peso)
-4. Paso 3: Groq clasifica lead (Frío/Tibio/Caliente) + genera respuesta con link cotizador
-5. Si Caliente → email al vendedor (tiene bug: variables no resueltas)
+### Flujo actual del bot (v IA híbrida)
+```
+Webhook WhatsApp → Extraer Mensaje → Obtener Config Empresa
+  → Buscar Lead Existente → Obtener Productos (Airtable PRODUCTOS Y SERVICIO)
+  → Preparar Contexto IA (lee Respuesta_1/2/3 + Notas + saludoHora Miami)
+  → Groq llama-3.3-70b (conversación IA con catálogo real de productos)
+  → Parsear Respuesta IA
+  → ¿Lead Caliente? → Notificar Vendedor (email con dirección si aplica)
+  → Enviar Mensaje WhatsApp
+  → ¿Crear o Actualizar? → POST / PATCH Airtable
+```
+
+Datos recolectados: producto, medidas, fecha, tipo_cajón, proteccion_extra, dirección
+Campos Airtable: Respuesta_1 (producto), Respuesta_2 (medidas), Respuesta_3 (fecha), Notas (JSON: tipo_cajon, proteccion_extra, direccion)
 
 ### Pendiente / próximas mejoras
-- [ ] Corregir bug email "Lead Caliente" (variables `$json.telefono` etc. no se resuelven)
-- [ ] Rediseñar clasificación: Caliente debe ser DESPUÉS de la cotización, según respuesta del cliente
-- [ ] Agregar preguntas sobre tipo de cajón y protección extra ANTES de cotizar
-- [ ] Integrar API del cotizador cuando esté disponible
-- [ ] Migrar a conversación con IA (Gemini/Groq) para flujo más natural
+- [ ] Integrar API del cotizador cuando esté disponible (https://cratingcotiza.mdarthurdigital.com/cotizar-caja)
+- [ ] Activar LinkedIn en workflow RRSS cuando se tenga token
 
 ## Error conocido
 
