@@ -200,7 +200,8 @@ Tag `Alex` (ID: `2CrVJWitAB77MgTJ`) aplicado a los 4 workflows del agente:
 ### Pendiente / próximas mejoras
 - [ ] Integrar API del cotizador cuando esté disponible (https://cratingcotiza.mdarthurdigital.com/cotizar-caja)
 - [ ] Activar LinkedIn en workflow RRSS cuando se tenga token
-- [ ] Evaluar plan de pago para IA de respaldo (Groq Dev $10/mes = 500k tokens/día en modelo 70b)
+- [ ] Probar VAPI → WhatsApp Handoff con llamada real (bloqueado por reinicio n8n)
+- [ ] Probar planilla Nicaragua completa (bloqueado por reinicio n8n)
 
 ## Planilla Nicaragua
 
@@ -222,18 +223,35 @@ Sistema de nómina quincenal para empresa en Managua, Nicaragua.
 
 | Tabla | ID |
 |---|---|
-| Empleados | (tabla primaria, sin ID separado) |
+| Empleados | `tblwEpef3eoKtSmQe` |
 | Préstamos | `tbln3xy9hbjtzRGPa` |
 | Adelantos | `tblEz4M50EUw7vT0U` |
 | Extras | `tblb8OlnW60ItErxe` |
 | Planillas | `tblZj3F2T5aoSKGEV` |
 | Detalle Planilla | `tblxmAaz0k0Bv6r1y` |
 
+### Motor de cálculo n8n
+- **Workflow:** `🧮 Planilla Nicaragua — Motor de Cálculo` (ID: `jkFucDKb7JSe32ze`)
+- **Webhook path:** `planillanica` (POST)
+- **Nodos:** 14 — lee Empleados + Préstamos + Adelantos + Extras → calcula → guarda en Planillas + Detalle Planilla → actualiza estados
+- **Lógica:** salario quincenal = bruto/2, INSS 7%, IR C$0, deduce préstamos y adelantos, suma extras
+- **Estado:** ⚠️ Bloqueado — n8n necesita reinicio del servidor para registrar webhooks nuevos en memoria. Una vez reiniciado queda funcionando solo.
+
+### Empleada de prueba cargada
+- Solange Carolina Torrez Perez | Ejecutiva Principal Risos | C$12,000 | Ingreso: 12/01/2026
+
+### Bug conocido — n8n webhook registration
+Webhooks creados/modificados vía API no se registran en memoria hasta que n8n reinicia.
+El toggle desde la UI actualiza la DB pero NO la memoria del servidor.
+**Fix:** `sudo systemctl restart n8n` (pedir a quien tiene acceso al servidor).
+Afecta también: `📞→💬 VAPI → WhatsApp Handoff` (ID: `jfoJDSidx1sJlOrr`).
+
 ### Siguiente paso
-1. Meter empleados reales en Airtable (Kevin o Sol)
-2. Confirmar: aportaciones + marcador de huella
-3. Construir motor de cálculo en n8n (webhook)
-4. Construir web app en Netlify
+1. ~~Meter empleados reales en Airtable~~ ✅ Sol cargada como prueba
+2. Confirmar: aportaciones + marcador de huella (pendiente consulta)
+3. ~~Construir motor de cálculo en n8n~~ ✅ Listo, esperando reinicio
+4. Reinicio de n8n para activar webhooks → primera prueba del motor
+5. Construir web app en Netlify
 
 ## Error conocido
 
@@ -246,3 +264,7 @@ Sistema de nómina quincenal para empresa en Managua, Nicaragua.
 3. Gmail: migrado de `emailSend` a `gmail` OAuth2
 4. Airtable: variables `$vars.AIRTABLE_TOKEN` en lugar de token hardcodeado
 5. Canva: OAuth2 Generic configurado pero flujo actual usa Drive directamente
+6. Gemini fallback WhatsApp → reemplazado por **DeepSeek deepseek-chat** (mismo formato OpenAI, sin adaptador)
+7. Groq model: llama-3.3-70b → **llama-3.1-8b-instant** (500k TPD gratuito)
+8. Tag `Alex` creado en n8n y aplicado a los 4 workflows del agente
+9. Base Airtable `Planilla Nicaragua` creada con 6 tablas — motor de cálculo listo, pendiente reinicio n8n
