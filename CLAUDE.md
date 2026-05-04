@@ -128,9 +128,9 @@ Para listar workflows: `GET /api/v1/workflows` con header `X-N8N-API-KEY: <token
 Webhook WhatsApp → Extraer Mensaje → Obtener Config Empresa
   → Buscar Lead Existente → Obtener Productos (Airtable PRODUCTOS Y SERVICIO)
   → Preparar Contexto IA (lee Respuesta_1/2/3 + Notas + saludoHora Miami)
-  → Groq llama-3.3-70b (continueOnFail) → ¿Groq OK?
+  → Groq llama-3.1-8b-instant (continueOnFail) → ¿Groq OK?
       ✅ Sí → Parsear Respuesta IA
-      ❌ No → Gemini 2.0 Flash (continueOnFail) → ¿Gemini OK?
+      ❌ No → DeepSeek deepseek-chat (continueOnFail) → ¿DeepSeek OK?
                   ✅ Sí → Parsear Respuesta IA
                   ❌ No → 🆘 Modo Contingencia (rule-based) → Parsear Respuesta IA
   → ¿Lead Caliente? → Notificar Vendedor (email con dirección si aplica)
@@ -152,8 +152,8 @@ Campos Airtable: Respuesta_1 (producto), Respuesta_2 (medidas), Respuesta_3 (fec
 - Lee el mensaje del cliente antes de avanzar al siguiente dato
 - Al dar el link del cotizador: mencionar que pueden enviar foto por WhatsApp al +1 786 558-6007
 - Catálogo real de Airtable: Cajones cerrados, Jaulas, Palets a medida, Cunas, Plataformas en contenedor, Embalaje para ferias, Al por mayor
-- Gemini API key hardcodeada: `AIzaSyDgMayvXomDq8Mx3fwTVtYi9eDjU5cxGOU` (mismo que RRSS)
 - Groq credential ID en n8n: `jORffbRhRNohHT1B`
+- DeepSeek API key hardcodeada: `sk-035f6eddd6fd4602b7d91c6e9ff03dfe` (credential n8n ID: `YSdODZVNFGSB3Ih9`)
 
 ### Info de empresa que Alex conoce
 - Servicio mismo día disponible — sin costo adicional por urgencia
@@ -164,7 +164,7 @@ Campos Airtable: Respuesta_1 (producto), Respuesta_2 (medidas), Respuesta_3 (fec
 
 ### Límites de APIs
 - Groq llama-3.1-8b-instant: 500,000 tokens/día (plan gratuito) — se resetea a medianoche Miami
-- Gemini 2.0 Flash: cuota diaria compartida con workflows RRSS (fallback secundario)
+- DeepSeek deepseek-chat: cuota generosa (plan gratuito, muy barato si se paga) — fallback secundario
 - Si ambas se agotan → Modo Contingencia activa automáticamente (recopila datos básicos + email al vendedor)
 
 ## VAPI — Alex Voz
