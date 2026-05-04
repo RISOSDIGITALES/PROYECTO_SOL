@@ -144,23 +144,52 @@ Datos recolectados: producto, medidas, fecha, tipo_cajon, proteccion_extra, dire
 Campos Airtable: Respuesta_1 (producto), Respuesta_2 (medidas), Respuesta_3 (fecha), Notas (JSON: tipo_cajon, proteccion_extra, direccion)
 
 ### Comportamiento de Alex (IA)
+- **Idioma**: detecta el idioma del cliente y responde en el mismo (ES o EN)
 - Saludo con hora Miami (UTC-4): buenos días 6-11, buenas tardes 12-18, buenas noches 19-5
-- Si el cliente da modelo específico → busca medidas en conocimiento interno antes de preguntar
-- Orden de recopilación: producto → medidas → fecha → tipo_cajón (pregunta preferencia primero) → protección extra (pregunta preferencia primero) → dirección (solo si acepta visita)
+- Orden de recopilación: producto → medidas (si no sabe → pregunta modelo → busca specs) → fecha → tipo_cajón (pregunta preferencia primero) → protección extra (aclarar que es costo adicional) → dirección (solo si acepta visita)
 - NUNCA repite datos ya confirmados en mensajes posteriores
+- NUNCA pregunta método de envío (aéreo/marítimo/terrestre) — no es relevante
+- Lee el mensaje del cliente antes de avanzar al siguiente dato
+- Al dar el link del cotizador: mencionar que pueden enviar foto por WhatsApp al +1 786 558-6007
 - Catálogo real de Airtable: Cajones cerrados, Jaulas, Palets a medida, Cunas, Plataformas en contenedor, Embalaje para ferias, Al por mayor
 - Gemini API key hardcodeada: `AIzaSyDgMayvXomDq8Mx3fwTVtYi9eDjU5cxGOU` (mismo que RRSS)
 - Groq credential ID en n8n: `jORffbRhRNohHT1B`
 
-### Límites de APIs (plan gratuito)
-- Groq llama-3.3-70b: 100,000 tokens/día — se resetea a medianoche Miami
-- Gemini 2.0 Flash: cuota diaria compartida con workflows RRSS
-- Si ambas se agotan en el mismo día → Modo Contingencia activa automáticamente
+### Info de empresa que Alex conoce
+- Servicio mismo día disponible — sin costo adicional por urgencia
+- Descuentos por volumen para pedidos de 2+ unidades
+- Servicio on-site en Miami-Dade y alrededores
+- Protección interior (foam, burbuja, esquineras) = servicio adicional con costo extra
+- ISPM-15 / NIMF-15 incluido en todos los cajones para exportación
+
+### Límites de APIs
+- Groq llama-3.1-8b-instant: 500,000 tokens/día (plan gratuito) — se resetea a medianoche Miami
+- Gemini 2.0 Flash: cuota diaria compartida con workflows RRSS (fallback secundario)
+- Si ambas se agotan → Modo Contingencia activa automáticamente (recopila datos básicos + email al vendedor)
+
+## VAPI — Alex Voz
+
+- **API Key:** `9ff54869-33de-4f84-a8b7-2801afc3d355`
+- **Assistant ID:** `69fedf52-005f-4cde-a87d-5b421e7911b9`
+- **Nombre:** ALEX
+- **Modelo:** llama-3.3-70b-versatile (en Groq)
+- **Voz ID:** `onwK4e9ZLuTAKqWW03F9` (ElevenLabs)
+- **Workflow n8n:** `📞 CE Voice Agent — Vapi Webhook` (ID: `FYKfTJBfgwsMpJV7`)
+- **Resumen diario:** `📞 CE Voice Agent — Resumen Diario de Llamadas` (ID: `FTa48iKiRIMW5BNB`)
+- **Número de llamadas:** +1 786-788-0417 (mismo Twilio)
+
+### Diferencias voz vs WhatsApp
+| Voz | WhatsApp |
+|---|---|
+| Recopila: medidas + peso + descripción (3 datos) | Recopila: producto + medidas + fecha + tipo_cajón + protección + dirección (6 datos) |
+| Bilingual ES/EN automático | Bilingual ES/EN automático |
+| Manejo de silencio + fin de llamada | No aplica |
+| Sin recomendación de tipo de cajón | Recomienda tipo específico del catálogo |
 
 ### Pendiente / próximas mejoras
 - [ ] Integrar API del cotizador cuando esté disponible (https://cratingcotiza.mdarthurdigital.com/cotizar-caja)
 - [ ] Activar LinkedIn en workflow RRSS cuando se tenga token
-- [ ] Probar conversación completa con Groq (después de medianoche cuando se resetee el límite)
+- [ ] Evaluar plan de pago para IA de respaldo (Groq Dev $10/mes = 500k tokens/día en modelo 70b)
 
 ## Error conocido
 
