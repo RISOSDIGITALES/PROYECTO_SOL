@@ -202,6 +202,39 @@ Tag `Alex` (ID: `2CrVJWitAB77MgTJ`) aplicado a los 4 workflows del agente:
 - [ ] Activar LinkedIn en workflow RRSS cuando se tenga token
 - [ ] Evaluar plan de pago para IA de respaldo (Groq Dev $10/mes = 500k tokens/día en modelo 70b)
 
+## Planilla Nicaragua
+
+Sistema de nómina quincenal para empresa en Managua, Nicaragua.
+- **Frecuencia:** Quincenal — día 15 y último día del mes
+- **Empleados:** 8 activos (tabla dinámica)
+- **IR:** C$0 (todos por debajo del umbral)
+- **INSS empleado:** 7%
+- **Adelantos:** límite C$2,000 — se descuenta en la quincena indicada
+- **Préstamos:** autorizados por Don Marc — cuota quincenal acordada caso por caso
+- **Pagos:** siempre en efectivo
+- **Frontend:** Netlify (cuenta propia)
+- **Pendiente:** definición de "aportaciones" y destino del marcador de huella
+
+### Airtable — Base Planilla Nicaragua
+- **Base ID:** `appApxnaZKJKDUBR6`
+- **Workspace:** `wsphYNKZSHpRek4EJ` (mismo que CE Central Hub)
+- **Token:** mismo que CE Central Hub (ver credencial n8n `Airtable` o buscar en workflows existentes)
+
+| Tabla | ID |
+|---|---|
+| Empleados | (tabla primaria, sin ID separado) |
+| Préstamos | `tbln3xy9hbjtzRGPa` |
+| Adelantos | `tblEz4M50EUw7vT0U` |
+| Extras | `tblb8OlnW60ItErxe` |
+| Planillas | `tblZj3F2T5aoSKGEV` |
+| Detalle Planilla | `tblxmAaz0k0Bv6r1y` |
+
+### Siguiente paso
+1. Meter empleados reales en Airtable (Kevin o Sol)
+2. Confirmar: aportaciones + marcador de huella
+3. Construir motor de cálculo en n8n (webhook)
+4. Construir web app en Netlify
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
