@@ -178,6 +178,17 @@ Campos Airtable: Respuesta_1 (producto), Respuesta_2 (medidas), Respuesta_3 (fec
 - **Resumen diario:** `📞 CE Voice Agent — Resumen Diario de Llamadas` (ID: `FTa48iKiRIMW5BNB`)
 - **Número de llamadas:** +1 786-788-0417 (mismo Twilio)
 
+## n8n Tags — Alex
+
+Tag `Alex` (ID: `2CrVJWitAB77MgTJ`) aplicado a los 4 workflows del agente:
+
+| Workflow | ID | Tags |
+|---|---|---|
+| CE WhatsApp Engine - Sistema de Conversión | `eCOX3ogMjToxZsh9` | Alex, whatsapp |
+| 📞 CE Voice Agent — Vapi Webhook | `FYKfTJBfgwsMpJV7` | Alex |
+| 📞 CE Voice Agent — Resumen Diario de Llamadas | `FTa48iKiRIMW5BNB` | Alex |
+| 📞→💬 VAPI → WhatsApp Handoff | `jfoJDSidx1sJlOrr` | Alex |
+
 ### Diferencias voz vs WhatsApp
 | Voz | WhatsApp |
 |---|---|
