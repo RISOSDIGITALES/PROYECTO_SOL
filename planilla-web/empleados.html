@@ -96,6 +96,15 @@
           </select>
         </div>
         <div class="form-group">
+          <label>Base cálculo INSS</label>
+          <select id="emp-inss-base">
+            <option value="Salario Completo">Salario Completo</option>
+            <option value="Salario Mínimo">Salario Mínimo</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
           <label>Estado</label>
           <select id="emp-activo">
             <option value="true">Activo</option>
@@ -175,6 +184,7 @@ document.getElementById('btn-nuevo').addEventListener('click', () => {
   document.getElementById('emp-salario').value = '';
   document.getElementById('emp-ingreso').value = '';
   document.getElementById('emp-tipo').value = 'Con Seguro';
+  document.getElementById('emp-inss-base').value = 'Salario Completo';
   document.getElementById('emp-activo').value = 'true';
   document.getElementById('alert-form').className = 'alert';
   document.getElementById('modal-emp').classList.add('open');
@@ -190,10 +200,20 @@ function editarEmpleado(id) {
   document.getElementById('emp-salario').value = e['Salario bruto mensual'] || '';
   document.getElementById('emp-ingreso').value = e['Fecha de ingreso'] || '';
   document.getElementById('emp-tipo').value = e['Tipo_Planilla'] || 'Con Seguro';
+  document.getElementById('emp-inss-base').value = e['INSS_Base'] || 'Salario Completo';
   document.getElementById('emp-activo').value = e.Activo ? 'true' : 'false';
   document.getElementById('alert-form').className = 'alert';
   document.getElementById('modal-emp').classList.add('open');
 }
+
+// Show/hide INSS_Base based on tipo planilla
+function toggleInssBase() {
+  const tipo = document.getElementById('emp-tipo').value;
+  const row = document.getElementById('emp-inss-base').closest('.form-group');
+  row.style.opacity = tipo === 'Sin Seguro' ? '0.35' : '1';
+  row.style.pointerEvents = tipo === 'Sin Seguro' ? 'none' : '';
+}
+document.getElementById('emp-tipo').addEventListener('change', toggleInssBase);
 
 // Close modal
 ['close-modal','cancel-emp'].forEach(id => {
@@ -217,6 +237,7 @@ document.getElementById('save-emp').addEventListener('click', async () => {
     'Salario bruto mensual': salario,
     'Fecha de ingreso': document.getElementById('emp-ingreso').value || undefined,
     'Tipo_Planilla': document.getElementById('emp-tipo').value,
+    'INSS_Base': document.getElementById('emp-inss-base').value,
     'Activo': document.getElementById('emp-activo').value === 'true',
   };
 
