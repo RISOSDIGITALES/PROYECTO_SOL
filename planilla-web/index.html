@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Planilla Nicaragua</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h2>🧮 Planilla</h2>
+      <p>Nicaragua</p>
+    </div>
+    <nav>
+      <a href="/index.html" class="active"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <h1>Dashboard</h1>
+        <span class="sub" id="periodo-actual">Calculando período...</span>
+      </div>
+      <button class="btn btn-primary" id="btn-calcular">
+        <span id="calc-icon">🧮</span> Calcular Planilla
+      </button>
+    </div>
+
+    <div class="content">
+      <div id="alert-main" class="alert"></div>
+
+      <!-- STATS -->
+      <div class="cards" id="stats-cards">
+        <div class="card"><div class="label">Total Empleados</div><div class="value" id="stat-empleados">—</div></div>
+        <div class="card"><div class="label">Con Seguro</div><div class="value green" id="stat-con-seguro">—</div></div>
+        <div class="card"><div class="label">Sin Seguro</div><div class="value orange" id="stat-sin-seguro">—</div></div>
+        <div class="card"><div class="label">Préstamos Activos</div><div class="value" id="stat-prestamos">—</div></div>
+        <div class="card"><div class="label">Adelantos Pendientes</div><div class="value red" id="stat-adelantos">—</div></div>
+      </div>
+
+      <!-- ÚLTIMAS PLANILLAS -->
+      <div class="table-wrap">
+        <div class="table-header">
+          <h3>Últimas Planillas</h3>
+          <a href="/planillas.html" class="btn btn-ghost btn-sm">Ver todas</a>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Período</th>
+              <th>Tipo</th>
+              <th>Fecha de pago</th>
+              <th>Total bruto</th>
+              <th>Total neto</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-planillas">
+            <tr class="loading-row"><td colspan="7"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CALCULAR -->
+<div class="overlay" id="modal-calcular">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🧮 Calcular Planilla</h3>
+      <button class="modal-close" id="close-modal">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-calc" class="alert"></div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+        Selecciona la fecha de pago. El sistema calculará automáticamente el período
+        (1-15 si es día 15, o 16-fin si es último día del mes).
+      </p>
+      <div class="form-group">
+        <label>Fecha de pago</label>
+        <input type="date" id="fecha-pago" />
+      </div>
+      <p style="font-size:12px;color:var(--muted);">
+        ⚠️ Esto generará <strong>dos planillas separadas</strong>: Con Seguro y Sin Seguro.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-calc">Cancelar</button>
+      <button class="btn btn-primary" id="confirm-calc">
+        <span id="calc-spinner" style="display:none"><div class="spinner" style="width:14px;height:14px;border-width:2px"></div></span>
+        Calcular
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script>
+const { requireAuth, initLayout, apiFetch, fmt, showAlert } = AppAuth;
+requireAuth();
+
+netlifyIdentity.on('init', user => {
+  if (!user) return;
+  initLayout();
+  loadDashboard();
+});
+
+// Set default date (next 15th or end of month)
+function defaultFecha() {
+  const today = new Date();
+  const y = today.getFullYear(), m = today.getMonth(), d = today.getDate();
+  const lastDay = new Date(y, m + 1, 0).getDate();
+  const target = d <= 14 ? 15 : lastDay;
+  const mm = String(m + 1).padStart(2, '0');
+  const dd = String(target).padStart(2, '0');
+  return `${y}-${mm}-${dd}`;
+}
+
+// Set período label
+function setPeriodo() {
+  const today = new Date();
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const d = today.getDate(), m = today.getMonth(), y = today.getFullYear();
+  const lastDay = new Date(y, m + 1, 0).getDate();
+  const periodo = d <= 15
+    ? `Período: 1-15 ${meses[m]} ${y}`
+    : `Período: 16-${lastDay} ${meses[m]} ${y}`;
+  document.getElementById('periodo-actual').textContent = periodo;
+}
+
+async function loadDashboard() {
+  setPeriodo();
+  document.getElementById('fecha-pago').value = defaultFecha();
+
+  try {
+    const [empleados, planillas] = await Promise.all([
+      apiFetch('/.netlify/functions/empleados'),
+      apiFetch('/.netlify/functions/planillas'),
+    ]);
+
+    const activos = empleados.filter(e => e.Activo);
+    const conSeguro = activos.filter(e => (e['Tipo_Planilla'] || 'Con Seguro') !== 'Sin Seguro').length;
+    const sinSeguro = activos.filter(e => e['Tipo_Planilla'] === 'Sin Seguro').length;
+
+    document.getElementById('stat-empleados').textContent = activos.length;
+    document.getElementById('stat-con-seguro').textContent = conSeguro;
+    document.getElementById('stat-sin-seguro').textContent = sinSeguro;
+
+    // Load advances/loans counts in parallel
+    const [prestamos, adelantos] = await Promise.all([
+      apiFetch('/.netlify/functions/prestamos').catch(() => []),
+      apiFetch('/.netlify/functions/adelantos').catch(() => []),
+    ]);
+    document.getElementById('stat-prestamos').textContent = prestamos.filter(p => p.Estado === 'Activo').length;
+    document.getElementById('stat-adelantos').textContent = adelantos.length;
+
+    // Render planillas table
+    const tbody = document.getElementById('tabla-planillas');
+    const recent = planillas.slice(0, 8);
+    if (recent.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">No hay planillas generadas</td></tr>';
+      return;
+    }
+    tbody.innerHTML = recent.map(p => {
+      const tipo = p.Tipo || '—';
+      const badge = tipo === 'Con Seguro' ? 'badge-blue' : tipo === 'Sin Seguro' ? 'badge-orange' : 'badge-gray';
+      const estado = p.Estado || 'Borrador';
+      const estadoBadge = estado === 'Pagada' ? 'badge-green' : estado === 'Borrador' ? 'badge-gray' : 'badge-blue';
+      return `<tr>
+        <td>${p['Período'] || '—'}</td>
+        <td><span class="badge ${badge}">${tipo}</span></td>
+        <td>${p['Fecha de pago'] || '—'}</td>
+        <td class="num">${fmt(p['Total bruto'])}</td>
+        <td class="num"><strong>${fmt(p['Total neto'])}</strong></td>
+        <td><span class="badge ${estadoBadge}">${estado}</span></td>
+        <td><a href="/planilla-detalle.html?periodo=${encodeURIComponent(p['Período'])}&tipo=${encodeURIComponent(tipo)}" class="btn btn-icon btn-sm">👁</a></td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    showAlert('alert-main', 'Error cargando datos: ' + e.message, 'error');
+  }
+}
+
+// Modal
+document.getElementById('btn-calcular').addEventListener('click', () => {
+  document.getElementById('modal-calcular').classList.add('open');
+});
+document.getElementById('close-modal').addEventListener('click', () => {
+  document.getElementById('modal-calcular').classList.remove('open');
+});
+document.getElementById('cancel-calc').addEventListener('click', () => {
+  document.getElementById('modal-calcular').classList.remove('open');
+});
+
+document.getElementById('confirm-calc').addEventListener('click', async () => {
+  const fecha = document.getElementById('fecha-pago').value;
+  if (!fecha) { showAlert('alert-calc', 'Selecciona una fecha', 'error'); return; }
+
+  const btn = document.getElementById('confirm-calc');
+  const spinner = document.getElementById('calc-spinner');
+  btn.disabled = true;
+  spinner.style.display = 'inline-flex';
+
+  try {
+    await apiFetch('/.netlify/functions/calcular', {
+      method: 'POST',
+      body: JSON.stringify({ fecha_pago: fecha }),
+    });
+    document.getElementById('modal-calcular').classList.remove('open');
+    showAlert('alert-main', '✅ Planillas calculadas correctamente. Recarga para ver los resultados.', 'success');
+    setTimeout(loadDashboard, 1500);
+  } catch (e) {
+    showAlert('alert-calc', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+  }
+});
+</script>
+</body>
+</html>

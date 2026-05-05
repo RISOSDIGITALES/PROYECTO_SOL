@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Adelantos — Planilla Nicaragua</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>🧮 Planilla</h2><p>Nicaragua</p></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html" class="active"><span class="icon">⚡</span> Adelantos</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Adelantos</h1><span class="sub">Límite C$ 2,000 por quincena</span></div>
+      <button class="btn btn-primary" id="btn-nuevo">+ Nuevo adelanto</button>
+    </div>
+    <div class="content">
+      <div id="alert-adel" class="alert"></div>
+
+      <div class="tabs">
+        <button class="tab active" data-estado="Pendiente">Pendientes</button>
+        <button class="tab" data-estado="Descontado">Descontados</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Empleado</th>
+              <th>Monto</th>
+              <th>Descontar en quincena</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-adelantos">
+            <tr class="loading-row"><td colspan="5"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ADELANTO -->
+<div class="overlay" id="modal-adel">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Nuevo Adelanto</h3>
+      <button class="modal-close" id="close-modal">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-form" class="alert"></div>
+      <div class="form-group">
+        <label>Empleado *</label>
+        <select id="adel-empleado"><option value="">Seleccionar...</option></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Monto (C$) * — máx. C$2,000</label>
+          <input type="number" id="adel-monto" placeholder="0.00" step="0.01" max="2000" />
+        </div>
+        <div class="form-group">
+          <label>Descontar en quincena *</label>
+          <input type="date" id="adel-fecha" />
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);">
+        La fecha debe ser el día 15 o el último día del mes.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-adel">Cancelar</button>
+      <button class="btn btn-primary" id="save-adel">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script>
+const { requireAuth, initLayout, apiFetch, fmt, showAlert } = AppAuth;
+requireAuth();
+
+let allAdelantos = [];
+let filtroEstado = 'Pendiente';
+
+netlifyIdentity.on('init', user => {
+  if (!user) return;
+  initLayout();
+  loadAll();
+});
+
+async function loadAll() {
+  try {
+    const [adelantos, empleados] = await Promise.all([
+      apiFetch('/.netlify/functions/adelantos'),
+      apiFetch('/.netlify/functions/empleados'),
+    ]);
+    allAdelantos = adelantos;
+
+    const sel = document.getElementById('adel-empleado');
+    empleados.filter(e => e.Activo).forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.Nombre;
+      opt.textContent = e.Nombre;
+      sel.appendChild(opt);
+    });
+
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-adel', 'Error: ' + e.message, 'error');
+  }
+}
+
+function renderTabla() {
+  const lista = allAdelantos.filter(a => (a.Estado || 'Pendiente') === filtroEstado);
+  const tbody = document.getElementById('tabla-adelantos');
+  if (lista.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">No hay adelantos ${filtroEstado.toLowerCase()}s</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = lista.map(a => {
+    const estado = a.Estado || 'Pendiente';
+    const badge = estado === 'Pendiente' ? 'badge-orange' : 'badge-green';
+    return `<tr>
+      <td><strong>${a.Empleado || '—'}</strong></td>
+      <td class="num">${fmt(a.Monto)}</td>
+      <td>${a['Descontar en quincena'] || '—'}</td>
+      <td><span class="badge ${badge}">${estado}</span></td>
+      <td>${estado === 'Pendiente' ? `<button class="btn btn-icon btn-sm" onclick="editarAdelanto('${a.id}')">✏️</button>` : ''}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    filtroEstado = btn.dataset.estado;
+    renderTabla();
+  });
+});
+
+document.getElementById('btn-nuevo').addEventListener('click', () => {
+  document.getElementById('adel-empleado').value = '';
+  document.getElementById('adel-monto').value = '';
+  document.getElementById('adel-fecha').value = '';
+  document.getElementById('alert-form').className = 'alert';
+  document.getElementById('modal-adel').classList.add('open');
+});
+
+function editarAdelanto(id) {
+  const a = allAdelantos.find(x => x.id === id);
+  if (!a) return;
+  document.getElementById('adel-empleado').value = a.Empleado || '';
+  document.getElementById('adel-monto').value = a.Monto || '';
+  document.getElementById('adel-fecha').value = a['Descontar en quincena'] || '';
+  document.getElementById('alert-form').className = 'alert';
+  // Store id for update
+  document.getElementById('save-adel').dataset.editId = id;
+  document.getElementById('modal-adel').classList.add('open');
+}
+
+['close-modal','cancel-adel'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-adel').classList.remove('open');
+    delete document.getElementById('save-adel').dataset.editId;
+  });
+});
+
+document.getElementById('save-adel').addEventListener('click', async () => {
+  const editId   = document.getElementById('save-adel').dataset.editId;
+  const empleado = document.getElementById('adel-empleado').value;
+  const monto    = parseFloat(document.getElementById('adel-monto').value);
+  const fecha    = document.getElementById('adel-fecha').value;
+
+  if (!empleado) { showAlert('alert-form', 'Selecciona un empleado', 'error'); return; }
+  if (!monto || monto <= 0) { showAlert('alert-form', 'Ingresa un monto válido', 'error'); return; }
+  if (monto > 2000) { showAlert('alert-form', 'El límite de adelanto es C$ 2,000', 'error'); return; }
+  if (!fecha) { showAlert('alert-form', 'Selecciona la quincena de descuento', 'error'); return; }
+
+  const fields = {
+    'Empleado': empleado,
+    'Monto': monto,
+    'Descontar en quincena': fecha,
+  };
+
+  const btn = document.getElementById('save-adel');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    if (editId) {
+      await apiFetch('/.netlify/functions/adelantos', { method: 'PATCH', body: JSON.stringify({ id: editId, ...fields }) });
+    } else {
+      await apiFetch('/.netlify/functions/adelantos', { method: 'POST', body: JSON.stringify(fields) });
+    }
+    document.getElementById('modal-adel').classList.remove('open');
+    delete btn.dataset.editId;
+    showAlert('alert-adel', '✅ Adelanto guardado', 'success');
+    allAdelantos = await apiFetch('/.netlify/functions/adelantos');
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-form', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
+});
+</script>
+</body>
+</html>

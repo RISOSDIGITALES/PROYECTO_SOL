@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Planillas — Planilla Nicaragua</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>🧮 Planilla</h2><p>Nicaragua</p></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html" class="active"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Planillas</h1><span class="sub">Historial de quincenas</span></div>
+    </div>
+    <div class="content">
+      <div id="alert-pl" class="alert"></div>
+
+      <div class="tabs">
+        <button class="tab active" data-tipo="todas">Todas</button>
+        <button class="tab" data-tipo="Con Seguro">Con Seguro</button>
+        <button class="tab" data-tipo="Sin Seguro">Sin Seguro</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Período</th>
+              <th>Tipo</th>
+              <th>Fecha de pago</th>
+              <th>Empleados</th>
+              <th>Total bruto</th>
+              <th>Deducciones</th>
+              <th>Total neto</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-planillas">
+            <tr class="loading-row"><td colspan="9"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script>
+const { requireAuth, initLayout, apiFetch, fmt, showAlert } = AppAuth;
+requireAuth();
+
+let allPlanillas = [];
+let filtroActivo = 'todas';
+
+netlifyIdentity.on('init', user => {
+  if (!user) return;
+  initLayout();
+  loadPlanillas();
+});
+
+async function loadPlanillas() {
+  try {
+    allPlanillas = await apiFetch('/.netlify/functions/planillas');
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-pl', 'Error: ' + e.message, 'error');
+  }
+}
+
+function renderTabla() {
+  const lista = filtroActivo === 'todas'
+    ? allPlanillas
+    : allPlanillas.filter(p => p.Tipo === filtroActivo);
+
+  const tbody = document.getElementById('tabla-planillas');
+  if (lista.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">No hay planillas registradas</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = lista.map(p => {
+    const tipo = p.Tipo || '—';
+    const tipoBadge = tipo === 'Con Seguro' ? 'badge-blue' : tipo === 'Sin Seguro' ? 'badge-orange' : 'badge-gray';
+    const estado = p.Estado || 'Borrador';
+    const estadoBadge = estado === 'Pagada' ? 'badge-green' : estado === 'Borrador' ? 'badge-gray' : 'badge-blue';
+    const periodo = encodeURIComponent(p['Período'] || '');
+    const tipoEnc = encodeURIComponent(tipo);
+    return `<tr>
+      <td><strong>${p['Período'] || '—'}</strong></td>
+      <td><span class="badge ${tipoBadge}">${tipo}</span></td>
+      <td>${p['Fecha de pago'] || '—'}</td>
+      <td style="text-align:center">${p['Total empleados'] || '—'}</td>
+      <td class="num">${fmt(p['Total bruto'])}</td>
+      <td class="num" style="color:var(--red)">${fmt(p['Total deducciones'])}</td>
+      <td class="num"><strong>${fmt(p['Total neto'])}</strong></td>
+      <td><span class="badge ${estadoBadge}">${estado}</span></td>
+      <td><a href="/planilla-detalle.html?periodo=${periodo}&tipo=${tipoEnc}" class="btn btn-ghost btn-sm">Ver detalle</a></td>
+    </tr>`;
+  }).join('');
+}
+
+// Tabs
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    filtroActivo = btn.dataset.tipo;
+    renderTabla();
+  });
+});
+</script>
+</body>
+</html>

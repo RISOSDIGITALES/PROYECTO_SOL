@@ -1,0 +1,64 @@
+// Shared Airtable helper
+const BASE = 'appApxnaZKJKDUBR6';
+const TOKEN = process.env.AIRTABLE_TOKEN;
+
+const TABLES = {
+  empleados:  'tblwEpef3eoKtSmQe',
+  prestamos:  'tbln3xy9hbjtzRGPa',
+  adelantos:  'tblEz4M50EUw7vT0U',
+  extras:     'tblb8OlnW60ItErxe',
+  planillas:  'tblZj3F2T5aoSKGEV',
+  detalle:    'tblxmAaz0k0Bv6r1y',
+};
+
+async function atFetch(table, opts = {}) {
+  const { method = 'GET', params = {}, body } = opts;
+  let url = `https://api.airtable.com/v0/${BASE}/${TABLES[table]}`;
+
+  if (method === 'GET' && Object.keys(params).length) {
+    const qs = Object.entries(params)
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+      .join('&');
+    url += '?' + qs;
+  }
+
+  const res = await fetch(url, {
+    method,
+    headers: {
+      Authorization: `Bearer ${TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || 'Airtable error');
+  return data;
+}
+
+// Fetch all records handling pagination
+async function atAll(table, params = {}) {
+  let records = [];
+  let offset;
+  do {
+    const p = offset ? { ...params, offset } : params;
+    const data = await atFetch(table, { params: p });
+    records = records.concat(data.records || []);
+    offset = data.offset;
+  } while (offset);
+  return records;
+}
+
+function authCheck(context) {
+  return !!(context?.clientContext?.user);
+}
+
+function resp(statusCode, body) {
+  return {
+    statusCode,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  };
+}
+
+module.exports = { atFetch, atAll, authCheck, resp, TABLES };

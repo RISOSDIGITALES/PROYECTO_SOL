@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Empleados — Planilla Nicaragua</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>🧮 Planilla</h2><p>Nicaragua</p></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html" class="active"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Empleados</h1><span class="sub">Gestión del personal activo</span></div>
+      <button class="btn btn-primary" id="btn-nuevo">+ Nuevo empleado</button>
+    </div>
+    <div class="content">
+      <div id="alert-emp" class="alert"></div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <h3>Personal</h3>
+          <input type="text" id="buscador" placeholder="Buscar..." style="background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px 12px;font-size:13px;width:200px;outline:none;" />
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Cargo</th>
+              <th>Salario mensual</th>
+              <th>Tipo planilla</th>
+              <th>Ingreso</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-empleados">
+            <tr class="loading-row"><td colspan="7"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EMPLEADO -->
+<div class="overlay" id="modal-emp">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-titulo">Nuevo Empleado</h3>
+      <button class="modal-close" id="close-modal">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-form" class="alert"></div>
+      <input type="hidden" id="emp-id" />
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nombre completo *</label>
+          <input type="text" id="emp-nombre" placeholder="Nombre Apellido" />
+        </div>
+        <div class="form-group">
+          <label>Cargo</label>
+          <input type="text" id="emp-cargo" placeholder="Ej: Auxiliar Contable" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Salario bruto mensual (C$) *</label>
+          <input type="number" id="emp-salario" placeholder="0.00" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>Fecha de ingreso</label>
+          <input type="date" id="emp-ingreso" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tipo de planilla *</label>
+          <select id="emp-tipo">
+            <option value="Con Seguro">Con Seguro (INSS 7%)</option>
+            <option value="Sin Seguro">Sin Seguro (salario neto)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="emp-activo">
+            <option value="true">Activo</option>
+            <option value="false">Inactivo</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-emp">Cancelar</button>
+      <button class="btn btn-primary" id="save-emp">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script>
+const { requireAuth, initLayout, apiFetch, fmt, showAlert } = AppAuth;
+requireAuth();
+
+let allEmpleados = [];
+
+netlifyIdentity.on('init', user => {
+  if (!user) return;
+  initLayout();
+  loadEmpleados();
+});
+
+async function loadEmpleados() {
+  try {
+    allEmpleados = await apiFetch('/.netlify/functions/empleados');
+    renderTabla(allEmpleados);
+  } catch (e) {
+    showAlert('alert-emp', 'Error: ' + e.message, 'error');
+  }
+}
+
+function renderTabla(lista) {
+  const tbody = document.getElementById('tabla-empleados');
+  if (lista.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">No hay empleados registrados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(e => {
+    const tipo = e['Tipo_Planilla'] || 'Con Seguro';
+    const tipoBadge = tipo === 'Con Seguro' ? 'badge-blue' : 'badge-orange';
+    const activo = e.Activo;
+    return `<tr>
+      <td><strong>${e.Nombre || '—'}</strong></td>
+      <td>${e.Cargo || '—'}</td>
+      <td class="num">${fmt(e['Salario bruto mensual'])}</td>
+      <td><span class="badge ${tipoBadge}">${tipo}</span></td>
+      <td>${e['Fecha de ingreso'] || '—'}</td>
+      <td><span class="badge ${activo ? 'badge-green' : 'badge-gray'}">${activo ? 'Activo' : 'Inactivo'}</span></td>
+      <td>
+        <button class="btn btn-icon btn-sm" onclick="editarEmpleado('${e.id}')">✏️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// Search
+document.getElementById('buscador').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase();
+  renderTabla(allEmpleados.filter(emp =>
+    (emp.Nombre || '').toLowerCase().includes(q) ||
+    (emp.Cargo || '').toLowerCase().includes(q)
+  ));
+});
+
+// Open modal new
+document.getElementById('btn-nuevo').addEventListener('click', () => {
+  document.getElementById('modal-titulo').textContent = 'Nuevo Empleado';
+  document.getElementById('emp-id').value = '';
+  document.getElementById('emp-nombre').value = '';
+  document.getElementById('emp-cargo').value = '';
+  document.getElementById('emp-salario').value = '';
+  document.getElementById('emp-ingreso').value = '';
+  document.getElementById('emp-tipo').value = 'Con Seguro';
+  document.getElementById('emp-activo').value = 'true';
+  document.getElementById('alert-form').className = 'alert';
+  document.getElementById('modal-emp').classList.add('open');
+});
+
+function editarEmpleado(id) {
+  const e = allEmpleados.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('modal-titulo').textContent = 'Editar Empleado';
+  document.getElementById('emp-id').value = e.id;
+  document.getElementById('emp-nombre').value = e.Nombre || '';
+  document.getElementById('emp-cargo').value = e.Cargo || '';
+  document.getElementById('emp-salario').value = e['Salario bruto mensual'] || '';
+  document.getElementById('emp-ingreso').value = e['Fecha de ingreso'] || '';
+  document.getElementById('emp-tipo').value = e['Tipo_Planilla'] || 'Con Seguro';
+  document.getElementById('emp-activo').value = e.Activo ? 'true' : 'false';
+  document.getElementById('alert-form').className = 'alert';
+  document.getElementById('modal-emp').classList.add('open');
+}
+
+// Close modal
+['close-modal','cancel-emp'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-emp').classList.remove('open');
+  });
+});
+
+// Save
+document.getElementById('save-emp').addEventListener('click', async () => {
+  const id = document.getElementById('emp-id').value;
+  const nombre = document.getElementById('emp-nombre').value.trim();
+  const salario = parseFloat(document.getElementById('emp-salario').value);
+
+  if (!nombre) { showAlert('alert-form', 'El nombre es obligatorio', 'error'); return; }
+  if (!salario || salario <= 0) { showAlert('alert-form', 'Ingresa un salario válido', 'error'); return; }
+
+  const fields = {
+    'Nombre': nombre,
+    'Cargo': document.getElementById('emp-cargo').value.trim(),
+    'Salario bruto mensual': salario,
+    'Fecha de ingreso': document.getElementById('emp-ingreso').value || undefined,
+    'Tipo_Planilla': document.getElementById('emp-tipo').value,
+    'Activo': document.getElementById('emp-activo').value === 'true',
+  };
+
+  const btn = document.getElementById('save-emp');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  try {
+    if (id) {
+      await apiFetch('/.netlify/functions/empleados', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
+    } else {
+      await apiFetch('/.netlify/functions/empleados', { method: 'POST', body: JSON.stringify(fields) });
+    }
+    document.getElementById('modal-emp').classList.remove('open');
+    showAlert('alert-emp', '✅ Empleado guardado correctamente', 'success');
+    loadEmpleados();
+  } catch (e) {
+    showAlert('alert-form', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Guardar';
+  }
+});
+</script>
+</body>
+</html>

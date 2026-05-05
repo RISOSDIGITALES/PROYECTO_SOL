@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Préstamos — Planilla Nicaragua</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>🧮 Planilla</h2><p>Nicaragua</p></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html" class="active"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Préstamos</h1><span class="sub">Autorizados por Don Marc · cuota quincenal</span></div>
+      <button class="btn btn-primary" id="btn-nuevo">+ Nuevo préstamo</button>
+    </div>
+    <div class="content">
+      <div id="alert-pr" class="alert"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Empleado</th>
+              <th>Monto total</th>
+              <th>Cuota quincenal</th>
+              <th>Cuotas restantes</th>
+              <th>Pendiente</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-prestamos">
+            <tr class="loading-row"><td colspan="7"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PRÉSTAMO -->
+<div class="overlay" id="modal-pr">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-titulo">Nuevo Préstamo</h3>
+      <button class="modal-close" id="close-modal">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-form" class="alert"></div>
+      <input type="hidden" id="pr-id" />
+      <div class="form-group">
+        <label>Empleado *</label>
+        <select id="pr-empleado"><option value="">Seleccionar...</option></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Monto total (C$) *</label>
+          <input type="number" id="pr-monto" placeholder="0.00" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>Cuota quincenal (C$) *</label>
+          <input type="number" id="pr-cuota" placeholder="0.00" step="0.01" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cuotas restantes</label>
+          <input type="number" id="pr-cuotas" placeholder="Ej: 6" min="1" />
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="pr-estado">
+            <option value="Activo">Activo</option>
+            <option value="Pagado">Pagado</option>
+            <option value="Suspendido">Suspendido</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-pr">Cancelar</button>
+      <button class="btn btn-primary" id="save-pr">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script>
+const { requireAuth, initLayout, apiFetch, fmt, showAlert } = AppAuth;
+requireAuth();
+
+let allPrestamos = [];
+
+netlifyIdentity.on('init', user => {
+  if (!user) return;
+  initLayout();
+  loadAll();
+});
+
+async function loadAll() {
+  try {
+    const [prestamos, empleados] = await Promise.all([
+      apiFetch('/.netlify/functions/prestamos'),
+      apiFetch('/.netlify/functions/empleados'),
+    ]);
+    allPrestamos = prestamos;
+
+    // Populate empleados select
+    const sel = document.getElementById('pr-empleado');
+    empleados.filter(e => e.Activo).forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.Nombre;
+      opt.textContent = e.Nombre;
+      sel.appendChild(opt);
+    });
+
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-pr', 'Error: ' + e.message, 'error');
+  }
+}
+
+function renderTabla() {
+  const tbody = document.getElementById('tabla-prestamos');
+  if (allPrestamos.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">No hay préstamos registrados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = allPrestamos.map(p => {
+    const cuotasRest = p['Cuotas restantes'] || 0;
+    const pendiente = (p['Cuota quincenal'] || 0) * cuotasRest;
+    const estado = p.Estado || 'Activo';
+    const badge = estado === 'Activo' ? 'badge-blue' : estado === 'Pagado' ? 'badge-green' : 'badge-gray';
+    return `<tr>
+      <td><strong>${p.Empleado || '—'}</strong></td>
+      <td class="num">${fmt(p['Monto total'])}</td>
+      <td class="num">${fmt(p['Cuota quincenal'])}</td>
+      <td style="text-align:center">${cuotasRest}</td>
+      <td class="num" style="color:var(--orange)">${fmt(pendiente)}</td>
+      <td><span class="badge ${badge}">${estado}</span></td>
+      <td><button class="btn btn-icon btn-sm" onclick="editarPrestamo('${p.id}')">✏️</button></td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('btn-nuevo').addEventListener('click', () => {
+  document.getElementById('modal-titulo').textContent = 'Nuevo Préstamo';
+  document.getElementById('pr-id').value = '';
+  document.getElementById('pr-empleado').value = '';
+  document.getElementById('pr-monto').value = '';
+  document.getElementById('pr-cuota').value = '';
+  document.getElementById('pr-cuotas').value = '';
+  document.getElementById('pr-estado').value = 'Activo';
+  document.getElementById('alert-form').className = 'alert';
+  document.getElementById('modal-pr').classList.add('open');
+});
+
+function editarPrestamo(id) {
+  const p = allPrestamos.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('modal-titulo').textContent = 'Editar Préstamo';
+  document.getElementById('pr-id').value = p.id;
+  document.getElementById('pr-empleado').value = p.Empleado || '';
+  document.getElementById('pr-monto').value = p['Monto total'] || '';
+  document.getElementById('pr-cuota').value = p['Cuota quincenal'] || '';
+  document.getElementById('pr-cuotas').value = p['Cuotas restantes'] || '';
+  document.getElementById('pr-estado').value = p.Estado || 'Activo';
+  document.getElementById('alert-form').className = 'alert';
+  document.getElementById('modal-pr').classList.add('open');
+}
+
+['close-modal','cancel-pr'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-pr').classList.remove('open');
+  });
+});
+
+document.getElementById('save-pr').addEventListener('click', async () => {
+  const id       = document.getElementById('pr-id').value;
+  const empleado = document.getElementById('pr-empleado').value;
+  const monto    = parseFloat(document.getElementById('pr-monto').value);
+  const cuota    = parseFloat(document.getElementById('pr-cuota').value);
+  const cuotas   = parseInt(document.getElementById('pr-cuotas').value);
+
+  if (!empleado) { showAlert('alert-form', 'Selecciona un empleado', 'error'); return; }
+  if (!monto || monto <= 0) { showAlert('alert-form', 'Ingresa el monto total', 'error'); return; }
+  if (!cuota || cuota <= 0) { showAlert('alert-form', 'Ingresa la cuota quincenal', 'error'); return; }
+
+  const fields = {
+    'Empleado': empleado,
+    'Monto total': monto,
+    'Cuota quincenal': cuota,
+    'Cuotas restantes': cuotas || Math.ceil(monto / cuota),
+    'Estado': document.getElementById('pr-estado').value,
+  };
+
+  const btn = document.getElementById('save-pr');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    if (id) {
+      await apiFetch('/.netlify/functions/prestamos', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
+    } else {
+      await apiFetch('/.netlify/functions/prestamos', { method: 'POST', body: JSON.stringify(fields) });
+    }
+    document.getElementById('modal-pr').classList.remove('open');
+    showAlert('alert-pr', '✅ Préstamo guardado', 'success');
+    const prestamos = await apiFetch('/.netlify/functions/prestamos');
+    allPrestamos = prestamos;
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-form', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
+});
+</script>
+</body>
+</html>
