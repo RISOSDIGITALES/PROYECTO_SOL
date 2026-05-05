@@ -14,9 +14,9 @@ Automatización completa de redes sociales para **Crating Express** (empresa de 
 | Servicio | Uso |
 |---|---|
 | **n8n** | Orquestador de workflows |
-| **Gemini 1.5 Flash** | IA primaria (gratuita) |
-| **Groq llama-3.3-70b** | IA fallback automático |
-| **Airtable** | Base de datos (empresa, servicios, temas, contenidos) |
+| **Gemini 1.5 Flash** | IA primaria RRSS (gratuita) |
+| **Groq llama-3.3-70b** | IA fallback RRSS / IA primaria WhatsApp |
+| **Airtable** | Base de datos (empresa, servicios, temas, contenidos, leads, planilla) |
 | **Google Drive** | Almacenamiento de imágenes exportadas |
 | **Gmail OAuth2** | Emails de aprobación y notificaciones |
 | **Facebook Graph API** | Publicación en FB Page |
@@ -29,13 +29,15 @@ Automatización completa de redes sociales para **Crating Express** (empresa de 
 |---|---|---|
 | `cuenta de Gmail` / `Gmail account` | Gmail OAuth2 | ✅ Configurado (ID: TESHSjzjMCpCxBBk) |
 | `Cuenta de Google Drive` | Google Drive OAuth2 | ✅ Configurado (ID: 5UKwJtdnQeutQ6mg) |
+| Groq (WhatsApp/Voz) | API Key | ✅ Actualizada 2026-05-05 (ID: `jORffbRhRNohHT1B`) — ver credencial en n8n |
+| DeepSeek (fallback WA) | API Key | ⚠️ Sin saldo — cuenta vacía (ID: `YSdODZVNFGSB3Ih9`) |
 
 ## Variables n8n requeridas (`$vars`)
 
 | Variable | Descripción |
 |---|---|
-| `GEMINI_API_KEY` | Google AI Studio — IA primaria |
-| `GROQ_API_KEY` | Groq — IA fallback automático |
+| `GEMINI_API_KEY` | Google AI Studio — IA primaria RRSS |
+| `GROQ_API_KEY` | Groq — IA fallback RRSS / primaria WhatsApp |
 | `AIRTABLE_TOKEN` | Token personal de Airtable |
 | `FB_PAGE_ID` | `1713965015486703` |
 | `FB_ACCESS_TOKEN` | Token larga duración Facebook |
@@ -45,11 +47,14 @@ Automatización completa de redes sociales para **Crating Express** (empresa de 
 
 ## IDs Airtable
 
-- **Base:** `appUOYi54iBfaDcLn`
+- **Base CE Central Hub:** `appUOYi54iBfaDcLn`
 - **Perfil Empresa:** `tblkmBqXrpmGcTNUM`
 - **Servicios:** `tbl2mwlJ149CLlMcd`
 - **Temas Semanales:** `tblgrYurnqCg8uKtG`
 - **Contenidos:** `tbl3ThftAg1Q36roD`
+- **WhatsApp_Leads:** `tblGQXzr1zL1T57lS`
+- **WhatsApp_Config:** `tblj4radGXHN7HBJi` ← nueva tabla (ver sección abajo)
+- **PRODUCTOS Y SERVICIO:** tabla de catálogo de productos CE
 
 ## Flujo principal (`workflow-rrss-n8n.json`)
 
@@ -120,22 +125,27 @@ Para listar workflows: `GET /api/v1/workflows` con header `X-N8N-API-KEY: <token
 - **Display Name:** Crating Express (aprobado)
 - **Workflow n8n:** `CE WhatsApp Engine - Sistema de Conversión` (ID: `eCOX3ogMjToxZsh9`)
 - **Webhook path:** `/whatsapp-ce`
-- **Cotizador app:** https://cratingcotiza.mdarthurdigital.com/cotizar-caja (API pendiente de recibir)
+- **Cotizador app:** https://cratingcotiza.mdarthurdigital.com/cotizar-caja
+- **Cotizador API:** `POST https://cratingcotiza.mdarthurdigital.com/api/cotizar` — integrada ✅
 - **Airtable tabla leads:** `WhatsApp_Leads` en base `appUOYi54iBfaDcLn`
 
-### Flujo actual del bot (v IA híbrida + fallback triple)
+### Flujo actual del bot (v IA híbrida + fallback triple + cotizador)
 ```
-Webhook WhatsApp → Extraer Mensaje → Obtener Config Empresa
-  → Buscar Lead Existente → Obtener Productos (Airtable PRODUCTOS Y SERVICIO)
-  → Preparar Contexto IA (lee Respuesta_1/2/3 + Notas + saludoHora Miami)
+Webhook WhatsApp → Extraer Mensaje → Obtener Config Empresa (PERFIL DE EMPRESA)
+  → Obtener WA Config (WhatsApp_Config) → Buscar Lead Existente
+  → Obtener Productos (Airtable PRODUCTOS Y SERVICIO)
+  → Preparar Contexto IA (promptSistema desde Airtable, hora Miami, historial)
   → Groq llama-3.1-8b-instant (continueOnFail) → ¿Groq OK?
       ✅ Sí → Parsear Respuesta IA
       ❌ No → DeepSeek deepseek-chat (continueOnFail) → ¿DeepSeek OK?
                   ✅ Sí → Parsear Respuesta IA
                   ❌ No → 🆘 Modo Contingencia (rule-based) → Parsear Respuesta IA
-  → ¿Lead Caliente? → Notificar Vendedor (email con dirección si aplica)
+  → ¿Cotizar? (todos_recolectados=true AND dimensiones completas)
+      ✅ Sí → API Cotizador → Enriquecer mensaje con precio + disclaimer
+      ❌ No → continuar sin precio
+  → ¿Lead Caliente? → Notificar Vendedor (emails desde WA_Email_Vendedor en PERFIL DE EMPRESA)
   → Enviar Mensaje WhatsApp
-  → ¿Crear o Actualizar? → POST / PATCH Airtable
+  → ¿Crear o Actualizar? → POST / PATCH Airtable (con Origen, Descripcion_Lead, Nombre_Contacto, Ultima_Actividad)
 ```
 
 **Modo Contingencia** (si ambas IAs fallan): pregunta producto → medidas → fecha usando reglas simples, luego manda email al vendedor y le dice al cliente que será contactado.
@@ -143,7 +153,57 @@ Webhook WhatsApp → Extraer Mensaje → Obtener Config Empresa
 Datos recolectados: producto, medidas, fecha, tipo_cajon, proteccion_extra, direccion
 Campos Airtable: Respuesta_1 (producto), Respuesta_2 (medidas), Respuesta_3 (fecha), Notas (JSON: tipo_cajon, proteccion_extra, direccion)
 
+### WhatsApp_Config — Tabla de configuración externa (tblj4radGXHN7HBJi)
+Permite editar el comportamiento de Alex desde fuera de n8n sin tocar el workflow.
+
+| Campo | Descripción |
+|---|---|
+| `Nombre_Config` | Identificador del registro (ej: "Crating Express — WhatsApp Bot Alex") |
+| `Prompt_Sistema` | System prompt completo con placeholders `{{CATALOGO}}` e `{{INSTRUCCIONES}}` |
+| `Instrucciones_IA` | Instrucciones adicionales que se insertan en `{{INSTRUCCIONES}}` |
+| `WA_Mensaje_Bienvenida` | Mensaje de bienvenida para nuevos leads |
+| `Emails_Notificacion` | Emails extra para alertas (no usado actualmente) |
+| `WA_Palabras_Lead_Caliente` | Keywords para detectar lead listo para cerrar |
+| `WA_FollowUp_24h` | Mensaje de seguimiento a 24h |
+| `WA_FollowUp_72h` | Mensaje de seguimiento a 72h |
+| `WA_FAQs` | Preguntas frecuentes para enriquecer respuestas |
+
+**Record activo:** `recLR54SP26jEroCG` — "Crating Express — WhatsApp Bot Alex"
+
+El nodo `⚙️ Obtener WA Config` lee esta tabla antes de Preparar Contexto IA.
+El `Prompt_Sistema` se usa como base; `{{CATALOGO}}` se reemplaza en el nodo Code con el catálogo real de Airtable.
+
+### Cotizador API — Integración
+- **Endpoint:** `POST https://cratingcotiza.mdarthurdigital.com/api/cotizar`
+- **Body:** `{ "tipo_caja": "cajones_cerrados", "cant": 1, "largo": 100, "ancho": 50, "alto": 60 }`
+- **Response:** `{ "precio_total": 285.00, "dimensiones_calc": { ... } }`
+- **Valores válidos para tipo_caja:** `cajones_cerrados`, `jaulas`, `palets_medida`, `cunas`, `plataformas_contenedor`, `embalaje_ferias`, `mayor`
+- Alex extrae `tipo_caja_api` y `dimensiones` (largo/ancho/alto en cm) durante la conversación
+- La cotización solo se solicita cuando `todos_recolectados === true` y las dimensiones están completas
+- El precio se adjunta al mensaje con un disclaimer: *"Este es un estimado... precio final puede variar..."*
+
+### WhatsApp_Leads — Campos actuales
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `Respuesta_1` | Text | Producto de interés |
+| `Respuesta_2` | Text | Medidas |
+| `Respuesta_3` | Text | Fecha requerida |
+| `Notas` | Text | JSON: tipo_cajon, proteccion_extra, direccion |
+| `Historial_Mensajes` | Text | Conversación completa |
+| `Estado` | Select | Nuevo / Activo / Lead Caliente / Completado / Inactivo |
+| `Origen` | Select | RRSS / Sitio web / QR / IA de ventas / Referido / Desconocido |
+| `Descripcion_Lead` | Multiline | Resumen del lead para el vendedor |
+| `Nombre_Contacto` | Text | Nombre del cliente (si se identifica) |
+| `Ultima_Actividad` | DateTime | Timestamp último mensaje |
+
+### Emails de notificación al vendedor
+- Vienen del campo `WA_Email_Vendedor` en PERFIL DE EMPRESA (`tblkmBqXrpmGcTNUM`)
+- Soporta múltiples emails separados por salto de línea (`\n`)
+- El nodo `📧 Notificar Vendedor` hace `sendTo = emailVendedor.split('\n').join(',')`
+- Fallback: `risosadmi@gmail.com` si el campo está vacío
+
 ### Comportamiento de Alex (IA)
+- **Prompt vive en:** Airtable `WhatsApp_Config` → campo `Prompt_Sistema` (editable sin tocar n8n)
 - **Idioma**: detecta el idioma del cliente y responde en el mismo (ES o EN)
 - Saludo con hora Miami (UTC-4): buenos días 6-11, buenas tardes 12-18, buenas noches 19-5
 - Orden de recopilación: producto → medidas (si no sabe → pregunta modelo → busca specs) → fecha → tipo_cajón (pregunta preferencia primero) → protección extra (aclarar que es costo adicional) → dirección (solo si acepta visita)
@@ -152,8 +212,8 @@ Campos Airtable: Respuesta_1 (producto), Respuesta_2 (medidas), Respuesta_3 (fec
 - Lee el mensaje del cliente antes de avanzar al siguiente dato
 - Al dar el link del cotizador: mencionar que pueden enviar foto por WhatsApp al +1 786 558-6007
 - Catálogo real de Airtable: Cajones cerrados, Jaulas, Palets a medida, Cunas, Plataformas en contenedor, Embalaje para ferias, Al por mayor
-- Groq credential ID en n8n: `jORffbRhRNohHT1B`
-- DeepSeek API key hardcodeada: `sk-035f6eddd6fd4602b7d91c6e9ff03dfe` (credential n8n ID: `YSdODZVNFGSB3Ih9`)
+- Groq credential ID en n8n: `jORffbRhRNohHT1B` — key actualizada 2026-05-05 (ver en n8n Settings → Credentials)
+- DeepSeek API key: `sk-035f6eddd6fd4602b7d91c6e9ff03dfe` (credential n8n ID: `YSdODZVNFGSB3Ih9`) — **⚠️ sin saldo**
 
 ### Info de empresa que Alex conoce
 - Servicio mismo día disponible — sin costo adicional por urgencia
@@ -164,8 +224,8 @@ Campos Airtable: Respuesta_1 (producto), Respuesta_2 (medidas), Respuesta_3 (fec
 
 ### Límites de APIs
 - Groq llama-3.1-8b-instant: 500,000 tokens/día (plan gratuito) — se resetea a medianoche Miami
-- DeepSeek deepseek-chat: cuota generosa (plan gratuito, muy barato si se paga) — fallback secundario
-- Si ambas se agotan → Modo Contingencia activa automáticamente (recopila datos básicos + email al vendedor)
+- DeepSeek deepseek-chat: ⚠️ **sin saldo** — si Groq falla → Contingencia activa directamente
+- Si Groq se agota → Modo Contingencia activa automáticamente (recopila datos básicos + email al vendedor)
 
 ## VAPI — Alex Voz
 
@@ -198,10 +258,12 @@ Tag `Alex` (ID: `2CrVJWitAB77MgTJ`) aplicado a los 4 workflows del agente:
 | Sin recomendación de tipo de cajón | Recomienda tipo específico del catálogo |
 
 ### Pendiente / próximas mejoras
-- [ ] Integrar API del cotizador cuando esté disponible (https://cratingcotiza.mdarthurdigital.com/cotizar-caja)
+- [x] ~~Integrar API del cotizador~~ ✅ Integrada — `POST /api/cotizar`
 - [ ] Activar LinkedIn en workflow RRSS cuando se tenga token
 - [ ] Probar VAPI → WhatsApp Handoff con llamada real (bloqueado por reinicio n8n)
 - [ ] Probar planilla Nicaragua completa (bloqueado por reinicio n8n)
+- [ ] Recargar saldo DeepSeek o reemplazar con otro fallback
+- [ ] Confirmar aportaciones + marcador de huella en Planilla Nicaragua
 
 ## Planilla Nicaragua
 
@@ -209,11 +271,11 @@ Sistema de nómina quincenal para empresa en Managua, Nicaragua.
 - **Frecuencia:** Quincenal — día 15 y último día del mes
 - **Empleados:** 8 activos (tabla dinámica)
 - **IR:** C$0 (todos por debajo del umbral)
-- **INSS empleado:** 7%
+- **INSS empleado:** 7% — base de cálculo configurable por empleado (ver INSS_Base)
 - **Adelantos:** límite C$2,000 — se descuenta en la quincena indicada
 - **Préstamos:** autorizados por Don Marc — cuota quincenal acordada caso por caso
 - **Pagos:** siempre en efectivo
-- **Frontend:** Netlify (cuenta propia)
+- **Frontend:** ✅ Desplegado en Netlify — `planilla-nicaragua.netlify.app`
 - **Pendiente:** definición de "aportaciones" y destino del marcador de huella
 
 ### Airtable — Base Planilla Nicaragua
@@ -230,15 +292,34 @@ Sistema de nómina quincenal para empresa en Managua, Nicaragua.
 | Planillas | `tblZj3F2T5aoSKGEV` |
 | Detalle Planilla | `tblxmAaz0k0Bv6r1y` |
 
+### Campo INSS_Base por empleado
+- **Campo Airtable:** `INSS_Base` (ID: `fldTCQ7uo35Enx7Vl`) — singleSelect
+- **Valores:** `Salario Completo` (default) | `Salario Mínimo`
+- **Lógica en motor de cálculo:**
+  - Si `Tipo_Planilla = Sin Seguro` → INSS = 0
+  - Si `INSS_Base = Salario Mínimo` → INSS = (7000/2) × 7% = C$245 fijos
+  - Si `INSS_Base = Salario Completo` → INSS = (salario_bruto/2) × 7%
+- **Salario mínimo:** `C$7,000` mensual (hipotético — actualizar cuando se confirme valor real)
+- **Empleados cargados:**
+  - Sol (Solange Torrez): Salario Mínimo, C$12,000 bruto
+  - María García: Salario Completo (prueba)
+  - Ana Martínez: Salario Mínimo (prueba)
+  - Roberto / Carlos: Sin Seguro (campo en blanco)
+
 ### Motor de cálculo n8n
 - **Workflow:** `🧮 Planilla Nicaragua — Motor de Cálculo` (ID: `jkFucDKb7JSe32ze`)
 - **Webhook path:** `planillanica` (POST)
 - **Nodos:** 14 — lee Empleados + Préstamos + Adelantos + Extras → calcula → guarda en Planillas + Detalle Planilla → actualiza estados
-- **Lógica:** salario quincenal = bruto/2, INSS 7%, IR C$0, deduce préstamos y adelantos, suma extras
+- **Lógica:** salario quincenal = bruto/2, INSS según INSS_Base, IR C$0, deduce préstamos y adelantos, suma extras
 - **Estado:** ⚠️ Bloqueado — n8n necesita reinicio del servidor para registrar webhooks nuevos en memoria. Una vez reiniciado queda funcionando solo.
 
-### Empleada de prueba cargada
-- Solange Carolina Torrez Perez | Ejecutiva Principal Risos | C$12,000 | Ingreso: 12/01/2026
+### Netlify — Planilla Web App
+- **URL:** https://planilla-nicaragua.netlify.app
+- **Repo:** `risosdigitales/rrss-automatizaci-n` → carpeta `planilla-web/`
+- **Build:** Base dir: `planilla-web`, Publish: `.`, Functions: `netlify/functions`
+- **Auth:** Netlify Identity (invite-only, confirmación por email activa)
+- **Env var pendiente:** `N8N_PLANILLA_WEBHOOK` = URL real del webhook (actualizar tras reinicio n8n)
+- **Estado:** ✅ App desplegada, Identity activo — pendiente invitar usuarios reales y activar webhook
 
 ### Bug conocido — n8n webhook registration
 Webhooks creados/modificados vía API no se registran en memoria hasta que n8n reinicia.
@@ -246,12 +327,15 @@ El toggle desde la UI actualiza la DB pero NO la memoria del servidor.
 **Fix:** `sudo systemctl restart n8n` (pedir a quien tiene acceso al servidor).
 Afecta también: `📞→💬 VAPI → WhatsApp Handoff` (ID: `jfoJDSidx1sJlOrr`).
 
-### Siguiente paso
-1. ~~Meter empleados reales en Airtable~~ ✅ Sol cargada como prueba
-2. Confirmar: aportaciones + marcador de huella (pendiente consulta)
-3. ~~Construir motor de cálculo en n8n~~ ✅ Listo, esperando reinicio
-4. Reinicio de n8n para activar webhooks → primera prueba del motor
-5. Construir web app en Netlify
+### Siguiente paso Planilla
+1. ~~Meter empleados reales en Airtable~~ ⏳ Sol cargada como prueba, faltan 7 reales
+2. ~~Construir motor de cálculo en n8n~~ ✅ Listo
+3. ~~Construir web app en Netlify~~ ✅ Desplegada
+4. **BLOQUEADO:** Reinicio de n8n → activa webhook planilla + VAPI handoff
+5. Actualizar `N8N_PLANILLA_WEBHOOK` en Netlify tras reinicio
+6. Confirmar: aportaciones + marcador de huella
+7. Ingresar empleados reales, eliminar registros de prueba (María García, Carlos López, Ana Martínez, Roberto Sánchez)
+8. Invitar usuarios reales a Netlify Identity
 
 ## Error conocido
 
@@ -259,7 +343,7 @@ Afecta también: `📞→💬 VAPI → WhatsApp Handoff` (ID: `jfoJDSidx1sJlOrr`
 
 ## Historial de cambios relevantes
 
-1. OpenAI → Gemini 1.5 Flash (gratuito) como IA principal
+1. OpenAI → Gemini 1.5 Flash (gratuito) como IA principal RRSS
 2. Gemini + Grok (xAI) como fallback → reemplazado por Gemini + **Groq** (más estable)
 3. Gmail: migrado de `emailSend` a `gmail` OAuth2
 4. Airtable: variables `$vars.AIRTABLE_TOKEN` en lugar de token hardcodeado
@@ -268,3 +352,14 @@ Afecta también: `📞→💬 VAPI → WhatsApp Handoff` (ID: `jfoJDSidx1sJlOrr`
 7. Groq model: llama-3.3-70b → **llama-3.1-8b-instant** (500k TPD gratuito)
 8. Tag `Alex` creado en n8n y aplicado a los 4 workflows del agente
 9. Base Airtable `Planilla Nicaragua` creada con 6 tablas — motor de cálculo listo, pendiente reinicio n8n
+10. **Prompt de Alex externalizado** a Airtable `WhatsApp_Config` — editable sin tocar n8n; usa placeholders `{{CATALOGO}}` e `{{INSTRUCCIONES}}`
+11. **Nueva tabla `WhatsApp_Config`** (`tblj4radGXHN7HBJi`) — centraliza configuración del bot WA
+12. **WhatsApp_Leads**: nuevos campos Origen, Descripcion_Lead, Nombre_Contacto, Ultima_Actividad
+13. **Cotizador API integrada** en flujo WhatsApp — `POST /api/cotizar` devuelve precio estimado con disclaimer
+14. **INSS_Base** por empleado en Planilla Nicaragua — algunos calculan sobre salario mínimo, otros sobre salario completo
+15. **Planilla web app desplegada** en Netlify (`planilla-nicaragua.netlify.app`) con Netlify Identity invite-only
+16. **Bug corregido:** conexiones "Gemini: Fallback IA" → renombradas a "DeepSeek: Fallback IA" en workflow WA (causaba que Alex no respondiera)
+17. **Bug corregido:** `promptSistema` se calculaba antes de `catalogoProductos` → ReferenceError; movido al lugar correcto en Code node
+18. **Bug corregido (echo):** lead recN4rjYTSXsM3VeF tenía datos de prueba viejos que confundían a la IA; reseteado
+19. **Groq API key actualizada** (2026-05-05) — credential `jORffbRhRNohHT1B` con nueva key
+20. **Emails de notificación**: leen de `WA_Email_Vendedor` en PERFIL DE EMPRESA, soportan múltiples emails separados por `\n`
