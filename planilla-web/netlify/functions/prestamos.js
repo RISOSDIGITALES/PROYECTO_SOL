@@ -8,7 +8,7 @@ exports.handler = async (event, context) => {
   try {
     if (method === 'GET') {
       const records = await atAll('prestamos', {
-        sort: '[{field: "Empleado", direction: "asc"}]',
+        sort: [{ field: 'Empleado', direction: 'asc' }],
       });
       return resp(200, records.map(r => ({ id: r.id, ...r.fields })));
     }
