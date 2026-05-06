@@ -281,7 +281,7 @@ Sistema de nómina quincenal para empresa en Managua, Nicaragua.
 ### Airtable — Base Planilla Nicaragua
 - **Base ID:** `appApxnaZKJKDUBR6`
 - **Workspace:** `wsphYNKZSHpRek4EJ` (mismo que CE Central Hub)
-- **Token:** mismo que CE Central Hub (ver credencial n8n `Airtable` o buscar en workflows existentes)
+- **Token:** ver Netlify → Planilla-nicaragua → Variables ambientales → `AIRTABLE_TOKEN`
 
 | Tabla | ID |
 |---|---|
