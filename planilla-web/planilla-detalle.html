@@ -78,19 +78,25 @@
 const { requireAuth, initLayout, apiFetch, fmt, showAlert } = AppAuth;
 requireAuth();
 
-netlifyIdentity.on('init', user => {
-  if (!user) return;
+function _initPage() {
   initLayout();
-
   const params = new URLSearchParams(window.location.search);
   const periodo = params.get('periodo') || '';
   const tipo    = params.get('tipo') || '';
-
   document.getElementById('titulo-planilla').textContent = periodo || 'Detalle';
   document.getElementById('sub-planilla').textContent = tipo ? `Planilla ${tipo}` : 'Planilla';
-
   loadDetalle(periodo, tipo);
-});
+}
+
+const _currentUser = netlifyIdentity.currentUser();
+if (_currentUser) {
+  _initPage();
+} else {
+  netlifyIdentity.on('init', user => {
+    if (!user) return;
+    _initPage();
+  });
+}
 
 async function loadDetalle(periodo, tipo) {
   try {
