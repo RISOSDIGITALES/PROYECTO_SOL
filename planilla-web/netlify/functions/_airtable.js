@@ -16,10 +16,18 @@ async function atFetch(table, opts = {}) {
   let url = `https://api.airtable.com/v0/${BASE}/${TABLES[table]}`;
 
   if (method === 'GET' && Object.keys(params).length) {
-    const qs = Object.entries(params)
-      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
-      .join('&');
-    url += '?' + qs;
+    const parts = [];
+    for (const [k, v] of Object.entries(params)) {
+      if (k === 'sort' && Array.isArray(v)) {
+        v.forEach((s, i) => {
+          parts.push(`sort%5B${i}%5D%5Bfield%5D=${encodeURIComponent(s.field)}`);
+          parts.push(`sort%5B${i}%5D%5Bdirection%5D=${encodeURIComponent(s.direction)}`);
+        });
+      } else {
+        parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(v)}`);
+      }
+    }
+    url += '?' + parts.join('&');
   }
 
   const res = await fetch(url, {

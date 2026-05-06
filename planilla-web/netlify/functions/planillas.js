@@ -5,7 +5,7 @@ exports.handler = async (event, context) => {
 
   try {
     const records = await atAll('planillas', {
-      sort: '[{field: "Fecha de pago", direction: "desc"}]',
+      sort: [{ field: 'Fecha de pago', direction: 'desc' }],
     });
     return resp(200, records.map(r => ({ id: r.id, ...r.fields })));
   } catch (e) {
