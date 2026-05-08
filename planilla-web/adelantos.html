@@ -36,10 +36,10 @@
 
       <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
         <div class="tabs" style="margin-bottom:0">
-          <button class="tab active" data-estado="Pendiente">Pendientes</button>
-          <button class="tab" data-estado="Suspendido">Suspendidos</button>
-          <button class="tab" data-estado="Descontado">Descontados</button>
-          <button class="tab" data-estado="todos">Todos</button>
+          <button class="tab active" data-filtro="pendiente">Pendientes</button>
+          <button class="tab" data-filtro="pausado">Pausados</button>
+          <button class="tab" data-filtro="Descontado">Descontados</button>
+          <button class="tab" data-filtro="todos">Todos</button>
         </div>
         <select id="filtro-empleado" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
           <option value="">Todos los empleados</option>
@@ -105,7 +105,7 @@
 requireAuth();
 
 let allAdelantos = [];
-let filtroEstado = 'Pendiente';
+let filtroEstado = 'pendiente';
 let filtroEmpleado = '';
 
 const _currentUser = netlifyIdentity.currentUser();
@@ -154,7 +154,9 @@ function fmtFecha(iso) {
 
 function renderTabla() {
   let lista = allAdelantos;
-  if (filtroEstado !== 'todos') lista = lista.filter(a => (a.Estado || 'Pendiente') === filtroEstado);
+  if (filtroEstado === 'pendiente') lista = lista.filter(a => (a.Estado || 'Pendiente') === 'Pendiente' && !a.Pausado);
+  else if (filtroEstado === 'pausado') lista = lista.filter(a => !!a.Pausado);
+  else if (filtroEstado !== 'todos') lista = lista.filter(a => (a.Estado || 'Pendiente') === filtroEstado);
   if (filtroEmpleado) lista = lista.filter(a => a.Empleado === filtroEmpleado);
 
   const tbody = document.getElementById('tabla-adelantos');
@@ -165,15 +167,17 @@ function renderTabla() {
 
   tbody.innerHTML = lista.map(a => {
     const estado = a.Estado || 'Pendiente';
-    const badge = estado === 'Pendiente' ? 'badge-orange'
-                : estado === 'Suspendido' ? 'badge-gray'
-                : 'badge-green';
+    const pausado = !!a.Pausado;
+    const badge = estado === 'Descontado' ? 'badge-green'
+                : pausado ? 'badge-gray'
+                : 'badge-orange';
+    const badgeLabel = estado === 'Descontado' ? 'Descontado' : pausado ? 'Pausado' : 'Pendiente';
     const creado = fmtFecha(a._createdTime);
     const acciones = [];
-    if (estado === 'Pendiente') {
+    if (estado === 'Pendiente' && !pausado) {
       acciones.push(`<button class="btn btn-icon btn-sm" title="Editar" onclick="editarAdelanto('${a.id}')">✏️</button>`);
       acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer" onclick="pausar('${a.id}')">Pausar</button>`);
-    } else if (estado === 'Suspendido') {
+    } else if (pausado) {
       acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer" onclick="reactivar('${a.id}')">Reactivar</button>`);
     }
     return `<tr>
@@ -181,7 +185,7 @@ function renderTabla() {
       <td class="num">${fmt(a.Monto)}</td>
       <td>${a['Descontar en quincena'] || '—'}</td>
       <td style="color:var(--text-muted);font-size:12px">${creado}</td>
-      <td><span class="badge ${badge}">${estado}</span></td>
+      <td><span class="badge ${badge}">${badgeLabel}</span></td>
       <td style="display:flex;gap:4px;flex-wrap:wrap">${acciones.join('')}</td>
     </tr>`;
   }).join('');
@@ -191,7 +195,7 @@ document.querySelectorAll('.tab').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
-    filtroEstado = btn.dataset.estado;
+    filtroEstado = btn.dataset.filtro;
     renderTabla();
   });
 });
@@ -205,12 +209,12 @@ async function pausar(id) {
   try {
     await apiFetch('/.netlify/functions/adelantos', {
       method: 'PATCH',
-      body: JSON.stringify({ id, Estado: 'Suspendido' }),
+      body: JSON.stringify({ id, Pausado: true }),
     });
     const idx = allAdelantos.findIndex(x => x.id === id);
-    if (idx >= 0) allAdelantos[idx].Estado = 'Suspendido';
+    if (idx >= 0) allAdelantos[idx].Pausado = true;
     renderTabla();
-    showAlert('alert-adel', 'Adelanto pausado — no se descontará en la próxima quincena', 'success');
+    showAlert('alert-adel', 'Adelanto pausado — no se descontará aunque coincida la quincena', 'success');
   } catch (e) {
     showAlert('alert-adel', 'Error: ' + e.message, 'error');
   }
@@ -220,10 +224,10 @@ async function reactivar(id) {
   try {
     await apiFetch('/.netlify/functions/adelantos', {
       method: 'PATCH',
-      body: JSON.stringify({ id, Estado: 'Pendiente' }),
+      body: JSON.stringify({ id, Pausado: false }),
     });
     const idx = allAdelantos.findIndex(x => x.id === id);
-    if (idx >= 0) allAdelantos[idx].Estado = 'Pendiente';
+    if (idx >= 0) allAdelantos[idx].Pausado = false;
     renderTabla();
     showAlert('alert-adel', 'Adelanto reactivado — se descontará en la quincena indicada', 'success');
   } catch (e) {

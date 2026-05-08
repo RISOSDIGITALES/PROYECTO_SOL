@@ -19,10 +19,10 @@ exports.handler = async (event, context) => {
 
     // 2. Cargar datos del período en paralelo
     const [adelantos, prestamos, extras, deducciones] = await Promise.all([
-      atAll('adelantos', { filterByFormula: `AND({Descontar en quincena}="${periodo}",{Estado}="Pendiente",NOT({Estado}="Suspendido"))` }),
+      atAll('adelantos', { filterByFormula: `AND({Descontar en quincena}="${periodo}",{Estado}="Pendiente",NOT({Pausado}=TRUE()))` }),
       atAll('prestamos', { filterByFormula: '{Estado}="Activo"' }),
       atAll('extras', { filterByFormula: `{Pagar en quincena}="${periodo}"` }),
-      atAll('deducciones', { filterByFormula: `AND({Descontar en quincena}="${periodo}",{Estado}="Pendiente",NOT({Estado}="Suspendido"))` }),
+      atAll('deducciones', { filterByFormula: `AND({Descontar en quincena}="${periodo}",{Estado}="Pendiente",NOT({Pausado}=TRUE()))` }),
     ]);
 
     // Indexar por empleado
