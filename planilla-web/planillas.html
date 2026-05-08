@@ -101,22 +101,25 @@ function renderTabla() {
   }
 
   tbody.innerHTML = lista.map(p => {
-    const tipo = p.Tipo || '—';
+    const tipo = p.Tipo || '';
     const tipoBadge = tipo === 'Con Seguro' ? 'badge-blue' : tipo === 'Sin Seguro' ? 'badge-orange' : 'badge-gray';
     const estado = p.Estado || 'Borrador';
     const estadoBadge = estado === 'Pagada' ? 'badge-green' : estado === 'Borrador' ? 'badge-gray' : 'badge-blue';
-    const periodo = encodeURIComponent(p['Período'] || '');
+    const periodoVal = p['Período'] || '';
+    const periodo = encodeURIComponent(periodoVal);
     const tipoEnc = encodeURIComponent(tipo);
+    // Calcular fecha de pago desde el período si no está definida
+    const fechaPago = p['Fecha de pago'] || periodoVal;
     return `<tr>
-      <td><strong>${p['Período'] || '—'}</strong></td>
-      <td><span class="badge ${tipoBadge}">${tipo}</span></td>
-      <td>${p['Fecha de pago'] || '—'}</td>
+      <td><strong>${periodoVal || '—'}</strong></td>
+      <td>${tipo ? `<span class="badge ${tipoBadge}">${tipo}</span>` : '—'}</td>
+      <td>${fechaPago || '—'}</td>
       <td style="text-align:center">${p['Total empleados'] || '—'}</td>
       <td class="num">${fmt(p['Total bruto'])}</td>
       <td class="num" style="color:var(--red)">${fmt(p['Total deducciones'])}</td>
       <td class="num"><strong>${fmt(p['Total neto'])}</strong></td>
       <td><span class="badge ${estadoBadge}">${estado}</span></td>
-      <td><a href="/planilla-detalle.html?periodo=${periodo}&tipo=${tipoEnc}" class="btn btn-ghost btn-sm">Ver detalle</a></td>
+      <td><a href="/planilla-detalle.html?periodo=${periodo}" class="btn btn-ghost btn-sm">Ver detalle</a></td>
     </tr>`;
   }).join('');
 }
