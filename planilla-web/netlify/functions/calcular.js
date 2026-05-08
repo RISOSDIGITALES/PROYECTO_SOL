@@ -19,10 +19,10 @@ exports.handler = async (event, context) => {
 
     // 2. Cargar datos del período en paralelo
     const [adelantos, prestamos, extras, deducciones] = await Promise.all([
-      atAll('adelantos', { filterByFormula: `AND({Descontar en quincena}="${periodo}",{Estado}="Pendiente")` }),
+      atAll('adelantos', { filterByFormula: `AND({Descontar en quincena}="${periodo}",{Estado}="Pendiente",NOT({Estado}="Suspendido"))` }),
       atAll('prestamos', { filterByFormula: '{Estado}="Activo"' }),
       atAll('extras', { filterByFormula: `{Pagar en quincena}="${periodo}"` }),
-      atAll('deducciones', { filterByFormula: `AND({Descontar en quincena}="${periodo}",{Estado}="Pendiente")` }),
+      atAll('deducciones', { filterByFormula: `AND({Descontar en quincena}="${periodo}",{Estado}="Pendiente",NOT({Estado}="Suspendido"))` }),
     ]);
 
     // Indexar por empleado
@@ -86,7 +86,12 @@ exports.handler = async (event, context) => {
         nombre, tipoPlanilla, salarioQuincenal, inss, ir,
         descAdelanto, descPrestamo, totalExtras, descDed, descTotal, neto,
         adelantosIds: empAdel.map(r => r.id),
-        prestamosData: empPrest.map(r => ({ id: r.id, cuotasRest: r.fields['Cuotas restantes'] || 0 })),
+        prestamosData: empPrest.map(r => ({
+        id: r.id,
+        cuotasRest: r.fields['Cuotas restantes'] || 0,
+        cuota: r.fields['Cuota quincenal'] || 0,
+        historial: r.fields['Historial_Pagos'] || '',
+      })),
         deduccionesIds: empDed.map(r => r.id),
       });
     }
@@ -138,13 +143,19 @@ exports.handler = async (event, context) => {
     }
 
     // 8. Decrementar cuotas restantes de préstamos
-    const prestUpd = detalles.flatMap(d => d.prestamosData.map(p => ({
-      id: p.id,
-      fields: {
-        'Cuotas restantes': Math.max(0, p.cuotasRest - 1),
-        'Estado': p.cuotasRest - 1 <= 0 ? 'Pagado' : 'Activo',
-      },
-    })));
+    const prestUpd = detalles.flatMap(d => d.prestamosData.map(p => {
+      const nuevasCuotas = Math.max(0, p.cuotasRest - 1);
+      const entry = `${periodo} | C$${p.cuota.toFixed(2)} | Descuento quincena`;
+      const nuevoHistorial = p.historial ? `${p.historial}\n${entry}` : entry;
+      return {
+        id: p.id,
+        fields: {
+          'Cuotas restantes': nuevasCuotas,
+          'Estado': nuevasCuotas <= 0 ? 'Pagado' : 'Activo',
+          'Historial_Pagos': nuevoHistorial,
+        },
+      };
+    }));
     for (let i = 0; i < prestUpd.length; i += 10) {
       await atFetch('prestamos', { method: 'PATCH', body: { records: prestUpd.slice(i, i + 10) } });
     }

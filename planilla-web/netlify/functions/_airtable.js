@@ -52,7 +52,10 @@ async function atAll(table, params = {}) {
   do {
     const p = offset ? { ...params, offset } : params;
     const data = await atFetch(table, { params: p });
-    records = records.concat(data.records || []);
+    records = records.concat((data.records || []).map(r => ({
+      ...r,
+      fields: { ...r.fields, _createdTime: r.createdTime },
+    })));
     offset = data.offset;
   } while (offset);
   return records;

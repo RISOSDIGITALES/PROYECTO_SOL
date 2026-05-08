@@ -33,6 +33,18 @@
     </div>
     <div class="content">
       <div id="alert-pr" class="alert"></div>
+
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <div class="tabs" style="margin-bottom:0">
+          <button class="tab active" data-estado="todos">Todos</button>
+          <button class="tab" data-estado="Activo">Activos</button>
+          <button class="tab" data-estado="Pagado">Pagados</button>
+        </div>
+        <select id="filtro-empleado" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
+          <option value="">Todos los empleados</option>
+        </select>
+      </div>
+
       <div class="table-wrap">
         <table>
           <thead>
@@ -40,14 +52,15 @@
               <th>Empleado</th>
               <th>Monto total</th>
               <th>Cuota quincenal</th>
-              <th>Cuotas restantes</th>
+              <th>Cuotas rest.</th>
               <th>Pendiente</th>
+              <th>Pagos</th>
               <th>Estado</th>
               <th></th>
             </tr>
           </thead>
           <tbody id="tabla-prestamos">
-            <tr class="loading-row"><td colspan="7"><div class="spinner"></div></td></tr>
+            <tr class="loading-row"><td colspan="8"><div class="spinner"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -101,11 +114,64 @@
   </div>
 </div>
 
+<!-- MODAL PAGO DIRECTO -->
+<div class="overlay" id="modal-pago">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3>Registrar pago directo</h3>
+      <button class="modal-close" id="close-pago">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-pago" class="alert"></div>
+      <input type="hidden" id="pago-prestamo-id" />
+      <p id="pago-prestamo-info" style="margin:0 0 12px;font-size:13px;color:var(--text-muted)"></p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fecha del pago *</label>
+          <input type="date" id="pago-fecha" />
+        </div>
+        <div class="form-group">
+          <label>Monto (C$) *</label>
+          <input type="number" id="pago-monto" placeholder="0.00" step="0.01" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notas (opcional)</label>
+        <input type="text" id="pago-notas" placeholder="Ej: Efectivo entregado a caja" />
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+        <input type="checkbox" id="pago-decrementar" checked style="cursor:pointer" />
+        <label for="pago-decrementar" style="font-size:13px;cursor:pointer;color:var(--text-muted)">Descontar una cuota del conteo restante</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-pago">Cancelar</button>
+      <button class="btn btn-primary" id="save-pago">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HISTORIAL -->
+<div class="overlay" id="modal-historial">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3 id="historial-titulo">Historial de pagos</h3>
+      <button class="modal-close" id="close-historial">×</button>
+    </div>
+    <div class="modal-body" id="historial-body" style="max-height:400px;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-historial">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <script src="/assets/js/auth.js"></script>
 <script>
 requireAuth();
 
 let allPrestamos = [];
+let filtroEstado = 'todos';
+let filtroEmpleado = '';
 
 const _currentUser = netlifyIdentity.currentUser();
 if (_currentUser) {
@@ -127,13 +193,16 @@ async function loadAll() {
     ]);
     allPrestamos = prestamos;
 
-    // Populate empleados select
+    const activos = empleados.filter(e => e.Activo);
     const sel = document.getElementById('pr-empleado');
-    empleados.filter(e => e.Activo).forEach(e => {
-      const opt = document.createElement('option');
-      opt.value = e.Nombre;
-      opt.textContent = e.Nombre;
-      sel.appendChild(opt);
+    const filtroSel = document.getElementById('filtro-empleado');
+    activos.forEach(e => {
+      [sel, filtroSel].forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = e.Nombre;
+        opt.textContent = e.Nombre;
+        s.appendChild(opt);
+      });
     });
 
     renderTabla();
@@ -142,29 +211,160 @@ async function loadAll() {
   }
 }
 
+function contarPagos(historial) {
+  if (!historial) return 0;
+  return historial.trim().split('\n').filter(l => l.trim()).length;
+}
+
 function renderTabla() {
+  let lista = allPrestamos;
+  if (filtroEstado !== 'todos') lista = lista.filter(p => (p.Estado || 'Activo') === filtroEstado);
+  if (filtroEmpleado) lista = lista.filter(p => p.Empleado === filtroEmpleado);
+
   const tbody = document.getElementById('tabla-prestamos');
-  if (allPrestamos.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">No hay préstamos registrados</td></tr>';
+  if (lista.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">No hay préstamos registrados</td></tr>';
     return;
   }
-  tbody.innerHTML = allPrestamos.map(p => {
+  tbody.innerHTML = lista.map(p => {
     const cuotasRest = p['Cuotas restantes'] || 0;
     const pendiente = (p['Cuota quincenal'] || 0) * cuotasRest;
     const estado = p.Estado || 'Activo';
     const badge = estado === 'Activo' ? 'badge-blue' : estado === 'Pagado' ? 'badge-green' : 'badge-gray';
+    const nPagos = contarPagos(p.Historial_Pagos);
     return `<tr>
       <td><strong>${p.Empleado || '—'}</strong></td>
       <td class="num">${fmt(p['Monto total'])}</td>
       <td class="num">${fmt(p['Cuota quincenal'])}</td>
       <td style="text-align:center">${cuotasRest}</td>
       <td class="num" style="color:var(--orange)">${fmt(pendiente)}</td>
+      <td style="text-align:center">
+        <button onclick="verHistorial('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--primary);font-size:12px;text-decoration:underline">
+          ${nPagos} pago${nPagos !== 1 ? 's' : ''}
+        </button>
+      </td>
       <td><span class="badge ${badge}">${estado}</span></td>
-      <td><button class="btn btn-icon btn-sm" onclick="editarPrestamo('${p.id}')">✏️</button></td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="btn btn-icon btn-sm" title="Editar" onclick="editarPrestamo('${p.id}')">✏️</button>
+        ${estado === 'Activo' ? `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text)" onclick="abrirPago('${p.id}')">+ Pago</button>` : ''}
+      </td>
     </tr>`;
   }).join('');
 }
 
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    filtroEstado = btn.dataset.estado;
+    renderTabla();
+  });
+});
+
+document.getElementById('filtro-empleado').addEventListener('change', e => {
+  filtroEmpleado = e.target.value;
+  renderTabla();
+});
+
+// Historial
+function verHistorial(id) {
+  const p = allPrestamos.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('historial-titulo').textContent = `Historial — ${p.Empleado}`;
+
+  const pagos = (p.Historial_Pagos || '').trim().split('\n').filter(l => l.trim());
+  if (pagos.length === 0) {
+    document.getElementById('historial-body').innerHTML =
+      '<p style="color:var(--text-muted);text-align:center;padding:24px 0">No hay pagos registrados aún.<br><small>Los pagos aparecen aquí al generar planilla o al registrar un pago directo.</small></p>';
+  } else {
+    const rows = [...pagos].reverse().map(linea => {
+      const [fecha, monto, tipo, notas] = linea.split('|').map(s => s.trim());
+      const esPagoDirecto = (tipo || '').toLowerCase().includes('directo');
+      return `<div style="display:grid;grid-template-columns:90px 1fr auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--text-muted)">${fecha || '—'}</div>
+        <div>
+          <div style="font-weight:600">${monto || '—'}</div>
+          ${notas ? `<div style="font-size:12px;color:var(--text-muted)">${notas}</div>` : ''}
+        </div>
+        <span class="badge ${esPagoDirecto ? 'badge-blue' : 'badge-gray'}">${esPagoDirecto ? 'Pago directo' : 'Quincena'}</span>
+      </div>`;
+    }).join('');
+    document.getElementById('historial-body').innerHTML =
+      `<div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">${pagos.length} pago(s) — más reciente primero</div>${rows}`;
+  }
+  document.getElementById('modal-historial').classList.add('open');
+}
+
+['close-historial','cancel-historial'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-historial').classList.remove('open');
+  });
+});
+
+// Pago directo
+function abrirPago(id) {
+  const p = allPrestamos.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('pago-prestamo-id').value = id;
+  document.getElementById('pago-prestamo-info').textContent =
+    `${p.Empleado} · cuota C$${fmt(p['Cuota quincenal'])} · ${p['Cuotas restantes'] || 0} cuotas restantes`;
+  document.getElementById('pago-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('pago-monto').value = p['Cuota quincenal'] || '';
+  document.getElementById('pago-notas').value = '';
+  document.getElementById('pago-decrementar').checked = true;
+  document.getElementById('alert-pago').className = 'alert';
+  document.getElementById('modal-pago').classList.add('open');
+}
+
+['close-pago','cancel-pago'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-pago').classList.remove('open');
+  });
+});
+
+document.getElementById('save-pago').addEventListener('click', async () => {
+  const prestamoId  = document.getElementById('pago-prestamo-id').value;
+  const fecha       = document.getElementById('pago-fecha').value;
+  const monto       = parseFloat(document.getElementById('pago-monto').value);
+  const notas       = document.getElementById('pago-notas').value.trim();
+  const decrementar = document.getElementById('pago-decrementar').checked;
+
+  if (!fecha) { showAlert('alert-pago', 'Indica la fecha del pago', 'error'); return; }
+  if (!monto || monto <= 0) { showAlert('alert-pago', 'Ingresa el monto', 'error'); return; }
+
+  const p = allPrestamos.find(x => x.id === prestamoId);
+  if (!p) return;
+
+  const entry = `${fecha} | C$${monto.toFixed(2)} | Pago directo${notas ? ' | ' + notas : ''}`;
+  const historialActual = p.Historial_Pagos || '';
+  const nuevoHistorial  = historialActual ? `${historialActual}\n${entry}` : entry;
+
+  const fields = { 'Historial_Pagos': nuevoHistorial };
+  if (decrementar) {
+    const nuevasCuotas = Math.max(0, (p['Cuotas restantes'] || 0) - 1);
+    fields['Cuotas restantes'] = nuevasCuotas;
+    if (nuevasCuotas <= 0) fields['Estado'] = 'Pagado';
+  }
+
+  const btn = document.getElementById('save-pago');
+  btn.disabled = true; btn.textContent = 'Registrando...';
+  try {
+    await apiFetch('/.netlify/functions/prestamos', {
+      method: 'PATCH',
+      body: JSON.stringify({ id: prestamoId, ...fields }),
+    });
+    document.getElementById('modal-pago').classList.remove('open');
+    showAlert('alert-pr', '✅ Pago directo registrado', 'success');
+    allPrestamos = await apiFetch('/.netlify/functions/prestamos');
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-pago', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Registrar';
+  }
+});
+
+// Nuevo / Editar préstamo
 document.getElementById('btn-nuevo').addEventListener('click', () => {
   document.getElementById('modal-titulo').textContent = 'Nuevo Préstamo';
   document.getElementById('pr-id').value = '';
@@ -226,8 +426,7 @@ document.getElementById('save-pr').addEventListener('click', async () => {
     }
     document.getElementById('modal-pr').classList.remove('open');
     showAlert('alert-pr', '✅ Préstamo guardado', 'success');
-    const prestamos = await apiFetch('/.netlify/functions/prestamos');
-    allPrestamos = prestamos;
+    allPrestamos = await apiFetch('/.netlify/functions/prestamos');
     renderTabla();
   } catch (e) {
     showAlert('alert-form', 'Error: ' + e.message, 'error');
