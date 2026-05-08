@@ -26,12 +26,13 @@
       letter-spacing: 1px;
     }
     .recibo-subheader {
-      background: #ffd700;
-      color: #111;
+      background: #e8eaf6;
+      color: #333;
       text-align: center;
       padding: 6px;
       font-weight: bold;
       font-size: 13px;
+      border-bottom: 1px solid #c5cae9;
     }
     .recibo-body {
       display: grid;
@@ -49,13 +50,13 @@
     }
     .recibo-row .label { color: #444; }
     .recibo-row .value { font-weight: bold; text-align: right; }
-    .recibo-row.highlight { background: #fffbcc; }
-    .recibo-row.total { background: #e8f5e9; font-size: 14px; }
+    .recibo-row.highlight { background: #f3f4f6; }
+    .recibo-row.total { background: #eef2ff; font-size: 14px; }
 
     /* Tabla de descuentos */
     .desc-title {
-      background: #4fc3f7;
-      color: #111;
+      background: #e8eaf6;
+      color: #333;
       font-weight: bold;
       padding: 6px 12px;
       text-align: center;
@@ -85,11 +86,11 @@
       border-bottom: 1px solid #ddd;
       font-weight: bold;
     }
-    .footer-row.yellow { background: #ffd700; color: #111; }
-    .footer-row.red    { background: #e53935; color: #fff; }
-    .footer-row.blue   { background: #90caf9; color: #111; }
-    .footer-row.teal   { background: #80cbc4; color: #111; }
-    .footer-row.green  { background: #2e7d32; color: #fff; font-size: 16px; justify-content: center; }
+    .footer-row.yellow { background: #f3f4f6; color: #333; border-top: 1px solid #ddd; }
+    .footer-row.red    { background: #fce8e8; color: #c62828; }
+    .footer-row.blue   { background: #e8eaf6; color: #333; }
+    .footer-row.teal   { background: #f0fdf4; color: #166534; }
+    .footer-row.green  { background: #1e3a5f; color: #fff; font-size: 16px; justify-content: center; }
 
     .firma-line {
       padding: 16px;
@@ -179,6 +180,14 @@ const _cu = netlifyIdentity.currentUser();
 if (_cu) { _initPage(); }
 else { netlifyIdentity.on('init', u => { if (u) _initPage(); }); }
 
+function setEntrega() {
+  const u = netlifyIdentity.currentUser();
+  if (!u) return;
+  const nombre = u.user_metadata?.full_name || u.email || '—';
+  const el = document.getElementById('firma-entrega');
+  if (el) el.textContent = nombre;
+}
+
 function cs(n) {
   if (!n && n !== 0) return '—';
   return 'C$ ' + parseFloat(n).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -197,6 +206,7 @@ async function loadRecibo(empleado, periodo) {
     showAlert('alert-recibo', 'Error cargando recibo: ' + e.message, 'error');
     document.getElementById('recibo-container').innerHTML = '';
   }
+  setEntrega();
 }
 
 function renderRecibo(data, empleado, periodo) {
@@ -361,7 +371,10 @@ function renderRecibo(data, empleado, periodo) {
           He recibido de MD Arthur SA la suma de <strong>${cs(netoAPagar)}</strong> Córdobas Netos
           correspondiente a la quincena del período <strong>${periodo}</strong>.
           <br><br>
-          <div class="linea">Firma del empleado</div>
+          <div style="display:flex;justify-content:space-between;margin-top:32px">
+            <div class="linea">Firma del empleado<br><small>${emp.Nombre || empleado}</small></div>
+            <div class="linea">Entregado por<br><small id="firma-entrega">—</small></div>
+          </div>
         </div>
       </div>
     </div>
