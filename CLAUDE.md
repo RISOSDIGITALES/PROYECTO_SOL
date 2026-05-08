@@ -238,6 +238,13 @@ El `Prompt_Sistema` se usa como base; `{{CATALOGO}}` se reemplaza en el nodo Cod
 - **Resumen diario:** `📞 CE Voice Agent — Resumen Diario de Llamadas` (ID: `FTa48iKiRIMW5BNB`)
 - **Número de llamadas:** +1 786-788-0417 (mismo Twilio)
 
+## Otros workflows activos (descubiertos 2026-05-08)
+
+| Workflow | ID | Trigger | Estado |
+|---|---|---|---|
+| CE Mantenimiento Web - Calendario Automático | `T9J845yE4sd8Dde5` | Diario 13:00 | ✅ Corre todos los días — publica/comparte contenido web. Destinatarios incluyen emails externos; `webmaster@omegacb.com` rebota (eliminar) |
+| 📬 CE Gmail Monitor — Detectar Respuestas de Leads | `cJZV7jcwlbFoW5qJ` | Cada hora | ✅ Monitorea Gmail en busca de respuestas de leads |
+
 ## n8n Tags — Alex
 
 Tag `Alex` (ID: `2CrVJWitAB77MgTJ`) aplicado a los 4 workflows del agente:
@@ -299,7 +306,7 @@ Sistema de nómina quincenal para empresa en Managua, Nicaragua.
   - Si `Tipo_Planilla = Sin Seguro` → INSS = 0
   - Si `INSS_Base = Salario Mínimo` → INSS = (7000/2) × 7% = C$245 fijos
   - Si `INSS_Base = Salario Completo` → INSS = (salario_bruto/2) × 7%
-- **Salario mínimo:** `C$7,000` mensual (hipotético — actualizar cuando se confirme valor real)
+- **Salario mínimo:** `C$10,913.54` mensual (confirmado 2026-05-08)
 - **Empleados cargados:**
   - Sol (Solange Torrez): Salario Mínimo, C$12,000 bruto
   - María García: Salario Completo (prueba)
@@ -327,15 +334,34 @@ El toggle desde la UI actualiza la DB pero NO la memoria del servidor.
 **Fix:** `sudo systemctl restart n8n` (pedir a quien tiene acceso al servidor).
 Afecta también: `📞→💬 VAPI → WhatsApp Handoff` (ID: `jfoJDSidx1sJlOrr`).
 
+### Backend local — Planilla Nicaragua (2026-05-08)
+API REST local en Windows para gestión de planilla, conecta con MariaDB local y expone endpoints para el frontend Netlify.
+
+- **Ruta:** `C:\Users\Orison3\Desktop\planilla-backend`
+- **Stack:** Node.js 24 (via NVM) + Express + mysql2 + cors + dotenv
+- **DB:** MariaDB 11.4.10 en Windows (HeidiSQL como cliente)
+- **Estado:** ⚙️ En construcción — npm install en proceso (2026-05-08)
+- **Nota NVM:** Usar `nvm use 24` antes de correr npm en esa máquina — había conflicto con v20.16.0 vieja
+
+**Schema DB — 10 tablas:**
+`empleados`, `planillas`, `detalle_planilla`, `prestamos`, `pagos_prestamo`, `adelantos`, `extras`, `vacaciones`, `historial_cambios`, `recibos`
+
+**Detalles clave:**
+- Préstamos: pueden ser varios activos por empleado simultáneamente
+- Vacaciones: sección propia, marcar si son pagadas o días libres
+- Recibo PDF por quincena por empleado con todo el detalle
+- Pagos préstamo: incluye abonos extras en efectivo + fechas + concepto
+
 ### Siguiente paso Planilla
 1. ~~Meter empleados reales en Airtable~~ ⏳ Sol cargada como prueba, faltan 7 reales
 2. ~~Construir motor de cálculo en n8n~~ ✅ Listo
 3. ~~Construir web app en Netlify~~ ✅ Desplegada
-4. **BLOQUEADO:** Reinicio de n8n → activa webhook planilla + VAPI handoff
-5. Actualizar `N8N_PLANILLA_WEBHOOK` en Netlify tras reinicio
-6. Confirmar: aportaciones + marcador de huella
-7. Ingresar empleados reales, eliminar registros de prueba (María García, Carlos López, Ana Martínez, Roberto Sánchez)
-8. Invitar usuarios reales a Netlify Identity
+4. **EN PROCESO:** Construir backend local Node.js/Express en `planilla-backend`
+5. **BLOQUEADO:** Reinicio de n8n → activa webhook planilla + VAPI handoff
+6. Actualizar `N8N_PLANILLA_WEBHOOK` en Netlify tras reinicio
+7. Confirmar: aportaciones + marcador de huella
+8. Ingresar empleados reales, eliminar registros de prueba (María García, Carlos López, Ana Martínez, Roberto Sánchez)
+9. Invitar usuarios reales a Netlify Identity
 
 ## Modelo de reporte diario
 
@@ -374,3 +400,7 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 19. **Groq API key actualizada** (2026-05-05) — credential `jORffbRhRNohHT1B` con nueva key
 20. **Emails de notificación**: leen de `WA_Email_Vendedor` en PERFIL DE EMPRESA, soportan múltiples emails separados por `\n`
 21. **Bug corregido (LinkedIn RRSS):** (2026-05-06) credencial de LinkedIn tenía un error de tipeo — corregida y publicación probada exitosamente
+22. **Salario mínimo actualizado** (2026-05-08): C$10,913.54 mensual (confirmado)
+23. **Backend planilla iniciado** (2026-05-08): Node.js/Express + MariaDB local en `C:\Users\Orison3\Desktop\planilla-backend`, schema 10 tablas diseñado
+24. **NVM conflicto resuelto** (2026-05-08): máquina tiene NVM for Windows con v20.16.0 vieja — usar `nvm use 24` antes de correr npm
+25. **Nuevos workflows identificados**: CE Mantenimiento Web (diario 13:00) y CE Gmail Monitor (horario) — ambos activos y en success
