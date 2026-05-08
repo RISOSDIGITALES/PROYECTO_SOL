@@ -288,7 +288,7 @@ Sistema de nómina quincenal para empresa en Managua, Nicaragua.
 ### Airtable — Base Planilla Nicaragua
 - **Base ID:** `appApxnaZKJKDUBR6`
 - **Workspace:** `wsphYNKZSHpRek4EJ` (mismo que CE Central Hub)
-- **Token:** en Netlify → Planilla-nicaragua → Variables ambientales → `AIRTABLE_TOKEN` (empieza con `pat8DWg`)
+- **Token:** guardado en `planilla-backend/.env` (excluido de git via .gitignore) — empieza con `pat8DWgbBJQsCZOY2`
 
 | Tabla | ID |
 |---|---|
@@ -298,6 +298,14 @@ Sistema de nómina quincenal para empresa en Managua, Nicaragua.
 | Extras | `tblb8OlnW60ItErxe` |
 | Planillas | `tblZj3F2T5aoSKGEV` |
 | Detalle Planilla | `tblxmAaz0k0Bv6r1y` |
+| Deducciones | `tblf4FpWvxQdepOgb` |
+
+**Campos adicionales creados via API (2026-05-08):**
+| Tabla | Campo | Tipo | Field ID |
+|---|---|---|---|
+| Préstamos | `Historial_Pagos` | multilineText | `fld6feyYH26jWLr6v` |
+| Adelantos | `Pausado` | checkbox | `fldCVvnPwZTWfiJ6H` |
+| Deducciones | `Pausado` | checkbox | `fldapUW2ibbXMy30L` |
 
 ### Campo INSS_Base por empleado
 - **Campo Airtable:** `INSS_Base` (ID: `fldTCQ7uo35Enx7Vl`) — singleSelect
@@ -313,20 +321,51 @@ Sistema de nómina quincenal para empresa en Managua, Nicaragua.
   - Ana Martínez: Salario Mínimo (prueba)
   - Roberto / Carlos: Sin Seguro (campo en blanco)
 
-### Motor de cálculo n8n
-- **Workflow:** `🧮 Planilla Nicaragua — Motor de Cálculo` (ID: `jkFucDKb7JSe32ze`)
-- **Webhook path:** `planillanica` (POST)
-- **Nodos:** 14 — lee Empleados + Préstamos + Adelantos + Extras → calcula → guarda en Planillas + Detalle Planilla → actualiza estados
-- **Lógica:** salario quincenal = bruto/2, INSS según INSS_Base, IR C$0, deduce préstamos y adelantos, suma extras
-- **Estado:** ⚠️ Bloqueado — n8n necesita reinicio del servidor para registrar webhooks nuevos en memoria. Una vez reiniciado queda funcionando solo.
+### Motor de cálculo — Netlify Function (reemplaza n8n)
+- **Archivo:** `planilla-web/netlify/functions/calcular.js`
+- **Endpoint:** `POST /.netlify/functions/calcular`
+- **Body:** `{ periodo: "YYYY-MM-DD", tipo: "Con Seguro" | "Sin Seguro" | undefined }`
+- **Lógica completa en código:** salario quincenal = bruto/2, INSS según Tipo_Planilla + INSS_Base, IR fijo por empleado, deduce préstamos (activos) + adelantos (Pendiente + NO Pausado) + deducciones (Pendiente + NO Pausado), suma extras del período
+- **Al generar planilla:** crea registro en Planillas + registros en Detalle, marca adelantos como Descontado, marca deducciones como Descontado, decrementa cuotas restantes en préstamos, agrega entrada en Historial_Pagos del préstamo
+- **n8n workflow anterior:** `jkFucDKb7JSe32ze` — YA NO SE USA, el cálculo está 100% en código
+
+### Motor de cálculo n8n (OBSOLETO — dejado en n8n pero no se usa)
+- **Estado:** ⚠️ Reemplazado por calcular.js — el workflow de n8n sigue existiendo pero no es necesario
 
 ### Netlify — Planilla Web App
 - **URL:** https://planilla-nicaragua.netlify.app
 - **Repo:** `risosdigitales/rrss-automatizaci-n` → carpeta `planilla-web/`
 - **Build:** Base dir: `planilla-web`, Publish: `.`, Functions: `netlify/functions`
 - **Auth:** Netlify Identity (invite-only, confirmación por email activa)
-- **Env var pendiente:** `N8N_PLANILLA_WEBHOOK` = URL real del webhook (actualizar tras reinicio n8n)
-- **Estado:** ✅ App desplegada, Identity activo — pendiente invitar usuarios reales y activar webhook
+- **Auto-deploy:** ⛔ DESACTIVADO — acumular commits y deployar manualmente desde Netlify dashboard para no gastar minutos (plan gratuito: 300/mes)
+- **Estado:** ✅ App desplegada — pendiente deploy manual para activar Bloque 1 + Bloque 2
+- **Env var `N8N_PLANILLA_WEBHOOK`:** ya no es necesaria — cálculo en código local
+
+### Páginas de la web app (planilla-web/)
+| Página | Función |
+|---|---|
+| `index.html` | Dashboard |
+| `empleados.html` | CRUD empleados — con modal de confirmación antes de editar |
+| `planillas.html` | Historial + botón **Generar planilla** (llama calcular.js) |
+| `planilla-detalle.html` | Detalle de empleados de una quincena |
+| `prestamos.html` | CRUD préstamos + historial de pagos por préstamo + registro pago directo |
+| `adelantos.html` | CRUD adelantos + Pausar/Reactivar + fecha de registro + filtro empleado |
+| `extras.html` | CRUD bonos/feriados/turnos extra + filtro tipo y empleado |
+| `deducciones.html` | CRUD deducciones manuales + Pausar/Reactivar + fecha de registro |
+| `recibo.html` | Recibo de pago imprimible por empleado/quincena |
+
+### Netlify Functions (planilla-web/netlify/functions/)
+| Función | Métodos | Descripción |
+|---|---|---|
+| `empleados.js` | GET/POST/PATCH | CRUD empleados |
+| `prestamos.js` | GET/POST/PATCH | CRUD préstamos (incluye Historial_Pagos) |
+| `adelantos.js` | GET/POST/PATCH | CRUD adelantos (GET devuelve todos, filtro por empleado opcional) |
+| `extras.js` | GET/POST/PATCH/DELETE | CRUD extras/bonos |
+| `deducciones.js` | GET/POST/PATCH/DELETE | CRUD deducciones manuales |
+| `planillas.js` | GET | Lista planillas con conteo de empleados |
+| `detalle.js` | GET | Detalle por planilla/período |
+| `calcular.js` | POST | Motor de cálculo completo de planilla |
+| `recibo.js` | GET | Datos del recibo por empleado+período |
 
 ### Bug conocido — n8n webhook registration
 Webhooks creados/modificados vía API no se registran en memoria hasta que n8n reinicia.
@@ -354,14 +393,17 @@ API REST local en Windows para gestión de planilla, conecta con MariaDB local y
 
 ### Siguiente paso Planilla
 1. ~~Meter empleados reales en Airtable~~ ⏳ Sol cargada como prueba, faltan 7 reales
-2. ~~Construir motor de cálculo en n8n~~ ✅ Listo
+2. ~~Construir motor de cálculo en n8n~~ ✅ Reemplazado por calcular.js (sin n8n)
 3. ~~Construir web app en Netlify~~ ✅ Desplegada
-4. **EN PROCESO:** Construir backend local Node.js/Express en `planilla-backend`
-5. **BLOQUEADO:** Reinicio de n8n → activa webhook planilla + VAPI handoff
-6. Actualizar `N8N_PLANILLA_WEBHOOK` en Netlify tras reinicio
-7. Confirmar: aportaciones + marcador de huella
-8. Ingresar empleados reales, eliminar registros de prueba (María García, Carlos López, Ana Martínez, Roberto Sánchez)
-9. Invitar usuarios reales a Netlify Identity
+4. ~~Bloque 1~~ ✅ Completado: extras.html, generar planilla UI, confirmación editar empleado
+5. ~~Bloque 2~~ ✅ Completado: historial pagos préstamos, pausar adelantos/deducciones, fechas registro
+6. **PENDIENTE:** Deploy manual en Netlify para activar todos los cambios
+7. **PENDIENTE:** Ingresar empleados reales, eliminar registros de prueba (María García, Carlos López, Ana Martínez, Roberto Sánchez)
+8. **PENDIENTE:** Invitar usuarios reales a Netlify Identity
+9. **PENDIENTE:** Confirmar aportaciones + marcador de huella con quien corresponda
+10. **PENDIENTE (Bloque 3):** Dashboard con resúmenes, calendario de feriados Nicaragua
+11. **BLOQUEADO:** Reinicio de n8n → activa VAPI handoff (no afecta planilla, cálculo ya es independiente)
+12. **EN PAUSA:** Backend local Node.js/Express + MariaDB — esperar acceso al servidor propio
 
 ## Modelo de reporte diario
 
@@ -404,3 +446,10 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 23. **Backend planilla iniciado** (2026-05-08): Node.js/Express + MariaDB local en `C:\Users\Orison3\Desktop\planilla-backend`, schema 10 tablas diseñado
 24. **NVM conflicto resuelto** (2026-05-08): máquina tiene NVM for Windows con v20.16.0 vieja — usar `nvm use 24` antes de correr npm
 25. **Nuevos workflows identificados**: CE Mantenimiento Web (diario 13:00) y CE Gmail Monitor (horario) — ambos activos y en success
+26. **Motor de cálculo planilla migrado a código** (2026-05-08): `calcular.js` reemplaza el workflow de n8n completamente — sin dependencia de n8n para generar planillas
+27. **Bloque 1 completado** (2026-05-08): `extras.html` + `extras.js`, botón Generar Planilla en `planillas.html`, modal confirmación editar en `empleados.html`, nav actualizado en todas las páginas
+28. **Bloque 2 completado** (2026-05-08): historial de pagos por préstamo en `Historial_Pagos` (campo multilineText), pagos directos registrables desde UI, Pausar/Reactivar en adelantos y deducciones vía campo `Pausado` (checkbox), fechas de creación en adelantos/deducciones
+29. **Campos Airtable creados via API**: `Historial_Pagos` en Préstamos, `Pausado` en Adelantos y Deducciones
+30. **`.gitignore` creado**: excluye `planilla-backend/.env` y archivos `.env` con credenciales
+31. **Token Airtable guardado** en `planilla-backend/.env` (local, no en git) y documentado en CLAUDE.md
+32. **Branch activo:** `claude/review-session-context-ohQ2R` — todos los cambios de Bloque 1 + 2 están commiteados y pusheados, pendiente deploy manual en Netlify
