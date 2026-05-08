@@ -320,13 +320,31 @@ Sistema de nómina quincenal para empresa en Managua, Nicaragua.
 - **Lógica:** salario quincenal = bruto/2, INSS según INSS_Base, IR C$0, deduce préstamos y adelantos, suma extras
 - **Estado:** ⚠️ Bloqueado — n8n necesita reinicio del servidor para registrar webhooks nuevos en memoria. Una vez reiniciado queda funcionando solo.
 
-### Netlify — Planilla Web App
+### Netlify — Planilla Web App (TEMPORAL)
 - **URL:** https://planilla-nicaragua.netlify.app
 - **Repo:** `risosdigitales/rrss-automatizaci-n` → carpeta `planilla-web/`
 - **Build:** Base dir: `planilla-web`, Publish: `.`, Functions: `netlify/functions`
 - **Auth:** Netlify Identity (invite-only, confirmación por email activa)
 - **Env var pendiente:** `N8N_PLANILLA_WEBHOOK` = URL real del webhook (actualizar tras reinicio n8n)
 - **Estado:** ✅ App desplegada, Identity activo — pendiente invitar usuarios reales y activar webhook
+- **⚠️ IMPORTANTE — Netlify es temporal:** toda la app se migrará al servidor propio (mismo servidor donde corre n8n). El código debe escribirse de forma agnóstica — sin dependencias duras de servicios Netlify (Identity, Functions). Ver sección "Plan de migración al servidor" abajo.
+
+### Plan de migración al servidor (pendiente — no urgente)
+Cuando se migre la web app de Netlify al servidor propio:
+
+1. **Auth** — reemplazar Netlify Identity con JWT propio:
+   - Agregar tabla `usuarios` en MariaDB (email, password_hash bcrypt, nombre_completo, rol)
+   - Agregar endpoints al backend Express: `POST /api/auth/login`, `GET /api/auth/me`
+   - Reemplazar `auth.js` en frontend — llama al backend propio, guarda JWT en localStorage
+   - El nombre del usuario en el recibo ("Entregado por") sale del JWT — el admin lo setea al crear el usuario en la BD
+
+2. **Netlify Functions** → **rutas Express** — cada función en `netlify/functions/` se convierte en un endpoint del backend Express ya existente (`planilla-backend/server.js`). Los archivos HTML llaman al backend directamente en vez de `/.netlify/functions/`
+
+3. **Variables de entorno** — las env vars de Netlify pasan a `.env` del backend Express
+
+4. **Deploy** — los HTML se sirven como archivos estáticos desde Express (`express.static`) o desde Nginx apuntando a la carpeta `planilla-web/`
+
+**Criterio de diseño:** todo código nuevo en el frontend debe evitar llamadas directas a APIs de Netlify. Las llamadas a `/.netlify/functions/` son aceptables por ahora porque se reemplazarán en bloque al migrar.
 
 ### Bug conocido — n8n webhook registration
 Webhooks creados/modificados vía API no se registran en memoria hasta que n8n reinicia.
@@ -404,3 +422,5 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 23. **Backend planilla iniciado** (2026-05-08): Node.js/Express + MariaDB local en `C:\Users\Orison3\Desktop\planilla-backend`, schema 10 tablas diseñado
 24. **NVM conflicto resuelto** (2026-05-08): máquina tiene NVM for Windows con v20.16.0 vieja — usar `nvm use 24` antes de correr npm
 25. **Nuevos workflows identificados**: CE Mantenimiento Web (diario 13:00) y CE Gmail Monitor (horario) — ambos activos y en success
+26. **Recibo de pago mejorado** (2026-05-08): panel izquierdo simplificado (sin Fecha Ingreso, Aumento, Otros Ingresos, Total Mes), se agrega Cargo, Bono/Feriados/Turno Extra solo si tienen valor, INSS e IR como líneas explícitas en descuentos, "Abono Préstamo" (sin "especial") solo aparece si hay préstamo activo, "Entregado por" usa nombre completo del usuario autenticado
+27. **Netlify marcado como temporal** (2026-05-08): toda la web app se migrará al servidor propio — plan de migración documentado en CLAUDE.md; código escrito de forma agnóstica para no depender de servicios Netlify-específicos
