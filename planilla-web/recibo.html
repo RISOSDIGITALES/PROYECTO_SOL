@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recibo de Pago — Nicaragua</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <style>
+    .recibo-wrap {
+      max-width: 860px;
+      margin: 0 auto;
+      background: #fff;
+      color: #111;
+      border: 2px solid #333;
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+    }
+    .recibo-header {
+      background: #1a1a2e;
+      color: #fff;
+      text-align: center;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+    .recibo-subheader {
+      background: #ffd700;
+      color: #111;
+      text-align: center;
+      padding: 6px;
+      font-weight: bold;
+      font-size: 13px;
+    }
+    .recibo-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+    .recibo-left {
+      border-right: 1px solid #ccc;
+    }
+    .recibo-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 12px;
+      border-bottom: 1px solid #eee;
+    }
+    .recibo-row .label { color: #444; }
+    .recibo-row .value { font-weight: bold; text-align: right; }
+    .recibo-row.highlight { background: #fffbcc; }
+    .recibo-row.total { background: #e8f5e9; font-size: 14px; }
+
+    /* Tabla de descuentos */
+    .desc-title {
+      background: #4fc3f7;
+      color: #111;
+      font-weight: bold;
+      padding: 6px 12px;
+      text-align: center;
+    }
+    .desc-table { width: 100%; border-collapse: collapse; }
+    .desc-table th {
+      background: #e0e0e0;
+      padding: 5px 8px;
+      font-size: 11px;
+      text-align: center;
+      border: 1px solid #ccc;
+    }
+    .desc-table td {
+      padding: 4px 8px;
+      border: 1px solid #eee;
+      font-size: 12px;
+    }
+    .desc-table .num { text-align: right; }
+
+    /* Sección inferior */
+    .recibo-footer { border-top: 2px solid #333; }
+    .footer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 16px;
+      border-bottom: 1px solid #ddd;
+      font-weight: bold;
+    }
+    .footer-row.yellow { background: #ffd700; color: #111; }
+    .footer-row.red    { background: #e53935; color: #fff; }
+    .footer-row.blue   { background: #90caf9; color: #111; }
+    .footer-row.teal   { background: #80cbc4; color: #111; }
+    .footer-row.green  { background: #2e7d32; color: #fff; font-size: 16px; justify-content: center; }
+
+    .firma-line {
+      padding: 16px;
+      font-size: 12px;
+      color: #333;
+      border-top: 1px solid #ddd;
+    }
+    .firma-line .linea {
+      border-top: 1px solid #333;
+      margin-top: 24px;
+      width: 200px;
+      text-align: center;
+      font-size: 11px;
+      color: #666;
+    }
+
+    /* Toolbar (solo en pantalla) */
+    @media print {
+      .recibo-toolbar, .sidebar, .topbar { display: none !important; }
+      .main { margin-left: 0 !important; padding: 0 !important; }
+      .content { padding: 0 !important; }
+      .recibo-wrap { border: 1px solid #333; }
+      body { background: #fff !important; }
+    }
+    .recibo-toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>🧮 Planilla</h2><p>Nicaragua</p></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html" class="active"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <h1>Recibo de Pago</h1>
+        <span class="sub" id="sub-recibo">Cargando...</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <a id="btn-volver" href="/planilla-detalle.html" class="btn btn-ghost btn-sm">← Volver</a>
+        <button class="btn btn-sm" onclick="window.print()" style="background:var(--accent)">🖨 Imprimir / PDF</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div id="alert-recibo" class="alert"></div>
+      <div id="recibo-container">
+        <div style="text-align:center;padding:40px"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script>
+requireAuth();
+
+function _initPage() {
+  initLayout();
+  const p = new URLSearchParams(window.location.search);
+  const empleado = p.get('empleado') || '';
+  const periodo  = p.get('periodo')  || '';
+  document.getElementById('sub-recibo').textContent = `${empleado} — ${periodo}`;
+  const volverUrl = `/planilla-detalle.html?periodo=${encodeURIComponent(periodo)}`;
+  document.getElementById('btn-volver').href = volverUrl;
+  loadRecibo(empleado, periodo);
+}
+
+const _cu = netlifyIdentity.currentUser();
+if (_cu) { _initPage(); }
+else { netlifyIdentity.on('init', u => { if (u) _initPage(); }); }
+
+function cs(n) {
+  if (!n && n !== 0) return '—';
+  return 'C$ ' + parseFloat(n).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fd(s) {
+  if (!s) return '—';
+  return s.split('T')[0];
+}
+
+async function loadRecibo(empleado, periodo) {
+  try {
+    const qs = `?empleado=${encodeURIComponent(empleado)}&periodo=${encodeURIComponent(periodo)}`;
+    const data = await apiFetch('/.netlify/functions/recibo' + qs);
+    renderRecibo(data, empleado, periodo);
+  } catch (e) {
+    showAlert('alert-recibo', 'Error cargando recibo: ' + e.message, 'error');
+    document.getElementById('recibo-container').innerHTML = '';
+  }
+}
+
+function renderRecibo(data, empleado, periodo) {
+  const emp  = data.empleado  || {};
+  const det  = data.detalle   || {};
+  const adel = data.adelantos || [];
+  const pres = data.prestamos || [];
+  const ext  = data.extras    || [];
+
+  const salarioMensual   = parseFloat(emp['Salario_Mensual'] || emp['Salario Mensual'] || 0);
+  const aumento          = parseFloat(emp['Aumento'] || 0);
+  const otrosIngresos    = parseFloat(det['Otros Ingresos'] || 0);
+  const totalMes         = salarioMensual + aumento + otrosIngresos;
+  const subTotalQuincena = parseFloat(det['Salario quincenal bruto'] || totalMes / 2);
+
+  const bono      = ext.filter(e => e.Tipo === 'Bono').reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
+  const feriados  = ext.filter(e => e.Tipo === 'Feriado').reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
+  const turnoExt  = ext.filter(e => e.Tipo === 'Turno Extra').reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
+  const granTotal = subTotalQuincena + bono + feriados + turnoExt;
+
+  const inss           = parseFloat(det['INSS (7%)'] || 0);
+  const descPrestamo   = parseFloat(det['Descuento préstamo'] || 0);
+  const descAdelanto   = parseFloat(det['Descuento adelanto'] || 0);
+  const totalDesc      = inss + descAdelanto;
+  const netoAPagar     = parseFloat(det['Neto a recibir'] || granTotal - inss - descPrestamo - descAdelanto);
+
+  // Filas de descuentos (adelantos con fecha)
+  let filasDesc = '';
+  adel.forEach(a => {
+    const monto = parseFloat(a.Monto || 0);
+    filasDesc += `<tr>
+      <td>${fd(a.Fecha_Adelanto || a['Fecha Adelanto'])}</td>
+      <td>Adelanto</td>
+      <td class="num" style="color:#c62828">${cs(monto)}</td>
+      <td class="num"></td>
+    </tr>
+    <tr>
+      <td>${fd(a.Quincena_Descuento || a['Quincena Descuento'])}</td>
+      <td>P. Adelanto</td>
+      <td class="num"></td>
+      <td class="num" style="color:#1b5e20">${cs(monto)}</td>
+    </tr>`;
+  });
+
+  if (inss > 0) {
+    filasDesc += `<tr>
+      <td>${periodo}</td>
+      <td>INSS Laboral (7%)</td>
+      <td class="num" style="color:#c62828">${cs(inss)}</td>
+      <td class="num"></td>
+    </tr>`;
+  }
+
+  if (!filasDesc) {
+    filasDesc = '<tr><td colspan="4" style="text-align:center;color:#999;padding:8px">Sin descuentos</td></tr>';
+  }
+
+  // Días de vacaciones
+  const diasVac = det['Días Vacaciones'] || 0;
+  const vacLine = diasVac
+    ? `<div class="footer-row teal">
+        <span>Días a cuenta de vacaciones</span>
+        <span>${diasVac} día(s)</span>
+       </div>`
+    : '';
+
+  document.getElementById('recibo-container').innerHTML = `
+    <div class="recibo-wrap">
+      <div class="recibo-header">MD Arthur — Planilla Nicaragua</div>
+      <div class="recibo-subheader">Resumen del Pago Quincenal ${periodo}</div>
+
+      <div class="recibo-body">
+        <!-- IZQUIERDA: datos del empleado -->
+        <div class="recibo-left">
+          <div class="recibo-row">
+            <span class="label">Nombre:</span>
+            <span class="value">${emp.Nombre || empleado}</span>
+          </div>
+          <div class="recibo-row" style="background:#fffbcc">
+            <span class="label">Fecha de Ingreso:</span>
+            <span class="value">${fd(emp['Fecha_Ingreso'] || emp['Fecha Ingreso'])}</span>
+          </div>
+          <div class="recibo-row">
+            <span class="label">Salario Mensual</span>
+            <span class="value">${cs(salarioMensual)}</span>
+          </div>
+          <div class="recibo-row">
+            <span class="label">Aumento</span>
+            <span class="value">${aumento ? cs(aumento) : '—'}</span>
+          </div>
+          <div class="recibo-row">
+            <span class="label">Total / Salario</span>
+            <span class="value">${cs(salarioMensual + aumento)}</span>
+          </div>
+          <div class="recibo-row">
+            <span class="label">Otros Ingresos</span>
+            <span class="value">${otrosIngresos ? cs(otrosIngresos) : '—'}</span>
+          </div>
+          <div class="recibo-row highlight">
+            <span class="label">Total del Mes</span>
+            <span class="value">${cs(totalMes)}</span>
+          </div>
+          <div class="recibo-row">
+            <span class="label">Sub Total Quincena</span>
+            <span class="value">${cs(subTotalQuincena)}</span>
+          </div>
+          <div class="recibo-row">
+            <span class="label">Bono</span>
+            <span class="value">${bono ? cs(bono) : '—'}</span>
+          </div>
+          <div class="recibo-row">
+            <span class="label">Feriados</span>
+            <span class="value">${feriados ? cs(feriados) : '—'}</span>
+          </div>
+          <div class="recibo-row">
+            <span class="label">Turno Extra</span>
+            <span class="value">${turnoExt ? cs(turnoExt) : '—'}</span>
+          </div>
+          <div class="recibo-row total">
+            <span class="label"><strong>Gran Total</strong></span>
+            <span class="value"><strong>${cs(granTotal)}</strong></span>
+          </div>
+        </div>
+
+        <!-- DERECHA: tabla de descuentos -->
+        <div class="recibo-right">
+          <div class="desc-title">Descuentos</div>
+          <table class="desc-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Concepto</th>
+                <th>CC$</th>
+                <th>C$ a cta</th>
+              </tr>
+            </thead>
+            <tbody>${filasDesc}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PIE DEL RECIBO -->
+      <div class="recibo-footer">
+        <div class="footer-row yellow">
+          <span>Total descuentos de la Quincena</span>
+          <span>${cs(totalDesc)}</span>
+        </div>
+        <div class="footer-row red">
+          <span>Abono préstamo especial</span>
+          <span>${cs(descPrestamo)}</span>
+        </div>
+        <div class="footer-row blue">
+          <span>Total descuentos</span>
+          <span>${cs(totalDesc + descPrestamo)}</span>
+        </div>
+        ${vacLine}
+        <div class="footer-row green">
+          Recibo de Pago Por ${cs(netoAPagar)}
+        </div>
+        <div class="firma-line">
+          He recibido de MD Arthur SA la suma de <strong>${cs(netoAPagar)}</strong> Córdobas Netos
+          correspondiente a la quincena del período <strong>${periodo}</strong>.
+          <br><br>
+          <div class="linea">Firma del empleado</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>
