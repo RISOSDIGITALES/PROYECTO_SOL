@@ -266,7 +266,7 @@ Tag `Alex` (ID: `2CrVJWitAB77MgTJ`) aplicado a los 4 workflows del agente:
 
 ### Pendiente / próximas mejoras
 - [x] ~~Integrar API del cotizador~~ ✅ Integrada — `POST /api/cotizar`
-- [ ] Activar LinkedIn en workflow RRSS cuando se tenga token
+- [x] ~~Activar LinkedIn en workflow RRSS cuando se tenga token~~ ✅ Ya activo desde 2026-05-06 en CE Blog workflow
 - [ ] Probar VAPI → WhatsApp Handoff con llamada real (bloqueado por reinicio n8n)
 - [ ] Probar planilla Nicaragua completa (bloqueado por reinicio n8n)
 - [ ] Recargar saldo DeepSeek o reemplazar con otro fallback
