@@ -217,10 +217,7 @@ function renderRecibo(data, empleado, periodo) {
   const ext  = data.extras    || [];
 
   const salarioMensual   = parseFloat(emp['Salario bruto mensual'] || 0);
-  const aumento          = parseFloat(emp['Aumento'] || 0);
-  const otrosIngresos    = parseFloat(det['Otros Ingresos'] || 0);
-  const totalMes         = salarioMensual + aumento + otrosIngresos;
-  const subTotalQuincena = parseFloat(det['Salario quincenal bruto'] || totalMes / 2);
+  const subTotalQuincena = parseFloat(det['Salario quincenal bruto'] || salarioMensual / 2);
 
   const bono      = ext.filter(e => e.Tipo === 'Bono').reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
   const feriados  = ext.filter(e => e.Tipo === 'Feriado').reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
@@ -228,10 +225,11 @@ function renderRecibo(data, empleado, periodo) {
   const granTotal = subTotalQuincena + bono + feriados + turnoExt;
 
   const inss           = parseFloat(det['INSS (7%)'] || 0);
+  const ir             = parseFloat(det['IR'] || 0);
   const descPrestamo   = parseFloat(det['Descuento préstamo'] || 0);
   const descAdelanto   = parseFloat(det['Descuento adelanto'] || 0);
-  const totalDesc      = inss + descAdelanto;
-  const netoAPagar     = parseFloat(det['Neto a recibir'] || granTotal - inss - descPrestamo - descAdelanto);
+  const totalDesc      = inss + ir + descAdelanto + descPrestamo;
+  const netoAPagar     = parseFloat(det['Neto a recibir'] || granTotal - inss - ir - descPrestamo - descAdelanto);
 
   // Filas de descuentos (adelantos con fecha)
   let filasDesc = '';
@@ -261,6 +259,15 @@ function renderRecibo(data, empleado, periodo) {
     </tr>`;
   }
 
+  if (ir > 0) {
+    filasDesc += `<tr>
+      <td>${periodo}</td>
+      <td>IR</td>
+      <td class="num" style="color:#c62828">${cs(ir)}</td>
+      <td class="num"></td>
+    </tr>`;
+  }
+
   if (!filasDesc) {
     filasDesc = '<tr><td colspan="4" style="text-align:center;color:#999;padding:8px">Sin descuentos</td></tr>';
   }
@@ -286,46 +293,30 @@ function renderRecibo(data, empleado, periodo) {
             <span class="label">Nombre:</span>
             <span class="value">${emp.Nombre || empleado}</span>
           </div>
-          <div class="recibo-row" style="background:#fffbcc">
-            <span class="label">Fecha de Ingreso:</span>
-            <span class="value">${fd(emp['Fecha_Ingreso'] || emp['Fecha Ingreso'])}</span>
-          </div>
           <div class="recibo-row">
-            <span class="label">Salario Mensual</span>
-            <span class="value">${cs(salarioMensual)}</span>
-          </div>
-          <div class="recibo-row">
-            <span class="label">Aumento</span>
-            <span class="value">${aumento ? cs(aumento) : '—'}</span>
-          </div>
-          <div class="recibo-row">
-            <span class="label">Total / Salario</span>
-            <span class="value">${cs(salarioMensual + aumento)}</span>
-          </div>
-          <div class="recibo-row">
-            <span class="label">Otros Ingresos</span>
-            <span class="value">${otrosIngresos ? cs(otrosIngresos) : '—'}</span>
+            <span class="label">Cargo:</span>
+            <span class="value">${emp.Cargo || emp.Puesto || '—'}</span>
           </div>
           <div class="recibo-row highlight">
-            <span class="label">Total del Mes</span>
-            <span class="value">${cs(totalMes)}</span>
+            <span class="label">Salario Mensual</span>
+            <span class="value">${cs(salarioMensual)}</span>
           </div>
           <div class="recibo-row">
             <span class="label">Sub Total Quincena</span>
             <span class="value">${cs(subTotalQuincena)}</span>
           </div>
-          <div class="recibo-row">
+          ${bono ? `<div class="recibo-row">
             <span class="label">Bono</span>
-            <span class="value">${bono ? cs(bono) : '—'}</span>
-          </div>
-          <div class="recibo-row">
+            <span class="value">${cs(bono)}</span>
+          </div>` : ''}
+          ${feriados ? `<div class="recibo-row">
             <span class="label">Feriados</span>
-            <span class="value">${feriados ? cs(feriados) : '—'}</span>
-          </div>
-          <div class="recibo-row">
+            <span class="value">${cs(feriados)}</span>
+          </div>` : ''}
+          ${turnoExt ? `<div class="recibo-row">
             <span class="label">Turno Extra</span>
-            <span class="value">${turnoExt ? cs(turnoExt) : '—'}</span>
-          </div>
+            <span class="value">${cs(turnoExt)}</span>
+          </div>` : ''}
           <div class="recibo-row total">
             <span class="label"><strong>Gran Total</strong></span>
             <span class="value"><strong>${cs(granTotal)}</strong></span>
@@ -351,17 +342,13 @@ function renderRecibo(data, empleado, periodo) {
 
       <!-- PIE DEL RECIBO -->
       <div class="recibo-footer">
-        <div class="footer-row yellow">
-          <span>Total descuentos de la Quincena</span>
-          <span>${cs(totalDesc)}</span>
-        </div>
-        <div class="footer-row red">
-          <span>Abono préstamo especial</span>
+        ${descPrestamo > 0 ? `<div class="footer-row red">
+          <span>Abono Préstamo</span>
           <span>${cs(descPrestamo)}</span>
-        </div>
-        <div class="footer-row blue">
+        </div>` : ''}
+        <div class="footer-row yellow">
           <span>Total descuentos</span>
-          <span>${cs(totalDesc + descPrestamo)}</span>
+          <span>${cs(totalDesc)}</span>
         </div>
         ${vacLine}
         <div class="footer-row green">
