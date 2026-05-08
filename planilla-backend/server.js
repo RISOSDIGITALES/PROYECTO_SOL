@@ -64,7 +64,7 @@ app.put('/api/empleados/:id', async (req, res) => {
 app.get('/api/prestamos', async (req, res) => {
   try {
     const [rows] = await db.query(
-      'SELECT p.*, e.nombre as empleado_nombre FROM prestamos p JOIN empleados e ON p.empleado_id = e.id WHERE p.saldo_pendiente > 0 ORDER BY p.fecha_inicio DESC'
+      'SELECT p.*, e.nombre as empleado_nombre FROM prestamos p JOIN empleados e ON p.empleado_id = e.id WHERE p.estado = "Activo" ORDER BY p.fecha_inicio DESC'
     );
     res.json(rows);
   } catch (e) {
@@ -86,10 +86,10 @@ app.get('/api/prestamos/:empleadoId', async (req, res) => {
 
 app.post('/api/prestamos', async (req, res) => {
   try {
-    const { empleado_id, monto_total, cuota_quincenal, descripcion } = req.body;
+    const { empleado_id, monto_total, cuota_quincenal, descripcion, fecha_inicio } = req.body;
     const [result] = await db.query(
-      'INSERT INTO prestamos (empleado_id, monto_total, saldo_pendiente, cuota_quincenal, descripcion) VALUES (?, ?, ?, ?, ?)',
-      [empleado_id, monto_total, monto_total, cuota_quincenal, descripcion || '']
+      'INSERT INTO prestamos (empleado_id, monto_total, saldo_pendiente, cuota_quincenal, descripcion, fecha_inicio, estado) VALUES (?, ?, ?, ?, ?, ?, "Activo")',
+      [empleado_id, monto_total, monto_total, cuota_quincenal, descripcion || '', fecha_inicio || new Date().toISOString().split('T')[0]]
     );
     res.json({ id: result.insertId });
   } catch (e) {
@@ -112,11 +112,11 @@ app.get('/api/adelantos/:empleadoId', async (req, res) => {
 
 app.post('/api/adelantos', async (req, res) => {
   try {
-    const { empleado_id, monto, quincena_descuento } = req.body;
+    const { empleado_id, monto, quincena_descuento, fecha_adelanto, descripcion } = req.body;
     if (monto > 2000) return res.status(400).json({ error: 'Adelanto máximo C$2,000' });
     const [result] = await db.query(
-      'INSERT INTO adelantos (empleado_id, monto, quincena_descuento, descontado) VALUES (?, ?, ?, 0)',
-      [empleado_id, monto, quincena_descuento]
+      'INSERT INTO adelantos (empleado_id, monto, quincena_descuento, fecha_adelanto, descripcion, estado) VALUES (?, ?, ?, ?, ?, "Pendiente")',
+      [empleado_id, monto, quincena_descuento, fecha_adelanto || new Date().toISOString().split('T')[0], descripcion || '']
     );
     res.json({ id: result.insertId });
   } catch (e) {
@@ -128,7 +128,7 @@ app.post('/api/adelantos', async (req, res) => {
 app.get('/api/extras/:empleadoId', async (req, res) => {
   try {
     const [rows] = await db.query(
-      'SELECT * FROM extras WHERE empleado_id = ? ORDER BY created_at DESC',
+      'SELECT * FROM extras WHERE empleado_id = ? ORDER BY fecha DESC',
       [req.params.empleadoId]
     );
     res.json(rows);
@@ -139,10 +139,10 @@ app.get('/api/extras/:empleadoId', async (req, res) => {
 
 app.post('/api/extras', async (req, res) => {
   try {
-    const { empleado_id, concepto, monto, quincena } = req.body;
+    const { empleado_id, tipo, descripcion, monto, fecha } = req.body;
     const [result] = await db.query(
-      'INSERT INTO extras (empleado_id, concepto, monto, quincena) VALUES (?, ?, ?, ?)',
-      [empleado_id, concepto, monto, quincena]
+      'INSERT INTO extras (empleado_id, tipo, descripcion, monto, fecha) VALUES (?, ?, ?, ?, ?)',
+      [empleado_id, tipo || 'Otro', descripcion || '', monto, fecha || new Date().toISOString().split('T')[0]]
     );
     res.json({ id: result.insertId });
   } catch (e) {
@@ -199,15 +199,15 @@ app.get('/api/planillas/:id/detalle', async (req, res) => {
 });
 
 app.post('/api/planillas/calcular', async (req, res) => {
-  const { periodo } = req.body; // periodo: "2026-05-15" | "2026-05-31"
+  const { periodo } = req.body; // "2026-05-15" o "2026-05-31"
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
 
     const [empleados] = await conn.query('SELECT * FROM empleados WHERE activo = 1');
 
-    // Calcular fecha_inicio y fecha_fin según el periodo
-    const fechaFin = new Date(periodo);
+    // Calcular fecha_inicio y fecha_fin
+    const fechaFin = new Date(periodo + 'T12:00:00');
     const dia = fechaFin.getDate();
     const fechaInicio = new Date(fechaFin);
     if (dia === 15) {
@@ -239,9 +239,9 @@ app.post('/api/planillas/calcular', async (req, res) => {
         }
       }
 
-      // Préstamos activos — sumar cuotas
+      // Préstamos activos
       const [prestamos] = await conn.query(
-        'SELECT * FROM prestamos WHERE empleado_id = ? AND saldo_pendiente > 0',
+        'SELECT * FROM prestamos WHERE empleado_id = ? AND estado = "Activo" AND saldo_pendiente > 0',
         [emp.id]
       );
       let totalPrestamos = 0;
@@ -252,22 +252,21 @@ app.post('/api/planillas/calcular', async (req, res) => {
 
       // Adelantos pendientes para esta quincena
       const [adelantos] = await conn.query(
-        'SELECT * FROM adelantos WHERE empleado_id = ? AND quincena_descuento = ? AND descontado = 0',
+        'SELECT * FROM adelantos WHERE empleado_id = ? AND quincena_descuento = ? AND estado = "Pendiente"',
         [emp.id, periodo]
       );
       const totalAdelantos = adelantos.reduce((s, a) => s + parseFloat(a.monto), 0);
 
-      // Extras para esta quincena
+      // Extras dentro del periodo
       const [extras] = await conn.query(
-        'SELECT * FROM extras WHERE empleado_id = ? AND quincena = ?',
-        [emp.id, periodo]
+        'SELECT * FROM extras WHERE empleado_id = ? AND fecha BETWEEN ? AND ?',
+        [emp.id, toDate(fechaInicio), toDate(fechaFin)]
       );
       const totalExtras = extras.reduce((s, x) => s + parseFloat(x.monto), 0);
 
-      const netoAPagar = salarioQuincenal + totalExtras - inss - totalPrestamos - totalAdelantos;
-
       const subtotalQuincena = salarioQuincenal + totalExtras;
       const totalDescuentos = inss + totalPrestamos + totalAdelantos;
+      const netoAPagar = subtotalQuincena - totalDescuentos;
 
       await conn.query(
         `INSERT INTO detalle_planilla
@@ -280,17 +279,29 @@ app.post('/api/planillas/calcular', async (req, res) => {
 
       // Marcar adelantos como descontados
       for (const a of adelantos) {
-        await conn.query('UPDATE adelantos SET descontado = 1 WHERE id = ?', [a.id]);
+        await conn.query('UPDATE adelantos SET estado = "Descontado" WHERE id = ?', [a.id]);
       }
 
       // Reducir saldo de préstamos
       for (const p of prestamos) {
         const cuota = Math.min(parseFloat(p.cuota_quincenal), parseFloat(p.saldo_pendiente));
         const nuevoSaldo = parseFloat(p.saldo_pendiente) - cuota;
-        await conn.query('UPDATE prestamos SET saldo_pendiente = ? WHERE id = ?', [nuevoSaldo, p.id]);
+        if (nuevoSaldo <= 0) {
+          await conn.query('UPDATE prestamos SET saldo_pendiente = 0, estado = "Pagado" WHERE id = ?', [p.id]);
+        } else {
+          await conn.query('UPDATE prestamos SET saldo_pendiente = ? WHERE id = ?', [nuevoSaldo, p.id]);
+        }
       }
 
-      detalles.push({ empleado: emp.nombre, neto: netoAPagar.toFixed(2) });
+      detalles.push({
+        empleado: emp.nombre,
+        salario_quincenal: salarioQuincenal.toFixed(2),
+        inss: inss.toFixed(2),
+        deduc_prestamos: totalPrestamos.toFixed(2),
+        deduc_adelantos: totalAdelantos.toFixed(2),
+        extras: totalExtras.toFixed(2),
+        neto: netoAPagar.toFixed(2)
+      });
     }
 
     await conn.query('UPDATE planillas SET estado = "Generada" WHERE id = ?', [planillaId]);
