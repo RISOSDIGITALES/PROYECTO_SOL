@@ -13,7 +13,7 @@ exports.handler = async (event, context) => {
 
     const records = await atAll('detalle', {
       filterByFormula: formula,
-      sort: '[{field: "Empleado", direction: "asc"}]',
+      sort: [{ field: 'Empleado', direction: 'asc' }],
     });
     return resp(200, records.map(r => ({ id: r.id, ...r.fields })));
   } catch (e) {
