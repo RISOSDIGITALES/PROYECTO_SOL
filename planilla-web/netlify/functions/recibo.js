@@ -34,12 +34,18 @@ exports.handler = async (event, context) => {
       filterByFormula: `AND({Empleado}="${empleado}",{Pagar en quincena}="${periodo}")`,
     });
 
+    // Deducciones manuales del periodo
+    const deducciones = await atAll('deducciones', {
+      filterByFormula: `AND({Empleado}="${empleado}",{Descontar en quincena}="${periodo}")`,
+    });
+
     return resp(200, {
       empleado: emp,
       detalle,
       adelantos: adelantos.map(r => ({ id: r.id, ...r.fields })),
       prestamos: prestamos.map(r => ({ id: r.id, ...r.fields })),
       extras: extras.map(r => ({ id: r.id, ...r.fields })),
+      deducciones: deducciones.map(r => ({ id: r.id, ...r.fields })),
     });
   } catch (e) {
     return resp(500, { error: e.message });

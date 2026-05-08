@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deducciones — Planilla Nicaragua</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>🧮 Planilla</h2><p>Nicaragua</p></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+      <a href="/deducciones.html" class="active"><span class="icon">➖</span> Deducciones</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Deducciones</h1><span class="sub">Descuentos manuales por quincena</span></div>
+      <button class="btn btn-primary" id="btn-nuevo">+ Nueva deducción</button>
+    </div>
+    <div class="content">
+      <div id="alert-ded" class="alert"></div>
+
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <div class="tabs" style="margin-bottom:0">
+          <button class="tab active" data-estado="todos">Todas</button>
+          <button class="tab" data-estado="Pendiente">Pendientes</button>
+          <button class="tab" data-estado="Descontado">Descontadas</button>
+        </div>
+        <select id="filtro-empleado" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
+          <option value="">Todos los empleados</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Empleado</th>
+              <th>Concepto</th>
+              <th>Descripción</th>
+              <th>Monto</th>
+              <th>Descontar en quincena</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-ded">
+            <tr class="loading-row"><td colspan="7"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="modal-ded">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-titulo">Nueva Deducción</h3>
+      <button class="modal-close" id="close-modal">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-form" class="alert"></div>
+      <input type="hidden" id="ded-id" />
+      <div class="form-group">
+        <label>Empleado *</label>
+        <select id="ded-empleado"><option value="">Seleccionar...</option></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Concepto *</label>
+          <select id="ded-concepto">
+            <option value="">Seleccionar...</option>
+            <option value="Uniforme">Uniforme</option>
+            <option value="Herramienta / Equipo">Herramienta / Equipo</option>
+            <option value="Daño / Pérdida">Daño / Pérdida</option>
+            <option value="Inasistencia">Inasistencia</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Monto (C$) *</label>
+          <input type="number" id="ded-monto" placeholder="0.00" step="0.01" min="0.01" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descripción (opcional)</label>
+        <input type="text" id="ded-descripcion" placeholder="Detalle adicional..." />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Descontar en quincena *</label>
+          <input type="date" id="ded-fecha" />
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="ded-estado">
+            <option value="Pendiente">Pendiente</option>
+            <option value="Descontado">Descontado</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-ded">Cancelar</button>
+      <button class="btn btn-primary" id="save-ded">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script>
+requireAuth();
+
+let allDed = [];
+let filtroEstado = 'todos';
+let filtroEmpleado = '';
+
+const _cu = netlifyIdentity.currentUser();
+if (_cu) { initLayout(); loadAll(); }
+else { netlifyIdentity.on('init', u => { if (u) { initLayout(); loadAll(); } }); }
+
+async function loadAll() {
+  try {
+    const [ded, empleados] = await Promise.all([
+      apiFetch('/.netlify/functions/deducciones'),
+      apiFetch('/.netlify/functions/empleados'),
+    ]);
+    allDed = ded;
+
+    const sel = document.getElementById('ded-empleado');
+    const filtroSel = document.getElementById('filtro-empleado');
+    empleados.filter(e => e.Activo).forEach(e => {
+      [sel, filtroSel].forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = e.Nombre;
+        opt.textContent = e.Nombre;
+        s.appendChild(opt);
+      });
+    });
+
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-ded', 'Error: ' + e.message, 'error');
+  }
+}
+
+function renderTabla() {
+  let lista = allDed;
+  if (filtroEstado !== 'todos') lista = lista.filter(d => (d.Estado || 'Pendiente') === filtroEstado);
+  if (filtroEmpleado) lista = lista.filter(d => d.Empleado === filtroEmpleado);
+
+  const tbody = document.getElementById('tabla-ded');
+  if (lista.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">No hay deducciones registradas</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(d => {
+    const estado = d.Estado || 'Pendiente';
+    const badge = estado === 'Pendiente' ? 'badge-orange' : 'badge-green';
+    return `<tr>
+      <td><strong>${d.Empleado || '—'}</strong></td>
+      <td><span class="badge badge-gray">${d.Concepto || '—'}</span></td>
+      <td style="color:var(--muted);font-size:12px">${d['Descripción'] || ''}</td>
+      <td class="num" style="color:var(--red)">${fmt(d.Monto)}</td>
+      <td>${d['Descontar en quincena'] || '—'}</td>
+      <td><span class="badge ${badge}">${estado}</span></td>
+      <td style="display:flex;gap:4px">
+        ${estado === 'Pendiente' ? `<button class="btn btn-icon btn-sm" onclick="editar('${d.id}')">✏️</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    filtroEstado = btn.dataset.estado;
+    renderTabla();
+  });
+});
+
+document.getElementById('filtro-empleado').addEventListener('change', e => {
+  filtroEmpleado = e.target.value;
+  renderTabla();
+});
+
+function abrirModal(d = null) {
+  document.getElementById('modal-titulo').textContent = d ? 'Editar Deducción' : 'Nueva Deducción';
+  document.getElementById('ded-id').value = d?.id || '';
+  document.getElementById('ded-empleado').value = d?.Empleado || '';
+  document.getElementById('ded-concepto').value = d?.Concepto || '';
+  document.getElementById('ded-monto').value = d?.Monto || '';
+  document.getElementById('ded-descripcion').value = d?.['Descripción'] || '';
+  document.getElementById('ded-fecha').value = d?.['Descontar en quincena'] || '';
+  document.getElementById('ded-estado').value = d?.Estado || 'Pendiente';
+  document.getElementById('alert-form').className = 'alert';
+  document.getElementById('modal-ded').classList.add('open');
+}
+
+document.getElementById('btn-nuevo').addEventListener('click', () => abrirModal());
+function editar(id) { abrirModal(allDed.find(x => x.id === id)); }
+
+['close-modal', 'cancel-ded'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-ded').classList.remove('open');
+  });
+});
+
+document.getElementById('save-ded').addEventListener('click', async () => {
+  const id        = document.getElementById('ded-id').value;
+  const empleado  = document.getElementById('ded-empleado').value;
+  const concepto  = document.getElementById('ded-concepto').value;
+  const monto     = parseFloat(document.getElementById('ded-monto').value);
+  const desc      = document.getElementById('ded-descripcion').value;
+  const fecha     = document.getElementById('ded-fecha').value;
+  const estado    = document.getElementById('ded-estado').value;
+
+  if (!empleado) { showAlert('alert-form', 'Selecciona un empleado', 'error'); return; }
+  if (!concepto) { showAlert('alert-form', 'Selecciona un concepto', 'error'); return; }
+  if (!monto || monto <= 0) { showAlert('alert-form', 'Ingresa un monto válido', 'error'); return; }
+  if (!fecha) { showAlert('alert-form', 'Selecciona la quincena de descuento', 'error'); return; }
+
+  const fields = {
+    Empleado: empleado,
+    Concepto: concepto,
+    Monto: monto,
+    'Descripción': desc,
+    'Descontar en quincena': fecha,
+    Estado: estado,
+  };
+
+  const btn = document.getElementById('save-ded');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    if (id) {
+      await apiFetch('/.netlify/functions/deducciones', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
+    } else {
+      await apiFetch('/.netlify/functions/deducciones', { method: 'POST', body: JSON.stringify(fields) });
+    }
+    document.getElementById('modal-ded').classList.remove('open');
+    showAlert('alert-ded', '✅ Deducción guardada', 'success');
+    allDed = await apiFetch('/.netlify/functions/deducciones');
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-form', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
+});
+</script>
+</body>
+</html>
