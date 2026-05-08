@@ -206,7 +206,7 @@ function renderRecibo(data, empleado, periodo) {
   const pres = data.prestamos || [];
   const ext  = data.extras    || [];
 
-  const salarioMensual   = parseFloat(emp['Salario_Mensual'] || emp['Salario Mensual'] || 0);
+  const salarioMensual   = parseFloat(emp['Salario bruto mensual'] || 0);
   const aumento          = parseFloat(emp['Aumento'] || 0);
   const otrosIngresos    = parseFloat(det['Otros Ingresos'] || 0);
   const totalMes         = salarioMensual + aumento + otrosIngresos;
@@ -214,7 +214,7 @@ function renderRecibo(data, empleado, periodo) {
 
   const bono      = ext.filter(e => e.Tipo === 'Bono').reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
   const feriados  = ext.filter(e => e.Tipo === 'Feriado').reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
-  const turnoExt  = ext.filter(e => e.Tipo === 'Turno Extra').reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
+  const turnoExt  = ext.filter(e => e.Tipo === 'Turno Extra' || e.Tipo === 'Turno extra').reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
   const granTotal = subTotalQuincena + bono + feriados + turnoExt;
 
   const inss           = parseFloat(det['INSS (7%)'] || 0);
@@ -227,14 +227,15 @@ function renderRecibo(data, empleado, periodo) {
   let filasDesc = '';
   adel.forEach(a => {
     const monto = parseFloat(a.Monto || 0);
+    const quincena = a['Descontar en quincena'] || periodo;
     filasDesc += `<tr>
-      <td>${fd(a.Fecha_Adelanto || a['Fecha Adelanto'])}</td>
+      <td>${quincena}</td>
       <td>Adelanto</td>
       <td class="num" style="color:#c62828">${cs(monto)}</td>
       <td class="num"></td>
     </tr>
     <tr>
-      <td>${fd(a.Quincena_Descuento || a['Quincena Descuento'])}</td>
+      <td>${quincena}</td>
       <td>P. Adelanto</td>
       <td class="num"></td>
       <td class="num" style="color:#1b5e20">${cs(monto)}</td>

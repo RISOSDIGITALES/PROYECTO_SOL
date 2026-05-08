@@ -19,10 +19,9 @@ exports.handler = async (event, context) => {
     });
     const emp = empleados[0]?.fields || {};
 
-    // Adelantos del empleado en este periodo o pendientes descontados en este periodo
+    // Adelantos del empleado descontados en este periodo
     const adelantos = await atAll('adelantos', {
-      filterByFormula: `AND({Empleado}="${empleado}",{Quincena_Descuento}="${periodo}")`,
-      sort: [{ field: 'Fecha_Adelanto', direction: 'asc' }],
+      filterByFormula: `AND({Empleado}="${empleado}",{Descontar en quincena}="${periodo}")`,
     });
 
     // Préstamos activos del empleado
@@ -30,9 +29,9 @@ exports.handler = async (event, context) => {
       filterByFormula: `AND({Empleado}="${empleado}",{Estado}="Activo")`,
     });
 
-    // Extras del periodo (bonos, feriados, turno extra)
+    // Extras del periodo
     const extras = await atAll('extras', {
-      filterByFormula: `AND({Empleado}="${empleado}",{Período}="${periodo}")`,
+      filterByFormula: `AND({Empleado}="${empleado}",{Pagar en quincena}="${periodo}")`,
     });
 
     return resp(200, {
