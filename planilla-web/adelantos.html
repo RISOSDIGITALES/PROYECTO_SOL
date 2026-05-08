@@ -32,9 +32,15 @@
     <div class="content">
       <div id="alert-adel" class="alert"></div>
 
-      <div class="tabs">
-        <button class="tab active" data-estado="Pendiente">Pendientes</button>
-        <button class="tab" data-estado="Descontado">Descontados</button>
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+        <div class="tabs" style="margin-bottom:0">
+          <button class="tab active" data-estado="todos">Todos</button>
+          <button class="tab" data-estado="Pendiente">Pendientes</button>
+          <button class="tab" data-estado="Descontado">Descontados</button>
+        </div>
+        <select id="filtro-empleado" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
+          <option value="">Todos los empleados</option>
+        </select>
       </div>
 
       <div class="table-wrap">
@@ -96,7 +102,8 @@
 requireAuth();
 
 let allAdelantos = [];
-let filtroEstado = 'Pendiente';
+let filtroEstado = 'todos';
+let filtroEmpleado = '';
 
 const _currentUser = netlifyIdentity.currentUser();
 if (_currentUser) {
@@ -118,12 +125,16 @@ async function loadAll() {
     ]);
     allAdelantos = adelantos;
 
+    const activos = empleados.filter(e => e.Activo);
     const sel = document.getElementById('adel-empleado');
-    empleados.filter(e => e.Activo).forEach(e => {
-      const opt = document.createElement('option');
-      opt.value = e.Nombre;
-      opt.textContent = e.Nombre;
-      sel.appendChild(opt);
+    const filtroSel = document.getElementById('filtro-empleado');
+    activos.forEach(e => {
+      [sel, filtroSel].forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = e.Nombre;
+        opt.textContent = e.Nombre;
+        s.appendChild(opt);
+      });
     });
 
     renderTabla();
@@ -133,10 +144,13 @@ async function loadAll() {
 }
 
 function renderTabla() {
-  const lista = allAdelantos.filter(a => (a.Estado || 'Pendiente') === filtroEstado);
+  let lista = allAdelantos;
+  if (filtroEstado !== 'todos') lista = lista.filter(a => (a.Estado || 'Pendiente') === filtroEstado);
+  if (filtroEmpleado) lista = lista.filter(a => a.Empleado === filtroEmpleado);
+
   const tbody = document.getElementById('tabla-adelantos');
   if (lista.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="empty">No hay adelantos ${filtroEstado.toLowerCase()}s</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">No hay adelantos registrados</td></tr>`;
     return;
   }
   tbody.innerHTML = lista.map(a => {
@@ -159,6 +173,11 @@ document.querySelectorAll('.tab').forEach(btn => {
     filtroEstado = btn.dataset.estado;
     renderTabla();
   });
+});
+
+document.getElementById('filtro-empleado').addEventListener('change', e => {
+  filtroEmpleado = e.target.value;
+  renderTabla();
 });
 
 document.getElementById('btn-nuevo').addEventListener('click', () => {

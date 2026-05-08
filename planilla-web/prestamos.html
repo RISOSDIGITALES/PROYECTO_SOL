@@ -31,6 +31,18 @@
     </div>
     <div class="content">
       <div id="alert-pr" class="alert"></div>
+
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <div class="tabs" style="margin-bottom:0">
+          <button class="tab active" data-estado="todos">Todos</button>
+          <button class="tab" data-estado="Activo">Activos</button>
+          <button class="tab" data-estado="Pagado">Pagados</button>
+        </div>
+        <select id="filtro-empleado" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
+          <option value="">Todos los empleados</option>
+        </select>
+      </div>
+
       <div class="table-wrap">
         <table>
           <thead>
@@ -104,6 +116,8 @@
 requireAuth();
 
 let allPrestamos = [];
+let filtroEstado = 'todos';
+let filtroEmpleado = '';
 
 const _currentUser = netlifyIdentity.currentUser();
 if (_currentUser) {
@@ -125,13 +139,16 @@ async function loadAll() {
     ]);
     allPrestamos = prestamos;
 
-    // Populate empleados select
+    const activos = empleados.filter(e => e.Activo);
     const sel = document.getElementById('pr-empleado');
-    empleados.filter(e => e.Activo).forEach(e => {
-      const opt = document.createElement('option');
-      opt.value = e.Nombre;
-      opt.textContent = e.Nombre;
-      sel.appendChild(opt);
+    const filtroSel = document.getElementById('filtro-empleado');
+    activos.forEach(e => {
+      [sel, filtroSel].forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = e.Nombre;
+        opt.textContent = e.Nombre;
+        s.appendChild(opt);
+      });
     });
 
     renderTabla();
@@ -141,12 +158,16 @@ async function loadAll() {
 }
 
 function renderTabla() {
+  let lista = allPrestamos;
+  if (filtroEstado !== 'todos') lista = lista.filter(p => (p.Estado || 'Activo') === filtroEstado);
+  if (filtroEmpleado) lista = lista.filter(p => p.Empleado === filtroEmpleado);
+
   const tbody = document.getElementById('tabla-prestamos');
-  if (allPrestamos.length === 0) {
+  if (lista.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" class="empty">No hay préstamos registrados</td></tr>';
     return;
   }
-  tbody.innerHTML = allPrestamos.map(p => {
+  tbody.innerHTML = lista.map(p => {
     const cuotasRest = p['Cuotas restantes'] || 0;
     const pendiente = (p['Cuota quincenal'] || 0) * cuotasRest;
     const estado = p.Estado || 'Activo';
@@ -162,6 +183,20 @@ function renderTabla() {
     </tr>`;
   }).join('');
 }
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    filtroEstado = btn.dataset.estado;
+    renderTabla();
+  });
+});
+
+document.getElementById('filtro-empleado').addEventListener('change', e => {
+  filtroEmpleado = e.target.value;
+  renderTabla();
+});
 
 document.getElementById('btn-nuevo').addEventListener('click', () => {
   document.getElementById('modal-titulo').textContent = 'Nuevo Préstamo';
