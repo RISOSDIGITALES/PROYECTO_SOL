@@ -36,10 +36,10 @@ app.get('/api/empleados/:id', async (req, res) => {
 
 app.post('/api/empleados', async (req, res) => {
   try {
-    const { nombre, cargo, salario_bruto, tipo_planilla, inss_base } = req.body;
+    const { nombre, cargo, salario_mensual, tipo_planilla, inss_base } = req.body;
     const [result] = await db.query(
-      'INSERT INTO empleados (nombre, cargo, salario_bruto, tipo_planilla, inss_base) VALUES (?, ?, ?, ?, ?)',
-      [nombre, cargo, salario_bruto, tipo_planilla || 'Con Seguro', inss_base || 'Salario Completo']
+      'INSERT INTO empleados (nombre, cargo, salario_mensual, tipo_planilla, inss_base) VALUES (?, ?, ?, ?, ?)',
+      [nombre, cargo, salario_mensual, tipo_planilla || 'Con Seguro', inss_base || 'Salario Completo']
     );
     res.json({ id: result.insertId });
   } catch (e) {
@@ -49,10 +49,10 @@ app.post('/api/empleados', async (req, res) => {
 
 app.put('/api/empleados/:id', async (req, res) => {
   try {
-    const { nombre, cargo, salario_bruto, tipo_planilla, inss_base, activo } = req.body;
+    const { nombre, cargo, salario_mensual, tipo_planilla, inss_base, activo } = req.body;
     await db.query(
-      'UPDATE empleados SET nombre=?, cargo=?, salario_bruto=?, tipo_planilla=?, inss_base=?, activo=? WHERE id=?',
-      [nombre, cargo, salario_bruto, tipo_planilla, inss_base, activo ?? 1, req.params.id]
+      'UPDATE empleados SET nombre=?, cargo=?, salario_mensual=?, tipo_planilla=?, inss_base=?, activo=? WHERE id=?',
+      [nombre, cargo, salario_mensual, tipo_planilla, inss_base, activo ?? 1, req.params.id]
     );
     res.json({ ok: true });
   } catch (e) {
@@ -216,7 +216,7 @@ app.post('/api/planillas/calcular', async (req, res) => {
     const detalles = [];
 
     for (const emp of empleados) {
-      const salarioQuincenal = parseFloat(emp.salario_bruto) / 2;
+      const salarioQuincenal = parseFloat(emp.salario_mensual) / 2;
 
       // Calcular INSS
       let inss = 0;
