@@ -264,13 +264,18 @@ app.post('/api/planillas/calcular', async (req, res) => {
       );
       const totalExtras = extras.reduce((s, x) => s + parseFloat(x.monto), 0);
 
-      const netoAPagar = salarioQuincenal - inss - totalPrestamos - totalAdelantos + totalExtras;
+      const netoAPagar = salarioQuincenal + totalExtras - inss - totalPrestamos - totalAdelantos;
+
+      const subtotalQuincena = salarioQuincenal + totalExtras;
+      const totalDescuentos = inss + totalPrestamos + totalAdelantos;
 
       await conn.query(
         `INSERT INTO detalle_planilla
-          (planilla_id, empleado_id, salario_quincenal, inss, ir, deduc_prestamos, deduc_adelantos, extras, neto_pagar)
-         VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?)`,
-        [planillaId, emp.id, salarioQuincenal, inss, totalPrestamos, totalAdelantos, totalExtras, netoAPagar]
+          (planilla_id, empleado_id, salario_bruto, otros_ingresos, subtotal_quincena,
+           inss, ir, total_adelantos, total_prestamos, total_descuentos, neto_pagar)
+         VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
+        [planillaId, emp.id, salarioQuincenal, totalExtras, subtotalQuincena,
+         inss, totalAdelantos, totalPrestamos, totalDescuentos, netoAPagar]
       );
 
       // Marcar adelantos como descontados
