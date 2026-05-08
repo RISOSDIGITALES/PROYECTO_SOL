@@ -179,7 +179,7 @@ app.post('/api/vacaciones', async (req, res) => {
 // ─── PLANILLAS ────────────────────────────────────────────────
 app.get('/api/planillas', async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM planillas ORDER BY fecha_generacion DESC LIMIT 20');
+    const [rows] = await db.query('SELECT * FROM planillas ORDER BY created_at DESC LIMIT 20');
     res.json(rows);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -199,17 +199,28 @@ app.get('/api/planillas/:id/detalle', async (req, res) => {
 });
 
 app.post('/api/planillas/calcular', async (req, res) => {
-  const { periodo, tipo } = req.body; // periodo: "2026-05-15" | "2026-05-31", tipo: "quincenal"
+  const { periodo } = req.body; // periodo: "2026-05-15" | "2026-05-31"
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
 
     const [empleados] = await conn.query('SELECT * FROM empleados WHERE activo = 1');
 
+    // Calcular fecha_inicio y fecha_fin según el periodo
+    const fechaFin = new Date(periodo);
+    const dia = fechaFin.getDate();
+    const fechaInicio = new Date(fechaFin);
+    if (dia === 15) {
+      fechaInicio.setDate(1);
+    } else {
+      fechaInicio.setDate(16);
+    }
+    const toDate = d => d.toISOString().split('T')[0];
+
     // Crear encabezado de planilla
     const [planResult] = await conn.query(
-      'INSERT INTO planillas (periodo, tipo, estado, fecha_generacion) VALUES (?, ?, "borrador", NOW())',
-      [periodo, tipo || 'quincenal']
+      'INSERT INTO planillas (periodo, fecha_inicio, fecha_fin, estado) VALUES (?, ?, ?, "Borrador")',
+      [periodo, toDate(fechaInicio), toDate(fechaFin)]
     );
     const planillaId = planResult.insertId;
 
@@ -277,7 +288,7 @@ app.post('/api/planillas/calcular', async (req, res) => {
       detalles.push({ empleado: emp.nombre, neto: netoAPagar.toFixed(2) });
     }
 
-    await conn.query('UPDATE planillas SET estado = "generada" WHERE id = ?', [planillaId]);
+    await conn.query('UPDATE planillas SET estado = "Generada" WHERE id = ?', [planillaId]);
     await conn.commit();
 
     res.json({ planilla_id: planillaId, periodo, empleados: detalles });
