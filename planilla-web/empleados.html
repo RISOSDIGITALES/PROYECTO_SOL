@@ -17,6 +17,8 @@
       <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
       <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
       <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+      <a href="/extras.html"><span class="icon">⭐</span> Extras</a>
+      <a href="/deducciones.html"><span class="icon">➖</span> Deducciones</a>
     </nav>
     <div class="sidebar-footer">
       <span id="user-email"></span>
@@ -53,6 +55,23 @@
           </tbody>
         </table>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMACIÓN EDITAR -->
+<div class="overlay" id="modal-confirm-edit">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <h3>¿Editar empleado?</h3>
+      <button class="modal-close" id="close-confirm-edit">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0;color:var(--text-muted)">Vas a editar a <strong id="confirm-nombre-emp"></strong>. Los cambios se guardan directamente en la base de datos.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-confirm-edit">Cancelar</button>
+      <button class="btn btn-primary" id="ok-confirm-edit">Continuar</button>
     </div>
   </div>
 </div>
@@ -200,7 +219,17 @@ document.getElementById('btn-nuevo').addEventListener('click', () => {
   document.getElementById('modal-emp').classList.add('open');
 });
 
+let pendingEditId = null;
+
 function editarEmpleado(id) {
+  const e = allEmpleados.find(x => x.id === id);
+  if (!e) return;
+  pendingEditId = id;
+  document.getElementById('confirm-nombre-emp').textContent = e.Nombre || 'este empleado';
+  document.getElementById('modal-confirm-edit').classList.add('open');
+}
+
+function abrirFormEditar(id) {
   const e = allEmpleados.find(x => x.id === id);
   if (!e) return;
   document.getElementById('modal-titulo').textContent = 'Editar Empleado';
@@ -214,8 +243,22 @@ function editarEmpleado(id) {
   document.getElementById('emp-ir').value = e['IR'] ?? '';
   document.getElementById('emp-activo').value = e.Activo ? 'true' : 'false';
   document.getElementById('alert-form').className = 'alert';
+  toggleInssBase();
   document.getElementById('modal-emp').classList.add('open');
 }
+
+['close-confirm-edit','cancel-confirm-edit'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-confirm-edit').classList.remove('open');
+    pendingEditId = null;
+  });
+});
+
+document.getElementById('ok-confirm-edit').addEventListener('click', () => {
+  document.getElementById('modal-confirm-edit').classList.remove('open');
+  if (pendingEditId) abrirFormEditar(pendingEditId);
+  pendingEditId = null;
+});
 
 // Show/hide INSS_Base based on tipo planilla
 function toggleInssBase() {

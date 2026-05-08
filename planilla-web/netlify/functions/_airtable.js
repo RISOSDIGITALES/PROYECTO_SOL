@@ -3,12 +3,13 @@ const BASE = 'appApxnaZKJKDUBR6';
 const TOKEN = process.env.AIRTABLE_TOKEN;
 
 const TABLES = {
-  empleados:  'tblwEpef3eoKtSmQe',
-  prestamos:  'tbln3xy9hbjtzRGPa',
-  adelantos:  'tblEz4M50EUw7vT0U',
-  extras:     'tblb8OlnW60ItErxe',
-  planillas:  'tblZj3F2T5aoSKGEV',
-  detalle:    'tblxmAaz0k0Bv6r1y',
+  empleados:   'tblwEpef3eoKtSmQe',
+  prestamos:   'tbln3xy9hbjtzRGPa',
+  adelantos:   'tblEz4M50EUw7vT0U',
+  extras:      'tblb8OlnW60ItErxe',
+  planillas:   'tblZj3F2T5aoSKGEV',
+  detalle:     'tblxmAaz0k0Bv6r1y',
+  deducciones: 'tblf4FpWvxQdepOgb',
 };
 
 async function atFetch(table, opts = {}) {

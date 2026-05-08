@@ -17,6 +17,8 @@
       <a href="/planillas.html" class="active"><span class="icon">📋</span> Planillas</a>
       <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
       <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+      <a href="/extras.html"><span class="icon">⭐</span> Extras</a>
+      <a href="/deducciones.html"><span class="icon">➖</span> Deducciones</a>
     </nav>
     <div class="sidebar-footer">
       <span id="user-email"></span>
@@ -27,6 +29,7 @@
   <div class="main">
     <div class="topbar">
       <div><h1>Planillas</h1><span class="sub">Historial de quincenas</span></div>
+      <button class="btn btn-primary" id="btn-generar">⚡ Generar planilla</button>
     </div>
     <div class="content">
       <div id="alert-pl" class="alert"></div>
@@ -57,6 +60,37 @@
           </tbody>
         </table>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GENERAR PLANILLA -->
+<div class="overlay" id="modal-gen">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>Generar planilla</h3>
+      <button class="modal-close" id="close-gen">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-gen" class="alert"></div>
+      <p style="margin:0 0 16px;color:var(--text-muted);font-size:13px">Se calculará la quincena para todos los empleados activos del tipo seleccionado. Se crearán los registros de planilla y detalle en Airtable, y se actualizarán adelantos, deducciones y préstamos.</p>
+      <div class="form-group">
+        <label>Período (fecha de la quincena) *</label>
+        <input type="date" id="gen-periodo" />
+      </div>
+      <div class="form-group">
+        <label>Tipo de planilla</label>
+        <select id="gen-tipo">
+          <option value="">Todos (Con Seguro + Sin Seguro)</option>
+          <option value="Con Seguro">Con Seguro</option>
+          <option value="Sin Seguro">Sin Seguro</option>
+        </select>
+      </div>
+      <div id="gen-preview" style="display:none;margin-top:12px;padding:12px;background:var(--surface);border-radius:8px;border:1px solid var(--border);font-size:13px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-gen">Cancelar</button>
+      <button class="btn btn-primary" id="save-gen">Calcular y generar</button>
     </div>
   </div>
 </div>
@@ -132,6 +166,68 @@ document.querySelectorAll('.tab').forEach(btn => {
     filtroActivo = btn.dataset.tipo;
     renderTabla();
   });
+});
+
+// Generar planilla
+document.getElementById('btn-generar').addEventListener('click', () => {
+  // Default: today's date as the período
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('gen-periodo').value = today;
+  document.getElementById('gen-tipo').value = '';
+  document.getElementById('alert-gen').className = 'alert';
+  document.getElementById('gen-preview').style.display = 'none';
+  document.getElementById('modal-gen').classList.add('open');
+});
+
+['close-gen','cancel-gen'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-gen').classList.remove('open');
+  });
+});
+
+document.getElementById('save-gen').addEventListener('click', async () => {
+  const periodo = document.getElementById('gen-periodo').value;
+  const tipo    = document.getElementById('gen-tipo').value;
+
+  if (!periodo) {
+    showAlert('alert-gen', 'Selecciona el período', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('save-gen');
+  btn.disabled = true;
+  btn.textContent = 'Calculando...';
+  document.getElementById('gen-preview').style.display = 'none';
+  document.getElementById('alert-gen').className = 'alert';
+
+  try {
+    const result = await apiFetch('/.netlify/functions/calcular', {
+      method: 'POST',
+      body: JSON.stringify({ periodo, tipo: tipo || undefined }),
+    });
+
+    document.getElementById('gen-preview').style.display = 'block';
+    document.getElementById('gen-preview').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><span style="color:var(--text-muted)">Empleados</span><br><strong>${result.empleados}</strong></div>
+        <div><span style="color:var(--text-muted)">Período</span><br><strong>${result.periodo}</strong></div>
+        <div><span style="color:var(--text-muted)">Total bruto</span><br><strong>${fmt(result.totalBruto)}</strong></div>
+        <div><span style="color:var(--text-muted)">Deducciones</span><br><strong style="color:var(--red)">${fmt(result.totalDeducciones)}</strong></div>
+        <div style="grid-column:1/-1"><span style="color:var(--text-muted)">Total neto</span><br><strong style="font-size:18px;color:var(--green)">${fmt(result.totalNeto)}</strong></div>
+      </div>
+    `;
+
+    showAlert('alert-gen', '✅ Planilla generada correctamente', 'success');
+    allPlanillas = await apiFetch('/.netlify/functions/planillas');
+    renderTabla();
+
+    btn.textContent = 'Generar otra';
+  } catch (e) {
+    showAlert('alert-gen', 'Error: ' + e.message, 'error');
+    btn.textContent = 'Calcular y generar';
+  } finally {
+    btn.disabled = false;
+  }
 });
 </script>
 </body>
