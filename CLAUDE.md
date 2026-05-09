@@ -327,10 +327,7 @@ Sistema de nómina quincenal para empresa en Managua, Nicaragua.
 - **Body:** `{ periodo: "YYYY-MM-DD", tipo: "Con Seguro" | "Sin Seguro" | undefined }`
 - **Lógica completa en código:** salario quincenal = bruto/2, INSS según Tipo_Planilla + INSS_Base, IR fijo por empleado, deduce préstamos (activos) + adelantos (Pendiente + NO Pausado) + deducciones (Pendiente + NO Pausado), suma extras del período
 - **Al generar planilla:** crea registro en Planillas + registros en Detalle, marca adelantos como Descontado, marca deducciones como Descontado, decrementa cuotas restantes en préstamos, agrega entrada en Historial_Pagos del préstamo
-- **n8n workflow anterior:** `jkFucDKb7JSe32ze` — YA NO SE USA, el cálculo está 100% en código
-
-### Motor de cálculo n8n (OBSOLETO — dejado en n8n pero no se usa)
-- **Estado:** ⚠️ Reemplazado por calcular.js — el workflow de n8n sigue existiendo pero no es necesario
+- **n8n workflow anterior:** `jkFucDKb7JSe32ze` — **ELIMINADO** (2026-05-09), el cálculo está 100% en código
 
 ### Netlify — Planilla Web App
 - **URL:** https://planilla-nicaragua.netlify.app
@@ -338,7 +335,7 @@ Sistema de nómina quincenal para empresa en Managua, Nicaragua.
 - **Build:** Base dir: `planilla-web`, Publish: `.`, Functions: `netlify/functions`
 - **Auth:** Netlify Identity (invite-only, confirmación por email activa)
 - **Auto-deploy:** ⛔ DESACTIVADO — acumular commits y deployar manualmente desde Netlify dashboard para no gastar minutos (plan gratuito: 300/mes)
-- **Estado:** ✅ App desplegada — pendiente deploy manual para activar Bloque 1 + Bloque 2
+- **Estado:** ✅ App desplegada — pendiente deploy manual para activar Bloque 1 + 2 + 3
 - **Env var `N8N_PLANILLA_WEBHOOK`:** ya no es necesaria — cálculo en código local
 
 ### Páginas de la web app (planilla-web/)
@@ -397,11 +394,11 @@ API REST local en Windows para gestión de planilla, conecta con MariaDB local y
 3. ~~Construir web app en Netlify~~ ✅ Desplegada
 4. ~~Bloque 1~~ ✅ Completado: extras.html, generar planilla UI, confirmación editar empleado
 5. ~~Bloque 2~~ ✅ Completado: historial pagos préstamos, pausar adelantos/deducciones, fechas registro
-6. **PENDIENTE:** Deploy manual en Netlify para activar todos los cambios
-7. **PENDIENTE:** Ingresar empleados reales, eliminar registros de prueba (María García, Carlos López, Ana Martínez, Roberto Sánchez)
-8. **PENDIENTE:** Invitar usuarios reales a Netlify Identity
-9. **PENDIENTE:** Confirmar aportaciones + marcador de huella con quien corresponda
-10. **PENDIENTE (Bloque 3):** Dashboard con resúmenes, calendario de feriados Nicaragua
+6. ~~Bloque 3~~ ✅ Completado: dashboard con 5 stats + montos, feriados Nicaragua, selector feriados en extras, recibo corregido
+7. **PENDIENTE:** Deploy manual en Netlify para activar todos los cambios (Bloques 1+2+3)
+8. **PENDIENTE:** Ingresar empleados reales, eliminar registros de prueba (María García, Carlos López, Ana Martínez, Roberto Sánchez)
+9. **PENDIENTE:** Invitar usuarios reales a Netlify Identity
+10. **PENDIENTE:** Confirmar aportaciones + marcador de huella con quien corresponda
 11. **BLOQUEADO:** Reinicio de n8n → activa VAPI handoff (no afecta planilla, cálculo ya es independiente)
 12. **EN PAUSA:** Backend local Node.js/Express + MariaDB — esperar acceso al servidor propio
 
@@ -453,3 +450,7 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 30. **`.gitignore` creado**: excluye `planilla-backend/.env` y archivos `.env` con credenciales
 31. **Token Airtable guardado** en `planilla-backend/.env` (local, no en git) y documentado en CLAUDE.md
 32. **Branch activo:** `claude/review-session-context-ohQ2R` — todos los cambios de Bloque 1 + 2 están commiteados y pusheados, pendiente deploy manual en Netlify
+33. **Bloque 3 completado** (2026-05-09): `assets/js/feriados.js` (módulo feriados Nicaragua, algoritmo Pascua), dashboard renovado con 5 tarjetas de stats + montos C$, panel próximos feriados con caja calendario y cuenta regresiva, selector de feriados en extras.html al elegir "Feriado trabajado"
+34. **Workflow n8n planilla eliminado** (2026-05-09): `jkFucDKb7JSe32ze` borrado vía API — ya no existe en n8n
+35. **Bug fix recibo** (2026-05-09): `recibo.js` — campos adelantos (`{Quincena_Descuento}` → `{Descontar en quincena}`), extras (`{Período}` → `{Pagar en quincena}`), deducciones manuales añadidas; `recibo.html` — salario (`Salario bruto mensual`), tipos extras (`Feriado trabajado`, `Otro`), totalDesc incluye IR + deducciones
+36. **Cunas/amarras añadidas** (2026-05-09): catálogo de All Estimados en Segundos actualizado con variación de precios para cunas/amarras
