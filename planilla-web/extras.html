@@ -95,6 +95,12 @@
           <input type="number" id="ext-monto" placeholder="0.00" step="0.01" min="0" />
         </div>
       </div>
+      <div class="form-group" id="row-feriado" style="display:none">
+        <label>Feriado *</label>
+        <select id="ext-feriado">
+          <option value="">Seleccionar feriado...</option>
+        </select>
+      </div>
       <div class="form-group">
         <label>Concepto / Descripción</label>
         <input type="text" id="ext-concepto" placeholder="Ej: Turno extra sábado 15" />
@@ -128,6 +134,7 @@
   </div>
 </div>
 
+<script src="/assets/js/feriados.js"></script>
 <script src="/assets/js/auth.js"></script>
 <script>
 requireAuth();
@@ -224,32 +231,60 @@ document.getElementById('filtro-empleado').addEventListener('change', e => {
   renderTabla();
 });
 
-// New
-document.getElementById('btn-nuevo').addEventListener('click', () => {
-  document.getElementById('modal-titulo').textContent = 'Nuevo Extra';
-  document.getElementById('ext-id').value = '';
-  document.getElementById('ext-empleado').value = '';
-  document.getElementById('ext-tipo').value = 'Bono';
-  document.getElementById('ext-monto').value = '';
-  document.getElementById('ext-concepto').value = '';
-  document.getElementById('ext-quincena').value = '';
-  document.getElementById('alert-form').className = 'alert';
-  document.getElementById('modal-ext').classList.add('open');
+// Feriado picker — populate with holidays from -60 to +120 days
+function poblarFeriados() {
+  const hoy = new Date();
+  const desde = new Date(hoy); desde.setDate(hoy.getDate() - 60);
+  const hasta = new Date(hoy); hasta.setDate(hoy.getDate() + 120);
+  const desdeStr = desde.toISOString().split('T')[0];
+  const hastaStr = hasta.toISOString().split('T')[0];
+  const lista = feriadosEnRango(desdeStr, hastaStr);
+
+  const sel = document.getElementById('ext-feriado');
+  sel.innerHTML = '<option value="">Seleccionar feriado...</option>';
+  lista.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.fecha;
+    opt.dataset.nombre = f.nombre;
+    const dias = diasHasta(f.fecha);
+    const rel = dias === 0 ? 'Hoy' : dias > 0 ? `en ${dias}d` : `hace ${-dias}d`;
+    opt.textContent = `${f.nombre} — ${nomMes(f.fecha)} (${rel})`;
+    sel.appendChild(opt);
+  });
+}
+
+document.getElementById('ext-tipo').addEventListener('change', function() {
+  const esFeriado = this.value === 'Feriado trabajado';
+  document.getElementById('row-feriado').style.display = esFeriado ? '' : 'none';
+  if (esFeriado) poblarFeriados();
 });
 
-function editar(id) {
-  const x = allExtras.find(e => e.id === id);
-  if (!x) return;
-  document.getElementById('modal-titulo').textContent = 'Editar Extra';
-  document.getElementById('ext-id').value = x.id;
-  document.getElementById('ext-empleado').value = x.Empleado || '';
-  document.getElementById('ext-tipo').value = x.Tipo || 'Bono';
-  document.getElementById('ext-monto').value = x.Monto || '';
-  document.getElementById('ext-concepto').value = x.Concepto || x.Descripcion || '';
-  document.getElementById('ext-quincena').value = x['Pagar en quincena'] || '';
+document.getElementById('ext-feriado').addEventListener('change', function() {
+  const opt = this.options[this.selectedIndex];
+  if (!opt.value) return;
+  const nombre = opt.dataset.nombre || '';
+  const concepto = document.getElementById('ext-concepto');
+  if (!concepto.value) concepto.value = nombre;
+});
+
+function abrirModalExt(x = null) {
+  document.getElementById('modal-titulo').textContent = x ? 'Editar Extra' : 'Nuevo Extra';
+  document.getElementById('ext-id').value = x?.id || '';
+  document.getElementById('ext-empleado').value = x?.Empleado || '';
+  const tipo = x?.Tipo || 'Bono';
+  document.getElementById('ext-tipo').value = tipo;
+  document.getElementById('ext-monto').value = x?.Monto || '';
+  document.getElementById('ext-concepto').value = x?.Concepto || x?.Descripcion || '';
+  document.getElementById('ext-quincena').value = x?.['Pagar en quincena'] || '';
   document.getElementById('alert-form').className = 'alert';
+  const esFeriado = tipo === 'Feriado trabajado';
+  document.getElementById('row-feriado').style.display = esFeriado ? '' : 'none';
+  if (esFeriado) poblarFeriados();
   document.getElementById('modal-ext').classList.add('open');
 }
+
+document.getElementById('btn-nuevo').addEventListener('click', () => abrirModalExt());
+function editar(id) { abrirModalExt(allExtras.find(e => e.id === id)); }
 
 ['close-modal','cancel-ext'].forEach(id => {
   document.getElementById(id).addEventListener('click', () => {
