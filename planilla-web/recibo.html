@@ -202,44 +202,48 @@ async function loadRecibo(empleado, periodo) {
 }
 
 function renderRecibo(data, empleado, periodo) {
-  const emp  = data.empleado  || {};
-  const det  = data.detalle   || {};
-  const adel = data.adelantos || [];
-  const pres = data.prestamos || [];
-  const ext  = data.extras    || [];
+  const emp  = data.empleado    || {};
+  const det  = data.detalle     || {};
+  const adel = data.adelantos   || [];
+  const pres = data.prestamos   || [];
+  const ext  = data.extras      || [];
+  const ded  = data.deducciones || [];
 
-  const salarioMensual   = parseFloat(emp['Salario_Mensual'] || emp['Salario Mensual'] || 0);
-  const aumento          = parseFloat(emp['Aumento'] || 0);
-  const otrosIngresos    = parseFloat(det['Otros Ingresos'] || 0);
-  const totalMes         = salarioMensual + aumento + otrosIngresos;
-  const subTotalQuincena = parseFloat(det['Salario quincenal bruto'] || totalMes / 2);
+  const salarioMensual   = parseFloat(emp['Salario bruto mensual'] || 0);
+  const subTotalQuincena = parseFloat(det['Salario quincenal bruto'] || salarioMensual / 2);
 
   const bono      = ext.filter(e => e.Tipo === 'Bono').reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
-  const feriados  = ext.filter(e => e.Tipo === 'Feriado').reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
-  const turnoExt  = ext.filter(e => e.Tipo === 'Turno Extra').reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
+  const feriados  = ext.filter(e => e.Tipo === 'Feriado trabajado').reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
+  const turnoExt  = ext.filter(e => e.Tipo === 'Otro').reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
   const granTotal = subTotalQuincena + bono + feriados + turnoExt;
 
-  const inss           = parseFloat(det['INSS (7%)'] || 0);
-  const descPrestamo   = parseFloat(det['Descuento préstamo'] || 0);
-  const descAdelanto   = parseFloat(det['Descuento adelanto'] || 0);
-  const totalDesc      = inss + descAdelanto;
-  const netoAPagar     = parseFloat(det['Neto a recibir'] || granTotal - inss - descPrestamo - descAdelanto);
+  const inss         = parseFloat(det['INSS (7%)'] || 0);
+  const ir           = parseFloat(det['IR'] || 0);
+  const descPrestamo = parseFloat(det['Descuento préstamo'] || 0);
+  const descAdelanto = parseFloat(det['Descuento adelanto'] || 0);
+  const descDed      = ded.reduce((s, d) => s + parseFloat(d.Monto || 0), 0);
+  const totalDesc    = inss + ir + descAdelanto + descDed;
+  const netoAPagar   = parseFloat(det['Neto a recibir'] || (granTotal - inss - ir - descPrestamo - descAdelanto - descDed));
 
-  // Filas de descuentos (adelantos con fecha)
+  // Filas de descuentos
   let filasDesc = '';
   adel.forEach(a => {
     const monto = parseFloat(a.Monto || 0);
     filasDesc += `<tr>
-      <td>${fd(a.Fecha_Adelanto || a['Fecha Adelanto'])}</td>
+      <td>${a['Descontar en quincena'] || periodo}</td>
       <td>Adelanto</td>
       <td class="num" style="color:#c62828">${cs(monto)}</td>
       <td class="num"></td>
-    </tr>
-    <tr>
-      <td>${fd(a.Quincena_Descuento || a['Quincena Descuento'])}</td>
-      <td>P. Adelanto</td>
+    </tr>`;
+  });
+
+  ded.forEach(d => {
+    const monto = parseFloat(d.Monto || 0);
+    filasDesc += `<tr>
+      <td>${d['Descontar en quincena'] || periodo}</td>
+      <td>${d.Concepto || 'Deducción'}</td>
+      <td class="num" style="color:#c62828">${cs(monto)}</td>
       <td class="num"></td>
-      <td class="num" style="color:#1b5e20">${cs(monto)}</td>
     </tr>`;
   });
 
@@ -248,6 +252,15 @@ function renderRecibo(data, empleado, periodo) {
       <td>${periodo}</td>
       <td>INSS Laboral (7%)</td>
       <td class="num" style="color:#c62828">${cs(inss)}</td>
+      <td class="num"></td>
+    </tr>`;
+  }
+
+  if (ir > 0) {
+    filasDesc += `<tr>
+      <td>${periodo}</td>
+      <td>IR</td>
+      <td class="num" style="color:#c62828">${cs(ir)}</td>
       <td class="num"></td>
     </tr>`;
   }
@@ -278,30 +291,14 @@ function renderRecibo(data, empleado, periodo) {
             <span class="value">${emp.Nombre || empleado}</span>
           </div>
           <div class="recibo-row" style="background:#fffbcc">
-            <span class="label">Fecha de Ingreso:</span>
-            <span class="value">${fd(emp['Fecha_Ingreso'] || emp['Fecha Ingreso'])}</span>
+            <span class="label">Tipo planilla:</span>
+            <span class="value">${emp['Tipo_Planilla'] || 'Con Seguro'}</span>
           </div>
           <div class="recibo-row">
             <span class="label">Salario Mensual</span>
             <span class="value">${cs(salarioMensual)}</span>
           </div>
-          <div class="recibo-row">
-            <span class="label">Aumento</span>
-            <span class="value">${aumento ? cs(aumento) : '—'}</span>
-          </div>
-          <div class="recibo-row">
-            <span class="label">Total / Salario</span>
-            <span class="value">${cs(salarioMensual + aumento)}</span>
-          </div>
-          <div class="recibo-row">
-            <span class="label">Otros Ingresos</span>
-            <span class="value">${otrosIngresos ? cs(otrosIngresos) : '—'}</span>
-          </div>
           <div class="recibo-row highlight">
-            <span class="label">Total del Mes</span>
-            <span class="value">${cs(totalMes)}</span>
-          </div>
-          <div class="recibo-row">
             <span class="label">Sub Total Quincena</span>
             <span class="value">${cs(subTotalQuincena)}</span>
           </div>
@@ -310,11 +307,11 @@ function renderRecibo(data, empleado, periodo) {
             <span class="value">${bono ? cs(bono) : '—'}</span>
           </div>
           <div class="recibo-row">
-            <span class="label">Feriados</span>
+            <span class="label">Feriados trabajados</span>
             <span class="value">${feriados ? cs(feriados) : '—'}</span>
           </div>
           <div class="recibo-row">
-            <span class="label">Turno Extra</span>
+            <span class="label">Turno / Extra</span>
             <span class="value">${turnoExt ? cs(turnoExt) : '—'}</span>
           </div>
           <div class="recibo-row total">

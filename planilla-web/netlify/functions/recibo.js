@@ -7,40 +7,34 @@ exports.handler = async (event, context) => {
   if (!empleado || !periodo) return resp(400, { error: 'Se requiere ?empleado= y ?periodo=' });
 
   try {
-    // Detalle de planilla para este empleado y periodo
-    const detalles = await atAll('detalle', {
-      filterByFormula: `AND({Período}="${periodo}",{Empleado}="${empleado}")`,
-    });
-    const detalle = detalles[0]?.fields || {};
-
-    // Datos del empleado
-    const empleados = await atAll('empleados', {
-      filterByFormula: `{Nombre}="${empleado}"`,
-    });
-    const emp = empleados[0]?.fields || {};
-
-    // Adelantos del empleado en este periodo o pendientes descontados en este periodo
-    const adelantos = await atAll('adelantos', {
-      filterByFormula: `AND({Empleado}="${empleado}",{Quincena_Descuento}="${periodo}")`,
-      sort: [{ field: 'Fecha_Adelanto', direction: 'asc' }],
-    });
-
-    // Préstamos activos del empleado
-    const prestamos = await atAll('prestamos', {
-      filterByFormula: `AND({Empleado}="${empleado}",{Estado}="Activo")`,
-    });
-
-    // Extras del periodo (bonos, feriados, turno extra)
-    const extras = await atAll('extras', {
-      filterByFormula: `AND({Empleado}="${empleado}",{Período}="${periodo}")`,
-    });
+    const [detalles, empleados, adelantos, prestamos, extras, deducciones] = await Promise.all([
+      atAll('detalle', {
+        filterByFormula: `AND({Período}="${periodo}",{Empleado}="${empleado}")`,
+      }),
+      atAll('empleados', {
+        filterByFormula: `{Nombre}="${empleado}"`,
+      }),
+      atAll('adelantos', {
+        filterByFormula: `AND({Empleado}="${empleado}",{Descontar en quincena}="${periodo}")`,
+      }),
+      atAll('prestamos', {
+        filterByFormula: `AND({Empleado}="${empleado}",{Estado}="Activo")`,
+      }),
+      atAll('extras', {
+        filterByFormula: `AND({Empleado}="${empleado}",{Pagar en quincena}="${periodo}")`,
+      }),
+      atAll('deducciones', {
+        filterByFormula: `AND({Empleado}="${empleado}",{Descontar en quincena}="${periodo}")`,
+      }),
+    ]);
 
     return resp(200, {
-      empleado: emp,
-      detalle,
+      empleado: empleados[0]?.fields || {},
+      detalle: detalles[0]?.fields || {},
       adelantos: adelantos.map(r => ({ id: r.id, ...r.fields })),
       prestamos: prestamos.map(r => ({ id: r.id, ...r.fields })),
       extras: extras.map(r => ({ id: r.id, ...r.fields })),
+      deducciones: deducciones.map(r => ({ id: r.id, ...r.fields })),
     });
   } catch (e) {
     return resp(500, { error: e.message });
