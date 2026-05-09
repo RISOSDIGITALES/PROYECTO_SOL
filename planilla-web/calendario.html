@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calendario — Planilla Nicaragua</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <style>
+    .cal-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .cal-nav h2 { font-size: 18px; font-weight: 700; text-transform: capitalize; }
+    .cal-nav .btn-nav {
+      background: var(--navy2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .cal-nav .btn-nav:hover { background: var(--border); }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+    .cal-dow {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      padding: 6px 0;
+    }
+    .cal-cell {
+      min-height: 90px;
+      background: var(--navy2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px;
+      position: relative;
+      cursor: default;
+    }
+    .cal-cell.vacio { background: transparent; border-color: transparent; }
+    .cal-cell.hoy { border-color: var(--green); box-shadow: 0 0 0 1px var(--green); }
+    .cal-cell.quincena { background: #1e3a2a; border-color: var(--green2); }
+    .cal-cell.feriado  { background: #2a1e3a; border-color: #9b59b6; }
+    .cal-cell.hoy.quincena { border-color: var(--green2); box-shadow: 0 0 0 2px var(--green2); }
+
+    .cal-num {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .cal-cell.hoy .cal-num { color: var(--green2); }
+    .cal-cell.quincena .cal-num { color: var(--green2); }
+    .cal-cell.feriado .cal-num  { color: #c39bd3; }
+
+    .cal-tag {
+      margin-top: 4px;
+      font-size: 10px;
+      line-height: 1.3;
+      color: var(--muted);
+    }
+    .cal-tag.tag-quincena { color: var(--green2); font-weight: 600; }
+    .cal-tag.tag-feriado  { color: #c39bd3; font-weight: 600; }
+
+    .cal-legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .cal-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .cal-legend-dot {
+      width: 12px; height: 12px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>📋 Planilla</h2><p>Nicaragua</p></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+      <a href="/extras.html"><span class="icon">⭐</span> Extras</a>
+      <a href="/deducciones.html"><span class="icon">➖</span> Deducciones</a>
+      <a href="/calendario.html" class="active"><span class="icon">📅</span> Calendario</a>
+      <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Calendario</h1><span class="sub">Feriados, quincenas y fechas clave</span></div>
+    </div>
+    <div class="content">
+      <div class="cal-nav">
+        <button class="btn-nav" id="btn-prev">◀ Anterior</button>
+        <h2 id="cal-titulo"></h2>
+        <button class="btn-nav" id="btn-next">Siguiente ▶</button>
+      </div>
+
+      <div class="table-wrap" style="padding:16px">
+        <div class="cal-grid" id="cal-grid"></div>
+        <div class="cal-legend">
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--green2);border:1px solid var(--green2)"></div> Hoy</div>
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#1e3a2a;border:1px solid var(--green2)"></div> Quincena</div>
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#2a1e3a;border:1px solid #9b59b6"></div> Feriado</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/feriados.js"></script>
+<script>
+requireAuth();
+
+const _cu = netlifyIdentity.currentUser();
+if (_cu) { initLayout(); initCal(); }
+else { netlifyIdentity.on('init', u => { if (u) { initLayout(); initCal(); } }); }
+
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DIAS_SEMANA = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+let viewYear, viewMonth;
+
+function initCal() {
+  const hoy = new Date();
+  viewYear  = hoy.getFullYear();
+  viewMonth = hoy.getMonth();
+  renderCal();
+
+  document.getElementById('btn-prev').addEventListener('click', () => {
+    viewMonth--;
+    if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+    renderCal();
+  });
+  document.getElementById('btn-next').addEventListener('click', () => {
+    viewMonth++;
+    if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+    renderCal();
+  });
+}
+
+function renderCal() {
+  const hoy = new Date();
+  const todayStr = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+
+  const primerDia = new Date(viewYear, viewMonth, 1).getDay(); // 0=Dom
+  const ultimoDia = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+  // Feriados de este mes
+  const mesStr  = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}`;
+  const desde   = `${mesStr}-01`;
+  const hasta   = `${mesStr}-${String(ultimoDia).padStart(2,'0')}`;
+  const ferList = feriadosEnRango(desde, hasta);
+  const ferMap  = {};
+  ferList.forEach(f => { ferMap[f.fecha] = f.nombre; });
+
+  // Quincenas de este mes
+  const quincenas = new Set([
+    `${mesStr}-15`,
+    `${mesStr}-${String(ultimoDia).padStart(2,'0')}`,
+  ]);
+
+  document.getElementById('cal-titulo').textContent = `${MESES[viewMonth]} ${viewYear}`;
+
+  let html = DIAS_SEMANA.map(d => `<div class="cal-dow">${d}</div>`).join('');
+
+  // Celdas vacías al inicio
+  for (let i = 0; i < primerDia; i++) {
+    html += `<div class="cal-cell vacio"></div>`;
+  }
+
+  for (let dia = 1; dia <= ultimoDia; dia++) {
+    const dStr = `${mesStr}-${String(dia).padStart(2,'0')}`;
+    const esFeriado  = !!ferMap[dStr];
+    const esQuincena = quincenas.has(dStr);
+    const esHoy      = dStr === todayStr;
+
+    let cls = 'cal-cell';
+    if (esHoy)      cls += ' hoy';
+    if (esQuincena) cls += ' quincena';
+    if (esFeriado)  cls += ' feriado';
+
+    let tags = '';
+    if (esQuincena) tags += `<div class="cal-tag tag-quincena">📋 Quincena</div>`;
+    if (esFeriado)  tags += `<div class="cal-tag tag-feriado">🎌 ${ferMap[dStr]}</div>`;
+
+    html += `<div class="${cls}">
+      <div class="cal-num">${dia}</div>
+      ${tags}
+    </div>`;
+  }
+
+  document.getElementById('cal-grid').innerHTML = html;
+}
+</script>
+</body>
+</html>

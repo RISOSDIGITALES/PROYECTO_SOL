@@ -10,6 +10,7 @@ const TABLES = {
   planillas:   'tblZj3F2T5aoSKGEV',
   detalle:     'tblxmAaz0k0Bv6r1y',
   deducciones: 'tblf4FpWvxQdepOgb',
+  vacaciones:  'tblbjDOCejr48NgRO',
 };
 
 async function atFetch(table, opts = {}) {

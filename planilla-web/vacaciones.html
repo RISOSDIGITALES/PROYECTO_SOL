@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vacaciones — Planilla Nicaragua</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>📋 Planilla</h2><p>Nicaragua</p></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+      <a href="/extras.html"><span class="icon">⭐</span> Extras</a>
+      <a href="/deducciones.html"><span class="icon">➖</span> Deducciones</a>
+      <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
+      <a href="/vacaciones.html" class="active"><span class="icon">🏖</span> Vacaciones</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Vacaciones</h1><span class="sub">Días acumulados y registros por empleado</span></div>
+      <button class="btn btn-primary" id="btn-nuevo">+ Registrar días</button>
+    </div>
+    <div class="content">
+      <div id="alert-vac" class="alert"></div>
+
+      <!-- RESUMEN POR EMPLEADO -->
+      <div class="table-wrap" style="margin-bottom:20px">
+        <div class="table-header">
+          <h3>Saldo de vacaciones</h3>
+          <span style="font-size:11px;color:var(--muted)">Nicaragua: 15 días/año · 1.25 días/mes</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Empleado</th>
+              <th>Ingreso</th>
+              <th>Antigüedad</th>
+              <th>Días acumulados</th>
+              <th>Días tomados</th>
+              <th>Saldo</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-resumen">
+            <tr class="loading-row"><td colspan="7"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- HISTORIAL DE REGISTROS -->
+      <div class="table-wrap">
+        <div class="table-header">
+          <h3>Historial de vacaciones</h3>
+          <select id="filtro-empleado" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--navy2);color:var(--text);font-size:12px">
+            <option value="">Todos los empleados</option>
+          </select>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Empleado</th>
+              <th>Desde</th>
+              <th>Hasta</th>
+              <th>Días</th>
+              <th>Tipo</th>
+              <th>Estado</th>
+              <th>Notas</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-historial">
+            <tr class="loading-row"><td colspan="8"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL REGISTRAR VACACIONES -->
+<div class="overlay" id="modal-vac">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-titulo">Registrar Vacaciones</h3>
+      <button class="modal-close" id="close-modal">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-form" class="alert"></div>
+      <input type="hidden" id="vac-id" />
+      <div class="form-group">
+        <label>Empleado *</label>
+        <select id="vac-empleado"><option value="">Seleccionar...</option></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tipo *</label>
+          <select id="vac-tipo">
+            <option value="Descanso">Descanso (días libres)</option>
+            <option value="Pagadas">Pagadas (liquidación)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="vac-estado">
+            <option value="Aprobada">Aprobada</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Completada">Completada</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fecha inicio *</label>
+          <input type="date" id="vac-inicio" />
+        </div>
+        <div class="form-group">
+          <label>Fecha fin *</label>
+          <input type="date" id="vac-fin" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Días <span style="font-size:11px;color:var(--muted)">(se calcula automáticamente)</span></label>
+        <input type="number" id="vac-dias" placeholder="0" min="0.5" step="0.5" readonly style="opacity:0.7" />
+      </div>
+      <div class="form-group">
+        <label>Notas</label>
+        <input type="text" id="vac-notas" placeholder="Observaciones..." />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-vac">Cancelar</button>
+      <button class="btn btn-primary" id="save-vac">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script>
+requireAuth();
+
+let allVac = [];
+let allEmpleados = [];
+let filtroEmp = '';
+
+const _cu = netlifyIdentity.currentUser();
+if (_cu) { initLayout(); loadAll(); }
+else { netlifyIdentity.on('init', u => { if (u) { initLayout(); loadAll(); } }); }
+
+// Nicaragua: 15 días hábiles/año = 1.25 días/mes
+function calcAntiguedad(fechaIngreso) {
+  if (!fechaIngreso) return { meses: 0, label: '—' };
+  const ingreso = new Date(fechaIngreso + 'T00:00:00');
+  const hoy     = new Date();
+  let meses = (hoy.getFullYear() - ingreso.getFullYear()) * 12 + (hoy.getMonth() - ingreso.getMonth());
+  if (hoy.getDate() < ingreso.getDate()) meses--;
+  if (meses < 0) meses = 0;
+  const anios = Math.floor(meses / 12);
+  const mesesRest = meses % 12;
+  const label = anios > 0
+    ? `${anios} año${anios > 1 ? 's' : ''}${mesesRest > 0 ? ` ${mesesRest}m` : ''}`
+    : `${meses} mes${meses !== 1 ? 'es' : ''}`;
+  return { meses, label };
+}
+
+function diasLaborales(inicio, fin) {
+  let count = 0;
+  const d = new Date(inicio + 'T00:00:00');
+  const f = new Date(fin   + 'T00:00:00');
+  while (d <= f) {
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
+
+async function loadAll() {
+  try {
+    const [empleados, vacaciones] = await Promise.all([
+      apiFetch('/.netlify/functions/empleados'),
+      apiFetch('/.netlify/functions/vacaciones'),
+    ]);
+    allEmpleados = empleados.filter(e => e.Activo);
+    allVac = vacaciones;
+
+    // Poblar selectores
+    const selEmp  = document.getElementById('vac-empleado');
+    const selFilt = document.getElementById('filtro-empleado');
+    allEmpleados.forEach(e => {
+      [selEmp, selFilt].forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = e.Nombre;
+        opt.textContent = e.Nombre;
+        s.appendChild(opt);
+      });
+    });
+
+    renderResumen();
+    renderHistorial();
+  } catch (e) {
+    showAlert('alert-vac', 'Error: ' + e.message, 'error');
+  }
+}
+
+function renderResumen() {
+  const tbody = document.getElementById('tabla-resumen');
+  if (!allEmpleados.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">No hay empleados activos</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = allEmpleados.map(e => {
+    const { meses, label } = calcAntiguedad(e['Fecha de ingreso']);
+    const acumulados = Math.floor(meses * 1.25 * 10) / 10;
+    const tomados    = allVac
+      .filter(v => v.Empleado === e.Nombre && (v.Estado === 'Aprobada' || v.Estado === 'Completada'))
+      .reduce((s, v) => s + (parseFloat(v.Dias) || 0), 0);
+    const saldo      = Math.round((acumulados - tomados) * 10) / 10;
+
+    // Alertas: >15 días sin tomar, cerca de 6 meses, etc.
+    let estadoBadge = '';
+    let estadoLabel = '';
+    if (!e['Fecha de ingreso']) {
+      estadoBadge = 'badge-gray'; estadoLabel = 'Sin fecha ingreso';
+    } else if (meses < 6) {
+      estadoBadge = 'badge-gray'; estadoLabel = `Faltan ${6 - meses}m para 6m`;
+    } else if (saldo > 15) {
+      estadoBadge = 'badge-orange'; estadoLabel = '⚠ Exceso — debe tomar';
+    } else if (saldo > 7) {
+      estadoBadge = 'badge-blue'; estadoLabel = 'Acumulado';
+    } else if (saldo >= 0) {
+      estadoBadge = 'badge-green'; estadoLabel = 'Al día';
+    } else {
+      estadoBadge = 'badge-gray'; estadoLabel = 'Avanzadas';
+    }
+
+    return `<tr>
+      <td><strong>${e.Nombre}</strong></td>
+      <td>${e['Fecha de ingreso'] || '—'}</td>
+      <td>${label}</td>
+      <td style="font-weight:600">${acumulados}</td>
+      <td>${tomados}</td>
+      <td style="font-weight:700;color:${saldo < 0 ? 'var(--orange)' : 'var(--green2)'}">${saldo}</td>
+      <td><span class="badge ${estadoBadge}">${estadoLabel}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderHistorial() {
+  let lista = allVac;
+  if (filtroEmp) lista = lista.filter(v => v.Empleado === filtroEmp);
+
+  const tbody = document.getElementById('tabla-historial');
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">No hay registros de vacaciones</td></tr>';
+    return;
+  }
+
+  const tipoBadge = t => t === 'Pagadas' ? 'badge-orange' : 'badge-blue';
+  const estBadge  = s => s === 'Completada' ? 'badge-green' : s === 'Pendiente' ? 'badge-gray' : 'badge-blue';
+
+  tbody.innerHTML = lista.map(v => `<tr>
+    <td><strong>${v.Empleado || '—'}</strong></td>
+    <td>${v.Fecha_Inicio || '—'}</td>
+    <td>${v.Fecha_Fin    || '—'}</td>
+    <td style="font-weight:600">${v.Dias || '—'}</td>
+    <td><span class="badge ${tipoBadge(v.Tipo)}">${v.Tipo || '—'}</span></td>
+    <td><span class="badge ${estBadge(v.Estado)}">${v.Estado || '—'}</span></td>
+    <td style="font-size:12px;color:var(--muted)">${v.Notas || ''}</td>
+    <td>
+      ${v.Estado !== 'Completada' ? `<button class="btn btn-icon btn-sm" onclick="eliminar('${v.id}')" style="color:var(--red)">🗑️</button>` : ''}
+    </td>
+  </tr>`).join('');
+}
+
+document.getElementById('filtro-empleado').addEventListener('change', e => {
+  filtroEmp = e.target.value;
+  renderHistorial();
+});
+
+// Calcular días automáticamente al cambiar fechas
+['vac-inicio', 'vac-fin'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => {
+    const inicio = document.getElementById('vac-inicio').value;
+    const fin    = document.getElementById('vac-fin').value;
+    if (inicio && fin && fin >= inicio) {
+      document.getElementById('vac-dias').value = diasLaborales(inicio, fin);
+    }
+  });
+});
+
+function abrirModal() {
+  document.getElementById('vac-id').value = '';
+  document.getElementById('vac-empleado').value = '';
+  document.getElementById('vac-tipo').value = 'Descanso';
+  document.getElementById('vac-estado').value = 'Aprobada';
+  document.getElementById('vac-inicio').value = '';
+  document.getElementById('vac-fin').value = '';
+  document.getElementById('vac-dias').value = '';
+  document.getElementById('vac-notas').value = '';
+  document.getElementById('alert-form').className = 'alert';
+  document.getElementById('modal-vac').classList.add('open');
+}
+
+document.getElementById('btn-nuevo').addEventListener('click', abrirModal);
+['close-modal', 'cancel-vac'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-vac').classList.remove('open');
+  });
+});
+
+document.getElementById('save-vac').addEventListener('click', async () => {
+  const empleado = document.getElementById('vac-empleado').value;
+  const tipo     = document.getElementById('vac-tipo').value;
+  const estado   = document.getElementById('vac-estado').value;
+  const inicio   = document.getElementById('vac-inicio').value;
+  const fin      = document.getElementById('vac-fin').value;
+  const dias     = parseFloat(document.getElementById('vac-dias').value);
+  const notas    = document.getElementById('vac-notas').value.trim();
+
+  if (!empleado) { showAlert('alert-form', 'Selecciona un empleado', 'error'); return; }
+  if (!inicio)   { showAlert('alert-form', 'Selecciona la fecha de inicio', 'error'); return; }
+  if (!fin)      { showAlert('alert-form', 'Selecciona la fecha de fin', 'error'); return; }
+  if (fin < inicio) { showAlert('alert-form', 'La fecha fin debe ser posterior al inicio', 'error'); return; }
+
+  const fields = {
+    Empleado: empleado,
+    Tipo: tipo,
+    Estado: estado,
+    Fecha_Inicio: inicio,
+    Fecha_Fin: fin,
+    Dias: dias || diasLaborales(inicio, fin),
+    ...(notas ? { Notas: notas } : {}),
+  };
+
+  const btn = document.getElementById('save-vac');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    await apiFetch('/.netlify/functions/vacaciones', { method: 'POST', body: JSON.stringify(fields) });
+    document.getElementById('modal-vac').classList.remove('open');
+    showAlert('alert-vac', '✅ Vacaciones registradas', 'success');
+    allVac = await apiFetch('/.netlify/functions/vacaciones');
+    renderResumen();
+    renderHistorial();
+  } catch (e) {
+    showAlert('alert-form', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
+});
+
+async function eliminar(id) {
+  if (!confirm('¿Eliminar este registro de vacaciones?')) return;
+  try {
+    await apiFetch('/.netlify/functions/vacaciones', { method: 'DELETE', body: JSON.stringify({ id }) });
+    showAlert('alert-vac', '✅ Registro eliminado', 'success');
+    allVac = allVac.filter(v => v.id !== id);
+    renderResumen();
+    renderHistorial();
+  } catch (e) {
+    showAlert('alert-vac', 'Error: ' + e.message, 'error');
+  }
+}
+</script>
+</body>
+</html>

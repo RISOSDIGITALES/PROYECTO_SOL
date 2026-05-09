@@ -19,6 +19,8 @@
       <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
       <a href="/extras.html"><span class="icon">⭐</span> Extras</a>
       <a href="/deducciones.html" class="active"><span class="icon">➖</span> Deducciones</a>
+      <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
+      <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
     </nav>
     <div class="sidebar-footer">
       <span id="user-email"></span>
@@ -28,12 +30,43 @@
 
   <div class="main">
     <div class="topbar">
-      <div><h1>Deducciones</h1><span class="sub">Descuentos manuales por quincena</span></div>
+      <div><h1>Deducciones</h1><span class="sub">Descuentos por quincena</span></div>
       <button class="btn btn-primary" id="btn-nuevo">+ Nueva deducción</button>
     </div>
     <div class="content">
       <div id="alert-ded" class="alert"></div>
 
+      <!-- VISTA CONSOLIDADA POR QUINCENA -->
+      <div class="table-wrap" style="margin-bottom:20px">
+        <div class="table-header">
+          <h3>Resumen por quincena</h3>
+          <div style="display:flex;align-items:center;gap:8px">
+            <label style="font-size:12px;color:var(--muted)">Quincena:</label>
+            <input type="date" id="quincena-filtro" style="padding:4px 8px;border-radius:5px;border:1px solid var(--border);background:var(--navy2);color:var(--text);font-size:12px" />
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Empleado</th>
+              <th>Concepto</th>
+              <th>Tipo</th>
+              <th class="num">Monto</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-consolidada">
+            <tr><td colspan="4" class="empty">Seleccioná una quincena para ver todos los descuentos</td></tr>
+          </tbody>
+          <tfoot id="tfoot-consolidada" style="display:none">
+            <tr style="font-weight:700;border-top:2px solid var(--border)">
+              <td colspan="3" style="padding:8px 12px">Total descuentos</td>
+              <td class="num" id="total-consolidado" style="padding:8px 12px;color:var(--red)"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- GESTIÓN DE DEDUCCIONES MANUALES -->
       <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
         <div class="tabs" style="margin-bottom:0">
           <button class="tab active" data-filtro="todos">Todas</button>
@@ -41,7 +74,7 @@
           <button class="tab" data-filtro="pausado">Pausadas</button>
           <button class="tab" data-filtro="Descontado">Descontadas</button>
         </div>
-        <select id="filtro-empleado" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
+        <select id="filtro-empleado" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--navy2);color:var(--text);font-size:13px">
           <option value="">Todos los empleados</option>
         </select>
       </div>
@@ -221,17 +254,17 @@ function renderTabla() {
     const acciones = [];
     if (estado === 'Pendiente' && !pausado) {
       acciones.push(`<button class="btn btn-icon btn-sm" title="Editar" onclick="editar('${d.id}')">✏️</button>`);
-      acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer" onclick="pausar('${d.id}')">Pausar</button>`);
+      acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--navy2);border:1px solid var(--border);border-radius:4px;cursor:pointer" onclick="pausar('${d.id}')">Pausar</button>`);
     } else if (pausado) {
-      acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer" onclick="reactivar('${d.id}')">Reactivar</button>`);
+      acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--navy2);border:1px solid var(--border);border-radius:4px;cursor:pointer" onclick="reactivar('${d.id}')">Reactivar</button>`);
     }
     return `<tr>
       <td><strong>${d.Empleado || '—'}</strong></td>
       <td><span class="badge badge-gray">${d.Concepto || '—'}</span></td>
-      <td style="color:var(--text-muted);font-size:12px">${d['Descripción'] || ''}</td>
+      <td style="color:var(--muted);font-size:12px">${d['Descripción'] || ''}</td>
       <td class="num" style="color:var(--red)">${fmt(d.Monto)}</td>
       <td>${d['Descontar en quincena'] || '—'}</td>
-      <td style="color:var(--text-muted);font-size:12px">${creado}</td>
+      <td style="color:var(--muted);font-size:12px">${creado}</td>
       <td><span class="badge ${badge}">${badgeLabel}</span></td>
       <td style="display:flex;gap:4px;flex-wrap:wrap">${acciones.join('')}</td>
     </tr>`;
@@ -313,6 +346,97 @@ document.getElementById('save-ded').addEventListener('click', async () => {
     showAlert('alert-form', 'Error: ' + e.message, 'error');
   } finally {
     btn.disabled = false; btn.textContent = 'Guardar';
+  }
+});
+
+// ── VISTA CONSOLIDADA POR QUINCENA ──────────────────────────────────────────
+document.getElementById('quincena-filtro').addEventListener('change', async function() {
+  const q = this.value;
+  if (!q) return;
+
+  const tbody  = document.getElementById('tabla-consolidada');
+  const tfoot  = document.getElementById('tfoot-consolidada');
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="4"><div class="spinner"></div></td></tr>';
+  tfoot.style.display = 'none';
+
+  try {
+    const [prestamos, adelantos, deduccionesQ] = await Promise.all([
+      apiFetch('/.netlify/functions/prestamos'),
+      apiFetch('/.netlify/functions/adelantos'),
+      apiFetch('/.netlify/functions/deducciones'),
+    ]);
+
+    const rows = [];
+
+    // Préstamos activos → cuota quincenal automática
+    prestamos.filter(p => p.Estado === 'Activo' && (p['Cuotas restantes'] || 0) > 0).forEach(p => {
+      rows.push({
+        empleado: p.Empleado || '—',
+        concepto: `Cuota préstamo${p.Concepto ? ' — ' + p.Concepto : ''}`,
+        tipo: 'Préstamo',
+        monto: parseFloat(p['Cuota quincenal'] || 0),
+        badge: 'badge-orange',
+      });
+    });
+
+    // Adelantos pendientes y no pausados para esta quincena
+    adelantos
+      .filter(a => (a['Descontar en quincena'] || '') === q && (a.Estado || 'Pendiente') === 'Pendiente' && !a.Pausado)
+      .forEach(a => {
+        rows.push({
+          empleado: a.Empleado || '—',
+          concepto: 'Adelanto',
+          tipo: 'Adelanto',
+          monto: parseFloat(a.Monto || 0),
+          badge: 'badge-blue',
+        });
+      });
+
+    // Deducciones manuales pendientes para esta quincena
+    deduccionesQ
+      .filter(d => (d['Descontar en quincena'] || '') === q && (d.Estado || 'Pendiente') === 'Pendiente' && !d.Pausado)
+      .forEach(d => {
+        rows.push({
+          empleado: d.Empleado || '—',
+          concepto: d.Concepto || 'Deducción',
+          tipo: 'Manual',
+          monto: parseFloat(d.Monto || 0),
+          badge: 'badge-gray',
+        });
+      });
+
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="4" class="empty">Sin descuentos para la quincena ${q}</td></tr>`;
+      return;
+    }
+
+    // Agrupar por empleado
+    const grupos = {};
+    rows.forEach(r => {
+      if (!grupos[r.empleado]) grupos[r.empleado] = [];
+      grupos[r.empleado].push(r);
+    });
+
+    let html = '';
+    let total = 0;
+    Object.keys(grupos).sort().forEach(emp => {
+      const items = grupos[emp];
+      items.forEach((r, i) => {
+        total += r.monto;
+        html += `<tr>
+          ${i === 0 ? `<td rowspan="${items.length}" style="font-weight:600;vertical-align:top;padding-top:10px">${emp}</td>` : ''}
+          <td>${r.concepto}</td>
+          <td><span class="badge ${r.badge}">${r.tipo}</span></td>
+          <td class="num">${fmt(r.monto)}</td>
+        </tr>`;
+      });
+    });
+
+    tbody.innerHTML = html;
+    document.getElementById('total-consolidado').textContent = fmt(total);
+    tfoot.style.display = '';
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="4" class="empty" style="color:var(--red)">Error: ${e.message}</td></tr>`;
   }
 });
 </script>
