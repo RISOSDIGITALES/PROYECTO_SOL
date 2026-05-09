@@ -161,18 +161,35 @@ else { netlifyIdentity.on('init', u => { if (u) { initLayout(); loadAll(); } });
 
 // Nicaragua: 15 días hábiles/año = 1.25 días/mes
 function calcAntiguedad(fechaIngreso) {
-  if (!fechaIngreso) return { meses: 0, label: '—' };
+  if (!fechaIngreso) return { meses: 0, label: '—', cumple6: null, falta6Label: null };
   const ingreso = new Date(fechaIngreso + 'T00:00:00');
   const hoy     = new Date();
+
   let meses = (hoy.getFullYear() - ingreso.getFullYear()) * 12 + (hoy.getMonth() - ingreso.getMonth());
   if (hoy.getDate() < ingreso.getDate()) meses--;
   if (meses < 0) meses = 0;
-  const anios = Math.floor(meses / 12);
+
+  const anios     = Math.floor(meses / 12);
   const mesesRest = meses % 12;
-  const label = anios > 0
+  const label     = anios > 0
     ? `${anios} año${anios > 1 ? 's' : ''}${mesesRest > 0 ? ` ${mesesRest}m` : ''}`
     : `${meses} mes${meses !== 1 ? 'es' : ''}`;
-  return { meses, label };
+
+  // Fecha exacta en que cumple 6 meses
+  const cumple6 = new Date(ingreso);
+  cumple6.setMonth(cumple6.getMonth() + 6);
+
+  let falta6Label = null;
+  if (meses < 6) {
+    const msRest = Math.ceil((cumple6 - hoy) / (1000 * 60 * 60 * 24)); // días restantes
+    const mFalta = Math.floor(msRest / 30);
+    const dFalta = msRest % 30;
+    falta6Label = mFalta > 0
+      ? `Faltan ${mFalta} mes${mFalta > 1 ? 'es' : ''}${dFalta > 0 ? ` y ${dFalta} día${dFalta > 1 ? 's' : ''}` : ''}`
+      : `Faltan ${msRest} día${msRest !== 1 ? 's' : ''}`;
+  }
+
+  return { meses, label, cumple6, falta6Label };
 }
 
 function diasLaborales(inicio, fin) {
@@ -223,20 +240,19 @@ function renderResumen() {
   }
 
   tbody.innerHTML = allEmpleados.map(e => {
-    const { meses, label } = calcAntiguedad(e['Fecha de ingreso']);
+    const { meses, label, falta6Label } = calcAntiguedad(e['Fecha de ingreso']);
     const acumulados = Math.floor(meses * 1.25 * 10) / 10;
     const tomados    = allVac
       .filter(v => v.Empleado === e.Nombre && (v.Estado === 'Aprobada' || v.Estado === 'Completada'))
       .reduce((s, v) => s + (parseFloat(v.Dias) || 0), 0);
     const saldo      = Math.round((acumulados - tomados) * 10) / 10;
 
-    // Alertas: >15 días sin tomar, cerca de 6 meses, etc.
     let estadoBadge = '';
     let estadoLabel = '';
     if (!e['Fecha de ingreso']) {
       estadoBadge = 'badge-gray'; estadoLabel = 'Sin fecha ingreso';
     } else if (meses < 6) {
-      estadoBadge = 'badge-gray'; estadoLabel = `Faltan ${6 - meses}m para 6m`;
+      estadoBadge = 'badge-gray'; estadoLabel = falta6Label || `Faltan ${6 - meses} meses`;
     } else if (saldo > 15) {
       estadoBadge = 'badge-orange'; estadoLabel = '⚠ Exceso — debe tomar';
     } else if (saldo > 7) {
