@@ -9,7 +9,7 @@ exports.handler = async (event, context) => {
 
   try {
     let formula = `{Período}="${periodo}"`;
-    if (tipo && tipo !== '—') formula = `AND(${formula},{Tipo}="${tipo}")`;
+    if (tipo && tipo !== '—') formula = `AND(${formula},{Tipo_Planilla}="${tipo}")`;
 
     const records = await atAll('detalle', {
       filterByFormula: formula,
