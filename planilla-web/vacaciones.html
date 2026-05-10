@@ -40,7 +40,7 @@
       <div class="table-wrap" style="margin-bottom:20px">
         <div class="table-header">
           <h3>Saldo de vacaciones</h3>
-          <span style="font-size:11px;color:var(--muted)">Nicaragua: 15 días/año · 1.25 días/mes</span>
+          <span style="font-size:11px;color:var(--muted)">Nicaragua: 30 días/año · 2.5 días/mes (Art. 76 Código del Trabajo)</span>
         </div>
         <table>
           <thead>
@@ -51,6 +51,7 @@
               <th>Días acumulados</th>
               <th>Días tomados</th>
               <th>Saldo</th>
+              <th>Valor saldo (neto)</th>
               <th>Estado</th>
             </tr>
           </thead>
@@ -134,6 +135,15 @@
       <div class="form-group">
         <label>Días <span style="font-size:11px;color:var(--muted)">(se calcula automáticamente)</span></label>
         <input type="number" id="vac-dias" placeholder="0" min="0.5" step="0.5" readonly style="opacity:0.7" />
+      </div>
+      <!-- Preview pago vacaciones (solo tipo Pagadas) -->
+      <div id="preview-pago" style="display:none;background:var(--navy2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px">
+        <div style="font-weight:600;margin-bottom:6px;color:var(--green2)">Cálculo del pago</div>
+        <div style="display:flex;justify-content:space-between"><span>Salario diario</span><span id="prev-diario">—</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Días a pagar</span><span id="prev-dias2">—</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Monto bruto</span><span id="prev-bruto">—</span></div>
+        <div style="display:flex;justify-content:space-between;color:var(--muted)"><span>INSS (7%)</span><span id="prev-inss">—</span></div>
+        <div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px solid var(--border);margin-top:6px;padding-top:6px"><span>Neto a pagar</span><span id="prev-neto" style="color:var(--green2)">—</span></div>
       </div>
       <div class="form-group">
         <label>Notas</label>
@@ -241,11 +251,15 @@ function renderResumen() {
 
   tbody.innerHTML = allEmpleados.map(e => {
     const { meses, label, falta6Label } = calcAntiguedad(e['Fecha de ingreso']);
-    const acumulados = Math.floor(meses * 1.25 * 10) / 10;
+    const acumulados = Math.floor(meses * 2.5 * 10) / 10;
     const tomados    = allVac
       .filter(v => v.Empleado === e.Nombre && (v.Estado === 'Aprobada' || v.Estado === 'Completada'))
       .reduce((s, v) => s + (parseFloat(v.Dias) || 0), 0);
     const saldo      = Math.round((acumulados - tomados) * 10) / 10;
+    const salario    = parseFloat(e['Salario bruto mensual'] || 0);
+    const montoBruto = Math.round(saldo * (salario / 30) * 100) / 100;
+    const inssVac    = Math.round(montoBruto * 0.07 * 100) / 100;
+    const montoNeto  = Math.round((montoBruto - inssVac) * 100) / 100;
 
     let estadoBadge = '';
     let estadoLabel = '';
@@ -270,6 +284,7 @@ function renderResumen() {
       <td style="font-weight:600">${acumulados}</td>
       <td>${tomados}</td>
       <td style="font-weight:700;color:${saldo < 0 ? 'var(--orange)' : 'var(--green2)'}">${saldo}</td>
+      <td style="font-size:12px;color:var(--muted)">${salario > 0 && saldo > 0 ? fmt(montoNeto) : '—'}<br><span style="font-size:10px;opacity:0.6">${salario > 0 && saldo > 0 ? 'bruto ' + fmt(montoBruto) + ' − INSS ' + fmt(inssVac) : ''}</span></td>
       <td><span class="badge ${estadoBadge}">${estadoLabel}</span></td>
     </tr>`;
   }).join('');
@@ -307,6 +322,34 @@ document.getElementById('filtro-empleado').addEventListener('change', e => {
   renderHistorial();
 });
 
+function actualizarPreviewPago() {
+  const tipo = document.getElementById('vac-tipo').value;
+  const preview = document.getElementById('preview-pago');
+  if (tipo !== 'Pagadas') { preview.style.display = 'none'; return; }
+
+  const dias = parseFloat(document.getElementById('vac-dias').value) || 0;
+  const empNombre = document.getElementById('vac-empleado').value;
+  const emp = allEmpleados.find(e => e.Nombre === empNombre);
+  const salario = parseFloat(emp?.['Salario bruto mensual'] || 0);
+
+  if (!dias || !salario) { preview.style.display = 'none'; return; }
+
+  const diario = salario / 30;
+  const bruto  = Math.round(dias * diario * 100) / 100;
+  const inss   = Math.round(bruto * 0.07 * 100) / 100;
+  const neto   = Math.round((bruto - inss) * 100) / 100;
+
+  document.getElementById('prev-diario').textContent = fmt(diario);
+  document.getElementById('prev-dias2').textContent  = dias;
+  document.getElementById('prev-bruto').textContent  = fmt(bruto);
+  document.getElementById('prev-inss').textContent   = '− ' + fmt(inss);
+  document.getElementById('prev-neto').textContent   = fmt(neto);
+  preview.style.display = 'block';
+}
+
+document.getElementById('vac-tipo').addEventListener('change', actualizarPreviewPago);
+document.getElementById('vac-empleado').addEventListener('change', actualizarPreviewPago);
+
 // Calcular días automáticamente al cambiar fechas
 ['vac-inicio', 'vac-fin'].forEach(id => {
   document.getElementById(id).addEventListener('change', () => {
@@ -314,6 +357,7 @@ document.getElementById('filtro-empleado').addEventListener('change', e => {
     const fin    = document.getElementById('vac-fin').value;
     if (inicio && fin && fin >= inicio) {
       document.getElementById('vac-dias').value = diasLaborales(inicio, fin);
+      actualizarPreviewPago();
     }
   });
 });
@@ -352,13 +396,25 @@ document.getElementById('save-vac').addEventListener('click', async () => {
   if (!fin)      { showAlert('alert-form', 'Selecciona la fecha de fin', 'error'); return; }
   if (fin < inicio) { showAlert('alert-form', 'La fecha fin debe ser posterior al inicio', 'error'); return; }
 
+  const diasFinal = dias || diasLaborales(inicio, fin);
+  let montoNeto = null;
+  if (tipo === 'Pagadas') {
+    const emp = allEmpleados.find(e => e.Nombre === empleado);
+    const sal = parseFloat(emp?.['Salario bruto mensual'] || 0);
+    if (sal) {
+      const bruto = diasFinal * (sal / 30);
+      montoNeto = Math.round((bruto - bruto * 0.07) * 100) / 100;
+    }
+  }
+
   const fields = {
     Empleado: empleado,
     Tipo: tipo,
     Estado: estado,
     Fecha_Inicio: inicio,
     Fecha_Fin: fin,
-    Dias: dias || diasLaborales(inicio, fin),
+    Dias: diasFinal,
+    ...(montoNeto !== null ? { Monto: montoNeto } : {}),
     ...(notas ? { Notas: notas } : {}),
   };
 

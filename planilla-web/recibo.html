@@ -180,6 +180,7 @@ function renderRecibo(data, empleado, periodo) {
   const pres = data.prestamos   || [];
   const ext  = data.extras      || [];
   const ded  = data.deducciones || [];
+  const vac  = data.vacaciones  || [];
 
   const salarioMensual   = parseFloat(emp['Salario bruto mensual'] || 0);
   const subTotalQuincena = parseFloat(det['Salario quincenal bruto'] || salarioMensual / 2);
@@ -190,7 +191,8 @@ function renderRecibo(data, empleado, periodo) {
   const bono        = bonosArr.reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
   const feriados    = feriadosArr.reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
   const turnoExt    = turnosArr.reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
-  const granTotal   = subTotalQuincena + bono + feriados + turnoExt;
+  const vacPago     = vac.reduce((s, v) => s + parseFloat(v.Monto || 0), 0);
+  const granTotal   = subTotalQuincena + bono + feriados + turnoExt + vacPago;
 
   const inss         = parseFloat(det['INSS (7%)'] || 0);
   const ir           = parseFloat(det['IR'] || 0);
@@ -201,12 +203,13 @@ function renderRecibo(data, empleado, periodo) {
   const netoAPagar   = parseFloat(det['Neto a recibir'] || (granTotal - totalDesc));
 
   // Sección extras (solo si hay)
-  const extrasSection = (bono || feriados || turnoExt) ? `
+  const extrasSection = (bono || feriados || turnoExt || vacPago) ? `
     <div class="recibo-section">
       <div class="recibo-section-title">Extras</div>
       ${bono ? `<div class="recibo-row"><span class="label">Bono</span><span class="value">${cs(bono)}</span></div>` : ''}
       ${feriados ? `<div class="recibo-row"><span class="label">Feriados trabajados</span><span class="value">${cs(feriados)}</span></div>` : ''}
       ${turnoExt ? `<div class="recibo-row"><span class="label">Turno / Extra</span><span class="value">${cs(turnoExt)}</span></div>` : ''}
+      ${vac.map(v => `<div class="recibo-row"><span class="label">Vacaciones pagadas (${v.Dias} días)</span><span class="value">${cs(parseFloat(v.Monto || 0))}</span></div>`).join('')}
     </div>` : '';
 
   // Sección descuentos (solo si hay)
