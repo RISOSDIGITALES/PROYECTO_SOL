@@ -388,6 +388,60 @@ API REST local en Windows para gestión de planilla, conecta con MariaDB local y
 - Recibo PDF por quincena por empleado con todo el detalle
 - Pagos préstamo: incluye abonos extras en efectivo + fechas + concepto
 
+### Sistema de roles — Planilla Nicaragua (2026-05-10)
+Implementado con dos capas separadas:
+
+- **Autenticación (login):** Netlify Identity — invite-only, confirmación por email
+- **Roles (permisos):** Airtable tabla `empleados` → campos `Email` (flde0AWKl2BbqCwDO) y `Rol` (fldghugx86Ny89ouH)
+
+| Rol | Acceso |
+|---|---|
+| `Admin` | Todo — crear/editar empleados, salarios, roles |
+| `Planillero` | Todo excepto: no puede crear empleados, campos salario/INSS/IR/Email/Rol bloqueados |
+| `Empleado` | Solo `/mi-recibo.html` — ve sus propias quincenas |
+| Sin registro en Airtable | Se trata como Admin (compatibilidad hacia atrás) |
+
+**Flujo de creación de usuario:**
+1. Netlify dashboard → Identity → Invite users → email del empleado
+2. En la app → Empleados → editar el registro → llenar Email (mismo que en Netlify) y Rol
+3. El sistema cruza el JWT de Netlify con Airtable vía `/.netlify/functions/me`
+
+**Archivos clave:**
+- `planilla-web/netlify/functions/me.js` — devuelve `{ email, rol, nombre, id }` desde Airtable
+- `planilla-web/assets/js/auth.js` — `requireAuthRole()`, `getMyInfo()`, `isAdmin()`, `canEdit()`
+- `planilla-web/mi-recibo.html` — vista de empleado (solo sus recibos)
+
+### Migración de auth al salir de Netlify
+Cuando se migre a servidor propio (Node.js + Express + MariaDB), el login de Netlify Identity se reemplaza pero **la lógica de roles no cambia**.
+
+**Plan de migración:**
+
+1. Agregar tabla `usuarios` en MariaDB:
+   ```sql
+   CREATE TABLE usuarios (
+     id INT AUTO_INCREMENT PRIMARY KEY,
+     email VARCHAR(255) UNIQUE NOT NULL,
+     password_hash VARCHAR(255) NOT NULL,
+     rol ENUM('Admin','Planillero','Empleado') DEFAULT 'Empleado',
+     empleado_id INT,
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   );
+   ```
+
+2. Agregar endpoints al backend Express:
+   - `POST /auth/login` → verifica email+password, emite JWT propio (librería `jsonwebtoken`)
+   - `GET /auth/me` → verifica JWT, devuelve `{ email, rol, nombre, id }` — mismo formato que `me.js` actual
+
+3. Reemplazar en `auth.js` del frontend:
+   - `netlifyIdentity.currentUser()` → leer JWT de `localStorage`
+   - `user.jwt()` → devolver el JWT guardado
+   - `requireAuth()` / `requireAuthRole()` → verificar JWT local en vez de Netlify
+   - El resto de la lógica (roles, redirecciones, `isAdmin()`, `canEdit()`) queda **igual**
+
+4. Contraseñas: usar `bcrypt` en Express para hashear. Al migrar, generar contraseñas temporales y forzar cambio en primer login.
+
+**Lo que NO cambia al migrar:** todas las páginas HTML, la lógica de roles, `mi-recibo.html`, las restricciones de Planillero en `empleados.html` — solo cambia quién firma el JWT.
+
 ### Siguiente paso Planilla
 1. ~~Meter empleados reales en Airtable~~ ⏳ Sol cargada como prueba, faltan 7 reales
 2. ~~Construir motor de cálculo en n8n~~ ✅ Reemplazado por calcular.js (sin n8n)
@@ -395,12 +449,13 @@ API REST local en Windows para gestión de planilla, conecta con MariaDB local y
 4. ~~Bloque 1~~ ✅ Completado: extras.html, generar planilla UI, confirmación editar empleado
 5. ~~Bloque 2~~ ✅ Completado: historial pagos préstamos, pausar adelantos/deducciones, fechas registro
 6. ~~Bloque 3~~ ✅ Completado: dashboard con 5 stats + montos, feriados Nicaragua, selector feriados en extras, recibo corregido
-7. **PENDIENTE:** Deploy manual en Netlify para activar todos los cambios (Bloques 1+2+3)
-8. **PENDIENTE:** Ingresar empleados reales, eliminar registros de prueba (María García, Carlos López, Ana Martínez, Roberto Sánchez)
-9. **PENDIENTE:** Invitar usuarios reales a Netlify Identity
-10. **PENDIENTE:** Confirmar aportaciones + marcador de huella con quien corresponda
-11. **BLOQUEADO:** Reinicio de n8n → activa VAPI handoff (no afecta planilla, cálculo ya es independiente)
-12. **EN PAUSA:** Backend local Node.js/Express + MariaDB — esperar acceso al servidor propio
+7. ~~Deploy Netlify~~ ✅ Vía CLI (sin consumir minutos de build) — token: `nfp_5M7C84VijySQ7PTEeWADhMCTCTANhGcx0ae3`
+8. ~~Sistema de roles~~ ✅ Completado: Admin/Planillero/Empleado, me.js, mi-recibo.html
+9. **PENDIENTE:** Ingresar empleados reales, eliminar registros de prueba (María García, Carlos López, Ana Martínez, Roberto Sánchez)
+10. **PENDIENTE:** Invitar usuarios reales a Netlify Identity + asignar roles en Empleados
+11. **PENDIENTE:** Confirmar aportaciones + marcador de huella con quien corresponda
+12. **BLOQUEADO:** Reinicio de n8n → activa VAPI handoff (no afecta planilla, cálculo ya es independiente)
+13. **EN PAUSA:** Backend local Node.js/Express + MariaDB — esperar acceso al servidor propio
 
 ## Modelo de reporte diario
 
@@ -454,3 +509,7 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 34. **Workflow n8n planilla eliminado** (2026-05-09): `jkFucDKb7JSe32ze` borrado vía API — ya no existe en n8n
 35. **Bug fix recibo** (2026-05-09): `recibo.js` — campos adelantos (`{Quincena_Descuento}` → `{Descontar en quincena}`), extras (`{Período}` → `{Pagar en quincena}`), deducciones manuales añadidas; `recibo.html` — salario (`Salario bruto mensual`), tipos extras (`Feriado trabajado`, `Otro`), totalDesc incluye IR + deducciones
 36. **Cunas/amarras añadidas** (2026-05-09): catálogo de All Estimados en Segundos actualizado con variación de precios para cunas/amarras
+37. **Sistema de roles implementado** (2026-05-10): `me.js` + `auth.js` actualizado + `mi-recibo.html` creada — Admin/Planillero/Empleado con restricciones por página; campos Email y Rol en tabla Empleados de Airtable
+38. **Deploy via CLI documentado** (2026-05-10): `NETLIFY_AUTH_TOKEN=... netlify deploy --dir=planilla-web --functions=planilla-web/netlify/functions --site=b1f602d3-...` — no consume minutos de build
+39. **Deducciones renombrada** (2026-05-10): "Otras Deducciones" en nav y página para distinguirla de préstamos y adelantos
+40. **Plan de migración de auth documentado** (2026-05-10): cuando se salga de Netlify, reemplazar Netlify Identity con JWT propio en Express + tabla `usuarios` en MariaDB — lógica de roles no cambia
