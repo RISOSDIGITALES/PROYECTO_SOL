@@ -171,6 +171,18 @@ if (_cu) { initLayout(); loadAll(); }
 else { netlifyIdentity.on('init', u => { if (u) { initLayout(); loadAll(); } }); }
 
 async function loadAll() {
+  // Auto-setear quincena actual
+  const hoy = new Date();
+  const d   = hoy.getDate();
+  const y   = hoy.getFullYear();
+  const m   = String(hoy.getMonth() + 1).padStart(2, '0');
+  const ult  = new Date(y, hoy.getMonth() + 1, 0).getDate();
+  const qFecha = d <= 15
+    ? `${y}-${m}-15`
+    : `${y}-${m}-${String(ult).padStart(2, '0')}`;
+  const inputQ = document.getElementById('quincena-filtro');
+  inputQ.value = qFecha;
+
   try {
     const [ded, empleados] = await Promise.all([
       apiFetch('/.netlify/functions/deducciones'),
@@ -190,6 +202,7 @@ async function loadAll() {
     });
 
     renderTabla();
+    cargarResumenQuincena(qFecha);
   } catch (e) {
     showAlert('alert-ded', 'Error: ' + e.message, 'error');
   }
@@ -350,12 +363,10 @@ document.getElementById('save-ded').addEventListener('click', async () => {
 });
 
 // ── VISTA CONSOLIDADA POR QUINCENA ──────────────────────────────────────────
-document.getElementById('quincena-filtro').addEventListener('change', async function() {
-  const q = this.value;
+async function cargarResumenQuincena(q) {
   if (!q) return;
-
-  const tbody  = document.getElementById('tabla-consolidada');
-  const tfoot  = document.getElementById('tfoot-consolidada');
+  const tbody = document.getElementById('tabla-consolidada');
+  const tfoot = document.getElementById('tfoot-consolidada');
   tbody.innerHTML = '<tr class="loading-row"><td colspan="4"><div class="spinner"></div></td></tr>';
   tfoot.style.display = 'none';
 
@@ -368,7 +379,7 @@ document.getElementById('quincena-filtro').addEventListener('change', async func
 
     const rows = [];
 
-    // Préstamos activos → cuota quincenal automática
+    // Préstamos activos → cuota quincenal automática (aplica a toda quincena)
     prestamos.filter(p => p.Estado === 'Activo' && (p['Cuotas restantes'] || 0) > 0).forEach(p => {
       rows.push({
         empleado: p.Empleado || '—',
@@ -410,7 +421,6 @@ document.getElementById('quincena-filtro').addEventListener('change', async func
       return;
     }
 
-    // Agrupar por empleado
     const grupos = {};
     rows.forEach(r => {
       if (!grupos[r.empleado]) grupos[r.empleado] = [];
@@ -438,6 +448,10 @@ document.getElementById('quincena-filtro').addEventListener('change', async func
   } catch (e) {
     tbody.innerHTML = `<tr><td colspan="4" class="empty" style="color:var(--red)">Error: ${e.message}</td></tr>`;
   }
+}
+
+document.getElementById('quincena-filtro').addEventListener('change', function() {
+  cargarResumenQuincena(this.value);
 });
 </script>
 </body>
