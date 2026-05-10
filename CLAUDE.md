@@ -514,5 +514,36 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 38. **Deploy via CLI documentado** (2026-05-10): `NETLIFY_AUTH_TOKEN=... netlify deploy --dir=planilla-web --functions=planilla-web/netlify/functions --site=b1f602d3-...` — no consume minutos de build
 39. **Deducciones renombrada** (2026-05-10): "Otras Deducciones" en nav y página para distinguirla de préstamos y adelantos
 40. **Plan de migración de auth documentado** (2026-05-10): cuando se salga de Netlify, reemplazar Netlify Identity con JWT propio en Express + tabla `usuarios` en MariaDB — lógica de roles no cambia
-41. **Vacaciones pagadas implementadas** (2026-05-10): `vacaciones.html` — tasa corregida a 2.5 días/mes, columna "Valor saldo (neto)" con cálculo bruto − INSS 7%, preview de pago en modal para tipo Pagadas, campo `Monto` guardado al registrar; `recibo.js` — incluye vacaciones pagadas filtradas por rango de quincena; `recibo.html` — muestra vacaciones pagadas en sección Extras
+41. **Vacaciones pagadas implementadas** (2026-05-10): `vacaciones.html` — tasa corregida a 2.5 días/mes (Art. 76), columna "Valor saldo (neto)" con cálculo bruto − INSS 7%, preview de pago en modal para tipo Pagadas, campo `Monto` guardado al registrar; `recibo.js` — incluye vacaciones pagadas filtradas por rango de quincena; `recibo.html` — muestra vacaciones pagadas en sección Extras
 42. **Repo renombrado** (2026-05-10): GitHub repo `rrss-automatizaci-n` → `PROYECTO_SOL` por indicación de Don Walter; GitHub redirige automáticamente URLs antiguas
+43. **Documento CE reorganizado** (2026-05-11): documento de referencia de Crating Express reorganizado en 8 secciones limpias (perfil, catálogo, interiores, ISPM-15, logística, cotización, pagos, FAQs) — datos bancarios removidos por seguridad, duplicados eliminados; guardado como nuevo Google Doc para revisión
+
+## Reportes Diarios
+
+> Los últimos 14 días. Anteriores archivados en `PROYECTO-SOL/reportes/`.
+
+---
+
+### 2026-05-11 (Domingo)
+
+El día inició con un correo de error del workflow RRSS - Generador de Temas Semanales: el nodo "GSC: Top Keywords" falló porque el token OAuth de Google Search Console había expirado. Se diagnosticó el problema y se indicó el procedimiento para reconectar la credencial en n8n Settings → Credentials. El usuario lo resolvió por su cuenta y confirmó que el workflow volvió a correr correctamente.
+
+Luego iniciamos la jornada con Alex, retomando el bot de WhatsApp después de haber pausado la planilla. La primera tarea fue reorganizar el documento de referencia de Crating Express que alguien había pedido organizar — se leyó el documento original desde Google Drive, se identificaron los problemas (sección de términos duplicada, datos bancarios sensibles expuestos, estructura caótica mezclando catálogo con FAQs) y se produjo una versión reorganizada en 8 secciones claras. Los datos bancarios fueron removidos deliberadamente por razones de seguridad. El documento reorganizado quedó guardado como nuevo Google Doc para revisión el lunes antes de reemplazar el original.
+
+También se discutió la estrategia para conectar este documento con Alex: reemplazar el catálogo de Airtable con el contenido del documento en WhatsApp_Config, manteniendo el perfil de empresa en Airtable. Eso queda pendiente para cuando el documento sea aprobado.
+
+Finalmente se acordó una nueva práctica: usar CLAUDE.md como bitácora de reportes diarios para que haya contexto completo en cada sesión nueva, con los últimos 14 días activos y el resto archivado en GitHub. Se configuró la sección en este mismo archivo.
+
+Pendiente al cierre: publicar el draft de Netlify a producción desde el dashboard (el deploy con --prod da Forbidden con el token actual), y conectar el documento CE reorganizado con Alex una vez aprobado.
+
+---
+
+### 2026-05-10 (Sábado)
+
+El día estuvo enfocado en cerrar varios bloques de la planilla Nicaragua y en organizar el respaldo en GitHub. Se implementó el sistema de roles completo para la web app: tres niveles (Admin, Planillero, Empleado), con autenticación por Netlify Identity y permisos por Airtable. Se creó la función me.js que cruza el JWT de Netlify con el campo Email y Rol en la tabla de empleados, y se actualizó auth.js con requireAuthRole(), isAdmin() y canEdit(). Se creó mi-recibo.html como vista exclusiva para empleados que solo pueden ver sus propias quincenas. En empleados.html se bloquearon los campos sensibles (salario, tipo, INSS, IR, email, rol) para el rol Planillero y se ocultó el botón de crear empleado.
+
+También se corrigió el recibo de pago: el fallback de adelantos ahora muestra los registros individuales cuando existen, y se agregó la firma de "Quien entrega". Se renombró la sección "Deducciones" a "Otras Deducciones" en toda la navegación para distinguirla de préstamos y adelantos. Se documentó el plan de migración de auth para cuando se salga de Netlify hacia servidor propio con Express y MariaDB.
+
+Por indicación de Don Walter se creó el respaldo de todos los workflows en GitHub bajo la carpeta PROYECTO-SOL/2026/, con 16 workflows organizados en 7 categorías, cada uno con su workflow.json y descripcion.txt. Durante el proceso GitHub bloqueó el push por un token de Airtable hardcodeado en los JSONs — se limpió con sed y se reescribió el historial con git reset --soft antes de poder pushear. También por indicación de Don Walter se renombró el repositorio de rrss-automatizaci-n a PROYECTO_SOL.
+
+Al final del día se implementaron las vacaciones pagadas según ley nicaragüense: tasa corregida a 2.5 días/mes (Art. 76 CT), calculadora de pago en el modal con preview de bruto/INSS/neto, campo Monto guardado en Airtable al registrar vacaciones pagadas, y las vacaciones pagadas aparecen reflejadas en el recibo de pago filtradas por rango de quincena. El deploy quedó como draft en Netlify porque el token CLI no tiene permiso para --prod; queda pendiente publicar desde el dashboard.
