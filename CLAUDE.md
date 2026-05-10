@@ -331,11 +331,12 @@ Sistema de nómina quincenal para empresa en Managua, Nicaragua.
 
 ### Netlify — Planilla Web App
 - **URL:** https://planilla-nicaragua.netlify.app
-- **Repo:** `risosdigitales/rrss-automatizaci-n` → carpeta `planilla-web/`
+- **Repo:** `risosdigitales/PROYECTO_SOL` → carpeta `planilla-web/`
 - **Build:** Base dir: `planilla-web`, Publish: `.`, Functions: `netlify/functions`
 - **Auth:** Netlify Identity (invite-only, confirmación por email activa)
-- **Auto-deploy:** ⛔ DESACTIVADO — acumular commits y deployar manualmente desde Netlify dashboard para no gastar minutos (plan gratuito: 300/mes)
-- **Estado:** ✅ App desplegada — pendiente deploy manual para activar Bloque 1 + 2 + 3
+- **Auto-deploy:** ⛔ DESACTIVADO — acumular commits y deployar manualmente vía CLI para no gastar minutos (plan gratuito: 300/mes)
+- **Deploy CLI:** `NETLIFY_AUTH_TOKEN=nfp_5M7C84VijySQ7PTEeWADhMCTCTANhGcx0ae3 netlify deploy --dir=planilla-web --functions=planilla-web/netlify/functions --site=b1f602d3-324e-41c0-a034-1da91cadb946` (sin --prod para draft, con --prod para producción — producción puede requerir publicar desde dashboard)
+- **Estado:** ✅ App desplegada y actualizada
 - **Env var `N8N_PLANILLA_WEBHOOK`:** ya no es necesaria — cálculo en código local
 
 ### Páginas de la web app (planilla-web/)
@@ -513,3 +514,5 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 38. **Deploy via CLI documentado** (2026-05-10): `NETLIFY_AUTH_TOKEN=... netlify deploy --dir=planilla-web --functions=planilla-web/netlify/functions --site=b1f602d3-...` — no consume minutos de build
 39. **Deducciones renombrada** (2026-05-10): "Otras Deducciones" en nav y página para distinguirla de préstamos y adelantos
 40. **Plan de migración de auth documentado** (2026-05-10): cuando se salga de Netlify, reemplazar Netlify Identity con JWT propio en Express + tabla `usuarios` en MariaDB — lógica de roles no cambia
+41. **Vacaciones pagadas implementadas** (2026-05-10): `vacaciones.html` — tasa corregida a 2.5 días/mes, columna "Valor saldo (neto)" con cálculo bruto − INSS 7%, preview de pago en modal para tipo Pagadas, campo `Monto` guardado al registrar; `recibo.js` — incluye vacaciones pagadas filtradas por rango de quincena; `recibo.html` — muestra vacaciones pagadas en sección Extras
+42. **Repo renombrado** (2026-05-10): GitHub repo `rrss-automatizaci-n` → `PROYECTO_SOL` por indicación de Don Walter; GitHub redirige automáticamente URLs antiguas
