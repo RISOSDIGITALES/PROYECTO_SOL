@@ -1,0 +1,448 @@
+{
+    "updatedAt": "2026-04-14T19:37:39.000Z",
+    "createdAt": "2026-03-30T20:32:50.573Z",
+    "id": "Hh0HsBADMs1zUZSb",
+    "name": "[ARCHIVADO] CE LinkedIn - Publicar Blog Semanal",
+    "description": null,
+    "active": false,
+    "isArchived": true,
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "weeks",
+                            "triggerAtDay": [
+                                5
+                            ],
+                            "triggerAtHour": 9,
+                            "triggerAtMinute": 0
+                        }
+                    ]
+                }
+            },
+            "id": "trigger-semanal",
+            "name": "\u23f0 Trigger Viernes 9am",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                240,
+                304
+            ]
+        },
+        {
+            "parameters": {},
+            "id": "trigger-manual",
+            "name": "\u25b6\ufe0f Ejecutar Manualmente",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                240,
+                160
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://cratingexpress.com/wp-json/wp/v2/posts",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "per_page",
+                            "value": "100"
+                        },
+                        {
+                            "name": "status",
+                            "value": "publish"
+                        },
+                        {
+                            "name": "orderby",
+                            "value": "date"
+                        },
+                        {
+                            "name": "order",
+                            "value": "asc"
+                        },
+                        {
+                            "name": "_fields",
+                            "value": "id,title,excerpt,link,date,content,featured_media,_links"
+                        },
+                        {
+                            "name": "_embed",
+                            "value": "wp:featuredmedia"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "get-blogs-wp",
+            "name": "\ud83d\udcf0 Obtener Blogs de WordPress",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                464,
+                304
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/LinkedIn_CE",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "sort[0][field]",
+                            "value": "Fecha_Publicacion"
+                        },
+                        {
+                            "name": "sort[0][direction]",
+                            "value": "desc"
+                        },
+                        {
+                            "name": "maxRecords",
+                            "value": "1"
+                        }
+                    ]
+                },
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "get-ultimo-publicado",
+            "name": "\ud83d\udccb Obtener \u00daltimo Publicado (Airtable)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                576,
+                480
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Traer TODOS los blogs\nconst blogs = $('\ud83d\udcf0 Obtener Blogs de WordPress').all().map(item => item.json);\nconst ultimoData = $('\ud83d\udccb Obtener \u00daltimo Publicado (Airtable)').item.json;\n\n// \u00daltimo WP Post ID publicado en LinkedIn\nconst ultimoRegistro = ultimoData.records && ultimoData.records[0] ? ultimoData.records[0].fields : null;\n// Fix: convert to number to avoid string/number mismatch\nconst ultimoWpId = ultimoRegistro && ultimoRegistro.WP_Post_ID ? Number(ultimoRegistro.WP_Post_ID) : 0;\n\n// Encontrar el siguiente blog en orden cronol\u00f3gico\nconst idx = ultimoWpId > 0 ? blogs.findIndex(function(b){ return Number(b.id) === ultimoWpId; }) : -1;\nlet siguiente = idx >= 0 ? blogs[idx + 1] : blogs[0];\n\n// Si se complet\u00f3 el ciclo, reiniciar desde el primero\nif (!siguiente) siguiente = blogs[0];\nif (!siguiente) throw new Error('No se encontraron blogs en WordPress');\n\nfunction stripHtml(html) {\n  return (html || '').replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();\n}\n\n// Get featured image URL from _embedded\nconst featuredImage = siguiente._embedded && siguiente._embedded['wp:featuredmedia'] && siguiente._embedded['wp:featuredmedia'][0]\n  ? siguiente._embedded['wp:featuredmedia'][0].source_url || '' : '';\n\nconst titulo = siguiente.title ? siguiente.title.rendered || '' : '';\nconst extracto = stripHtml(siguiente.excerpt ? siguiente.excerpt.rendered || '' : siguiente.content ? siguiente.content.rendered || '' : '');\n\nreturn [{\n  json: {\n    wp_id: siguiente.id,\n    titulo: titulo,\n    extracto: extracto.slice(0, 500),\n    url: siguiente.link,\n    fecha_wp: siguiente.date,\n    featured_image_url: featuredImage\n  }\n}];"
+            },
+            "id": "seleccionar-blog",
+            "name": "\ud83d\udd27 Seleccionar Siguiente Blog",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                688,
+                304
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.groq.com/openai/v1/chat/completions",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "groqApi",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer gsk_xh4sNFnhiBX0IIKYo5cLWGdyb3FYnFEJIPiSPuIBTK8MgCmVbBf"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: 'You are a B2B thought leadership writer for Crating Express, a wood packaging and industrial crating company in Miami FL. You write analytical LinkedIn posts for freight forwarders, logistics managers, and industrial shippers. Education first, never salesy. Always respond with valid JSON only.' }, { role: 'user', content: 'Write an analytical LinkedIn post in ENGLISH based on this blog article.\\n\\nIMPORTANT: This is NOT a blog summary. Reframe the content as an industry insight or thought leadership piece. Focus on what this topic means for freight professionals and shippers.\\n\\nANALYTICAL ANGLES (pick the one that fits best):\\n- Industry problem + how expert packaging solves it\\n- Most common mistake shippers make regarding this topic\\n- Regulatory or compliance insight (ISPM-15, export requirements, international standards)\\n- Cost and risk framing: what poor packaging decisions actually cost\\n\\nFORMATTING RULES (follow exactly):\\n- Structure: 1 strong hook line (contrarian fact, industry pain point, or bold stat) => blank line => 2 short analytical paragraphs (2-3 sentences each) => blank line => 1 CTA line with article URL => blank line => exactly 7 hashtags on their own line\\n- Max 250 words total\\n- Tone: expert, analytical. Education precedes selling.\\n- ONE clear CTA only. No multiple CTAs.\\n- Use full name Crating Express \u2014 never abbreviate.\\n\\nHASHTAG RULES:\\n- EXACTLY 7 hashtags on the last line, nothing else on that line\\n- #ISPM15 is MANDATORY in every post\\n- The other 6 must be specific to the article topic (no generic tags like #Business or #Tips)\\n\\nBlog title: ' + $json.titulo + '\\nBlog excerpt: ' + $json.extracto + '\\nArticle URL: ' + $json.url + '\\n\\nRespond ONLY with this JSON:\\n{\"post_text\": \"Hook line.\\\\n\\\\nParagraph 1.\\\\n\\\\nParagraph 2.\\\\n\\\\nRead the full analysis: [ARTICLE URL]\\\\n\\\\n#ISPM15 #Tag2 #Tag3 #Tag4 #Tag5 #Tag6 #Tag7\", \"hook\": \"first sentence only\"}' }], temperature: 0.7, max_tokens: 700, response_format: { type: 'json_object' } }) }}",
+                "options": {}
+            },
+            "id": "groq-linkedin",
+            "name": "\ud83e\udd16 Groq: Generar Post LinkedIn",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                912,
+                304
+            ],
+            "credentials": {
+                "groqApi": {
+                    "id": "jORffbRhRNohHT1B",
+                    "name": "Groq account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "const aiResponse = $input.item.json.choices?.[0]?.message?.content || '{}';\n\nlet post;\ntry { post = JSON.parse(aiResponse); }\ncatch(e) {\n  const match = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  post = match ? JSON.parse(match[0]) : { post_text: aiResponse };\n}\n\nconst blog = $('\\U0001F527 Seleccionar Siguiente Blog').item.json;\n\n// \u2500\u2500 UTM tracking: tag any cratingexpress.com link in the post \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nfunction addUtm(text) {\n  if (!text) return text;\n  return text.replace(\n    /https?:\\/\\/(www\\.)?cratingexpress\\.com(\\/[^\\s\"'<>\\)]*)?/g,\n    function(match) {\n      if (match.includes('utm_source')) return match;\n      const sep = match.includes('?') ? '&' : '?';\n      return match + sep + 'utm_source=linkedin&utm_medium=social&utm_campaign=blog-semanal';\n    }\n  );\n}\n\nreturn [{\n  json: {\n    wp_id:              blog.wp_id,\n    titulo:             blog.titulo,\n    url:                blog.url,\n    fecha_wp:           blog.fecha_wp,\n    featured_image_url: blog.featured_image_url || '',\n    post_text:          addUtm(post.post_text || ''),\n    hook:               post.hook || ''\n  }\n}];"
+            },
+            "id": "parsear-post",
+            "name": "\ud83d\udd0d Parsear Post LinkedIn",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1344,
+                304
+            ]
+        },
+        {
+            "parameters": {
+                "postAs": "organization",
+                "organization": "112205115",
+                "text": "={{ $('\ud83d\udd0d Parsear Post LinkedIn').item.json.post_text }}",
+                "shareMediaCategory": "IMAGE",
+                "additionalFields": {
+                    "title": "={{ $('\ud83d\udd0d Parsear Post LinkedIn').item.json.titulo }}"
+                }
+            },
+            "id": "publicar-linkedin",
+            "name": "\ud83d\udce2 Publicar en LinkedIn",
+            "type": "n8n-nodes-base.linkedIn",
+            "typeVersion": 1,
+            "position": [
+                1568,
+                304
+            ],
+            "credentials": {
+                "linkedInOAuth2Api": {
+                    "id": "EdRerqCGO9tt9sGO",
+                    "name": "LinkedIn account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/LinkedIn_CE",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ records: [{ fields: { WP_Post_ID: $json.wp_id, Titulo: $json.titulo, URL: $json.url, Post_LinkedIn: $json.post_text, Fecha_Publicacion: new Date().toISOString().split('T')[0], Estado: 'Publicado' } }] }) }}",
+                "options": {}
+            },
+            "id": "guardar-airtable",
+            "name": "\ud83d\udcbe Guardar en Airtable",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1792,
+                304
+            ]
+        },
+        {
+            "parameters": {
+                "sendTo": "risosadmi@gmail.com",
+                "subject": "\u2705 LinkedIn CE \u2014 Publicado: {{ $('\ud83d\udd0d Parsear Post LinkedIn').item.json.titulo }}",
+                "message": "<h2>\u2705 Post publicado en LinkedIn</h2><p><strong>Art\u00edculo:</strong> <a href='{{ $('\ud83d\udd0d Parsear Post LinkedIn').item.json.url }}'>{{ $('\ud83d\udd0d Parsear Post LinkedIn').item.json.titulo }}</a></p><hr><h3>Texto publicado:</h3><p>{{ $('\ud83d\udd0d Parsear Post LinkedIn').item.json.post_text.replace(/\\n/g, '<br>') }}</p>",
+                "options": {}
+            },
+            "id": "notificar-email",
+            "name": "\ud83d\udce7 Notificar Publicaci\u00f3n",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                2000,
+                304
+            ],
+            "webhookId": "a72d38b3-22a7-443f-a855-5196d458324b",
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "TESHSjzjMCpCxBBk",
+                    "name": "Gmail account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "url": "={{ $json.featured_image_url }}",
+                "options": {}
+            },
+            "id": "descargar-imagen",
+            "name": "\u2b07\ufe0f Descargar Imagen Destacada",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1456,
+                528
+            ]
+        }
+    ],
+    "connections": {
+        "\u25b6\ufe0f Ejecutar Manualmente": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcf0 Obtener Blogs de WordPress",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udcf0 Obtener Blogs de WordPress": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udccb Obtener \u00daltimo Publicado (Airtable)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udccb Obtener \u00daltimo Publicado (Airtable)": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd27 Seleccionar Siguiente Blog",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd27 Seleccionar Siguiente Blog": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83e\udd16 Groq: Generar Post LinkedIn",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd0d Parsear Post LinkedIn": {
+            "main": [
+                [
+                    {
+                        "node": "\u2b07\ufe0f Descargar Imagen Destacada",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udce2 Publicar en LinkedIn": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcbe Guardar en Airtable",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udcbe Guardar en Airtable": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udce7 Notificar Publicaci\u00f3n",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83e\udd16 Groq: Generar Post LinkedIn": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd0d Parsear Post LinkedIn",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u2b07\ufe0f Descargar Imagen Destacada": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udce2 Publicar en LinkedIn",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u23f0 Trigger Martes y Jueves 9am": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcf0 Obtener Blogs de WordPress",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": {
+        "node:\u23f0 Trigger Martes y Jueves 9am": {
+            "recurrenceRules": []
+        },
+        "node:\u23f0 Trigger Viernes 9am": {
+            "recurrenceRules": []
+        }
+    },
+    "meta": {
+        "templateCredsSetupCompleted": true
+    },
+    "pinData": {},
+    "versionId": "37b06a71-99ef-4aa2-8dea-1d22abb57b33",
+    "activeVersionId": null,
+    "versionCounter": 48,
+    "triggerCount": 1,
+    "shared": [
+        {
+            "updatedAt": "2026-03-30T20:32:50.577Z",
+            "createdAt": "2026-03-30T20:32:50.577Z",
+            "role": "workflow:owner",
+            "workflowId": "Hh0HsBADMs1zUZSb",
+            "projectId": "scK6yPpEmlkikl67",
+            "project": {
+                "updatedAt": "2026-03-16T19:58:01.773Z",
+                "createdAt": "2026-03-16T19:56:18.866Z",
+                "id": "scK6yPpEmlkikl67",
+                "name": "Solange  Torrez <risosadmi@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            }
+        }
+    ],
+    "tags": [
+        {
+            "updatedAt": "2026-04-16T17:44:15.543Z",
+            "createdAt": "2026-04-16T17:44:15.543Z",
+            "id": "yWYf1RnRP6RkHiBT",
+            "name": "archivado"
+        }
+    ],
+    "activeVersion": null
+}

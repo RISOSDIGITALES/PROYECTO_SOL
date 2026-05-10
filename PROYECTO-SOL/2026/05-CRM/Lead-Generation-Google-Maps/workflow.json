@@ -1,0 +1,2267 @@
+{
+    "updatedAt": "2026-04-27T13:50:17.878Z",
+    "createdAt": "2026-04-06T16:50:35.429Z",
+    "id": "rtyrpJJsXD2xHINU",
+    "name": "\ud83d\udd0d Lead Generation - Google Maps",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "node-trigger-001",
+            "name": "\ud83d\ude80 Iniciar B\u00fasqueda",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                304
+            ]
+        },
+        {
+            "parameters": {
+                "content": "## \u2699\ufe0f CONFIGURACI\u00d3N\n**Paso 1:** Cambia el `query` en nodo \u2699\ufe0f Par\u00e1metros\n**Paso 2:** Cambia el `spreadsheetId` en nodo \u2699\ufe0f Par\u00e1metros\n_(El ID est\u00e1 en la URL de tu Sheet entre /d/ y /edit)_\n\n**Formato query:** `tipo negocio + ciudad`\nEj: `agencias exportaci\u00f3n Barcelona`",
+                "height": 220,
+                "width": 400,
+                "color": 4
+            },
+            "id": "node-note-001",
+            "name": "\ud83d\udccc Instrucciones",
+            "type": "n8n-nodes-base.stickyNote",
+            "typeVersion": 1,
+            "position": [
+                0,
+                48
+            ]
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "param-query",
+                            "name": "query",
+                            "value": "={{ ['customs broker Miami','freight forwarder Miami','import export company Miami','industrial equipment dealer Miami','art gallery Miami','aerospace company Miami','medical equipment company Miami','manufacturing company Miami'][Math.ceil(((new Date()-new Date(new Date().getFullYear(),0,1))/86400000+new Date(new Date().getFullYear(),0,1).getDay()+1)/7)%8] }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "param-key",
+                            "name": "apiKey",
+                            "value": "AIzaSyD523MCZTPTBkRRWWktCesLkwbcsBakOiw",
+                            "type": "string"
+                        },
+                        {
+                            "id": "param-sheet",
+                            "name": "spreadsheetId",
+                            "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+                            "type": "string"
+                        },
+                        {
+                            "id": "param-nicho",
+                            "name": "nicho",
+                            "value": "={{ ['customs-brokers','freight-forwarders','importers-exporters','industrial-equip','art-galleries','aerospace','medical-equipment','manufacturing'][Math.ceil(((new Date()-new Date(new Date().getFullYear(),0,1))/86400000+new Date(new Date().getFullYear(),0,1).getDay()+1)/7)%8] }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "node-set-params",
+            "name": "\u2699\ufe0f Par\u00e1metros",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                224,
+                304
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://maps.googleapis.com/maps/api/place/textsearch/json",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "query",
+                            "value": "={{ $json.query }}"
+                        },
+                        {
+                            "name": "key",
+                            "value": "={{ $json.apiKey }}"
+                        },
+                        {
+                            "name": "language",
+                            "value": "es"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "node-places-search",
+            "name": "\ud83c\udf0d Places: B\u00fasqueda",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                448,
+                304
+            ]
+        },
+        {
+            "parameters": {
+                "fieldToSplitOut": "results",
+                "options": {}
+            },
+            "id": "node-split",
+            "name": "\ud83d\udcc2 Separar Resultados",
+            "type": "n8n-nodes-base.splitOut",
+            "typeVersion": 1,
+            "position": [
+                672,
+                304
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://maps.googleapis.com/maps/api/place/details/json",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "place_id",
+                            "value": "={{ $json.place_id }}"
+                        },
+                        {
+                            "name": "fields",
+                            "value": "name,formatted_phone_number,international_phone_number,website,formatted_address,rating"
+                        },
+                        {
+                            "name": "key",
+                            "value": "AIzaSyD523MCZTPTBkRRWWktCesLkwbcsBakOiw"
+                        },
+                        {
+                            "name": "language",
+                            "value": "es"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "node-place-details",
+            "name": "\ud83d\udd0e Places: Detalles",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                880,
+                304
+            ],
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "f1",
+                            "name": "nombre",
+                            "value": "={{ $json.result.name }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "f2",
+                            "name": "direccion",
+                            "value": "={{ $json.result.formatted_address }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "f3",
+                            "name": "telefono",
+                            "value": "={{ ($json.result.international_phone_number || $json.result.formatted_phone_number || '').replace('+', '') }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "f4",
+                            "name": "web",
+                            "value": "={{ $json.result.website || \"\" }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "f5",
+                            "name": "rating",
+                            "value": "={{ $json.result.rating || \"\" }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "f6",
+                            "name": "fecha_captura",
+                            "value": "={{ $now.toFormat(\"dd/MM/yyyy\") }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "f7",
+                            "name": "estado",
+                            "value": "Nuevo",
+                            "type": "string"
+                        },
+                        {
+                            "id": "f8",
+                            "name": "correo_enviado",
+                            "value": "0",
+                            "type": "string"
+                        },
+                        {
+                            "id": "f9",
+                            "name": "fecha_c1",
+                            "value": "",
+                            "type": "string"
+                        },
+                        {
+                            "id": "f10",
+                            "name": "fecha_c2",
+                            "value": "",
+                            "type": "string"
+                        },
+                        {
+                            "id": "f11",
+                            "name": "fecha_c3",
+                            "value": "",
+                            "type": "string"
+                        },
+                        {
+                            "id": "f12",
+                            "name": "estado_email",
+                            "value": "activo",
+                            "type": "string"
+                        },
+                        {
+                            "id": "f-nicho",
+                            "name": "nicho",
+                            "value": "={{ $('\u2699\ufe0f Par\u00e1metros').item.json.nicho }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "f13",
+                            "name": "nicho",
+                            "value": "={{ $('\u2699\ufe0f Par\u00e1metros').first().json.nicho }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "f14",
+                            "name": "idioma",
+                            "value": "=en",
+                            "type": "string"
+                        },
+                        {
+                            "id": "f15",
+                            "name": "empresa",
+                            "value": "={{ $json.result.name }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "node-format",
+            "name": "\ud83e\uddf9 Formatear Lead",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                1104,
+                304
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": false,
+                        "leftValue": "",
+                        "typeValidation": "loose"
+                    },
+                    "conditions": [
+                        {
+                            "id": "cond-web",
+                            "leftValue": "={{ $json.web }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "string",
+                                "operation": "notEquals"
+                            }
+                        },
+                        {
+                            "id": "cond-phone",
+                            "leftValue": "={{ $json.telefono }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "string",
+                                "operation": "notEquals"
+                            }
+                        }
+                    ],
+                    "combinator": "or"
+                },
+                "options": {}
+            },
+            "id": "node-if",
+            "name": "\u2705 \u00bfTiene contacto?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                1328,
+                304
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "append",
+                "documentId": {
+                    "__rl": true,
+                    "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+                    "mode": "id"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": 0,
+                    "mode": "id"
+                },
+                "columns": {
+                    "mappingMode": "autoMapInputData",
+                    "value": {},
+                    "matchingColumns": [],
+                    "schema": [
+                        {
+                            "id": "nombre",
+                            "displayName": "nombre",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "direccion",
+                            "displayName": "direccion",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "telefono",
+                            "displayName": "telefono",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "web",
+                            "displayName": "web",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "rating",
+                            "displayName": "rating",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "fecha_captura",
+                            "displayName": "fecha_captura",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "estado",
+                            "displayName": "estado",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "email",
+                            "displayName": "email",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "correo_enviado",
+                            "displayName": "correo_enviado",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "fecha_c1",
+                            "displayName": "fecha_c1",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "fecha_c2",
+                            "displayName": "fecha_c2",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "fecha_c3",
+                            "displayName": "fecha_c3",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "estado_email",
+                            "displayName": "estado_email",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "nicho",
+                            "displayName": "nicho",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "idioma",
+                            "displayName": "idioma",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "empresa",
+                            "displayName": "empresa",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        }
+                    ],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": true
+                },
+                "options": {}
+            },
+            "id": "node-sheets",
+            "name": "\ud83d\udcca Google Sheets: Guardar Lead",
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.5,
+            "position": [
+                1568,
+                192
+            ],
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "QE2RlAxaMLoYefTD",
+                    "name": "Google Sheets account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "url": "https://api.hunter.io/v2/domain-search",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "domain",
+                            "value": "={{ $json.web.replace(/^https?:\\/\\/(www\\.)?/,'').replace(/\\/.*$/,'') }}"
+                        },
+                        {
+                            "name": "api_key",
+                            "value": "e51ae7cf7d8d93d9ae948ec931017cdd77b1b2d7"
+                        }
+                    ]
+                },
+                "options": {
+                    "response": {
+                        "response": {
+                            "responseFormat": "json",
+                            "outputPropertyName": "hunterResult"
+                        }
+                    },
+                    "timeout": 15000
+                }
+            },
+            "id": "node-fetch-web",
+            "name": "\ud83d\udd0d Hunter: Buscar Email",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1568,
+                448
+            ],
+            "continueOnFail": true,
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Hunter puts its response in $json.hunterResult\n// Original lead fields (nombre, web) are still in $json\nconst nombre = $json.nombre || '';\nconst web = $json.web || '';\n\nlet email = '';\ntry {\n  const emails = $json.hunterResult?.data?.emails || [];\n  if (emails.length > 0) {\n    const sorted = [...emails].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));\n    email = sorted[0].value || '';\n  }\n} catch(e) {}\n\nreturn [{ json: { nombre, web, email } }];",
+                "mode": "runOnceForEachItem"
+            },
+            "id": "node-extract-email",
+            "name": "\ud83d\udce7 Extraer Email",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1792,
+                448
+            ],
+            "continueOnFail": false
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 1
+                    },
+                    "conditions": [
+                        {
+                            "id": "cond-email",
+                            "leftValue": "={{ $json.email }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "string",
+                                "operation": "notEquals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "node-if-email",
+            "name": "\u2705 \u00bfEncontr\u00f3 Email?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                2000,
+                448
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "update",
+                "documentId": {
+                    "__rl": true,
+                    "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+                    "mode": "id"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": 0,
+                    "mode": "id"
+                },
+                "columns": {
+                    "mappingMode": "defineBelow",
+                    "value": {
+                        "nombre": "={{ $json.nombre }}",
+                        "email": "={{ $json.email }}"
+                    },
+                    "matchingColumns": [
+                        "nombre"
+                    ],
+                    "schema": [
+                        {
+                            "id": "nombre",
+                            "displayName": "nombre",
+                            "required": false,
+                            "defaultMatch": true,
+                            "canBeUsedToMatch": true,
+                            "display": true,
+                            "type": "string",
+                            "removed": false
+                        },
+                        {
+                            "id": "email",
+                            "displayName": "email",
+                            "required": false,
+                            "defaultMatch": false,
+                            "canBeUsedToMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "removed": false
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "node-update-email",
+            "name": "\ud83d\udcca Actualizar Email",
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.5,
+            "position": [
+                2224,
+                368
+            ],
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "QE2RlAxaMLoYefTD",
+                    "name": "Google Sheets account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "url": "={{ $json.web.replace(/\\/+$/, '') + '/contact' }}",
+                "options": {
+                    "response": {
+                        "response": {
+                            "responseFormat": "autodetect",
+                            "outputPropertyName": "scrapingResult"
+                        }
+                    },
+                    "timeout": 12000
+                }
+            },
+            "id": "node-scraping-fetch",
+            "name": "\ud83c\udf10 Scraping: Buscar Email",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                2224,
+                560
+            ],
+            "continueOnFail": true,
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Scraping puts its HTML in $json.scrapingResult\n// Original lead fields (nombre, web) still in $json from Extract Email output\nconst nombre = $json.nombre || '';\nconst web = $json.web || '';\n\nlet html = '';\ntry {\n  const raw = $json.scrapingResult || '';\n  html = typeof raw === 'string' ? raw : JSON.stringify(raw);\n} catch(e) {}\n\n// Priority 1: mailto: links\nlet mailtoEmails = [];\ntry {\n  const re = /href=[\"']mailto:([^\"'?\\s]+)/gi;\n  let m;\n  while ((m = re.exec(html)) !== null) {\n    if (m[1].includes('@')) mailtoEmails.push(m[1]);\n  }\n} catch(e) {}\n\n// Priority 2: regex\nlet regexEmails = [];\ntry {\n  const found = html.match(/[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}/g) || [];\n  regexEmails = found;\n} catch(e) {}\n\nconst blacklist = ['example','sentry','wixpress','yourdomain','schema',\n                   'placeholder','noreply','no-reply','webmaster@'];\nconst all = [...new Set([...mailtoEmails, ...regexEmails])];\nconst emails = all.filter(e => {\n  const l = e.toLowerCase();\n  return !blacklist.some(b => l.includes(b))\n    && !l.endsWith('.js') && !l.endsWith('.css')\n    && !l.endsWith('.png') && !l.endsWith('.jpg') && !l.endsWith('.gif');\n});\n\nreturn [{ json: { nombre, web, email: emails[0] || '' } }];",
+                "mode": "runOnceForEachItem"
+            },
+            "id": "node-scraping-code",
+            "name": "\ud83d\udce7 Extraer Email Scraping",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2448,
+                560
+            ],
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": false,
+                        "leftValue": "",
+                        "typeValidation": "loose"
+                    },
+                    "conditions": [
+                        {
+                            "id": "cond-scraping-email",
+                            "leftValue": "={{ $json.email }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "string",
+                                "operation": "notEquals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "node-if-scraping",
+            "name": "\u2705 \u00bfEmail Scraping?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                2672,
+                560
+            ]
+        },
+        {
+            "parameters": {
+                "url": "={{ $json.web.replace(/\\/+$/, '') + '/about' }}",
+                "options": {
+                    "response": {
+                        "response": {
+                            "responseFormat": "autodetect",
+                            "outputPropertyName": "scrapingResult"
+                        }
+                    },
+                    "timeout": 12000
+                }
+            },
+            "id": "node-scraping-fetch-about",
+            "name": "\ud83c\udf10 Scraping: /about",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                2896,
+                560
+            ],
+            "continueOnFail": true,
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Scraping /about puts its HTML in $json.scrapingResult\n// Original lead fields (nombre) still in $json\nconst nombre = $json.nombre || '';\n\nlet html = '';\ntry {\n  const raw = $json.scrapingResult || '';\n  html = typeof raw === 'string' ? raw : JSON.stringify(raw);\n} catch(e) {}\n\n// Priority 1: mailto: links\nlet mailtoEmails = [];\ntry {\n  const re = /href=[\"']mailto:([^\"'?\\s]+)/gi;\n  let m;\n  while ((m = re.exec(html)) !== null) {\n    if (m[1].includes('@')) mailtoEmails.push(m[1]);\n  }\n} catch(e) {}\n\n// Priority 2: regex\nlet regexEmails = [];\ntry {\n  const found = html.match(/[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}/g) || [];\n  regexEmails = found;\n} catch(e) {}\n\nconst blacklist = ['example','sentry','wixpress','yourdomain','schema',\n                   'placeholder','noreply','no-reply','webmaster@'];\nconst all = [...new Set([...mailtoEmails, ...regexEmails])];\nconst emails = all.filter(e => {\n  const l = e.toLowerCase();\n  return !blacklist.some(b => l.includes(b))\n    && !l.endsWith('.js') && !l.endsWith('.css')\n    && !l.endsWith('.png') && !l.endsWith('.jpg') && !l.endsWith('.gif');\n});\n\nreturn [{ json: { nombre, email: emails[0] || '' } }];",
+                "mode": "runOnceForEachItem"
+            },
+            "id": "node-scraping-code-about",
+            "name": "\ud83d\udce7 Extraer Email /about",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                3120,
+                560
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": false,
+                        "leftValue": "",
+                        "typeValidation": "loose"
+                    },
+                    "conditions": [
+                        {
+                            "id": "cond-about-email",
+                            "leftValue": "={{ $json.email }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "string",
+                                "operation": "notEquals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "node-if-scraping-about",
+            "name": "\u2705 \u00bfEmail /about?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                3344,
+                560
+            ]
+        },
+        {
+            "id": "schedule-lunes",
+            "name": "\u23f0 Trigger Lunes 9am",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                0,
+                144
+            ],
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "weeks",
+                            "weeksInterval": 1,
+                            "triggerAtDay": [
+                                1
+                            ],
+                            "triggerAtHour": 9,
+                            "triggerAtMinute": 0
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "id": "8e0a140d-f3e6-4752-bd4f-b5340c41bb41",
+            "name": "\ud83d\udcca Reporte Growth54",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                1400,
+                200
+            ],
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "TESHSjzjMCpCxBBk",
+                    "name": "Gmail account"
+                }
+            },
+            "parameters": {
+                "sendTo": "risosadmi@gmail.com",
+                "subject": "=\ud83d\udcca Lead Generation \u2014 Reporte del {{ new Date().toLocaleDateString('es-US', {timeZone:'America/New_York'}) }}",
+                "emailType": "html",
+                "message": "=<div style=\"font-family:Arial,sans-serif;max-width:660px;color:#333;\">\n<div style=\"background:#305468;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0;\">\n<strong>Growth54 \u2014 Reporte Lead Generation (Google Maps)</strong>\n</div>\n<div style=\"padding:16px 20px;border:1px solid #ddd;border-top:none;border-radius:0 0 6px 6px;\">\n<p><strong>Fecha:</strong> {{ new Date().toLocaleString('es-US', {timeZone:'America/New_York'}) }}</p>\n<p><strong>Total leads guardados:</strong> {{ $json.data.length }}</p>\n<hr style=\"border:none;border-top:1px solid #eee;margin:12px 0;\">\n<table width=\"100%\" cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse;font-size:14px;\">\n<thead>\n<tr style=\"background:#f5f5f5;\">\n<th style=\"text-align:left;border-bottom:2px solid #ddd;\">#</th>\n<th style=\"text-align:left;border-bottom:2px solid #ddd;\">Empresa</th>\n<th style=\"text-align:left;border-bottom:2px solid #ddd;\">Email</th>\n<th style=\"text-align:left;border-bottom:2px solid #ddd;\">Tel\u00e9fono</th>\n<th style=\"text-align:left;border-bottom:2px solid #ddd;\">Nicho</th>\n<th style=\"text-align:left;border-bottom:2px solid #ddd;\">Web</th>\n</tr>\n</thead>\n<tbody>\n{{ $json.data.map((item, i) => `<tr style=\"border-bottom:1px solid #eee;\"><td style=\"color:#999;\">${i+1}</td><td><strong>${item.nombre || '\u2014'}</strong></td><td style=\"color:#305468;\">${item.email || '<em style=color:#ccc>sin email</em>'}</td><td>${item.telefono || '\u2014'}</td><td>${item.nicho || '\u2014'}</td><td style=\"font-size:12px;color:#888;\">${(item.web||'').substring(0,30) || '\u2014'}</td></tr>`).join('') }}\n</tbody>\n</table>\n<p style=\"margin-top:16px;font-size:12px;color:#999;\">Workflow: Lead Generation \u2014 Google Maps | Ejecuci\u00f3n: {{ $execution.id }}</p>\n</div>\n</div>",
+                "options": {
+                    "senderName": "Growth54"
+                }
+            }
+        },
+        {
+            "id": "agg-leads-found",
+            "name": "\ud83d\udce6 Agrupar Leads",
+            "type": "n8n-nodes-base.aggregate",
+            "typeVersion": 1,
+            "position": [
+                3400,
+                300
+            ],
+            "parameters": {
+                "aggregate": "aggregateAllItemData",
+                "options": {}
+            }
+        }
+    ],
+    "connections": {
+        "\ud83d\ude80 Iniciar B\u00fasqueda": {
+            "main": [
+                [
+                    {
+                        "node": "\u2699\ufe0f Par\u00e1metros",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u2699\ufe0f Par\u00e1metros": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83c\udf0d Places: B\u00fasqueda",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83c\udf0d Places: B\u00fasqueda": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcc2 Separar Resultados",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udcc2 Separar Resultados": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd0e Places: Detalles",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd0e Places: Detalles": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83e\uddf9 Formatear Lead",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83e\uddf9 Formatear Lead": {
+            "main": [
+                [
+                    {
+                        "node": "\u2705 \u00bfTiene contacto?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u2705 \u00bfTiene contacto?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcca Google Sheets: Guardar Lead",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "\ud83d\udd0d Hunter: Buscar Email",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "\ud83d\udce7 Extraer Email": {
+            "main": [
+                [
+                    {
+                        "node": "\u2705 \u00bfEncontr\u00f3 Email?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u2705 \u00bfEncontr\u00f3 Email?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcca Actualizar Email",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\ud83c\udf10 Scraping: Buscar Email",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd0d Hunter: Buscar Email": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udce7 Extraer Email",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83c\udf10 Scraping: Buscar Email": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udce7 Extraer Email Scraping",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udce7 Extraer Email Scraping": {
+            "main": [
+                [
+                    {
+                        "node": "\u2705 \u00bfEmail Scraping?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u2705 \u00bfEmail Scraping?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcca Actualizar Email",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\ud83c\udf10 Scraping: /about",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83c\udf10 Scraping: /about": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udce7 Extraer Email /about",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udce7 Extraer Email /about": {
+            "main": [
+                [
+                    {
+                        "node": "\u2705 \u00bfEmail /about?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u2705 \u00bfEmail /about?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcca Actualizar Email",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "\u23f0 Trigger Lunes 9am": {
+            "main": [
+                [
+                    {
+                        "node": "\u2699\ufe0f Par\u00e1metros",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udcca Actualizar Email": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udce6 Agrupar Leads",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udcca Google Sheets: Guardar Lead": {
+            "main": [
+                []
+            ]
+        },
+        "\ud83d\udce6 Agrupar Leads": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcca Reporte Growth54",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false,
+        "errorWorkflow": "CKOju9JVnSMymfKv"
+    },
+    "staticData": {
+        "node:\u23f0 Trigger Lunes 9am": {
+            "recurrenceRules": []
+        }
+    },
+    "meta": null,
+    "pinData": {},
+    "versionId": "7a541846-ab6c-4840-bf82-7f3da9e9c294",
+    "activeVersionId": "7a541846-ab6c-4840-bf82-7f3da9e9c294",
+    "versionCounter": 67,
+    "triggerCount": 1,
+    "shared": [
+        {
+            "updatedAt": "2026-04-06T16:50:35.433Z",
+            "createdAt": "2026-04-06T16:50:35.433Z",
+            "role": "workflow:owner",
+            "workflowId": "rtyrpJJsXD2xHINU",
+            "projectId": "scK6yPpEmlkikl67",
+            "project": {
+                "updatedAt": "2026-03-16T19:58:01.773Z",
+                "createdAt": "2026-03-16T19:56:18.866Z",
+                "id": "scK6yPpEmlkikl67",
+                "name": "Solange  Torrez <risosadmi@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            }
+        }
+    ],
+    "tags": [
+        {
+            "updatedAt": "2026-04-16T17:44:15.165Z",
+            "createdAt": "2026-04-16T17:44:15.165Z",
+            "id": "ujwRo7f5pLGmeHA8",
+            "name": "leads"
+        }
+    ],
+    "activeVersion": {
+        "updatedAt": "2026-04-27T13:50:17.880Z",
+        "createdAt": "2026-04-27T13:50:17.880Z",
+        "versionId": "7a541846-ab6c-4840-bf82-7f3da9e9c294",
+        "workflowId": "rtyrpJJsXD2xHINU",
+        "nodes": [
+            {
+                "parameters": {},
+                "id": "node-trigger-001",
+                "name": "\ud83d\ude80 Iniciar B\u00fasqueda",
+                "type": "n8n-nodes-base.manualTrigger",
+                "typeVersion": 1,
+                "position": [
+                    0,
+                    304
+                ]
+            },
+            {
+                "parameters": {
+                    "content": "## \u2699\ufe0f CONFIGURACI\u00d3N\n**Paso 1:** Cambia el `query` en nodo \u2699\ufe0f Par\u00e1metros\n**Paso 2:** Cambia el `spreadsheetId` en nodo \u2699\ufe0f Par\u00e1metros\n_(El ID est\u00e1 en la URL de tu Sheet entre /d/ y /edit)_\n\n**Formato query:** `tipo negocio + ciudad`\nEj: `agencias exportaci\u00f3n Barcelona`",
+                    "height": 220,
+                    "width": 400,
+                    "color": 4
+                },
+                "id": "node-note-001",
+                "name": "\ud83d\udccc Instrucciones",
+                "type": "n8n-nodes-base.stickyNote",
+                "typeVersion": 1,
+                "position": [
+                    0,
+                    48
+                ]
+            },
+            {
+                "parameters": {
+                    "assignments": {
+                        "assignments": [
+                            {
+                                "id": "param-query",
+                                "name": "query",
+                                "value": "={{ ['customs broker Miami','freight forwarder Miami','import export company Miami','industrial equipment dealer Miami','art gallery Miami','aerospace company Miami','medical equipment company Miami','manufacturing company Miami'][Math.ceil(((new Date()-new Date(new Date().getFullYear(),0,1))/86400000+new Date(new Date().getFullYear(),0,1).getDay()+1)/7)%8] }}",
+                                "type": "string"
+                            },
+                            {
+                                "id": "param-key",
+                                "name": "apiKey",
+                                "value": "AIzaSyD523MCZTPTBkRRWWktCesLkwbcsBakOiw",
+                                "type": "string"
+                            },
+                            {
+                                "id": "param-sheet",
+                                "name": "spreadsheetId",
+                                "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+                                "type": "string"
+                            },
+                            {
+                                "id": "param-nicho",
+                                "name": "nicho",
+                                "value": "={{ ['customs-brokers','freight-forwarders','importers-exporters','industrial-equip','art-galleries','aerospace','medical-equipment','manufacturing'][Math.ceil(((new Date()-new Date(new Date().getFullYear(),0,1))/86400000+new Date(new Date().getFullYear(),0,1).getDay()+1)/7)%8] }}",
+                                "type": "string"
+                            }
+                        ]
+                    },
+                    "options": {}
+                },
+                "id": "node-set-params",
+                "name": "\u2699\ufe0f Par\u00e1metros",
+                "type": "n8n-nodes-base.set",
+                "typeVersion": 3.4,
+                "position": [
+                    224,
+                    304
+                ]
+            },
+            {
+                "parameters": {
+                    "url": "https://maps.googleapis.com/maps/api/place/textsearch/json",
+                    "sendQuery": true,
+                    "queryParameters": {
+                        "parameters": [
+                            {
+                                "name": "query",
+                                "value": "={{ $json.query }}"
+                            },
+                            {
+                                "name": "key",
+                                "value": "={{ $json.apiKey }}"
+                            },
+                            {
+                                "name": "language",
+                                "value": "es"
+                            }
+                        ]
+                    },
+                    "options": {}
+                },
+                "id": "node-places-search",
+                "name": "\ud83c\udf0d Places: B\u00fasqueda",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    448,
+                    304
+                ]
+            },
+            {
+                "parameters": {
+                    "fieldToSplitOut": "results",
+                    "options": {}
+                },
+                "id": "node-split",
+                "name": "\ud83d\udcc2 Separar Resultados",
+                "type": "n8n-nodes-base.splitOut",
+                "typeVersion": 1,
+                "position": [
+                    672,
+                    304
+                ]
+            },
+            {
+                "parameters": {
+                    "url": "https://maps.googleapis.com/maps/api/place/details/json",
+                    "sendQuery": true,
+                    "queryParameters": {
+                        "parameters": [
+                            {
+                                "name": "place_id",
+                                "value": "={{ $json.place_id }}"
+                            },
+                            {
+                                "name": "fields",
+                                "value": "name,formatted_phone_number,international_phone_number,website,formatted_address,rating"
+                            },
+                            {
+                                "name": "key",
+                                "value": "AIzaSyD523MCZTPTBkRRWWktCesLkwbcsBakOiw"
+                            },
+                            {
+                                "name": "language",
+                                "value": "es"
+                            }
+                        ]
+                    },
+                    "options": {}
+                },
+                "id": "node-place-details",
+                "name": "\ud83d\udd0e Places: Detalles",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    880,
+                    304
+                ],
+                "onError": "continueRegularOutput"
+            },
+            {
+                "parameters": {
+                    "assignments": {
+                        "assignments": [
+                            {
+                                "id": "f1",
+                                "name": "nombre",
+                                "value": "={{ $json.result.name }}",
+                                "type": "string"
+                            },
+                            {
+                                "id": "f2",
+                                "name": "direccion",
+                                "value": "={{ $json.result.formatted_address }}",
+                                "type": "string"
+                            },
+                            {
+                                "id": "f3",
+                                "name": "telefono",
+                                "value": "={{ ($json.result.international_phone_number || $json.result.formatted_phone_number || '').replace('+', '') }}",
+                                "type": "string"
+                            },
+                            {
+                                "id": "f4",
+                                "name": "web",
+                                "value": "={{ $json.result.website || \"\" }}",
+                                "type": "string"
+                            },
+                            {
+                                "id": "f5",
+                                "name": "rating",
+                                "value": "={{ $json.result.rating || \"\" }}",
+                                "type": "string"
+                            },
+                            {
+                                "id": "f6",
+                                "name": "fecha_captura",
+                                "value": "={{ $now.toFormat(\"dd/MM/yyyy\") }}",
+                                "type": "string"
+                            },
+                            {
+                                "id": "f7",
+                                "name": "estado",
+                                "value": "Nuevo",
+                                "type": "string"
+                            },
+                            {
+                                "id": "f8",
+                                "name": "correo_enviado",
+                                "value": "0",
+                                "type": "string"
+                            },
+                            {
+                                "id": "f9",
+                                "name": "fecha_c1",
+                                "value": "",
+                                "type": "string"
+                            },
+                            {
+                                "id": "f10",
+                                "name": "fecha_c2",
+                                "value": "",
+                                "type": "string"
+                            },
+                            {
+                                "id": "f11",
+                                "name": "fecha_c3",
+                                "value": "",
+                                "type": "string"
+                            },
+                            {
+                                "id": "f12",
+                                "name": "estado_email",
+                                "value": "activo",
+                                "type": "string"
+                            },
+                            {
+                                "id": "f-nicho",
+                                "name": "nicho",
+                                "value": "={{ $('\u2699\ufe0f Par\u00e1metros').item.json.nicho }}",
+                                "type": "string"
+                            },
+                            {
+                                "id": "f13",
+                                "name": "nicho",
+                                "value": "={{ $('\u2699\ufe0f Par\u00e1metros').first().json.nicho }}",
+                                "type": "string"
+                            },
+                            {
+                                "id": "f14",
+                                "name": "idioma",
+                                "value": "=en",
+                                "type": "string"
+                            },
+                            {
+                                "id": "f15",
+                                "name": "empresa",
+                                "value": "={{ $json.result.name }}",
+                                "type": "string"
+                            }
+                        ]
+                    },
+                    "options": {}
+                },
+                "id": "node-format",
+                "name": "\ud83e\uddf9 Formatear Lead",
+                "type": "n8n-nodes-base.set",
+                "typeVersion": 3.4,
+                "position": [
+                    1104,
+                    304
+                ]
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": false,
+                            "leftValue": "",
+                            "typeValidation": "loose"
+                        },
+                        "conditions": [
+                            {
+                                "id": "cond-web",
+                                "leftValue": "={{ $json.web }}",
+                                "rightValue": "",
+                                "operator": {
+                                    "type": "string",
+                                    "operation": "notEquals"
+                                }
+                            },
+                            {
+                                "id": "cond-phone",
+                                "leftValue": "={{ $json.telefono }}",
+                                "rightValue": "",
+                                "operator": {
+                                    "type": "string",
+                                    "operation": "notEquals"
+                                }
+                            }
+                        ],
+                        "combinator": "or"
+                    },
+                    "options": {}
+                },
+                "id": "node-if",
+                "name": "\u2705 \u00bfTiene contacto?",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2,
+                "position": [
+                    1328,
+                    304
+                ]
+            },
+            {
+                "parameters": {
+                    "operation": "append",
+                    "documentId": {
+                        "__rl": true,
+                        "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+                        "mode": "id"
+                    },
+                    "sheetName": {
+                        "__rl": true,
+                        "value": 0,
+                        "mode": "id"
+                    },
+                    "columns": {
+                        "mappingMode": "autoMapInputData",
+                        "value": {},
+                        "matchingColumns": [],
+                        "schema": [
+                            {
+                                "id": "nombre",
+                                "displayName": "nombre",
+                                "required": false,
+                                "defaultMatch": false,
+                                "display": true,
+                                "type": "string",
+                                "canBeUsedToMatch": true,
+                                "removed": false
+                            },
+                            {
+                                "id": "direccion",
+                                "displayName": "direccion",
+                                "required": false,
+                                "defaultMatch": false,
+                                "display": true,
+                                "type": "string",
+                                "canBeUsedToMatch": true,
+                                "removed": false
+                            },
+                            {
+                                "id": "telefono",
+                                "displayName": "telefono",
+                                "required": false,
+                                "defaultMatch": false,
+                                "display": true,
+                                "type": "string",
+                                "canBeUsedToMatch": true,
+                                "removed": false
+                            },
+                            {
+                                "id": "web",
+                                "displayName": "web",
+                                "required": false,
+                                "defaultMatch": false,
+                                "display": true,
+                                "type": "string",
+                                "canBeUsedToMatch": true,
+                                "removed": false
+                            },
+                            {
+                                "id": "rating",
+                                "displayName": "rating",
+                                "required": false,
+                                "defaultMatch": false,
+                                "display": true,
+                                "type": "string",
+                                "canBeUsedToMatch": true,
+                                "removed": false
+                            },
+                            {
+                                "id": "fecha_captura",
+                                "displayName": "fecha_captura",
+                                "required": false,
+                                "defaultMatch": false,
+                                "display": true,
+                                "type": "string",
+                                "canBeUsedToMatch": true,
+                                "removed": false
+                            },
+                            {
+                                "id": "estado",
+                                "displayName": "estado",
+                                "required": false,
+                                "defaultMatch": false,
+                                "display": true,
+                                "type": "string",
+                                "canBeUsedToMatch": true,
+                                "removed": false
+                            },
+                            {
+                                "id": "email",
+                                "displayName": "email",
+                                "required": false,
+                                "defaultMatch": false,
+                                "display": true,
+                                "type": "string",
+                                "canBeUsedToMatch": true,
+                                "removed": false
+                            },
+                            {
+                                "id": "correo_enviado",
+                                "displayName": "correo_enviado",
+                                "required": false,
+                                "defaultMatch": false,
+                                "display": true,
+                                "type": "string",
+                                "canBeUsedToMatch": true,
+                                "removed": false
+                            },
+                            {
+                                "id": "fecha_c1",
+                                "displayName": "fecha_c1",
+                                "required": false,
+                                "defaultMatch": false,
+                                "display": true,
+                                "type": "string",
+                                "canBeUsedToMatch": true,
+                                "removed": false
+                            },
+                            {
+                                "id": "fecha_c2",
+                                "displayName": "fecha_c2",
+                                "required": false,
+                                "defaultMatch": false,
+                                "display": true,
+                                "type": "string",
+                                "canBeUsedToMatch": true,
+                                "removed": false
+                            },
+                            {
+                                "id": "fecha_c3",
+                                "displayName": "fecha_c3",
+                                "required": false,
+                                "defaultMatch": false,
+                                "display": true,
+                                "type": "string",
+                                "canBeUsedToMatch": true,
+                                "removed": false
+                            },
+                            {
+                                "id": "estado_email",
+                                "displayName": "estado_email",
+                                "required": false,
+                                "defaultMatch": false,
+                                "display": true,
+                                "type": "string",
+                                "canBeUsedToMatch": true,
+                                "removed": false
+                            },
+                            {
+                                "id": "nicho",
+                                "displayName": "nicho",
+                                "required": false,
+                                "defaultMatch": false,
+                                "display": true,
+                                "type": "string",
+                                "canBeUsedToMatch": true,
+                                "removed": false
+                            },
+                            {
+                                "id": "idioma",
+                                "displayName": "idioma",
+                                "required": false,
+                                "defaultMatch": false,
+                                "display": true,
+                                "type": "string",
+                                "canBeUsedToMatch": true,
+                                "removed": false
+                            },
+                            {
+                                "id": "empresa",
+                                "displayName": "empresa",
+                                "required": false,
+                                "defaultMatch": false,
+                                "display": true,
+                                "type": "string",
+                                "canBeUsedToMatch": true,
+                                "removed": false
+                            }
+                        ],
+                        "attemptToConvertTypes": false,
+                        "convertFieldsToString": true
+                    },
+                    "options": {}
+                },
+                "id": "node-sheets",
+                "name": "\ud83d\udcca Google Sheets: Guardar Lead",
+                "type": "n8n-nodes-base.googleSheets",
+                "typeVersion": 4.5,
+                "position": [
+                    1568,
+                    192
+                ],
+                "credentials": {
+                    "googleSheetsOAuth2Api": {
+                        "id": "QE2RlAxaMLoYefTD",
+                        "name": "Google Sheets account"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "url": "https://api.hunter.io/v2/domain-search",
+                    "sendQuery": true,
+                    "queryParameters": {
+                        "parameters": [
+                            {
+                                "name": "domain",
+                                "value": "={{ $json.web.replace(/^https?:\\/\\/(www\\.)?/,'').replace(/\\/.*$/,'') }}"
+                            },
+                            {
+                                "name": "api_key",
+                                "value": "e51ae7cf7d8d93d9ae948ec931017cdd77b1b2d7"
+                            }
+                        ]
+                    },
+                    "options": {
+                        "response": {
+                            "response": {
+                                "responseFormat": "json",
+                                "outputPropertyName": "hunterResult"
+                            }
+                        },
+                        "timeout": 15000
+                    }
+                },
+                "id": "node-fetch-web",
+                "name": "\ud83d\udd0d Hunter: Buscar Email",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    1568,
+                    448
+                ],
+                "continueOnFail": true,
+                "onError": "continueRegularOutput"
+            },
+            {
+                "parameters": {
+                    "jsCode": "// Hunter puts its response in $json.hunterResult\n// Original lead fields (nombre, web) are still in $json\nconst nombre = $json.nombre || '';\nconst web = $json.web || '';\n\nlet email = '';\ntry {\n  const emails = $json.hunterResult?.data?.emails || [];\n  if (emails.length > 0) {\n    const sorted = [...emails].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));\n    email = sorted[0].value || '';\n  }\n} catch(e) {}\n\nreturn [{ json: { nombre, web, email } }];",
+                    "mode": "runOnceForEachItem"
+                },
+                "id": "node-extract-email",
+                "name": "\ud83d\udce7 Extraer Email",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    1792,
+                    448
+                ],
+                "continueOnFail": false
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": true,
+                            "leftValue": "",
+                            "typeValidation": "strict",
+                            "version": 1
+                        },
+                        "conditions": [
+                            {
+                                "id": "cond-email",
+                                "leftValue": "={{ $json.email }}",
+                                "rightValue": "",
+                                "operator": {
+                                    "type": "string",
+                                    "operation": "notEquals"
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                },
+                "id": "node-if-email",
+                "name": "\u2705 \u00bfEncontr\u00f3 Email?",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2,
+                "position": [
+                    2000,
+                    448
+                ]
+            },
+            {
+                "parameters": {
+                    "operation": "update",
+                    "documentId": {
+                        "__rl": true,
+                        "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+                        "mode": "id"
+                    },
+                    "sheetName": {
+                        "__rl": true,
+                        "value": 0,
+                        "mode": "id"
+                    },
+                    "columns": {
+                        "mappingMode": "defineBelow",
+                        "value": {
+                            "nombre": "={{ $json.nombre }}",
+                            "email": "={{ $json.email }}"
+                        },
+                        "matchingColumns": [
+                            "nombre"
+                        ],
+                        "schema": [
+                            {
+                                "id": "nombre",
+                                "displayName": "nombre",
+                                "required": false,
+                                "defaultMatch": true,
+                                "canBeUsedToMatch": true,
+                                "display": true,
+                                "type": "string",
+                                "removed": false
+                            },
+                            {
+                                "id": "email",
+                                "displayName": "email",
+                                "required": false,
+                                "defaultMatch": false,
+                                "canBeUsedToMatch": false,
+                                "display": true,
+                                "type": "string",
+                                "removed": false
+                            }
+                        ]
+                    },
+                    "options": {}
+                },
+                "id": "node-update-email",
+                "name": "\ud83d\udcca Actualizar Email",
+                "type": "n8n-nodes-base.googleSheets",
+                "typeVersion": 4.5,
+                "position": [
+                    2224,
+                    368
+                ],
+                "credentials": {
+                    "googleSheetsOAuth2Api": {
+                        "id": "QE2RlAxaMLoYefTD",
+                        "name": "Google Sheets account"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "url": "={{ $json.web.replace(/\\/+$/, '') + '/contact' }}",
+                    "options": {
+                        "response": {
+                            "response": {
+                                "responseFormat": "autodetect",
+                                "outputPropertyName": "scrapingResult"
+                            }
+                        },
+                        "timeout": 12000
+                    }
+                },
+                "id": "node-scraping-fetch",
+                "name": "\ud83c\udf10 Scraping: Buscar Email",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    2224,
+                    560
+                ],
+                "continueOnFail": true,
+                "onError": "continueRegularOutput"
+            },
+            {
+                "parameters": {
+                    "jsCode": "// Scraping puts its HTML in $json.scrapingResult\n// Original lead fields (nombre, web) still in $json from Extract Email output\nconst nombre = $json.nombre || '';\nconst web = $json.web || '';\n\nlet html = '';\ntry {\n  const raw = $json.scrapingResult || '';\n  html = typeof raw === 'string' ? raw : JSON.stringify(raw);\n} catch(e) {}\n\n// Priority 1: mailto: links\nlet mailtoEmails = [];\ntry {\n  const re = /href=[\"']mailto:([^\"'?\\s]+)/gi;\n  let m;\n  while ((m = re.exec(html)) !== null) {\n    if (m[1].includes('@')) mailtoEmails.push(m[1]);\n  }\n} catch(e) {}\n\n// Priority 2: regex\nlet regexEmails = [];\ntry {\n  const found = html.match(/[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}/g) || [];\n  regexEmails = found;\n} catch(e) {}\n\nconst blacklist = ['example','sentry','wixpress','yourdomain','schema',\n                   'placeholder','noreply','no-reply','webmaster@'];\nconst all = [...new Set([...mailtoEmails, ...regexEmails])];\nconst emails = all.filter(e => {\n  const l = e.toLowerCase();\n  return !blacklist.some(b => l.includes(b))\n    && !l.endsWith('.js') && !l.endsWith('.css')\n    && !l.endsWith('.png') && !l.endsWith('.jpg') && !l.endsWith('.gif');\n});\n\nreturn [{ json: { nombre, web, email: emails[0] || '' } }];",
+                    "mode": "runOnceForEachItem"
+                },
+                "id": "node-scraping-code",
+                "name": "\ud83d\udce7 Extraer Email Scraping",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    2448,
+                    560
+                ],
+                "continueOnFail": true
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": false,
+                            "leftValue": "",
+                            "typeValidation": "loose"
+                        },
+                        "conditions": [
+                            {
+                                "id": "cond-scraping-email",
+                                "leftValue": "={{ $json.email }}",
+                                "rightValue": "",
+                                "operator": {
+                                    "type": "string",
+                                    "operation": "notEquals"
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                },
+                "id": "node-if-scraping",
+                "name": "\u2705 \u00bfEmail Scraping?",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2,
+                "position": [
+                    2672,
+                    560
+                ]
+            },
+            {
+                "parameters": {
+                    "url": "={{ $json.web.replace(/\\/+$/, '') + '/about' }}",
+                    "options": {
+                        "response": {
+                            "response": {
+                                "responseFormat": "autodetect",
+                                "outputPropertyName": "scrapingResult"
+                            }
+                        },
+                        "timeout": 12000
+                    }
+                },
+                "id": "node-scraping-fetch-about",
+                "name": "\ud83c\udf10 Scraping: /about",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    2896,
+                    560
+                ],
+                "continueOnFail": true,
+                "onError": "continueRegularOutput"
+            },
+            {
+                "parameters": {
+                    "jsCode": "// Scraping /about puts its HTML in $json.scrapingResult\n// Original lead fields (nombre) still in $json\nconst nombre = $json.nombre || '';\n\nlet html = '';\ntry {\n  const raw = $json.scrapingResult || '';\n  html = typeof raw === 'string' ? raw : JSON.stringify(raw);\n} catch(e) {}\n\n// Priority 1: mailto: links\nlet mailtoEmails = [];\ntry {\n  const re = /href=[\"']mailto:([^\"'?\\s]+)/gi;\n  let m;\n  while ((m = re.exec(html)) !== null) {\n    if (m[1].includes('@')) mailtoEmails.push(m[1]);\n  }\n} catch(e) {}\n\n// Priority 2: regex\nlet regexEmails = [];\ntry {\n  const found = html.match(/[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}/g) || [];\n  regexEmails = found;\n} catch(e) {}\n\nconst blacklist = ['example','sentry','wixpress','yourdomain','schema',\n                   'placeholder','noreply','no-reply','webmaster@'];\nconst all = [...new Set([...mailtoEmails, ...regexEmails])];\nconst emails = all.filter(e => {\n  const l = e.toLowerCase();\n  return !blacklist.some(b => l.includes(b))\n    && !l.endsWith('.js') && !l.endsWith('.css')\n    && !l.endsWith('.png') && !l.endsWith('.jpg') && !l.endsWith('.gif');\n});\n\nreturn [{ json: { nombre, email: emails[0] || '' } }];",
+                    "mode": "runOnceForEachItem"
+                },
+                "id": "node-scraping-code-about",
+                "name": "\ud83d\udce7 Extraer Email /about",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    3120,
+                    560
+                ]
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": false,
+                            "leftValue": "",
+                            "typeValidation": "loose"
+                        },
+                        "conditions": [
+                            {
+                                "id": "cond-about-email",
+                                "leftValue": "={{ $json.email }}",
+                                "rightValue": "",
+                                "operator": {
+                                    "type": "string",
+                                    "operation": "notEquals"
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                },
+                "id": "node-if-scraping-about",
+                "name": "\u2705 \u00bfEmail /about?",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2,
+                "position": [
+                    3344,
+                    560
+                ]
+            },
+            {
+                "id": "schedule-lunes",
+                "name": "\u23f0 Trigger Lunes 9am",
+                "type": "n8n-nodes-base.scheduleTrigger",
+                "typeVersion": 1.2,
+                "position": [
+                    0,
+                    144
+                ],
+                "parameters": {
+                    "rule": {
+                        "interval": [
+                            {
+                                "field": "weeks",
+                                "weeksInterval": 1,
+                                "triggerAtDay": [
+                                    1
+                                ],
+                                "triggerAtHour": 9,
+                                "triggerAtMinute": 0
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "id": "8e0a140d-f3e6-4752-bd4f-b5340c41bb41",
+                "name": "\ud83d\udcca Reporte Growth54",
+                "type": "n8n-nodes-base.gmail",
+                "typeVersion": 2.1,
+                "position": [
+                    1400,
+                    200
+                ],
+                "credentials": {
+                    "gmailOAuth2": {
+                        "id": "TESHSjzjMCpCxBBk",
+                        "name": "Gmail account"
+                    }
+                },
+                "parameters": {
+                    "sendTo": "risosadmi@gmail.com",
+                    "subject": "=\ud83d\udcca Lead Generation \u2014 Reporte del {{ new Date().toLocaleDateString('es-US', {timeZone:'America/New_York'}) }}",
+                    "emailType": "html",
+                    "message": "=<div style=\"font-family:Arial,sans-serif;max-width:660px;color:#333;\">\n<div style=\"background:#305468;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0;\">\n<strong>Growth54 \u2014 Reporte Lead Generation (Google Maps)</strong>\n</div>\n<div style=\"padding:16px 20px;border:1px solid #ddd;border-top:none;border-radius:0 0 6px 6px;\">\n<p><strong>Fecha:</strong> {{ new Date().toLocaleString('es-US', {timeZone:'America/New_York'}) }}</p>\n<p><strong>Total leads guardados:</strong> {{ $json.data.length }}</p>\n<hr style=\"border:none;border-top:1px solid #eee;margin:12px 0;\">\n<table width=\"100%\" cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse;font-size:14px;\">\n<thead>\n<tr style=\"background:#f5f5f5;\">\n<th style=\"text-align:left;border-bottom:2px solid #ddd;\">#</th>\n<th style=\"text-align:left;border-bottom:2px solid #ddd;\">Empresa</th>\n<th style=\"text-align:left;border-bottom:2px solid #ddd;\">Email</th>\n<th style=\"text-align:left;border-bottom:2px solid #ddd;\">Tel\u00e9fono</th>\n<th style=\"text-align:left;border-bottom:2px solid #ddd;\">Nicho</th>\n<th style=\"text-align:left;border-bottom:2px solid #ddd;\">Web</th>\n</tr>\n</thead>\n<tbody>\n{{ $json.data.map((item, i) => `<tr style=\"border-bottom:1px solid #eee;\"><td style=\"color:#999;\">${i+1}</td><td><strong>${item.nombre || '\u2014'}</strong></td><td style=\"color:#305468;\">${item.email || '<em style=color:#ccc>sin email</em>'}</td><td>${item.telefono || '\u2014'}</td><td>${item.nicho || '\u2014'}</td><td style=\"font-size:12px;color:#888;\">${(item.web||'').substring(0,30) || '\u2014'}</td></tr>`).join('') }}\n</tbody>\n</table>\n<p style=\"margin-top:16px;font-size:12px;color:#999;\">Workflow: Lead Generation \u2014 Google Maps | Ejecuci\u00f3n: {{ $execution.id }}</p>\n</div>\n</div>",
+                    "options": {
+                        "senderName": "Growth54"
+                    }
+                }
+            },
+            {
+                "id": "agg-leads-found",
+                "name": "\ud83d\udce6 Agrupar Leads",
+                "type": "n8n-nodes-base.aggregate",
+                "typeVersion": 1,
+                "position": [
+                    3400,
+                    300
+                ],
+                "parameters": {
+                    "aggregate": "aggregateAllItemData",
+                    "options": {}
+                }
+            }
+        ],
+        "connections": {
+            "\ud83d\ude80 Iniciar B\u00fasqueda": {
+                "main": [
+                    [
+                        {
+                            "node": "\u2699\ufe0f Par\u00e1metros",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\u2699\ufe0f Par\u00e1metros": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83c\udf0d Places: B\u00fasqueda",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83c\udf0d Places: B\u00fasqueda": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udcc2 Separar Resultados",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udcc2 Separar Resultados": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd0e Places: Detalles",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd0e Places: Detalles": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83e\uddf9 Formatear Lead",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83e\uddf9 Formatear Lead": {
+                "main": [
+                    [
+                        {
+                            "node": "\u2705 \u00bfTiene contacto?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\u2705 \u00bfTiene contacto?": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udcca Google Sheets: Guardar Lead",
+                            "type": "main",
+                            "index": 0
+                        },
+                        {
+                            "node": "\ud83d\udd0d Hunter: Buscar Email",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    []
+                ]
+            },
+            "\ud83d\udce7 Extraer Email": {
+                "main": [
+                    [
+                        {
+                            "node": "\u2705 \u00bfEncontr\u00f3 Email?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\u2705 \u00bfEncontr\u00f3 Email?": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udcca Actualizar Email",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "\ud83c\udf10 Scraping: Buscar Email",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd0d Hunter: Buscar Email": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udce7 Extraer Email",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83c\udf10 Scraping: Buscar Email": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udce7 Extraer Email Scraping",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udce7 Extraer Email Scraping": {
+                "main": [
+                    [
+                        {
+                            "node": "\u2705 \u00bfEmail Scraping?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\u2705 \u00bfEmail Scraping?": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udcca Actualizar Email",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "\ud83c\udf10 Scraping: /about",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83c\udf10 Scraping: /about": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udce7 Extraer Email /about",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udce7 Extraer Email /about": {
+                "main": [
+                    [
+                        {
+                            "node": "\u2705 \u00bfEmail /about?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\u2705 \u00bfEmail /about?": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udcca Actualizar Email",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    []
+                ]
+            },
+            "\u23f0 Trigger Lunes 9am": {
+                "main": [
+                    [
+                        {
+                            "node": "\u2699\ufe0f Par\u00e1metros",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udcca Actualizar Email": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udce6 Agrupar Leads",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udcca Google Sheets: Guardar Lead": {
+                "main": [
+                    []
+                ]
+            },
+            "\ud83d\udce6 Agrupar Leads": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udcca Reporte Growth54",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "authors": "Solange  Torrez",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": [
+            {
+                "createdAt": "2026-04-27T13:50:18.277Z",
+                "id": 255,
+                "workflowId": "rtyrpJJsXD2xHINU",
+                "versionId": "7a541846-ab6c-4840-bf82-7f3da9e9c294",
+                "event": "activated",
+                "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            },
+            {
+                "createdAt": "2026-04-27T13:50:18.233Z",
+                "id": 254,
+                "workflowId": "rtyrpJJsXD2xHINU",
+                "versionId": "7a541846-ab6c-4840-bf82-7f3da9e9c294",
+                "event": "deactivated",
+                "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            }
+        ]
+    }
+}

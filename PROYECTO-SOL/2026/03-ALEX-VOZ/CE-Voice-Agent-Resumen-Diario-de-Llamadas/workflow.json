@@ -1,0 +1,418 @@
+{
+    "updatedAt": "2026-04-28T19:12:19.673Z",
+    "createdAt": "2026-04-25T20:21:48.465Z",
+    "id": "FTa48iKiRIMW5BNB",
+    "name": "\ud83d\udcde CE Voice Agent \u2014 Resumen Diario de Llamadas",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "id": "d1",
+            "name": "\u23f0 Trigger 6pm Diario",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                0,
+                300
+            ],
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "days",
+                            "triggerAtHour": 18,
+                            "triggerAtMinute": 0
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "id": "d2",
+            "name": "\ud83d\udccb Leer Llamadas de Hoy",
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.5,
+            "position": [
+                280,
+                300
+            ],
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "QE2RlAxaMLoYefTD",
+                    "name": "Google Sheets account"
+                }
+            },
+            "parameters": {
+                "operation": "read",
+                "documentId": {
+                    "__rl": true,
+                    "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+                    "mode": "id"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": "Llamadas",
+                    "mode": "name"
+                },
+                "options": {}
+            }
+        },
+        {
+            "id": "d3",
+            "name": "\ud83d\udcca Preparar Resumen",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                560,
+                300
+            ],
+            "parameters": {
+                "jsCode": "\nconst today = new Date().toISOString().split('T')[0];\nconst rows  = $input.all().map(r => r.json).filter(r => r.fechaLlamada === today && r.skip !== 'TRUE' && r.skip !== true);\n\nif (rows.length === 0) return [{ json: { skip: true } }];\n\nconst NAVY = '#305468', ORANGE = '#ff6900';\nconst badge = { cotizacion:'\ud83d\udd25 Cotizaci\u00f3n', informacion:'\u2139\ufe0f Informaci\u00f3n', urgente:'\ud83d\udea8 URGENTE', no_interesado:'\u274c No interesado', otro:'\ud83d\udccc Otro', sin_transcript:'\ud83d\udcf5 Sin audio' };\n\nconst filas = rows.map(r => `\n  <tr>\n    <td style=\"padding:8px;border-bottom:1px solid #eee;\">${r.callerPhone||'\u2014'}</td>\n    <td style=\"padding:8px;border-bottom:1px solid #eee;\">${r.nombre||'\u2014'}</td>\n    <td style=\"padding:8px;border-bottom:1px solid #eee;\"><span style=\"background:${ORANGE};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;\">${badge[r.interes]||r.interes||'\u2014'}</span></td>\n    <td style=\"padding:8px;border-bottom:1px solid #eee;\">${r.duration||0}s</td>\n    <td style=\"padding:8px;border-bottom:1px solid #eee;font-size:12px;color:#555;\">${r.notas||'\u2014'}</td>\n  </tr>`).join('');\n\nconst fecha = new Date().toLocaleDateString('es-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});\nconst html = `<div style=\"font-family:Arial,sans-serif;max-width:680px;margin:0 auto;color:#333;\">\n  <div style=\"background:${NAVY};color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;\">\n    <div style=\"font-size:11px;letter-spacing:1px;opacity:.7;text-transform:uppercase;\">CE Voice Agent \u2014 Alex</div>\n    <h2 style=\"margin:4px 0 0;font-size:20px;\">\ud83d\udcde Resumen de Llamadas \u2014 ${fecha}</h2>\n    <p style=\"margin:6px 0 0;opacity:.8;font-size:13px;\">${rows.length} llamada(s) recibida(s) hoy</p>\n  </div>\n  <div style=\"padding:20px 24px;border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;\">\n    <table style=\"width:100%;border-collapse:collapse;font-size:13px;\">\n      <thead><tr style=\"background:#f5f5f5;\">\n        <th style=\"padding:8px;text-align:left;\">Tel\u00e9fono</th>\n        <th style=\"padding:8px;text-align:left;\">Nombre</th>\n        <th style=\"padding:8px;text-align:left;\">Inter\u00e9s</th>\n        <th style=\"padding:8px;text-align:left;\">Duraci\u00f3n</th>\n        <th style=\"padding:8px;text-align:left;\">Notas</th>\n      </tr></thead>\n      <tbody>${filas}</tbody>\n    </table>\n    <hr style=\"margin:20px 0;border:none;border-top:1px solid #eee;\">\n    <p style=\"font-size:12px;color:#999;\">CE Voice Agent \u2014 Generado autom\u00e1ticamente por n8n</p>\n  </div>\n</div>`;\n\nreturn [{ json: { subject: `\ud83d\udcde Alex: ${rows.length} llamada(s) hoy \u2014 ${fecha}`, body_html: html } }];\n"
+            }
+        },
+        {
+            "id": "d4",
+            "name": "\u2753 \u00bfHubo llamadas?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                800,
+                300
+            ],
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "id": "c1",
+                            "leftValue": "={{ $json.skip }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "false"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                }
+            }
+        },
+        {
+            "id": "d5",
+            "name": "\ud83d\udce7 Enviar Resumen",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                1040,
+                200
+            ],
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "TESHSjzjMCpCxBBk",
+                    "name": "Gmail account"
+                }
+            },
+            "parameters": {
+                "sendTo": "risosadmi@gmail.com",
+                "subject": "={{ $json.subject }}",
+                "message": "={{ $json.body_html }}",
+                "options": {
+                    "appendAttribution": false,
+                    "senderName": "CE Voice Agent"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "\u23f0 Trigger 6pm Diario": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udccb Leer Llamadas de Hoy",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udccb Leer Llamadas de Hoy": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcca Preparar Resumen",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udcca Preparar Resumen": {
+            "main": [
+                [
+                    {
+                        "node": "\u2753 \u00bfHubo llamadas?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u2753 \u00bfHubo llamadas?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udce7 Enviar Resumen",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": {
+        "node:\u23f0 Trigger 6pm Diario": {
+            "recurrenceRules": []
+        }
+    },
+    "meta": null,
+    "pinData": null,
+    "versionId": "736a5257-abdd-4311-887a-d0417b436cd9",
+    "activeVersionId": "736a5257-abdd-4311-887a-d0417b436cd9",
+    "versionCounter": 7,
+    "triggerCount": 1,
+    "shared": [
+        {
+            "updatedAt": "2026-04-25T20:21:48.470Z",
+            "createdAt": "2026-04-25T20:21:48.470Z",
+            "role": "workflow:owner",
+            "workflowId": "FTa48iKiRIMW5BNB",
+            "projectId": "scK6yPpEmlkikl67",
+            "project": {
+                "updatedAt": "2026-03-16T19:58:01.773Z",
+                "createdAt": "2026-03-16T19:56:18.866Z",
+                "id": "scK6yPpEmlkikl67",
+                "name": "Solange  Torrez <risosadmi@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            }
+        }
+    ],
+    "tags": [
+        {
+            "updatedAt": "2026-05-04T16:04:54.762Z",
+            "createdAt": "2026-05-04T16:04:54.762Z",
+            "id": "2CrVJWitAB77MgTJ",
+            "name": "Alex"
+        }
+    ],
+    "activeVersion": {
+        "updatedAt": "2026-04-28T19:12:19.675Z",
+        "createdAt": "2026-04-28T19:12:19.675Z",
+        "versionId": "736a5257-abdd-4311-887a-d0417b436cd9",
+        "workflowId": "FTa48iKiRIMW5BNB",
+        "nodes": [
+            {
+                "id": "d1",
+                "name": "\u23f0 Trigger 6pm Diario",
+                "type": "n8n-nodes-base.scheduleTrigger",
+                "typeVersion": 1.2,
+                "position": [
+                    0,
+                    300
+                ],
+                "parameters": {
+                    "rule": {
+                        "interval": [
+                            {
+                                "field": "days",
+                                "triggerAtHour": 18,
+                                "triggerAtMinute": 0
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "id": "d2",
+                "name": "\ud83d\udccb Leer Llamadas de Hoy",
+                "type": "n8n-nodes-base.googleSheets",
+                "typeVersion": 4.5,
+                "position": [
+                    280,
+                    300
+                ],
+                "credentials": {
+                    "googleSheetsOAuth2Api": {
+                        "id": "QE2RlAxaMLoYefTD",
+                        "name": "Google Sheets account"
+                    }
+                },
+                "parameters": {
+                    "operation": "read",
+                    "documentId": {
+                        "__rl": true,
+                        "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+                        "mode": "id"
+                    },
+                    "sheetName": {
+                        "__rl": true,
+                        "value": "Llamadas",
+                        "mode": "name"
+                    },
+                    "options": {}
+                }
+            },
+            {
+                "id": "d3",
+                "name": "\ud83d\udcca Preparar Resumen",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    560,
+                    300
+                ],
+                "parameters": {
+                    "jsCode": "\nconst today = new Date().toISOString().split('T')[0];\nconst rows  = $input.all().map(r => r.json).filter(r => r.fechaLlamada === today && r.skip !== 'TRUE' && r.skip !== true);\n\nif (rows.length === 0) return [{ json: { skip: true } }];\n\nconst NAVY = '#305468', ORANGE = '#ff6900';\nconst badge = { cotizacion:'\ud83d\udd25 Cotizaci\u00f3n', informacion:'\u2139\ufe0f Informaci\u00f3n', urgente:'\ud83d\udea8 URGENTE', no_interesado:'\u274c No interesado', otro:'\ud83d\udccc Otro', sin_transcript:'\ud83d\udcf5 Sin audio' };\n\nconst filas = rows.map(r => `\n  <tr>\n    <td style=\"padding:8px;border-bottom:1px solid #eee;\">${r.callerPhone||'\u2014'}</td>\n    <td style=\"padding:8px;border-bottom:1px solid #eee;\">${r.nombre||'\u2014'}</td>\n    <td style=\"padding:8px;border-bottom:1px solid #eee;\"><span style=\"background:${ORANGE};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;\">${badge[r.interes]||r.interes||'\u2014'}</span></td>\n    <td style=\"padding:8px;border-bottom:1px solid #eee;\">${r.duration||0}s</td>\n    <td style=\"padding:8px;border-bottom:1px solid #eee;font-size:12px;color:#555;\">${r.notas||'\u2014'}</td>\n  </tr>`).join('');\n\nconst fecha = new Date().toLocaleDateString('es-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});\nconst html = `<div style=\"font-family:Arial,sans-serif;max-width:680px;margin:0 auto;color:#333;\">\n  <div style=\"background:${NAVY};color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;\">\n    <div style=\"font-size:11px;letter-spacing:1px;opacity:.7;text-transform:uppercase;\">CE Voice Agent \u2014 Alex</div>\n    <h2 style=\"margin:4px 0 0;font-size:20px;\">\ud83d\udcde Resumen de Llamadas \u2014 ${fecha}</h2>\n    <p style=\"margin:6px 0 0;opacity:.8;font-size:13px;\">${rows.length} llamada(s) recibida(s) hoy</p>\n  </div>\n  <div style=\"padding:20px 24px;border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;\">\n    <table style=\"width:100%;border-collapse:collapse;font-size:13px;\">\n      <thead><tr style=\"background:#f5f5f5;\">\n        <th style=\"padding:8px;text-align:left;\">Tel\u00e9fono</th>\n        <th style=\"padding:8px;text-align:left;\">Nombre</th>\n        <th style=\"padding:8px;text-align:left;\">Inter\u00e9s</th>\n        <th style=\"padding:8px;text-align:left;\">Duraci\u00f3n</th>\n        <th style=\"padding:8px;text-align:left;\">Notas</th>\n      </tr></thead>\n      <tbody>${filas}</tbody>\n    </table>\n    <hr style=\"margin:20px 0;border:none;border-top:1px solid #eee;\">\n    <p style=\"font-size:12px;color:#999;\">CE Voice Agent \u2014 Generado autom\u00e1ticamente por n8n</p>\n  </div>\n</div>`;\n\nreturn [{ json: { subject: `\ud83d\udcde Alex: ${rows.length} llamada(s) hoy \u2014 ${fecha}`, body_html: html } }];\n"
+                }
+            },
+            {
+                "id": "d4",
+                "name": "\u2753 \u00bfHubo llamadas?",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2,
+                "position": [
+                    800,
+                    300
+                ],
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": true,
+                            "leftValue": "",
+                            "typeValidation": "strict"
+                        },
+                        "conditions": [
+                            {
+                                "id": "c1",
+                                "leftValue": "={{ $json.skip }}",
+                                "rightValue": true,
+                                "operator": {
+                                    "type": "boolean",
+                                    "operation": "false"
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    }
+                }
+            },
+            {
+                "id": "d5",
+                "name": "\ud83d\udce7 Enviar Resumen",
+                "type": "n8n-nodes-base.gmail",
+                "typeVersion": 2.1,
+                "position": [
+                    1040,
+                    200
+                ],
+                "credentials": {
+                    "gmailOAuth2": {
+                        "id": "TESHSjzjMCpCxBBk",
+                        "name": "Gmail account"
+                    }
+                },
+                "parameters": {
+                    "sendTo": "risosadmi@gmail.com",
+                    "subject": "={{ $json.subject }}",
+                    "message": "={{ $json.body_html }}",
+                    "options": {
+                        "appendAttribution": false,
+                        "senderName": "CE Voice Agent"
+                    }
+                }
+            }
+        ],
+        "connections": {
+            "\u23f0 Trigger 6pm Diario": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udccb Leer Llamadas de Hoy",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udccb Leer Llamadas de Hoy": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udcca Preparar Resumen",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udcca Preparar Resumen": {
+                "main": [
+                    [
+                        {
+                            "node": "\u2753 \u00bfHubo llamadas?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\u2753 \u00bfHubo llamadas?": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udce7 Enviar Resumen",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    []
+                ]
+            }
+        },
+        "authors": "Solange  Torrez",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": [
+            {
+                "createdAt": "2026-04-28T19:12:19.760Z",
+                "id": 263,
+                "workflowId": "FTa48iKiRIMW5BNB",
+                "versionId": "736a5257-abdd-4311-887a-d0417b436cd9",
+                "event": "activated",
+                "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            },
+            {
+                "createdAt": "2026-04-28T19:12:19.744Z",
+                "id": 262,
+                "workflowId": "FTa48iKiRIMW5BNB",
+                "versionId": "736a5257-abdd-4311-887a-d0417b436cd9",
+                "event": "deactivated",
+                "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            }
+        ]
+    }
+}

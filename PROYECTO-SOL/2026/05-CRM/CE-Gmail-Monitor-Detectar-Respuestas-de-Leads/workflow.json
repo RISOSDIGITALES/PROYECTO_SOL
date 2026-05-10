@@ -1,0 +1,708 @@
+{
+    "updatedAt": "2026-04-24T16:29:47.919Z",
+    "createdAt": "2026-04-24T16:26:02.944Z",
+    "id": "cJZV7jcwlbFoW5qJ",
+    "name": "\ud83d\udcec CE Gmail Monitor \u2014 Detectar Respuestas de Leads",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "id": "gmon-sched",
+            "name": "\u23f0 Revisar cada hora",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                0,
+                300
+            ],
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "hours",
+                            "hoursInterval": 1
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "id": "gmon-manual",
+            "name": "\u25b6\ufe0f Ejecutar Manualmente",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                480
+            ],
+            "parameters": {}
+        },
+        {
+            "id": "gmon-gmail",
+            "name": "\ud83d\udcec Leer Inbox Gmail",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                280,
+                300
+            ],
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "TESHSjzjMCpCxBBk",
+                    "name": "Gmail account"
+                }
+            },
+            "parameters": {
+                "operation": "getAll",
+                "filters": {
+                    "q": "in:inbox is:unread newer_than:2h"
+                },
+                "limit": 50,
+                "options": {}
+            }
+        },
+        {
+            "id": "gmon-leads",
+            "name": "\ud83d\udccb Obtener Leads",
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.5,
+            "position": [
+                280,
+                480
+            ],
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "QE2RlAxaMLoYefTD",
+                    "name": "Google Sheets account"
+                }
+            },
+            "parameters": {
+                "operation": "read",
+                "documentId": {
+                    "__rl": true,
+                    "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+                    "mode": "id"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": "gid=0",
+                    "mode": "id"
+                },
+                "options": {}
+            }
+        },
+        {
+            "id": "gmon-match",
+            "name": "\ud83d\udd0d Cruzar con Leads",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                560,
+                300
+            ],
+            "parameters": {
+                "jsCode": "\nconst emails  = $('\ud83d\udcec Leer Inbox Gmail').all();\nconst leads   = $('\ud83d\udccb Obtener Leads').all();\n\n// Build lookup: email address \u2192 lead row_number\nconst leadMap = {};\nfor (const l of leads) {\n  const d = l.json;\n  if (d.email) leadMap[d.email.toLowerCase().trim()] = d;\n}\n\nconst today   = new Date().toISOString().split('T')[0];\nconst replies = [];\n\nfor (const msg of emails) {\n  const m    = msg.json;\n  const from = (m.from || '').toLowerCase();\n\n  // Extract email address from \"Name <email@example.com>\" format\n  const match = from.match(/<(.+?)>/) || from.match(/([^\\s]+@[^\\s]+)/);\n  const senderEmail = match ? match[1].trim() : from.trim();\n\n  const lead = leadMap[senderEmail];\n  if (!lead) continue;  // not a known lead, skip\n\n  replies.push({\n    json: {\n      row_number:              lead.row_number,\n      email:                   senderEmail,\n      nombre:                  lead.nombre || '',\n      estado_email_nuevo:      'respondi\u00f3',\n      fecha_ultima_interaccion: today,\n      asunto_respuesta:        m.subject || '',\n      fecha_respuesta:         today\n    }\n  });\n}\n\nif (replies.length === 0) return [{ json: { noReplies: true } }];\nreturn replies;\n"
+            }
+        },
+        {
+            "id": "gmon-if",
+            "name": "\u2753 \u00bfHay respuestas?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                800,
+                300
+            ],
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "id": "cond-replies",
+                            "leftValue": "={{ $json.noReplies }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "false"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                }
+            }
+        },
+        {
+            "id": "gmon-update",
+            "name": "\u2705 Actualizar Estado en Sheets",
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.5,
+            "position": [
+                1040,
+                200
+            ],
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "QE2RlAxaMLoYefTD",
+                    "name": "Google Sheets account"
+                }
+            },
+            "parameters": {
+                "operation": "update",
+                "documentId": {
+                    "__rl": true,
+                    "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+                    "mode": "id"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": "gid=0",
+                    "mode": "id"
+                },
+                "columns": {
+                    "mappingMode": "defineBelow",
+                    "value": {
+                        "row_number": "={{ $json.row_number }}",
+                        "estado_email": "={{ $json.estado_email_nuevo }}",
+                        "fecha_ultima_interaccion": "={{ $json.fecha_ultima_interaccion }}"
+                    },
+                    "matchingColumns": [
+                        "row_number"
+                    ],
+                    "schema": [
+                        {
+                            "id": "row_number",
+                            "displayName": "row_number",
+                            "canBeUsedToMatch": true,
+                            "defaultMatch": true
+                        },
+                        {
+                            "id": "estado_email",
+                            "displayName": "estado_email",
+                            "canBeUsedToMatch": false,
+                            "defaultMatch": false
+                        },
+                        {
+                            "id": "fecha_ultima_interaccion",
+                            "displayName": "fecha_ultima_interaccion",
+                            "canBeUsedToMatch": false,
+                            "defaultMatch": false
+                        }
+                    ]
+                },
+                "options": {}
+            }
+        },
+        {
+            "id": "gmon-notify-code",
+            "name": "\ud83d\udccb Preparar Notificaci\u00f3n",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1040,
+                380
+            ],
+            "parameters": {
+                "jsCode": "\nconst items = $input.all();\nif (items[0]?.json?.noReplies) return [{ json: { skipped: true } }];\n\nconst NAVY   = '#305468';\nconst ORANGE = '#ff6900';\nconst today  = new Date().toLocaleDateString('es-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });\n\nconst rows = items.map(i => `\n  <tr>\n    <td style=\"padding:8px;border-bottom:1px solid #eee;\">${i.json.nombre || '\u2014'}</td>\n    <td style=\"padding:8px;border-bottom:1px solid #eee;\">${i.json.email}</td>\n    <td style=\"padding:8px;border-bottom:1px solid #eee;\">${i.json.asunto_respuesta || '\u2014'}</td>\n  </tr>`).join('');\n\nconst html = `<div style=\"font-family:Arial,sans-serif;max-width:620px;margin:0 auto;color:#333;\">\n  <div style=\"background:${NAVY};color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;\">\n    <div style=\"font-size:11px;letter-spacing:1px;opacity:.7;text-transform:uppercase;\">Gmail Monitor</div>\n    <h2 style=\"margin:4px 0 0;font-size:20px;\">\ud83d\udcac ${items.length} Lead(s) respondieron</h2>\n    <p style=\"margin:6px 0 0;opacity:.8;font-size:13px;\">${today}</p>\n  </div>\n  <div style=\"padding:20px 24px;border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;\">\n    <p>Hola Sol, estos leads respondieron uno de nuestros emails:</p>\n    <table style=\"width:100%;border-collapse:collapse;font-size:13px;\">\n      <thead>\n        <tr style=\"background:#f5f5f5;\">\n          <th style=\"padding:8px;text-align:left;\">Nombre</th>\n          <th style=\"padding:8px;text-align:left;\">Email</th>\n          <th style=\"padding:8px;text-align:left;\">Asunto</th>\n        </tr>\n      </thead>\n      <tbody>${rows}</tbody>\n    </table>\n    <p style=\"margin-top:16px;font-size:13px;color:#666;\">Su estado fue actualizado a <strong>\"respondi\u00f3\"</strong> en el CRM y no recibir\u00e1n m\u00e1s emails autom\u00e1ticos hasta que los contactes manualmente.</p>\n    <hr style=\"margin:20px 0;border:none;border-top:1px solid #eee;\">\n    <p style=\"font-size:12px;color:#999;\">CE Gmail Monitor \u2014 Generado autom\u00e1ticamente por n8n</p>\n  </div>\n</div>`;\n\nreturn [{ json: { subject: `\ud83d\udcac ${items.length} lead(s) respondieron \u2014 ${today}`, body_html: html } }];\n"
+            }
+        },
+        {
+            "id": "gmon-email",
+            "name": "\ud83d\udce7 Notificar a Sol",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                1280,
+                380
+            ],
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "TESHSjzjMCpCxBBk",
+                    "name": "Gmail account"
+                }
+            },
+            "parameters": {
+                "sendTo": "solange@cratingexpress.com",
+                "subject": "={{ $json.subject }}",
+                "message": "={{ $json.body_html }}",
+                "options": {
+                    "appendAttribution": false,
+                    "senderName": "CE Gmail Monitor"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "\u23f0 Revisar cada hora": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udccb Obtener Leads",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u25b6\ufe0f Ejecutar Manualmente": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udccb Obtener Leads",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udcec Leer Inbox Gmail": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd0d Cruzar con Leads",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udccb Obtener Leads": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcec Leer Inbox Gmail",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd0d Cruzar con Leads": {
+            "main": [
+                [
+                    {
+                        "node": "\u2753 \u00bfHay respuestas?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u2753 \u00bfHay respuestas?": {
+            "main": [
+                [
+                    {
+                        "node": "\u2705 Actualizar Estado en Sheets",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "\ud83d\udccb Preparar Notificaci\u00f3n",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "\ud83d\udccb Preparar Notificaci\u00f3n": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udce7 Notificar a Sol",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": {
+        "node:\u23f0 Revisar cada hora": {
+            "recurrenceRules": []
+        }
+    },
+    "meta": null,
+    "pinData": null,
+    "versionId": "ab0efbcb-6a40-42c1-951f-6ae33af23998",
+    "activeVersionId": "ab0efbcb-6a40-42c1-951f-6ae33af23998",
+    "versionCounter": 5,
+    "triggerCount": 1,
+    "shared": [
+        {
+            "updatedAt": "2026-04-24T16:26:02.954Z",
+            "createdAt": "2026-04-24T16:26:02.954Z",
+            "role": "workflow:owner",
+            "workflowId": "cJZV7jcwlbFoW5qJ",
+            "projectId": "scK6yPpEmlkikl67",
+            "project": {
+                "updatedAt": "2026-03-16T19:58:01.773Z",
+                "createdAt": "2026-03-16T19:56:18.866Z",
+                "id": "scK6yPpEmlkikl67",
+                "name": "Solange  Torrez <risosadmi@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            }
+        }
+    ],
+    "tags": [
+        {
+            "updatedAt": "2026-04-16T17:44:14.781Z",
+            "createdAt": "2026-04-16T17:44:14.781Z",
+            "id": "pJ6UP83Ety9RKf4d",
+            "name": "email"
+        },
+        {
+            "updatedAt": "2026-04-16T17:44:15.165Z",
+            "createdAt": "2026-04-16T17:44:15.165Z",
+            "id": "ujwRo7f5pLGmeHA8",
+            "name": "leads"
+        }
+    ],
+    "activeVersion": {
+        "updatedAt": "2026-04-24T16:29:47.920Z",
+        "createdAt": "2026-04-24T16:29:47.920Z",
+        "versionId": "ab0efbcb-6a40-42c1-951f-6ae33af23998",
+        "workflowId": "cJZV7jcwlbFoW5qJ",
+        "nodes": [
+            {
+                "id": "gmon-sched",
+                "name": "\u23f0 Revisar cada hora",
+                "type": "n8n-nodes-base.scheduleTrigger",
+                "typeVersion": 1.2,
+                "position": [
+                    0,
+                    300
+                ],
+                "parameters": {
+                    "rule": {
+                        "interval": [
+                            {
+                                "field": "hours",
+                                "hoursInterval": 1
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "id": "gmon-manual",
+                "name": "\u25b6\ufe0f Ejecutar Manualmente",
+                "type": "n8n-nodes-base.manualTrigger",
+                "typeVersion": 1,
+                "position": [
+                    0,
+                    480
+                ],
+                "parameters": {}
+            },
+            {
+                "id": "gmon-gmail",
+                "name": "\ud83d\udcec Leer Inbox Gmail",
+                "type": "n8n-nodes-base.gmail",
+                "typeVersion": 2.1,
+                "position": [
+                    280,
+                    300
+                ],
+                "credentials": {
+                    "gmailOAuth2": {
+                        "id": "TESHSjzjMCpCxBBk",
+                        "name": "Gmail account"
+                    }
+                },
+                "parameters": {
+                    "operation": "getAll",
+                    "filters": {
+                        "q": "in:inbox is:unread newer_than:2h"
+                    },
+                    "limit": 50,
+                    "options": {}
+                }
+            },
+            {
+                "id": "gmon-leads",
+                "name": "\ud83d\udccb Obtener Leads",
+                "type": "n8n-nodes-base.googleSheets",
+                "typeVersion": 4.5,
+                "position": [
+                    280,
+                    480
+                ],
+                "credentials": {
+                    "googleSheetsOAuth2Api": {
+                        "id": "QE2RlAxaMLoYefTD",
+                        "name": "Google Sheets account"
+                    }
+                },
+                "parameters": {
+                    "operation": "read",
+                    "documentId": {
+                        "__rl": true,
+                        "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+                        "mode": "id"
+                    },
+                    "sheetName": {
+                        "__rl": true,
+                        "value": "gid=0",
+                        "mode": "id"
+                    },
+                    "options": {}
+                }
+            },
+            {
+                "id": "gmon-match",
+                "name": "\ud83d\udd0d Cruzar con Leads",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    560,
+                    300
+                ],
+                "parameters": {
+                    "jsCode": "\nconst emails  = $('\ud83d\udcec Leer Inbox Gmail').all();\nconst leads   = $('\ud83d\udccb Obtener Leads').all();\n\n// Build lookup: email address \u2192 lead row_number\nconst leadMap = {};\nfor (const l of leads) {\n  const d = l.json;\n  if (d.email) leadMap[d.email.toLowerCase().trim()] = d;\n}\n\nconst today   = new Date().toISOString().split('T')[0];\nconst replies = [];\n\nfor (const msg of emails) {\n  const m    = msg.json;\n  const from = (m.from || '').toLowerCase();\n\n  // Extract email address from \"Name <email@example.com>\" format\n  const match = from.match(/<(.+?)>/) || from.match(/([^\\s]+@[^\\s]+)/);\n  const senderEmail = match ? match[1].trim() : from.trim();\n\n  const lead = leadMap[senderEmail];\n  if (!lead) continue;  // not a known lead, skip\n\n  replies.push({\n    json: {\n      row_number:              lead.row_number,\n      email:                   senderEmail,\n      nombre:                  lead.nombre || '',\n      estado_email_nuevo:      'respondi\u00f3',\n      fecha_ultima_interaccion: today,\n      asunto_respuesta:        m.subject || '',\n      fecha_respuesta:         today\n    }\n  });\n}\n\nif (replies.length === 0) return [{ json: { noReplies: true } }];\nreturn replies;\n"
+                }
+            },
+            {
+                "id": "gmon-if",
+                "name": "\u2753 \u00bfHay respuestas?",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2,
+                "position": [
+                    800,
+                    300
+                ],
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": true,
+                            "leftValue": "",
+                            "typeValidation": "strict"
+                        },
+                        "conditions": [
+                            {
+                                "id": "cond-replies",
+                                "leftValue": "={{ $json.noReplies }}",
+                                "rightValue": true,
+                                "operator": {
+                                    "type": "boolean",
+                                    "operation": "false"
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    }
+                }
+            },
+            {
+                "id": "gmon-update",
+                "name": "\u2705 Actualizar Estado en Sheets",
+                "type": "n8n-nodes-base.googleSheets",
+                "typeVersion": 4.5,
+                "position": [
+                    1040,
+                    200
+                ],
+                "credentials": {
+                    "googleSheetsOAuth2Api": {
+                        "id": "QE2RlAxaMLoYefTD",
+                        "name": "Google Sheets account"
+                    }
+                },
+                "parameters": {
+                    "operation": "update",
+                    "documentId": {
+                        "__rl": true,
+                        "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+                        "mode": "id"
+                    },
+                    "sheetName": {
+                        "__rl": true,
+                        "value": "gid=0",
+                        "mode": "id"
+                    },
+                    "columns": {
+                        "mappingMode": "defineBelow",
+                        "value": {
+                            "row_number": "={{ $json.row_number }}",
+                            "estado_email": "={{ $json.estado_email_nuevo }}",
+                            "fecha_ultima_interaccion": "={{ $json.fecha_ultima_interaccion }}"
+                        },
+                        "matchingColumns": [
+                            "row_number"
+                        ],
+                        "schema": [
+                            {
+                                "id": "row_number",
+                                "displayName": "row_number",
+                                "canBeUsedToMatch": true,
+                                "defaultMatch": true
+                            },
+                            {
+                                "id": "estado_email",
+                                "displayName": "estado_email",
+                                "canBeUsedToMatch": false,
+                                "defaultMatch": false
+                            },
+                            {
+                                "id": "fecha_ultima_interaccion",
+                                "displayName": "fecha_ultima_interaccion",
+                                "canBeUsedToMatch": false,
+                                "defaultMatch": false
+                            }
+                        ]
+                    },
+                    "options": {}
+                }
+            },
+            {
+                "id": "gmon-notify-code",
+                "name": "\ud83d\udccb Preparar Notificaci\u00f3n",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    1040,
+                    380
+                ],
+                "parameters": {
+                    "jsCode": "\nconst items = $input.all();\nif (items[0]?.json?.noReplies) return [{ json: { skipped: true } }];\n\nconst NAVY   = '#305468';\nconst ORANGE = '#ff6900';\nconst today  = new Date().toLocaleDateString('es-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });\n\nconst rows = items.map(i => `\n  <tr>\n    <td style=\"padding:8px;border-bottom:1px solid #eee;\">${i.json.nombre || '\u2014'}</td>\n    <td style=\"padding:8px;border-bottom:1px solid #eee;\">${i.json.email}</td>\n    <td style=\"padding:8px;border-bottom:1px solid #eee;\">${i.json.asunto_respuesta || '\u2014'}</td>\n  </tr>`).join('');\n\nconst html = `<div style=\"font-family:Arial,sans-serif;max-width:620px;margin:0 auto;color:#333;\">\n  <div style=\"background:${NAVY};color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;\">\n    <div style=\"font-size:11px;letter-spacing:1px;opacity:.7;text-transform:uppercase;\">Gmail Monitor</div>\n    <h2 style=\"margin:4px 0 0;font-size:20px;\">\ud83d\udcac ${items.length} Lead(s) respondieron</h2>\n    <p style=\"margin:6px 0 0;opacity:.8;font-size:13px;\">${today}</p>\n  </div>\n  <div style=\"padding:20px 24px;border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;\">\n    <p>Hola Sol, estos leads respondieron uno de nuestros emails:</p>\n    <table style=\"width:100%;border-collapse:collapse;font-size:13px;\">\n      <thead>\n        <tr style=\"background:#f5f5f5;\">\n          <th style=\"padding:8px;text-align:left;\">Nombre</th>\n          <th style=\"padding:8px;text-align:left;\">Email</th>\n          <th style=\"padding:8px;text-align:left;\">Asunto</th>\n        </tr>\n      </thead>\n      <tbody>${rows}</tbody>\n    </table>\n    <p style=\"margin-top:16px;font-size:13px;color:#666;\">Su estado fue actualizado a <strong>\"respondi\u00f3\"</strong> en el CRM y no recibir\u00e1n m\u00e1s emails autom\u00e1ticos hasta que los contactes manualmente.</p>\n    <hr style=\"margin:20px 0;border:none;border-top:1px solid #eee;\">\n    <p style=\"font-size:12px;color:#999;\">CE Gmail Monitor \u2014 Generado autom\u00e1ticamente por n8n</p>\n  </div>\n</div>`;\n\nreturn [{ json: { subject: `\ud83d\udcac ${items.length} lead(s) respondieron \u2014 ${today}`, body_html: html } }];\n"
+                }
+            },
+            {
+                "id": "gmon-email",
+                "name": "\ud83d\udce7 Notificar a Sol",
+                "type": "n8n-nodes-base.gmail",
+                "typeVersion": 2.1,
+                "position": [
+                    1280,
+                    380
+                ],
+                "credentials": {
+                    "gmailOAuth2": {
+                        "id": "TESHSjzjMCpCxBBk",
+                        "name": "Gmail account"
+                    }
+                },
+                "parameters": {
+                    "sendTo": "solange@cratingexpress.com",
+                    "subject": "={{ $json.subject }}",
+                    "message": "={{ $json.body_html }}",
+                    "options": {
+                        "appendAttribution": false,
+                        "senderName": "CE Gmail Monitor"
+                    }
+                }
+            }
+        ],
+        "connections": {
+            "\u23f0 Revisar cada hora": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udccb Obtener Leads",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\u25b6\ufe0f Ejecutar Manualmente": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udccb Obtener Leads",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udcec Leer Inbox Gmail": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd0d Cruzar con Leads",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udccb Obtener Leads": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udcec Leer Inbox Gmail",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd0d Cruzar con Leads": {
+                "main": [
+                    [
+                        {
+                            "node": "\u2753 \u00bfHay respuestas?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\u2753 \u00bfHay respuestas?": {
+                "main": [
+                    [
+                        {
+                            "node": "\u2705 Actualizar Estado en Sheets",
+                            "type": "main",
+                            "index": 0
+                        },
+                        {
+                            "node": "\ud83d\udccb Preparar Notificaci\u00f3n",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    []
+                ]
+            },
+            "\ud83d\udccb Preparar Notificaci\u00f3n": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udce7 Notificar a Sol",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "authors": "Solange  Torrez",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": [
+            {
+                "createdAt": "2026-04-24T16:32:52.635Z",
+                "id": 220,
+                "workflowId": "cJZV7jcwlbFoW5qJ",
+                "versionId": "ab0efbcb-6a40-42c1-951f-6ae33af23998",
+                "event": "activated",
+                "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            }
+        ]
+    }
+}

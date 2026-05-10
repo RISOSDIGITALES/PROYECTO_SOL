@@ -1,0 +1,522 @@
+{
+    "updatedAt": "2026-05-04T15:57:24.087Z",
+    "createdAt": "2026-05-04T15:57:24.087Z",
+    "id": "jfoJDSidx1sJlOrr",
+    "name": "\ud83d\udcde\u2192\ud83d\udcac VAPI \u2192 WhatsApp Handoff",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "id": "wa-handoff-webhook",
+            "name": "\ud83d\udd14 Webhook VAPI Tool Call",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                240,
+                400
+            ],
+            "parameters": {
+                "path": "vapi-wa-handoff",
+                "responseMode": "responseNode",
+                "httpMethod": "POST",
+                "options": {}
+            }
+        },
+        {
+            "id": "wa-handoff-extract",
+            "name": "\ud83d\udd27 Extraer Datos Llamada",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                460,
+                400
+            ],
+            "parameters": {
+                "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst msg = body.message || body;\n\n// Tool call data\nconst toolCallList = msg.toolCallList || msg.toolCalls || [];\nconst toolCall = toolCallList[0] || {};\nconst toolCallId = toolCall.id || 'unknown';\nlet args = {};\ntry { args = JSON.parse(toolCall.function?.arguments || '{}'); } catch(e) {}\n\n// Call data\nconst call = msg.call || {};\nconst telefono = (call.customer?.number || '').replace(/^\\+/, '');\nconst callId = call.id || '';\n\n// Transcript\nconst transcript = msg.artifact?.transcript || msg.transcript || '';\nconst messages = msg.artifact?.messages || [];\n\n// Build historial from messages\nconst historial = messages\n  .filter(m => m.role === 'user' || m.role === 'assistant')\n  .map(m => {\n    const rol = m.role === 'user' ? 'Cliente' : 'Alex';\n    return `[Llamada] ${rol}: ${m.message || m.content || ''}`;\n  })\n  .join('\\n');\n\nreturn [{ json: {\n  toolCallId,\n  autorizado: args.autorizado !== false,\n  telefono,\n  callId,\n  transcript,\n  historial: historial || `[Llamada] Transcript: ${transcript.slice(0, 1000)}`\n}}];"
+            }
+        },
+        {
+            "id": "wa-handoff-groq",
+            "name": "\ud83e\udd16 Groq: Resumir Llamada",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                680,
+                400
+            ],
+            "continueOnFail": true,
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.groq.com/openai/v1/chat/completions",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer gsk_xh4sNFnhiBX0IIKYo5cLWGdyb3FYnFEJIPiSPuIBTK8MgCmVbBf"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({\n  model: 'llama-3.1-8b-instant',\n  messages: [{\n    role: 'user',\n    content: `Analiza este transcript de llamada de Crating Express y extrae la informaci\u00f3n. Responde SOLO con JSON v\u00e1lido:\\n\\nTranscript:\\n${$json.transcript.slice(0, 2000)}\\n\\nJSON requerido:\\n{\\\"producto\\\": \\\"\\\", \\\"medidas\\\": \\\"\\\", \\\"fecha\\\": \\\"\\\", \\\"nombre_cliente\\\": \\\"\\\", \\\"idioma\\\": \\\"es\\\", \\\"resumen\\\": \\\"1 frase resumiendo qu\u00e9 necesita el cliente\\\"}`\n  }],\n  max_tokens: 200,\n  temperature: 0.1,\n  response_format: { type: 'json_object' }\n}) }}"
+            }
+        },
+        {
+            "id": "wa-handoff-preparar",
+            "name": "\ud83d\udd27 Preparar Mensaje y Lead",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                900,
+                400
+            ],
+            "parameters": {
+                "jsCode": "const extractData = $('\ud83d\udd27 Extraer Datos Llamada').item.json;\nconst groqRaw = $input.first().json;\n\nlet leadData = { producto: '', medidas: '', fecha: '', nombre_cliente: '', idioma: 'es', resumen: 'Llamada recibida' };\ntry {\n  const content = groqRaw.choices?.[0]?.message?.content || '{}';\n  leadData = { ...leadData, ...JSON.parse(content) };\n} catch(e) {}\n\nconst esEspanol = leadData.idioma !== 'en';\nconst producto = leadData.producto || 'tu art\u00edculo';\nconst resumen = leadData.resumen || '';\n\nlet mensajeWA;\nif (esEspanol) {\n  mensajeWA = `Hola \ud83d\udc4b soy Alex de Crating Express. Gracias por tu llamada.\\n\\n`;\n  if (resumen) mensajeWA += `${resumen}\\n\\n`;\n  mensajeWA += `Puedes continuar tu cotizaci\u00f3n aqu\u00ed respondiendo este mensaje, o ver precios en: https://cratingcotiza.mdarthurdigital.com/cotizar-caja\\n\\n\u00bfTienes alguna pregunta?`;\n} else {\n  mensajeWA = `Hi \ud83d\udc4b this is Alex from Crating Express. Thanks for your call.\\n\\n`;\n  if (resumen) mensajeWA += `${resumen}\\n\\n`;\n  mensajeWA += `You can continue your quote here by replying to this message, or check prices at: https://cratingcotiza.mdarthurdigital.com/cotizar-caja\\n\\nAny questions?`;\n}\n\n// Historial para Airtable\nconst historialConResumen = extractData.historial + \n  (resumen ? `\\n[Resumen] ${resumen}` : '');\n\nreturn [{ json: {\n  ...extractData,\n  mensajeWA,\n  producto: leadData.producto || null,\n  medidas: leadData.medidas || null,\n  fecha: leadData.fecha || null,\n  historialCompleto: historialConResumen\n}}];"
+            }
+        },
+        {
+            "id": "wa-handoff-airtable",
+            "name": "\ud83d\udcbe Crear Lead en Airtable",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1120,
+                300
+            ],
+            "continueOnFail": true,
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ fields: {\n  Telefono: '+' + $json.telefono,\n  Estado: 'En calificaci\u00f3n',\n  Respuesta_1: $json.producto || '',\n  Respuesta_2: $json.medidas || '',\n  Respuesta_3: $json.fecha || '',\n  Notas: JSON.stringify({ origen: 'llamada_vapi', callId: $json.callId }),\n  Historial_Mensajes: $json.historialCompleto || '',\n  Ultima_Interaccion: new Date().toISOString()\n}}) }}"
+            }
+        },
+        {
+            "id": "wa-handoff-send",
+            "name": "\ud83d\udce4 Enviar WhatsApp",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1120,
+                500
+            ],
+            "continueOnFail": true,
+            "parameters": {
+                "method": "POST",
+                "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer EAALcI7uQ5DkBRQZCmn8bV2laZBaYe929AtdjIw4NZCKnuOZB0i2ZApaUXvEYiwcXUZCM4ZBRCQZAYq36ioDOZANd1F2pZCncwvhGuUMmAafdP3GBwXWXbA56TvBAyv7xH8hVvfpcUbhWzYhHlGvOVnhve0ZAxYJCZApm9fn5ampBTR6ZBZCTJRseZCAR4K2xNmyTPSVcAZDZD"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('\ud83d\udd27 Preparar Mensaje y Lead').item.json.telefono, type: 'text', text: { body: $('\ud83d\udd27 Preparar Mensaje y Lead').item.json.mensajeWA } }) }}"
+            }
+        },
+        {
+            "id": "wa-handoff-respond",
+            "name": "\u2705 Responder a VAPI",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                1340,
+                400
+            ],
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({ results: [{ toolCallId: $('\ud83d\udd27 Extraer Datos Llamada').item.json.toolCallId, result: 'WhatsApp enviado. El cliente puede continuar la conversaci\u00f3n por WhatsApp.' }] }) }}",
+                "options": {
+                    "responseCode": 200
+                }
+            }
+        }
+    ],
+    "connections": {
+        "\ud83d\udd14 Webhook VAPI Tool Call": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd27 Extraer Datos Llamada",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd27 Extraer Datos Llamada": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83e\udd16 Groq: Resumir Llamada",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83e\udd16 Groq: Resumir Llamada": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd27 Preparar Mensaje y Lead",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd27 Preparar Mensaje y Lead": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcbe Crear Lead en Airtable",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "\ud83d\udce4 Enviar WhatsApp",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udcbe Crear Lead en Airtable": {
+            "main": [
+                [
+                    {
+                        "node": "\u2705 Responder a VAPI",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udce4 Enviar WhatsApp": {
+            "main": [
+                [
+                    {
+                        "node": "\u2705 Responder a VAPI",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": null,
+    "versionId": "20ad89ff-6ecc-42a0-a6c4-9aec34f75992",
+    "activeVersionId": "20ad89ff-6ecc-42a0-a6c4-9aec34f75992",
+    "versionCounter": 3,
+    "triggerCount": 1,
+    "shared": [
+        {
+            "updatedAt": "2026-05-04T15:57:24.113Z",
+            "createdAt": "2026-05-04T15:57:24.113Z",
+            "role": "workflow:owner",
+            "workflowId": "jfoJDSidx1sJlOrr",
+            "projectId": "scK6yPpEmlkikl67",
+            "project": {
+                "updatedAt": "2026-03-16T19:58:01.773Z",
+                "createdAt": "2026-03-16T19:56:18.866Z",
+                "id": "scK6yPpEmlkikl67",
+                "name": "Solange  Torrez <risosadmi@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            }
+        }
+    ],
+    "tags": [
+        {
+            "updatedAt": "2026-05-04T16:04:54.762Z",
+            "createdAt": "2026-05-04T16:04:54.762Z",
+            "id": "2CrVJWitAB77MgTJ",
+            "name": "Alex"
+        }
+    ],
+    "activeVersion": {
+        "updatedAt": "2026-05-04T15:57:24.139Z",
+        "createdAt": "2026-05-04T15:57:24.139Z",
+        "versionId": "20ad89ff-6ecc-42a0-a6c4-9aec34f75992",
+        "workflowId": "jfoJDSidx1sJlOrr",
+        "nodes": [
+            {
+                "id": "wa-handoff-webhook",
+                "name": "\ud83d\udd14 Webhook VAPI Tool Call",
+                "type": "n8n-nodes-base.webhook",
+                "typeVersion": 2,
+                "position": [
+                    240,
+                    400
+                ],
+                "parameters": {
+                    "path": "vapi-wa-handoff",
+                    "responseMode": "responseNode",
+                    "httpMethod": "POST",
+                    "options": {}
+                }
+            },
+            {
+                "id": "wa-handoff-extract",
+                "name": "\ud83d\udd27 Extraer Datos Llamada",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    460,
+                    400
+                ],
+                "parameters": {
+                    "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst msg = body.message || body;\n\n// Tool call data\nconst toolCallList = msg.toolCallList || msg.toolCalls || [];\nconst toolCall = toolCallList[0] || {};\nconst toolCallId = toolCall.id || 'unknown';\nlet args = {};\ntry { args = JSON.parse(toolCall.function?.arguments || '{}'); } catch(e) {}\n\n// Call data\nconst call = msg.call || {};\nconst telefono = (call.customer?.number || '').replace(/^\\+/, '');\nconst callId = call.id || '';\n\n// Transcript\nconst transcript = msg.artifact?.transcript || msg.transcript || '';\nconst messages = msg.artifact?.messages || [];\n\n// Build historial from messages\nconst historial = messages\n  .filter(m => m.role === 'user' || m.role === 'assistant')\n  .map(m => {\n    const rol = m.role === 'user' ? 'Cliente' : 'Alex';\n    return `[Llamada] ${rol}: ${m.message || m.content || ''}`;\n  })\n  .join('\\n');\n\nreturn [{ json: {\n  toolCallId,\n  autorizado: args.autorizado !== false,\n  telefono,\n  callId,\n  transcript,\n  historial: historial || `[Llamada] Transcript: ${transcript.slice(0, 1000)}`\n}}];"
+                }
+            },
+            {
+                "id": "wa-handoff-groq",
+                "name": "\ud83e\udd16 Groq: Resumir Llamada",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    680,
+                    400
+                ],
+                "continueOnFail": true,
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://api.groq.com/openai/v1/chat/completions",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "Bearer gsk_xh4sNFnhiBX0IIKYo5cLWGdyb3FYnFEJIPiSPuIBTK8MgCmVbBf"
+                            },
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify({\n  model: 'llama-3.1-8b-instant',\n  messages: [{\n    role: 'user',\n    content: `Analiza este transcript de llamada de Crating Express y extrae la informaci\u00f3n. Responde SOLO con JSON v\u00e1lido:\\n\\nTranscript:\\n${$json.transcript.slice(0, 2000)}\\n\\nJSON requerido:\\n{\\\"producto\\\": \\\"\\\", \\\"medidas\\\": \\\"\\\", \\\"fecha\\\": \\\"\\\", \\\"nombre_cliente\\\": \\\"\\\", \\\"idioma\\\": \\\"es\\\", \\\"resumen\\\": \\\"1 frase resumiendo qu\u00e9 necesita el cliente\\\"}`\n  }],\n  max_tokens: 200,\n  temperature: 0.1,\n  response_format: { type: 'json_object' }\n}) }}"
+                }
+            },
+            {
+                "id": "wa-handoff-preparar",
+                "name": "\ud83d\udd27 Preparar Mensaje y Lead",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    900,
+                    400
+                ],
+                "parameters": {
+                    "jsCode": "const extractData = $('\ud83d\udd27 Extraer Datos Llamada').item.json;\nconst groqRaw = $input.first().json;\n\nlet leadData = { producto: '', medidas: '', fecha: '', nombre_cliente: '', idioma: 'es', resumen: 'Llamada recibida' };\ntry {\n  const content = groqRaw.choices?.[0]?.message?.content || '{}';\n  leadData = { ...leadData, ...JSON.parse(content) };\n} catch(e) {}\n\nconst esEspanol = leadData.idioma !== 'en';\nconst producto = leadData.producto || 'tu art\u00edculo';\nconst resumen = leadData.resumen || '';\n\nlet mensajeWA;\nif (esEspanol) {\n  mensajeWA = `Hola \ud83d\udc4b soy Alex de Crating Express. Gracias por tu llamada.\\n\\n`;\n  if (resumen) mensajeWA += `${resumen}\\n\\n`;\n  mensajeWA += `Puedes continuar tu cotizaci\u00f3n aqu\u00ed respondiendo este mensaje, o ver precios en: https://cratingcotiza.mdarthurdigital.com/cotizar-caja\\n\\n\u00bfTienes alguna pregunta?`;\n} else {\n  mensajeWA = `Hi \ud83d\udc4b this is Alex from Crating Express. Thanks for your call.\\n\\n`;\n  if (resumen) mensajeWA += `${resumen}\\n\\n`;\n  mensajeWA += `You can continue your quote here by replying to this message, or check prices at: https://cratingcotiza.mdarthurdigital.com/cotizar-caja\\n\\nAny questions?`;\n}\n\n// Historial para Airtable\nconst historialConResumen = extractData.historial + \n  (resumen ? `\\n[Resumen] ${resumen}` : '');\n\nreturn [{ json: {\n  ...extractData,\n  mensajeWA,\n  producto: leadData.producto || null,\n  medidas: leadData.medidas || null,\n  fecha: leadData.fecha || null,\n  historialCompleto: historialConResumen\n}}];"
+                }
+            },
+            {
+                "id": "wa-handoff-airtable",
+                "name": "\ud83d\udcbe Crear Lead en Airtable",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    1120,
+                    300
+                ],
+                "continueOnFail": true,
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                            },
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify({ fields: {\n  Telefono: '+' + $json.telefono,\n  Estado: 'En calificaci\u00f3n',\n  Respuesta_1: $json.producto || '',\n  Respuesta_2: $json.medidas || '',\n  Respuesta_3: $json.fecha || '',\n  Notas: JSON.stringify({ origen: 'llamada_vapi', callId: $json.callId }),\n  Historial_Mensajes: $json.historialCompleto || '',\n  Ultima_Interaccion: new Date().toISOString()\n}}) }}"
+                }
+            },
+            {
+                "id": "wa-handoff-send",
+                "name": "\ud83d\udce4 Enviar WhatsApp",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    1120,
+                    500
+                ],
+                "continueOnFail": true,
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "Bearer EAALcI7uQ5DkBRQZCmn8bV2laZBaYe929AtdjIw4NZCKnuOZB0i2ZApaUXvEYiwcXUZCM4ZBRCQZAYq36ioDOZANd1F2pZCncwvhGuUMmAafdP3GBwXWXbA56TvBAyv7xH8hVvfpcUbhWzYhHlGvOVnhve0ZAxYJCZApm9fn5ampBTR6ZBZCTJRseZCAR4K2xNmyTPSVcAZDZD"
+                            },
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('\ud83d\udd27 Preparar Mensaje y Lead').item.json.telefono, type: 'text', text: { body: $('\ud83d\udd27 Preparar Mensaje y Lead').item.json.mensajeWA } }) }}"
+                }
+            },
+            {
+                "id": "wa-handoff-respond",
+                "name": "\u2705 Responder a VAPI",
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.1,
+                "position": [
+                    1340,
+                    400
+                ],
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "={{ JSON.stringify({ results: [{ toolCallId: $('\ud83d\udd27 Extraer Datos Llamada').item.json.toolCallId, result: 'WhatsApp enviado. El cliente puede continuar la conversaci\u00f3n por WhatsApp.' }] }) }}",
+                    "options": {
+                        "responseCode": 200
+                    }
+                }
+            }
+        ],
+        "connections": {
+            "\ud83d\udd14 Webhook VAPI Tool Call": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd27 Extraer Datos Llamada",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd27 Extraer Datos Llamada": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83e\udd16 Groq: Resumir Llamada",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83e\udd16 Groq: Resumir Llamada": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd27 Preparar Mensaje y Lead",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd27 Preparar Mensaje y Lead": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udcbe Crear Lead en Airtable",
+                            "type": "main",
+                            "index": 0
+                        },
+                        {
+                            "node": "\ud83d\udce4 Enviar WhatsApp",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udcbe Crear Lead en Airtable": {
+                "main": [
+                    [
+                        {
+                            "node": "\u2705 Responder a VAPI",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udce4 Enviar WhatsApp": {
+                "main": [
+                    [
+                        {
+                            "node": "\u2705 Responder a VAPI",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "authors": "Solange  Torrez",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": [
+            {
+                "createdAt": "2026-05-04T15:57:29.515Z",
+                "id": 351,
+                "workflowId": "jfoJDSidx1sJlOrr",
+                "versionId": "20ad89ff-6ecc-42a0-a6c4-9aec34f75992",
+                "event": "activated",
+                "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            }
+        ]
+    }
+}

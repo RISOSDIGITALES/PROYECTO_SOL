@@ -1,0 +1,2663 @@
+{
+    "updatedAt": "2026-05-09T18:30:51.554Z",
+    "createdAt": "2026-04-04T14:58:41.470Z",
+    "id": "eCOX3ogMjToxZsh9",
+    "name": "CE WhatsApp Engine - Sistema de Conversi\u00f3n",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "parameters": {
+                "content": "## \ud83d\udfe2 CE WhatsApp Engine\n\n**Pendiente conectar:**\n- Credencial WhatsApp (Meta API) en nodo Webhook y env\u00edo\n- Token de acceso permanente de Meta\n\n**Configuraci\u00f3n:** Airtable \u2192 PERFIL DE EMPRESA \u2192 campos WA_*",
+                "height": 200,
+                "width": 400,
+                "color": 5
+            },
+            "id": "sticky-info",
+            "name": "\ud83d\udccb CONFIGURACI\u00d3N",
+            "type": "n8n-nodes-base.stickyNote",
+            "typeVersion": 1,
+            "position": [
+                -48,
+                -16
+            ]
+        },
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "whatsapp-ce",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "webhook-wa",
+            "name": "\ud83d\udcf2 Webhook WhatsApp",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                240,
+                304
+            ],
+            "webhookId": "200cbd06-8278-4dc0-a4dd-33a29c9493c5"
+        },
+        {
+            "parameters": {
+                "respondWith": "text",
+                "responseBody": "OK",
+                "options": {
+                    "responseCode": 200
+                }
+            },
+            "id": "responder-meta",
+            "name": "\u2705 Responder a Meta (200)",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                464,
+                144
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": false,
+                        "leftValue": "",
+                        "typeValidation": "loose"
+                    },
+                    "conditions": [
+                        {
+                            "id": "check-hub",
+                            "leftValue": "={{ $json.query?.['hub.mode'] }}",
+                            "rightValue": "subscribe",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "verificar-webhook",
+            "name": "\ud83d\udd00 \u00bfVerificaci\u00f3n o Mensaje?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [
+                464,
+                304
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "text",
+                "responseBody": "={{ $json.query?.['hub.challenge'] }}",
+                "options": {
+                    "responseCode": 200
+                }
+            },
+            "id": "responder-verificacion",
+            "name": "\u2705 Responder Verificaci\u00f3n Meta",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                688,
+                144
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const body = $input.item.json.body || $input.item.json;\n\n// Extract message data from WhatsApp webhook payload\nconst entry = body.entry?.[0];\nconst changes = entry?.changes?.[0];\nconst value = changes?.value;\nconst message = value?.messages?.[0];\n\nif (!message) {\n  return [{ json: { skip: true } }];\n}\n\nconst telefono = message.from;\nconst texto = message.text?.body || '';\nconst messageId = message.id;\nconst timestamp = message.timestamp;\nconst nombreContacto = value?.contacts?.[0]?.profile?.name || '';\n\nreturn [{\n  json: {\n    telefono,\n    texto,\n    messageId,\n    timestamp,\n    nombreContacto,\n    skip: false\n  }\n}];"
+            },
+            "id": "extraer-mensaje",
+            "name": "\ud83d\udd27 Extraer Mensaje y Tel\u00e9fono",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                688,
+                384
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": false,
+                        "leftValue": "",
+                        "typeValidation": "loose"
+                    },
+                    "conditions": [
+                        {
+                            "id": "check-skip",
+                            "leftValue": "={{ $json.skip }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "false"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "check-skip",
+            "name": "\ud83d\udd00 \u00bfHay mensaje?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [
+                912,
+                384
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/PERFIL%20DE%20EMPRESA",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "maxRecords",
+                            "value": "1"
+                        }
+                    ]
+                },
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "get-config",
+            "name": "\ud83d\udcca Obtener Config Empresa",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1120,
+                304
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "filterByFormula",
+                            "value": "={Telefono}='+{{ $('\ud83d\udd27 Extraer Mensaje y Tel\u00e9fono').item.json.telefono }}'"
+                        },
+                        {
+                            "name": "maxRecords",
+                            "value": "1"
+                        }
+                    ]
+                },
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "get-lead",
+            "name": "\ud83d\udccb Buscar Lead Existente",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1120,
+                464
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const msgData = $('\ud83d\udd27 Extraer Mensaje y Tel\u00e9fono').item.json;\nconst configData = $('\ud83d\udcca Obtener Config Empresa').item.json;\nconst waConfigData = $('\u2699\ufe0f Obtener WA Config').item.json;\nconst leadData = $('\ud83d\udccb Buscar Lead Existente').item.json;\n\nconst config = configData.records?.[0]?.fields || {};\nconst waConfig = waConfigData.records?.[0]?.fields || {};\nconst bienvenida = waConfig.WA_Mensaje_Bienvenida || config.WA_Mensaje_Bienvenida || 'Hola \ud83d\udc4b buen d\u00eda, soy el asistente de Crating Express en Miami. \u00bfEn qu\u00e9 te puedo ayudar?';\nconst emailVendedor = config.WA_Email_Vendedor || 'risosadmi@gmail.com';\nconst descripcion = config['descripci\u00f3n_corta'] || 'Embalajes de madera a medida en Miami, FL. Cajones y cajas con certificaci\u00f3n ISPM-15.';\nconst instruccionesIA = waConfig.Instrucciones_IA || config.Instrucciones_IA || '';\nconst promptTemplate = waConfig.Prompt_Sistema || config.Prompt_Sistema || '';\nconst followup24 = waConfig.WA_FollowUp_24h || config.WA_FollowUp_24h || '';\nconst followup72 = waConfig.WA_FollowUp_72h || config.WA_FollowUp_72h || '';\n\nconst leadExistente = leadData.records?.[0];\nconst leadId = leadExistente?.id || null;\nconst leadFields = leadExistente?.fields || {};\n\n// Read from Respuesta_1/2/3 fields (reliable individual fields)\nlet datosRecolectados = {\n  producto: leadFields.Respuesta_1 || null,\n  medidas: leadFields.Respuesta_2 || null,\n  fecha: leadFields.Respuesta_3 || null,\n  tipo_cajon: null,\n  proteccion_extra: null,\n  direccion: null\n};\n\n// Try to supplement tipo_cajon and proteccion_extra from Notas\ntry {\n  const notas = leadFields.Notas || '';\n  if (notas && notas.trim().startsWith('{')) {\n    const stored = JSON.parse(notas);\n    if (stored.tipo_cajon) datosRecolectados.tipo_cajon = stored.tipo_cajon;\n    if (stored.proteccion_extra) datosRecolectados.proteccion_extra = stored.proteccion_extra;\n    if (stored.direccion) datosRecolectados.direccion = stored.direccion;\n  }\n} catch(e) {}\n\nconst estado = leadFields.Estado || 'Nuevo';\nconst cotizacionEnviada = ['Cotizacion_Enviada', 'Calificado', 'Vendedor notificado'].includes(estado);\nconst historial = leadFields.Historial_Mensajes || '';\nconst esNuevo = !leadId;\n\n\n// Read products catalog from Airtable\nconst productosData = $('\ud83d\udce6 Obtener Productos').item.json;\nconst productosRaw = productosData.records || [];\nconst catalogoProductos = productosRaw.map(r => {\n  const f = r.fields;\n  const nombre = Object.entries(f).find(([k]) => k.includes('Nombre de Servicio'))?.[1] || '';\n  const cuando = (f['cuando_recomendar'] || '').split('\\n')[0].trim();\n  const noUsar = (f['cuando_no_recomendar'] || '').split('\\n')[0].trim();\n  return `${nombre}: ${cuando}${noUsar ? '. NO: ' + noUsar : ''}`;\n}).filter(l => l.length > 2).join('\\n');\n\n// Build final prompt substituting dynamic values\nconst promptSistema = promptTemplate\n  .replace('{{CATALOGO}}', catalogoProductos)\n  .replace('{{INSTRUCCIONES}}', instruccionesIA ? 'Instrucciones adicionales: ' + instruccionesIA : '')\n  .trim();\n\n// Greeting based on Miami time (UTC-4 EDT)\nconst horaMiami = (new Date().getUTCHours() - 4 + 24) % 24;\nconst saludoHora = horaMiami >= 6 && horaMiami < 12 ? 'buenos d\u00edas'\n  : horaMiami >= 12 && horaMiami < 19 ? 'buenas tardes'\n  : 'buenas noches';\n\nreturn [{ json: {\n  telefono: msgData.telefono,\n  texto: msgData.texto,\n  nombreContacto: msgData.nombreContacto || '',\n  emailVendedor,\n  descripcion,\n  instruccionesIA,\n  bienvenida,\n  followup24,\n  followup72,\n  leadId,\n  estado,\n  historial,\n  datosRecolectados,\n  cotizacionEnviada,\n  esNuevo,\n  saludoHora,\n  catalogoProductos,\n  promptSistema\n} }];"
+            },
+            "id": "preparar-contexto",
+            "name": "\ud83d\udd27 Preparar Contexto IA",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1344,
+                384
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": false,
+                        "leftValue": "",
+                        "typeValidation": "loose"
+                    },
+                    "conditions": [
+                        {
+                            "id": "check-hot",
+                            "leftValue": "={{ $json.clasificacion }}",
+                            "rightValue": "Caliente",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "if-caliente",
+            "name": "\ud83d\udd00 \u00bfLead Caliente?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [
+                2224,
+                560
+            ]
+        },
+        {
+            "parameters": {
+                "sendTo": "={{ $json.emailVendedor.split('\\n').join(',') }}",
+                "subject": "={{ \"\ud83d\udd25 Lead Caliente WhatsApp \u2014 \" + ($json.nombreContacto || $json.telefono) }}",
+                "message": "={{ \"<h2>\ud83d\udd25 Nuevo Lead Caliente en WhatsApp</h2><p><strong>Tel\u00e9fono:</strong> \" + $json.telefono + \"</p><p><strong>Nombre:</strong> \" + ($json.nombreContacto || 'No disponible') + \"</p><hr><h3>Respuestas de calificaci\u00f3n:</h3><p><strong>\u00bfQu\u00e9 embalar?</strong> \" + ($json.respuesta1 || '-') + \"</p><p><strong>\u00bfPara qu\u00e9?</strong> \" + ($json.respuesta2 || '-') + \"</p><p><strong>Medidas/peso:</strong> \" + ($json.respuesta3 || $json.texto || '-') + \"</p><hr><p><strong>Resumen:</strong> \" + ($json.resumenLead + (($json.datosRecolectados.direccion) ? \"<br><b>Direcci\u00f3n:</b> \" + $json.datosRecolectados.direccion : \"\") || '-') + \"</p>\" }}",
+                "options": {}
+            },
+            "id": "notificar-vendedor",
+            "name": "\ud83d\udce7 Notificar Vendedor",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                2368,
+                304
+            ],
+            "webhookId": "62dcf57f-d27c-4c17-9d4e-a04331eb1403",
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "TESHSjzjMCpCxBBk",
+                    "name": "Gmail account"
+                }
+            },
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer EAALcI7uQ5DkBRQZCmn8bV2laZBaYe929AtdjIw4NZCKnuOZB0i2ZApaUXvEYiwcXUZCM4ZBRCQZAYq36ioDOZANd1F2pZCncwvhGuUMmAafdP3GBwXWXbA56TvBAyv7xH8hVvfpcUbhWzYhHlGvOVnhve0ZAxYJCZApm9fn5ampBTR6ZBZCTJRseZCAR4K2xNmyTPSVcAZDZD"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.telefono, type: 'text', text: { body: $json.mensajeRespuesta } }) }}",
+                "options": {}
+            },
+            "id": "enviar-mensaje-wa",
+            "name": "\ud83d\udce4 Enviar Mensaje WhatsApp",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                2816,
+                464
+            ],
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ (() => {\n  const fields = {\n    Telefono: '+' + $json.telefono,\n    Nombre: $json.nombreContacto || '',\n    Estado: $json.nuevoEstado,\n    Respuesta_1: $json.datosRecolectados.producto || '',\n    Respuesta_2: $json.datosRecolectados.medidas || '',\n    Respuesta_3: $json.datosRecolectados.fecha || '',\n    Notas: JSON.stringify({ tipo_cajon: $json.datosRecolectados.tipo_cajon || null, proteccion_extra: $json.datosRecolectados.proteccion_extra || null, direccion: $json.datosRecolectados.direccion || null }),\n    Origen: $json.origen || 'Desconocido',\n    Descripcion_Lead: $json.resumen_lead || '',\n    Nombre_Contacto: $json.nombreContacto || '',\n    Ultima_Actividad: new Date().toISOString(),\n    Historial_Mensajes: $json.nuevoHistorial,\n    Fecha_Inicio: new Date().toISOString(),\n    Ultima_Interaccion: new Date().toISOString()\n  };\n  if ($json.clasificacion) fields.Clasificacion = $json.clasificacion;\n  return JSON.stringify({ records: [{ fields }] });\n})() }}",
+                "options": {}
+            },
+            "id": "guardar-lead",
+            "name": "\ud83d\udcbe Crear Lead (POST)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                2640,
+                640
+            ]
+        },
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "hours"
+                        }
+                    ]
+                }
+            },
+            "id": "trigger-followup",
+            "name": "\u23f0 Trigger Follow-up Check",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                240,
+                752
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "filterByFormula",
+                            "value": "AND(OR({Estado}='Calificado',{Estado}='Nuevo',{Estado}='En calificaci\u00f3n'),IS_BEFORE({Ultima_Interaccion}, DATEADD(NOW(),-23,'hours')))"
+                        }
+                    ]
+                },
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "get-leads-followup",
+            "name": "\ud83d\udccb Obtener Leads Sin Respuesta",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                464,
+                752
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const data = $input.item.json;\nconst records = data.records || [];\nconst now = new Date();\nconst results = [];\n\nfor (const record of records) {\n  const fields = record.fields;\n  const ultimaInteraccion = new Date(fields.Ultima_Interaccion);\n  const horasDiff = (now - ultimaInteraccion) / (1000 * 60 * 60);\n  \n  let tipoFollowup = null;\n  if (horasDiff >= 72) tipoFollowup = '72h';\n  else if (horasDiff >= 24) tipoFollowup = '24h';\n  \n  if (tipoFollowup) {\n    results.push({\n      json: {\n        recordId: record.id,\n        telefono: fields.Telefono,\n        nombre: fields.Nombre,\n        tipoFollowup,\n        estado: fields.Estado\n      }\n    });\n  }\n}\n\nreturn results;"
+            },
+            "id": "procesar-followups",
+            "name": "\ud83d\udd27 Procesar Follow-ups",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                688,
+                752
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/PERFIL%20DE%20EMPRESA",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "maxRecords",
+                            "value": "1"
+                        }
+                    ]
+                },
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "get-config-followup",
+            "name": "\ud83d\udcca Config para Follow-up",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                912,
+                752
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer EAALcI7uQ5DkBRQZCmn8bV2laZBaYe929AtdjIw4NZCKnuOZB0i2ZApaUXvEYiwcXUZCM4ZBRCQZAYq36ioDOZANd1F2pZCncwvhGuUMmAafdP3GBwXWXbA56TvBAyv7xH8hVvfpcUbhWzYhHlGvOVnhve0ZAxYJCZApm9fn5ampBTR6ZBZCTJRseZCAR4K2xNmyTPSVcAZDZD"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.telefono, type: 'text', text: { body: $json.tipoFollowup === '24h' ? $('\ud83d\udcca Config para Follow-up').item.json.records[0].fields.WA_FollowUp_24h : $('\ud83d\udcca Config para Follow-up').item.json.records[0].fields.WA_FollowUp_72h } }) }}",
+                "options": {}
+            },
+            "id": "enviar-followup",
+            "name": "\ud83d\udce4 Enviar Follow-up WhatsApp",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1136,
+                752
+            ]
+        },
+        {
+            "parameters": {
+                "method": "PATCH",
+                "url": "=https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads/{{ $json.recordId }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ fields: { Estado: 'Follow-up ' + $json.tipoFollowup, Ultima_Interaccion: new Date().toISOString() } }) }}",
+                "options": {}
+            },
+            "id": "actualizar-estado-followup",
+            "name": "\ud83d\udd04 Actualizar Estado Follow-up",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1344,
+                752
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": false,
+                        "leftValue": "",
+                        "typeValidation": "loose"
+                    },
+                    "conditions": [
+                        {
+                            "id": "check-leadid",
+                            "leftValue": "={{ $json.leadId }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "string",
+                                "operation": "notEmpty",
+                                "singleValue": true
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "if-crear-actualizar",
+            "name": "\ud83d\udd00 \u00bfCrear o Actualizar?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                2432,
+                736
+            ]
+        },
+        {
+            "parameters": {
+                "method": "PATCH",
+                "url": "=https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads/{{ $json.leadId }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ (() => {\n  const fields = {\n    Estado: $json.nuevoEstado,\n    Respuesta_1: $json.datosRecolectados.producto || '',\n    Respuesta_2: $json.datosRecolectados.medidas || '',\n    Respuesta_3: $json.datosRecolectados.fecha || '',\n    Notas: JSON.stringify({ tipo_cajon: $json.datosRecolectados.tipo_cajon || null, proteccion_extra: $json.datosRecolectados.proteccion_extra || null, direccion: $json.datosRecolectados.direccion || null }),\n    Descripcion_Lead: $json.resumen_lead || '',\n    Nombre_Contacto: $json.nombreContacto || '',\n    Ultima_Actividad: new Date().toISOString(),\n    Historial_Mensajes: $json.nuevoHistorial,\n    Ultima_Interaccion: new Date().toISOString()\n  };\n  if ($json.clasificacion) fields.Clasificacion = $json.clasificacion;\n  return JSON.stringify({ fields });\n})() }}",
+                "options": {}
+            },
+            "id": "patch-actualizar-lead",
+            "name": "\ud83d\udcbe Actualizar Lead (PATCH)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                2640,
+                848
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.groq.com/openai/v1/chat/completions",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "groqApi",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({\n  model: 'llama-3.1-8b-instant',\n  messages: [\n    {\n      role: 'system',\n      content: `${ $json.promptSistema }`\n    },\n    {\n      role: 'user',\n      content: `HISTORIAL:\n` + ($json.historial || '(primer mensaje)') + `\n\nDATOS CONFIRMADOS:\nproducto: ` + ($json.datosRecolectados.producto || 'desconocido') + `\nmedidas: ` + ($json.datosRecolectados.medidas || 'desconocido') + `\nfecha: ` + ($json.datosRecolectados.fecha || 'desconocido') + `\ntipo_cajon: ` + ($json.datosRecolectados.tipo_cajon || 'desconocido') + `\nproteccion_extra: ` + ($json.datosRecolectados.proteccion_extra || 'desconocido') + `\nCliente nuevo: ` + ($json.esNuevo ? 'S\u00cd' : 'NO') + ` | Saludo: ` + $json.saludoHora + `\nCotizador enviado: ` + ($json.cotizacionEnviada ? 'S\u00cd' : 'NO') + `\n\nMENSAJE ACTUAL: \"` + $json.texto + `\"\n\nSi cliente nuevo \u2192 saluda con \"` + $json.saludoHora + `, gracias por considerar a Crating Express.\"\nSi dato dice \"desconocido\" pero est\u00e1 en historial \u2192 extr\u00e1elo. Nunca preguntes algo ya respondido.\n\nResponde SOLO con JSON v\u00e1lido:\n{\"mensaje\":\"\",\"datos_actualizados\":{\"producto\":null,\"medidas\":null,\"fecha\":null,\"tipo_cajon\":null,\"proteccion_extra\":null,\"direccion\":null},\"dimensiones\":{\"largo\":null,\"ancho\":null,\"alto\":null},\"tipo_caja_api\":null,\"todos_recolectados\":false,\"cotizador_enviado\":false,\"clasificacion\":null,\"resumen_lead\":\"\"}\ndimensiones: largo/ancho/alto en PULGADAS como n\u00fameros (extrae del texto de medidas). null si no disponible.\ntipo_caja_api: valor del MAPEO TIPO_CAJA_API seg\u00fan el tipo elegido. null si no definido.\n\ndatos_actualizados: incluye TODOS los datos conocidos. Nunca null si ya fue mencionado.`\n    }\n  ],\n  temperature: 0.4,\n  max_tokens: 400,\n  response_format: { type: 'json_object' }\n}) }}",
+                "options": {}
+            },
+            "id": "groq-conversacion-ia",
+            "name": "\ud83e\udd16 Groq: Conversaci\u00f3n IA",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1568,
+                384
+            ],
+            "credentials": {
+                "groqApi": {
+                    "id": "jORffbRhRNohHT1B",
+                    "name": "Groq account"
+                }
+            },
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "jsCode": "// Handle OpenAI-format (Groq/DeepSeek choices) or Contingency (direct object)\nconst raw = $input.item.json;\nlet aiResponse;\nif (raw._contingencia) {\n  aiResponse = JSON.stringify(raw);\n} else {\n  aiResponse = raw.choices?.[0]?.message?.content \n    || '{}';\n}\nlet result;\ntry { result = JSON.parse(aiResponse); }\ncatch(e) { result = { mensaje: 'Gracias por tu mensaje. Te ayudaremos con tu cotizaci\u00f3n.', datos_actualizados: {}, todos_recolectados: false, cotizador_enviado: false, clasificacion: null, resumen_lead: '' }; }\n\nconst ctx = $('\ud83d\udd27 Preparar Contexto IA').item.json;\nconst datosAnt = ctx.datosRecolectados || {};\nconst datosNuevos = result.datos_actualizados || {};\n\n// Clean \"desconocido\", \"null\", empty strings \u2192 real null\nconst clean = (v) => (!v || v === 'desconocido' || v === 'null' || v === 'undefined') ? null : v;\n\nconst datosMerged = {\n  producto: clean(datosNuevos.producto) || clean(datosAnt.producto) || null,\n  medidas: clean(datosNuevos.medidas) || clean(datosAnt.medidas) || null,\n  fecha: clean(datosNuevos.fecha) || clean(datosAnt.fecha) || null,\n  tipo_cajon: clean(datosNuevos.tipo_cajon) || clean(datosAnt.tipo_cajon) || null,\n  proteccion_extra: clean(datosNuevos.proteccion_extra) || clean(datosAnt.proteccion_extra) || null,\n  direccion: clean(datosNuevos.direccion) || clean(datosAnt.direccion) || null\n};\n\n// Valid Airtable Estado options: Nuevo, En calificaci\u00f3n, Calificado, Vendedor notificado\nlet nuevoEstado = ctx.estado;\nif (result.cotizador_enviado && result.clasificacion === 'Caliente') nuevoEstado = 'Vendedor notificado';\nelse if (result.cotizador_enviado) nuevoEstado = 'Calificado';\nelse if (result.clasificacion === 'Caliente') nuevoEstado = 'Vendedor notificado';\nelse if (result.clasificacion) nuevoEstado = 'Calificado';\nelse if (!ctx.leadId || nuevoEstado === 'Nuevo') nuevoEstado = 'En calificaci\u00f3n';\n\nconst ts = new Date().toISOString();\nconst nuevoHistorial = (ctx.historial ? ctx.historial + '\\n' : '') +\n  `[${ts}] Cliente: ${ctx.texto}\\n[${ts}] Bot: ${result.mensaje || ''}`;\n\nreturn [{ json: {\n  ...ctx,\n  mensajeRespuesta: result.mensaje || '',\n  datosRecolectados: datosMerged,\n  todosRecolectados: result.todos_recolectados || false,\n  cotizadorEnviado: result.cotizador_enviado || false,\n  clasificacion: result.clasificacion || null,\n  resumenLead: result.resumen_lead || '',\n  nuevoEstado,\n  nuevoHistorial\n} }];"
+            },
+            "id": "parsear-respuesta-ia",
+            "name": "\ud83d\udd0d Parsear Respuesta IA",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1792,
+                384
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/PRODUCTOS%20Y%20SERVICIO",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "filterByFormula",
+                            "value": "{activo}='SI'"
+                        }
+                    ]
+                },
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "obtener-productos-node",
+            "name": "\ud83d\udce6 Obtener Productos",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1088,
+                144
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": false,
+                        "leftValue": "",
+                        "typeValidation": "loose"
+                    },
+                    "conditions": [
+                        {
+                            "id": "check-groq",
+                            "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "string",
+                                "operation": "notEmpty",
+                                "singleValue": true
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "if-groq-ok",
+            "name": "\ud83d\udd00 \u00bfGroq OK?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                1792,
+                384
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.deepseek.com/v1/chat/completions",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        },
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer sk-035f6eddd6fd4602b7d91c6e9ff03dfe"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({\n  model: 'deepseek-chat',\n  messages: [\n    {\n      role: 'system',\n      content: `${ $json.promptSistema }`\n    },\n    {\n      role: 'user',\n      content: `HISTORIAL:\n` + ($json.historial || '(primer mensaje)') + `\n\nDATOS CONFIRMADOS:\nproducto: ` + ($json.datosRecolectados.producto || 'desconocido') + `\nmedidas: ` + ($json.datosRecolectados.medidas || 'desconocido') + `\nfecha: ` + ($json.datosRecolectados.fecha || 'desconocido') + `\ntipo_cajon: ` + ($json.datosRecolectados.tipo_cajon || 'desconocido') + `\nproteccion_extra: ` + ($json.datosRecolectados.proteccion_extra || 'desconocido') + `\nCliente nuevo: ` + ($json.esNuevo ? 'S\u00cd' : 'NO') + ` | Saludo: ` + $json.saludoHora + `\nCotizador enviado: ` + ($json.cotizacionEnviada ? 'S\u00cd' : 'NO') + `\n\nMENSAJE ACTUAL: \"` + $json.texto + `\"\n\nSi cliente nuevo \u2192 saluda con \"` + $json.saludoHora + `, gracias por considerar a Crating Express.\"\nSi dato dice \"desconocido\" pero est\u00e1 en historial \u2192 extr\u00e1elo. Nunca preguntes algo ya respondido.\n\nResponde SOLO con JSON v\u00e1lido:\n{\"mensaje\":\"\",\"datos_actualizados\":{\"producto\":null,\"medidas\":null,\"fecha\":null,\"tipo_cajon\":null,\"proteccion_extra\":null,\"direccion\":null},\"dimensiones\":{\"largo\":null,\"ancho\":null,\"alto\":null},\"tipo_caja_api\":null,\"todos_recolectados\":false,\"cotizador_enviado\":false,\"clasificacion\":null,\"resumen_lead\":\"\"}\ndimensiones: largo/ancho/alto en PULGADAS como n\u00fameros (extrae del texto de medidas). null si no disponible.\ntipo_caja_api: valor del MAPEO TIPO_CAJA_API seg\u00fan el tipo elegido. null si no definido.\n\ndatos_actualizados: incluye TODOS los datos conocidos. Nunca null si ya fue mencionado.`\n    }\n  ],\n  temperature: 0.4,\n  max_tokens: 400,\n  response_format: { type: 'json_object' }\n}) }}",
+                "options": {}
+            },
+            "id": "gemini-fallback-wa",
+            "name": "\ud83e\udd16 DeepSeek: Fallback IA",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1888,
+                560
+            ],
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": false,
+                        "leftValue": "",
+                        "typeValidation": "loose"
+                    },
+                    "conditions": [
+                        {
+                            "id": "check-deepseek",
+                            "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "string",
+                                "operation": "notEmpty",
+                                "singleValue": true
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "if-gemini-ok",
+            "name": "\ud83d\udd00 \u00bfDeepSeek OK?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                2112,
+                512
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "\nconst ctx = $('\ud83d\udd27 Preparar Contexto IA').item.json;\nconst datos = ctx.datosRecolectados || {};\nconst historial = ctx.historial || '';\nconst texto = (ctx.texto || '').trim().toLowerCase();\nconst emailVendedor = ctx.emailVendedor || 'risosadmi@gmail.com';\n\n// Detect what the last bot question was about, to map current answer\nconst ultimaLinea = historial.split('\\n').reverse().find(l => l.includes('] Bot:')) || '';\nconst preguntaProducto = ultimaLinea.includes('necesitas embalar') || ultimaLinea.includes('producto necesitas');\nconst preguntaMedidas = ultimaLinea.includes('medidas') || ultimaLinea.includes('tama\u00f1o') || ultimaLinea.includes('largo x');\nconst preguntaFecha = ultimaLinea.includes('cu\u00e1ndo') || ultimaLinea.includes('fecha') || ultimaLinea.includes('para cu\u00e1ndo');\n\n// Non-answer messages (greetings, questions, confusion)\nconst esSaludo = /^(hola|buenas|buenos|hey|hi|buen dia|buenas tardes|buenas noches)/i.test(ctx.texto);\nconst esConfusion = /^(\\?+|hmm|no s\u00e9|ok|si|s\u00ed|bien|gracias)$/i.test(ctx.texto.trim());\n\n// Map current message as answer to last question\nlet producto = datos.producto;\nlet medidas = datos.medidas;\nlet fecha = datos.fecha;\n\nif (!esSaludo && !esConfusion) {\n  if (preguntaProducto && !producto) producto = ctx.texto;\n  else if (preguntaMedidas && !medidas) medidas = ctx.texto;\n  else if (preguntaFecha && !fecha) fecha = ctx.texto;\n  else if (!producto) producto = ctx.texto; // first real message = product\n}\n\n// Determine next question\nlet mensaje = '';\nlet listo = false;\n\nif (!producto) {\n  mensaje = ctx.esNuevo\n    ? `${ctx.saludoHora || 'Hola'}, gracias por contactar a Crating Express. \u00bfQu\u00e9 necesitas embalar?`\n    : '\u00bfQu\u00e9 producto necesitas embalar?';\n} else if (!medidas) {\n  mensaje = `\u00bfCu\u00e1les son las medidas aproximadas y el peso? (Largo x Ancho x Alto + peso)`;\n} else if (!fecha) {\n  mensaje = '\u00bfPara cu\u00e1ndo necesitas el servicio?';\n} else {\n  listo = true;\n  mensaje = 'Perfecto, tenemos tu informaci\u00f3n. Un asesor te contactar\u00e1 en breve por este mismo WhatsApp con la cotizaci\u00f3n. \ud83d\ude4f';\n}\n\nconst result = {\n  mensaje,\n  datos_actualizados: { producto, medidas, fecha,\n    tipo_cajon: datos.tipo_cajon || null,\n    proteccion_extra: datos.proteccion_extra || null,\n    direccion: datos.direccion || null\n  },\n  todos_recolectados: listo,\n  cotizador_enviado: false,\n  clasificacion: listo ? 'Tibio' : null,\n  resumen_lead: listo ? `Contingencia \u2014 ${producto}, ${medidas}, ${fecha}` : '',\n  _contingencia: true\n};\n\nreturn [{ json: result }];\n"
+            },
+            "id": "contingencia-node",
+            "name": "\ud83c\udd98 Modo Contingencia",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2304,
+                608
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://graph.facebook.com/v17.0/1083260611538246/messages",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{$vars.IG_ACCESS_TOKEN}}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\"messaging_product\": \"whatsapp\", \"status\": \"read\", \"message_id\": \"{{ $('\ud83d\udd27 Extraer Mensaje y Tel\u00e9fono').item.json.messageId }}\"}",
+                "options": {}
+            },
+            "id": "marcar-leido-node",
+            "name": "\u2705 Marcar como Le\u00eddo",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1344,
+                224
+            ],
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "amount": 3
+            },
+            "id": "esperar-typing-node",
+            "name": "\u23f3 Esperar (Typing)",
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1.1,
+            "position": [
+                2496,
+                496
+            ],
+            "webhookId": "64e129f7-36f1-49a1-9f0f-21e369b0392b"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": false,
+                        "leftValue": "",
+                        "typeValidation": "loose"
+                    },
+                    "conditions": [
+                        {
+                            "id": "check-todos",
+                            "leftValue": "={{ $json.todos_recolectados }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "true",
+                                "singleValue": true
+                            }
+                        },
+                        {
+                            "id": "check-medidas",
+                            "leftValue": "={{ $json.dimensiones?.largo }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "number",
+                                "operation": "notEmpty",
+                                "singleValue": true
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "cotizar-check-001",
+            "name": "\ud83d\udd00 \u00bfCotizar?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                2032,
+                384
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://cratingcotiza.mdarthurdigital.com/api/cotizar",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        },
+                        {
+                            "name": "Accept",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({\n  tipo_caja: $json.tipo_caja_api || 'cajon_cerrado',\n  cant: 1,\n  largo: $json.dimensiones?.largo || 48,\n  ancho: $json.dimensiones?.ancho || 40,\n  alto: $json.dimensiones?.alto || 30\n}) }}",
+                "options": {}
+            },
+            "id": "cotizador-api-001",
+            "name": "\ud83d\udcb0 API Cotizador",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                2224,
+                272
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const parsear = $('\ud83d\udd0d Parsear Respuesta IA').item.json;\nconst cotizacion = $input.item.json;\n\nconst precio = cotizacion?.data?.precio_total;\nconst dims = cotizacion?.data?.dimensiones_calc;\n\nlet mensajeExtra = '';\nif (precio && cotizacion?.success) {\n  const dimsStr = dims ? `${dims.largo}\" \u00d7 ${dims.ancho}\" \u00d7 ${dims.alto}\"` : '';\n  mensajeExtra = `\\n\\n\ud83d\udcb5 *Precio estimado: $${precio} USD*${dimsStr ? ` (${dimsStr})` : ''}\\n_Este es un estimado basado en las dimensiones indicadas. El precio final puede variar seg\u00fan detalles adicionales. Para una cotizaci\u00f3n formal puedes solicitarla por correo a info@cratingexpress.com._\\n\\nhttps://cratingcotiza.mdarthurdigital.com/cotizar-caja`;\n}\n\nreturn [{\n  json: {\n    ...parsear,\n    mensaje: (parsear.mensaje || '') + mensajeExtra,\n    cotizador_enviado: true\n  }\n}];"
+            },
+            "id": "enriquecer-msg-001",
+            "name": "\ud83d\udcdd Enriquecer con Precio",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2656,
+                192
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/tblj4radGXHN7HBJi",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "filterByFormula",
+                            "value": "NOT({Nombre_Config}='')"
+                        },
+                        {
+                            "name": "maxRecords",
+                            "value": "1"
+                        }
+                    ]
+                },
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "wa-config-001",
+            "name": "\u2699\ufe0f Obtener WA Config",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1344,
+                560
+            ]
+        }
+    ],
+    "connections": {
+        "\ud83d\udcf2 Webhook WhatsApp": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd00 \u00bfVerificaci\u00f3n o Mensaje?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd00 \u00bfVerificaci\u00f3n o Mensaje?": {
+            "main": [
+                [
+                    {
+                        "node": "\u2705 Responder Verificaci\u00f3n Meta",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\u2705 Responder a Meta (200)",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "\ud83d\udd27 Extraer Mensaje y Tel\u00e9fono",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd27 Extraer Mensaje y Tel\u00e9fono": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd00 \u00bfHay mensaje?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd00 \u00bfHay mensaje?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcca Obtener Config Empresa",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "\u2705 Marcar como Le\u00eddo",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "\ud83d\udcca Obtener Config Empresa": {
+            "main": [
+                [
+                    {
+                        "node": "\u2699\ufe0f Obtener WA Config",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udccb Buscar Lead Existente": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udce6 Obtener Productos",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd27 Preparar Contexto IA": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83e\udd16 Groq: Conversaci\u00f3n IA",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83e\udd16 Groq: Conversaci\u00f3n IA": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd00 \u00bfGroq OK?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd0d Parsear Respuesta IA": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd00 \u00bfCotizar?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd00 \u00bfLead Caliente?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udce7 Notificar Vendedor",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\u23f3 Esperar (Typing)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udce7 Notificar Vendedor": {
+            "main": [
+                [
+                    {
+                        "node": "\u23f3 Esperar (Typing)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd00 \u00bfCrear o Actualizar?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcbe Actualizar Lead (PATCH)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\ud83d\udcbe Crear Lead (POST)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u23f0 Trigger Follow-up Check": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udccb Obtener Leads Sin Respuesta",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udccb Obtener Leads Sin Respuesta": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd27 Procesar Follow-ups",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd27 Procesar Follow-ups": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcca Config para Follow-up",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udcca Config para Follow-up": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udce4 Enviar Follow-up WhatsApp",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udce4 Enviar Follow-up WhatsApp": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd04 Actualizar Estado Follow-up",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udce6 Obtener Productos": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd27 Preparar Contexto IA",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd00 \u00bfGroq OK?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd0d Parsear Respuesta IA",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\ud83e\udd16 DeepSeek: Fallback IA",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83e\udd16 DeepSeek: Fallback IA": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd00 \u00bfDeepSeek OK?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd00 \u00bfDeepSeek OK?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd0d Parsear Respuesta IA",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\ud83c\udd98 Modo Contingencia",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83c\udd98 Modo Contingencia": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd0d Parsear Respuesta IA",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u23f3 Esperar (Typing)": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udce4 Enviar Mensaje WhatsApp",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd00 \u00bfCotizar?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcb0 API Cotizador",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\ud83d\udd00 \u00bfLead Caliente?",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "\ud83d\udd00 \u00bfCrear o Actualizar?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udcb0 API Cotizador": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcdd Enriquecer con Precio",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udcdd Enriquecer con Precio": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd00 \u00bfLead Caliente?",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "\ud83d\udd00 \u00bfCrear o Actualizar?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u2699\ufe0f Obtener WA Config": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udccb Buscar Lead Existente",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": {
+        "node:\u23f0 Trigger Follow-up Check": {
+            "recurrenceRules": []
+        }
+    },
+    "meta": null,
+    "pinData": {},
+    "versionId": "f2a94c78-820f-45ea-8647-277a8e2de1d4",
+    "activeVersionId": "6c8da56c-7efb-48e8-9a33-09cb014bbe5d",
+    "versionCounter": 185,
+    "triggerCount": 2,
+    "shared": [
+        {
+            "updatedAt": "2026-04-04T14:58:41.476Z",
+            "createdAt": "2026-04-04T14:58:41.476Z",
+            "role": "workflow:owner",
+            "workflowId": "eCOX3ogMjToxZsh9",
+            "projectId": "scK6yPpEmlkikl67",
+            "project": {
+                "updatedAt": "2026-03-16T19:58:01.773Z",
+                "createdAt": "2026-03-16T19:56:18.866Z",
+                "id": "scK6yPpEmlkikl67",
+                "name": "Solange  Torrez <risosadmi@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            }
+        }
+    ],
+    "tags": [
+        {
+            "updatedAt": "2026-05-04T16:04:54.762Z",
+            "createdAt": "2026-05-04T16:04:54.762Z",
+            "id": "2CrVJWitAB77MgTJ",
+            "name": "Alex"
+        },
+        {
+            "updatedAt": "2026-04-16T17:44:15.361Z",
+            "createdAt": "2026-04-16T17:44:15.361Z",
+            "id": "gmgwt5lqgiBDxZJ8",
+            "name": "whatsapp"
+        }
+    ],
+    "activeVersion": {
+        "updatedAt": "2026-05-06T16:09:16.060Z",
+        "createdAt": "2026-05-06T16:09:16.060Z",
+        "versionId": "6c8da56c-7efb-48e8-9a33-09cb014bbe5d",
+        "workflowId": "eCOX3ogMjToxZsh9",
+        "nodes": [
+            {
+                "parameters": {
+                    "content": "## \ud83d\udfe2 CE WhatsApp Engine\n\n**Pendiente conectar:**\n- Credencial WhatsApp (Meta API) en nodo Webhook y env\u00edo\n- Token de acceso permanente de Meta\n\n**Configuraci\u00f3n:** Airtable \u2192 PERFIL DE EMPRESA \u2192 campos WA_*",
+                    "height": 200,
+                    "width": 400,
+                    "color": 5
+                },
+                "id": "sticky-info",
+                "name": "\ud83d\udccb CONFIGURACI\u00d3N",
+                "type": "n8n-nodes-base.stickyNote",
+                "typeVersion": 1,
+                "position": [
+                    -48,
+                    -16
+                ]
+            },
+            {
+                "parameters": {
+                    "httpMethod": "POST",
+                    "path": "whatsapp-ce",
+                    "responseMode": "responseNode",
+                    "options": {}
+                },
+                "id": "webhook-wa",
+                "name": "\ud83d\udcf2 Webhook WhatsApp",
+                "type": "n8n-nodes-base.webhook",
+                "typeVersion": 2,
+                "position": [
+                    240,
+                    304
+                ],
+                "webhookId": "200cbd06-8278-4dc0-a4dd-33a29c9493c5"
+            },
+            {
+                "parameters": {
+                    "respondWith": "text",
+                    "responseBody": "OK",
+                    "options": {
+                        "responseCode": 200
+                    }
+                },
+                "id": "responder-meta",
+                "name": "\u2705 Responder a Meta (200)",
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.1,
+                "position": [
+                    464,
+                    144
+                ]
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": false,
+                            "leftValue": "",
+                            "typeValidation": "loose"
+                        },
+                        "conditions": [
+                            {
+                                "id": "check-hub",
+                                "leftValue": "={{ $json.query?.['hub.mode'] }}",
+                                "rightValue": "subscribe",
+                                "operator": {
+                                    "type": "string",
+                                    "operation": "equals"
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                },
+                "id": "verificar-webhook",
+                "name": "\ud83d\udd00 \u00bfVerificaci\u00f3n o Mensaje?",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2.2,
+                "position": [
+                    464,
+                    304
+                ]
+            },
+            {
+                "parameters": {
+                    "respondWith": "text",
+                    "responseBody": "={{ $json.query?.['hub.challenge'] }}",
+                    "options": {
+                        "responseCode": 200
+                    }
+                },
+                "id": "responder-verificacion",
+                "name": "\u2705 Responder Verificaci\u00f3n Meta",
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.1,
+                "position": [
+                    688,
+                    144
+                ]
+            },
+            {
+                "parameters": {
+                    "jsCode": "const body = $input.item.json.body || $input.item.json;\n\n// Extract message data from WhatsApp webhook payload\nconst entry = body.entry?.[0];\nconst changes = entry?.changes?.[0];\nconst value = changes?.value;\nconst message = value?.messages?.[0];\n\nif (!message) {\n  return [{ json: { skip: true } }];\n}\n\nconst telefono = message.from;\nconst texto = message.text?.body || '';\nconst messageId = message.id;\nconst timestamp = message.timestamp;\nconst nombreContacto = value?.contacts?.[0]?.profile?.name || '';\n\nreturn [{\n  json: {\n    telefono,\n    texto,\n    messageId,\n    timestamp,\n    nombreContacto,\n    skip: false\n  }\n}];"
+                },
+                "id": "extraer-mensaje",
+                "name": "\ud83d\udd27 Extraer Mensaje y Tel\u00e9fono",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    688,
+                    384
+                ]
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": false,
+                            "leftValue": "",
+                            "typeValidation": "loose"
+                        },
+                        "conditions": [
+                            {
+                                "id": "check-skip",
+                                "leftValue": "={{ $json.skip }}",
+                                "rightValue": true,
+                                "operator": {
+                                    "type": "boolean",
+                                    "operation": "false"
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                },
+                "id": "check-skip",
+                "name": "\ud83d\udd00 \u00bfHay mensaje?",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2.2,
+                "position": [
+                    912,
+                    384
+                ]
+            },
+            {
+                "parameters": {
+                    "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/PERFIL%20DE%20EMPRESA",
+                    "sendQuery": true,
+                    "queryParameters": {
+                        "parameters": [
+                            {
+                                "name": "maxRecords",
+                                "value": "1"
+                            }
+                        ]
+                    },
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                            }
+                        ]
+                    },
+                    "options": {}
+                },
+                "id": "get-config",
+                "name": "\ud83d\udcca Obtener Config Empresa",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    1120,
+                    304
+                ]
+            },
+            {
+                "parameters": {
+                    "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+                    "sendQuery": true,
+                    "queryParameters": {
+                        "parameters": [
+                            {
+                                "name": "filterByFormula",
+                                "value": "={Telefono}='+{{ $('\ud83d\udd27 Extraer Mensaje y Tel\u00e9fono').item.json.telefono }}'"
+                            },
+                            {
+                                "name": "maxRecords",
+                                "value": "1"
+                            }
+                        ]
+                    },
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                            }
+                        ]
+                    },
+                    "options": {}
+                },
+                "id": "get-lead",
+                "name": "\ud83d\udccb Buscar Lead Existente",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    1120,
+                    464
+                ]
+            },
+            {
+                "parameters": {
+                    "jsCode": "const msgData = $('\ud83d\udd27 Extraer Mensaje y Tel\u00e9fono').item.json;\nconst configData = $('\ud83d\udcca Obtener Config Empresa').item.json;\nconst waConfigData = $('\u2699\ufe0f Obtener WA Config').item.json;\nconst leadData = $('\ud83d\udccb Buscar Lead Existente').item.json;\n\nconst config = configData.records?.[0]?.fields || {};\nconst waConfig = waConfigData.records?.[0]?.fields || {};\nconst bienvenida = waConfig.WA_Mensaje_Bienvenida || config.WA_Mensaje_Bienvenida || 'Hola \ud83d\udc4b buen d\u00eda, soy el asistente de Crating Express en Miami. \u00bfEn qu\u00e9 te puedo ayudar?';\nconst emailVendedor = config.WA_Email_Vendedor || 'risosadmi@gmail.com';\nconst descripcion = config['descripci\u00f3n_corta'] || 'Embalajes de madera a medida en Miami, FL. Cajones y cajas con certificaci\u00f3n ISPM-15.';\nconst instruccionesIA = waConfig.Instrucciones_IA || config.Instrucciones_IA || '';\nconst promptTemplate = waConfig.Prompt_Sistema || config.Prompt_Sistema || '';\nconst followup24 = waConfig.WA_FollowUp_24h || config.WA_FollowUp_24h || '';\nconst followup72 = waConfig.WA_FollowUp_72h || config.WA_FollowUp_72h || '';\n\nconst leadExistente = leadData.records?.[0];\nconst leadId = leadExistente?.id || null;\nconst leadFields = leadExistente?.fields || {};\n\n// Read from Respuesta_1/2/3 fields (reliable individual fields)\nlet datosRecolectados = {\n  producto: leadFields.Respuesta_1 || null,\n  medidas: leadFields.Respuesta_2 || null,\n  fecha: leadFields.Respuesta_3 || null,\n  tipo_cajon: null,\n  proteccion_extra: null,\n  direccion: null\n};\n\n// Try to supplement tipo_cajon and proteccion_extra from Notas\ntry {\n  const notas = leadFields.Notas || '';\n  if (notas && notas.trim().startsWith('{')) {\n    const stored = JSON.parse(notas);\n    if (stored.tipo_cajon) datosRecolectados.tipo_cajon = stored.tipo_cajon;\n    if (stored.proteccion_extra) datosRecolectados.proteccion_extra = stored.proteccion_extra;\n    if (stored.direccion) datosRecolectados.direccion = stored.direccion;\n  }\n} catch(e) {}\n\nconst estado = leadFields.Estado || 'Nuevo';\nconst cotizacionEnviada = ['Cotizacion_Enviada', 'Calificado', 'Vendedor notificado'].includes(estado);\nconst historial = leadFields.Historial_Mensajes || '';\nconst esNuevo = !leadId;\n\n\n// Read products catalog from Airtable\nconst productosData = $('\ud83d\udce6 Obtener Productos').item.json;\nconst productosRaw = productosData.records || [];\nconst catalogoProductos = productosRaw.map(r => {\n  const f = r.fields;\n  const nombre = Object.entries(f).find(([k]) => k.includes('Nombre de Servicio'))?.[1] || '';\n  const cuando = (f['cuando_recomendar'] || '').split('\\n')[0].trim();\n  const noUsar = (f['cuando_no_recomendar'] || '').split('\\n')[0].trim();\n  return `${nombre}: ${cuando}${noUsar ? '. NO: ' + noUsar : ''}`;\n}).filter(l => l.length > 2).join('\\n');\n\n// Build final prompt substituting dynamic values\nconst promptSistema = promptTemplate\n  .replace('{{CATALOGO}}', catalogoProductos)\n  .replace('{{INSTRUCCIONES}}', instruccionesIA ? 'Instrucciones adicionales: ' + instruccionesIA : '')\n  .trim();\n\n// Greeting based on Miami time (UTC-4 EDT)\nconst horaMiami = (new Date().getUTCHours() - 4 + 24) % 24;\nconst saludoHora = horaMiami >= 6 && horaMiami < 12 ? 'buenos d\u00edas'\n  : horaMiami >= 12 && horaMiami < 19 ? 'buenas tardes'\n  : 'buenas noches';\n\nreturn [{ json: {\n  telefono: msgData.telefono,\n  texto: msgData.texto,\n  nombreContacto: msgData.nombreContacto || '',\n  emailVendedor,\n  descripcion,\n  instruccionesIA,\n  bienvenida,\n  followup24,\n  followup72,\n  leadId,\n  estado,\n  historial,\n  datosRecolectados,\n  cotizacionEnviada,\n  esNuevo,\n  saludoHora,\n  catalogoProductos,\n  promptSistema\n} }];"
+                },
+                "id": "preparar-contexto",
+                "name": "\ud83d\udd27 Preparar Contexto IA",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    1344,
+                    384
+                ]
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": false,
+                            "leftValue": "",
+                            "typeValidation": "loose"
+                        },
+                        "conditions": [
+                            {
+                                "id": "check-hot",
+                                "leftValue": "={{ $json.clasificacion }}",
+                                "rightValue": "Caliente",
+                                "operator": {
+                                    "type": "string",
+                                    "operation": "equals"
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                },
+                "id": "if-caliente",
+                "name": "\ud83d\udd00 \u00bfLead Caliente?",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2.2,
+                "position": [
+                    2224,
+                    560
+                ]
+            },
+            {
+                "parameters": {
+                    "sendTo": "={{ $json.emailVendedor.split('\\n').join(',') }}",
+                    "subject": "={{ \"\ud83d\udd25 Lead Caliente WhatsApp \u2014 \" + ($json.nombreContacto || $json.telefono) }}",
+                    "message": "={{ \"<h2>\ud83d\udd25 Nuevo Lead Caliente en WhatsApp</h2><p><strong>Tel\u00e9fono:</strong> \" + $json.telefono + \"</p><p><strong>Nombre:</strong> \" + ($json.nombreContacto || 'No disponible') + \"</p><hr><h3>Respuestas de calificaci\u00f3n:</h3><p><strong>\u00bfQu\u00e9 embalar?</strong> \" + ($json.respuesta1 || '-') + \"</p><p><strong>\u00bfPara qu\u00e9?</strong> \" + ($json.respuesta2 || '-') + \"</p><p><strong>Medidas/peso:</strong> \" + ($json.respuesta3 || $json.texto || '-') + \"</p><hr><p><strong>Resumen:</strong> \" + ($json.resumenLead + (($json.datosRecolectados.direccion) ? \"<br><b>Direcci\u00f3n:</b> \" + $json.datosRecolectados.direccion : \"\") || '-') + \"</p>\" }}",
+                    "options": {}
+                },
+                "id": "notificar-vendedor",
+                "name": "\ud83d\udce7 Notificar Vendedor",
+                "type": "n8n-nodes-base.gmail",
+                "typeVersion": 2.1,
+                "position": [
+                    2368,
+                    304
+                ],
+                "webhookId": "62dcf57f-d27c-4c17-9d4e-a04331eb1403",
+                "credentials": {
+                    "gmailOAuth2": {
+                        "id": "TESHSjzjMCpCxBBk",
+                        "name": "Gmail account"
+                    }
+                },
+                "onError": "continueRegularOutput"
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "Bearer EAALcI7uQ5DkBRQZCmn8bV2laZBaYe929AtdjIw4NZCKnuOZB0i2ZApaUXvEYiwcXUZCM4ZBRCQZAYq36ioDOZANd1F2pZCncwvhGuUMmAafdP3GBwXWXbA56TvBAyv7xH8hVvfpcUbhWzYhHlGvOVnhve0ZAxYJCZApm9fn5ampBTR6ZBZCTJRseZCAR4K2xNmyTPSVcAZDZD"
+                            },
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.telefono, type: 'text', text: { body: $json.mensajeRespuesta } }) }}",
+                    "options": {}
+                },
+                "id": "enviar-mensaje-wa",
+                "name": "\ud83d\udce4 Enviar Mensaje WhatsApp",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    2640,
+                    512
+                ],
+                "onError": "continueRegularOutput"
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                            },
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ (() => {\n  const fields = {\n    Telefono: '+' + $json.telefono,\n    Nombre: $json.nombreContacto || '',\n    Estado: $json.nuevoEstado,\n    Respuesta_1: $json.datosRecolectados.producto || '',\n    Respuesta_2: $json.datosRecolectados.medidas || '',\n    Respuesta_3: $json.datosRecolectados.fecha || '',\n    Notas: JSON.stringify({ tipo_cajon: $json.datosRecolectados.tipo_cajon || null, proteccion_extra: $json.datosRecolectados.proteccion_extra || null, direccion: $json.datosRecolectados.direccion || null }),\n    Origen: $json.origen || 'Desconocido',\n    Descripcion_Lead: $json.resumen_lead || '',\n    Nombre_Contacto: $json.nombreContacto || '',\n    Ultima_Actividad: new Date().toISOString(),\n    Historial_Mensajes: $json.nuevoHistorial,\n    Fecha_Inicio: new Date().toISOString(),\n    Ultima_Interaccion: new Date().toISOString()\n  };\n  if ($json.clasificacion) fields.Clasificacion = $json.clasificacion;\n  return JSON.stringify({ records: [{ fields }] });\n})() }}",
+                    "options": {}
+                },
+                "id": "guardar-lead",
+                "name": "\ud83d\udcbe Crear Lead (POST)",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    2632,
+                    636
+                ]
+            },
+            {
+                "parameters": {
+                    "rule": {
+                        "interval": [
+                            {
+                                "field": "hours"
+                            }
+                        ]
+                    }
+                },
+                "id": "trigger-followup",
+                "name": "\u23f0 Trigger Follow-up Check",
+                "type": "n8n-nodes-base.scheduleTrigger",
+                "typeVersion": 1.2,
+                "position": [
+                    240,
+                    704
+                ]
+            },
+            {
+                "parameters": {
+                    "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+                    "sendQuery": true,
+                    "queryParameters": {
+                        "parameters": [
+                            {
+                                "name": "filterByFormula",
+                                "value": "AND(OR({Estado}='Calificado',{Estado}='Nuevo',{Estado}='En calificaci\u00f3n'),IS_BEFORE({Ultima_Interaccion}, DATEADD(NOW(),-23,'hours')))"
+                            }
+                        ]
+                    },
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                            }
+                        ]
+                    },
+                    "options": {}
+                },
+                "id": "get-leads-followup",
+                "name": "\ud83d\udccb Obtener Leads Sin Respuesta",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    464,
+                    704
+                ]
+            },
+            {
+                "parameters": {
+                    "jsCode": "const data = $input.item.json;\nconst records = data.records || [];\nconst now = new Date();\nconst results = [];\n\nfor (const record of records) {\n  const fields = record.fields;\n  const ultimaInteraccion = new Date(fields.Ultima_Interaccion);\n  const horasDiff = (now - ultimaInteraccion) / (1000 * 60 * 60);\n  \n  let tipoFollowup = null;\n  if (horasDiff >= 72) tipoFollowup = '72h';\n  else if (horasDiff >= 24) tipoFollowup = '24h';\n  \n  if (tipoFollowup) {\n    results.push({\n      json: {\n        recordId: record.id,\n        telefono: fields.Telefono,\n        nombre: fields.Nombre,\n        tipoFollowup,\n        estado: fields.Estado\n      }\n    });\n  }\n}\n\nreturn results;"
+                },
+                "id": "procesar-followups",
+                "name": "\ud83d\udd27 Procesar Follow-ups",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    688,
+                    704
+                ]
+            },
+            {
+                "parameters": {
+                    "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/PERFIL%20DE%20EMPRESA",
+                    "sendQuery": true,
+                    "queryParameters": {
+                        "parameters": [
+                            {
+                                "name": "maxRecords",
+                                "value": "1"
+                            }
+                        ]
+                    },
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                            }
+                        ]
+                    },
+                    "options": {}
+                },
+                "id": "get-config-followup",
+                "name": "\ud83d\udcca Config para Follow-up",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    912,
+                    704
+                ]
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "Bearer EAALcI7uQ5DkBRQZCmn8bV2laZBaYe929AtdjIw4NZCKnuOZB0i2ZApaUXvEYiwcXUZCM4ZBRCQZAYq36ioDOZANd1F2pZCncwvhGuUMmAafdP3GBwXWXbA56TvBAyv7xH8hVvfpcUbhWzYhHlGvOVnhve0ZAxYJCZApm9fn5ampBTR6ZBZCTJRseZCAR4K2xNmyTPSVcAZDZD"
+                            },
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.telefono, type: 'text', text: { body: $json.tipoFollowup === '24h' ? $('\ud83d\udcca Config para Follow-up').item.json.records[0].fields.WA_FollowUp_24h : $('\ud83d\udcca Config para Follow-up').item.json.records[0].fields.WA_FollowUp_72h } }) }}",
+                    "options": {}
+                },
+                "id": "enviar-followup",
+                "name": "\ud83d\udce4 Enviar Follow-up WhatsApp",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    1120,
+                    704
+                ]
+            },
+            {
+                "parameters": {
+                    "method": "PATCH",
+                    "url": "=https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads/{{ $json.recordId }}",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                            },
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify({ fields: { Estado: 'Follow-up ' + $json.tipoFollowup, Ultima_Interaccion: new Date().toISOString() } }) }}",
+                    "options": {}
+                },
+                "id": "actualizar-estado-followup",
+                "name": "\ud83d\udd04 Actualizar Estado Follow-up",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    1344,
+                    704
+                ]
+            },
+            {
+                "id": "if-crear-actualizar",
+                "name": "\ud83d\udd00 \u00bfCrear o Actualizar?",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2,
+                "position": [
+                    2432,
+                    736
+                ],
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": false,
+                            "leftValue": "",
+                            "typeValidation": "loose"
+                        },
+                        "conditions": [
+                            {
+                                "id": "check-leadid",
+                                "leftValue": "={{ $json.leadId }}",
+                                "rightValue": "",
+                                "operator": {
+                                    "type": "string",
+                                    "operation": "notEmpty",
+                                    "singleValue": true
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                }
+            },
+            {
+                "id": "patch-actualizar-lead",
+                "name": "\ud83d\udcbe Actualizar Lead (PATCH)",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    2632,
+                    836
+                ],
+                "parameters": {
+                    "method": "PATCH",
+                    "url": "=https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads/{{ $json.leadId }}",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                            },
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ (() => {\n  const fields = {\n    Estado: $json.nuevoEstado,\n    Respuesta_1: $json.datosRecolectados.producto || '',\n    Respuesta_2: $json.datosRecolectados.medidas || '',\n    Respuesta_3: $json.datosRecolectados.fecha || '',\n    Notas: JSON.stringify({ tipo_cajon: $json.datosRecolectados.tipo_cajon || null, proteccion_extra: $json.datosRecolectados.proteccion_extra || null, direccion: $json.datosRecolectados.direccion || null }),\n    Descripcion_Lead: $json.resumen_lead || '',\n    Nombre_Contacto: $json.nombreContacto || '',\n    Ultima_Actividad: new Date().toISOString(),\n    Historial_Mensajes: $json.nuevoHistorial,\n    Ultima_Interaccion: new Date().toISOString()\n  };\n  if ($json.clasificacion) fields.Clasificacion = $json.clasificacion;\n  return JSON.stringify({ fields });\n})() }}",
+                    "options": {}
+                }
+            },
+            {
+                "id": "groq-conversacion-ia",
+                "name": "\ud83e\udd16 Groq: Conversaci\u00f3n IA",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    1568,
+                    384
+                ],
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://api.groq.com/openai/v1/chat/completions",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify({\n  model: 'llama-3.1-8b-instant',\n  messages: [\n    {\n      role: 'system',\n      content: `${ $json.promptSistema }`\n    },\n    {\n      role: 'user',\n      content: `HISTORIAL:\n` + ($json.historial || '(primer mensaje)') + `\n\nDATOS CONFIRMADOS:\nproducto: ` + ($json.datosRecolectados.producto || 'desconocido') + `\nmedidas: ` + ($json.datosRecolectados.medidas || 'desconocido') + `\nfecha: ` + ($json.datosRecolectados.fecha || 'desconocido') + `\ntipo_cajon: ` + ($json.datosRecolectados.tipo_cajon || 'desconocido') + `\nproteccion_extra: ` + ($json.datosRecolectados.proteccion_extra || 'desconocido') + `\nCliente nuevo: ` + ($json.esNuevo ? 'S\u00cd' : 'NO') + ` | Saludo: ` + $json.saludoHora + `\nCotizador enviado: ` + ($json.cotizacionEnviada ? 'S\u00cd' : 'NO') + `\n\nMENSAJE ACTUAL: \"` + $json.texto + `\"\n\nSi cliente nuevo \u2192 saluda con \"` + $json.saludoHora + `, gracias por considerar a Crating Express.\"\nSi dato dice \"desconocido\" pero est\u00e1 en historial \u2192 extr\u00e1elo. Nunca preguntes algo ya respondido.\n\nResponde SOLO con JSON v\u00e1lido:\n{\"mensaje\":\"\",\"datos_actualizados\":{\"producto\":null,\"medidas\":null,\"fecha\":null,\"tipo_cajon\":null,\"proteccion_extra\":null,\"direccion\":null},\"dimensiones\":{\"largo\":null,\"ancho\":null,\"alto\":null},\"tipo_caja_api\":null,\"todos_recolectados\":false,\"cotizador_enviado\":false,\"clasificacion\":null,\"resumen_lead\":\"\"}\ndimensiones: largo/ancho/alto en PULGADAS como n\u00fameros (extrae del texto de medidas). null si no disponible.\ntipo_caja_api: valor del MAPEO TIPO_CAJA_API seg\u00fan el tipo elegido. null si no definido.\n\ndatos_actualizados: incluye TODOS los datos conocidos. Nunca null si ya fue mencionado.`\n    }\n  ],\n  temperature: 0.4,\n  max_tokens: 400,\n  response_format: { type: 'json_object' }\n}) }}",
+                    "options": {},
+                    "continueOnFail": true,
+                    "authentication": "predefinedCredentialType",
+                    "nodeCredentialType": "groqApi"
+                },
+                "credentials": {
+                    "groqApi": {
+                        "id": "jORffbRhRNohHT1B",
+                        "name": "Groq account"
+                    }
+                },
+                "continueOnFail": true
+            },
+            {
+                "id": "parsear-respuesta-ia",
+                "name": "\ud83d\udd0d Parsear Respuesta IA",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    1792,
+                    384
+                ],
+                "parameters": {
+                    "jsCode": "// Handle OpenAI-format (Groq/DeepSeek choices) or Contingency (direct object)\nconst raw = $input.item.json;\nlet aiResponse;\nif (raw._contingencia) {\n  aiResponse = JSON.stringify(raw);\n} else {\n  aiResponse = raw.choices?.[0]?.message?.content \n    || '{}';\n}\nlet result;\ntry { result = JSON.parse(aiResponse); }\ncatch(e) { result = { mensaje: 'Gracias por tu mensaje. Te ayudaremos con tu cotizaci\u00f3n.', datos_actualizados: {}, todos_recolectados: false, cotizador_enviado: false, clasificacion: null, resumen_lead: '' }; }\n\nconst ctx = $('\ud83d\udd27 Preparar Contexto IA').item.json;\nconst datosAnt = ctx.datosRecolectados || {};\nconst datosNuevos = result.datos_actualizados || {};\n\n// Clean \"desconocido\", \"null\", empty strings \u2192 real null\nconst clean = (v) => (!v || v === 'desconocido' || v === 'null' || v === 'undefined') ? null : v;\n\nconst datosMerged = {\n  producto: clean(datosNuevos.producto) || clean(datosAnt.producto) || null,\n  medidas: clean(datosNuevos.medidas) || clean(datosAnt.medidas) || null,\n  fecha: clean(datosNuevos.fecha) || clean(datosAnt.fecha) || null,\n  tipo_cajon: clean(datosNuevos.tipo_cajon) || clean(datosAnt.tipo_cajon) || null,\n  proteccion_extra: clean(datosNuevos.proteccion_extra) || clean(datosAnt.proteccion_extra) || null,\n  direccion: clean(datosNuevos.direccion) || clean(datosAnt.direccion) || null\n};\n\n// Valid Airtable Estado options: Nuevo, En calificaci\u00f3n, Calificado, Vendedor notificado\nlet nuevoEstado = ctx.estado;\nif (result.cotizador_enviado && result.clasificacion === 'Caliente') nuevoEstado = 'Vendedor notificado';\nelse if (result.cotizador_enviado) nuevoEstado = 'Calificado';\nelse if (result.clasificacion === 'Caliente') nuevoEstado = 'Vendedor notificado';\nelse if (result.clasificacion) nuevoEstado = 'Calificado';\nelse if (!ctx.leadId || nuevoEstado === 'Nuevo') nuevoEstado = 'En calificaci\u00f3n';\n\nconst ts = new Date().toISOString();\nconst nuevoHistorial = (ctx.historial ? ctx.historial + '\\n' : '') +\n  `[${ts}] Cliente: ${ctx.texto}\\n[${ts}] Bot: ${result.mensaje || ''}`;\n\nreturn [{ json: {\n  ...ctx,\n  mensajeRespuesta: result.mensaje || '',\n  datosRecolectados: datosMerged,\n  todosRecolectados: result.todos_recolectados || false,\n  cotizadorEnviado: result.cotizador_enviado || false,\n  clasificacion: result.clasificacion || null,\n  resumenLead: result.resumen_lead || '',\n  nuevoEstado,\n  nuevoHistorial\n} }];"
+                }
+            },
+            {
+                "id": "obtener-productos-node",
+                "name": "\ud83d\udce6 Obtener Productos",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    1100,
+                    300
+                ],
+                "parameters": {
+                    "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/PRODUCTOS%20Y%20SERVICIO",
+                    "sendQuery": true,
+                    "queryParameters": {
+                        "parameters": [
+                            {
+                                "name": "filterByFormula",
+                                "value": "{activo}='SI'"
+                            }
+                        ]
+                    },
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                            }
+                        ]
+                    },
+                    "options": {}
+                }
+            },
+            {
+                "id": "if-groq-ok",
+                "name": "\ud83d\udd00 \u00bfGroq OK?",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2,
+                "position": [
+                    1788,
+                    384
+                ],
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": false,
+                            "leftValue": "",
+                            "typeValidation": "loose"
+                        },
+                        "conditions": [
+                            {
+                                "id": "check-groq",
+                                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                                "rightValue": "",
+                                "operator": {
+                                    "type": "string",
+                                    "operation": "notEmpty",
+                                    "singleValue": true
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                }
+            },
+            {
+                "id": "gemini-fallback-wa",
+                "name": "\ud83e\udd16 DeepSeek: Fallback IA",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    1788,
+                    584
+                ],
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://api.deepseek.com/v1/chat/completions",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "name": "Authorization",
+                                "value": "Bearer sk-035f6eddd6fd4602b7d91c6e9ff03dfe"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify({\n  model: 'deepseek-chat',\n  messages: [\n    {\n      role: 'system',\n      content: `${ $json.promptSistema }`\n    },\n    {\n      role: 'user',\n      content: `HISTORIAL:\n` + ($json.historial || '(primer mensaje)') + `\n\nDATOS CONFIRMADOS:\nproducto: ` + ($json.datosRecolectados.producto || 'desconocido') + `\nmedidas: ` + ($json.datosRecolectados.medidas || 'desconocido') + `\nfecha: ` + ($json.datosRecolectados.fecha || 'desconocido') + `\ntipo_cajon: ` + ($json.datosRecolectados.tipo_cajon || 'desconocido') + `\nproteccion_extra: ` + ($json.datosRecolectados.proteccion_extra || 'desconocido') + `\nCliente nuevo: ` + ($json.esNuevo ? 'S\u00cd' : 'NO') + ` | Saludo: ` + $json.saludoHora + `\nCotizador enviado: ` + ($json.cotizacionEnviada ? 'S\u00cd' : 'NO') + `\n\nMENSAJE ACTUAL: \"` + $json.texto + `\"\n\nSi cliente nuevo \u2192 saluda con \"` + $json.saludoHora + `, gracias por considerar a Crating Express.\"\nSi dato dice \"desconocido\" pero est\u00e1 en historial \u2192 extr\u00e1elo. Nunca preguntes algo ya respondido.\n\nResponde SOLO con JSON v\u00e1lido:\n{\"mensaje\":\"\",\"datos_actualizados\":{\"producto\":null,\"medidas\":null,\"fecha\":null,\"tipo_cajon\":null,\"proteccion_extra\":null,\"direccion\":null},\"dimensiones\":{\"largo\":null,\"ancho\":null,\"alto\":null},\"tipo_caja_api\":null,\"todos_recolectados\":false,\"cotizador_enviado\":false,\"clasificacion\":null,\"resumen_lead\":\"\"}\ndimensiones: largo/ancho/alto en PULGADAS como n\u00fameros (extrae del texto de medidas). null si no disponible.\ntipo_caja_api: valor del MAPEO TIPO_CAJA_API seg\u00fan el tipo elegido. null si no definido.\n\ndatos_actualizados: incluye TODOS los datos conocidos. Nunca null si ya fue mencionado.`\n    }\n  ],\n  temperature: 0.4,\n  max_tokens: 400,\n  response_format: { type: 'json_object' }\n}) }}",
+                    "options": {},
+                    "continueOnFail": true
+                },
+                "continueOnFail": true
+            },
+            {
+                "id": "if-gemini-ok",
+                "name": "\ud83d\udd00 \u00bfDeepSeek OK?",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2,
+                "position": [
+                    2100,
+                    500
+                ],
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": false,
+                            "leftValue": "",
+                            "typeValidation": "loose"
+                        },
+                        "conditions": [
+                            {
+                                "id": "check-deepseek",
+                                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                                "rightValue": "",
+                                "operator": {
+                                    "type": "string",
+                                    "operation": "notEmpty",
+                                    "singleValue": true
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                }
+            },
+            {
+                "id": "contingencia-node",
+                "name": "\ud83c\udd98 Modo Contingencia",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    2300,
+                    600
+                ],
+                "parameters": {
+                    "jsCode": "\nconst ctx = $('\ud83d\udd27 Preparar Contexto IA').item.json;\nconst datos = ctx.datosRecolectados || {};\nconst historial = ctx.historial || '';\nconst texto = (ctx.texto || '').trim().toLowerCase();\nconst emailVendedor = ctx.emailVendedor || 'risosadmi@gmail.com';\n\n// Detect what the last bot question was about, to map current answer\nconst ultimaLinea = historial.split('\\n').reverse().find(l => l.includes('] Bot:')) || '';\nconst preguntaProducto = ultimaLinea.includes('necesitas embalar') || ultimaLinea.includes('producto necesitas');\nconst preguntaMedidas = ultimaLinea.includes('medidas') || ultimaLinea.includes('tama\u00f1o') || ultimaLinea.includes('largo x');\nconst preguntaFecha = ultimaLinea.includes('cu\u00e1ndo') || ultimaLinea.includes('fecha') || ultimaLinea.includes('para cu\u00e1ndo');\n\n// Non-answer messages (greetings, questions, confusion)\nconst esSaludo = /^(hola|buenas|buenos|hey|hi|buen dia|buenas tardes|buenas noches)/i.test(ctx.texto);\nconst esConfusion = /^(\\?+|hmm|no s\u00e9|ok|si|s\u00ed|bien|gracias)$/i.test(ctx.texto.trim());\n\n// Map current message as answer to last question\nlet producto = datos.producto;\nlet medidas = datos.medidas;\nlet fecha = datos.fecha;\n\nif (!esSaludo && !esConfusion) {\n  if (preguntaProducto && !producto) producto = ctx.texto;\n  else if (preguntaMedidas && !medidas) medidas = ctx.texto;\n  else if (preguntaFecha && !fecha) fecha = ctx.texto;\n  else if (!producto) producto = ctx.texto; // first real message = product\n}\n\n// Determine next question\nlet mensaje = '';\nlet listo = false;\n\nif (!producto) {\n  mensaje = ctx.esNuevo\n    ? `${ctx.saludoHora || 'Hola'}, gracias por contactar a Crating Express. \u00bfQu\u00e9 necesitas embalar?`\n    : '\u00bfQu\u00e9 producto necesitas embalar?';\n} else if (!medidas) {\n  mensaje = `\u00bfCu\u00e1les son las medidas aproximadas y el peso? (Largo x Ancho x Alto + peso)`;\n} else if (!fecha) {\n  mensaje = '\u00bfPara cu\u00e1ndo necesitas el servicio?';\n} else {\n  listo = true;\n  mensaje = 'Perfecto, tenemos tu informaci\u00f3n. Un asesor te contactar\u00e1 en breve por este mismo WhatsApp con la cotizaci\u00f3n. \ud83d\ude4f';\n}\n\nconst result = {\n  mensaje,\n  datos_actualizados: { producto, medidas, fecha,\n    tipo_cajon: datos.tipo_cajon || null,\n    proteccion_extra: datos.proteccion_extra || null,\n    direccion: datos.direccion || null\n  },\n  todos_recolectados: listo,\n  cotizador_enviado: false,\n  clasificacion: listo ? 'Tibio' : null,\n  resumen_lead: listo ? `Contingencia \u2014 ${producto}, ${medidas}, ${fecha}` : '',\n  _contingencia: true\n};\n\nreturn [{ json: result }];\n"
+                }
+            },
+            {
+                "id": "marcar-leido-node",
+                "name": "\u2705 Marcar como Le\u00eddo",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    1120,
+                    480
+                ],
+                "continueOnFail": true,
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://graph.facebook.com/v17.0/1083260611538246/messages",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "=Bearer {{$vars.IG_ACCESS_TOKEN}}"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={\"messaging_product\": \"whatsapp\", \"status\": \"read\", \"message_id\": \"{{ $('\ud83d\udd27 Extraer Mensaje y Tel\u00e9fono').item.json.messageId }}\"}"
+                }
+            },
+            {
+                "id": "esperar-typing-node",
+                "name": "\u23f3 Esperar (Typing)",
+                "type": "n8n-nodes-base.wait",
+                "typeVersion": 1.1,
+                "position": [
+                    2416,
+                    512
+                ],
+                "parameters": {
+                    "resume": "timeInterval",
+                    "amount": 3,
+                    "unit": "seconds"
+                }
+            },
+            {
+                "id": "cotizar-check-001",
+                "name": "\ud83d\udd00 \u00bfCotizar?",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2,
+                "position": [
+                    2020,
+                    384
+                ],
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": false,
+                            "leftValue": "",
+                            "typeValidation": "loose"
+                        },
+                        "conditions": [
+                            {
+                                "id": "check-todos",
+                                "leftValue": "={{ $json.todos_recolectados }}",
+                                "rightValue": true,
+                                "operator": {
+                                    "type": "boolean",
+                                    "operation": "true",
+                                    "singleValue": true
+                                }
+                            },
+                            {
+                                "id": "check-medidas",
+                                "leftValue": "={{ $json.dimensiones?.largo }}",
+                                "rightValue": "",
+                                "operator": {
+                                    "type": "number",
+                                    "operation": "notEmpty",
+                                    "singleValue": true
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                }
+            },
+            {
+                "id": "cotizador-api-001",
+                "name": "\ud83d\udcb0 API Cotizador",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    2220,
+                    260
+                ],
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://cratingcotiza.mdarthurdigital.com/api/cotizar",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "name": "Accept",
+                                "value": "application/json"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify({\n  tipo_caja: $json.tipo_caja_api || 'cajon_cerrado',\n  cant: 1,\n  largo: $json.dimensiones?.largo || 48,\n  ancho: $json.dimensiones?.ancho || 40,\n  alto: $json.dimensiones?.alto || 30\n}) }}",
+                    "options": {},
+                    "continueOnFail": true
+                }
+            },
+            {
+                "id": "enriquecer-msg-001",
+                "name": "\ud83d\udcdd Enriquecer con Precio",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    2420,
+                    260
+                ],
+                "parameters": {
+                    "jsCode": "const parsear = $('\ud83d\udd0d Parsear Respuesta IA').item.json;\nconst cotizacion = $input.item.json;\n\nconst precio = cotizacion?.data?.precio_total;\nconst dims = cotizacion?.data?.dimensiones_calc;\n\nlet mensajeExtra = '';\nif (precio && cotizacion?.success) {\n  const dimsStr = dims ? `${dims.largo}\" \u00d7 ${dims.ancho}\" \u00d7 ${dims.alto}\"` : '';\n  mensajeExtra = `\\n\\n\ud83d\udcb5 *Precio estimado: $${precio} USD*${dimsStr ? ` (${dimsStr})` : ''}\\n_Este es un estimado basado en las dimensiones indicadas. El precio final puede variar seg\u00fan detalles adicionales. Para una cotizaci\u00f3n formal puedes solicitarla por correo a info@cratingexpress.com._\\n\\nhttps://cratingcotiza.mdarthurdigital.com/cotizar-caja`;\n}\n\nreturn [{\n  json: {\n    ...parsear,\n    mensaje: (parsear.mensaje || '') + mensajeExtra,\n    cotizador_enviado: true\n  }\n}];"
+                }
+            },
+            {
+                "id": "wa-config-001",
+                "name": "\u2699\ufe0f Obtener WA Config",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    1120,
+                    424
+                ],
+                "parameters": {
+                    "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/tblj4radGXHN7HBJi",
+                    "sendQuery": true,
+                    "queryParameters": {
+                        "parameters": [
+                            {
+                                "name": "filterByFormula",
+                                "value": "NOT({Nombre_Config}='')"
+                            },
+                            {
+                                "name": "maxRecords",
+                                "value": "1"
+                            }
+                        ]
+                    },
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "Bearer [AIRTABLE_TOKEN_REDACTED]"
+                            }
+                        ]
+                    },
+                    "options": {}
+                }
+            }
+        ],
+        "connections": {
+            "\ud83d\udcf2 Webhook WhatsApp": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd00 \u00bfVerificaci\u00f3n o Mensaje?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd00 \u00bfVerificaci\u00f3n o Mensaje?": {
+                "main": [
+                    [
+                        {
+                            "node": "\u2705 Responder Verificaci\u00f3n Meta",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "\u2705 Responder a Meta (200)",
+                            "type": "main",
+                            "index": 0
+                        },
+                        {
+                            "node": "\ud83d\udd27 Extraer Mensaje y Tel\u00e9fono",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd27 Extraer Mensaje y Tel\u00e9fono": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd00 \u00bfHay mensaje?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd00 \u00bfHay mensaje?": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udcca Obtener Config Empresa",
+                            "type": "main",
+                            "index": 0
+                        },
+                        {
+                            "node": "\u2705 Marcar como Le\u00eddo",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    []
+                ]
+            },
+            "\ud83d\udcca Obtener Config Empresa": {
+                "main": [
+                    [
+                        {
+                            "node": "\u2699\ufe0f Obtener WA Config",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udccb Buscar Lead Existente": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udce6 Obtener Productos",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd27 Preparar Contexto IA": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83e\udd16 Groq: Conversaci\u00f3n IA",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83e\udd16 Groq: Conversaci\u00f3n IA": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd00 \u00bfGroq OK?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd0d Parsear Respuesta IA": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd00 \u00bfCotizar?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd00 \u00bfLead Caliente?": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udce7 Notificar Vendedor",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "\u23f3 Esperar (Typing)",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udce7 Notificar Vendedor": {
+                "main": [
+                    [
+                        {
+                            "node": "\u23f3 Esperar (Typing)",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd00 \u00bfCrear o Actualizar?": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udcbe Actualizar Lead (PATCH)",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "\ud83d\udcbe Crear Lead (POST)",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\u23f0 Trigger Follow-up Check": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udccb Obtener Leads Sin Respuesta",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udccb Obtener Leads Sin Respuesta": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd27 Procesar Follow-ups",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd27 Procesar Follow-ups": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udcca Config para Follow-up",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udcca Config para Follow-up": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udce4 Enviar Follow-up WhatsApp",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udce4 Enviar Follow-up WhatsApp": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd04 Actualizar Estado Follow-up",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udce6 Obtener Productos": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd27 Preparar Contexto IA",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd00 \u00bfGroq OK?": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd0d Parsear Respuesta IA",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "\ud83e\udd16 DeepSeek: Fallback IA",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83e\udd16 DeepSeek: Fallback IA": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd00 \u00bfDeepSeek OK?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd00 \u00bfDeepSeek OK?": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd0d Parsear Respuesta IA",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "\ud83c\udd98 Modo Contingencia",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83c\udd98 Modo Contingencia": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd0d Parsear Respuesta IA",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\u23f3 Esperar (Typing)": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udce4 Enviar Mensaje WhatsApp",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd00 \u00bfCotizar?": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udcb0 API Cotizador",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "\ud83d\udd00 \u00bfLead Caliente?",
+                            "type": "main",
+                            "index": 0
+                        },
+                        {
+                            "node": "\ud83d\udd00 \u00bfCrear o Actualizar?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udcb0 API Cotizador": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udcdd Enriquecer con Precio",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udcdd Enriquecer con Precio": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd00 \u00bfLead Caliente?",
+                            "type": "main",
+                            "index": 0
+                        },
+                        {
+                            "node": "\ud83d\udd00 \u00bfCrear o Actualizar?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\u2699\ufe0f Obtener WA Config": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udccb Buscar Lead Existente",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "authors": "Solange  Torrez",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": [
+            {
+                "createdAt": "2026-05-06T16:09:16.314Z",
+                "id": 408,
+                "workflowId": "eCOX3ogMjToxZsh9",
+                "versionId": "6c8da56c-7efb-48e8-9a33-09cb014bbe5d",
+                "event": "activated",
+                "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            },
+            {
+                "createdAt": "2026-05-06T16:09:16.245Z",
+                "id": 407,
+                "workflowId": "eCOX3ogMjToxZsh9",
+                "versionId": "6c8da56c-7efb-48e8-9a33-09cb014bbe5d",
+                "event": "deactivated",
+                "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            }
+        ]
+    }
+}

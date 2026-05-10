@@ -1,0 +1,72 @@
+NOMBRE: RRSS Automation - Crating Express
+ID EN N8N: HqKUsOwwguIYQbsU
+ESTADO: Activo
+CATEGORIA: 01-RRSS
+ULTIMA ACTUALIZACION: Mayo 2026
+
+DESCRIPCION
+-----------
+Workflow principal de redes sociales para Crating Express. Se activa cada lunes
+a las 9am, genera un post semanal con IA (Gemini + Groq como fallback), crea el
+diseño en Canva/Drive, envía un email de aprobación y — si se aprueba — publica
+automáticamente en Facebook e Instagram.
+
+ALCANCE
+-------
+Hace:
+- Obtiene el perfil de empresa, servicios y tema pendiente desde Airtable
+- Genera el post en español con Gemini 1.5 Flash (fallback: Groq llama-3.3-70b)
+- Genera versiones en inglés para FB, IG y LinkedIn
+- Crea registro en Airtable con estado "Revisión"
+- Construye la imagen del post usando plantilla en Google Drive
+- Envía email de aprobación con botones Aprobar / Rechazar
+- Si aprobado: publica en Facebook Page e Instagram
+- Actualiza el estado en Airtable a "Publicado" o "Pendiente" según respuesta
+
+No hace:
+- No publica en LinkedIn (nodo desactivado — listo para activar con token)
+- No genera imágenes originales con IA (usa plantilla existente en Drive)
+- No reprograma ni reintenta si se rechaza (queda en "Pendiente" para edición manual)
+
+REQUISITOS PARA FUNCIONAR
+--------------------------
+Credenciales en n8n:
+- Gmail OAuth2 (ID: TESHSjzjMCpCxBBk)
+- Google Drive OAuth2 (ID: 5UKwJtdnQeutQ6mg)
+
+Variables n8n ($vars):
+- GEMINI_API_KEY — Google AI Studio
+- GROQ_API_KEY — Groq (fallback IA)
+- AIRTABLE_TOKEN — Token personal Airtable
+- FB_PAGE_ID — 1713965015486703
+- FB_ACCESS_TOKEN — Token larga duración Facebook
+- IG_ACCOUNT_ID — 17841402206774619
+- IG_ACCESS_TOKEN — Mismo que FB_ACCESS_TOKEN
+- EMAIL_APROBACION — risosadmi@gmail.com
+
+Airtable (Base: appUOYi54iBfaDcLn):
+- Perfil Empresa (tblkmBqXrpmGcTNUM)
+- Servicios (tbl2mwlJ149CLlMcd)
+- Temas Semanales (tblgrYurnqCg8uKtG) — debe haber al menos un tema en estado "Pendiente"
+- Contenidos (tbl3ThftAg1Q36roD)
+
+TRIGGER
+-------
+Automático — todos los lunes a las 9:00am (hora del servidor n8n)
+
+GUIA RAPIDA
+-----------
+1. Asegurarse de que haya al menos 1 tema en estado "Pendiente" en Airtable
+   (si no, correr primero el workflow "RRSS-Generador-de-Temas-Semanales")
+2. El workflow corre solo cada lunes
+3. Se recibirá un email en EMAIL_APROBACION con vista previa del post
+4. Hacer clic en "Aprobar" para publicar o "Rechazar" para descartarlo
+5. Si se rechaza, el post queda en Airtable con estado "Pendiente" para editar manualmente
+
+NOTAS IMPORTANTES
+-----------------
+- Patrón Gemini + Groq: si Gemini falla (continueOnFail=true), el flujo pasa
+  automáticamente a Groq sin interrupción
+- LinkedIn está desactivado en el nodo "post-linkedin" — para activarlo solo
+  agregar LI_ACCESS_TOKEN y LI_COMPANY_ID como variables y habilitar el nodo
+- El workflow se pausa esperando la respuesta del webhook de aprobación (nodo Wait)

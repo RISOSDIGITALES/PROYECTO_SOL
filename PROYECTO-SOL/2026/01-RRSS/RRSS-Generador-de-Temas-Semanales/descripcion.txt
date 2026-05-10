@@ -1,0 +1,60 @@
+NOMBRE: RRSS - Generador de Temas Semanales
+ID EN N8N: 1RHpMk3iKHjLXGgb
+ESTADO: Activo
+CATEGORIA: 01-RRSS
+ULTIMA ACTUALIZACION: Mayo 2026
+
+DESCRIPCION
+-----------
+Workflow auxiliar que genera automáticamente temas para los posts semanales de
+redes sociales. Se asegura de que siempre haya al menos 6 temas pendientes en
+Airtable para que el workflow principal (RRSS Automation) nunca se quede sin
+contenido. Corre cada domingo a las 8am o se puede ejecutar manualmente.
+
+ALCANCE
+-------
+Hace:
+- Consulta cuántos temas están en estado "Pendiente" en Airtable
+- Si hay menos de 6, genera los que faltan con Gemini (fallback: Groq)
+- Guarda cada tema nuevo en Airtable con estado "Pendiente"
+- Envía un email de notificación por cada tema creado
+- Si ya hay 6 o más pendientes, envía email avisando que no se necesitan más
+
+No hace:
+- No genera el post completo (eso lo hace RRSS Automation)
+- No publica en ninguna red social
+- No edita ni elimina temas existentes
+
+REQUISITOS PARA FUNCIONAR
+--------------------------
+Credenciales en n8n:
+- Gmail OAuth2 (ID: TESHSjzjMCpCxBBk)
+
+Variables n8n ($vars):
+- GEMINI_API_KEY — Google AI Studio
+- GROQ_API_KEY — Groq (fallback IA)
+- AIRTABLE_TOKEN — Token personal Airtable
+- EMAIL_APROBACION — risosadmi@gmail.com
+
+Airtable (Base: appUOYi54iBfaDcLn):
+- Perfil Empresa (tblkmBqXrpmGcTNUM)
+- Servicios (tbl2mwlJ149CLlMcd)
+- Temas Semanales (tblgrYurnqCg8uKtG)
+
+TRIGGER
+-------
+Automático — todos los domingos a las 8:00am
+Manual — se puede ejecutar desde n8n en cualquier momento
+
+GUIA RAPIDA
+-----------
+1. Puede correrse manualmente desde n8n si se necesitan temas urgentes
+2. Verifica automáticamente cuántos temas hay en "Pendiente" antes de generar
+3. Solo genera lo necesario para llegar a 6 pendientes
+4. Los temas generados aparecen en Airtable → tabla Temas Semanales
+
+NOTAS IMPORTANTES
+-----------------
+- Este workflow es prerrequisito para RRSS Automation — si no hay temas
+  pendientes, el workflow principal no puede generar el post semanal
+- Misma lógica de fallback: Gemini primero, Groq si falla

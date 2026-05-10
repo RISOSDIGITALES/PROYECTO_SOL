@@ -1,0 +1,60 @@
+NOMBRE: CE Voice Agent — Vapi Webhook
+ID EN N8N: FYKfTJBfgwsMpJV7
+ESTADO: Activo
+CATEGORIA: 03-ALEX-VOZ
+ULTIMA ACTUALIZACION: Mayo 2026
+
+DESCRIPCION
+-----------
+Webhook que recibe las llamadas entrantes procesadas por VAPI y ejecuta la
+lógica del agente de voz Alex. Maneja el flujo de la conversación telefónica,
+recopila datos del cliente (medidas, producto, fecha) y registra el lead
+en Airtable al finalizar la llamada.
+
+ALCANCE
+-------
+Hace:
+- Recibe eventos de VAPI (inicio, transcripción, fin de llamada)
+- Procesa la conversación y extrae datos del cliente
+- Registra o actualiza el lead en Airtable (WhatsApp_Leads)
+- Puede hacer handoff hacia WhatsApp al finalizar la llamada
+
+No hace:
+- No genera voz (eso lo hace VAPI con ElevenLabs)
+- No envía mensajes de WhatsApp directamente (usa el workflow de handoff)
+- No cotiza precios en tiempo real durante la llamada
+
+REQUISITOS PARA FUNCIONAR
+--------------------------
+Variables n8n ($vars):
+- AIRTABLE_TOKEN
+- GROQ_API_KEY
+
+Servicios externos:
+- VAPI — Assistant ID: 69fedf52-005f-4cde-a87d-5b421e7911b9
+- ElevenLabs — Voice ID: onwK4e9ZLuTAKqWW03F9
+- Twilio — número +1 786-788-0417
+
+Airtable (Base: appUOYi54iBfaDcLn):
+- WhatsApp_Leads (tblGQXzr1zL1T57lS)
+- PERFIL DE EMPRESA (tblkmBqXrpmGcTNUM)
+
+TRIGGER
+-------
+Webhook — activado automáticamente por VAPI al recibir o finalizar una llamada
+
+GUIA RAPIDA
+-----------
+1. No se activa manualmente — VAPI lo llama automáticamente
+2. El asistente de voz (Alex) vive en VAPI con modelo llama-3.3-70b en Groq
+3. Al finalizar la llamada, los datos quedan en Airtable → WhatsApp_Leads
+4. Si el cliente da su WhatsApp, se puede activar el handoff automático
+
+NOTAS IMPORTANTES
+-----------------
+- VAPI API Key: 9ff54869-33de-4f84-a8b7-2801afc3d355
+- El webhook debe estar registrado en n8n activo — requiere reinicio del
+  servidor n8n para que los webhooks nuevos queden en memoria
+- Tag Alex en n8n aplicado a este workflow
+- Diferencia vs WhatsApp: voz recopila 3 datos (medidas, peso, descripción);
+  WhatsApp recopila 6 (producto, medidas, fecha, tipo cajón, protección, dirección)

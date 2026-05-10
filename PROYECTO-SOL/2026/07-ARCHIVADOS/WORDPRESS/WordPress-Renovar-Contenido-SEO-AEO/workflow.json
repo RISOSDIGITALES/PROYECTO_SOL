@@ -1,0 +1,1054 @@
+{
+    "updatedAt": "2026-05-05T16:07:09.000Z",
+    "createdAt": "2026-03-23T16:44:02.357Z",
+    "id": "zM0SIQq1mUPoLsFa",
+    "name": "[ARCHIVADO] WordPress - Renovar Contenido SEO/AEO Autom\u00e1tico",
+    "description": null,
+    "active": false,
+    "isArchived": true,
+    "nodes": [
+        {
+            "id": "sticky-instrucciones",
+            "name": "\ud83d\udccb INSTRUCCIONES DE CONFIGURACI\u00d3N",
+            "type": "n8n-nodes-base.stickyNote",
+            "typeVersion": 1,
+            "position": [
+                0,
+                0
+            ],
+            "parameters": {
+                "content": "## \u2699\ufe0f VARIABLES REQUERIDAS (n8n Settings \u2192 Variables)\n\n| Variable | Descripci\u00f3n | Ejemplo |\n|---|---|---|\n| `WP_URL` | URL base de WordPress (sin barra final) | `https://midominio.com` |\n| `WP_AUTH_BASIC` | Base64 de `usuario:contrase\u00f1a_aplicaci\u00f3n` | Ver instrucciones abajo |\n| `GROQ_API_KEY` | API Key de Groq (ya existente) | `gsk_...` |\n| `NOTIFICATION_FROM_EMAIL` | Email remitente para alertas de error | `bot@midominio.com` |\n| `NOTIFICATION_TO_EMAIL` | Email destinatario para alertas de error | `admin@midominio.com` |\n\n## \ud83d\udce7 NOTIFICACIONES DE ERROR\nSi Groq falla 3 veces seguidas en un post, el flujo env\u00eda un email con el detalle del error y contin\u00faa con los dem\u00e1s posts.\nRequiere credencial **SMTP** configurada en n8n (Credentials \u2192 New \u2192 SMTP) y reemplazar `SMTP_CREDENTIAL_ID` en el nodo \ud83d\udce7.\n\n## \ud83d\udd11 C\u00d3MO GENERAR WP_AUTH_BASIC\n1. En WordPress \u2192 Usuarios \u2192 Tu perfil \u2192 **Contrase\u00f1as de aplicaci\u00f3n**\n2. Crea una nueva \u2192 copia el password generado\n3. En terminal: `echo -n \"tuusuario:elpassword\" | base64`\n4. Pega el resultado como valor de `WP_AUTH_BASIC`\n\n## \ud83d\udcf0 GOOGLE NEWS RSS \u2014 Sin API key, 100% gratis\nEl flujo usa Google News RSS para obtener noticias actuales del tema de cada art\u00edculo.\nURL: `https://news.google.com/rss/search?q=TEMA&hl=es`\nNo requiere registro ni configuraci\u00f3n adicional.\n\n## \ud83c\udfd7\ufe0f BUILDERS SOPORTADOS\n\u2705 Divi | \u2705 Gutenberg | \u2705 Elementor | \u2705 Classic Editor\n\n## \u23f0 PROGRAMACI\u00d3N\nPor defecto: **Lunes 7am** \u2014 procesa los **5 art\u00edculos m\u00e1s antiguos** (sin modificar en m\u00e1s tiempo)\nCambia `per_page=5` en el nodo **Obtener Posts** para ajustar la cantidad\n\n## \ud83d\udee1\ufe0f SEGURIDAD DE IM\u00c1GENES\nLas im\u00e1genes NUNCA se modifican. Se preservan mediante un sistema de placeholders antes de enviar a Groq.",
+                "height": 620,
+                "width": 680,
+                "color": 7
+            }
+        },
+        {
+            "id": "trigger-schedule",
+            "name": "\u23f0 Trigger Semanal (Lunes 7am)",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                760,
+                360
+            ],
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "weeks",
+                            "weeksInterval": 1,
+                            "triggerAtDay": [
+                                1
+                            ],
+                            "triggerAtHour": 7,
+                            "triggerAtMinute": 0
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "id": "get-wp-posts",
+            "name": "\ud83d\udce1 Obtener Posts M\u00e1s Antiguos",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1000,
+                360
+            ],
+            "parameters": {
+                "method": "GET",
+                "url": "https://help.orisonhostels.com/wp-json/wp/v2/posts",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": []
+                },
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "orderby",
+                            "value": "modified"
+                        },
+                        {
+                            "name": "order",
+                            "value": "asc"
+                        },
+                        {
+                            "name": "per_page",
+                            "value": "1"
+                        },
+                        {
+                            "name": "status",
+                            "value": "publish"
+                        },
+                        {
+                            "name": "_fields",
+                            "value": "id,title,modified,link,slug"
+                        }
+                    ]
+                },
+                "options": {},
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "wordpressApi"
+            },
+            "credentials": {
+                "wordpressApi": {
+                    "id": "RDrxQuZ4saThZnps",
+                    "name": "WORDPRESS PRUEBA"
+                }
+            }
+        },
+        {
+            "id": "separar-posts",
+            "name": "\ud83d\udce6 Separar Posts en Items",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1240,
+                360
+            ],
+            "parameters": {
+                "jsCode": "const items = $input.all();\nif (items.length === 0) {\n  throw new Error(\"No se encontraron art\u00edculos publicados. Verifica WP_URL y WP_AUTH_BASIC en Settings \u2192 Variables.\");\n}\nreturn items.map(item => ({\n  json: {\n    id: item.json.id,\n    title: item.json.title?.rendered || \"\",\n    modified: item.json.modified,\n    link: item.json.link,\n    slug: item.json.slug\n  }\n}));"
+            }
+        },
+        {
+            "id": "split-batches",
+            "name": "\ud83d\udd04 Procesar Uno a Uno",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 3,
+            "position": [
+                1480,
+                360
+            ],
+            "parameters": {
+                "batchSize": 1,
+                "options": {}
+            }
+        },
+        {
+            "id": "get-post-detail",
+            "name": "\ud83d\udcc4 Obtener Post Completo",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1720,
+                360
+            ],
+            "parameters": {
+                "method": "GET",
+                "url": "={{ 'https://help.orisonhostels.com/wp-json/wp/v2/posts/' + $json.id }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": []
+                },
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "context",
+                            "value": "edit"
+                        }
+                    ]
+                },
+                "options": {},
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "wordpressApi"
+            },
+            "credentials": {
+                "wordpressApi": {
+                    "id": "RDrxQuZ4saThZnps",
+                    "name": "WORDPRESS PRUEBA"
+                }
+            }
+        },
+        {
+            "id": "extract-content",
+            "name": "\ud83d\udd0d Extraer Contenido",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1960,
+                360
+            ],
+            "parameters": {
+                "jsCode": "const post = $input.first().json;\nconst raw = post.content?.raw || '';\nconst meta = post.meta || {};\nconst title = post.title?.raw || post.title?.rendered || '';\nconst postId = post.id;\nconst postUrl = post.link || '';\n\n// \u2500\u2500 Detectar builder \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nlet builderType = 'classic';\nif (raw.includes('[et_pb_')) {\n  builderType = 'divi';\n} else if (raw.includes('<!-- wp:')) {\n  builderType = 'gutenberg';\n} else if (meta._elementor_data && meta._elementor_data.length > 10) {\n  builderType = 'elementor';\n} else if (raw.includes('elementor-section') || raw.includes('data-elementor-type')) {\n  builderType = 'elementor_html';\n}\n\nlet textChunks = [], imageMap = {}, structuredData = {};\n\n// \u2500\u2500 Divi \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nif (builderType === 'divi') {\n  const re = /(\\[et_pb_text[^\\]]*\\])([\\s\\S]*?)(\\[\\/et_pb_text\\])/g;\n  let m, idx = 0;\n  while ((m = re.exec(raw)) !== null) {\n    const text = m[2].trim();\n    if (text.length > 20) {\n      textChunks.push({ id: 'chunk_' + idx, text, openTag: m[1], closeTag: m[3] });\n      idx++;\n    }\n  }\n  structuredData = { originalContent: raw };\n\n// \u2500\u2500 Gutenberg \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n} else if (builderType === 'gutenberg') {\n  const re = /(<!-- wp:(paragraph|heading)(\\s[^>]*)? -->\\n?)([\\s\\S]*?)(<!-- \\/wp:\\2 -->)/g;\n  let m, idx = 0;\n  while ((m = re.exec(raw)) !== null) {\n    const text = m[4].trim();\n    if (text.length > 20) {\n      textChunks.push({ id: 'chunk_' + idx, blockType: m[2], openComment: m[1], text, closeComment: m[5] });\n      idx++;\n    }\n  }\n  structuredData = { originalContent: raw };\n\n// \u2500\u2500 Elementor (JSON meta) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n} else if (builderType === 'elementor') {\n  let elData = [];\n  try { elData = JSON.parse(meta._elementor_data); } catch(e) {}\n  function traverse(els) {\n    if (!Array.isArray(els)) return;\n    els.forEach(el => {\n      if (el.elType === 'widget' && ['text-editor', 'heading', 'button'].includes(el.widgetType)) {\n        const text = el.settings?.editor || el.settings?.title || el.settings?.text || '';\n        if (text && text.length > 20) {\n          textChunks.push({ id: el.id, widgetType: el.widgetType, text });\n        }\n      }\n      if (el.elements?.length) traverse(el.elements);\n    });\n  }\n  traverse(elData);\n  structuredData = { elementorDataStr: JSON.stringify(elData) };\n\n// \u2500\u2500 Classic / Elementor HTML \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n} else {\n  let processed = raw;\n  const imgRe = /(<figure[^>]*>[\\s\\S]*?<\\/figure>|<img[^>]+\\/?>)/gi;\n  let m, imgIdx = 0;\n  // Reset regex before using exec\n  let imgMatch;\n  const imgRe2 = /(<figure[^>]*>[\\s\\S]*?<\\/figure>|<img[^>]+\\/?>)/gi;\n  while ((imgMatch = imgRe2.exec(raw)) !== null) {\n    const ph = 'IMGPH' + imgIdx + 'ENDPH';\n    imageMap[ph] = imgMatch[1];\n    processed = processed.replace(imgMatch[1], ph);\n    imgIdx++;\n  }\n  textChunks.push({ id: 'chunk_0', text: processed });\n  structuredData = {};\n}\n\n// \u2500\u2500 Preparar prompts para Groq \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst systemPrompt = `Eres un experto en SEO sem\u00e1ntico y AEO (Answer Engine Optimization) para WordPress.\nTu tarea: reescribir fragmentos de contenido para mantenerlos frescos y optimizados.\n\nREGLAS ABSOLUTAS:\n1. Mant\u00e9n EXACTAMENTE el mismo tema e ideas del original. NO inventes informaci\u00f3n nueva.\n2. NO cambies el idioma del contenido.\n3. PRESERVA todos los tags HTML exactamente (clases, atributos, estructura interna).\n4. Los placeholders IMGPH0ENDPH, IMGPH1ENDPH... deben quedar EXACTOS en su posici\u00f3n original.\n5. Mejora sem\u00e1ntica SEO: usa sin\u00f3nimos, entidades relacionadas, t\u00e9rminos long-tail naturales.\n6. Optimiza para AEO: respuestas directas al inicio de p\u00e1rrafos, listas bien estructuradas, preguntas frecuentes naturales.\n7. Responde \u00daNICAMENTE con JSON v\u00e1lido, sin texto adicional.`;\n\nconst jsonFormatExample = '{\"chunks\": [{\"id\": \"chunk_0\", \"text\": \"contenido reescrito aqu\u00ed\"}]}';\nconst chunksForPrompt = JSON.stringify(textChunks.map(c => ({ id: c.id, text: c.text })), null, 2);\n\nconst userPrompt = 'Art\u00edculo: \"' + title + '\"\\nBuilder detectado: ' + builderType + '\\n\\nDevuelve SOLO este JSON (sin texto extra):\\n' + jsonFormatExample + '\\n\\nFragmentos a reescribir:\\n' + chunksForPrompt;\n\nreturn [{\n  json: {\n    postId,\n    postTitle: title,\n    postUrl,\n    builderType,\n    textChunks,\n    structuredData,\n    imageMap,\n    originalRaw: raw,\n    originalMeta: meta,\n    groqSystemPrompt: systemPrompt,\n    groqUserPrompt: userPrompt,\n    topicForTrends: title\n  }\n}];"
+            }
+        },
+        {
+            "id": "rss-noticias",
+            "name": "\ud83d\udcf0 Google News: Tendencias del Tema",
+            "type": "n8n-nodes-base.rssFeedRead",
+            "typeVersion": 1.1,
+            "position": [
+                2200,
+                360
+            ],
+            "continueOnFail": true,
+            "parameters": {
+                "url": "=https://news.google.com/rss/search?q={{ encodeURIComponent($json.topicForTrends) }}+SEO&hl=es&gl=ES&ceid=ES:es"
+            }
+        },
+        {
+            "id": "preparar-prompt",
+            "name": "\ud83c\udfaf Preparar Prompt Enriquecido",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2440,
+                360
+            ],
+            "parameters": {
+                "mode": "runOnceForAllItems",
+                "jsCode": "// Recibimos N items del RSS (uno por noticia) + posible item de error si RSS fall\u00f3\nconst allItems = $input.all();\nconst extraction = $('\ud83d\udd0d Extraer Contenido').first().json;\n\n// Filtrar items v\u00e1lidos de Google News (tienen campo title)\nlet newsContext = '';\ntry {\n  const newsItems = allItems.filter(i => i.json && i.json.title && !i.json.error);\n  if (newsItems.length > 0) {\n    const headlines = newsItems\n      .slice(0, 5)\n      .map(i => '- ' + i.json.title + (i.json.contentSnippet ? ': ' + i.json.contentSnippet.slice(0, 120) : ''))\n      .join('\\n');\n    newsContext = '\\n\\nNoticias actuales sobre este tema (referencia de tendencias SEO):\\n' + headlines;\n  }\n} catch(e) {\n  newsContext = '';\n}\n\nconst enrichedUserPrompt = extraction.groqUserPrompt + newsContext;\nreturn [{ json: { ...extraction, enrichedUserPrompt, retryCount: 0 } }];"
+            }
+        },
+        {
+            "id": "groq-rewrite",
+            "name": "\ud83e\udd16 Groq: Reescribir SEO/AEO",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                2680,
+                360
+            ],
+            "continueOnFail": true,
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.groq.com/openai/v1/chat/completions",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer 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"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\"model\": \"llama-3.3-70b-versatile\", \"messages\": [{\"role\": \"system\", \"content\": {{ JSON.stringify($json.groqSystemPrompt) }}}, {\"role\": \"user\", \"content\": {{ JSON.stringify($json.enrichedUserPrompt) }}}], \"temperature\": 0.65, \"max_tokens\": 8000, \"response_format\": {\"type\": \"json_object\"}}",
+                "options": {}
+            }
+        },
+        {
+            "id": "update-wp-post",
+            "name": "\u2705 Actualizar Post en WordPress",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                4360,
+                240
+            ],
+            "parameters": {
+                "method": "POST",
+                "url": "={{ 'https://help.orisonhostels.com/wp-json/wp/v2/posts/' + $json.postId }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify($json.updateBody) }}",
+                "options": {},
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "wordpressApi"
+            },
+            "credentials": {
+                "wordpressApi": {
+                    "id": "RDrxQuZ4saThZnps",
+                    "name": "WORDPRESS PRUEBA"
+                }
+            }
+        },
+        {
+            "id": "sticky-resultado",
+            "name": "\u2705 Resultado del Flujo",
+            "type": "n8n-nodes-base.stickyNote",
+            "typeVersion": 1,
+            "position": [
+                4360,
+                80
+            ],
+            "parameters": {
+                "content": "## Resultado Final\n\nCada post actualizado responde con:\n- `id`: ID del post\n- `modified`: nueva fecha de modificaci\u00f3n\n- `link`: URL del art\u00edculo\n\nLos art\u00edculos actualizados quedan con fecha de modificaci\u00f3n reciente, por lo que la pr\u00f3xima ejecuci\u00f3n autom\u00e1ticamente tomar\u00e1 otros art\u00edculos m\u00e1s antiguos.",
+                "height": 180,
+                "width": 340,
+                "color": 5
+            }
+        },
+        {
+            "id": "sticky-rss",
+            "name": "\ud83d\udca1 Google News RSS \u2014 Sin API key",
+            "type": "n8n-nodes-base.stickyNote",
+            "typeVersion": 1,
+            "position": [
+                2120,
+                160
+            ],
+            "parameters": {
+                "content": "## \ud83d\udcf0 Google News RSS\n\n**100% gratis, sin API key.**\nBusca noticias recientes sobre el tema del art\u00edculo.\nURL din\u00e1mica por art\u00edculo: `news.google.com/rss/search?q=TEMA`\n\nSi Google News falla (sin conexi\u00f3n, etc.), el nodo tiene `continueOnFail: true` y el flujo contin\u00faa sin contexto extra.",
+                "height": 180,
+                "width": 300,
+                "color": 5
+            }
+        },
+        {
+            "id": "validate-content",
+            "name": "\ud83d\udee1\ufe0f Validar Contenido",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                3880,
+                360
+            ],
+            "parameters": {
+                "jsCode": "const data = $input.first().json;\nconst extraction = $('\ud83d\udd0d Extraer Contenido').first().json;\nconst { builderType, originalRaw, textChunks } = extraction;\nconst updateBody = data.updateBody || {};\nconst errors = [];\n\n// \u2500\u2500 1. Groq devolvi\u00f3 chunks \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nif (data.chunksRewritten === 0) {\n  errors.push('Groq no devolvi\u00f3 ning\u00fan fragmento reescrito');\n}\n\n// \u2500\u2500 2. Obtener el contenido nuevo para validar \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst newContent = updateBody.content || \n  (updateBody.meta?._elementor_data) || '';\n\nif (!newContent || newContent.length < 50) {\n  errors.push('Contenido nuevo vac\u00edo o demasiado corto');\n}\n\n// \u2500\u2500 3. No debe ser m\u00e1s corto que 40% del original \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nif (newContent && originalRaw) {\n  const ratio = newContent.length / originalRaw.length;\n  if (ratio < 0.4) {\n    errors.push(`Contenido nuevo sospechosamente corto (${Math.round(ratio*100)}% del original)`);\n  }\n}\n\n// \u2500\u2500 4. Placeholders de imagen no deben quedar sin reemplazar \u2500\u2500\u2500\nif (newContent && newContent.includes('ENDPH')) {\n  errors.push('Quedan placeholders de im\u00e1genes sin reemplazar (IMGPH...ENDPH)');\n}\n\n// \u2500\u2500 5. Estructura del builder debe estar intacta \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nif (builderType === 'divi' && newContent && !newContent.includes('[et_pb_')) {\n  errors.push('Divi: shortcodes [et_pb_] desaparecieron del contenido');\n}\nif (builderType === 'gutenberg' && newContent && !newContent.includes('<!-- wp:')) {\n  errors.push('Gutenberg: bloques <!-- wp: --> desaparecieron del contenido');\n}\nif (builderType === 'elementor') {\n  try { JSON.parse(newContent); } catch(e) {\n    errors.push('Elementor: _elementor_data no es JSON v\u00e1lido');\n  }\n}\n\nconst esValido = errors.length === 0;\n\nreturn [{\n  json: {\n    ...data,\n    esValido,\n    erroresValidacion: errors,\n    resumenValidacion: esValido\n      ? '\u2705 Contenido validado \u2014 seguro actualizar'\n      : '\u274c BLOQUEADO: ' + errors.join(' | ')\n  }\n}];"
+            }
+        },
+        {
+            "id": "check-valid",
+            "name": "\u00bfContenido V\u00e1lido?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                4120,
+                360
+            ],
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "id": "cond-valid",
+                            "leftValue": "={{ $json.esValido }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            }
+        },
+        {
+            "id": "log-error",
+            "name": "\u26a0\ufe0f Log: Actualizaci\u00f3n Bloqueada",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                4360,
+                480
+            ],
+            "parameters": {
+                "jsCode": "const data = $input.first().json;\nconsole.error('=== ACTUALIZACI\u00d3N BLOQUEADA ===');\nconsole.error('Post ID:', data.postId);\nconsole.error('T\u00edtulo:', data.postTitle);\nconsole.error('Builder:', data.builderType);\nconsole.error('Errores:', data.erroresValidacion.join(' | '));\nconsole.error('El art\u00edculo NO fue modificado. Revisar logs para diagn\u00f3stico.');\n\n// Devolver info para que quede visible en la ejecuci\u00f3n\nreturn [{\n  json: {\n    estado: 'BLOQUEADO_SIN_ACTUALIZAR',\n    postId: data.postId,\n    postTitle: data.postTitle,\n    motivo: data.erroresValidacion,\n    accion: 'Art\u00edculo preservado intacto. Revisar logs de ejecuci\u00f3n.'\n  }\n}];"
+            }
+        },
+        {
+            "id": "sticky-validation",
+            "name": "\ud83d\udee1\ufe0f Capa de Validaci\u00f3n",
+            "type": "n8n-nodes-base.stickyNote",
+            "typeVersion": 1,
+            "position": [
+                3800,
+                160
+            ],
+            "parameters": {
+                "content": "## \ud83d\udee1\ufe0f Validaciones antes de guardar\n\n\u2705 Groq devolvi\u00f3 fragmentos reescritos\n\u2705 Contenido nuevo no est\u00e1 vac\u00edo\n\u2705 Nuevo contenido \u2265 40% del original\n\u2705 Sin placeholders de imagen sin reemplazar\n\u2705 Estructura del builder intacta (shortcodes/bloques)\n\n**Si alguna falla \u2192 el art\u00edculo NO se toca.**\nVer nodo \u26a0\ufe0f Log para diagn\u00f3stico.",
+                "height": 200,
+                "width": 320,
+                "color": 3
+            }
+        },
+        {
+            "id": "check-groq-error",
+            "name": "\u00bfGroq respondi\u00f3 OK?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                2800,
+                360
+            ],
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "loose"
+                    },
+                    "conditions": [
+                        {
+                            "id": "cond-groq-ok",
+                            "leftValue": "={{ $json.error === undefined }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            }
+        },
+        {
+            "id": "increment-retry",
+            "name": "\ud83d\udd01 Incrementar Intento",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2800,
+                580
+            ],
+            "parameters": {
+                "jsCode": "const item = $input.first().json;\nconst retryCount = (item.retryCount || 0) + 1;\nconst lastError = item.error || 'Error desconocido en Groq API';\nconsole.warn(`Groq fall\u00f3. Intento ${retryCount}/3. Error: ${lastError}`);\nreturn [{ json: { ...item, retryCount, lastError } }];"
+            }
+        },
+        {
+            "id": "check-max-retries",
+            "name": "\u00bfQuedan intentos?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                3000,
+                580
+            ],
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "loose"
+                    },
+                    "conditions": [
+                        {
+                            "id": "cond-retry-limit",
+                            "leftValue": "={{ $json.retryCount }}",
+                            "rightValue": 3,
+                            "operator": {
+                                "type": "number",
+                                "operation": "lt"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            }
+        },
+        {
+            "id": "send-error-email",
+            "name": "\ud83d\udce7 Notificar Error por Email",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                3200,
+                580
+            ],
+            "continueOnFail": true,
+            "parameters": {
+                "sendTo": "risosadmi@gmail.com",
+                "subject": "\u26a0\ufe0f Error flujo WordPress: Groq fall\u00f3 3 veces",
+                "emailType": "text",
+                "message": "=El flujo de renovaci\u00f3n de contenido WordPress ha fallado tras 3 intentos.\n\nPost afectado: {{ $json.postTitle }}\nPost ID: {{ $json.postId }}\n\u00daltimo error: {{ $json.lastError }}\n\nEl flujo ha continuado con los dem\u00e1s posts pero este post NO fue actualizado.\n\n\u2014 Automatizaci\u00f3n RRSS"
+            },
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "TESHSjzjMCpCxBBk",
+                    "name": "Gmail account"
+                }
+            }
+        },
+        {
+            "id": "parse-groq",
+            "name": "\ud83d\udce6 Parsear Respuesta Groq",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2920,
+                360
+            ],
+            "parameters": {
+                "jsCode": "const groqRaw = $input.first().json;\nconst extraction = $('\ud83d\udd0d Extraer Contenido').first().json;\n\n// \u2500\u2500 Parsear JSON de respuesta \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst responseText = groqRaw.choices?.[0]?.message?.content || '{}';\nlet rewrittenData;\ntry {\n  rewrittenData = typeof responseText === 'object' ? responseText : JSON.parse(responseText);\n} catch(e) {\n  const match = String(responseText).match(/\\{[\\s\\S]*\\}/);\n  try { rewrittenData = match ? JSON.parse(match[0]) : { chunks: [] }; }\n  catch(e2) { rewrittenData = { chunks: [] }; }\n}\n\nconst chunksMap = {};\n(rewrittenData.chunks || []).forEach(c => { if (c.id && c.text) chunksMap[c.id] = c.text; });\nconst chunksRewritten = Object.keys(chunksMap).length;\n\nif (chunksRewritten === 0) {\n  console.warn('\u26a0\ufe0f Grok no devolvi\u00f3 chunks. Raw:', String(responseText).slice(0, 300));\n}\n\nreturn [{\n  json: {\n    ...extraction,\n    chunksMap,\n    chunksRewritten,\n    groqRawResponse: String(responseText).slice(0, 200)\n  }\n}];"
+            }
+        },
+        {
+            "id": "switch-builder",
+            "name": "\ud83d\udd00 Switch: Tipo de Builder",
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3,
+            "position": [
+                3160,
+                360
+            ],
+            "parameters": {
+                "mode": "rules",
+                "rules": {
+                    "values": [
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": false,
+                                    "leftValue": "",
+                                    "typeValidation": "loose"
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "r-divi",
+                                        "leftValue": "={{ $json.builderType }}",
+                                        "rightValue": "divi",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Divi"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": false,
+                                    "leftValue": "",
+                                    "typeValidation": "loose"
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "r-gb",
+                                        "leftValue": "={{ $json.builderType }}",
+                                        "rightValue": "gutenberg",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Gutenberg"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": false,
+                                    "leftValue": "",
+                                    "typeValidation": "loose"
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "r-el",
+                                        "leftValue": "={{ $json.builderType }}",
+                                        "rightValue": "elementor",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Elementor"
+                        }
+                    ]
+                },
+                "options": {
+                    "fallbackOutput": "extra"
+                }
+            }
+        },
+        {
+            "id": "reconstruct-divi",
+            "name": "\ud83d\udd27 Reconstruir Divi",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                3400,
+                100
+            ],
+            "parameters": {
+                "jsCode": "const data = $input.first().json;\nconst { textChunks, chunksMap, originalRaw, postId, postTitle, chunksRewritten } = data;\n\n// Reemplazar cada [et_pb_text]...[/et_pb_text] con el chunk reescrito\nlet idx = 0;\nconst newContent = originalRaw.replace(\n  /(\\[et_pb_text[^\\]]*\\])([\\s\\S]*?)(\\[\\/et_pb_text\\])/g,\n  (match, openTag, oldText, closeTag) => {\n    const chunk = textChunks[idx];\n    idx++;\n    if (!chunk) return match;\n    const newText = chunksMap[chunk.id];\n    if (!newText) {\n      console.warn('Divi chunk sin reescribir:', chunk.id, '\u2014 preservando original');\n      return match;\n    }\n    return openTag + '\\n' + newText + '\\n' + closeTag;\n  }\n);\n\n// Verificaci\u00f3n: shortcodes Divi deben seguir presentes\nif (!newContent.includes('[et_pb_')) {\n  throw new Error('Divi: los shortcodes [et_pb_] desaparecieron tras la reconstrucci\u00f3n');\n}\n\nreturn [{ json: {\n  postId, postTitle,\n  builderType: 'divi',\n  chunksRewritten,\n  updateBody: { content: newContent }\n}}];"
+            }
+        },
+        {
+            "id": "reconstruct-gutenberg",
+            "name": "\ud83d\udd27 Reconstruir Gutenberg",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                3400,
+                280
+            ],
+            "parameters": {
+                "jsCode": "const data = $input.first().json;\nconst { textChunks, chunksMap, originalRaw, postId, postTitle, chunksRewritten } = data;\n\nlet idx = 0;\nconst newContent = originalRaw.replace(\n  /(<!-- wp:(paragraph|heading)(\\s[^>]*)? -->\\n?)([\\s\\S]*?)(<!-- \\/wp:\\2 -->)/g,\n  (match, openComment, blockType, attrs, oldContent, closeComment) => {\n    const chunk = textChunks[idx];\n    idx++;\n    if (!chunk) return match;\n    const newText = chunksMap[chunk.id];\n    if (!newText) {\n      console.warn('Gutenberg chunk sin reescribir:', chunk.id, '\u2014 preservando original');\n      return match;\n    }\n    return openComment + newText + '\\n' + closeComment;\n  }\n);\n\n// Verificaci\u00f3n: bloques Gutenberg deben seguir presentes\nif (!newContent.includes('<!-- wp:')) {\n  throw new Error('Gutenberg: los bloques <!-- wp: --> desaparecieron tras la reconstrucci\u00f3n');\n}\n\nreturn [{ json: {\n  postId, postTitle,\n  builderType: 'gutenberg',\n  chunksRewritten,\n  updateBody: { content: newContent }\n}}];"
+            }
+        },
+        {
+            "id": "reconstruct-elementor",
+            "name": "\ud83d\udd27 Reconstruir Elementor",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                3400,
+                460
+            ],
+            "parameters": {
+                "jsCode": "const data = $input.first().json;\nconst { structuredData, chunksMap, postId, postTitle, chunksRewritten } = data;\n\nlet elData = [];\ntry {\n  elData = JSON.parse(structuredData.elementorDataStr || '[]');\n} catch(e) {\n  throw new Error('Elementor: no se pudo parsear _elementor_data: ' + e.message);\n}\n\n// Recorrer \u00e1rbol Elementor y actualizar widgets\nfunction updateEl(elements) {\n  if (!Array.isArray(elements)) return elements;\n  return elements.map(el => {\n    if (el.elType === 'widget' && chunksMap[el.id]) {\n      const newText = chunksMap[el.id];\n      el = { ...el, settings: { ...el.settings } };\n      if (el.widgetType === 'text-editor') el.settings.editor = newText;\n      else if (el.widgetType === 'heading')     el.settings.title  = newText;\n      else if (el.widgetType === 'button')      el.settings.text   = newText;\n    }\n    if (el.elements?.length) el.elements = updateEl(el.elements);\n    return el;\n  });\n}\n\nconst updatedData = updateEl(elData);\nconst newElementorJson = JSON.stringify(updatedData);\n\n// Verificaci\u00f3n: debe ser JSON v\u00e1lido\ntry { JSON.parse(newElementorJson); } catch(e) {\n  throw new Error('Elementor: _elementor_data no es JSON v\u00e1lido tras reconstrucci\u00f3n');\n}\n\nreturn [{ json: {\n  postId, postTitle,\n  builderType: 'elementor',\n  chunksRewritten,\n  updateBody: { meta: { _elementor_data: newElementorJson } }\n}}];"
+            }
+        },
+        {
+            "id": "reconstruct-classic",
+            "name": "\ud83d\udd27 Reconstruir Classic/HTML",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                3400,
+                640
+            ],
+            "parameters": {
+                "jsCode": "const data = $input.first().json;\nconst { chunksMap, imageMap, originalRaw, postId, postTitle, chunksRewritten, builderType } = data;\n\n// El contenido es HTML plano (Classic Editor o Elementor HTML)\nlet reconstructed = chunksMap['chunk_0'] || originalRaw;\n\n// Restaurar im\u00e1genes reemplazadas por placeholders\nconst imgMapData = imageMap || {};\nconst placeholders = Object.keys(imgMapData);\nif (placeholders.length > 0) {\n  placeholders.forEach(placeholder => {\n    reconstructed = reconstructed.split(placeholder).join(imgMapData[placeholder]);\n  });\n  // Verificar que no quedan placeholders sin reemplazar\n  if (reconstructed.includes('ENDPH')) {\n    throw new Error('Classic: quedan placeholders de im\u00e1genes sin reemplazar');\n  }\n}\n\nreturn [{ json: {\n  postId, postTitle,\n  builderType: builderType || 'classic',\n  chunksRewritten,\n  updateBody: { content: reconstructed }\n}}];"
+            }
+        },
+        {
+            "id": "merge-paths",
+            "name": "\ud83d\udd17 Unir Rutas de Builder",
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 3,
+            "position": [
+                3640,
+                360
+            ],
+            "parameters": {
+                "mode": "append"
+            }
+        },
+        {
+            "id": "reporte-preparar-001",
+            "name": "\ud83d\udcca Preparar Reporte de Actualizaci\u00f3n",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                4620,
+                240
+            ],
+            "parameters": {
+                "jsCode": "\nconst wpResponse = $input.first().json;\nconst parsedGroq = $('\ud83d\udce6 Parsear Respuesta Groq').first().json;\n\nconst postId    = parsedGroq.postId;\nconst postTitle = parsedGroq.postTitle;\nconst postUrl   = parsedGroq.postUrl;\nconst builderType = parsedGroq.builderType;\nconst textChunks  = parsedGroq.textChunks || [];\nconst chunksMap   = parsedGroq.chunksMap  || {};\nconst modifiedDate = wpResponse.modified || new Date().toISOString();\n\nconst stripHtml = html =>\n  String(html || '').replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();\n\nlet comparisonRows = '';\nlet changesCount = 0;\n\ntextChunks.forEach(chunk => {\n  const original  = stripHtml(chunk.text || '').slice(0, 500);\n  const rewritten = stripHtml(chunksMap[chunk.id] || chunk.text || '').slice(0, 500);\n  if (original === rewritten) return;\n  changesCount++;\n  comparisonRows += `\n    <tr>\n      <td style=\"padding:12px;border:1px solid #ddd;background:#fff5f5;vertical-align:top;width:50%;font-size:14px;color:#333\">\n        <span style=\"display:block;font-size:11px;color:#999;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px\">Antes</span>\n        ${original}\n      </td>\n      <td style=\"padding:12px;border:1px solid #ddd;background:#f5fff5;vertical-align:top;width:50%;font-size:14px;color:#333\">\n        <span style=\"display:block;font-size:11px;color:#999;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px\">Despu\u00e9s</span>\n        ${rewritten}\n      </td>\n    </tr>`;\n});\n\nif (!comparisonRows) {\n  comparisonRows = `<tr><td colspan=\"2\" style=\"padding:16px;text-align:center;color:#888;font-style:italic\">\n    Cambios aplicados en estructura HTML/shortcodes (sin diferencias de texto plano detectables)\n  </td></tr>`;\n}\n\nconst htmlBody = `\n<div style=\"font-family:Arial,sans-serif;max-width:820px;margin:0 auto;color:#333\">\n  <div style=\"background:#0a63c9;padding:20px 24px;border-radius:6px 6px 0 0\">\n    <h2 style=\"margin:0;color:#fff;font-size:20px\">\u2705 Art\u00edculo actualizado \u00b7 Reporte autom\u00e1tico</h2>\n  </div>\n  <div style=\"border:1px solid #ddd;border-top:none;border-radius:0 0 6px 6px;padding:24px\">\n    <table style=\"width:100%;border-collapse:collapse;margin-bottom:24px;font-size:14px\">\n      <tr style=\"border-bottom:1px solid #eee\">\n        <td style=\"padding:10px 8px;font-weight:bold;color:#555;width:130px\">Post ID</td>\n        <td style=\"padding:10px 8px\"><code style=\"background:#f4f4f4;padding:2px 6px;border-radius:3px\">${postId}</code></td>\n      </tr>\n      <tr style=\"background:#fafafa;border-bottom:1px solid #eee\">\n        <td style=\"padding:10px 8px;font-weight:bold;color:#555\">T\u00edtulo</td>\n        <td style=\"padding:10px 8px\">${postTitle}</td>\n      </tr>\n      <tr style=\"border-bottom:1px solid #eee\">\n        <td style=\"padding:10px 8px;font-weight:bold;color:#555\">Builder</td>\n        <td style=\"padding:10px 8px\"><span style=\"background:#e8f0fe;color:#1a73e8;padding:2px 8px;border-radius:12px;font-size:12px\">${builderType}</span></td>\n      </tr>\n      <tr style=\"background:#fafafa;border-bottom:1px solid #eee\">\n        <td style=\"padding:10px 8px;font-weight:bold;color:#555\">Modificado</td>\n        <td style=\"padding:10px 8px\">${new Date(modifiedDate).toLocaleString('es-ES', {timeZone:'Europe/Madrid'})}</td>\n      </tr>\n      <tr style=\"border-bottom:1px solid #eee\">\n        <td style=\"padding:10px 8px;font-weight:bold;color:#555\">Bloques cambiados</td>\n        <td style=\"padding:10px 8px\"><strong style=\"color:#0a63c9\">${changesCount}</strong> de ${textChunks.length}</td>\n      </tr>\n      <tr style=\"background:#fafafa\">\n        <td style=\"padding:10px 8px;font-weight:bold;color:#555\">Ver art\u00edculo</td>\n        <td style=\"padding:10px 8px\"><a href=\"${postUrl}\" style=\"color:#0a63c9;font-weight:bold\">${postUrl}</a></td>\n      </tr>\n    </table>\n\n    <h3 style=\"color:#333;margin:0 0 12px;font-size:16px\">Comparativa de cambios</h3>\n    <table style=\"width:100%;border-collapse:collapse;font-size:13px\">\n      ${comparisonRows}\n    </table>\n\n    <p style=\"color:#aaa;font-size:11px;margin-top:24px;border-top:1px solid #eee;padding-top:12px\">\n      Automatizaci\u00f3n RRSS \u00b7 WordPress Content Renewal\n    </p>\n  </div>\n</div>`;\n\nreturn [{\n  json: {\n    postId,\n    postTitle,\n    postUrl,\n    builderType,\n    changesCount,\n    emailHtml: htmlBody,\n    subject: `\u2705 Actualizado: ${postTitle} (ID ${postId}) \u00b7 ${changesCount} bloques modificados`\n  }\n}];\n"
+            }
+        },
+        {
+            "id": "reporte-gmail-001",
+            "name": "\ud83d\udce7 Enviar Reporte de Actualizaci\u00f3n",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                4860,
+                240
+            ],
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "TESHSjzjMCpCxBBk",
+                    "name": "Gmail account"
+                }
+            },
+            "parameters": {
+                "sendTo": "risosadmi@gmail.com",
+                "subject": "={{ $json.subject }}",
+                "emailType": "html",
+                "message": "={{ $json.emailHtml }}"
+            }
+        }
+    ],
+    "connections": {
+        "\u23f0 Trigger Semanal (Lunes 7am)": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udce1 Obtener Posts M\u00e1s Antiguos",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udce1 Obtener Posts M\u00e1s Antiguos": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udce6 Separar Posts en Items",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udce6 Separar Posts en Items": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd04 Procesar Uno a Uno",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd04 Procesar Uno a Uno": {
+            "main": [
+                [],
+                [
+                    {
+                        "node": "\ud83d\udcc4 Obtener Post Completo",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udcc4 Obtener Post Completo": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd0d Extraer Contenido",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd0d Extraer Contenido": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcf0 Google News: Tendencias del Tema",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udcf0 Google News: Tendencias del Tema": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83c\udfaf Preparar Prompt Enriquecido",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83c\udfaf Preparar Prompt Enriquecido": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83e\udd16 Groq: Reescribir SEO/AEO",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83e\udd16 Groq: Reescribir SEO/AEO": {
+            "main": [
+                [
+                    {
+                        "node": "\u00bfGroq respondi\u00f3 OK?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u00bfGroq respondi\u00f3 OK?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udce6 Parsear Respuesta Groq",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\ud83d\udd01 Incrementar Intento",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd01 Incrementar Intento": {
+            "main": [
+                [
+                    {
+                        "node": "\u00bfQuedan intentos?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u00bfQuedan intentos?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83e\udd16 Groq: Reescribir SEO/AEO",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\ud83d\udce7 Notificar Error por Email",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udce7 Notificar Error por Email": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd04 Procesar Uno a Uno",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u2705 Actualizar Post en WordPress": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcca Preparar Reporte de Actualizaci\u00f3n",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udee1\ufe0f Validar Contenido": {
+            "main": [
+                [
+                    {
+                        "node": "\u00bfContenido V\u00e1lido?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u00bfContenido V\u00e1lido?": {
+            "main": [
+                [
+                    {
+                        "node": "\u2705 Actualizar Post en WordPress",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\u26a0\ufe0f Log: Actualizaci\u00f3n Bloqueada",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udce6 Parsear Respuesta Groq": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd00 Switch: Tipo de Builder",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd00 Switch: Tipo de Builder": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd27 Reconstruir Divi",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\ud83d\udd27 Reconstruir Gutenberg",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\ud83d\udd27 Reconstruir Elementor",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\ud83d\udd27 Reconstruir Classic/HTML",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd27 Reconstruir Divi": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd17 Unir Rutas de Builder",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd27 Reconstruir Gutenberg": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd17 Unir Rutas de Builder",
+                        "type": "main",
+                        "index": 1
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd27 Reconstruir Elementor": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd17 Unir Rutas de Builder",
+                        "type": "main",
+                        "index": 2
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd27 Reconstruir Classic/HTML": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd17 Unir Rutas de Builder",
+                        "type": "main",
+                        "index": 3
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd17 Unir Rutas de Builder": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udee1\ufe0f Validar Contenido",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u26a0\ufe0f Log: Actualizaci\u00f3n Bloqueada": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd04 Procesar Uno a Uno",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udcca Preparar Reporte de Actualizaci\u00f3n": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udce7 Enviar Reporte de Actualizaci\u00f3n",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udce7 Enviar Reporte de Actualizaci\u00f3n": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd04 Procesar Uno a Uno",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": null,
+    "versionId": "a6d906c7-e7d9-4a55-839f-784e23364e62",
+    "activeVersionId": null,
+    "versionCounter": 15,
+    "triggerCount": 0,
+    "shared": [
+        {
+            "updatedAt": "2026-03-23T16:44:02.413Z",
+            "createdAt": "2026-03-23T16:44:02.413Z",
+            "role": "workflow:owner",
+            "workflowId": "zM0SIQq1mUPoLsFa",
+            "projectId": "scK6yPpEmlkikl67",
+            "project": {
+                "updatedAt": "2026-03-16T19:58:01.773Z",
+                "createdAt": "2026-03-16T19:56:18.866Z",
+                "id": "scK6yPpEmlkikl67",
+                "name": "Solange  Torrez <risosadmi@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            }
+        }
+    ],
+    "tags": [
+        {
+            "updatedAt": "2026-04-16T17:44:15.453Z",
+            "createdAt": "2026-04-16T17:44:15.453Z",
+            "id": "hcnMCnSNqDdoaLJZ",
+            "name": "wordpress"
+        }
+    ],
+    "activeVersion": null
+}

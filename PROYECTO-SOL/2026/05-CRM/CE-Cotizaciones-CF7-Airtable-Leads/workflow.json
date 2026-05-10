@@ -1,0 +1,340 @@
+{
+    "updatedAt": "2026-04-21T13:30:09.777Z",
+    "createdAt": "2026-04-16T15:35:12.673Z",
+    "id": "FU8QG1BVmT4r5Kjw",
+    "name": "CE Cotizaciones - CF7 \u2192 Airtable + Leads",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "id": "webhook-cf7",
+            "name": "\ud83d\udce5 Webhook CF7",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                240,
+                300
+            ],
+            "webhookId": "cf7-cotizacion",
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "cf7-cotizacion",
+                "responseMode": "responseNode",
+                "options": {}
+            }
+        },
+        {
+            "id": "format-lead",
+            "name": "\ud83d\udd27 Formatear Datos",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                480,
+                300
+            ],
+            "parameters": {
+                "jsCode": "\nconst b = $json.body || $json;\n\nconst nombre   = (b['nombre']      || '').toString().trim();\nconst email    = (b['email']       || '').toString().trim();\nconst telefono = (b['telefono']    || '').toString().trim();\nconst zip      = (b['ZipCode']     || '').toString().trim();\nconst producto = (b['Product']     || '').toString().trim();\nconst servicio = (b['Service']     || '').toString().trim();\nconst mensaje  = (b['Message']     || '').toString().trim();\nconst fecha    = (b['Fecha']       || new Date().toLocaleDateString('es-US',{timeZone:'America/New_York'})).toString().trim();\n\n// Build shipment details from all 5 rows\nconst filas = [\n  { cant: b['Cantidad'],  det: b['detalles'],  l: b['Length'],  w: b['Width'],  h: b['height'],  p: b['Weightaprox']  },\n  { cant: b['Cantidad2'], det: b['Detalles2'], l: b['Length2'], w: b['Width2'], h: b['height2'], p: b['Weightaprox2'] },\n  { cant: b['Cantidad3'], det: b['Detalles3'], l: b['Length3'], w: b['Width3'], h: b['height3'], p: b['Weightaprox3'] },\n  { cant: b['Cantidad4'], det: b['Detalles4'], l: b['Length4'], w: b['Width4'], h: b['height4'], p: b['Weightaprox4'] },\n  { cant: b['Cantidad5'], det: b['Detalles5'], l: b['Length5'], w: b['Width5'], h: b['height5'], p: b['Weightaprox5'] },\n];\n\nconst lineas = filas\n  .filter(f => f.det || f.l)\n  .map(f => `${f.cant||'1'}x ${f.det||'item'} \u2014 ${f.l||'?'}\u00d7${f.w||'?'}\u00d7${f.h||'?'} in / ${f.p||'?'} lbs`);\n\nconst detalles_embarque = lineas.join('\\n') || 'Sin dimensiones';\n\nconst resumen = [\n  `\ud83d\udce6 Producto: ${producto} / ${servicio}`,\n  `\ud83d\udcd0 Detalles:\\n${detalles_embarque}`,\n  mensaje ? `\ud83d\udcac Notas: ${mensaje}` : ''\n].filter(Boolean).join('\\n');\n\nconst fecha_captura = new Date().toLocaleDateString('es-US', {timeZone:'America/New_York'});\n\nreturn [{\n  json: {\n    // Para Leads Sheet\n    nombre,\n    email,\n    telefono,\n    direccion: `Zip: ${zip}`,\n    web: '',\n    rating: '',\n    fecha_captura,\n    correo_enviado: '0',\n    fecha_c1: '', fecha_c2: '', fecha_c3: '',\n    estado_email: 'activo',\n    estado: 'Cotizaci\u00f3n Web',\n    nicho: 'cotizacion-web',\n    // Para Airtable\n    zip, producto, servicio,\n    mensaje: resumen,\n    fecha_solicitud: fecha,\n  }\n}];\n"
+            }
+        },
+        {
+            "id": "save-leads-sheet",
+            "name": "\ud83d\udcca Guardar en Leads Sheet",
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.5,
+            "position": [
+                720,
+                400
+            ],
+            "continueOnFail": true,
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "QE2RlAxaMLoYefTD",
+                    "name": "Google Sheets account"
+                }
+            },
+            "parameters": {
+                "operation": "append",
+                "documentId": {
+                    "__rl": true,
+                    "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+                    "mode": "id"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": "gid=0",
+                    "mode": "id"
+                },
+                "columns": {
+                    "mappingMode": "autoMapInputData",
+                    "value": {},
+                    "matchingColumns": [
+                        "email"
+                    ],
+                    "schema": []
+                },
+                "options": {}
+            }
+        },
+        {
+            "id": "respond-ok",
+            "name": "\u2705 Responder OK",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                960,
+                300
+            ],
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={\"ok\":true}",
+                "options": {
+                    "responseCode": 200
+                }
+            }
+        }
+    ],
+    "connections": {
+        "\ud83d\udce5 Webhook CF7": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd27 Formatear Datos",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd27 Formatear Datos": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcca Guardar en Leads Sheet",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udcca Guardar en Leads Sheet": {
+            "main": [
+                [
+                    {
+                        "node": "\u2705 Responder OK",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "saveManualExecutions": true,
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false,
+        "errorWorkflow": "CKOju9JVnSMymfKv"
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": null,
+    "versionId": "8113561e-f9e0-41b7-8783-a22bc5efee48",
+    "activeVersionId": "8113561e-f9e0-41b7-8783-a22bc5efee48",
+    "versionCounter": 18,
+    "triggerCount": 1,
+    "shared": [
+        {
+            "updatedAt": "2026-04-16T15:35:12.680Z",
+            "createdAt": "2026-04-16T15:35:12.680Z",
+            "role": "workflow:owner",
+            "workflowId": "FU8QG1BVmT4r5Kjw",
+            "projectId": "scK6yPpEmlkikl67",
+            "project": {
+                "updatedAt": "2026-03-16T19:58:01.773Z",
+                "createdAt": "2026-03-16T19:56:18.866Z",
+                "id": "scK6yPpEmlkikl67",
+                "name": "Solange  Torrez <risosadmi@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            }
+        }
+    ],
+    "tags": [
+        {
+            "updatedAt": "2026-04-16T17:44:14.781Z",
+            "createdAt": "2026-04-16T17:44:14.781Z",
+            "id": "pJ6UP83Ety9RKf4d",
+            "name": "email"
+        }
+    ],
+    "activeVersion": {
+        "updatedAt": "2026-04-16T17:22:10.863Z",
+        "createdAt": "2026-04-16T17:22:10.863Z",
+        "versionId": "8113561e-f9e0-41b7-8783-a22bc5efee48",
+        "workflowId": "FU8QG1BVmT4r5Kjw",
+        "nodes": [
+            {
+                "id": "webhook-cf7",
+                "name": "\ud83d\udce5 Webhook CF7",
+                "type": "n8n-nodes-base.webhook",
+                "typeVersion": 2,
+                "position": [
+                    240,
+                    300
+                ],
+                "webhookId": "cf7-cotizacion",
+                "parameters": {
+                    "httpMethod": "POST",
+                    "path": "cf7-cotizacion",
+                    "responseMode": "responseNode",
+                    "options": {}
+                }
+            },
+            {
+                "id": "format-lead",
+                "name": "\ud83d\udd27 Formatear Datos",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    480,
+                    300
+                ],
+                "parameters": {
+                    "jsCode": "\nconst b = $json.body || $json;\n\nconst nombre   = (b['nombre']      || '').toString().trim();\nconst email    = (b['email']       || '').toString().trim();\nconst telefono = (b['telefono']    || '').toString().trim();\nconst zip      = (b['ZipCode']     || '').toString().trim();\nconst producto = (b['Product']     || '').toString().trim();\nconst servicio = (b['Service']     || '').toString().trim();\nconst mensaje  = (b['Message']     || '').toString().trim();\nconst fecha    = (b['Fecha']       || new Date().toLocaleDateString('es-US',{timeZone:'America/New_York'})).toString().trim();\n\n// Build shipment details from all 5 rows\nconst filas = [\n  { cant: b['Cantidad'],  det: b['detalles'],  l: b['Length'],  w: b['Width'],  h: b['height'],  p: b['Weightaprox']  },\n  { cant: b['Cantidad2'], det: b['Detalles2'], l: b['Length2'], w: b['Width2'], h: b['height2'], p: b['Weightaprox2'] },\n  { cant: b['Cantidad3'], det: b['Detalles3'], l: b['Length3'], w: b['Width3'], h: b['height3'], p: b['Weightaprox3'] },\n  { cant: b['Cantidad4'], det: b['Detalles4'], l: b['Length4'], w: b['Width4'], h: b['height4'], p: b['Weightaprox4'] },\n  { cant: b['Cantidad5'], det: b['Detalles5'], l: b['Length5'], w: b['Width5'], h: b['height5'], p: b['Weightaprox5'] },\n];\n\nconst lineas = filas\n  .filter(f => f.det || f.l)\n  .map(f => `${f.cant||'1'}x ${f.det||'item'} \u2014 ${f.l||'?'}\u00d7${f.w||'?'}\u00d7${f.h||'?'} in / ${f.p||'?'} lbs`);\n\nconst detalles_embarque = lineas.join('\\n') || 'Sin dimensiones';\n\nconst resumen = [\n  `\ud83d\udce6 Producto: ${producto} / ${servicio}`,\n  `\ud83d\udcd0 Detalles:\\n${detalles_embarque}`,\n  mensaje ? `\ud83d\udcac Notas: ${mensaje}` : ''\n].filter(Boolean).join('\\n');\n\nconst fecha_captura = new Date().toLocaleDateString('es-US', {timeZone:'America/New_York'});\n\nreturn [{\n  json: {\n    // Para Leads Sheet\n    nombre,\n    email,\n    telefono,\n    direccion: `Zip: ${zip}`,\n    web: '',\n    rating: '',\n    fecha_captura,\n    correo_enviado: '0',\n    fecha_c1: '', fecha_c2: '', fecha_c3: '',\n    estado_email: 'activo',\n    estado: 'Cotizaci\u00f3n Web',\n    nicho: 'cotizacion-web',\n    // Para Airtable\n    zip, producto, servicio,\n    mensaje: resumen,\n    fecha_solicitud: fecha,\n  }\n}];\n"
+                }
+            },
+            {
+                "id": "save-leads-sheet",
+                "name": "\ud83d\udcca Guardar en Leads Sheet",
+                "type": "n8n-nodes-base.googleSheets",
+                "typeVersion": 4.5,
+                "position": [
+                    720,
+                    400
+                ],
+                "continueOnFail": true,
+                "credentials": {
+                    "googleSheetsOAuth2Api": {
+                        "id": "QE2RlAxaMLoYefTD",
+                        "name": "Google Sheets account"
+                    }
+                },
+                "parameters": {
+                    "operation": "append",
+                    "documentId": {
+                        "__rl": true,
+                        "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+                        "mode": "id"
+                    },
+                    "sheetName": {
+                        "__rl": true,
+                        "value": "gid=0",
+                        "mode": "id"
+                    },
+                    "columns": {
+                        "mappingMode": "autoMapInputData",
+                        "value": {},
+                        "matchingColumns": [
+                            "email"
+                        ],
+                        "schema": []
+                    },
+                    "options": {}
+                }
+            },
+            {
+                "id": "respond-ok",
+                "name": "\u2705 Responder OK",
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.1,
+                "position": [
+                    960,
+                    300
+                ],
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "={\"ok\":true}",
+                    "options": {
+                        "responseCode": 200
+                    }
+                }
+            }
+        ],
+        "connections": {
+            "\ud83d\udce5 Webhook CF7": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd27 Formatear Datos",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd27 Formatear Datos": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udcca Guardar en Leads Sheet",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udcca Guardar en Leads Sheet": {
+                "main": [
+                    [
+                        {
+                            "node": "\u2705 Responder OK",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "authors": "Solange  Torrez",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": [
+            {
+                "createdAt": "2026-04-16T17:22:10.961Z",
+                "id": 168,
+                "workflowId": "FU8QG1BVmT4r5Kjw",
+                "versionId": "8113561e-f9e0-41b7-8783-a22bc5efee48",
+                "event": "activated",
+                "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            },
+            {
+                "createdAt": "2026-04-21T13:30:09.907Z",
+                "id": 195,
+                "workflowId": "FU8QG1BVmT4r5Kjw",
+                "versionId": "8113561e-f9e0-41b7-8783-a22bc5efee48",
+                "event": "activated",
+                "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            },
+            {
+                "createdAt": "2026-04-16T17:22:10.940Z",
+                "id": 167,
+                "workflowId": "FU8QG1BVmT4r5Kjw",
+                "versionId": "8113561e-f9e0-41b7-8783-a22bc5efee48",
+                "event": "deactivated",
+                "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            },
+            {
+                "createdAt": "2026-04-21T13:30:09.863Z",
+                "id": 194,
+                "workflowId": "FU8QG1BVmT4r5Kjw",
+                "versionId": "8113561e-f9e0-41b7-8783-a22bc5efee48",
+                "event": "deactivated",
+                "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            }
+        ]
+    }
+}

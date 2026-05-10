@@ -1,0 +1,412 @@
+{
+    "updatedAt": "2026-04-28T16:49:20.070Z",
+    "createdAt": "2026-04-24T13:38:42.263Z",
+    "id": "FYKfTJBfgwsMpJV7",
+    "name": "\ud83d\udcde CE Voice Agent \u2014 Vapi Webhook",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "id": "vapi-trigger",
+            "name": "\ud83d\udd14 Webhook Vapi",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                240,
+                300
+            ],
+            "webhookId": "vapi-ce-calls",
+            "parameters": {
+                "path": "vapi-ce-calls",
+                "responseMode": "onReceived",
+                "options": {},
+                "httpMethod": "POST",
+                "responseCode": 200
+            }
+        },
+        {
+            "id": "vapi-parse",
+            "name": "\ud83d\udd0d Parsear Evento Vapi",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                480,
+                300
+            ],
+            "parameters": {
+                "jsCode": "\nconst body     = $input.first().json.body || $input.first().json;\nconst callData = body.message || body;\n\n// Vapi sends different event types \u2014 only process call-ended\nconst eventType = callData.type || callData.event || '';\nif (!eventType.includes('end') && !eventType.includes('End')) {\n  return [{ json: { skip: true, reason: 'Not a call-ended event', eventType } }];\n}\n\nconst call        = callData.call || callData;\nconst transcript  = callData.artifact?.transcript || callData.transcript || '';\nconst callerPhone = call.customer?.number || call.phoneNumber || 'unknown';\nconst duration    = Math.round((call.endedAt && call.startedAt\n  ? (new Date(call.endedAt) - new Date(call.startedAt)) / 1000\n  : callData.durationSeconds || 0));\n\nconst endedReason = call.endedReason || callData.endedReason || 'unknown';\n\nreturn [{ json: {\n  skip:         false,\n  transcript,\n  callerPhone,\n  duration,\n  endedReason,\n  rawEvent:     eventType,\n  fechaLlamada: new Date().toISOString().split('T')[0]\n}}];\n"
+            }
+        },
+        {
+            "id": "vapi-ifskip",
+            "name": "\u2753 \u00bfEs llamada terminada?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                720,
+                300
+            ],
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "id": "cond-skip",
+                            "leftValue": "={{ $json.skip }}",
+                            "rightValue": false,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "false"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                }
+            }
+        },
+        {
+            "id": "vapi-groq",
+            "name": "\ud83e\udd16 Groq: Extraer Datos Lead",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                960,
+                200
+            ],
+            "parameters": {
+                "jsCode": "const data = $input.first().json;\nif (data.skip) return [{ json: data }];\n\nconst transcript = data.transcript || '';\nif (!transcript || transcript.length < 20) {\n  return [{ json: { ...data, nombre: '', empresa: '', interes: 'sin_transcript', notas: '' } }];\n}\n\nconst prompt = `Extract lead information from this phone call transcript. Return ONLY valid JSON with these fields:\n- nombre: caller's name if mentioned, else \"\"\n- empresa: company name if mentioned, else \"\"\n- interes: one of \"cotizacion\", \"informacion\", \"urgente\", \"no_interesado\", \"otro\"\n- notas: 1-2 sentence summary of what the caller needed in Spanish\n\nTranscript:\n${transcript.slice(0, 2000)}\n\nReturn only JSON, no explanation.`;\n\nlet extracted = { nombre: '', empresa: '', interes: 'otro', notas: '' };\ntry {\n  const groqRes = await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://api.groq.com/openai/v1/chat/completions',\n    headers: {\n      'Authorization': 'Bearer gsk_xh4sNFnhiBX0IIKYo5cLWGdyb3FYnFEJIPiSPuIBTK8MgCmVbBf',\n      'Content-Type': 'application/json'\n    },\n    body: {\n      model: 'llama-3.3-70b-versatile',\n      messages: [{ role: 'user', content: prompt }],\n      max_tokens: 200,\n      temperature: 0.1\n    }\n  });\n  const text = groqRes.choices?.[0]?.message?.content || '{}';\n  const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) extracted = JSON.parse(jsonMatch[0]);\n} catch(e) {}\n\nreturn [{ json: { ...data, ...extracted } }];"
+            },
+            "onError": "continueRegularOutput"
+        },
+        {
+            "id": "vapi-sheets",
+            "name": "\ud83d\udcca Guardar Llamada en Sheets",
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.5,
+            "position": [
+                1200,
+                200
+            ],
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "QE2RlAxaMLoYefTD",
+                    "name": "Google Sheets account"
+                }
+            },
+            "parameters": {
+                "operation": "append",
+                "documentId": {
+                    "__rl": true,
+                    "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+                    "mode": "id"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": "Llamadas",
+                    "mode": "name"
+                },
+                "columns": {
+                    "mappingMode": "autoMapInputData",
+                    "value": {},
+                    "matchingColumns": [],
+                    "schema": []
+                },
+                "options": {
+                    "cellFormat": "USER_ENTERED"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "\ud83d\udd14 Webhook Vapi": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd0d Parsear Evento Vapi",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd0d Parsear Evento Vapi": {
+            "main": [
+                [
+                    {
+                        "node": "\u2753 \u00bfEs llamada terminada?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u2753 \u00bfEs llamada terminada?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83e\udd16 Groq: Extraer Datos Lead",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "\ud83e\udd16 Groq: Extraer Datos Lead": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcca Guardar Llamada en Sheets",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udcca Guardar Llamada en Sheets": {
+            "main": [
+                []
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": null,
+    "versionId": "dacde012-294c-4831-b422-a9f3a488b542",
+    "activeVersionId": "dacde012-294c-4831-b422-a9f3a488b542",
+    "versionCounter": 25,
+    "triggerCount": 1,
+    "shared": [
+        {
+            "updatedAt": "2026-04-24T13:38:42.272Z",
+            "createdAt": "2026-04-24T13:38:42.272Z",
+            "role": "workflow:owner",
+            "workflowId": "FYKfTJBfgwsMpJV7",
+            "projectId": "scK6yPpEmlkikl67",
+            "project": {
+                "updatedAt": "2026-03-16T19:58:01.773Z",
+                "createdAt": "2026-03-16T19:56:18.866Z",
+                "id": "scK6yPpEmlkikl67",
+                "name": "Solange  Torrez <risosadmi@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            }
+        }
+    ],
+    "tags": [
+        {
+            "updatedAt": "2026-05-04T16:04:54.762Z",
+            "createdAt": "2026-05-04T16:04:54.762Z",
+            "id": "2CrVJWitAB77MgTJ",
+            "name": "Alex"
+        }
+    ],
+    "activeVersion": {
+        "updatedAt": "2026-04-28T16:49:20.074Z",
+        "createdAt": "2026-04-28T16:49:20.074Z",
+        "versionId": "dacde012-294c-4831-b422-a9f3a488b542",
+        "workflowId": "FYKfTJBfgwsMpJV7",
+        "nodes": [
+            {
+                "id": "vapi-trigger",
+                "name": "\ud83d\udd14 Webhook Vapi",
+                "type": "n8n-nodes-base.webhook",
+                "typeVersion": 2,
+                "position": [
+                    240,
+                    300
+                ],
+                "webhookId": "vapi-ce-calls",
+                "parameters": {
+                    "path": "vapi-ce-calls",
+                    "responseMode": "onReceived",
+                    "options": {},
+                    "httpMethod": "POST",
+                    "responseCode": 200
+                }
+            },
+            {
+                "id": "vapi-parse",
+                "name": "\ud83d\udd0d Parsear Evento Vapi",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    480,
+                    300
+                ],
+                "parameters": {
+                    "jsCode": "\nconst body     = $input.first().json.body || $input.first().json;\nconst callData = body.message || body;\n\n// Vapi sends different event types \u2014 only process call-ended\nconst eventType = callData.type || callData.event || '';\nif (!eventType.includes('end') && !eventType.includes('End')) {\n  return [{ json: { skip: true, reason: 'Not a call-ended event', eventType } }];\n}\n\nconst call        = callData.call || callData;\nconst transcript  = callData.artifact?.transcript || callData.transcript || '';\nconst callerPhone = call.customer?.number || call.phoneNumber || 'unknown';\nconst duration    = Math.round((call.endedAt && call.startedAt\n  ? (new Date(call.endedAt) - new Date(call.startedAt)) / 1000\n  : callData.durationSeconds || 0));\n\nconst endedReason = call.endedReason || callData.endedReason || 'unknown';\n\nreturn [{ json: {\n  skip:         false,\n  transcript,\n  callerPhone,\n  duration,\n  endedReason,\n  rawEvent:     eventType,\n  fechaLlamada: new Date().toISOString().split('T')[0]\n}}];\n"
+                }
+            },
+            {
+                "id": "vapi-ifskip",
+                "name": "\u2753 \u00bfEs llamada terminada?",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2,
+                "position": [
+                    720,
+                    300
+                ],
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": true,
+                            "leftValue": "",
+                            "typeValidation": "strict"
+                        },
+                        "conditions": [
+                            {
+                                "id": "cond-skip",
+                                "leftValue": "={{ $json.skip }}",
+                                "rightValue": false,
+                                "operator": {
+                                    "type": "boolean",
+                                    "operation": "false"
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    }
+                }
+            },
+            {
+                "id": "vapi-groq",
+                "name": "\ud83e\udd16 Groq: Extraer Datos Lead",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    960,
+                    200
+                ],
+                "parameters": {
+                    "jsCode": "const data = $input.first().json;\nif (data.skip) return [{ json: data }];\n\nconst transcript = data.transcript || '';\nif (!transcript || transcript.length < 20) {\n  return [{ json: { ...data, nombre: '', empresa: '', interes: 'sin_transcript', notas: '' } }];\n}\n\nconst prompt = `Extract lead information from this phone call transcript. Return ONLY valid JSON with these fields:\n- nombre: caller's name if mentioned, else \"\"\n- empresa: company name if mentioned, else \"\"\n- interes: one of \"cotizacion\", \"informacion\", \"urgente\", \"no_interesado\", \"otro\"\n- notas: 1-2 sentence summary of what the caller needed in Spanish\n\nTranscript:\n${transcript.slice(0, 2000)}\n\nReturn only JSON, no explanation.`;\n\nlet extracted = { nombre: '', empresa: '', interes: 'otro', notas: '' };\ntry {\n  const groqRes = await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://api.groq.com/openai/v1/chat/completions',\n    headers: {\n      'Authorization': 'Bearer gsk_xh4sNFnhiBX0IIKYo5cLWGdyb3FYnFEJIPiSPuIBTK8MgCmVbBf',\n      'Content-Type': 'application/json'\n    },\n    body: {\n      model: 'llama-3.3-70b-versatile',\n      messages: [{ role: 'user', content: prompt }],\n      max_tokens: 200,\n      temperature: 0.1\n    }\n  });\n  const text = groqRes.choices?.[0]?.message?.content || '{}';\n  const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) extracted = JSON.parse(jsonMatch[0]);\n} catch(e) {}\n\nreturn [{ json: { ...data, ...extracted } }];"
+                },
+                "onError": "continueRegularOutput"
+            },
+            {
+                "id": "vapi-sheets",
+                "name": "\ud83d\udcca Guardar Llamada en Sheets",
+                "type": "n8n-nodes-base.googleSheets",
+                "typeVersion": 4.5,
+                "position": [
+                    1200,
+                    200
+                ],
+                "credentials": {
+                    "googleSheetsOAuth2Api": {
+                        "id": "QE2RlAxaMLoYefTD",
+                        "name": "Google Sheets account"
+                    }
+                },
+                "parameters": {
+                    "operation": "append",
+                    "documentId": {
+                        "__rl": true,
+                        "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+                        "mode": "id"
+                    },
+                    "sheetName": {
+                        "__rl": true,
+                        "value": "Llamadas",
+                        "mode": "name"
+                    },
+                    "columns": {
+                        "mappingMode": "autoMapInputData",
+                        "value": {},
+                        "matchingColumns": [],
+                        "schema": []
+                    },
+                    "options": {
+                        "cellFormat": "USER_ENTERED"
+                    }
+                }
+            }
+        ],
+        "connections": {
+            "\ud83d\udd14 Webhook Vapi": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd0d Parsear Evento Vapi",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd0d Parsear Evento Vapi": {
+                "main": [
+                    [
+                        {
+                            "node": "\u2753 \u00bfEs llamada terminada?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\u2753 \u00bfEs llamada terminada?": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83e\udd16 Groq: Extraer Datos Lead",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    []
+                ]
+            },
+            "\ud83e\udd16 Groq: Extraer Datos Lead": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udcca Guardar Llamada en Sheets",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udcca Guardar Llamada en Sheets": {
+                "main": [
+                    []
+                ]
+            }
+        },
+        "authors": "Solange  Torrez",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": [
+            {
+                "createdAt": "2026-04-28T16:49:20.241Z",
+                "id": 259,
+                "workflowId": "FYKfTJBfgwsMpJV7",
+                "versionId": "dacde012-294c-4831-b422-a9f3a488b542",
+                "event": "activated",
+                "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            },
+            {
+                "createdAt": "2026-04-28T16:49:20.201Z",
+                "id": 258,
+                "workflowId": "FYKfTJBfgwsMpJV7",
+                "versionId": "dacde012-294c-4831-b422-a9f3a488b542",
+                "event": "deactivated",
+                "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+            }
+        ]
+    }
+}

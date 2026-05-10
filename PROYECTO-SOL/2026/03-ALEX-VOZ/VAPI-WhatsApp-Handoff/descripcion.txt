@@ -1,0 +1,54 @@
+NOMBRE: VAPI → WhatsApp Handoff
+ID EN N8N: jfoJDSidx1sJlOrr
+ESTADO: Activo (pendiente prueba con llamada real)
+CATEGORIA: 03-ALEX-VOZ
+ULTIMA ACTUALIZACION: Mayo 2026
+
+DESCRIPCION
+-----------
+Puente entre el agente de voz (VAPI) y el agente de WhatsApp. Cuando Alex
+termina una llamada y el cliente quiere recibir seguimiento por escrito,
+este workflow envía automáticamente el primer mensaje de WhatsApp con el
+resumen de la llamada y los datos recopilados.
+
+ALCANCE
+-------
+Hace:
+- Recibe el evento de fin de llamada desde VAPI
+- Extrae los datos recopilados durante la conversación
+- Envía un mensaje de WhatsApp al cliente con resumen y próximos pasos
+- Crea el lead en Airtable si no existe aún
+
+No hace:
+- No continúa la conversación de WhatsApp (eso lo hace el WhatsApp Engine)
+- No hace la llamada — solo actúa al finalizar
+
+REQUISITOS PARA FUNCIONAR
+--------------------------
+Variables n8n ($vars):
+- AIRTABLE_TOKEN
+
+Servicios externos:
+- VAPI — Assistant ID: 69fedf52-005f-4cde-a87d-5b421e7911b9
+- Meta WhatsApp Cloud API — Phone Number ID: 1083260611538246
+
+Airtable (Base: appUOYi54iBfaDcLn):
+- WhatsApp_Leads (tblGQXzr1zL1T57lS)
+
+TRIGGER
+-------
+Webhook — activado por VAPI al finalizar una llamada donde el cliente
+proporcionó su número de WhatsApp
+
+GUIA RAPIDA
+-----------
+1. No se activa manualmente
+2. Requiere que el cliente haya dado su WhatsApp durante la llamada
+3. Después del handoff, la conversación continúa en WhatsApp Engine normalmente
+
+NOTAS IMPORTANTES
+-----------------
+- BLOQUEADO: requiere reinicio de n8n para que el webhook quede registrado
+  en memoria del servidor (bug conocido de n8n con webhooks via API)
+- Tag Alex en n8n aplicado a este workflow
+- Es el último eslabón de la cadena: Llamada → Vapi Webhook → Handoff → WhatsApp Engine

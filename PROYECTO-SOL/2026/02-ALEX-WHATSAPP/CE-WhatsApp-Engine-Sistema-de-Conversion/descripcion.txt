@@ -1,0 +1,84 @@
+NOMBRE: CE WhatsApp Engine - Sistema de Conversión
+ID EN N8N: eCOX3ogMjToxZsh9
+ESTADO: Activo
+CATEGORIA: 02-ALEX-WHATSAPP
+ULTIMA ACTUALIZACION: Mayo 2026
+
+DESCRIPCION
+-----------
+Motor principal del agente de ventas Alex en WhatsApp. Recibe cada mensaje
+entrante, consulta el contexto del cliente en Airtable, genera una respuesta
+con IA (Groq), y si tiene todos los datos necesarios lanza una cotización
+automática. Notifica al vendedor cuando detecta un lead caliente y registra
+toda la conversación en Airtable.
+
+ALCANCE
+-------
+Hace:
+- Recibe mensajes de WhatsApp vía webhook (Twilio / Meta Cloud API)
+- Obtiene el perfil de empresa y configuración del bot desde Airtable
+- Busca si el cliente ya existe en WhatsApp_Leads
+- Consulta el catálogo de productos (PRODUCTOS Y SERVICIO en Airtable)
+- Genera respuesta con Groq llama-3.1-8b-instant
+- Fallback triple: Groq → DeepSeek → Modo Contingencia (reglas simples)
+- Llama a la API del cotizador si tiene producto + medidas completas
+- Adjunta precio estimado con disclaimer en el mensaje
+- Detecta "lead caliente" por palabras clave y notifica al vendedor por email
+- Envía el mensaje de respuesta por WhatsApp
+- Crea o actualiza el registro del lead en Airtable
+
+No hace:
+- No procesa imágenes ni archivos adjuntos de WhatsApp
+- No agenda citas ni confirma visitas directamente
+- No da precio final (solo estimado con disclaimer)
+- No maneja pagos ni contratos
+
+REQUISITOS PARA FUNCIONAR
+--------------------------
+Credenciales en n8n:
+- Groq API Key (ID: jORffbRhRNohHT1B) — actualizada Mayo 2026
+- DeepSeek API Key (ID: YSdODZVNFGSB3Ih9) — sin saldo actualmente
+- Gmail OAuth2 (ID: TESHSjzjMCpCxBBk)
+
+Variables n8n ($vars):
+- GROQ_API_KEY
+- AIRTABLE_TOKEN
+
+Airtable (Base: appUOYi54iBfaDcLn):
+- WhatsApp_Leads (tblGQXzr1zL1T57lS)
+- WhatsApp_Config (tblj4radGXHN7HBJi) — record activo: recLR54SP26jEroCG
+- PERFIL DE EMPRESA (tblkmBqXrpmGcTNUM) — campo WA_Email_Vendedor
+- PRODUCTOS Y SERVICIO — catálogo completo
+
+Servicios externos:
+- Meta WhatsApp Cloud API — Phone Number ID: 1083260611538246
+- Twilio — número +1 786-788-0417
+- API Cotizador: POST https://cratingcotiza.mdarthurdigital.com/api/cotizar
+- VAPI (para handoff de voz)
+
+TRIGGER
+-------
+Webhook entrante — path: /whatsapp-ce
+Se activa con cada mensaje que llega al número de WhatsApp de Crating Express
+
+GUIA RAPIDA
+-----------
+1. El comportamiento de Alex se edita desde Airtable → WhatsApp_Config
+   (campo Prompt_Sistema) sin tocar el workflow
+2. El catálogo de productos se lee en tiempo real desde Airtable
+3. Si Groq falla → DeepSeek → si DeepSeek también falla → Modo Contingencia
+   (recopila datos básicos y notifica al vendedor manualmente)
+4. Cotización automática: se activa cuando todos_recolectados=true y
+   dimensiones completas (largo/ancho/alto en cm)
+5. Lead caliente: cuando el mensaje contiene palabras de WA_Palabras_Lead_Caliente,
+   se envía email automático a los vendedores
+
+NOTAS IMPORTANTES
+-----------------
+- Número WhatsApp: +1 786-788-0417 (Twilio + Meta)
+- WABA ID: 1449711680212677
+- DeepSeek sin saldo — si Groq falla, pasa directo a Modo Contingencia
+- Groq límite: 500,000 tokens/día (plan gratuito) — se resetea a medianoche Miami
+- El Prompt_Sistema tiene placeholders {{CATALOGO}} e {{INSTRUCCIONES}} que
+  se reemplazan automáticamente en cada ejecución
+- Tag Alex en n8n aplicado a este workflow
