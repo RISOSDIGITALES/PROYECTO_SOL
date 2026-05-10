@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mi Recibo — Planilla Nicaragua</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>🧮 Planilla</h2><p>Nicaragua</p></div>
+    <nav>
+      <a href="/mi-recibo.html" class="active"><span class="icon">📋</span> Mis Recibos</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Mis Recibos</h1><span class="sub" id="sub-nombre">Cargando...</span></div>
+    </div>
+    <div class="content">
+      <div id="alert-main" class="alert"></div>
+      <div class="table-wrap">
+        <div class="table-header"><h3>Historial de quincenas</h3></div>
+        <table>
+          <thead>
+            <tr>
+              <th>Período</th>
+              <th>Tipo</th>
+              <th>Salario quincenal</th>
+              <th>Neto a recibir</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-recibos">
+            <tr class="loading-row"><td colspan="5"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script>
+requireAuth();
+
+function fmt2(n) {
+  return 'C$ ' + Number(n || 0).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+async function initPage() {
+  initLayout();
+  const info = await getMyInfo();
+
+  if (!info.nombre && info.rol !== 'Empleado') {
+    // If Admin or Planillero without employee record, redirect to main dashboard
+    window.location.href = '/index.html';
+    return;
+  }
+
+  if (info.nombre) {
+    document.getElementById('sub-nombre').textContent = info.nombre;
+  }
+
+  if (!info.id) {
+    showAlert('alert-main', 'No se encontró tu registro de empleado. Contacta al administrador.', 'error');
+    document.getElementById('tabla-recibos').innerHTML = '<tr><td colspan="5" class="empty">Sin datos</td></tr>';
+    return;
+  }
+
+  try {
+    // Load all planillas and filter by this employee
+    const planillas = await apiFetch('/.netlify/functions/planillas');
+    const misPlanillas = [];
+
+    for (const p of planillas) {
+      const periodo = p['Período'] || p.Periodo || '';
+      const tipo = p['Tipo'] || '';
+      // Check detalle for this employee
+      try {
+        const qs = `?empleado=${encodeURIComponent(info.nombre)}&periodo=${encodeURIComponent(periodo)}`;
+        const recibo = await apiFetch('/.netlify/functions/recibo' + qs);
+        if (recibo && recibo.detalle) {
+          misPlanillas.push({ periodo, tipo, detalle: recibo.detalle });
+        }
+      } catch (_) { /* employee not in this planilla */ }
+    }
+
+    renderTabla(misPlanillas, info.nombre);
+  } catch (e) {
+    showAlert('alert-main', 'Error: ' + e.message, 'error');
+    document.getElementById('tabla-recibos').innerHTML = '<tr><td colspan="5" class="empty">Error cargando datos</td></tr>';
+  }
+}
+
+function renderTabla(lista, nombre) {
+  const tbody = document.getElementById('tabla-recibos');
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">No hay recibos registrados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(item => {
+    const det = item.detalle;
+    const quincenal = parseFloat(det['Salario quincenal bruto'] || 0);
+    const neto = parseFloat(det['Neto a recibir'] || 0);
+    return `<tr>
+      <td><strong>${item.periodo}</strong></td>
+      <td>${item.tipo || '—'}</td>
+      <td class="num">${fmt2(quincenal)}</td>
+      <td class="num"><strong>${fmt2(neto)}</strong></td>
+      <td>
+        <a class="btn btn-icon btn-sm" href="/recibo.html?empleado=${encodeURIComponent(nombre)}&periodo=${encodeURIComponent(item.periodo)}">👁</a>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+const _cu = netlifyIdentity.currentUser();
+if (_cu) { initPage(); }
+else { netlifyIdentity.on('init', u => { if (u) initPage(); }); }
+</script>
+</body>
+</html>

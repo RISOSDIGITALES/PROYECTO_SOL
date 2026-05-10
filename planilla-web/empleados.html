@@ -137,6 +137,21 @@
           </select>
         </div>
       </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Email (para acceso al sistema)</label>
+          <input type="email" id="emp-email" placeholder="correo@ejemplo.com" />
+        </div>
+        <div class="form-group">
+          <label>Rol en el sistema</label>
+          <select id="emp-rol">
+            <option value="">Sin acceso</option>
+            <option value="Admin">Admin (acceso total)</option>
+            <option value="Planillero">Planillero (genera planillas, no edita empleados)</option>
+            <option value="Empleado">Empleado (solo ve su propio recibo)</option>
+          </select>
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" id="cancel-emp">Cancelar</button>
@@ -147,21 +162,29 @@
 
 <script src="/assets/js/auth.js"></script>
 <script>
-requireAuth();
+requireAuthRole(['Admin', 'Planillero']);
 
 let allEmpleados = [];
+let _esAdmin = false;
+
+async function _init() {
+  initLayout();
+  const info = await getMyInfo();
+  _esAdmin = info.rol === 'Admin';
+  if (!_esAdmin) {
+    // Planillero: hide "Nuevo empleado" button and lock salary fields
+    document.getElementById('btn-nuevo').style.display = 'none';
+    ['emp-salario','emp-tipo','emp-inss-base','emp-ir','emp-email','emp-rol'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.disabled = true; el.style.opacity = '0.55'; }
+    });
+  }
+  loadEmpleados();
+}
 
 const _currentUser = netlifyIdentity.currentUser();
-if (_currentUser) {
-  initLayout();
-  loadEmpleados();
-} else {
-  netlifyIdentity.on('init', user => {
-    if (!user) return;
-    initLayout();
-    loadEmpleados();
-  });
-}
+if (_currentUser) { _init(); }
+else { netlifyIdentity.on('init', user => { if (user) _init(); }); }
 
 async function loadEmpleados() {
   try {
@@ -217,6 +240,8 @@ document.getElementById('btn-nuevo').addEventListener('click', () => {
   document.getElementById('emp-inss-base').value = 'Salario Completo';
   document.getElementById('emp-ir').value = '';
   document.getElementById('emp-activo').value = 'true';
+  document.getElementById('emp-email').value = '';
+  document.getElementById('emp-rol').value = '';
   document.getElementById('alert-form').className = 'alert';
   document.getElementById('modal-emp').classList.add('open');
 });
@@ -244,6 +269,8 @@ function abrirFormEditar(id) {
   document.getElementById('emp-inss-base').value = e['INSS_Base'] || 'Salario Completo';
   document.getElementById('emp-ir').value = e['IR'] ?? '';
   document.getElementById('emp-activo').value = e.Activo ? 'true' : 'false';
+  document.getElementById('emp-email').value = e['Email'] || '';
+  document.getElementById('emp-rol').value = e['Rol'] || '';
   document.getElementById('alert-form').className = 'alert';
   toggleInssBase();
   document.getElementById('modal-emp').classList.add('open');
@@ -287,6 +314,8 @@ document.getElementById('save-emp').addEventListener('click', async () => {
   if (!nombre) { showAlert('alert-form', 'El nombre es obligatorio', 'error'); return; }
   if (!salario || salario <= 0) { showAlert('alert-form', 'Ingresa un salario válido', 'error'); return; }
 
+  const emailVal = document.getElementById('emp-email').value.trim();
+  const rolVal = document.getElementById('emp-rol').value;
   const fields = {
     'Nombre': nombre,
     'Cargo': document.getElementById('emp-cargo').value.trim(),
@@ -296,6 +325,8 @@ document.getElementById('save-emp').addEventListener('click', async () => {
     'INSS_Base': document.getElementById('emp-inss-base').value,
     'IR': document.getElementById('emp-ir').value !== '' ? parseFloat(document.getElementById('emp-ir').value) : undefined,
     'Activo': document.getElementById('emp-activo').value === 'true',
+    'Email': emailVal || undefined,
+    'Rol': rolVal || undefined,
   };
 
   const btn = document.getElementById('save-emp');
