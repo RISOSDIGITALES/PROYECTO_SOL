@@ -32,6 +32,7 @@ function feriadosAnio(anio) {
     { fecha: fmt(juevesSanto), nombre: 'Jueves Santo',                tipo: 'nacional' },
     { fecha: fmt(viernesSanto), nombre: 'Viernes Santo',              tipo: 'nacional' },
     { fecha: `${anio}-05-01`, nombre: 'Día del Trabajo',              tipo: 'nacional' },
+    { fecha: `${anio}-05-30`, nombre: 'Día de las Madres',            tipo: 'nacional' },
     { fecha: `${anio}-07-19`, nombre: 'Aniversario de la Revolución', tipo: 'nacional' },
     { fecha: `${anio}-08-01`, nombre: 'Descenso de Santo Domingo',    tipo: 'managua'  },
     { fecha: `${anio}-08-10`, nombre: 'Subida de Santo Domingo',      tipo: 'managua'  },
