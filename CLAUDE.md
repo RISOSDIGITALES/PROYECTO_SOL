@@ -449,7 +449,7 @@ Cuando se migre a servidor propio (Node.js + Express + MariaDB), el login de Net
 3. ~~Construir web app en Netlify~~ ✅ Desplegada
 4. ~~Bloque 1~~ ✅ Completado: extras.html, generar planilla UI, confirmación editar empleado
 5. ~~Bloque 2~~ ✅ Completado: historial pagos préstamos, pausar adelantos/deducciones, fechas registro
-6. ~~Bloque 3~~ ✅ Completado: dashboard con 5 stats + montos, feriados Nicaragua, selector feriados en extras, recibo corregido
+6. ~~Bloque 3~~ ✅ Completado: dashboard con 5 stats + montos C$, feriados Nicaragua, selector feriados en extras, recibo corregido
 7. ~~Deploy Netlify~~ ✅ Vía CLI (sin consumir minutos de build) — token: `nfp_5M7C84VijySQ7PTEeWADhMCTCTANhGcx0ae3`
 8. ~~Sistema de roles~~ ✅ Completado: Admin/Planillero/Empleado, me.js, mi-recibo.html
 9. **PENDIENTE:** Ingresar empleados reales, eliminar registros de prueba (María García, Carlos López, Ana Martínez, Roberto Sánchez)
@@ -518,6 +518,7 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 42. **Repo renombrado** (2026-05-10): GitHub repo `rrss-automatizaci-n` → `PROYECTO_SOL` por indicación de Don Walter; GitHub redirige automáticamente URLs antiguas
 43. **Documento CE reorganizado** (2026-05-11): documento de referencia de Crating Express reorganizado en 8 secciones limpias (perfil, catálogo, interiores, ISPM-15, logística, cotización, pagos, FAQs) — datos bancarios removidos por seguridad, duplicados eliminados; guardado como nuevo Google Doc para revisión
 44. **Bug fix Alex "Hola de nuevo"** (2026-05-11): `Instrucciones_IA` en Airtable `WhatsApp_Config` reemplazado — contenido RRSS removido, sustituido por reglas de comportamiento del bot WA: manejo de cliente nuevo vs conocido, prioridad del MENSAJE ACTUAL, prohibición de repetir/parafrasear el mensaje del cliente
+45. **Reestructuración completa prompts Alex** (2026-05-11): `Prompt_Sistema` e `Instrucciones_IA` reescritos desde cero — eliminada regla contradictoria de "Hola de nuevo" en Prompt_Sistema que conflictuaba con Instrucciones_IA; corregido MAPEO TIPO_CAJA_API (valores incorrectos: `cajon_cerrado`, `jaula_abierta`, `plataforma`, etc. → correctos: `cajones_cerrados`, `jaulas`, `plataformas_contenedor`, etc.); estructura limpia sin instrucciones duplicadas ni fragmentadas
 
 ## Reportes Diarios
 
@@ -537,7 +538,9 @@ Finalmente se acordó una nueva práctica: usar CLAUDE.md como bitácora de repo
 
 Durante las pruebas de Alex se detectaron dos bugs: el bug de echo (Alex repite el mensaje del cliente al inicio de su respuesta) y el bug de "Hola de nuevo" (Alex responde con saludo genérico ignorando el mensaje actual cuando el cliente ya tiene un lead registrado). Ambos fueron diagnosticados — causa raíz: el campo `Instrucciones_IA` en Airtable `WhatsApp_Config` contenía guías de estilo de RRSS completamente equivocadas para el bot de WhatsApp, y el nodo Groq solo tenía instrucción para el caso `esNuevo=true`. Se reemplazó el contenido de `Instrucciones_IA` con reglas de comportamiento correctas para el bot WA, incluyendo manejo explícito de cliente conocido y prohibición de repetir el mensaje del cliente.
 
-Pendiente al cierre: publicar el draft de Netlify a producción desde el dashboard (el deploy con --prod da Forbidden con el token actual), y conectar el documento CE reorganizado con Alex una vez aprobado.
+Más tarde se hicieron nuevas pruebas y el comportamiento seguía siendo inconsistente. Se hizo un análisis profundo del prompt completo y se encontraron dos bugs estructurales: (1) el `Prompt_Sistema` tenía una regla que decía explícitamente "di Hola de nuevo" para clientes que regresan, contradiciendo directamente lo que `Instrucciones_IA` indicaba; (2) el MAPEO TIPO_CAJA_API usaba valores incorrectos (`cajon_cerrado`, `jaula_abierta`, `plataforma`, etc.) que no coinciden con los que acepta la API del cotizador (`cajones_cerrados`, `jaulas`, `plataformas_contenedor`, etc.). Se reestructuraron ambos campos completamente: `Prompt_Sistema` limpio sin reglas contradictorias, TIPO_CAJA_API corregido, `Instrucciones_IA` con comportamiento de cliente nuevo/conocido unificado y sin duplicaciones.
+
+Pendiente al cierre: probar Alex con las nuevas instrucciones, publicar el draft de Netlify a producción desde el dashboard, y conectar el documento CE reorganizado con Alex una vez aprobado.
 
 ---
 
