@@ -310,7 +310,7 @@ app.post('/api/planillas/calcular', async (req, res) => {
       // INSS
       let inss = 0;
       if (emp.tipo_planilla !== 'Sin Seguro') {
-        const base = emp.inss_base === 'Salario Mínimo' ? SALARIO_MINIMO : parseFloat(emp.salario_mensual);
+        const base = emp.inss_base !== 'Salario Completo' ? SALARIO_MINIMO : parseFloat(emp.salario_mensual);
         inss = Math.round((base / 2) * INSS_RATE * 100) / 100;
       }
 
