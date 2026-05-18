@@ -76,9 +76,7 @@
     <div class="content">
 
       <div class="hint-box">
-        💡 Para <strong>invitar un nuevo usuario</strong> a la aplicación, hazlo desde el
-        <a href="https://app.netlify.com" target="_blank">dashboard de Netlify</a> →
-        Identity → Invite users. Luego asigna su rol y acceso aquí abajo.
+        💡 Asigna el <strong>email de login</strong> al empleado directamente aquí. Ese email debe coincidir con la invitación de Netlify Identity para que pueda iniciar sesión.
       </div>
 
       <div id="alert-box" class="alert"></div>
@@ -123,7 +121,7 @@ async function load() {
       tr.innerHTML = `
         <td>${u.nombre || '<span class="no-email">Sin nombre</span>'}</td>
         <td style="color:var(--muted);font-size:13px">${u.cargo || '—'}</td>
-        <td>${u.email ? u.email : '<span class="no-email">Sin email asignado</span>'}</td>
+        <td><input class="inline inp-email" type="email" value="${u.email || ''}" placeholder="email@ejemplo.com" style="width:100%;min-width:180px"></td>
         <td>
           <select class="inline sel-rol" data-field="rol">
             ${ROLES.map(r => `<option value="${r}" ${u.rol === r ? 'selected' : ''}>${r}</option>`).join('')}
@@ -145,13 +143,14 @@ async function load() {
       btn.addEventListener('click', async () => {
         const tr = btn.closest('tr');
         const id = btn.dataset.id;
+        const email = tr.querySelector('.inp-email').value.trim();
         const rol = tr.querySelector('.sel-rol').value;
         const planillas_acceso = tr.querySelector('.sel-acc').value;
         tr.classList.add('saving');
         try {
           await AppAuth.apiFetch(`/.netlify/functions/usuarios/${id}`, {
             method: 'PATCH',
-            body: JSON.stringify({ rol, planillas_acceso }),
+            body: JSON.stringify({ email, rol, planillas_acceso }),
           });
           AppAuth.showAlert('alert-box', 'Cambios guardados correctamente');
         } catch (e) {
