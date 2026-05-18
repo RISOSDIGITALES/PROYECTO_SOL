@@ -35,6 +35,12 @@ function initLayout() {
   identity.on('logout', () => {
     window.location.href = '/login.html';
   });
+
+  // Mostrar link de Configuraciones solo a Admin
+  getMyInfo().then(info => {
+    const link = document.getElementById('link-config');
+    if (link && info.rol !== 'Admin') link.style.display = 'none';
+  });
 }
 
 async function getToken() {
