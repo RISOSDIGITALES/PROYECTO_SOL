@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Detalle Planilla — Nicaragua</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  
   <style>
     @media print {
       .sidebar, .topbar .btn, #btn-print { display: none !important; }
@@ -29,6 +29,7 @@
       <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
     </nav>
     <div class="sidebar-footer">
+      <a href="/usuarios.html" class="sidebar-config" id="link-config">⚙️ Configuraciones</a>
       <span id="user-email"></span>
       <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
     </div>
@@ -47,11 +48,7 @@
     </div>
     <div class="content">
       <div id="alert-det" class="alert"></div>
-
-      <!-- Resumen -->
       <div class="cards" id="resumen-cards" style="margin-bottom:24px;"></div>
-
-      <!-- Tabla detalle -->
       <div class="table-wrap">
         <div class="table-header"><h3>Detalle por empleado</h3></div>
         <table>
@@ -105,7 +102,7 @@ if (_currentUser) {
 async function loadDetalle(periodo, tipo) {
   try {
     const qs = `?periodo=${encodeURIComponent(periodo)}&tipo=${encodeURIComponent(tipo)}`;
-    const detalles = await apiFetch('/.netlify/functions/detalle' + qs);
+    const detalles = await apiFetch('/api/detalle' + qs);
 
     if (detalles.length === 0) {
       document.getElementById('tabla-detalle').innerHTML =
@@ -113,16 +110,14 @@ async function loadDetalle(periodo, tipo) {
       return;
     }
 
-    // Totals
-    const totBruto = detalles.reduce((s, d) => s + (d['Salario quincenal bruto'] || 0), 0);
-    const totInss  = detalles.reduce((s, d) => s + (d['INSS (7%)'] || 0), 0);
-    const totPrest = detalles.reduce((s, d) => s + (d['Descuento préstamo'] || 0), 0);
-    const totAdel  = detalles.reduce((s, d) => s + (d['Descuento adelanto'] || 0), 0);
-    const totExtra = detalles.reduce((s, d) => s + (d.Extras || 0), 0);
-    const totDesc  = detalles.reduce((s, d) => s + (d['Total deducciones'] || (d['INSS (7%)'] || 0) + (d['Descuento préstamo'] || 0) + (d['Descuento adelanto'] || 0)), 0);
-    const totNeto  = detalles.reduce((s, d) => s + (d['Neto a recibir'] || 0), 0);
+    const totBruto = detalles.reduce((s, d) => s + (d.salario_quincenal || 0), 0);
+    const totInss  = detalles.reduce((s, d) => s + (d.inss || 0), 0);
+    const totPrest = detalles.reduce((s, d) => s + (d.desc_prestamo || 0), 0);
+    const totAdel  = detalles.reduce((s, d) => s + (d.desc_adelanto || 0), 0);
+    const totExtra = detalles.reduce((s, d) => s + (d.extras || 0), 0);
+    const totDesc  = detalles.reduce((s, d) => s + (d.total_deducciones || 0), 0);
+    const totNeto  = detalles.reduce((s, d) => s + (d.neto || 0), 0);
 
-    // Resumen cards
     document.getElementById('resumen-cards').innerHTML = `
       <div class="card"><div class="label">Empleados</div><div class="value">${detalles.length}</div></div>
       <div class="card"><div class="label">Total bruto</div><div class="value" style="font-size:18px">${fmt(totBruto)}</div></div>
@@ -130,23 +125,18 @@ async function loadDetalle(periodo, tipo) {
       <div class="card"><div class="label">Total neto</div><div class="value green" style="font-size:18px">${fmt(totNeto)}</div></div>
     `;
 
-    // Rows
-    document.getElementById('tabla-detalle').innerHTML = detalles.map(d => {
-      const totalDesc = (d['INSS (7%)'] || 0) + (d['Descuento préstamo'] || 0) + (d['Descuento adelanto'] || 0);
-      return `<tr>
-        <td><strong>${d.Empleado || '—'}</strong></td>
-        <td class="num">${fmt(d['Salario quincenal bruto'])}</td>
-        <td class="num" style="color:var(--red)">${fmt(d['INSS (7%)'])}</td>
-        <td class="num" style="color:var(--red)">${fmt(d['Descuento préstamo'])}</td>
-        <td class="num" style="color:var(--red)">${fmt(d['Descuento adelanto'])}</td>
-        <td class="num" style="color:var(--green2)">${fmt(d.Extras)}</td>
-        <td class="num" style="color:var(--red)"><strong>${fmt(totalDesc)}</strong></td>
-        <td class="num"><strong style="color:var(--green2)">${fmt(d['Neto a recibir'])}</strong></td>
-        <td><a href="/recibo.html?empleado=${encodeURIComponent(d.Empleado || '')}&periodo=${encodeURIComponent(periodo)}" class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 8px">🧾 Recibo</a></td>
-      </tr>`;
-    }).join('');
+    document.getElementById('tabla-detalle').innerHTML = detalles.map(d => `<tr>
+      <td><strong>${d.nombre || '—'}</strong></td>
+      <td class="num">${fmt(d.salario_quincenal)}</td>
+      <td class="num" style="color:var(--red)">${fmt(d.inss)}</td>
+      <td class="num" style="color:var(--red)">${fmt(d.desc_prestamo)}</td>
+      <td class="num" style="color:var(--red)">${fmt(d.desc_adelanto)}</td>
+      <td class="num" style="color:var(--green2)">${fmt(d.extras)}</td>
+      <td class="num" style="color:var(--red)"><strong>${fmt(d.total_deducciones)}</strong></td>
+      <td class="num"><strong style="color:var(--green2)">${fmt(d.neto)}</strong></td>
+      <td><a href="/recibo.html?empleado_id=${d.empleado_id}&periodo=${encodeURIComponent(periodo)}" class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 8px">🧾 Recibo</a></td>
+    </tr>`).join('');
 
-    // Totals footer
     document.getElementById('tabla-totales').innerHTML = `
       <tr style="border-top:2px solid var(--border);background:rgba(0,0,0,.2)">
         <td style="padding:12px 16px;font-weight:700;font-size:13px">TOTALES</td>
