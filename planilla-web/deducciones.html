@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Otras Deducciones — Planilla Nicaragua</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>🧮 Planilla</h2><p>Nicaragua</p></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+      <a href="/extras.html"><span class="icon">⭐</span> Extras</a>
+      <a href="/deducciones.html" class="active"><span class="icon">➖</span> Otras Deducciones</a>
+      <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
+      <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Otras Deducciones</h1><span class="sub">Descuentos manuales por quincena</span></div>
+      <button class="btn btn-primary" id="btn-nuevo">+ Nueva deducción</button>
+    </div>
+    <div class="content">
+      <div id="alert-ded" class="alert"></div>
+
+      <!-- VISTA CONSOLIDADA POR QUINCENA -->
+      <div class="table-wrap" style="margin-bottom:20px">
+        <div class="table-header">
+          <h3>Resumen por quincena</h3>
+          <div style="display:flex;align-items:center;gap:8px">
+            <label style="font-size:12px;color:var(--muted)">Quincena:</label>
+            <input type="date" id="quincena-filtro" style="padding:4px 8px;border-radius:5px;border:1px solid var(--border);background:var(--navy2);color:var(--text);font-size:12px" />
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Empleado</th>
+              <th>Concepto</th>
+              <th>Tipo</th>
+              <th class="num">Monto</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-consolidada">
+            <tr><td colspan="4" class="empty">Seleccioná una quincena para ver todos los descuentos</td></tr>
+          </tbody>
+          <tfoot id="tfoot-consolidada" style="display:none">
+            <tr style="font-weight:700;border-top:2px solid var(--border)">
+              <td colspan="3" style="padding:8px 12px">Total descuentos</td>
+              <td class="num" id="total-consolidado" style="padding:8px 12px;color:var(--red)"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- GESTIÓN DE DEDUCCIONES MANUALES -->
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <div class="tabs" style="margin-bottom:0">
+          <button class="tab active" data-filtro="todos">Todas</button>
+          <button class="tab" data-filtro="pendiente">Pendientes</button>
+          <button class="tab" data-filtro="pausado">Pausadas</button>
+          <button class="tab" data-filtro="Descontado">Descontadas</button>
+        </div>
+        <select id="filtro-empleado" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--navy2);color:var(--text);font-size:13px">
+          <option value="">Todos los empleados</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Empleado</th>
+              <th>Concepto</th>
+              <th>Descripción</th>
+              <th>Monto</th>
+              <th>Quincena</th>
+              <th>Registrado</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-ded">
+            <tr class="loading-row"><td colspan="8"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="modal-ded">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-titulo">Nueva Deducción</h3>
+      <button class="modal-close" id="close-modal">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-form" class="alert"></div>
+      <input type="hidden" id="ded-id" />
+      <div class="form-group">
+        <label>Empleado *</label>
+        <select id="ded-empleado"><option value="">Seleccionar...</option></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Concepto *</label>
+          <select id="ded-concepto">
+            <option value="">Seleccionar...</option>
+            <option value="Uniforme">Uniforme</option>
+            <option value="Herramienta / Equipo">Herramienta / Equipo</option>
+            <option value="Daño / Pérdida">Daño / Pérdida</option>
+            <option value="Inasistencia">Inasistencia</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Monto (C$) *</label>
+          <input type="number" id="ded-monto" placeholder="0.00" step="0.01" min="0.01" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descripción (opcional)</label>
+        <input type="text" id="ded-descripcion" placeholder="Detalle adicional..." />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Descontar en quincena *</label>
+          <input type="date" id="ded-fecha" />
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="ded-estado">
+            <option value="Pendiente">Pendiente</option>
+            <option value="Descontado">Descontado</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-ded">Cancelar</button>
+      <button class="btn btn-primary" id="save-ded">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script>
+requireAuthRole(['Admin', 'Planillero']);
+
+let allDed = [];
+let filtroEstado = 'todos';
+let filtroEmpleado = '';
+
+const _cu = netlifyIdentity.currentUser();
+if (_cu) { initLayout(); loadAll(); }
+else { netlifyIdentity.on('init', u => { if (u) { initLayout(); loadAll(); } }); }
+
+async function loadAll() {
+  // Auto-setear quincena actual
+  const hoy = new Date();
+  const d   = hoy.getDate();
+  const y   = hoy.getFullYear();
+  const m   = String(hoy.getMonth() + 1).padStart(2, '0');
+  const ult  = new Date(y, hoy.getMonth() + 1, 0).getDate();
+  const qFecha = d <= 15
+    ? `${y}-${m}-15`
+    : `${y}-${m}-${String(ult).padStart(2, '0')}`;
+  const inputQ = document.getElementById('quincena-filtro');
+  inputQ.value = qFecha;
+
+  try {
+    const [ded, empleados] = await Promise.all([
+      apiFetch('/.netlify/functions/deducciones'),
+      apiFetch('/.netlify/functions/empleados'),
+    ]);
+    allDed = ded;
+
+    const sel = document.getElementById('ded-empleado');
+    const filtroSel = document.getElementById('filtro-empleado');
+    empleados.filter(e => e.Activo).forEach(e => {
+      [sel, filtroSel].forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = e.Nombre;
+        opt.textContent = e.Nombre;
+        s.appendChild(opt);
+      });
+    });
+
+    renderTabla();
+    cargarResumenQuincena(qFecha);
+  } catch (e) {
+    showAlert('alert-ded', 'Error: ' + e.message, 'error');
+  }
+}
+
+function fmtFecha(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d) ? iso : d.toLocaleDateString('es-NI', { day:'2-digit', month:'2-digit', year:'2-digit' });
+}
+
+async function pausar(id) {
+  try {
+    await apiFetch('/.netlify/functions/deducciones', {
+      method: 'PATCH',
+      body: JSON.stringify({ id, Pausado: true }),
+    });
+    const idx = allDed.findIndex(x => x.id === id);
+    if (idx >= 0) allDed[idx].Pausado = true;
+    renderTabla();
+    showAlert('alert-ded', 'Deducción pausada — no se descontará aunque coincida la quincena', 'success');
+  } catch (e) {
+    showAlert('alert-ded', 'Error: ' + e.message, 'error');
+  }
+}
+
+async function reactivar(id) {
+  try {
+    await apiFetch('/.netlify/functions/deducciones', {
+      method: 'PATCH',
+      body: JSON.stringify({ id, Pausado: false }),
+    });
+    const idx = allDed.findIndex(x => x.id === id);
+    if (idx >= 0) allDed[idx].Pausado = false;
+    renderTabla();
+    showAlert('alert-ded', 'Deducción reactivada — se descontará en la quincena indicada', 'success');
+  } catch (e) {
+    showAlert('alert-ded', 'Error: ' + e.message, 'error');
+  }
+}
+
+function renderTabla() {
+  let lista = allDed;
+  if (filtroEstado === 'pendiente') lista = lista.filter(d => (d.Estado || 'Pendiente') === 'Pendiente' && !d.Pausado);
+  else if (filtroEstado === 'pausado') lista = lista.filter(d => !!d.Pausado);
+  else if (filtroEstado !== 'todos') lista = lista.filter(d => (d.Estado || 'Pendiente') === filtroEstado);
+  if (filtroEmpleado) lista = lista.filter(d => d.Empleado === filtroEmpleado);
+
+  const tbody = document.getElementById('tabla-ded');
+  if (lista.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">No hay deducciones registradas</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(d => {
+    const estado = d.Estado || 'Pendiente';
+    const pausado = !!d.Pausado;
+    const badge = estado === 'Descontado' ? 'badge-green'
+                : pausado ? 'badge-gray'
+                : 'badge-orange';
+    const badgeLabel = estado === 'Descontado' ? 'Descontado' : pausado ? 'Pausado' : 'Pendiente';
+    const creado = fmtFecha(d._createdTime);
+    const acciones = [];
+    if (estado === 'Pendiente' && !pausado) {
+      acciones.push(`<button class="btn btn-icon btn-sm" title="Editar" onclick="editar('${d.id}')">✏️</button>`);
+      acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--navy2);border:1px solid var(--border);border-radius:4px;cursor:pointer" onclick="pausar('${d.id}')">Pausar</button>`);
+    } else if (pausado) {
+      acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--navy2);border:1px solid var(--border);border-radius:4px;cursor:pointer" onclick="reactivar('${d.id}')">Reactivar</button>`);
+    }
+    return `<tr>
+      <td><strong>${d.Empleado || '—'}</strong></td>
+      <td><span class="badge badge-gray">${d.Concepto || '—'}</span></td>
+      <td style="color:var(--muted);font-size:12px">${d['Descripción'] || ''}</td>
+      <td class="num" style="color:var(--red)">${fmt(d.Monto)}</td>
+      <td>${d['Descontar en quincena'] || '—'}</td>
+      <td style="color:var(--muted);font-size:12px">${creado}</td>
+      <td><span class="badge ${badge}">${badgeLabel}</span></td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap">${acciones.join('')}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    filtroEstado = btn.dataset.filtro;
+    renderTabla();
+  });
+});
+
+document.getElementById('filtro-empleado').addEventListener('change', e => {
+  filtroEmpleado = e.target.value;
+  renderTabla();
+});
+
+function abrirModal(d = null) {
+  document.getElementById('modal-titulo').textContent = d ? 'Editar Deducción' : 'Nueva Deducción';
+  document.getElementById('ded-id').value = d?.id || '';
+  document.getElementById('ded-empleado').value = d?.Empleado || '';
+  document.getElementById('ded-concepto').value = d?.Concepto || '';
+  document.getElementById('ded-monto').value = d?.Monto || '';
+  document.getElementById('ded-descripcion').value = d?.['Descripción'] || '';
+  document.getElementById('ded-fecha').value = d?.['Descontar en quincena'] || '';
+  document.getElementById('ded-estado').value = d?.Estado || 'Pendiente';
+  document.getElementById('alert-form').className = 'alert';
+  document.getElementById('modal-ded').classList.add('open');
+}
+
+document.getElementById('btn-nuevo').addEventListener('click', () => abrirModal());
+function editar(id) { abrirModal(allDed.find(x => x.id === id)); }
+
+['close-modal', 'cancel-ded'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-ded').classList.remove('open');
+  });
+});
+
+document.getElementById('save-ded').addEventListener('click', async () => {
+  const id        = document.getElementById('ded-id').value;
+  const empleado  = document.getElementById('ded-empleado').value;
+  const concepto  = document.getElementById('ded-concepto').value;
+  const monto     = parseFloat(document.getElementById('ded-monto').value);
+  const desc      = document.getElementById('ded-descripcion').value;
+  const fecha     = document.getElementById('ded-fecha').value;
+  const estado    = document.getElementById('ded-estado').value;
+
+  if (!empleado) { showAlert('alert-form', 'Selecciona un empleado', 'error'); return; }
+  if (!concepto) { showAlert('alert-form', 'Selecciona un concepto', 'error'); return; }
+  if (!monto || monto <= 0) { showAlert('alert-form', 'Ingresa un monto válido', 'error'); return; }
+  if (!fecha) { showAlert('alert-form', 'Selecciona la quincena de descuento', 'error'); return; }
+
+  const fields = {
+    Empleado: empleado,
+    Concepto: concepto,
+    Monto: monto,
+    'Descripción': desc,
+    'Descontar en quincena': fecha,
+    Estado: estado,
+  };
+
+  const btn = document.getElementById('save-ded');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    if (id) {
+      await apiFetch('/.netlify/functions/deducciones', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
+    } else {
+      await apiFetch('/.netlify/functions/deducciones', { method: 'POST', body: JSON.stringify(fields) });
+    }
+    document.getElementById('modal-ded').classList.remove('open');
+    showAlert('alert-ded', '✅ Deducción guardada', 'success');
+    allDed = await apiFetch('/.netlify/functions/deducciones');
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-form', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
+});
+
+// ── VISTA CONSOLIDADA POR QUINCENA ──────────────────────────────────────────
+async function cargarResumenQuincena(q) {
+  if (!q) return;
+  const tbody = document.getElementById('tabla-consolidada');
+  const tfoot = document.getElementById('tfoot-consolidada');
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="4"><div class="spinner"></div></td></tr>';
+  tfoot.style.display = 'none';
+
+  try {
+    const [prestamos, adelantos, deduccionesQ] = await Promise.all([
+      apiFetch('/.netlify/functions/prestamos'),
+      apiFetch('/.netlify/functions/adelantos'),
+      apiFetch('/.netlify/functions/deducciones'),
+    ]);
+
+    const rows = [];
+
+    // Préstamos activos → cuota quincenal automática (aplica a toda quincena)
+    prestamos.filter(p => p.Estado === 'Activo' && (p['Cuotas restantes'] || 0) > 0).forEach(p => {
+      rows.push({
+        empleado: p.Empleado || '—',
+        concepto: `Cuota préstamo${p.Concepto ? ' — ' + p.Concepto : ''}`,
+        tipo: 'Préstamo',
+        monto: parseFloat(p['Cuota quincenal'] || 0),
+        badge: 'badge-orange',
+      });
+    });
+
+    // Adelantos pendientes y no pausados para esta quincena
+    adelantos
+      .filter(a => (a['Descontar en quincena'] || '') === q && (a.Estado || 'Pendiente') === 'Pendiente' && !a.Pausado)
+      .forEach(a => {
+        rows.push({
+          empleado: a.Empleado || '—',
+          concepto: 'Adelanto',
+          tipo: 'Adelanto',
+          monto: parseFloat(a.Monto || 0),
+          badge: 'badge-blue',
+        });
+      });
+
+    // Deducciones manuales pendientes para esta quincena
+    deduccionesQ
+      .filter(d => (d['Descontar en quincena'] || '') === q && (d.Estado || 'Pendiente') === 'Pendiente' && !d.Pausado)
+      .forEach(d => {
+        rows.push({
+          empleado: d.Empleado || '—',
+          concepto: d.Concepto || 'Deducción',
+          tipo: 'Manual',
+          monto: parseFloat(d.Monto || 0),
+          badge: 'badge-gray',
+        });
+      });
+
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="4" class="empty">Sin descuentos para la quincena ${q}</td></tr>`;
+      return;
+    }
+
+    const grupos = {};
+    rows.forEach(r => {
+      if (!grupos[r.empleado]) grupos[r.empleado] = [];
+      grupos[r.empleado].push(r);
+    });
+
+    let html = '';
+    let total = 0;
+    Object.keys(grupos).sort().forEach(emp => {
+      const items = grupos[emp];
+      items.forEach((r, i) => {
+        total += r.monto;
+        html += `<tr>
+          ${i === 0 ? `<td rowspan="${items.length}" style="font-weight:600;vertical-align:top;padding-top:10px">${emp}</td>` : ''}
+          <td>${r.concepto}</td>
+          <td><span class="badge ${r.badge}">${r.tipo}</span></td>
+          <td class="num">${fmt(r.monto)}</td>
+        </tr>`;
+      });
+    });
+
+    tbody.innerHTML = html;
+    document.getElementById('total-consolidado').textContent = fmt(total);
+    tfoot.style.display = '';
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="4" class="empty" style="color:var(--red)">Error: ${e.message}</td></tr>`;
+  }
+}
+
+document.getElementById('quincena-filtro').addEventListener('change', function() {
+  cargarResumenQuincena(this.value);
+});
+</script>
+</body>
+</html>

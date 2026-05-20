@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mi Recibo — Planilla Nicaragua</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>🧮 Planilla</h2><p>Nicaragua</p></div>
+    <nav>
+      <a href="/mi-recibo.html" class="active"><span class="icon">📋</span> Mis Recibos</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Mis Recibos</h1><span class="sub" id="sub-nombre">Cargando...</span></div>
+    </div>
+    <div class="content">
+      <div id="alert-main" class="alert"></div>
+      <div class="table-wrap">
+        <div class="table-header"><h3>Historial de quincenas</h3></div>
+        <table>
+          <thead>
+            <tr>
+              <th>Período</th>
+              <th>Tipo</th>
+              <th>Salario quincenal</th>
+              <th>Neto a recibir</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-recibos">
+            <tr class="loading-row"><td colspan="5"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script>
+requireAuth();
+
+function fmt2(n) {
+  return 'C$ ' + Number(n || 0).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+async function initPage() {
+  initLayout();
+  const info = await getMyInfo();
+
+  if (info.rol !== 'Empleado') {
+    window.location.href = '/index.html';
+    return;
+  }
+
+  if (info.nombre) {
+    document.getElementById('sub-nombre').textContent = info.nombre;
+  }
+
+  if (!info.empleado_id) {
+    showAlert('alert-main', 'No se encontró tu registro de empleado. Contacta al administrador.', 'error');
+    document.getElementById('tabla-recibos').innerHTML = '<tr><td colspan="5" class="empty">Sin datos</td></tr>';
+    return;
+  }
+
+  try {
+    const detalles = await apiFetch(`/api/detalle?empleado_id=${info.empleado_id}`);
+    renderTabla(detalles, info.empleado_id);
+  } catch (e) {
+    showAlert('alert-main', 'Error: ' + e.message, 'error');
+    document.getElementById('tabla-recibos').innerHTML = '<tr><td colspan="5" class="empty">Error cargando datos</td></tr>';
+  }
+}
+
+function renderTabla(detalles, empleadoId) {
+  const tbody = document.getElementById('tabla-recibos');
+  if (!detalles.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">No hay recibos registrados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = detalles.map(d => `<tr>
+    <td><strong>${d.periodo}</strong></td>
+    <td>${d.tipo_planilla || '—'}</td>
+    <td class="num">${fmt2(d.salario_quincenal)}</td>
+    <td class="num"><strong>${fmt2(d.neto)}</strong></td>
+    <td>
+      <a class="btn btn-icon btn-sm" href="/recibo.html?empleado_id=${empleadoId}&periodo=${encodeURIComponent(d.periodo)}">👁</a>
+    </td>
+  </tr>`).join('');
+}
+
+const _cu = netlifyIdentity.currentUser();
+if (_cu) { initPage(); }
+else { netlifyIdentity.on('init', u => { if (u) initPage(); }); }
+</script>
+</body>
+</html>

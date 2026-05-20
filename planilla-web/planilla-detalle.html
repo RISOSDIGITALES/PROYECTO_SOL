@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detalle Planilla — Nicaragua</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  
+  <style>
+    @media print {
+      .sidebar, .topbar .btn, #btn-print { display: none !important; }
+      .main { margin-left: 0 !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>🧮 Planilla</h2><p>Nicaragua</p></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html" class="active"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+      <a href="/extras.html"><span class="icon">⭐</span> Extras</a>
+      <a href="/deducciones.html"><span class="icon">➖</span> Otras Deducciones</a>
+      <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
+      <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="/usuarios.html" class="sidebar-config" id="link-config">⚙️ Configuraciones</a>
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <h1 id="titulo-planilla">Detalle de Planilla</h1>
+        <span class="sub" id="sub-planilla">Cargando...</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <a href="/planillas.html" class="btn btn-ghost btn-sm">← Volver</a>
+        <button class="btn btn-ghost btn-sm" id="btn-print">🖨 Imprimir</button>
+      </div>
+    </div>
+    <div class="content">
+      <div id="alert-det" class="alert"></div>
+      <div class="cards" id="resumen-cards" style="margin-bottom:24px;"></div>
+      <div class="table-wrap">
+        <div class="table-header"><h3>Detalle por empleado</h3></div>
+        <table>
+          <thead>
+            <tr>
+              <th>Empleado</th>
+              <th>Salario quincenal</th>
+              <th>INSS (7%)</th>
+              <th>Desc. préstamo</th>
+              <th>Desc. adelanto</th>
+              <th>Extras</th>
+              <th>Total desc.</th>
+              <th><strong>Neto a recibir</strong></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-detalle">
+            <tr class="loading-row"><td colspan="8"><div class="spinner"></div></td></tr>
+          </tbody>
+          <tfoot id="tabla-totales"></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script>
+requireAuthRole(['Admin', 'Planillero']);
+
+function _initPage() {
+  initLayout();
+  const params = new URLSearchParams(window.location.search);
+  const periodo = params.get('periodo') || '';
+  const tipo    = params.get('tipo') || '';
+  document.getElementById('titulo-planilla').textContent = periodo || 'Detalle';
+  document.getElementById('sub-planilla').textContent = tipo ? `Planilla ${tipo}` : 'Planilla';
+  loadDetalle(periodo, tipo);
+}
+
+const _currentUser = netlifyIdentity.currentUser();
+if (_currentUser) {
+  _initPage();
+} else {
+  netlifyIdentity.on('init', user => {
+    if (!user) return;
+    _initPage();
+  });
+}
+
+async function loadDetalle(periodo, tipo) {
+  try {
+    const qs = `?periodo=${encodeURIComponent(periodo)}&tipo=${encodeURIComponent(tipo)}`;
+    const detalles = await apiFetch('/api/detalle' + qs);
+
+    if (detalles.length === 0) {
+      document.getElementById('tabla-detalle').innerHTML =
+        '<tr><td colspan="8" class="empty">No hay registros para este período</td></tr>';
+      return;
+    }
+
+    const totBruto = detalles.reduce((s, d) => s + (d.salario_quincenal || 0), 0);
+    const totInss  = detalles.reduce((s, d) => s + (d.inss || 0), 0);
+    const totPrest = detalles.reduce((s, d) => s + (d.desc_prestamo || 0), 0);
+    const totAdel  = detalles.reduce((s, d) => s + (d.desc_adelanto || 0), 0);
+    const totExtra = detalles.reduce((s, d) => s + (d.extras || 0), 0);
+    const totDesc  = detalles.reduce((s, d) => s + (d.total_deducciones || 0), 0);
+    const totNeto  = detalles.reduce((s, d) => s + (d.neto || 0), 0);
+
+    document.getElementById('resumen-cards').innerHTML = `
+      <div class="card"><div class="label">Empleados</div><div class="value">${detalles.length}</div></div>
+      <div class="card"><div class="label">Total bruto</div><div class="value" style="font-size:18px">${fmt(totBruto)}</div></div>
+      <div class="card"><div class="label">Total deducciones</div><div class="value red" style="font-size:18px">${fmt(totDesc)}</div></div>
+      <div class="card"><div class="label">Total neto</div><div class="value green" style="font-size:18px">${fmt(totNeto)}</div></div>
+    `;
+
+    document.getElementById('tabla-detalle').innerHTML = detalles.map(d => `<tr>
+      <td><strong>${d.nombre || '—'}</strong></td>
+      <td class="num">${fmt(d.salario_quincenal)}</td>
+      <td class="num" style="color:var(--red)">${fmt(d.inss)}</td>
+      <td class="num" style="color:var(--red)">${fmt(d.desc_prestamo)}</td>
+      <td class="num" style="color:var(--red)">${fmt(d.desc_adelanto)}</td>
+      <td class="num" style="color:var(--green2)">${fmt(d.extras)}</td>
+      <td class="num" style="color:var(--red)"><strong>${fmt(d.total_deducciones)}</strong></td>
+      <td class="num"><strong style="color:var(--green2)">${fmt(d.neto)}</strong></td>
+      <td><a href="/recibo.html?empleado_id=${d.empleado_id}&periodo=${encodeURIComponent(periodo)}" class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 8px">🧾 Recibo</a></td>
+    </tr>`).join('');
+
+    document.getElementById('tabla-totales').innerHTML = `
+      <tr style="border-top:2px solid var(--border);background:rgba(0,0,0,.2)">
+        <td style="padding:12px 16px;font-weight:700;font-size:13px">TOTALES</td>
+        <td class="num" style="padding:12px 16px;font-weight:700">${fmt(totBruto)}</td>
+        <td class="num" style="padding:12px 16px;color:var(--red);font-weight:700">${fmt(totInss)}</td>
+        <td class="num" style="padding:12px 16px;color:var(--red);font-weight:700">${fmt(totPrest)}</td>
+        <td class="num" style="padding:12px 16px;color:var(--red);font-weight:700">${fmt(totAdel)}</td>
+        <td class="num" style="padding:12px 16px;color:var(--green2);font-weight:700">${fmt(totExtra)}</td>
+        <td class="num" style="padding:12px 16px;color:var(--red);font-weight:700">${fmt(totDesc)}</td>
+        <td class="num" style="padding:12px 16px;color:var(--green2);font-weight:700;font-size:15px">${fmt(totNeto)}</td>
+      </tr>`;
+
+  } catch (e) {
+    showAlert('alert-det', 'Error: ' + e.message, 'error');
+  }
+}
+
+document.getElementById('btn-print').addEventListener('click', () => window.print());
+</script>
+</body>
+</html>
