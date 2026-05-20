@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mi Recibo — Planilla Nicaragua</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  
 </head>
 <body>
 <div class="layout">
@@ -59,8 +59,7 @@ async function initPage() {
   initLayout();
   const info = await getMyInfo();
 
-  if (!info.nombre && info.rol !== 'Empleado') {
-    // If Admin or Planillero without employee record, redirect to main dashboard
+  if (info.rol !== 'Empleado') {
     window.location.href = '/index.html';
     return;
   }
@@ -69,57 +68,36 @@ async function initPage() {
     document.getElementById('sub-nombre').textContent = info.nombre;
   }
 
-  if (!info.id) {
+  if (!info.empleado_id) {
     showAlert('alert-main', 'No se encontró tu registro de empleado. Contacta al administrador.', 'error');
     document.getElementById('tabla-recibos').innerHTML = '<tr><td colspan="5" class="empty">Sin datos</td></tr>';
     return;
   }
 
   try {
-    // Load all planillas and filter by this employee
-    const planillas = await apiFetch('/.netlify/functions/planillas');
-    const misPlanillas = [];
-
-    for (const p of planillas) {
-      const periodo = p['Período'] || p.Periodo || '';
-      const tipo = p['Tipo'] || '';
-      // Check detalle for this employee
-      try {
-        const qs = `?empleado=${encodeURIComponent(info.nombre)}&periodo=${encodeURIComponent(periodo)}`;
-        const recibo = await apiFetch('/.netlify/functions/recibo' + qs);
-        if (recibo && recibo.detalle) {
-          misPlanillas.push({ periodo, tipo, detalle: recibo.detalle });
-        }
-      } catch (_) { /* employee not in this planilla */ }
-    }
-
-    renderTabla(misPlanillas, info.nombre);
+    const detalles = await apiFetch(`/api/detalle?empleado_id=${info.empleado_id}`);
+    renderTabla(detalles, info.empleado_id);
   } catch (e) {
     showAlert('alert-main', 'Error: ' + e.message, 'error');
     document.getElementById('tabla-recibos').innerHTML = '<tr><td colspan="5" class="empty">Error cargando datos</td></tr>';
   }
 }
 
-function renderTabla(lista, nombre) {
+function renderTabla(detalles, empleadoId) {
   const tbody = document.getElementById('tabla-recibos');
-  if (!lista.length) {
+  if (!detalles.length) {
     tbody.innerHTML = '<tr><td colspan="5" class="empty">No hay recibos registrados</td></tr>';
     return;
   }
-  tbody.innerHTML = lista.map(item => {
-    const det = item.detalle;
-    const quincenal = parseFloat(det['Salario quincenal bruto'] || 0);
-    const neto = parseFloat(det['Neto a recibir'] || 0);
-    return `<tr>
-      <td><strong>${item.periodo}</strong></td>
-      <td>${item.tipo || '—'}</td>
-      <td class="num">${fmt2(quincenal)}</td>
-      <td class="num"><strong>${fmt2(neto)}</strong></td>
-      <td>
-        <a class="btn btn-icon btn-sm" href="/recibo.html?empleado=${encodeURIComponent(nombre)}&periodo=${encodeURIComponent(item.periodo)}">👁</a>
-      </td>
-    </tr>`;
-  }).join('');
+  tbody.innerHTML = detalles.map(d => `<tr>
+    <td><strong>${d.periodo}</strong></td>
+    <td>${d.tipo_planilla || '—'}</td>
+    <td class="num">${fmt2(d.salario_quincenal)}</td>
+    <td class="num"><strong>${fmt2(d.neto)}</strong></td>
+    <td>
+      <a class="btn btn-icon btn-sm" href="/recibo.html?empleado_id=${empleadoId}&periodo=${encodeURIComponent(d.periodo)}">👁</a>
+    </td>
+  </tr>`).join('');
 }
 
 const _cu = netlifyIdentity.currentUser();

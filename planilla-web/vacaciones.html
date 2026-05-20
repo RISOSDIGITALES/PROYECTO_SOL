@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vacaciones — Planilla Nicaragua</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  
 </head>
 <body>
 <div class="layout">
@@ -216,8 +216,8 @@ function diasLaborales(inicio, fin) {
 async function loadAll() {
   try {
     const [empleados, vacaciones] = await Promise.all([
-      apiFetch('/.netlify/functions/empleados'),
-      apiFetch('/.netlify/functions/vacaciones'),
+      apiFetch('/api/empleados'),
+      apiFetch('/api/vacaciones'),
     ]);
     allEmpleados = empleados.filter(e => e.Activo);
     allVac = vacaciones;
@@ -418,10 +418,10 @@ document.getElementById('save-vac').addEventListener('click', async () => {
   const btn = document.getElementById('save-vac');
   btn.disabled = true; btn.textContent = 'Guardando...';
   try {
-    await apiFetch('/.netlify/functions/vacaciones', { method: 'POST', body: JSON.stringify(fields) });
+    await apiFetch('/api/vacaciones', { method: 'POST', body: JSON.stringify(fields) });
     document.getElementById('modal-vac').classList.remove('open');
     showAlert('alert-vac', '✅ Vacaciones registradas', 'success');
-    allVac = await apiFetch('/.netlify/functions/vacaciones');
+    allVac = await apiFetch('/api/vacaciones');
     renderResumen();
     renderHistorial();
   } catch (e) {
@@ -434,7 +434,7 @@ document.getElementById('save-vac').addEventListener('click', async () => {
 async function eliminar(id) {
   if (!confirm('¿Eliminar este registro de vacaciones?')) return;
   try {
-    await apiFetch('/.netlify/functions/vacaciones', { method: 'DELETE', body: JSON.stringify({ id }) });
+    await apiFetch('/api/vacaciones', { method: 'DELETE', body: JSON.stringify({ id }) });
     showAlert('alert-vac', '✅ Registro eliminado', 'success');
     allVac = allVac.filter(v => v.id !== id);
     renderResumen();

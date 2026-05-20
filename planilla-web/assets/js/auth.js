@@ -1,64 +1,78 @@
-// Netlify Identity auth helpers
-const identity = window.netlifyIdentity;
+// Polyfill para páginas que usan netlifyIdentity directamente
+window.netlifyIdentity = {
+  currentUser: () => localStorage.getItem('planilla_token')
+    ? JSON.parse(localStorage.getItem('planilla_user') || '{}')
+    : null,
+  on: (event, cb) => {
+    if (event === 'init' || event === 'login') {
+      setTimeout(() => cb(window.netlifyIdentity.currentUser()), 0);
+    }
+    if (event === 'logout') {
+      window._niLogoutCb = cb;
+    }
+  },
+  logout: () => {
+    localStorage.removeItem('planilla_token');
+    localStorage.removeItem('planilla_user');
+    if (window._niLogoutCb) window._niLogoutCb();
+    window.location.href = '/login.html';
+  },
+  init: () => {},
+  open: () => { window.location.href = '/login.html'; },
+};
 
-let _myInfo = null; // cache del rol
+let _myInfo = null;
 
-function requireAuth() {
-  identity.on('init', user => {
-    if (!user) window.location.href = '/login.html';
-  });
-  identity.init();
+function getToken() {
+  return localStorage.getItem('planilla_token');
 }
 
-// requireAuth + redirige empleados a su vista propia
-function requireAuthRole(allowedRoles) {
-  identity.on('init', async user => {
-    if (!user) { window.location.href = '/login.html'; return; }
-    const info = await getMyInfo();
-    if (allowedRoles && !allowedRoles.includes(info.rol)) {
-      window.location.href = '/mi-recibo.html';
-    }
-  });
-  identity.init();
+function requireAuth() {
+  if (!getToken()) { window.location.href = '/login.html'; return; }
+}
+
+async function requireAuthRole(allowedRoles) {
+  if (!getToken()) { window.location.href = '/login.html'; return; }
+  const info = await getMyInfo();
+  if (allowedRoles && !allowedRoles.includes(info.rol)) {
+    window.location.href = '/mi-recibo.html';
+  }
 }
 
 function initLayout() {
-  const user = identity.currentUser();
+  const info = JSON.parse(localStorage.getItem('planilla_user') || '{}');
   const el = document.getElementById('user-email');
-  if (el && user) el.textContent = user.email;
+  if (el) el.textContent = info.email || '';
 
   document.getElementById('btn-logout')?.addEventListener('click', () => {
     _myInfo = null;
-    identity.logout();
-  });
-
-  identity.on('logout', () => {
+    localStorage.removeItem('planilla_token');
+    localStorage.removeItem('planilla_user');
     window.location.href = '/login.html';
   });
 
-  // Mostrar link de Configuraciones solo a Admin
   getMyInfo().then(info => {
     const link = document.getElementById('link-config');
     if (link && info.rol !== 'Admin') link.style.display = 'none';
   });
 }
 
-async function getToken() {
-  const user = identity.currentUser();
-  if (!user) return null;
-  return user.jwt();
-}
-
 async function apiFetch(path, options = {}) {
-  const token = await getToken();
+  const token = getToken();
   const res = await fetch(path, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
   });
+  if (res.status === 401) {
+    localStorage.removeItem('planilla_token');
+    localStorage.removeItem('planilla_user');
+    window.location.href = '/login.html';
+    throw new Error('Sesión expirada');
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || 'Error en la solicitud');
@@ -66,20 +80,17 @@ async function apiFetch(path, options = {}) {
   return res.json();
 }
 
-// Devuelve { email, rol, nombre } del usuario actual (con caché)
 async function getMyInfo() {
   if (_myInfo) return _myInfo;
   try {
-    _myInfo = await apiFetch('/.netlify/functions/me');
+    _myInfo = await apiFetch('/api/auth/me');
   } catch (_) {
     _myInfo = { rol: 'Admin', nombre: null };
   }
   return _myInfo;
 }
 
-// true si el usuario tiene rol Admin
 async function isAdmin() { return (await getMyInfo()).rol === 'Admin'; }
-// true si Admin o Planillero
 async function canEdit() { const r = (await getMyInfo()).rol; return r === 'Admin' || r === 'Planillero'; }
 
 function fmt(n) {

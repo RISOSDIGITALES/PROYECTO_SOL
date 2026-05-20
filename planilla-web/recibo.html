@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Recibo de Pago — Nicaragua</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  
   <style>
     .recibo-wrap {
       max-width: 680px;
@@ -141,12 +141,11 @@ requireAuth();
 function _initPage() {
   initLayout();
   const p = new URLSearchParams(window.location.search);
-  const empleado = p.get('empleado') || '';
-  const periodo  = p.get('periodo')  || '';
-  document.getElementById('sub-recibo').textContent = `${empleado} — ${periodo}`;
-  const volverUrl = `/planilla-detalle.html?periodo=${encodeURIComponent(periodo)}`;
-  document.getElementById('btn-volver').href = volverUrl;
-  loadRecibo(empleado, periodo);
+  const empleadoId = p.get('empleado_id') || '';
+  const periodo    = p.get('periodo')     || '';
+  document.getElementById('sub-recibo').textContent = `Cargando... — ${periodo}`;
+  document.getElementById('btn-volver').href = `/planilla-detalle.html?periodo=${encodeURIComponent(periodo)}`;
+  loadRecibo(empleadoId, periodo);
 }
 
 const _cu = netlifyIdentity.currentUser();
@@ -157,74 +156,59 @@ function cs(n) {
   if (!n && n !== 0) return '—';
   return 'C$ ' + parseFloat(n).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
-function fd(s) {
-  if (!s) return '—';
-  return s.split('T')[0];
-}
 
-async function loadRecibo(empleado, periodo) {
+async function loadRecibo(empleadoId, periodo) {
   try {
-    const qs = `?empleado=${encodeURIComponent(empleado)}&periodo=${encodeURIComponent(periodo)}`;
-    const data = await apiFetch('/.netlify/functions/recibo' + qs);
-    renderRecibo(data, empleado, periodo);
+    const qs = `?empleado_id=${encodeURIComponent(empleadoId)}&periodo=${encodeURIComponent(periodo)}`;
+    const data = await apiFetch('/api/recibo' + qs);
+    renderRecibo(data, periodo);
   } catch (e) {
     showAlert('alert-recibo', 'Error cargando recibo: ' + e.message, 'error');
     document.getElementById('recibo-container').innerHTML = '';
   }
 }
 
-function renderRecibo(data, empleado, periodo) {
+function renderRecibo(data, periodo) {
   const emp  = data.empleado    || {};
   const det  = data.detalle     || {};
   const adel = data.adelantos   || [];
-  const pres = data.prestamos   || [];
   const ext  = data.extras      || [];
   const ded  = data.deducciones || [];
   const vac  = data.vacaciones  || [];
 
-  const salarioMensual   = parseFloat(emp['Salario bruto mensual'] || 0);
-  const subTotalQuincena = parseFloat(det['Salario quincenal bruto'] || salarioMensual / 2);
+  document.getElementById('sub-recibo').textContent = `${emp.nombre || ''} — ${periodo}`;
 
-  const bonosArr    = ext.filter(e => e.Tipo === 'Bono');
-  const feriadosArr = ext.filter(e => e.Tipo === 'Feriado trabajado');
-  const turnosArr   = ext.filter(e => e.Tipo === 'Otro');
-  const bono        = bonosArr.reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
-  const feriados    = feriadosArr.reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
-  const turnoExt    = turnosArr.reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
-  const vacPago     = vac.reduce((s, v) => s + parseFloat(v.Monto || 0), 0);
-  const granTotal   = subTotalQuincena + bono + feriados + turnoExt + vacPago;
+  const salarioMensual   = parseFloat(emp.salario_bruto || 0);
+  const salarioQuincenal = parseFloat(det.salario_quincenal || salarioMensual / 2);
 
-  const inss         = parseFloat(det['INSS (7%)'] || 0);
-  const ir           = parseFloat(det['IR'] || 0);
-  const descPrestamo = parseFloat(det['Descuento préstamo'] || 0);
-  const descAdelanto = parseFloat(det['Descuento adelanto'] || 0);
-  const descDed      = ded.reduce((s, d) => s + parseFloat(d.Monto || 0), 0);
-  const totalDesc    = inss + ir + descAdelanto + descDed + descPrestamo;
-  const netoAPagar   = parseFloat(det['Neto a recibir'] || (granTotal - totalDesc));
+  const bonos    = ext.filter(e => e.tipo === 'Bono').reduce((s, e) => s + parseFloat(e.monto || 0), 0);
+  const feriados = ext.filter(e => e.tipo === 'Feriado trabajado').reduce((s, e) => s + parseFloat(e.monto || 0), 0);
+  const turnos   = ext.filter(e => e.tipo === 'Otro').reduce((s, e) => s + parseFloat(e.monto || 0), 0);
+  const vacPago  = vac.reduce((s, v) => s + parseFloat(v.monto || 0), 0);
 
-  // Sección extras (solo si hay)
-  const extrasSection = (bono || feriados || turnoExt || vacPago) ? `
+  const inss         = parseFloat(det.inss || 0);
+  const ir           = parseFloat(det.ir || 0);
+  const descPrestamo = parseFloat(det.desc_prestamo || 0);
+  const descAdelanto = parseFloat(det.desc_adelanto || 0);
+  const netoAPagar   = parseFloat(det.neto || 0);
+
+  const extrasSection = (bonos || feriados || turnos || vacPago) ? `
     <div class="recibo-section">
       <div class="recibo-section-title">Extras</div>
-      ${bono ? `<div class="recibo-row"><span class="label">Bono</span><span class="value">${cs(bono)}</span></div>` : ''}
+      ${bonos    ? `<div class="recibo-row"><span class="label">Bono</span><span class="value">${cs(bonos)}</span></div>` : ''}
       ${feriados ? `<div class="recibo-row"><span class="label">Feriados trabajados</span><span class="value">${cs(feriados)}</span></div>` : ''}
-      ${turnoExt ? `<div class="recibo-row"><span class="label">Turno / Extra</span><span class="value">${cs(turnoExt)}</span></div>` : ''}
-      ${vac.map(v => `<div class="recibo-row"><span class="label">Vacaciones pagadas (${v.Dias} días)</span><span class="value">${cs(parseFloat(v.Monto || 0))}</span></div>`).join('')}
+      ${turnos   ? `<div class="recibo-row"><span class="label">Turno / Extra</span><span class="value">${cs(turnos)}</span></div>` : ''}
+      ${vac.map(v => `<div class="recibo-row"><span class="label">Vacaciones pagadas (${v.dias} días)</span><span class="value">${cs(parseFloat(v.monto || 0))}</span></div>`).join('')}
     </div>` : '';
 
-  // Sección descuentos (solo si hay)
   let filasDesc = '';
   if (inss > 0) filasDesc += `<div class="recibo-row descuento"><span class="label">INSS Laboral (7%)</span><span class="value">- ${cs(inss)}</span></div>`;
   if (ir > 0)   filasDesc += `<div class="recibo-row descuento"><span class="label">IR</span><span class="value">- ${cs(ir)}</span></div>`;
-  if (adel.length > 0) {
-    adel.forEach(a => {
-      filasDesc += `<div class="recibo-row descuento"><span class="label">Adelanto</span><span class="value">- ${cs(parseFloat(a.Monto || 0))}</span></div>`;
-    });
-  } else if (descAdelanto > 0) {
-    filasDesc += `<div class="recibo-row descuento"><span class="label">Adelanto</span><span class="value">- ${cs(descAdelanto)}</span></div>`;
-  }
+  adel.forEach(a => {
+    filasDesc += `<div class="recibo-row descuento"><span class="label">Adelanto</span><span class="value">- ${cs(parseFloat(a.monto || 0))}</span></div>`;
+  });
   ded.forEach(d => {
-    filasDesc += `<div class="recibo-row descuento"><span class="label">${d.Concepto || 'Deducción'}</span><span class="value">- ${cs(parseFloat(d.Monto || 0))}</span></div>`;
+    filasDesc += `<div class="recibo-row descuento"><span class="label">${d.descripcion || 'Deducción'}</span><span class="value">- ${cs(parseFloat(d.monto || 0))}</span></div>`;
   });
   if (descPrestamo > 0) filasDesc += `<div class="recibo-row descuento"><span class="label">Abono préstamo</span><span class="value">- ${cs(descPrestamo)}</span></div>`;
 
@@ -240,48 +224,29 @@ function renderRecibo(data, empleado, periodo) {
         MD Arthur — Planilla Nicaragua
         <span>Quincena del período ${periodo}</span>
       </div>
-
       <div class="recibo-section">
         <div class="recibo-section-title">Empleado</div>
-        <div class="recibo-row">
-          <span class="label">Nombre</span>
-          <span class="value">${emp.Nombre || empleado}</span>
-        </div>
-        <div class="recibo-row">
-          <span class="label">Tipo de planilla</span>
-          <span class="value">${emp['Tipo_Planilla'] || 'Con Seguro'}</span>
-        </div>
+        <div class="recibo-row"><span class="label">Nombre</span><span class="value">${emp.nombre || '—'}</span></div>
+        <div class="recibo-row"><span class="label">Tipo de planilla</span><span class="value">${emp.tipo_planilla || 'Con Seguro'}</span></div>
       </div>
-
       <div class="recibo-section">
         <div class="recibo-section-title">Ingresos</div>
-        <div class="recibo-row">
-          <span class="label">Salario mensual</span>
-          <span class="value">${cs(salarioMensual)}</span>
-        </div>
-        <div class="recibo-row subtotal">
-          <span class="label">Salario quincenal</span>
-          <span class="value">${cs(subTotalQuincena)}</span>
-        </div>
+        <div class="recibo-row"><span class="label">Salario mensual</span><span class="value">${cs(salarioMensual)}</span></div>
+        <div class="recibo-row subtotal"><span class="label">Salario quincenal</span><span class="value">${cs(salarioQuincenal)}</span></div>
       </div>
-
       ${extrasSection}
       ${descSection}
-
       <div class="recibo-row neto">
         <span class="label">Neto a recibir</span>
         <span class="value">${cs(netoAPagar)}</span>
       </div>
-
       <div class="firma-area" style="display:flex;justify-content:space-between;align-items:flex-end">
         <div>
           He recibido de MD Arthur SA la suma de <strong>${cs(netoAPagar)}</strong> Córdobas Netos
           correspondiente a la quincena del período <strong>${periodo}</strong>.
           <div class="linea">Firma del empleado</div>
         </div>
-        <div>
-          <div class="linea">Quien entrega</div>
-        </div>
+        <div><div class="linea">Quien entrega</div></div>
       </div>
     </div>
   `;

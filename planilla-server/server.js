@@ -21,6 +21,9 @@ app.use('/api/extras',     require('./routes/extrasRoutes'));
 app.use('/api/deducciones',require('./routes/deduccionesRoutes'));
 app.use('/api/vacaciones', require('./routes/vacacionesRoutes'));
 app.use('/api/planillas',  require('./routes/planillasRoutes'));
+app.use('/api/detalle',   require('./routes/detalleRoutes'));
+app.use('/api/recibo',    require('./routes/reciboRoutes'));
+app.use('/api/usuarios',  require('./routes/usuariosRoutes'));
 
 // Todas las demás rutas devuelven el HTML correspondiente
 app.get('*', (req, res) => {

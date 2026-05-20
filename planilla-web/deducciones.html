@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Otras Deducciones — Planilla Nicaragua</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  
 </head>
 <body>
 <div class="layout">
@@ -186,8 +186,8 @@ async function loadAll() {
 
   try {
     const [ded, empleados] = await Promise.all([
-      apiFetch('/.netlify/functions/deducciones'),
-      apiFetch('/.netlify/functions/empleados'),
+      apiFetch('/api/deducciones'),
+      apiFetch('/api/empleados'),
     ]);
     allDed = ded;
 
@@ -217,7 +217,7 @@ function fmtFecha(iso) {
 
 async function pausar(id) {
   try {
-    await apiFetch('/.netlify/functions/deducciones', {
+    await apiFetch('/api/deducciones', {
       method: 'PATCH',
       body: JSON.stringify({ id, Pausado: true }),
     });
@@ -232,7 +232,7 @@ async function pausar(id) {
 
 async function reactivar(id) {
   try {
-    await apiFetch('/.netlify/functions/deducciones', {
+    await apiFetch('/api/deducciones', {
       method: 'PATCH',
       body: JSON.stringify({ id, Pausado: false }),
     });
@@ -348,13 +348,13 @@ document.getElementById('save-ded').addEventListener('click', async () => {
   btn.disabled = true; btn.textContent = 'Guardando...';
   try {
     if (id) {
-      await apiFetch('/.netlify/functions/deducciones', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
+      await apiFetch('/api/deducciones', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
     } else {
-      await apiFetch('/.netlify/functions/deducciones', { method: 'POST', body: JSON.stringify(fields) });
+      await apiFetch('/api/deducciones', { method: 'POST', body: JSON.stringify(fields) });
     }
     document.getElementById('modal-ded').classList.remove('open');
     showAlert('alert-ded', '✅ Deducción guardada', 'success');
-    allDed = await apiFetch('/.netlify/functions/deducciones');
+    allDed = await apiFetch('/api/deducciones');
     renderTabla();
   } catch (e) {
     showAlert('alert-form', 'Error: ' + e.message, 'error');
@@ -373,9 +373,9 @@ async function cargarResumenQuincena(q) {
 
   try {
     const [prestamos, adelantos, deduccionesQ] = await Promise.all([
-      apiFetch('/.netlify/functions/prestamos'),
-      apiFetch('/.netlify/functions/adelantos'),
-      apiFetch('/.netlify/functions/deducciones'),
+      apiFetch('/api/prestamos'),
+      apiFetch('/api/adelantos'),
+      apiFetch('/api/deducciones'),
     ]);
 
     const rows = [];
