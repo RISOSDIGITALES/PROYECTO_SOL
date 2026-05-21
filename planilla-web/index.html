@@ -40,7 +40,6 @@
     <div class="content">
       <div id="alert-main" class="alert"></div>
 
-      <!-- STATS ROW 1 -->
       <div class="cards" style="margin-bottom:12px">
         <div class="card">
           <div class="label">Empleados activos</div>
@@ -69,10 +68,7 @@
         </div>
       </div>
 
-      <!-- FERIADOS + ÚCTIMAS PLANILLAS -->
       <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;align-items:start">
-
-        <!-- FERIADOS -->
         <div class="table-wrap" style="margin-bottom:0">
           <div class="table-header">
             <h3>Próximos feriados</h3>
@@ -83,7 +79,6 @@
           </div>
         </div>
 
-        <!-- ÚCTIMAS PLANILLAS -->
         <div class="table-wrap" style="margin-bottom:0">
           <div class="table-header">
             <h3>Últimas planillas</h3>
@@ -105,7 +100,6 @@
             </tbody>
           </table>
         </div>
-
       </div>
     </div>
   </div>
@@ -177,15 +171,12 @@ function renderFeriados() {
 
 async function loadDashboard() {
   setPeriodoLabel();
-
   const proxFecha = proximaQuincena();
   const proxDias = diasHasta(proxFecha);
   document.getElementById('stat-proxima').textContent = proxFecha;
   document.getElementById('stat-proxima-dias').textContent =
     proxDias === 0 ? '¡Es hoy!' : `en ${proxDias} día${proxDias !== 1 ? 's' : ''}`;
-
   renderFeriados();
-
   try {
     const [empleados, planillas, prestamos, adelantos, deducciones] = await Promise.all([
       apiFetch('/api/empleados'),
@@ -194,28 +185,23 @@ async function loadDashboard() {
       apiFetch('/api/adelantos').catch(() => []),
       apiFetch('/api/deducciones').catch(() => []),
     ]);
-
     const activos = empleados.filter(e => e.Activo);
     const conSeg = activos.filter(e => (e.Tipo_Planilla || 'Con Seguro') !== 'Sin Seguro').length;
     const sinSeg = activos.filter(e => e.Tipo_Planilla === 'Sin Seguro').length;
     document.getElementById('stat-empleados').textContent = activos.length;
     document.getElementById('stat-tipos').textContent = `${conSeg} con seguro · ${sinSeg} sin seguro`;
-
     const prestActivos = prestamos.filter(p => p.Estado === 'Activo');
     const montoPrest = prestActivos.reduce((s, p) => s + ((p['Cuota quincenal'] || 0) * (p['Cuotas restantes'] || 0)), 0);
     document.getElementById('stat-prestamos').textContent = prestActivos.length;
     document.getElementById('stat-prestamos-monto').textContent = `${fmt(montoPrest)} pendiente`;
-
     const adelPend = adelantos.filter(a => (a.Estado || 'Pendiente') === 'Pendiente' && !a.Pausado);
     const montoAdel = adelPend.reduce((s, a) => s + (a.Monto || 0), 0);
     document.getElementById('stat-adelantos').textContent = adelPend.length;
     document.getElementById('stat-adelantos-monto').textContent = fmt(montoAdel);
-
     const dedPend = deducciones.filter(d => (d.Estado || 'Pendiente') === 'Pendiente' && !d.Pausado);
     const montoDed = dedPend.reduce((s, d) => s + (d.Monto || 0), 0);
     document.getElementById('stat-deducciones').textContent = dedPend.length;
     document.getElementById('stat-deducciones-monto').textContent = fmt(montoDed);
-
     const tbody = document.getElementById('tabla-planillas');
     const recientes = planillas.slice(0, 8);
     if (recientes.length === 0) {
@@ -236,7 +222,6 @@ async function loadDashboard() {
         <td><a href="/planilla-detalle.html?periodo=${encodeURIComponent(p['Período'])}&tipo=${encodeURIComponent(tipo)}" class="btn btn-icon btn-sm">👁</a></td>
       </tr>`;
     }).join('');
-
   } catch (e) {
     showAlert('alert-main', 'Error cargando datos: ' + e.message, 'error');
   }
