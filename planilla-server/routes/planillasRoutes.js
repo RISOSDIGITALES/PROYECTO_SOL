@@ -9,7 +9,15 @@ const INSS_RATE = 0.07;
 router.get('/', requireAuth, async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT p.*, COUNT(d.id) as total_empleados
+      `SELECT p.id,
+        p.periodo AS \`Período\`,
+        p.tipo AS Tipo,
+        p.estado AS Estado,
+        p.total_bruto AS \`Total bruto\`,
+        p.total_deducciones AS \`Total deducciones\`,
+        p.total_neto AS \`Total neto\`,
+        p.created_at AS \`Fecha de pago\`,
+        COUNT(d.id) AS \`Total empleados\`
        FROM planillas p
        LEFT JOIN detalle_planilla d ON p.id = d.planilla_id
        GROUP BY p.id

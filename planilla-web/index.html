@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard — Planilla Nicaragua</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
 <div class="layout">
@@ -187,51 +186,44 @@ function renderFeriados() {
 async function loadDashboard() {
   setPeriodoLabel();
 
-  // Próxima quincena
   const proxFecha = proximaQuincena();
   const proxDias = diasHasta(proxFecha);
   document.getElementById('stat-proxima').textContent = proxFecha;
   document.getElementById('stat-proxima-dias').textContent =
     proxDias === 0 ? '¡Es hoy!' : `en ${proxDias} día${proxDias !== 1 ? 's' : ''}`;
 
-  // Feriados
   renderFeriados();
 
   try {
     const [empleados, planillas, prestamos, adelantos, deducciones] = await Promise.all([
-      apiFetch('/.netlify/functions/empleados'),
-      apiFetch('/.netlify/functions/planillas'),
-      apiFetch('/.netlify/functions/prestamos').catch(() => []),
-      apiFetch('/.netlify/functions/adelantos').catch(() => []),
-      apiFetch('/.netlify/functions/deducciones').catch(() => []),
+      apiFetch('/api/empleados'),
+      apiFetch('/api/planillas'),
+      apiFetch('/api/prestamos').catch(() => []),
+      apiFetch('/api/adelantos').catch(() => []),
+      apiFetch('/api/deducciones').catch(() => []),
     ]);
 
-    // Empleados
     const activos = empleados.filter(e => e.Activo);
     const conSeg = activos.filter(e => (e.Tipo_Planilla || 'Con Seguro') !== 'Sin Seguro').length;
     const sinSeg = activos.filter(e => e.Tipo_Planilla === 'Sin Seguro').length;
     document.getElementById('stat-empleados').textContent = activos.length;
     document.getElementById('stat-tipos').textContent = `${conSeg} con seguro · ${sinSeg} sin seguro`;
 
-    // Préstamos activos
     const prestActivos = prestamos.filter(p => p.Estado === 'Activo');
     const montoPrest = prestActivos.reduce((s, p) => s + ((p['Cuota quincenal'] || 0) * (p['Cuotas restantes'] || 0)), 0);
     document.getElementById('stat-prestamos').textContent = prestActivos.length;
     document.getElementById('stat-prestamos-monto').textContent = `${fmt(montoPrest)} pendiente`;
 
-    // Adelantos pendientes (no pausados)
     const adelPend = adelantos.filter(a => (a.Estado || 'Pendiente') === 'Pendiente' && !a.Pausado);
     const montoAdel = adelPend.reduce((s, a) => s + (a.Monto || 0), 0);
     document.getElementById('stat-adelantos').textContent = adelPend.length;
     document.getElementById('stat-adelantos-monto').textContent = fmt(montoAdel);
 
-    // Deducciones pendientes (no pausadas)
     const dedPend = deducciones.filter(d => (d.Estado || 'Pendiente') === 'Pendiente' && !d.Pausado);
     const montoDed = dedPend.reduce((s, d) => s + (d.Monto || 0), 0);
     document.getElementById('stat-deducciones').textContent = dedPend.length;
     document.getElementById('stat-deducciones-monto').textContent = fmt(montoDed);
 
-    // Planillas recientes
     const tbody = document.getElementById('tabla-planillas');
     const recientes = planillas.slice(0, 8);
     if (recientes.length === 0) {

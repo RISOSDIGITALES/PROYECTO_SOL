@@ -30,6 +30,10 @@ CREATE TABLE IF NOT EXISTS detalle_planilla (
   created_at        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Agregar columna concepto a deducciones (si no existe)
+-- Ejecutar si la tabla ya existe sin esta columna:
+ALTER TABLE deducciones ADD COLUMN IF NOT EXISTS concepto VARCHAR(100) NULL DEFAULT NULL;
+
 CREATE TABLE IF NOT EXISTS usuarios (
   id            INT AUTO_INCREMENT PRIMARY KEY,
   email         VARCHAR(255) UNIQUE NOT NULL,

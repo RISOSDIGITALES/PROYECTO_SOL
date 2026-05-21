@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Planillas — Planilla Nicaragua</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
 <div class="layout">
@@ -75,7 +74,7 @@
     </div>
     <div class="modal-body">
       <div id="alert-gen" class="alert"></div>
-      <p style="margin:0 0 16px;color:var(--text-muted);font-size:13px">Se calculará la quincena para todos los empleados activos del tipo seleccionado. Se crearán los registros de planilla y detalle en Airtable, y se actualizarán adelantos, deducciones y préstamos.</p>
+      <p style="margin:0 0 16px;color:var(--text-muted);font-size:13px">Se calculará la quincena para todos los empleados activos del tipo seleccionado.</p>
       <div class="form-group">
         <label>Período (fecha de la quincena) *</label>
         <input type="date" id="gen-periodo" />
@@ -118,7 +117,7 @@ if (_currentUser) {
 
 async function loadPlanillas() {
   try {
-    allPlanillas = await apiFetch('/.netlify/functions/planillas');
+    allPlanillas = await apiFetch('/api/planillas');
     renderTabla();
   } catch (e) {
     showAlert('alert-pl', 'Error: ' + e.message, 'error');
@@ -144,7 +143,6 @@ function renderTabla() {
     const periodoVal = p['Período'] || '';
     const periodo = encodeURIComponent(periodoVal);
     const tipoEnc = encodeURIComponent(tipo);
-    // Calcular fecha de pago desde el período si no está definida
     const fechaPago = p['Fecha de pago'] || periodoVal;
     return `<tr>
       <td><strong>${periodoVal || '—'}</strong></td>
@@ -160,7 +158,6 @@ function renderTabla() {
   }).join('');
 }
 
-// Tabs
 document.querySelectorAll('.tab').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -170,9 +167,7 @@ document.querySelectorAll('.tab').forEach(btn => {
   });
 });
 
-// Generar planilla
 document.getElementById('btn-generar').addEventListener('click', () => {
-  // Default: today's date as the período
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('gen-periodo').value = today;
   document.getElementById('gen-tipo').value = '';
@@ -203,7 +198,7 @@ document.getElementById('save-gen').addEventListener('click', async () => {
   document.getElementById('alert-gen').className = 'alert';
 
   try {
-    const result = await apiFetch('/.netlify/functions/calcular', {
+    const result = await apiFetch('/api/planillas/calcular', {
       method: 'POST',
       body: JSON.stringify({ periodo, tipo: tipo || undefined }),
     });
@@ -220,9 +215,8 @@ document.getElementById('save-gen').addEventListener('click', async () => {
     `;
 
     showAlert('alert-gen', '✅ Planilla generada correctamente', 'success');
-    allPlanillas = await apiFetch('/.netlify/functions/planillas');
+    allPlanillas = await apiFetch('/api/planillas');
     renderTabla();
-
     btn.textContent = 'Generar otra';
   } catch (e) {
     showAlert('alert-gen', 'Error: ' + e.message, 'error');

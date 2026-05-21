@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Recibo de Pago — Nicaragua</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <style>
     .recibo-wrap {
       max-width: 680px;
@@ -32,9 +31,7 @@
       opacity: 0.8;
       margin-top: 2px;
     }
-    .recibo-section {
-      border-bottom: 1px solid #e0e0e0;
-    }
+    .recibo-section { border-bottom: 1px solid #e0e0e0; }
     .recibo-section-title {
       background: #f5f5f5;
       padding: 5px 14px;
@@ -54,10 +51,7 @@
     .recibo-row:last-child { border-bottom: none; }
     .recibo-row .label { color: #555; }
     .recibo-row .value { font-weight: 600; text-align: right; }
-    .recibo-row.subtotal {
-      background: #fafafa;
-      font-weight: 700;
-    }
+    .recibo-row.subtotal { background: #fafafa; font-weight: 700; }
     .recibo-row.neto {
       background: #1a1a2e;
       color: #fff;
@@ -68,7 +62,6 @@
     .recibo-row.neto .label,
     .recibo-row.neto .value { color: #fff; }
     .recibo-row.descuento .value { color: #555; }
-
     .firma-area {
       padding: 20px 14px 16px;
       font-size: 12px;
@@ -83,7 +76,6 @@
       padding-top: 4px;
       color: #666;
     }
-
     @media print {
       .sidebar, .topbar { display: none !important; }
       .main { margin-left: 0 !important; padding: 0 !important; }
@@ -141,12 +133,12 @@ requireAuth();
 function _initPage() {
   initLayout();
   const p = new URLSearchParams(window.location.search);
-  const empleado = p.get('empleado') || '';
-  const periodo  = p.get('periodo')  || '';
-  document.getElementById('sub-recibo').textContent = `${empleado} — ${periodo}`;
+  const empleadoId = p.get('empleado_id') || '';
+  const periodo    = p.get('periodo')      || '';
+  document.getElementById('sub-recibo').textContent = `Período ${periodo}`;
   const volverUrl = `/planilla-detalle.html?periodo=${encodeURIComponent(periodo)}`;
   document.getElementById('btn-volver').href = volverUrl;
-  loadRecibo(empleado, periodo);
+  loadRecibo(empleadoId, periodo);
 }
 
 const _cu = netlifyIdentity.currentUser();
@@ -162,69 +154,66 @@ function fd(s) {
   return s.split('T')[0];
 }
 
-async function loadRecibo(empleado, periodo) {
+async function loadRecibo(empleadoId, periodo) {
   try {
-    const qs = `?empleado=${encodeURIComponent(empleado)}&periodo=${encodeURIComponent(periodo)}`;
-    const data = await apiFetch('/.netlify/functions/recibo' + qs);
-    renderRecibo(data, empleado, periodo);
+    const qs = `?empleado_id=${encodeURIComponent(empleadoId)}&periodo=${encodeURIComponent(periodo)}`;
+    const data = await apiFetch('/api/recibo' + qs);
+    renderRecibo(data, periodo);
   } catch (e) {
     showAlert('alert-recibo', 'Error cargando recibo: ' + e.message, 'error');
     document.getElementById('recibo-container').innerHTML = '';
   }
 }
 
-function renderRecibo(data, empleado, periodo) {
+function renderRecibo(data, periodo) {
   const emp  = data.empleado    || {};
   const det  = data.detalle     || {};
   const adel = data.adelantos   || [];
-  const pres = data.prestamos   || [];
   const ext  = data.extras      || [];
   const ded  = data.deducciones || [];
   const vac  = data.vacaciones  || [];
 
-  const salarioMensual   = parseFloat(emp['Salario bruto mensual'] || 0);
-  const subTotalQuincena = parseFloat(det['Salario quincenal bruto'] || salarioMensual / 2);
+  const salarioMensual   = parseFloat(emp.salario_bruto || 0);
+  const subTotalQuincena = parseFloat(det.salario_quincenal || salarioMensual / 2);
 
-  const bonosArr    = ext.filter(e => e.Tipo === 'Bono');
-  const feriadosArr = ext.filter(e => e.Tipo === 'Feriado trabajado');
-  const turnosArr   = ext.filter(e => e.Tipo === 'Otro');
-  const bono        = bonosArr.reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
-  const feriados    = feriadosArr.reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
-  const turnoExt    = turnosArr.reduce((s, e) => s + parseFloat(e.Monto || 0), 0);
-  const vacPago     = vac.reduce((s, v) => s + parseFloat(v.Monto || 0), 0);
+  const bonosArr    = ext.filter(e => e.tipo === 'Bono');
+  const feriadosArr = ext.filter(e => e.tipo === 'Feriado trabajado');
+  const turnosArr   = ext.filter(e => e.tipo === 'Otro');
+  const bono        = bonosArr.reduce((s, e) => s + parseFloat(e.monto || 0), 0);
+  const feriados    = feriadosArr.reduce((s, e) => s + parseFloat(e.monto || 0), 0);
+  const turnoExt    = turnosArr.reduce((s, e) => s + parseFloat(e.monto || 0), 0);
+  const vacPago     = vac.reduce((s, v) => s + parseFloat(v.monto || 0), 0);
   const granTotal   = subTotalQuincena + bono + feriados + turnoExt + vacPago;
 
-  const inss         = parseFloat(det['INSS (7%)'] || 0);
-  const ir           = parseFloat(det['IR'] || 0);
-  const descPrestamo = parseFloat(det['Descuento préstamo'] || 0);
-  const descAdelanto = parseFloat(det['Descuento adelanto'] || 0);
-  const descDed      = ded.reduce((s, d) => s + parseFloat(d.Monto || 0), 0);
+  const inss         = parseFloat(det.inss || 0);
+  const ir           = parseFloat(det.ir || 0);
+  const descPrestamo = parseFloat(det.desc_prestamo || 0);
+  const descAdelanto = parseFloat(det.desc_adelanto || 0);
+  const descDed      = ded.reduce((s, d) => s + parseFloat(d.monto || 0), 0);
   const totalDesc    = inss + ir + descAdelanto + descDed + descPrestamo;
-  const netoAPagar   = parseFloat(det['Neto a recibir'] || (granTotal - totalDesc));
+  const netoAPagar   = parseFloat(det.neto || (granTotal - totalDesc));
 
-  // Sección extras (solo si hay)
   const extrasSection = (bono || feriados || turnoExt || vacPago) ? `
     <div class="recibo-section">
       <div class="recibo-section-title">Extras</div>
       ${bono ? `<div class="recibo-row"><span class="label">Bono</span><span class="value">${cs(bono)}</span></div>` : ''}
       ${feriados ? `<div class="recibo-row"><span class="label">Feriados trabajados</span><span class="value">${cs(feriados)}</span></div>` : ''}
       ${turnoExt ? `<div class="recibo-row"><span class="label">Turno / Extra</span><span class="value">${cs(turnoExt)}</span></div>` : ''}
-      ${vac.map(v => `<div class="recibo-row"><span class="label">Vacaciones pagadas (${v.Dias} días)</span><span class="value">${cs(parseFloat(v.Monto || 0))}</span></div>`).join('')}
+      ${vac.map(v => `<div class="recibo-row"><span class="label">Vacaciones pagadas (${v.dias} días)</span><span class="value">${cs(parseFloat(v.monto || 0))}</span></div>`).join('')}
     </div>` : '';
 
-  // Sección descuentos (solo si hay)
   let filasDesc = '';
   if (inss > 0) filasDesc += `<div class="recibo-row descuento"><span class="label">INSS Laboral (7%)</span><span class="value">- ${cs(inss)}</span></div>`;
   if (ir > 0)   filasDesc += `<div class="recibo-row descuento"><span class="label">IR</span><span class="value">- ${cs(ir)}</span></div>`;
   if (adel.length > 0) {
     adel.forEach(a => {
-      filasDesc += `<div class="recibo-row descuento"><span class="label">Adelanto</span><span class="value">- ${cs(parseFloat(a.Monto || 0))}</span></div>`;
+      filasDesc += `<div class="recibo-row descuento"><span class="label">Adelanto</span><span class="value">- ${cs(parseFloat(a.monto || 0))}</span></div>`;
     });
   } else if (descAdelanto > 0) {
     filasDesc += `<div class="recibo-row descuento"><span class="label">Adelanto</span><span class="value">- ${cs(descAdelanto)}</span></div>`;
   }
   ded.forEach(d => {
-    filasDesc += `<div class="recibo-row descuento"><span class="label">${d.Concepto || 'Deducción'}</span><span class="value">- ${cs(parseFloat(d.Monto || 0))}</span></div>`;
+    filasDesc += `<div class="recibo-row descuento"><span class="label">${d.concepto || 'Deducción'}</span><span class="value">- ${cs(parseFloat(d.monto || 0))}</span></div>`;
   });
   if (descPrestamo > 0) filasDesc += `<div class="recibo-row descuento"><span class="label">Abono préstamo</span><span class="value">- ${cs(descPrestamo)}</span></div>`;
 
@@ -245,11 +234,11 @@ function renderRecibo(data, empleado, periodo) {
         <div class="recibo-section-title">Empleado</div>
         <div class="recibo-row">
           <span class="label">Nombre</span>
-          <span class="value">${emp.Nombre || empleado}</span>
+          <span class="value">${emp.nombre || '—'}</span>
         </div>
         <div class="recibo-row">
           <span class="label">Tipo de planilla</span>
-          <span class="value">${emp['Tipo_Planilla'] || 'Con Seguro'}</span>
+          <span class="value">${emp.tipo_planilla || 'Con Seguro'}</span>
         </div>
       </div>
 
