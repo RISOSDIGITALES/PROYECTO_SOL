@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Préstamos — Planilla Nicaragua</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
 <div class="layout">
@@ -21,6 +20,7 @@
       <a href="/deducciones.html"><span class="icon">➖</span> Otras Deducciones</a>
       <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
       <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
+      <a href="/usuarios.html" id="link-usuarios"><span class="icon">👤</span> Usuarios</a>
     </nav>
     <div class="sidebar-footer">
       <span id="user-email"></span>
@@ -169,29 +169,20 @@
 
 <script src="/assets/js/auth.js"></script>
 <script>
-requireAuthRole(['Admin', 'Planillero']);
-
 let allPrestamos = [];
 let filtroEstado = 'todos';
 let filtroEmpleado = '';
 
-const _currentUser = netlifyIdentity.currentUser();
-if (_currentUser) {
+onReady(['Master', 'Colaborador'], () => {
   initLayout();
   loadAll();
-} else {
-  netlifyIdentity.on('init', user => {
-    if (!user) return;
-    initLayout();
-    loadAll();
-  });
-}
+});
 
 async function loadAll() {
   try {
     const [prestamos, empleados] = await Promise.all([
-      apiFetch('/.netlify/functions/prestamos'),
-      apiFetch('/.netlify/functions/empleados'),
+      apiFetch('/api/prestamos'),
+      apiFetch('/api/empleados'),
     ]);
     allPrestamos = prestamos;
 
@@ -247,7 +238,7 @@ function renderTabla() {
       </td>
       <td><span class="badge ${badge}">${estado}</span></td>
       <td style="display:flex;gap:4px;flex-wrap:wrap">
-        <button class="btn btn-icon btn-sm" title="Editar" onclick="editarPrestamo('${p.id}')">✏️</button>
+        <button class="btn btn-icon btn-sm" title="Editar" onclick="editarPrestamo('${p.id}')">&#9999;&#65039;</button>
         ${estado === 'Activo' ? `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text)" onclick="abrirPago('${p.id}')">+ Pago</button>` : ''}
       </td>
     </tr>`;
@@ -268,7 +259,6 @@ document.getElementById('filtro-empleado').addEventListener('change', e => {
   renderTabla();
 });
 
-// Historial
 function verHistorial(id) {
   const p = allPrestamos.find(x => x.id === id);
   if (!p) return;
@@ -303,7 +293,6 @@ function verHistorial(id) {
   });
 });
 
-// Pago directo
 function abrirPago(id) {
   const p = allPrestamos.find(x => x.id === id);
   if (!p) return;
@@ -351,13 +340,13 @@ document.getElementById('save-pago').addEventListener('click', async () => {
   const btn = document.getElementById('save-pago');
   btn.disabled = true; btn.textContent = 'Registrando...';
   try {
-    await apiFetch('/.netlify/functions/prestamos', {
+    await apiFetch('/api/prestamos', {
       method: 'PATCH',
       body: JSON.stringify({ id: prestamoId, ...fields }),
     });
     document.getElementById('modal-pago').classList.remove('open');
     showAlert('alert-pr', '✅ Pago directo registrado', 'success');
-    allPrestamos = await apiFetch('/.netlify/functions/prestamos');
+    allPrestamos = await apiFetch('/api/prestamos');
     renderTabla();
   } catch (e) {
     showAlert('alert-pago', 'Error: ' + e.message, 'error');
@@ -366,7 +355,6 @@ document.getElementById('save-pago').addEventListener('click', async () => {
   }
 });
 
-// Nuevo / Editar préstamo
 document.getElementById('btn-nuevo').addEventListener('click', () => {
   document.getElementById('modal-titulo').textContent = 'Nuevo Préstamo';
   document.getElementById('pr-id').value = '';
@@ -422,13 +410,13 @@ document.getElementById('save-pr').addEventListener('click', async () => {
   btn.disabled = true; btn.textContent = 'Guardando...';
   try {
     if (id) {
-      await apiFetch('/.netlify/functions/prestamos', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
+      await apiFetch('/api/prestamos', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
     } else {
-      await apiFetch('/.netlify/functions/prestamos', { method: 'POST', body: JSON.stringify(fields) });
+      await apiFetch('/api/prestamos', { method: 'POST', body: JSON.stringify(fields) });
     }
     document.getElementById('modal-pr').classList.remove('open');
     showAlert('alert-pr', '✅ Préstamo guardado', 'success');
-    allPrestamos = await apiFetch('/.netlify/functions/prestamos');
+    allPrestamos = await apiFetch('/api/prestamos');
     renderTabla();
   } catch (e) {
     showAlert('alert-form', 'Error: ' + e.message, 'error');

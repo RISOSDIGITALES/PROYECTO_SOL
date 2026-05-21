@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
-const { requireAuth } = require('../auth');
+const { requireAuth, requireMaster } = require('../auth');
 
 const SALARIO_MINIMO = 10913.54;
 const INSS_RATE = 0.07;
@@ -8,21 +8,42 @@ const INSS_RATE = 0.07;
 // GET /api/planillas
 router.get('/', requireAuth, async (req, res) => {
   try {
+    const conds = [];
+    const params = [];
+    if (req.user.rol === 'Colaborador' && req.user.planillas_acceso) {
+      conds.push('p.tipo = ?');
+      params.push(req.user.planillas_acceso);
+    }
+    const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
     const [rows] = await db.query(
-      `SELECT p.*, COUNT(d.id) as total_empleados
+      `SELECT p.id,
+        p.periodo AS \`Período\`,
+        p.tipo AS Tipo,
+        p.estado AS Estado,
+        p.total_bruto AS \`Total bruto\`,
+        p.total_deducciones AS \`Total deducciones\`,
+        p.total_neto AS \`Total neto\`,
+        p.created_at AS \`Fecha de pago\`,
+        COUNT(d.id) AS \`Total empleados\`
        FROM planillas p
        LEFT JOIN detalle_planilla d ON p.id = d.planilla_id
+       ${where}
        GROUP BY p.id
-       ORDER BY p.periodo DESC`
+       ORDER BY p.periodo DESC`,
+      params
     );
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// POST /api/planillas/calcular
+// POST /api/planillas/calcular — solo Master puede generar planilla global; Colaborador solo su tipo
 router.post('/calcular', requireAuth, async (req, res) => {
-  const { periodo, tipo } = req.body;
+  let { periodo, tipo } = req.body;
   if (!periodo) return res.status(400).json({ error: 'Se requiere periodo (YYYY-MM-DD)' });
+  // Colaborador solo puede generar su tipo asignado
+  if (req.user.rol === 'Colaborador' && req.user.planillas_acceso) {
+    tipo = req.user.planillas_acceso;
+  }
 
   const conn = await db.getConnection();
   try {

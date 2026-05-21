@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Usuarios — Nomify</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>🧮 Nomify</h2><p>Planilla Nicaragua</p></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+      <a href="/extras.html"><span class="icon">⭐</span> Extras</a>
+      <a href="/deducciones.html"><span class="icon">➖</span> Otras Deducciones</a>
+      <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
+      <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
+      <a href="/usuarios.html" class="active" id="link-usuarios"><span class="icon">👤</span> Usuarios</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Usuarios</h1><span class="sub">Acceso al sistema — solo Master</span></div>
+      <button class="btn btn-primary" id="btn-nuevo">+ Nuevo usuario</button>
+    </div>
+    <div class="content">
+      <div id="alert-usr" class="alert"></div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>Rol</th>
+              <th>Planilla asignada</th>
+              <th>Creado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-usuarios">
+            <tr class="loading-row"><td colspan="6"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL USUARIO -->
+<div class="overlay" id="modal-usr">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h3 id="modal-titulo">Nuevo Usuario</h3>
+      <button class="modal-close" id="close-modal">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-form" class="alert"></div>
+      <input type="hidden" id="usr-id" />
+      <div class="form-group">
+        <label>Nombre</label>
+        <input type="text" id="usr-nombre" placeholder="Nombre completo" />
+      </div>
+      <div class="form-group">
+        <label>Email *</label>
+        <input type="email" id="usr-email" placeholder="correo@ejemplo.com" />
+      </div>
+      <div class="form-group">
+        <label id="label-password">Contraseña *</label>
+        <input type="password" id="usr-password" placeholder="Mínimo 6 caracteres" />
+        <small style="color:var(--text-muted);font-size:11px" id="hint-password"></small>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Rol *</label>
+          <select id="usr-rol">
+            <option value="Master">Master</option>
+            <option value="Colaborador">Colaborador</option>
+          </select>
+        </div>
+        <div class="form-group" id="row-planilla">
+          <label>Planilla asignada *</label>
+          <select id="usr-planilla">
+            <option value="">— seleccionar —</option>
+            <option value="Con Seguro">Con Seguro</option>
+            <option value="Sin Seguro">Sin Seguro</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-usr">Cancelar</button>
+      <button class="btn btn-primary" id="save-usr">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAR ELIMINAR -->
+<div class="overlay" id="modal-confirm">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header">
+      <h3>Eliminar usuario</h3>
+      <button class="modal-close" id="close-confirm">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0">¿Eliminar <strong id="confirm-nombre"></strong>? Perderá el acceso al sistema.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-confirm">Cancelar</button>
+      <button class="btn" id="ok-confirm" style="background:var(--red);color:#fff">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script>
+let allUsuarios = [];
+let pendingDeleteId = null;
+
+onReady(['Master'], () => {
+  initLayout();
+  loadUsuarios();
+});
+
+async function loadUsuarios() {
+  try {
+    allUsuarios = await apiFetch('/api/usuarios');
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-usr', 'Error: ' + e.message, 'error');
+  }
+}
+
+function fmtFecha(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('es-NI', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+function renderTabla() {
+  const tbody = document.getElementById('tabla-usuarios');
+  if (!allUsuarios.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">No hay usuarios registrados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = allUsuarios.map(u => {
+    const badge = u.rol === 'Master' ? 'badge-blue' : 'badge-gray';
+    return `<tr>
+      <td><strong>${u.nombre || '—'}</strong></td>
+      <td style="font-size:13px">${u.email}</td>
+      <td><span class="badge ${badge}">${u.rol}</span></td>
+      <td style="font-size:13px;color:var(--text-muted)">${u.planillas_acceso || '— todas —'}</td>
+      <td style="font-size:12px;color:var(--text-muted)">${fmtFecha(u.created_at)}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-icon btn-sm" onclick="editar('${u.id}')">&#x270F;&#xFE0F;</button>
+        <button class="btn btn-icon btn-sm" onclick="confirmarEliminar('${u.id}','${u.nombre || u.email}')" style="color:var(--red)">&#x1F5D1;&#xFE0F;</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// Mostrar/ocultar campo planilla según rol
+document.getElementById('usr-rol').addEventListener('change', function() {
+  document.getElementById('row-planilla').style.display = this.value === 'Colaborador' ? '' : 'none';
+});
+
+function abrirModal(u = null) {
+  document.getElementById('modal-titulo').textContent = u ? 'Editar Usuario' : 'Nuevo Usuario';
+  document.getElementById('usr-id').value = u?.id || '';
+  document.getElementById('usr-nombre').value = u?.nombre || '';
+  document.getElementById('usr-email').value = u?.email || '';
+  document.getElementById('usr-password').value = '';
+  document.getElementById('usr-rol').value = u?.rol || 'Colaborador';
+  document.getElementById('usr-planilla').value = u?.planillas_acceso || '';
+  document.getElementById('row-planilla').style.display = (u?.rol || 'Colaborador') === 'Colaborador' ? '' : 'none';
+  document.getElementById('label-password').textContent = u ? 'Nueva contraseña' : 'Contraseña *';
+  document.getElementById('hint-password').textContent = u ? 'Dejar en blanco para no cambiarla' : '';
+  document.getElementById('alert-form').className = 'alert';
+  document.getElementById('modal-usr').classList.add('open');
+}
+
+document.getElementById('btn-nuevo').addEventListener('click', () => abrirModal());
+function editar(id) { abrirModal(allUsuarios.find(u => u.id == id)); }
+
+['close-modal','cancel-usr'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-usr').classList.remove('open');
+  });
+});
+
+document.getElementById('save-usr').addEventListener('click', async () => {
+  const id       = document.getElementById('usr-id').value;
+  const nombre   = document.getElementById('usr-nombre').value.trim();
+  const email    = document.getElementById('usr-email').value.trim();
+  const password = document.getElementById('usr-password').value;
+  const rol      = document.getElementById('usr-rol').value;
+  const planilla = document.getElementById('usr-planilla').value;
+
+  if (!email) { showAlert('alert-form', 'El email es requerido', 'error'); return; }
+  if (!id && !password) { showAlert('alert-form', 'La contraseña es requerida', 'error'); return; }
+  if (rol === 'Colaborador' && !planilla) { showAlert('alert-form', 'Selecciona la planilla asignada', 'error'); return; }
+
+  const body = { nombre, email, rol, planillas_acceso: rol === 'Colaborador' ? planilla : null };
+  if (password) body.password = password;
+
+  const btn = document.getElementById('save-usr');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    if (id) {
+      await apiFetch(`/api/usuarios/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+    } else {
+      await apiFetch('/api/usuarios', { method: 'POST', body: JSON.stringify(body) });
+    }
+    document.getElementById('modal-usr').classList.remove('open');
+    showAlert('alert-usr', '✅ Usuario guardado', 'success');
+    allUsuarios = await apiFetch('/api/usuarios');
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-form', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
+});
+
+function confirmarEliminar(id, nombre) {
+  pendingDeleteId = id;
+  document.getElementById('confirm-nombre').textContent = nombre;
+  document.getElementById('modal-confirm').classList.add('open');
+}
+
+['close-confirm','cancel-confirm'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-confirm').classList.remove('open');
+    pendingDeleteId = null;
+  });
+});
+
+document.getElementById('ok-confirm').addEventListener('click', async () => {
+  if (!pendingDeleteId) return;
+  document.getElementById('modal-confirm').classList.remove('open');
+  try {
+    await apiFetch(`/api/usuarios/${pendingDeleteId}`, { method: 'DELETE' });
+    showAlert('alert-usr', '✅ Usuario eliminado', 'success');
+    allUsuarios = allUsuarios.filter(u => u.id != pendingDeleteId);
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-usr', 'Error: ' + e.message, 'error');
+  } finally {
+    pendingDeleteId = null;
+  }
+});
+</script>
+</body>
+</html>

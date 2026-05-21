@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Calendario — Planilla Nicaragua</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <style>
     .cal-toolbar {
       display: flex;
@@ -142,6 +141,7 @@
       <a href="/deducciones.html"><span class="icon">➖</span> Otras Deducciones</a>
       <a href="/calendario.html" class="active"><span class="icon">📅</span> Calendario</a>
       <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
+      <a href="/usuarios.html" id="link-usuarios"><span class="icon">👤</span> Usuarios</a>
     </nav>
     <div class="sidebar-footer">
       <span id="user-email"></span>
@@ -157,9 +157,9 @@
 
       <div class="cal-toolbar">
         <div class="cal-mes">
-          <button class="cal-btn" id="btn-prev">◀</button>
+          <button class="cal-btn" id="btn-prev">◄</button>
           <h2 id="cal-titulo">Cargando...</h2>
-          <button class="cal-btn" id="btn-next">▶</button>
+          <button class="cal-btn" id="btn-next">►</button>
         </div>
         <div class="cal-filtros">
           <label><input type="checkbox" id="chk-feriados" checked /> 🎌 Feriados</label>
@@ -185,8 +185,6 @@
 <script src="/assets/js/auth.js"></script>
 <script src="/assets/js/feriados.js"></script>
 <script>
-requireAuthRole(['Admin', 'Planillero']);
-
 const MESES    = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const DIAS_SEM = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 const VAC_COLORS = ['tag-vac-0','tag-vac-1','tag-vac-2','tag-vac-3','tag-vac-4'];
@@ -197,14 +195,7 @@ let empColorMap   = {};
 let empColorIdx   = 0;
 let filtroEmpCal  = '';
 
-function onReady(fn) {
-  const u = netlifyIdentity.currentUser();
-  if (u) { fn(u); return; }
-  netlifyIdentity.on('init',  u2 => { if (u2) fn(u2); });
-  netlifyIdentity.on('login', fn);
-}
-
-onReady(() => {
+onReady(['Master', 'Colaborador'], () => {
   initLayout();
   const hoy = new Date();
   viewYear  = hoy.getFullYear();
@@ -238,19 +229,17 @@ function initControls() {
 async function loadVacaciones() {
   try {
     const [vac, empleados] = await Promise.all([
-      apiFetch('/.netlify/functions/vacaciones'),
-      apiFetch('/.netlify/functions/empleados'),
+      apiFetch('/api/vacaciones'),
+      apiFetch('/api/empleados'),
     ]);
     allVacaciones = vac.filter(v => v.Estado !== 'Pendiente');
 
-    // Asignar colores a empleados
     const activos = empleados.filter(e => e.Activo);
     activos.forEach(e => {
       empColorMap[e.Nombre] = VAC_COLORS[empColorIdx % VAC_COLORS.length];
       empColorIdx++;
     });
 
-    // Poblar selector de empleados
     const sel = document.getElementById('filtro-emp-cal');
     activos.forEach(e => {
       const opt = document.createElement('option');
@@ -283,7 +272,6 @@ function renderCal() {
   const ultimoDia = new Date(viewYear, viewMonth + 1, 0).getDate();
   const mesStr    = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}`;
 
-  // Feriados del mes
   let ferMap = {};
   if (showFer) {
     try {
@@ -326,7 +314,6 @@ function renderCal() {
 
   document.getElementById('cal-grid').innerHTML = html;
 
-  // Leyenda
   const legendItems = [
     { color: 'border:2px solid var(--green2)', label: 'Hoy' },
     ...(showQui ? [{ color: 'background:rgba(46,204,113,.2);border:1px solid rgba(46,204,113,.4)', label: 'Quincena' }] : []),

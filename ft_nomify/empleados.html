@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Empleados — Planilla Nicaragua</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
 <div class="layout">
@@ -21,6 +20,7 @@
       <a href="/deducciones.html"><span class="icon">➖</span> Otras Deducciones</a>
       <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
       <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
+      <a href="/usuarios.html" id="link-usuarios"><span class="icon">👤</span> Usuarios</a>
     </nav>
     <div class="sidebar-footer">
       <span id="user-email"></span>
@@ -146,8 +146,8 @@
           <label>Rol en el sistema</label>
           <select id="emp-rol">
             <option value="">Sin acceso</option>
-            <option value="Admin">Admin (acceso total)</option>
-            <option value="Planillero">Planillero (genera planillas, no edita empleados)</option>
+            <option value="Master">Master (acceso total)</option>
+            <option value="Colaborador">Colaborador (genera planillas, no edita empleados)</option>
             <option value="Empleado">Empleado (solo ve su propio recibo)</option>
           </select>
         </div>
@@ -162,17 +162,14 @@
 
 <script src="/assets/js/auth.js"></script>
 <script>
-requireAuthRole(['Admin', 'Planillero']);
-
 let allEmpleados = [];
-let _esAdmin = false;
+let _esMaster = false;
 
 async function _init() {
   initLayout();
   const info = await getMyInfo();
-  _esAdmin = info.rol === 'Admin';
-  if (!_esAdmin) {
-    // Planillero: hide "Nuevo empleado" button and lock salary fields
+  _esMaster = info.rol === 'Master';
+  if (!_esMaster) {
     document.getElementById('btn-nuevo').style.display = 'none';
     ['emp-salario','emp-tipo','emp-inss-base','emp-ir','emp-email','emp-rol'].forEach(id => {
       const el = document.getElementById(id);
@@ -182,13 +179,13 @@ async function _init() {
   loadEmpleados();
 }
 
-const _currentUser = netlifyIdentity.currentUser();
-if (_currentUser) { _init(); }
-else { netlifyIdentity.on('init', user => { if (user) _init(); }); }
+onReady(['Master', 'Colaborador'], () => {
+  _init();
+});
 
 async function loadEmpleados() {
   try {
-    allEmpleados = await apiFetch('/.netlify/functions/empleados');
+    allEmpleados = await apiFetch('/api/empleados');
     renderTabla(allEmpleados);
   } catch (e) {
     showAlert('alert-emp', 'Error: ' + e.message, 'error');
@@ -219,7 +216,6 @@ function renderTabla(lista) {
   }).join('');
 }
 
-// Search
 document.getElementById('buscador').addEventListener('input', e => {
   const q = e.target.value.toLowerCase();
   renderTabla(allEmpleados.filter(emp =>
@@ -228,7 +224,6 @@ document.getElementById('buscador').addEventListener('input', e => {
   ));
 });
 
-// Open modal new
 document.getElementById('btn-nuevo').addEventListener('click', () => {
   document.getElementById('modal-titulo').textContent = 'Nuevo Empleado';
   document.getElementById('emp-id').value = '';
@@ -289,7 +284,6 @@ document.getElementById('ok-confirm-edit').addEventListener('click', () => {
   pendingEditId = null;
 });
 
-// Show/hide INSS_Base based on tipo planilla
 function toggleInssBase() {
   const tipo = document.getElementById('emp-tipo').value;
   const row = document.getElementById('emp-inss-base').closest('.form-group');
@@ -298,14 +292,12 @@ function toggleInssBase() {
 }
 document.getElementById('emp-tipo').addEventListener('change', toggleInssBase);
 
-// Close modal
 ['close-modal','cancel-emp'].forEach(id => {
   document.getElementById(id).addEventListener('click', () => {
     document.getElementById('modal-emp').classList.remove('open');
   });
 });
 
-// Save
 document.getElementById('save-emp').addEventListener('click', async () => {
   const id = document.getElementById('emp-id').value;
   const nombre = document.getElementById('emp-nombre').value.trim();
@@ -335,9 +327,9 @@ document.getElementById('save-emp').addEventListener('click', async () => {
 
   try {
     if (id) {
-      await apiFetch('/.netlify/functions/empleados', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
+      await apiFetch('/api/empleados', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
     } else {
-      await apiFetch('/.netlify/functions/empleados', { method: 'POST', body: JSON.stringify(fields) });
+      await apiFetch('/api/empleados', { method: 'POST', body: JSON.stringify(fields) });
     }
     document.getElementById('modal-emp').classList.remove('open');
     showAlert('alert-emp', '✅ Empleado guardado correctamente', 'success');

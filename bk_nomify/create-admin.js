@@ -21,7 +21,7 @@ const PASSWORD = 'admin123';
   const hash = bcrypt.hashSync(PASSWORD, 10);
   await db.query(
     'INSERT INTO usuarios (email, password_hash, rol) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE password_hash = ?, rol = ?',
-    [EMAIL, hash, 'Admin', hash, 'Admin']
+    [EMAIL, hash, 'Master', hash, 'Master']
   );
   console.log(`Usuario admin creado: ${EMAIL} / ${PASSWORD}`);
   await db.end();
