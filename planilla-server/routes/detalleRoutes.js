@@ -24,9 +24,12 @@ router.get('/', requireAuth, async (req, res) => {
 
     const conds = ['d.periodo = ?'];
     const params = [periodo];
-    if (tipo && tipo !== '—' && tipo !== '') {
+    const tipoFiltro = (req.user.rol === 'Colaborador' && req.user.planillas_acceso)
+      ? req.user.planillas_acceso
+      : (tipo && tipo !== '—' && tipo !== '') ? tipo : null;
+    if (tipoFiltro) {
       conds.push('d.tipo_planilla = ?');
-      params.push(tipo);
+      params.push(tipoFiltro);
     }
 
     const [rows] = await db.query(

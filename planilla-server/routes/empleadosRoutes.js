@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
-const { requireAuth } = require('../auth');
+const { requireAuth, requireMaster } = require('../auth');
 
 const GET_SQL = `
   SELECT id, nombre AS Nombre, cargo AS Cargo,
@@ -9,7 +9,7 @@ const GET_SQL = `
     DATE_FORMAT(fecha_ingreso, '%Y-%m-%d') AS \`Fecha de ingreso\`,
     inss_base AS INSS_Base, ir_fijo AS IR, activo AS Activo,
     email AS Email, rol AS Rol
-  FROM empleados ORDER BY nombre ASC`;
+  FROM empleados`;
 
 function mapBody(b) {
   return {
@@ -28,12 +28,20 @@ function mapBody(b) {
 
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const [rows] = await db.query(GET_SQL);
+    let sql = GET_SQL;
+    const params = [];
+    // Colaborador solo ve su tipo de planilla
+    if (req.user.rol === 'Colaborador' && req.user.planillas_acceso) {
+      sql += ' WHERE tipo_planilla = ?';
+      params.push(req.user.planillas_acceso);
+    }
+    sql += ' ORDER BY nombre ASC';
+    const [rows] = await db.query(sql, params);
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, requireMaster, async (req, res) => {
   const m = mapBody(req.body);
   if (!m.nombre) return res.status(400).json({ error: 'Nombre requerido' });
   try {

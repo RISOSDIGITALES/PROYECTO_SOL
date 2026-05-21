@@ -18,9 +18,9 @@ function requireAuth(req, res, next) {
   }
 }
 
-function requireAdmin(req, res, next) {
-  if (req.user?.rol !== 'Admin') return res.status(403).json({ error: 'Solo Admin' });
+function requireMaster(req, res, next) {
+  if (req.user?.rol !== 'Master') return res.status(403).json({ error: 'Solo Master' });
   next();
 }
 
-module.exports = { signToken, requireAuth, requireAdmin };
+module.exports = { signToken, requireAuth, requireMaster };
