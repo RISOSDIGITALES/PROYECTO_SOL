@@ -519,10 +519,220 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 43. **Documento CE reorganizado** (2026-05-11): documento de referencia de Crating Express reorganizado en 8 secciones limpias (perfil, catálogo, interiores, ISPM-15, logística, cotización, pagos, FAQs) — datos bancarios removidos por seguridad, duplicados eliminados; guardado como nuevo Google Doc para revisión
 44. **Bug fix Alex "Hola de nuevo"** (2026-05-11): `Instrucciones_IA` en Airtable `WhatsApp_Config` reemplazado — contenido RRSS removido, sustituido por reglas de comportamiento del bot WA: manejo de cliente nuevo vs conocido, prioridad del MENSAJE ACTUAL, prohibición de repetir/parafrasear el mensaje del cliente
 45. **Reestructuración completa prompts Alex** (2026-05-11): `Prompt_Sistema` e `Instrucciones_IA` reescritos desde cero — eliminada regla contradictoria de "Hola de nuevo" en Prompt_Sistema que conflictuaba con Instrucciones_IA; corregido MAPEO TIPO_CAJA_API (valores incorrectos: `cajon_cerrado`, `jaula_abierta`, `plataforma`, etc. → correctos: `cajones_cerrados`, `jaulas`, `plataformas_contenedor`, etc.); estructura limpia sin instrucciones duplicadas ni fragmentadas
+46. **Migración Nomify completada** (2026-05-21): todo el stack de Planilla Nicaragua migrado de Netlify/Airtable a Express+MariaDB+JWT; todos los HTML actualizados con `onReady(roles,fn)` JWT, `netlify/functions/` eliminado, `usuarios.html` creado, backend completo en `planilla-server/`; pendiente push a `WX-MDA/Nomify` rama `sol/feature-inicial`
+
+## Nomify — Planilla Nicaragua (Express + MariaDB)
+
+### CRÍTICO: Repositorio correcto
+
+> **SIEMPRE** usar `WX-MDA/Nomify`, rama `sol/feature-inicial`.
+> El repo `risosdigitales/rrss-automatizaci-n` (también llamado `PROYECTO_SOL`) es el repo de RRSS/Crating Express — la planilla NO va ahí.
+> En sesiones donde el MCP de GitHub está conectado solo a `risosdigitales`, no se puede pushear a `WX-MDA/Nomify` directamente — abrir nueva sesión con acceso al repo correcto.
+
+### Estructura local en Windows
+
+```
+C:\Users\Orison3\Documents\PROYECTO SOL\2026\Nomify\
+  bk_nomify\         ← Express backend (git repo → WX-MDA/Nomify, rama sol/feature-inicial)
+  planilla-web\      ← HTML/CSS/JS frontend (carpeta hermana, NO repo git separado)
+  .gitignore
+  README.md
+```
+
+El servidor Express sirve el frontend con:
+```js
+app.use(express.static(path.join(__dirname, '../planilla-web')));
+```
+**La app SOLO funciona en `http://localhost:3000`** — NO abrir desde Netlify ni desde el sistema de archivos directamente.
+
+### Comandos para arrancar
+
+```bash
+# En PowerShell dentro de bk_nomify\
+nvm use 24           # ← OBLIGATORIO antes de node/npm (NVM for Windows, versión 24)
+npm install          # solo la primera vez o al agregar dependencias
+node server.js       # o: npm start
+
+# Si el puerto 3000 está ocupado:
+netstat -ano | findstr :3000
+taskkill /PID <número> /F
+```
+
+### Stack
+
+| Capa | Tecnología |
+|---|---|
+| Backend | Node.js 24 + Express 4 |
+| Auth | JWT (`jsonwebtoken` + `bcryptjs`), token en `localStorage` como `planilla_token` |
+| Base de datos | MariaDB 11 (local Windows), base `planilla_nicaragua` |
+| Frontend | HTML/CSS/JS puro, sin framework |
+| ORM/driver | `mysql2/promise` con pool de conexiones |
+
+### Sistema de roles
+
+| Rol | Acceso |
+|---|---|
+| `Master` | Todo — empleados, salarios, usuarios, todas las planillas |
+| `Colaborador` | Solo ve/edita su tipo de planilla asignada (`planillas_acceso`) |
+| ~~`Empleado`~~ | (en código) Solo `mi-recibo.html` — sus propios recibos |
+
+`planillas_acceso` en tabla `usuarios` = `'Con Seguro'` o `'Sin Seguro'` para Colaborador.
+
+### .env requerido en bk_nomify/
+
+```env
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=tu_password_aqui
+DB_NAME=planilla_nicaragua
+JWT_SECRET=cambia_esto_por_un_secreto_seguro
+PORT=3000
+```
+`.env` está en `.gitignore` — NUNCA commitear.
+
+### Crear primer usuario admin
+
+```bash
+node create-admin.js
+# Crea: risosadmi@gmail.com / admin123 con rol Master
+# Cambiar contraseña desde Usuarios en la app después del primer login
+```
+
+### Archivos del backend (en bk_nomify/)
+
+| Archivo | Descripción |
+|---|---|
+| `server.js` | Entry point — monta rutas, sirve frontend estático |
+| `auth.js` | `signToken()`, `requireAuth`, `requireMaster` |
+| `db.js` | Pool de conexión MariaDB (`mysql2/promise`) |
+| `create-admin.js` | CLI para crear usuario inicial Master |
+| `schema.sql` | DDL completo — crear todas las tablas |
+| `package.json` | Deps: express, cors, dotenv, mysql2, jsonwebtoken, bcryptjs |
+| `routes/authRoutes.js` | `POST /api/auth/login`, `GET /api/auth/me` |
+| `routes/empleadosRoutes.js` | GET/POST/PATCH empleados |
+| `routes/prestamosRoutes.js` | GET/POST/PATCH préstamos |
+| `routes/adelantosRoutes.js` | GET/POST/PATCH adelantos |
+| `routes/extrasRoutes.js` | GET/POST/PATCH/DELETE extras/bonos |
+| `routes/deduccionesRoutes.js` | GET/POST/PATCH/DELETE deducciones |
+| `routes/vacacionesRoutes.js` | GET/POST/PATCH/DELETE vacaciones |
+| `routes/planillasRoutes.js` | GET lista + `POST /calcular` (motor completo) |
+| `routes/detalleRoutes.js` | GET detalle por período/tipo o por empleado |
+| `routes/reciboRoutes.js` | GET recibo por empleado_id + período |
+| `routes/usuariosRoutes.js` | GET/POST/PATCH/DELETE usuarios (Master only) |
+
+### Schema de base de datos (tablas)
+
+```sql
+empleados      — id, nombre, cargo, tipo_planilla, salario_bruto, inss_base,
+                 ir_fijo, email, rol, planillas_acceso, fecha_ingreso, activo
+planillas      — id, periodo, tipo, estado, total_bruto, total_deducciones, total_neto
+detalle_planilla — id, planilla_id, empleado_id, periodo, tipo_planilla,
+                   salario_quincenal, inss, ir, desc_prestamo, desc_adelanto,
+                   extras, desc_deducciones, total_deducciones, neto
+prestamos      — id, empleado_id, monto_total, cuota_quincenal, cuotas_restantes,
+                 estado, historial_pagos, notas
+adelantos      — id, empleado_id, monto, descontar_en, estado, pausado, fecha_registro
+extras         — id, empleado_id, tipo, descripcion, monto, pagar_en
+deducciones    — id, empleado_id, concepto, descripcion, monto, descontar_en,
+                 estado, pausado, fecha_registro
+vacaciones     — id, empleado_id, tipo, dias, monto, fecha_inicio, fecha_fin,
+                 estado, notas
+usuarios       — id, nombre, email, password_hash, rol, planillas_acceso, empleado_id
+```
+
+**Notas de lógica clave:**
+- `inss_base = 'Salario Minimo'` → INSS = (10913.54/2) × 7% = C$381.97
+- `inss_base = 'Salario Completo'` → INSS = (salario_bruto/2) × 7%
+- `tipo_planilla = 'Sin Seguro'` → INSS = 0
+- Motor de cálculo está en `planillasRoutes.js → POST /api/planillas/calcular`
+
+### Archivos del frontend (en planilla-web/)
+
+| Archivo | `onReady` | Descripción |
+|---|---|---|
+| `login.html` | — (sin auth, es la pantalla de login) | Formulario JWT |
+| `index.html` | `onReady(['Master','Colaborador'], fn)` | Dashboard 5 stats + feriados |
+| `empleados.html` | `onReady(['Master','Colaborador'], fn)` | CRUD empleados |
+| `planillas.html` | `onReady(['Master','Colaborador'], fn)` | Historial + generar planilla |
+| `planilla-detalle.html` | `onReady(['Master','Colaborador'], fn)` | Detalle por período |
+| `prestamos.html` | `onReady(['Master','Colaborador'], fn)` | CRUD préstamos + historial pagos |
+| `adelantos.html` | `onReady(['Master','Colaborador'], fn)` | CRUD adelantos + Pausar |
+| `extras.html` | `onReady(['Master','Colaborador'], fn)` | CRUD extras/bonos/feriados |
+| `deducciones.html` | `onReady(['Master','Colaborador'], fn)` | CRUD deducciones + Pausar |
+| `calendario.html` | `onReady(['Master','Colaborador'], fn)` | Calendario feriados/quincenas/vac |
+| `vacaciones.html` | `onReady(['Master','Colaborador'], fn)` | Vacaciones 2.5 días/mes |
+| `recibo.html` | `onReady(['Master','Colaborador'], fn)` | Recibo imprimible |
+| `mi-recibo.html` | `onReady(null, fn)` | Vista empleado — sus recibos |
+| `usuarios.html` | `onReady(['Master'], fn)` | Gestión usuarios (solo Master) |
+| `assets/js/auth.js` | — (librería) | JWT auth, `onReady`, `apiFetch`, etc. |
+| `assets/js/feriados.js` | — (librería) | Feriados Nicaragua + algoritmo Pascua |
+
+**`auth.js` expone globalmente:** `onReady`, `initLayout`, `getToken`, `apiFetch`, `getMyInfo`, `isMaster`, `fmt`, `showAlert` (también como `window.AppAuth`).
+
+**Estructura del nav (TODAS las páginas excepto mi-recibo.html):**
+```html
+<nav>
+  <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+  <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+  <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
+  <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+  <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+  <a href="/extras.html"><span class="icon">⭐</span> Extras</a>
+  <a href="/deducciones.html"><span class="icon">➖</span> Otras Deducciones</a>
+  <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
+  <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
+  <a href="/usuarios.html" id="link-usuarios"><span class="icon">👤</span> Usuarios</a>
+</nav>
+```
+`id="link-usuarios"` es ocultado por `initLayout()` si el rol es Colaborador.
+
+**Sidebar logo en TODAS las páginas:** `<div class="sidebar-logo"><h2>🧮 Nomify</h2><p>Planilla Nicaragua</p></div>`
+
+### Estado actual del repo WX-MDA/Nomify (rama sol/feature-inicial)
+
+El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Express/MariaDB/JWT) está en este repositorio en:
+- Backend: `/home/user/RRSS-AUTOMATIZACI-N/planilla-server/`
+- Frontend: `/home/user/RRSS-AUTOMATIZACI-N/planilla-web/`
+
+**Qué hacer en una nueva sesión conectada a `WX-MDA/Nomify`:**
+
+1. Leer todos los archivos de `/home/user/RRSS-AUTOMATIZACI-N/planilla-server/` y `planilla-web/`
+2. Pushear el backend a `bk_nomify/` en rama `sol/feature-inicial`:
+   - `bk_nomify/server.js`, `auth.js`, `db.js`, `create-admin.js`, `schema.sql`, `package.json`
+   - `bk_nomify/.env.example` (con placeholders, NO el .env real)
+   - `bk_nomify/routes/` (11 archivos: auth, empleados, prestamos, adelantos, extras, deducciones, vacaciones, planillas, detalle, recibo, usuarios)
+3. Pushear el frontend a `planilla-web/` en misma rama:
+   - `planilla-web/assets/js/auth.js` y `feriados.js`
+   - Todos los HTML: login, index, empleados, planillas, planilla-detalle, prestamos, adelantos, extras, deducciones, calendario, vacaciones, recibo, mi-recibo, usuarios
+4. Asegurarse de que NO existe `planilla-web/netlify/` ni `netlify.toml` que apunte a Netlify functions
+5. En la máquina local: `git pull origin sol/feature-inicial` para bajar los cambios
+
+### Pendientes Nomify
+
+- [ ] Ingresar los 8 empleados reales (eliminar: María García, Carlos López, Ana Martínez, Roberto Sánchez)
+- [ ] Crear usuario admin real: `node create-admin.js` y cambiar contraseña desde la app
+- [ ] Invitar usuarios reales con sus roles
+- [ ] Confirmar definición de "aportaciones" y marcador de huella con quien corresponda
+- [ ] Probar flujo completo: login → empleados → generar planilla → recibo
+
+---
 
 ## Reportes Diarios
 
 > Los últimos 14 días. Anteriores archivados en `PROYECTO-SOL/reportes/`.
+
+---
+
+### 2026-05-21 (Miércoles)
+
+El día estuvo dedicado a migrar la Planilla Nicaragua del stack Netlify/Airtable al nuevo stack Express + MariaDB, que vive en el repositorio `WX-MDA/Nomify` (rama `sol/feature-inicial`). Se descubrió durante la sesión un problema crítico de repositorio: el MCP de GitHub estaba conectado únicamente a `risosdigitales/rrss-automatizaci-n` (PROYECTO_SOL), que es el repo de Crating Express, y todos los pushes de código de planilla iban a ese repo equivocado. El código correcto de Nomify debe vivir en `WX-MDA/Nomify`, que tiene la estructura `bk_nomify/` (Express backend) + `planilla-web/` (frontend HTML/CSS/JS) como carpetas hermanas.
+
+Se realizó la migración completa de auth: se eliminó toda dependencia de Netlify Identity (`netlifyIdentity`) de los 13 archivos HTML, se reemplazó con el sistema JWT propio, y se unificó el patrón `onReady(roles, fn)` como punto de entrada de todas las páginas. Se eliminaron los 12 archivos de `netlify/functions/` que apuntaban a Airtable. Se creó `usuarios.html` con CRUD completo de usuarios del sistema (solo Master). Se agregó `id="link-usuarios"` al nav de todas las páginas que lo faltaban.
+
+El motor de cálculo de planilla quedó completamente en código Express (`planillasRoutes.js → POST /api/planillas/calcular`), con soporte de INSS_Base, pausado de adelantos/deducciones, descuento de cuotas de préstamos y registro de historial.
+
+Al cierre se documentó todo en CLAUDE.md (esta sección) para que en una nueva sesión conectada a `WX-MDA/Nomify` se puedan pushear todos los archivos correctamente. El código listo para pushear está en `/home/user/RRSS-AUTOMATIZACI-N/planilla-server/` (backend) y `/home/user/RRSS-AUTOMATIZACI-N/planilla-web/` (frontend). Queda pendiente hacer ese push y luego ingresar los 8 empleados reales.
 
 ---
 
