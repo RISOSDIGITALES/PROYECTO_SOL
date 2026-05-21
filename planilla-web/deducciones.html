@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Otras Deducciones — Planilla Nicaragua</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
 <div class="layout">
@@ -55,7 +54,7 @@
             </tr>
           </thead>
           <tbody id="tabla-consolidada">
-            <tr><td colspan="4" class="empty">Seleccioná una quincena para ver todos los descuentos</td></tr>
+            <tr><td colspan="4" class="empty">Selecioná una quincena para ver todos los descuentos</td></tr>
           </tbody>
           <tfoot id="tfoot-consolidada" style="display:none">
             <tr style="font-weight:700;border-top:2px solid var(--border)">
@@ -171,7 +170,6 @@ if (_cu) { initLayout(); loadAll(); }
 else { netlifyIdentity.on('init', u => { if (u) { initLayout(); loadAll(); } }); }
 
 async function loadAll() {
-  // Auto-setear quincena actual
   const hoy = new Date();
   const d   = hoy.getDate();
   const y   = hoy.getFullYear();
@@ -185,8 +183,8 @@ async function loadAll() {
 
   try {
     const [ded, empleados] = await Promise.all([
-      apiFetch('/.netlify/functions/deducciones'),
-      apiFetch('/.netlify/functions/empleados'),
+      apiFetch('/api/deducciones'),
+      apiFetch('/api/empleados'),
     ]);
     allDed = ded;
 
@@ -216,7 +214,7 @@ function fmtFecha(iso) {
 
 async function pausar(id) {
   try {
-    await apiFetch('/.netlify/functions/deducciones', {
+    await apiFetch('/api/deducciones', {
       method: 'PATCH',
       body: JSON.stringify({ id, Pausado: true }),
     });
@@ -231,7 +229,7 @@ async function pausar(id) {
 
 async function reactivar(id) {
   try {
-    await apiFetch('/.netlify/functions/deducciones', {
+    await apiFetch('/api/deducciones', {
       method: 'PATCH',
       body: JSON.stringify({ id, Pausado: false }),
     });
@@ -347,13 +345,13 @@ document.getElementById('save-ded').addEventListener('click', async () => {
   btn.disabled = true; btn.textContent = 'Guardando...';
   try {
     if (id) {
-      await apiFetch('/.netlify/functions/deducciones', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
+      await apiFetch('/api/deducciones', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
     } else {
-      await apiFetch('/.netlify/functions/deducciones', { method: 'POST', body: JSON.stringify(fields) });
+      await apiFetch('/api/deducciones', { method: 'POST', body: JSON.stringify(fields) });
     }
     document.getElementById('modal-ded').classList.remove('open');
     showAlert('alert-ded', '✅ Deducción guardada', 'success');
-    allDed = await apiFetch('/.netlify/functions/deducciones');
+    allDed = await apiFetch('/api/deducciones');
     renderTabla();
   } catch (e) {
     showAlert('alert-form', 'Error: ' + e.message, 'error');
@@ -362,7 +360,6 @@ document.getElementById('save-ded').addEventListener('click', async () => {
   }
 });
 
-// ── VISTA CONSOLIDADA POR QUINCENA ──────────────────────────────────────────
 async function cargarResumenQuincena(q) {
   if (!q) return;
   const tbody = document.getElementById('tabla-consolidada');
@@ -372,14 +369,13 @@ async function cargarResumenQuincena(q) {
 
   try {
     const [prestamos, adelantos, deduccionesQ] = await Promise.all([
-      apiFetch('/.netlify/functions/prestamos'),
-      apiFetch('/.netlify/functions/adelantos'),
-      apiFetch('/.netlify/functions/deducciones'),
+      apiFetch('/api/prestamos'),
+      apiFetch('/api/adelantos'),
+      apiFetch('/api/deducciones'),
     ]);
 
     const rows = [];
 
-    // Préstamos activos → cuota quincenal automática (aplica a toda quincena)
     prestamos.filter(p => p.Estado === 'Activo' && (p['Cuotas restantes'] || 0) > 0).forEach(p => {
       rows.push({
         empleado: p.Empleado || '—',
@@ -390,7 +386,6 @@ async function cargarResumenQuincena(q) {
       });
     });
 
-    // Adelantos pendientes y no pausados para esta quincena
     adelantos
       .filter(a => (a['Descontar en quincena'] || '') === q && (a.Estado || 'Pendiente') === 'Pendiente' && !a.Pausado)
       .forEach(a => {
@@ -403,7 +398,6 @@ async function cargarResumenQuincena(q) {
         });
       });
 
-    // Deducciones manuales pendientes para esta quincena
     deduccionesQ
       .filter(d => (d['Descontar en quincena'] || '') === q && (d.Estado || 'Pendiente') === 'Pendiente' && !d.Pausado)
       .forEach(d => {
