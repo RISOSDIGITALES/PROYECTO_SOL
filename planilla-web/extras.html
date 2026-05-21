@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Extras — Planilla Nicaragua</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
 <div class="layout">
@@ -161,8 +160,8 @@ if (_currentUser) {
 async function loadAll() {
   try {
     const [extras, empleados] = await Promise.all([
-      apiFetch('/.netlify/functions/extras'),
-      apiFetch('/.netlify/functions/empleados'),
+      apiFetch('/api/extras'),
+      apiFetch('/api/empleados'),
     ]);
     allExtras = extras;
 
@@ -233,7 +232,6 @@ document.getElementById('filtro-empleado').addEventListener('change', e => {
   renderTabla();
 });
 
-// Feriado picker — populate with holidays from -60 to +120 days
 function poblarFeriados() {
   const hoy = new Date();
   const desde = new Date(hoy); desde.setDate(hoy.getDate() - 60);
@@ -306,7 +304,6 @@ document.getElementById('save-ext').addEventListener('click', async () => {
   if (!monto || monto <= 0) { showAlert('alert-form', 'Ingresa el monto', 'error'); return; }
   if (!quincena) { showAlert('alert-form', 'Indica la quincena de pago', 'error'); return; }
 
-  // Airtable Extras.Tipo is a singleSelect: Bono, Feriado trabajado, Otro
   const tipoAirtable = tipo === 'Otro / Turno extra' ? 'Otro' : tipo;
 
   const fields = {
@@ -321,13 +318,13 @@ document.getElementById('save-ext').addEventListener('click', async () => {
   btn.disabled = true; btn.textContent = 'Guardando...';
   try {
     if (id) {
-      await apiFetch('/.netlify/functions/extras', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
+      await apiFetch('/api/extras', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
     } else {
-      await apiFetch('/.netlify/functions/extras', { method: 'POST', body: JSON.stringify(fields) });
+      await apiFetch('/api/extras', { method: 'POST', body: JSON.stringify(fields) });
     }
     document.getElementById('modal-ext').classList.remove('open');
     showAlert('alert-ext', '✅ Extra guardado', 'success');
-    allExtras = await apiFetch('/.netlify/functions/extras');
+    allExtras = await apiFetch('/api/extras');
     renderTabla();
   } catch (e) {
     showAlert('alert-form', 'Error: ' + e.message, 'error');
@@ -336,7 +333,6 @@ document.getElementById('save-ext').addEventListener('click', async () => {
   }
 });
 
-// Delete
 function confirmarEliminar(id) {
   pendingDeleteId = id;
   document.getElementById('modal-confirm').classList.add('open');
@@ -353,7 +349,7 @@ document.getElementById('ok-confirm').addEventListener('click', async () => {
   if (!pendingDeleteId) return;
   document.getElementById('modal-confirm').classList.remove('open');
   try {
-    await apiFetch('/.netlify/functions/extras', { method: 'DELETE', body: JSON.stringify({ id: pendingDeleteId }) });
+    await apiFetch('/api/extras', { method: 'DELETE', body: JSON.stringify({ id: pendingDeleteId }) });
     showAlert('alert-ext', '✅ Extra eliminado', 'success');
     allExtras = allExtras.filter(x => x.id !== pendingDeleteId);
     renderTabla();
