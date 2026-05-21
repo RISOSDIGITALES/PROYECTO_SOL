@@ -20,6 +20,7 @@
       <a href="/deducciones.html"><span class="icon">➖</span> Otras Deducciones</a>
       <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
       <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
+      <a href="/usuarios.html" id="link-usuarios"><span class="icon">👤</span> Usuarios</a>
     </nav>
     <div class="sidebar-footer">
       <span id="user-email"></span>
@@ -145,8 +146,8 @@
           <label>Rol en el sistema</label>
           <select id="emp-rol">
             <option value="">Sin acceso</option>
-            <option value="Admin">Admin (acceso total)</option>
-            <option value="Planillero">Planillero (genera planillas, no edita empleados)</option>
+            <option value="Master">Master (acceso total)</option>
+            <option value="Colaborador">Colaborador (genera planillas, no edita empleados)</option>
             <option value="Empleado">Empleado (solo ve su propio recibo)</option>
           </select>
         </div>
@@ -161,16 +162,14 @@
 
 <script src="/assets/js/auth.js"></script>
 <script>
-requireAuthRole(['Admin', 'Planillero']);
-
 let allEmpleados = [];
-let _esAdmin = false;
+let _esMaster = false;
 
 async function _init() {
   initLayout();
   const info = await getMyInfo();
-  _esAdmin = info.rol === 'Admin';
-  if (!_esAdmin) {
+  _esMaster = info.rol === 'Master';
+  if (!_esMaster) {
     document.getElementById('btn-nuevo').style.display = 'none';
     ['emp-salario','emp-tipo','emp-inss-base','emp-ir','emp-email','emp-rol'].forEach(id => {
       const el = document.getElementById(id);
@@ -180,9 +179,9 @@ async function _init() {
   loadEmpleados();
 }
 
-const _currentUser = netlifyIdentity.currentUser();
-if (_currentUser) { _init(); }
-else { netlifyIdentity.on('init', user => { if (user) _init(); }); }
+onReady(['Master', 'Colaborador'], () => {
+  _init();
+});
 
 async function loadEmpleados() {
   try {
