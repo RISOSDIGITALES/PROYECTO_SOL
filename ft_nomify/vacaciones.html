@@ -31,7 +31,10 @@
   <div class="main">
     <div class="topbar">
       <div><h1>Vacaciones</h1><span class="sub">Días acumulados y registros por empleado</span></div>
-      <button class="btn btn-primary" id="btn-nuevo">+ Registrar días</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" id="btn-pagar" style="border-color:var(--orange);color:var(--orange)">💵 Pagar vacaciones</button>
+        <button class="btn btn-primary" id="btn-nuevo">+ Registrar días</button>
+      </div>
     </div>
     <div class="content">
       <div id="alert-vac" class="alert"></div>
@@ -160,7 +163,7 @@ let allVac = [];
 let allEmpleados = [];
 let filtroEmp = '';
 
-onReady(['Master', 'Colaborador'], () => { initLayout(); loadAll(); });
+onReady(['Master', 'Planillero'], () => { initLayout(); loadAll(); });
 
 function calcAntiguedad(fechaIngreso) {
   if (!fechaIngreso) return { meses: 0, label: '—', cumple6: null, falta6Label: null };
@@ -351,20 +354,23 @@ document.getElementById('vac-empleado').addEventListener('change', actualizarPre
   });
 });
 
-function abrirModal() {
+function abrirModal(tipo = 'Descanso') {
   document.getElementById('vac-id').value = '';
   document.getElementById('vac-empleado').value = '';
-  document.getElementById('vac-tipo').value = 'Descanso';
+  document.getElementById('vac-tipo').value = tipo;
   document.getElementById('vac-estado').value = 'Aprobada';
   document.getElementById('vac-inicio').value = '';
   document.getElementById('vac-fin').value = '';
   document.getElementById('vac-dias').value = '';
   document.getElementById('vac-notas').value = '';
   document.getElementById('alert-form').className = 'alert';
+  document.getElementById('preview-pago').style.display = 'none';
+  document.getElementById('modal-titulo').textContent = tipo === 'Pagadas' ? '💵 Pagar Vacaciones' : 'Registrar Vacaciones';
   document.getElementById('modal-vac').classList.add('open');
 }
 
-document.getElementById('btn-nuevo').addEventListener('click', abrirModal);
+document.getElementById('btn-nuevo').addEventListener('click', () => abrirModal('Descanso'));
+document.getElementById('btn-pagar').addEventListener('click', () => abrirModal('Pagadas'));
 ['close-modal', 'cancel-vac'].forEach(id => {
   document.getElementById(id).addEventListener('click', () => {
     document.getElementById('modal-vac').classList.remove('open');

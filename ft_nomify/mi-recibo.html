@@ -9,9 +9,13 @@
 <body>
 <div class="layout">
   <aside class="sidebar">
-    <div class="sidebar-logo"><h2>Nomify</h2></div>
+    <div class="sidebar-logo"><h2>Nomify</h2><p id="sub-nombre" style="font-size:11px;color:var(--muted);margin-top:2px"></p></div>
     <nav>
-      <a href="/mi-recibo.html" class="active"><span class="icon">📋</span> Mi Portal</a>
+      <a href="#" class="active" data-section="quincenas"><span class="icon">📋</span> Mis Quincenas</a>
+      <a href="#" data-section="prestamos"><span class="icon">💰</span> Mis Préstamos</a>
+      <a href="#" data-section="adelantos"><span class="icon">⚡</span> Mis Adelantos</a>
+      <a href="#" data-section="extras"><span class="icon">⭐</span> Mis Extras</a>
+      <a href="#" data-section="deducciones"><span class="icon">➖</span> Mis Deducciones</a>
     </nav>
     <div class="sidebar-footer">
       <span id="user-email"></span>
@@ -21,22 +25,13 @@
 
   <div class="main">
     <div class="topbar">
-      <div><h1>Mi Portal</h1><span class="sub" id="sub-nombre">Cargando...</span></div>
+      <div><h1 id="section-title">Mis Quincenas</h1><span class="sub">Mi portal de empleado</span></div>
     </div>
     <div class="content">
       <div id="alert-main" class="alert"></div>
 
-      <!-- TABS -->
-      <div class="tabs" style="margin-bottom:16px">
-        <button class="tab active" data-tab="quincenas">📋 Quincenas</button>
-        <button class="tab" data-tab="prestamos">💰 Préstamos</button>
-        <button class="tab" data-tab="adelantos">⚡ Adelantos</button>
-        <button class="tab" data-tab="extras">⭐ Extras</button>
-        <button class="tab" data-tab="deducciones">➖ Deducciones</button>
-      </div>
-
       <!-- SECCIÓN QUINCENAS -->
-      <div id="section-quincenas" class="tab-section">
+      <div id="section-quincenas" class="portal-section">
         <div class="table-wrap">
           <table>
             <thead>
@@ -56,7 +51,7 @@
       </div>
 
       <!-- SECCIÓN PRÉSTAMOS -->
-      <div id="section-prestamos" class="tab-section" style="display:none">
+      <div id="section-prestamos" class="portal-section" style="display:none">
         <div class="table-wrap">
           <table>
             <thead>
@@ -76,26 +71,25 @@
       </div>
 
       <!-- SECCIÓN ADELANTOS -->
-      <div id="section-adelantos" class="tab-section" style="display:none">
+      <div id="section-adelantos" class="portal-section" style="display:none">
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>Monto</th>
                 <th>Quincena descuento</th>
-                <th>Registrado</th>
                 <th>Estado</th>
               </tr>
             </thead>
             <tbody id="tabla-adelantos">
-              <tr class="loading-row"><td colspan="4"><div class="spinner"></div></td></tr>
+              <tr class="loading-row"><td colspan="3"><div class="spinner"></div></td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
       <!-- SECCIÓN EXTRAS -->
-      <div id="section-extras" class="tab-section" style="display:none">
+      <div id="section-extras" class="portal-section" style="display:none">
         <div class="table-wrap">
           <table>
             <thead>
@@ -114,7 +108,7 @@
       </div>
 
       <!-- SECCIÓN DEDUCCIONES -->
-      <div id="section-deducciones" class="tab-section" style="display:none">
+      <div id="section-deducciones" class="portal-section" style="display:none">
         <div class="table-wrap">
           <table>
             <thead>
@@ -139,7 +133,7 @@
 <script src="/assets/js/auth.js"></script>
 <script>
 let _empleadoId = null;
-const _loaded = {};  // tabs ya cargados
+const _loaded = {};
 
 function cs(n) {
   return 'C$ ' + Number(n || 0).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -148,6 +142,14 @@ function fd(s) {
   if (!s) return '—';
   return String(s).substring(0, 10);
 }
+
+const sectionTitles = {
+  quincenas:   'Mis Quincenas',
+  prestamos:   'Mis Préstamos',
+  adelantos:   'Mis Adelantos',
+  extras:      'Mis Extras',
+  deducciones: 'Mis Deducciones',
+};
 
 async function initPage() {
   initLayout();
@@ -171,6 +173,24 @@ async function initPage() {
   _empleadoId = info.empleado_id;
   cargarQuincenas();
 }
+
+// ── NAVEGACIÓN LATERAL ─────────────────────────────────────────────────────
+document.querySelectorAll('.sidebar nav a[data-section]').forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    const section = link.dataset.section;
+    // Actualizar clases activas
+    document.querySelectorAll('.sidebar nav a[data-section]').forEach(a => a.classList.remove('active'));
+    link.classList.add('active');
+    // Mostrar sección correcta
+    document.querySelectorAll('.portal-section').forEach(s => s.style.display = 'none');
+    document.getElementById('section-' + section).style.display = '';
+    // Actualizar título
+    document.getElementById('section-title').textContent = sectionTitles[section] || '';
+    // Cargar datos si no se han cargado aún
+    if (_empleadoId && loaders[section]) loaders[section]();
+  });
+});
 
 // ── QUINCENAS ──────────────────────────────────────────────────────────────
 async function cargarQuincenas() {
@@ -235,7 +255,7 @@ async function cargarAdelantos() {
     const rows = await apiFetch(`/api/adelantos?empleado_id=${_empleadoId}`);
     const tbody = document.getElementById('tabla-adelantos');
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="empty">No tienes adelantos registrados</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="3" class="empty">No tienes adelantos registrados</td></tr>';
       return;
     }
     tbody.innerHTML = rows.map(a => {
@@ -246,12 +266,11 @@ async function cargarAdelantos() {
       return `<tr>
         <td class="num">${cs(a.Monto)}</td>
         <td>${a['Descontar en quincena'] || '—'}</td>
-        <td style="font-size:12px;color:var(--text-muted)">${a._createdTime || '—'}</td>
         <td><span class="badge ${badge}">${label}</span></td>
       </tr>`;
     }).join('');
   } catch (e) {
-    document.getElementById('tabla-adelantos').innerHTML = `<tr><td colspan="4" class="empty">Error: ${e.message}</td></tr>`;
+    document.getElementById('tabla-adelantos').innerHTML = `<tr><td colspan="3" class="empty">Error: ${e.message}</td></tr>`;
   }
 }
 
@@ -303,25 +322,13 @@ async function cargarDeducciones() {
   }
 }
 
-// ── TAB SWITCHING ──────────────────────────────────────────────────────────
 const loaders = {
-  quincenas:   () => {},        // ya cargado en init
+  quincenas:   () => {},
   prestamos:   cargarPrestamos,
   adelantos:   cargarAdelantos,
   extras:      cargarExtras,
   deducciones: cargarDeducciones,
 };
-
-document.querySelectorAll('.tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-section').forEach(s => s.style.display = 'none');
-    btn.classList.add('active');
-    const tab = btn.dataset.tab;
-    document.getElementById('section-' + tab).style.display = '';
-    if (loaders[tab]) loaders[tab]();
-  });
-});
 
 onReady(null, () => { initPage(); });
 </script>

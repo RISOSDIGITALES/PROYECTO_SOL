@@ -24,7 +24,7 @@ router.get('/', requireAuth, async (req, res) => {
 
     // ── Por planilla_id (preferido) ────────────────────────────────────────
     if (planilla_id) {
-      const tipoFiltro = (req.user.rol === 'Colaborador' && req.user.planillas_acceso)
+      const tipoFiltro = (req.user.rol === 'Planillero' && req.user.planillas_acceso)
         ? req.user.planillas_acceso : null;
       const conds = ['d.planilla_id = ?'];
       const params = [planilla_id];
@@ -45,7 +45,7 @@ router.get('/', requireAuth, async (req, res) => {
     const periodoNorm = String(periodo).substring(0, 10);
     const conds = ['DATE(d.periodo) = ?'];
     const params = [periodoNorm];
-    const tipoFiltro = (req.user.rol === 'Colaborador' && req.user.planillas_acceso)
+    const tipoFiltro = (req.user.rol === 'Planillero' && req.user.planillas_acceso)
       ? req.user.planillas_acceso
       : (tipo && tipo !== '—' && tipo !== '') ? tipo : null;
     if (tipoFiltro) { conds.push('d.tipo_planilla = ?'); params.push(tipoFiltro); }

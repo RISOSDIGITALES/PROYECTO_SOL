@@ -103,17 +103,19 @@
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo"><h2>Nomify</h2></div>
-    <nav>
-      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
-      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
-      <a href="/planillas.html" class="active"><span class="icon">📋</span> Planillas</a>
-      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
-      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
-      <a href="/extras.html"><span class="icon">⭐</span> Extras</a>
-      <a href="/deducciones.html"><span class="icon">➖</span> Otras Deducciones</a>
-      <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
-      <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
-      <a href="/usuarios.html" id="link-usuarios"><span class="icon">👤</span> Usuarios</a>
+    <nav id="sidebar-nav">
+      <!-- se adapta según el rol: admin ve todo, empleado solo Mi Portal -->
+      <a href="/index.html" class="nav-admin"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html" class="nav-admin"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html" class="nav-admin active"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html" class="nav-admin"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html" class="nav-admin"><span class="icon">⚡</span> Adelantos</a>
+      <a href="/extras.html" class="nav-admin"><span class="icon">⭐</span> Extras</a>
+      <a href="/deducciones.html" class="nav-admin"><span class="icon">➖</span> Otras Deducciones</a>
+      <a href="/calendario.html" class="nav-admin"><span class="icon">📅</span> Calendario</a>
+      <a href="/vacaciones.html" class="nav-admin"><span class="icon">🏖</span> Vacaciones</a>
+      <a href="/usuarios.html" id="link-usuarios" class="nav-admin"><span class="icon">👤</span> Usuarios</a>
+      <a href="/mi-recibo.html" class="nav-empleado" style="display:none"><span class="icon">📋</span> Mi Portal</a>
     </nav>
     <div class="sidebar-footer">
       <span id="user-email"></span>
@@ -144,7 +146,7 @@
 
 <script src="/assets/js/auth.js"></script>
 <script>
-onReady(['Master', 'Colaborador', 'Empleado'], () => {
+onReady(['Master', 'Planillero', 'Empleado'], async () => {
   initLayout();
   const p = new URLSearchParams(window.location.search);
   const empleadoId = p.get('empleado_id') || '';
@@ -152,8 +154,20 @@ onReady(['Master', 'Colaborador', 'Empleado'], () => {
   const [ry, rm, rd] = (periodo || '').split('-');
   const periodoFmt = (ry && rm && rd) ? `${rd}/${rm}/${ry}` : periodo;
   document.getElementById('sub-recibo').textContent = `Período ${periodoFmt}`;
-  const volverUrl = `/planilla-detalle.html?periodo=${encodeURIComponent(periodo)}`;
-  document.getElementById('btn-volver').href = volverUrl;
+
+  // Adaptar sidebar y botón volver según rol
+  const myInfo = await getMyInfo();
+  if (myInfo.rol === 'Empleado') {
+    // Ocultar enlaces de admin, mostrar solo Mi Portal
+    document.querySelectorAll('.nav-admin').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.nav-empleado').forEach(el => el.style.display = '');
+    document.getElementById('btn-volver').href = '/mi-recibo.html';
+    document.getElementById('btn-volver').textContent = '← Mi Portal';
+  } else {
+    const volverUrl = `/planilla-detalle.html?periodo=${encodeURIComponent(periodo)}`;
+    document.getElementById('btn-volver').href = volverUrl;
+  }
+
   loadRecibo(empleadoId, periodo);
 });
 

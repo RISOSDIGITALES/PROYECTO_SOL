@@ -109,6 +109,8 @@
     }
     .tag-quincena { background: rgba(46,204,113,.2);  color: #2ecc71; }
     .tag-feriado  { background: rgba(155,89,182,.2);  color: #c39bd3; }
+    .tag-adelanto { background: rgba(231,76,60,.2);   color: #f1948a; }
+    .tag-extra    { background: rgba(241,196,15,.2);  color: #f4d03f; }
     .tag-vac-0    { background: rgba(52,152,219,.25); color: #5dade2; }
     .tag-vac-1    { background: rgba(230,126,34,.25); color: #f0a347; }
     .tag-vac-2    { background: rgba(231,76,60,.25);  color: #f1948a; }
@@ -151,7 +153,7 @@
 
   <div class="main">
     <div class="topbar">
-      <div><h1>Calendario</h1><span class="sub">Feriados, quincenas y vacaciones</span></div>
+      <div><h1>Calendario</h1><span class="sub">Todos los movimientos de planilla</span></div>
     </div>
     <div class="content">
 
@@ -165,6 +167,8 @@
           <label><input type="checkbox" id="chk-feriados" checked /> 🎌 Feriados</label>
           <label><input type="checkbox" id="chk-quincenas" checked /> 📋 Quincenas</label>
           <label><input type="checkbox" id="chk-vacaciones" checked /> 🏖 Vacaciones</label>
+          <label><input type="checkbox" id="chk-adelantos" checked /> ⚡ Adelantos</label>
+          <label><input type="checkbox" id="chk-extras" checked /> ⭐ Extras</label>
           <select id="filtro-emp-cal" style="display:none">
             <option value="">Todos los empleados</option>
           </select>
@@ -191,17 +195,22 @@ const VAC_COLORS = ['tag-vac-0','tag-vac-1','tag-vac-2','tag-vac-3','tag-vac-4']
 
 let viewYear, viewMonth;
 let allVacaciones = [];
+let allAdelantos  = [];
+let allExtras     = [];
 let empColorMap   = {};
 let empColorIdx   = 0;
 let filtroEmpCal  = '';
 
-onReady(['Master', 'Colaborador'], () => {
+// Normaliza fecha a YYYY-MM-DD (primeros 10 chars)
+const norm = s => s ? String(s).substring(0, 10) : '';
+
+onReady(['Master', 'Planillero'], () => {
   initLayout();
   const hoy = new Date();
   viewYear  = hoy.getFullYear();
   viewMonth = hoy.getMonth();
   initControls();
-  loadVacaciones();
+  loadDatos();
 });
 
 function initControls() {
@@ -213,7 +222,7 @@ function initControls() {
     viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; }
     renderCal();
   });
-  ['chk-feriados','chk-quincenas','chk-vacaciones'].forEach(id => {
+  ['chk-feriados','chk-quincenas','chk-vacaciones','chk-adelantos','chk-extras'].forEach(id => {
     document.getElementById(id).addEventListener('change', () => {
       const showVac = document.getElementById('chk-vacaciones').checked;
       document.getElementById('filtro-emp-cal').style.display = showVac ? '' : 'none';
@@ -226,13 +235,18 @@ function initControls() {
   });
 }
 
-async function loadVacaciones() {
+async function loadDatos() {
   try {
-    const [vac, empleados] = await Promise.all([
+    const [vac, empleados, adelantos, extras] = await Promise.all([
       apiFetch('/api/vacaciones'),
       apiFetch('/api/empleados'),
+      apiFetch('/api/adelantos'),
+      apiFetch('/api/extras'),
     ]);
     allVacaciones = vac.filter(v => v.Estado !== 'Pendiente');
+    // Solo adelantos pendientes (no descontados aún)
+    allAdelantos  = adelantos.filter(a => a.Estado !== 'Descontado');
+    allExtras     = extras;
 
     const activos = empleados.filter(e => e.Activo);
     activos.forEach(e => {
@@ -254,17 +268,27 @@ function vacEnDia(dStr) {
   return allVacaciones.filter(v => {
     if (!v.Fecha_Inicio || !v.Fecha_Fin) return false;
     if (filtroEmpCal && v.Empleado !== filtroEmpCal) return false;
-    return dStr >= v.Fecha_Inicio && dStr <= v.Fecha_Fin;
+    return dStr >= norm(v.Fecha_Inicio) && dStr <= norm(v.Fecha_Fin);
   });
+}
+
+function adelantosEnDia(dStr) {
+  return allAdelantos.filter(a => norm(a['Descontar en quincena']) === dStr);
+}
+
+function extrasEnDia(dStr) {
+  return allExtras.filter(x => norm(x['Pagar en quincena']) === dStr);
 }
 
 function renderCal() {
   const hoy     = new Date();
   const todayStr = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
 
-  const showFer = document.getElementById('chk-feriados').checked;
-  const showQui = document.getElementById('chk-quincenas').checked;
-  const showVac = document.getElementById('chk-vacaciones').checked;
+  const showFer  = document.getElementById('chk-feriados').checked;
+  const showQui  = document.getElementById('chk-quincenas').checked;
+  const showVac  = document.getElementById('chk-vacaciones').checked;
+  const showAdel = document.getElementById('chk-adelantos').checked;
+  const showExt  = document.getElementById('chk-extras').checked;
 
   document.getElementById('cal-titulo').textContent = `${MESES[viewMonth]} ${viewYear}`;
 
@@ -291,7 +315,9 @@ function renderCal() {
     const esFeriado = showFer && !!ferMap[dStr];
     const esQui     = showQui && (dStr === quincena15 || dStr === quincenaFin);
     const esHoy     = dStr === todayStr;
-    const vacsHoy   = showVac ? vacEnDia(dStr) : [];
+    const vacsHoy   = showVac  ? vacEnDia(dStr) : [];
+    const adelHoy   = showAdel ? adelantosEnDia(dStr) : [];
+    const extHoy    = showExt  ? extrasEnDia(dStr)    : [];
 
     let cls = 'cal-cell';
     if (esHoy)     cls += ' hoy';
@@ -305,6 +331,21 @@ function renderCal() {
       const color = empColorMap[v.Empleado] || 'tag-vac-0';
       tags += `<div class="cal-tag ${color}" title="${v.Empleado} — ${v.Tipo}">🏖 ${v.Empleado.split(' ')[0]}</div>`;
     });
+    // Agrupar adelantos por empleado si hay varios
+    if (adelHoy.length === 1) {
+      const a = adelHoy[0];
+      const emp = (a.Empleado || '').split(' ')[0];
+      tags += `<div class="cal-tag tag-adelanto" title="Adelanto ${a.Empleado} C$${a.Monto}">⚡ ${emp}</div>`;
+    } else if (adelHoy.length > 1) {
+      tags += `<div class="cal-tag tag-adelanto" title="${adelHoy.length} adelantos">⚡ ${adelHoy.length} adelantos</div>`;
+    }
+    if (extHoy.length === 1) {
+      const x = extHoy[0];
+      const emp = (x.Empleado || '').split(' ')[0];
+      tags += `<div class="cal-tag tag-extra" title="${x.Tipo} ${x.Empleado} C$${x.Monto}">⭐ ${emp}</div>`;
+    } else if (extHoy.length > 1) {
+      tags += `<div class="cal-tag tag-extra" title="${extHoy.length} extras">⭐ ${extHoy.length} extras</div>`;
+    }
 
     html += `<div class="${cls}">
       <div class="cal-num">${dia}</div>
@@ -316,8 +357,10 @@ function renderCal() {
 
   const legendItems = [
     { color: 'border:2px solid var(--green2)', label: 'Hoy' },
-    ...(showQui ? [{ color: 'background:rgba(46,204,113,.2);border:1px solid rgba(46,204,113,.4)', label: 'Quincena' }] : []),
-    ...(showFer ? [{ color: 'background:rgba(155,89,182,.2);border:1px solid rgba(155,89,182,.4)', label: 'Feriado' }] : []),
+    ...(showQui  ? [{ color: 'background:rgba(46,204,113,.2);border:1px solid rgba(46,204,113,.4)', label: 'Quincena' }] : []),
+    ...(showFer  ? [{ color: 'background:rgba(155,89,182,.2);border:1px solid rgba(155,89,182,.4)', label: 'Feriado' }] : []),
+    ...(showAdel ? [{ color: 'background:rgba(231,76,60,.2)', label: 'Adelanto' }] : []),
+    ...(showExt  ? [{ color: 'background:rgba(241,196,15,.2)', label: 'Extra' }] : []),
   ];
   if (showVac) {
     Object.keys(empColorMap).forEach(nombre => {

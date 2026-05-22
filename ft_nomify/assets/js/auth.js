@@ -200,7 +200,8 @@ async function getMyInfo() {
   if (_myInfo) return _myInfo;
   try {
     _myInfo = await apiFetch('/api/auth/me');
-    if (_myInfo.rol === 'Admin') _myInfo.rol = 'Master';
+    if (_myInfo.rol === 'Admin')      _myInfo.rol = 'Master';
+    if (_myInfo.rol === 'Colaborador') _myInfo.rol = 'Planillero'; // migración
   } catch (e) {
     localStorage.removeItem('planilla_token');
     localStorage.removeItem('planilla_user');
@@ -224,7 +225,7 @@ async function onReady(allowedRoles, fn) {
 
 async function isMaster() { return (await getMyInfo()).rol === 'Master'; }
 async function isAdmin()  { return (await getMyInfo()).rol === 'Master'; }
-async function canEdit()  { const r = (await getMyInfo()).rol; return r === 'Master' || r === 'Colaborador'; }
+async function canEdit()  { const r = (await getMyInfo()).rol; return r === 'Master' || r === 'Planillero'; }
 
 function fmt(n) {
   return 'C$ ' + Number(n || 0).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

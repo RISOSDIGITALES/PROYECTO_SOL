@@ -10,7 +10,7 @@ router.get('/', requireAuth, async (req, res) => {
   try {
     const conds = [];
     const params = [];
-    if (req.user.rol === 'Colaborador' && req.user.planillas_acceso) {
+    if (req.user.rol === 'Planillero' && req.user.planillas_acceso) {
       conds.push('p.tipo = ?');
       params.push(req.user.planillas_acceso);
     }
@@ -36,12 +36,12 @@ router.get('/', requireAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// POST /api/planillas/calcular — solo Master puede generar planilla global; Colaborador solo su tipo
+// POST /api/planillas/calcular — solo Master puede generar planilla global; Planillero solo su tipo
 router.post('/calcular', requireAuth, async (req, res) => {
   let { periodo, tipo } = req.body;
   if (!periodo) return res.status(400).json({ error: 'Se requiere periodo (YYYY-MM-DD)' });
-  // Colaborador solo puede generar su tipo asignado
-  if (req.user.rol === 'Colaborador' && req.user.planillas_acceso) {
+  // Planillero solo puede generar su tipo asignado
+  if (req.user.rol === 'Planillero' && req.user.planillas_acceso) {
     tipo = req.user.planillas_acceso;
   }
 

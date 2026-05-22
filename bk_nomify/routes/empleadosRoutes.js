@@ -6,8 +6,8 @@ const { requireAuth, requireMaster } = require('../auth');
 // Sincroniza (crea o actualiza) el usuario de un empleado cuando tiene email + rol
 async function syncUsuario(empleadoId, nombre, email, rol, tipoPlanilla) {
   if (!email || !rol) return null;
-  // Colaborador accede solo a su tipo de planilla; Empleado y Master no necesitan filtro
-  const planillasAcceso = rol === 'Colaborador' ? (tipoPlanilla || null) : null;
+  // Planillero accede solo a su tipo de planilla; Empleado y Master no necesitan filtro
+  const planillasAcceso = rol === 'Planillero' ? (tipoPlanilla || null) : null;
   const [existing] = await db.query('SELECT id FROM usuarios WHERE email = ?', [email]);
   if (existing.length) {
     await db.query(
@@ -53,8 +53,8 @@ router.get('/', requireAuth, async (req, res) => {
   try {
     let sql = GET_SQL;
     const params = [];
-    // Colaborador solo ve su tipo de planilla
-    if (req.user.rol === 'Colaborador' && req.user.planillas_acceso) {
+    // Planillero solo ve su tipo de planilla
+    if (req.user.rol === 'Planillero' && req.user.planillas_acceso) {
       sql += ' WHERE tipo_planilla = ?';
       params.push(req.user.planillas_acceso);
     }
@@ -68,6 +68,11 @@ router.post('/', requireAuth, requireMaster, async (req, res) => {
   const m = mapBody(req.body);
   if (!m.nombre) return res.status(400).json({ error: 'Nombre requerido' });
   try {
+    // Verificar correo duplicado antes de insertar
+    if (m.email) {
+      const [dup] = await db.query('SELECT id FROM empleados WHERE email = ?', [m.email]);
+      if (dup.length) return res.status(400).json({ error: 'Ese correo ya está registrado, por favor usa otro' });
+    }
     const [r] = await db.query(
       'INSERT INTO empleados (nombre, cargo, tipo_planilla, salario_bruto, inss_base, ir_fijo, email, rol, fecha_ingreso, activo) VALUES (?,?,?,?,?,?,?,?,?,?)',
       [m.nombre, m.cargo, m.tipo_planilla || 'Con Seguro', m.salario_bruto || 0,
@@ -79,7 +84,10 @@ router.post('/', requireAuth, requireMaster, async (req, res) => {
     const sync = await syncUsuario(empId, m.nombre, m.email, m.rol, m.tipo_planilla);
     const [rows] = await db.query(GET_SQL + ' WHERE id = ?', [empId]);
     res.status(201).json({ ...rows[0], usuario_creado: sync?.created ?? false });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    if (e.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Ese correo ya está registrado, por favor usa otro' });
+    res.status(500).json({ error: e.message });
+  }
 });
 
 async function patchHandler(req, res) {

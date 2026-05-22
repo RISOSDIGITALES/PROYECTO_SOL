@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   nombre           VARCHAR(150)   DEFAULT NULL,
   email            VARCHAR(255)   UNIQUE NOT NULL,
   password_hash    VARCHAR(255)   NOT NULL,
-  rol              VARCHAR(50)    DEFAULT 'Colaborador',
+  rol              VARCHAR(50)    DEFAULT 'Empleado',
   planillas_acceso VARCHAR(100)   DEFAULT NULL,
   empleado_id      INT            DEFAULT NULL,
   created_at       TIMESTAMP      DEFAULT CURRENT_TIMESTAMP

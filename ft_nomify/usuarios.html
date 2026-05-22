@@ -88,7 +88,7 @@
           <label>Rol *</label>
           <select id="usr-rol">
             <option value="Master">Master (acceso total)</option>
-            <option value="Colaborador">Colaborador (su planilla)</option>
+            <option value="Planillero">Planillero (gestiona planillas)</option>
             <option value="Empleado">Empleado (solo ve su recibo)</option>
           </select>
         </div>
@@ -162,7 +162,7 @@ function renderTabla() {
       <td><strong>${u.nombre || '—'}</strong></td>
       <td style="font-size:13px">${u.email}</td>
       <td><span class="badge ${badge}">${u.rol}</span></td>
-      <td style="font-size:13px;color:var(--text-muted)">${u.planillas_acceso || (u.rol === 'Colaborador' ? '<span style="color:var(--orange);font-size:12px">⚠ Sin planilla asignada</span>' : '— todas —')}</td>
+      <td style="font-size:13px;color:var(--text-muted)">${u.planillas_acceso || (u.rol === 'Planillero' ? '<span style="color:var(--orange);font-size:12px">⚠ Sin planilla asignada</span>' : '— todas —')}</td>
       <td style="font-size:12px;color:var(--text-muted)">${fmtFecha(u.created_at)}</td>
       <td style="display:flex;gap:6px">
         <button class="btn btn-icon btn-sm" onclick="editar('${u.id}')">&#x270F;&#xFE0F;</button>
@@ -172,10 +172,10 @@ function renderTabla() {
   }).join('');
 }
 
-// Mostrar/ocultar campo planilla según rol (solo Colaborador lo necesita)
+// Mostrar/ocultar campo planilla según rol (solo Planillero lo requiere)
 document.getElementById('usr-rol').addEventListener('change', function() {
-  document.getElementById('row-planilla').style.display = this.value === 'Colaborador' ? '' : 'none';
-  if (this.value !== 'Colaborador') document.getElementById('usr-planilla').value = '';
+  document.getElementById('row-planilla').style.display = this.value === 'Planillero' ? '' : 'none';
+  if (this.value !== 'Planillero') document.getElementById('usr-planilla').value = '';
 });
 
 function abrirModal(u = null) {
@@ -184,9 +184,9 @@ function abrirModal(u = null) {
   document.getElementById('usr-nombre').value = u?.nombre || '';
   document.getElementById('usr-email').value = u?.email || '';
   document.getElementById('usr-password').value = '';
-  document.getElementById('usr-rol').value = u?.rol || 'Colaborador';
+  document.getElementById('usr-rol').value = u?.rol || 'Planillero';
   document.getElementById('usr-planilla').value = u?.planillas_acceso || '';
-  document.getElementById('row-planilla').style.display = (u?.rol || 'Colaborador') === 'Colaborador' ? '' : 'none';
+  document.getElementById('row-planilla').style.display = (u?.rol || 'Planillero') === 'Planillero' ? '' : 'none';
   // Al crear: ocultar campo password y mostrar info de contraseña estándar
   // Al editar: mostrar campo de cambio de contraseña
   document.getElementById('row-password').style.display = u ? '' : 'none';
@@ -213,10 +213,10 @@ document.getElementById('save-usr').addEventListener('click', async () => {
   const planilla = document.getElementById('usr-planilla').value;
 
   if (!email) { showAlert('alert-form', 'El email es requerido', 'error'); return; }
-  if (rol === 'Colaborador' && !planilla) { showAlert('alert-form', 'Selecciona la planilla asignada', 'error'); return; }
+  if (rol === 'Planillero' && !planilla) { showAlert('alert-form', 'Selecciona la planilla asignada', 'error'); return; }
 
   // password solo se envía si se llenó (edición); al crear el backend usa Nomify2026
-  const body = { nombre, email, rol, planillas_acceso: rol === 'Colaborador' ? planilla : null };
+  const body = { nombre, email, rol, planillas_acceso: rol === 'Planillero' ? planilla : null };
   if (password) body.password = password;
 
   const btn = document.getElementById('save-usr');

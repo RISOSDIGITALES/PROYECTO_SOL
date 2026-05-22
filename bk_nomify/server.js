@@ -2,8 +2,22 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const db = require('./db');
 
 const { requireAuth, requireAdmin } = require('./auth');
+
+// ── Migraciones automáticas al arrancar ───────────────────────────────────────
+(async () => {
+  const run = async (sql) => { try { await db.query(sql); } catch (_) {} };
+  // Asegurar que columnas sean VARCHAR (no ENUM) — soporta todos los valores
+  await run("ALTER TABLE prestamos  MODIFY COLUMN estado VARCHAR(50) NOT NULL DEFAULT 'Activo'");
+  await run("ALTER TABLE empleados  MODIFY COLUMN rol    VARCHAR(50) NOT NULL DEFAULT 'Empleado'");
+  await run("ALTER TABLE usuarios   MODIFY COLUMN rol    VARCHAR(50) NOT NULL DEFAULT 'Planillero'");
+  // Renombrar Colaborador → Planillero en datos existentes
+  await run("UPDATE usuarios  SET rol='Planillero' WHERE rol='Colaborador'");
+  await run("UPDATE empleados SET rol='Planillero' WHERE rol='Colaborador'");
+  console.log('[migrations] OK');
+})();
 
 const app = express();
 app.use(cors());
