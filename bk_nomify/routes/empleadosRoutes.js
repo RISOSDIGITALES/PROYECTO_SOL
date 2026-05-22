@@ -4,20 +4,22 @@ const db = require('../db');
 const { requireAuth, requireMaster } = require('../auth');
 
 // Sincroniza (crea o actualiza) el usuario de un empleado cuando tiene email + rol
-async function syncUsuario(empleadoId, nombre, email, rol) {
+async function syncUsuario(empleadoId, nombre, email, rol, tipoPlanilla) {
   if (!email || !rol) return null;
+  // Colaborador accede solo a su tipo de planilla; Empleado y Master no necesitan filtro
+  const planillasAcceso = rol === 'Colaborador' ? (tipoPlanilla || null) : null;
   const [existing] = await db.query('SELECT id FROM usuarios WHERE email = ?', [email]);
   if (existing.length) {
     await db.query(
-      'UPDATE usuarios SET nombre = ?, rol = ?, empleado_id = ? WHERE email = ?',
-      [nombre, rol, empleadoId, email]
+      'UPDATE usuarios SET nombre = ?, rol = ?, empleado_id = ?, planillas_acceso = ? WHERE email = ?',
+      [nombre, rol, empleadoId, planillasAcceso, email]
     );
     return { created: false };
   } else {
     const hash = bcrypt.hashSync('Nomify2026', 10);
     await db.query(
-      'INSERT INTO usuarios (nombre, email, password_hash, rol, empleado_id) VALUES (?,?,?,?,?)',
-      [nombre, email, hash, rol, empleadoId]
+      'INSERT INTO usuarios (nombre, email, password_hash, rol, empleado_id, planillas_acceso) VALUES (?,?,?,?,?,?)',
+      [nombre, email, hash, rol, empleadoId, planillasAcceso]
     );
     return { created: true };
   }
@@ -74,7 +76,7 @@ router.post('/', requireAuth, requireMaster, async (req, res) => {
     );
     const empId = r.insertId;
     // Auto-crear usuario si tiene email y rol
-    const sync = await syncUsuario(empId, m.nombre, m.email, m.rol);
+    const sync = await syncUsuario(empId, m.nombre, m.email, m.rol, m.tipo_planilla);
     const [rows] = await db.query(GET_SQL + ' WHERE id = ?', [empId]);
     res.status(201).json({ ...rows[0], usuario_creado: sync?.created ?? false });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -100,7 +102,7 @@ async function patchHandler(req, res) {
     const emp = rows[0];
     // Sincronizar usuario si el empleado tiene email y rol
     if (emp && emp.Email && emp.Rol) {
-      await syncUsuario(id, emp.Nombre, emp.Email, emp.Rol);
+      await syncUsuario(id, emp.Nombre, emp.Email, emp.Rol, emp.Tipo_Planilla);
     }
     res.json(emp);
   } catch (e) { res.status(500).json({ error: e.message }); }

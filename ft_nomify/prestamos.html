@@ -267,6 +267,8 @@ function renderTabla() {
         <button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text)" onclick="verHistorial(${p.id})">📋 Detalle</button>
         ${_esMaster ? `<button class="btn btn-icon btn-sm" title="Editar" onclick="editarPrestamo(${p.id})">&#9999;&#65039;</button>` : ''}
         ${estado === 'Activo' ? `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text)" onclick="abrirPago(${p.id})">+ Pago</button>` : ''}
+        ${_esMaster && estado === 'Activo' ? `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text-muted)" onclick="cambiarEstadoPrestamo(${p.id},'Suspendido')">⏸ Pausar</button>` : ''}
+        ${_esMaster && estado === 'Suspendido' ? `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text)" onclick="cambiarEstadoPrestamo(${p.id},'Activo')">▶ Reactivar</button>` : ''}
       </td>
     </tr>`;
   }).join('');
@@ -320,8 +322,8 @@ async function verHistorial(id) {
         </div>
         <div style="background:var(--navy2);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
           <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:2px">Cuotas restantes</div>
-          <div style="font-size:16px;font-weight:700">${cuotasRest} × ${fmt(cuota)}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${frecuencia}${freDia}</div>
+          <div style="font-size:16px;font-weight:700">${cuotasRest}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Cuota habitual ${fmt(cuota)} · ${frecuencia}${freDia}</div>
         </div>
       </div>
       <div style="margin-bottom:14px">
@@ -523,6 +525,17 @@ document.getElementById('pr-cuotas').addEventListener('input', () => {
     avisoEl.style.display = 'none';
   }
 });
+
+async function cambiarEstadoPrestamo(id, nuevoEstado) {
+  try {
+    await apiFetch('/api/prestamos', { method: 'PATCH', body: JSON.stringify({ id, Estado: nuevoEstado }) });
+    showAlert('alert-pr', nuevoEstado === 'Suspendido' ? '⏸ Préstamo pausado — no se descontará en planilla' : '✅ Préstamo reactivado', 'success');
+    allPrestamos = await apiFetch('/api/prestamos');
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-pr', 'Error: ' + e.message, 'error');
+  }
+}
 
 document.getElementById('save-pr').addEventListener('click', async () => {
   const id       = document.getElementById('pr-id').value;

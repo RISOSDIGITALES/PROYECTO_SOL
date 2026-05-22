@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mi Recibo — Nomify</title>
+  <title>Mi Portal — Nomify</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
 </head>
 <body>
@@ -11,7 +11,7 @@
   <aside class="sidebar">
     <div class="sidebar-logo"><h2>Nomify</h2></div>
     <nav>
-      <a href="/mi-recibo.html" class="active"><span class="icon">📋</span> Mis Recibos</a>
+      <a href="/mi-recibo.html" class="active"><span class="icon">📋</span> Mi Portal</a>
     </nav>
     <div class="sidebar-footer">
       <span id="user-email"></span>
@@ -21,35 +21,132 @@
 
   <div class="main">
     <div class="topbar">
-      <div><h1>Mis Recibos</h1><span class="sub" id="sub-nombre">Cargando...</span></div>
+      <div><h1>Mi Portal</h1><span class="sub" id="sub-nombre">Cargando...</span></div>
     </div>
     <div class="content">
       <div id="alert-main" class="alert"></div>
-      <div class="table-wrap">
-        <div class="table-header"><h3>Historial de quincenas</h3></div>
-        <table>
-          <thead>
-            <tr>
-              <th>Período</th>
-              <th>Tipo</th>
-              <th>Salario quincenal</th>
-              <th>Neto a recibir</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="tabla-recibos">
-            <tr class="loading-row"><td colspan="5"><div class="spinner"></div></td></tr>
-          </tbody>
-        </table>
+
+      <!-- TABS -->
+      <div class="tabs" style="margin-bottom:16px">
+        <button class="tab active" data-tab="quincenas">📋 Quincenas</button>
+        <button class="tab" data-tab="prestamos">💰 Préstamos</button>
+        <button class="tab" data-tab="adelantos">⚡ Adelantos</button>
+        <button class="tab" data-tab="extras">⭐ Extras</button>
+        <button class="tab" data-tab="deducciones">➖ Deducciones</button>
       </div>
+
+      <!-- SECCIÓN QUINCENAS -->
+      <div id="section-quincenas" class="tab-section">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Período</th>
+                <th>Tipo</th>
+                <th>Salario quincenal</th>
+                <th>Neto a recibir</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tabla-quincenas">
+              <tr class="loading-row"><td colspan="5"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECCIÓN PRÉSTAMOS -->
+      <div id="section-prestamos" class="tab-section" style="display:none">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Monto original</th>
+                <th>Cuota quincenal</th>
+                <th>Cuotas rest.</th>
+                <th>Saldo pendiente</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-prestamos">
+              <tr class="loading-row"><td colspan="5"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECCIÓN ADELANTOS -->
+      <div id="section-adelantos" class="tab-section" style="display:none">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Monto</th>
+                <th>Quincena descuento</th>
+                <th>Registrado</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-adelantos">
+              <tr class="loading-row"><td colspan="4"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECCIÓN EXTRAS -->
+      <div id="section-extras" class="tab-section" style="display:none">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Concepto</th>
+                <th>Monto</th>
+                <th>Quincena pago</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-extras">
+              <tr class="loading-row"><td colspan="4"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECCIÓN DEDUCCIONES -->
+      <div id="section-deducciones" class="tab-section" style="display:none">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Concepto</th>
+                <th>Monto</th>
+                <th>Quincena descuento</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-deducciones">
+              <tr class="loading-row"><td colspan="4"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
 
 <script src="/assets/js/auth.js"></script>
 <script>
-function fmt2(n) {
+let _empleadoId = null;
+const _loaded = {};  // tabs ya cargados
+
+function cs(n) {
   return 'C$ ' + Number(n || 0).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fd(s) {
+  if (!s) return '—';
+  return String(s).substring(0, 10);
 }
 
 async function initPage() {
@@ -67,35 +164,164 @@ async function initPage() {
 
   if (!info.empleado_id) {
     showAlert('alert-main', 'No se encontró tu registro de empleado. Contacta al administrador.', 'error');
-    document.getElementById('tabla-recibos').innerHTML = '<tr><td colspan="5" class="empty">Sin datos</td></tr>';
+    document.getElementById('tabla-quincenas').innerHTML = '<tr><td colspan="5" class="empty">Sin datos</td></tr>';
     return;
   }
 
+  _empleadoId = info.empleado_id;
+  cargarQuincenas();
+}
+
+// ── QUINCENAS ──────────────────────────────────────────────────────────────
+async function cargarQuincenas() {
   try {
-    const detalles = await apiFetch(`/api/detalle?empleado_id=${info.empleado_id}`);
-    renderTabla(detalles, info.empleado_id);
+    const detalles = await apiFetch(`/api/detalle?empleado_id=${_empleadoId}`);
+    const tbody = document.getElementById('tabla-quincenas');
+    if (!detalles.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty">No hay quincenas registradas</td></tr>';
+      return;
+    }
+    tbody.innerHTML = detalles.map(d => `<tr>
+      <td><strong>${fd(d.periodo)}</strong></td>
+      <td>${d.tipo_planilla || '—'}</td>
+      <td class="num">${cs(d.salario_quincenal)}</td>
+      <td class="num"><strong>${cs(d.neto)}</strong></td>
+      <td>
+        <a class="btn btn-icon btn-sm" href="/recibo.html?empleado_id=${_empleadoId}&periodo=${encodeURIComponent(fd(d.periodo))}" title="Ver recibo">👁</a>
+      </td>
+    </tr>`).join('');
   } catch (e) {
     showAlert('alert-main', 'Error: ' + e.message, 'error');
-    document.getElementById('tabla-recibos').innerHTML = '<tr><td colspan="5" class="empty">Error cargando datos</td></tr>';
+    document.getElementById('tabla-quincenas').innerHTML = '<tr><td colspan="5" class="empty">Error cargando datos</td></tr>';
   }
 }
 
-function renderTabla(detalles, empleadoId) {
-  const tbody = document.getElementById('tabla-recibos');
-  if (!detalles.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="empty">No hay recibos registrados</td></tr>';
-    return;
+// ── PRÉSTAMOS ──────────────────────────────────────────────────────────────
+async function cargarPrestamos() {
+  if (_loaded.prestamos) return;
+  _loaded.prestamos = true;
+  try {
+    const rows = await apiFetch(`/api/prestamos?empleado_id=${_empleadoId}`);
+    const tbody = document.getElementById('tabla-prestamos');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty">No tienes préstamos registrados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(p => {
+      const estado = p.Estado || 'Activo';
+      const badge = estado === 'Activo' ? 'badge-blue' : estado === 'Pagado' ? 'badge-green' : 'badge-gray';
+      const saldo = parseFloat(p['Saldo pendiente'] || 0);
+      const cuotas = p['Cuotas restantes'] || 0;
+      const cuota = parseFloat(p['Cuota quincenal'] || 0);
+      const frecuencia = p.Frecuencia || 'Quincenal';
+      return `<tr>
+        <td class="num">${cs(p['Monto total'])}</td>
+        <td class="num">${cs(cuota)} <span style="font-size:11px;color:var(--text-muted)">${frecuencia}</span></td>
+        <td style="text-align:center">${cuotas}</td>
+        <td class="num" style="color:${saldo > 0 ? 'var(--orange)' : 'var(--green2)'}">${cs(saldo)}</td>
+        <td><span class="badge ${badge}">${estado}</span></td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    document.getElementById('tabla-prestamos').innerHTML = `<tr><td colspan="5" class="empty">Error: ${e.message}</td></tr>`;
   }
-  tbody.innerHTML = detalles.map(d => `<tr>
-    <td><strong>${d.periodo}</strong></td>
-    <td>${d.tipo_planilla || '—'}</td>
-    <td class="num">${fmt2(d.salario_quincenal)}</td>
-    <td class="num"><strong>${fmt2(d.neto)}</strong></td>
-    <td>
-      <a class="btn btn-icon btn-sm" href="/recibo.html?empleado_id=${empleadoId}&periodo=${encodeURIComponent(d.periodo)}">👁</a>
-    </td>
-  </tr>`).join('');
 }
+
+// ── ADELANTOS ──────────────────────────────────────────────────────────────
+async function cargarAdelantos() {
+  if (_loaded.adelantos) return;
+  _loaded.adelantos = true;
+  try {
+    const rows = await apiFetch(`/api/adelantos?empleado_id=${_empleadoId}`);
+    const tbody = document.getElementById('tabla-adelantos');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty">No tienes adelantos registrados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(a => {
+      const estado = a.Estado || 'Pendiente';
+      const pausado = !!a.Pausado;
+      const badge = estado === 'Descontado' ? 'badge-green' : pausado ? 'badge-gray' : 'badge-orange';
+      const label = estado === 'Descontado' ? 'Descontado' : pausado ? 'Pausado' : 'Pendiente';
+      return `<tr>
+        <td class="num">${cs(a.Monto)}</td>
+        <td>${a['Descontar en quincena'] || '—'}</td>
+        <td style="font-size:12px;color:var(--text-muted)">${a._createdTime || '—'}</td>
+        <td><span class="badge ${badge}">${label}</span></td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    document.getElementById('tabla-adelantos').innerHTML = `<tr><td colspan="4" class="empty">Error: ${e.message}</td></tr>`;
+  }
+}
+
+// ── EXTRAS ─────────────────────────────────────────────────────────────────
+async function cargarExtras() {
+  if (_loaded.extras) return;
+  _loaded.extras = true;
+  try {
+    const rows = await apiFetch(`/api/extras?empleado_id=${_empleadoId}`);
+    const tbody = document.getElementById('tabla-extras');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty">No tienes extras registrados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(x => `<tr>
+      <td><span class="badge badge-blue" style="font-size:11px">${x.Tipo || '—'}</span></td>
+      <td>${x.Concepto || '—'}</td>
+      <td class="num">${cs(x.Monto)}</td>
+      <td style="font-size:13px">${x['Pagar en quincena'] || '—'}</td>
+    </tr>`).join('');
+  } catch (e) {
+    document.getElementById('tabla-extras').innerHTML = `<tr><td colspan="4" class="empty">Error: ${e.message}</td></tr>`;
+  }
+}
+
+// ── DEDUCCIONES ────────────────────────────────────────────────────────────
+async function cargarDeducciones() {
+  if (_loaded.deducciones) return;
+  _loaded.deducciones = true;
+  try {
+    const rows = await apiFetch(`/api/deducciones?empleado_id=${_empleadoId}`);
+    const tbody = document.getElementById('tabla-deducciones');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty">No tienes deducciones registradas</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(d => {
+      const estado = d.Estado || 'Pendiente';
+      const badge = estado === 'Descontado' ? 'badge-green' : 'badge-orange';
+      return `<tr>
+        <td><strong>${d.Concepto || '—'}</strong></td>
+        <td class="num">${cs(d.Monto)}</td>
+        <td style="font-size:13px">${d['Descontar en quincena'] || '—'}</td>
+        <td><span class="badge ${badge}">${estado}</span></td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    document.getElementById('tabla-deducciones').innerHTML = `<tr><td colspan="4" class="empty">Error: ${e.message}</td></tr>`;
+  }
+}
+
+// ── TAB SWITCHING ──────────────────────────────────────────────────────────
+const loaders = {
+  quincenas:   () => {},        // ya cargado en init
+  prestamos:   cargarPrestamos,
+  adelantos:   cargarAdelantos,
+  extras:      cargarExtras,
+  deducciones: cargarDeducciones,
+};
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-section').forEach(s => s.style.display = 'none');
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.getElementById('section-' + tab).style.display = '';
+    if (loaders[tab]) loaders[tab]();
+  });
+});
 
 onReady(null, () => { initPage(); });
 </script>

@@ -8,6 +8,10 @@ router.get('/', requireAuth, async (req, res) => {
   if (!empleado_id || !periodo) {
     return res.status(400).json({ error: 'Se requiere ?empleado_id= y ?periodo=' });
   }
+  // Empleado solo puede ver su propio recibo
+  if (req.user.rol === 'Empleado' && String(req.user.empleado_id) !== String(empleado_id)) {
+    return res.status(403).json({ error: 'No autorizado para ver este recibo' });
+  }
 
   const [anio, mes, dia] = periodo.split('-').map(Number);
   const esQ1 = dia <= 15;
