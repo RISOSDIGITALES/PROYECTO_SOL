@@ -520,6 +520,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 44. **Bug fix Alex "Hola de nuevo"** (2026-05-11): `Instrucciones_IA` en Airtable `WhatsApp_Config` reemplazado — contenido RRSS removido, sustituido por reglas de comportamiento del bot WA: manejo de cliente nuevo vs conocido, prioridad del MENSAJE ACTUAL, prohibición de repetir/parafrasear el mensaje del cliente
 45. **Reestructuración completa prompts Alex** (2026-05-11): `Prompt_Sistema` e `Instrucciones_IA` reescritos desde cero — eliminada regla contradictoria de "Hola de nuevo" en Prompt_Sistema que conflictuaba con Instrucciones_IA; corregido MAPEO TIPO_CAJA_API (valores incorrectos: `cajon_cerrado`, `jaula_abierta`, `plataforma`, etc. → correctos: `cajones_cerrados`, `jaulas`, `plataformas_contenedor`, etc.); estructura limpia sin instrucciones duplicadas ni fragmentadas
 46. **Migración Nomify completada** (2026-05-21): todo el stack de Planilla Nicaragua migrado de Netlify/Airtable a Express+MariaDB+JWT; todos los HTML actualizados con `onReady(roles,fn)` JWT, `netlify/functions/` eliminado, `usuarios.html` creado, backend completo en `planilla-server/`; pendiente push a `WX-MDA/Nomify` rama `sol/feature-inicial`
+47. **Carpetas renombradas Nomify** (2026-05-22): frontend `planilla-web/` → `ft_nomify/`, backend ya era `bk_nomify/`; `server.js` debe usar `'../ft_nomify'` en `express.static()`; CLAUDE.md actualizado para reflejar nueva estructura
+48. **Bugs detectados en sesión perdida** (2026-05-22): `index.html` limpiado de referencias Netlify; columnas/tablas faltantes añadidas en MariaDB; bug: botón de Usuarios/Configuración no visible en la UI; bug: `usuarios.html` selector de rol solo muestra "Master", no permite asignar "Colaborador"
 
 ## Nomify — Planilla Nicaragua (Express + MariaDB)
 
@@ -534,14 +536,14 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 ```
 C:\Users\Orison3\Documents\PROYECTO SOL\2026\Nomify\
   bk_nomify\         ← Express backend (git repo → WX-MDA/Nomify, rama sol/feature-inicial)
-  planilla-web\      ← HTML/CSS/JS frontend (carpeta hermana, NO repo git separado)
+  ft_nomify\         ← HTML/CSS/JS frontend (carpeta hermana, NO repo git separado)
   .gitignore
   README.md
 ```
 
 El servidor Express sirve el frontend con:
 ```js
-app.use(express.static(path.join(__dirname, '../planilla-web')));
+app.use(express.static(path.join(__dirname, '../ft_nomify')));
 ```
 **La app SOLO funciona en `http://localhost:3000`** — NO abrir desde Netlify ni desde el sistema de archivos directamente.
 
@@ -647,7 +649,7 @@ usuarios       — id, nombre, email, password_hash, rol, planillas_acceso, empl
 - `tipo_planilla = 'Sin Seguro'` → INSS = 0
 - Motor de cálculo está en `planillasRoutes.js → POST /api/planillas/calcular`
 
-### Archivos del frontend (en planilla-web/)
+### Archivos del frontend (en ft_nomify/)
 
 | Archivo | `onReady` | Descripción |
 |---|---|---|
@@ -702,11 +704,15 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
    - `bk_nomify/server.js`, `auth.js`, `db.js`, `create-admin.js`, `schema.sql`, `package.json`
    - `bk_nomify/.env.example` (con placeholders, NO el .env real)
    - `bk_nomify/routes/` (11 archivos: auth, empleados, prestamos, adelantos, extras, deducciones, vacaciones, planillas, detalle, recibo, usuarios)
-3. Pushear el frontend a `planilla-web/` en misma rama:
-   - `planilla-web/assets/js/auth.js` y `feriados.js`
+3. Pushear el frontend a `ft_nomify/` en misma rama:
+   - `ft_nomify/assets/js/auth.js` y `feriados.js`
    - Todos los HTML: login, index, empleados, planillas, planilla-detalle, prestamos, adelantos, extras, deducciones, calendario, vacaciones, recibo, mi-recibo, usuarios
-4. Asegurarse de que NO existe `planilla-web/netlify/` ni `netlify.toml` que apunte a Netlify functions
+4. Asegurarse de que NO existe `ft_nomify/netlify/` ni `netlify.toml` que apunte a Netlify functions
 5. En la máquina local: `git pull origin sol/feature-inicial` para bajar los cambios
+
+**IMPORTANTE — Bug conocidos pendientes de fix:**
+- `usuarios.html`: el selector de rol solo permite asignar "Master" — no aparece "Colaborador" como opción; la opción existe en HTML pero algo en el JS la deshabilita/oculta
+- Botón de configuración/usuarios no visible en la UI para ciertos roles — verificar que `initLayout()` en `auth.js` oculta correctamente solo para Colaborador y no para Master
 
 ### Pendientes Nomify
 
@@ -724,6 +730,18 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ---
 
+### 2026-05-22 (Jueves)
+
+La sesión arrancó retomando los pendientes de Nomify tras el descubrimiento del día anterior de que las conversaciones de Claude Code no se sincronizan entre máquinas. Se identificaron varias cosas que se hicieron en una sesión que no quedaron registradas en CLAUDE.md: se limpió `index.html` de todas las referencias a Netlify Identity, se añadieron columnas y tablas faltantes en la base MariaDB local, y se detectaron dos bugs. El primero: el botón de Usuarios/Configuración no aparecía en la UI aunque el usuario era Master — posiblemente `initLayout()` estaba ocultándolo indebidamente. El segundo: en `usuarios.html`, el select de rol solo dejaba asignar "Master", no aparecía la opción "Colaborador" disponible.
+
+También se confirmó que las carpetas en Windows quedaron renombradas: el frontend es ahora `ft_nomify/` (no `planilla-web/`), el backend sigue siendo `bk_nomify/`. Se actualizó CLAUDE.md para reflejar este cambio en toda la sección de Nomify, incluyendo la referencia al `express.static()` en server.js que debe apuntar a `'../ft_nomify'`.
+
+Se dio el comando de clonado del repo correcto: `git clone -b sol/feature-inicial https://github.com/WX-MDA/Nomify.git`. La sesión actual (conectada solo a `risosdigitales`) no puede pushear a `WX-MDA/Nomify` directamente, por lo que quedó pendiente abrir una nueva sesión conectada al repo correcto para hacer el push de todos los archivos del backend y frontend.
+
+Pendiente al cierre: nueva sesión con acceso a `WX-MDA/Nomify` para pushear el código, corregir los dos bugs detectados, y luego en la máquina Windows: `git pull origin sol/feature-inicial` para bajar los cambios.
+
+---
+
 ### 2026-05-21 (Miércoles)
 
 El día estuvo dedicado a migrar la Planilla Nicaragua del stack Netlify/Airtable al nuevo stack Express + MariaDB, que vive en el repositorio `WX-MDA/Nomify` (rama `sol/feature-inicial`). Se descubrió durante la sesión un problema crítico de repositorio: el MCP de GitHub estaba conectado únicamente a `risosdigitales/rrss-automatizaci-n` (PROYECTO_SOL), que es el repo de Crating Express, y todos los pushes de código de planilla iban a ese repo equivocado. El código correcto de Nomify debe vivir en `WX-MDA/Nomify`, que tiene la estructura `bk_nomify/` (Express backend) + `planilla-web/` (frontend HTML/CSS/JS) como carpetas hermanas.
@@ -732,7 +750,7 @@ Se realizó la migración completa de auth: se eliminó toda dependencia de Netl
 
 El motor de cálculo de planilla quedó completamente en código Express (`planillasRoutes.js → POST /api/planillas/calcular`), con soporte de INSS_Base, pausado de adelantos/deducciones, descuento de cuotas de préstamos y registro de historial.
 
-Al cierre se documentó todo en CLAUDE.md (esta sección) para que en una nueva sesión conectada a `WX-MDA/Nomify` se puedan pushear todos los archivos correctamente. El código listo para pushear está en `/home/user/RRSS-AUTOMATIZACI-N/planilla-server/` (backend) y `/home/user/RRSS-AUTOMATIZACI-N/planilla-web/` (frontend). Queda pendiente hacer ese push y luego ingresar los 8 empleados reales.
+Al cierre se documentó todo en CLAUDE.md (esta sección) para que en una nueva sesión conectada a `WX-MDA/Nomify` se puedan pushear todos los archivos correctamente. El código listo para pushear está en `/home/user/RRSS-AUTOMATIZACI-N/planilla-server/` (backend) y `/home/user/RRSS-AUTOMATIZACI-N/planilla-web/` (frontend, carpeta local renombrada a `ft_nomify/` — ver estructura). Queda pendiente hacer ese push y luego ingresar los 8 empleados reales.
 
 ---
 
