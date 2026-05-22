@@ -96,8 +96,9 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Cuotas restantes</label>
-          <input type="number" id="pr-cuotas" placeholder="Ej: 6" min="1" />
+          <label>Cuotas restantes <span style="font-weight:400;color:var(--muted);font-size:11px">(se calcula automático)</span></label>
+          <input type="number" id="pr-cuotas" placeholder="Auto" min="1" />
+          <div id="pr-ultima-cuota" style="display:none;margin-top:6px;padding:7px 10px;background:var(--navy2);border:1px solid var(--orange);border-radius:6px;font-size:12px;color:var(--orange)"></div>
         </div>
         <div class="form-group">
           <label>Estado</label>
@@ -362,7 +363,9 @@ document.getElementById('btn-nuevo').addEventListener('click', () => {
   document.getElementById('pr-monto').value = '';
   document.getElementById('pr-cuota').value = '';
   document.getElementById('pr-cuotas').value = '';
+  document.getElementById('pr-cuotas')._editadoManual = false;
   document.getElementById('pr-estado').value = 'Activo';
+  document.getElementById('pr-ultima-cuota').style.display = 'none';
   document.getElementById('alert-form').className = 'alert';
   document.getElementById('modal-pr').classList.add('open');
 });
@@ -376,8 +379,13 @@ function editarPrestamo(id) {
   document.getElementById('pr-monto').value = p['Monto total'] || '';
   document.getElementById('pr-cuota').value = p['Cuota quincenal'] || '';
   document.getElementById('pr-cuotas').value = p['Cuotas restantes'] || '';
+  document.getElementById('pr-cuotas')._editadoManual = true; // al editar, respetar el valor guardado
   document.getElementById('pr-estado').value = p.Estado || 'Activo';
   document.getElementById('alert-form').className = 'alert';
+  // Mostrar aviso si aplica
+  document.getElementById('pr-cuotas')._editadoManual = false;
+  recalcularCuotas();
+  document.getElementById('pr-cuotas')._editadoManual = true;
   document.getElementById('modal-pr').classList.add('open');
 }
 
@@ -385,6 +393,59 @@ function editarPrestamo(id) {
   document.getElementById(id).addEventListener('click', () => {
     document.getElementById('modal-pr').classList.remove('open');
   });
+});
+
+// Cálculo automático de cuotas y aviso de última cuota
+function recalcularCuotas() {
+  const monto = parseFloat(document.getElementById('pr-monto').value);
+  const cuota = parseFloat(document.getElementById('pr-cuota').value);
+  const avisoEl = document.getElementById('pr-ultima-cuota');
+
+  if (!monto || !cuota || monto <= 0 || cuota <= 0) {
+    avisoEl.style.display = 'none';
+    return;
+  }
+
+  const cuotasCompletas = Math.floor(monto / cuota);
+  const resto = Math.round((monto - cuotasCompletas * cuota) * 100) / 100;
+  const totalCuotas = resto > 0 ? cuotasCompletas + 1 : cuotasCompletas;
+
+  // Solo sobreescribir si el campo está vacío o fue calculado antes (no si lo editó el usuario)
+  if (!document.getElementById('pr-cuotas')._editadoManual) {
+    document.getElementById('pr-cuotas').value = totalCuotas;
+  }
+
+  if (resto > 0 && resto < cuota) {
+    avisoEl.style.display = '';
+    avisoEl.textContent = `⚠️ La última cuota será de C$ ${resto.toLocaleString('es-NI', { minimumFractionDigits: 2 })} (cuota incompleta)`;
+  } else {
+    avisoEl.style.display = 'none';
+  }
+}
+
+['pr-monto', 'pr-cuota'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    document.getElementById('pr-cuotas')._editadoManual = false;
+    recalcularCuotas();
+  });
+});
+
+document.getElementById('pr-cuotas').addEventListener('input', () => {
+  document.getElementById('pr-cuotas')._editadoManual = true;
+  // Mostrar aviso si el monto no cierra exacto con las cuotas manuales
+  const monto = parseFloat(document.getElementById('pr-monto').value);
+  const cuota = parseFloat(document.getElementById('pr-cuota').value);
+  const cuotasManual = parseInt(document.getElementById('pr-cuotas').value);
+  const avisoEl = document.getElementById('pr-ultima-cuota');
+  if (!monto || !cuota || !cuotasManual) { avisoEl.style.display = 'none'; return; }
+  const cuotasCompletas = Math.floor(monto / cuota);
+  const resto = Math.round((monto - cuotasCompletas * cuota) * 100) / 100;
+  if (resto > 0 && cuotasManual === cuotasCompletas + 1) {
+    avisoEl.style.display = '';
+    avisoEl.textContent = `⚠️ La última cuota será de C$ ${resto.toLocaleString('es-NI', { minimumFractionDigits: 2 })} (cuota incompleta)`;
+  } else {
+    avisoEl.style.display = 'none';
+  }
 });
 
 document.getElementById('save-pr').addEventListener('click', async () => {
