@@ -19,7 +19,8 @@ function requireAuth(req, res, next) {
 }
 
 function requireMaster(req, res, next) {
-  if (req.user?.rol !== 'Master') return res.status(403).json({ error: 'Solo Master' });
+  const rol = req.user?.rol;
+  if (rol !== 'Master' && rol !== 'Admin') return res.status(403).json({ error: 'Solo Master' });
   next();
 }
 

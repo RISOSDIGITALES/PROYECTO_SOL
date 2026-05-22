@@ -52,8 +52,8 @@ function initLayout() {
   });
 
   getMyInfo().then(info => {
-    const link = document.getElementById('link-config');
-    if (link && info.rol !== 'Admin') link.style.display = 'none';
+    const link = document.getElementById('link-usuarios');
+    if (link && info.rol !== 'Master') link.style.display = 'none';
   });
 }
 
@@ -84,14 +84,31 @@ async function getMyInfo() {
   if (_myInfo) return _myInfo;
   try {
     _myInfo = await apiFetch('/api/auth/me');
-  } catch (_) {
-    _myInfo = { rol: 'Admin', nombre: null };
+    if (_myInfo.rol === 'Admin') _myInfo.rol = 'Master';
+  } catch (e) {
+    localStorage.removeItem('planilla_token');
+    localStorage.removeItem('planilla_user');
+    window.location.href = '/login.html';
+    throw e;
   }
   return _myInfo;
 }
 
-async function isAdmin() { return (await getMyInfo()).rol === 'Admin'; }
-async function canEdit() { const r = (await getMyInfo()).rol; return r === 'Admin' || r === 'Planillero'; }
+async function onReady(allowedRoles, fn) {
+  if (!getToken()) { window.location.href = '/login.html'; return; }
+  if (allowedRoles) {
+    const info = await getMyInfo();
+    if (!allowedRoles.includes(info.rol)) {
+      window.location.href = '/mi-recibo.html';
+      return;
+    }
+  }
+  fn();
+}
+
+async function isMaster() { return (await getMyInfo()).rol === 'Master'; }
+async function isAdmin()  { return (await getMyInfo()).rol === 'Master'; }
+async function canEdit()  { const r = (await getMyInfo()).rol; return r === 'Master' || r === 'Colaborador'; }
 
 function fmt(n) {
   return 'C$ ' + Number(n || 0).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -105,4 +122,4 @@ function showAlert(id, msg, type = 'success') {
   if (type === 'success') setTimeout(() => el.classList.remove('show'), 3500);
 }
 
-window.AppAuth = { requireAuth, requireAuthRole, initLayout, getToken, apiFetch, getMyInfo, isAdmin, canEdit, fmt, showAlert };
+window.AppAuth = { onReady, requireAuth, requireAuthRole, initLayout, getToken, apiFetch, getMyInfo, isMaster, isAdmin, canEdit, fmt, showAlert };

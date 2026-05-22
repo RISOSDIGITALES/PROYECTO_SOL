@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 // Servir el frontend estático
-app.use(express.static(path.join(__dirname, '../planilla-web')));
+app.use(express.static(path.join(__dirname, '../ft_nomify')));
 
 // Rutas API
 app.use('/api/auth',       require('./routes/authRoutes'));
@@ -27,7 +27,7 @@ app.use('/api/usuarios',  require('./routes/usuariosRoutes'));
 
 // Todas las demás rutas devuelven el HTML correspondiente
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../planilla-web/index.html'));
+  res.sendFile(path.join(__dirname, '../ft_nomify/index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
