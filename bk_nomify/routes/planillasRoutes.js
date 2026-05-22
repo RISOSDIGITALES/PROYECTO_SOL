@@ -61,6 +61,10 @@ router.post('/calcular', requireAuth, async (req, res) => {
     const [adelantos] = await conn.query(
       `SELECT * FROM adelantos WHERE descontar_en = ? AND estado = 'Pendiente' AND pausado = 0`, [periodo]
     );
+    // Detectar si es primera quincena del mes (día 15) para préstamos mensuales
+    const diaperiodo = parseInt(periodo.slice(-2));
+    const isFirstQuincena = diaperiodo <= 15;
+
     const [prestamos] = await conn.query(`SELECT * FROM prestamos WHERE estado = 'Activo'`);
     const [extras] = await conn.query(`SELECT * FROM extras WHERE pagar_en = ?`, [periodo]);
     const [deducciones] = await conn.query(
@@ -95,7 +99,15 @@ router.post('/calcular', requireAuth, async (req, res) => {
       const empAdel      = adelantosPor[emp.id] || [];
       const descAdelanto = Math.round(empAdel.reduce((s, a) => s + parseFloat(a.monto || 0), 0) * 100) / 100;
       const empPrest     = prestamosPor[emp.id] || [];
-      const descPrestamo = Math.round(empPrest.reduce((s, p) => s + parseFloat(p.cuota_quincenal || 0), 0) * 100) / 100;
+      // Préstamos mensuales solo se descuentan en la primera quincena (día 15)
+      const prestActivos = empPrest.filter(p =>
+        (p.frecuencia || 'Quincenal') !== 'Mensual' || isFirstQuincena
+      );
+      const descPrestamo = Math.round(prestActivos.reduce((s, p) => {
+        const saldo = parseFloat(p.saldo_pendiente ?? p.monto_total ?? 0);
+        const cuota = parseFloat(p.cuota_quincenal || 0);
+        return s + Math.min(cuota, saldo); // no descontar más de lo que queda
+      }, 0) * 100) / 100;
       const empExtras    = extrasPor[emp.id] || [];
       const totalExtras  = Math.round(empExtras.reduce((s, x) => s + parseFloat(x.monto || 0), 0) * 100) / 100;
       const empDed       = deduccPor[emp.id] || [];
@@ -116,10 +128,12 @@ router.post('/calcular', requireAuth, async (req, res) => {
         extras: totalExtras, desc_deducciones: descDed,
         total_deducciones: totalDeducciones, neto,
         adelantosIds:  empAdel.map(a => a.id),
-        prestamosData: empPrest.map(p => ({
+        prestamosData: prestActivos.map(p => ({
           id: p.id,
           cuotas_restantes: p.cuotas_restantes || 0,
-          cuota_quincenal:  p.cuota_quincenal  || 0,
+          cuota_quincenal:  parseFloat(p.cuota_quincenal  || 0),
+          saldo_pendiente:  parseFloat(p.saldo_pendiente ?? p.monto_total ?? 0),
+          frecuencia:       p.frecuencia || 'Quincenal',
           historial_pagos:  p.historial_pagos  || '',
         })),
         deduccionesIds: empDed.map(d => d.id),
@@ -160,12 +174,14 @@ router.post('/calcular', requireAuth, async (req, res) => {
 
     for (const d of detalles) {
       for (const p of d.prestamosData) {
+        const pagoReal     = Math.min(p.cuota_quincenal, p.saldo_pendiente); // no pagar más de lo que queda
+        const newSaldo     = Math.max(0, Math.round((p.saldo_pendiente - pagoReal) * 100) / 100);
         const nuevasCuotas = Math.max(0, p.cuotas_restantes - 1);
-        const entry        = `${periodo} | C$${parseFloat(p.cuota_quincenal).toFixed(2)} | Descuento quincena`;
+        const entry        = `${periodo} | C$${pagoReal.toFixed(2)} | Descuento quincena`;
         const nuevoHist    = p.historial_pagos ? `${p.historial_pagos}\n${entry}` : entry;
         await conn.query(
-          'UPDATE prestamos SET cuotas_restantes = ?, estado = ?, historial_pagos = ? WHERE id = ?',
-          [nuevasCuotas, nuevasCuotas <= 0 ? 'Pagado' : 'Activo', nuevoHist, p.id]
+          'UPDATE prestamos SET cuotas_restantes = ?, saldo_pendiente = ?, estado = ?, historial_pagos = ? WHERE id = ?',
+          [nuevasCuotas, newSaldo, newSaldo <= 0 ? 'Pagado' : 'Activo', nuevoHist, p.id]
         );
       }
     }

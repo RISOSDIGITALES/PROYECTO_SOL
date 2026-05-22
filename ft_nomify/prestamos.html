@@ -90,15 +90,17 @@
           <input type="number" id="pr-monto" placeholder="0.00" step="0.01" />
         </div>
         <div class="form-group">
-          <label>Cuota quincenal (C$) *</label>
+          <label>Monto de la cuota (C$) *</label>
           <input type="number" id="pr-cuota" placeholder="0.00" step="0.01" />
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Cuotas restantes <span style="font-weight:400;color:var(--muted);font-size:11px">(se calcula automático)</span></label>
-          <input type="number" id="pr-cuotas" placeholder="Auto" min="1" />
-          <div id="pr-ultima-cuota" style="display:none;margin-top:6px;padding:7px 10px;background:var(--navy2);border:1px solid var(--orange);border-radius:6px;font-size:12px;color:var(--orange)"></div>
+          <label>Frecuencia de pago</label>
+          <select id="pr-frecuencia">
+            <option value="Quincenal">Quincenal (cada 15 días)</option>
+            <option value="Mensual">Mensual (solo 1ra quincena)</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Estado</label>
@@ -107,6 +109,13 @@
             <option value="Pagado">Pagado</option>
             <option value="Suspendido">Suspendido</option>
           </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cuotas restantes <span style="font-weight:400;color:var(--muted);font-size:11px">(se calcula automático)</span></label>
+          <input type="number" id="pr-cuotas" placeholder="Auto" min="1" />
+          <div id="pr-ultima-cuota" style="display:none;margin-top:6px;padding:7px 10px;background:var(--navy2);border:1px solid var(--orange);border-radius:6px;font-size:12px;color:var(--orange)"></div>
         </div>
       </div>
     </div>
@@ -138,14 +147,21 @@
           <input type="number" id="pago-monto" placeholder="0.00" step="0.01" />
         </div>
       </div>
+      <div id="pago-saldo-info" style="background:var(--navy2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:10px;font-size:13px;display:none">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="color:var(--text-muted)">Saldo pendiente</span>
+          <strong id="pago-saldo-val" style="color:var(--orange)">—</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:var(--text-muted)">Cuota habitual</span>
+          <span id="pago-cuota-val">—</span>
+        </div>
+      </div>
       <div class="form-group">
         <label>Notas (opcional)</label>
         <input type="text" id="pago-notas" placeholder="Ej: Efectivo entregado a caja" />
       </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-        <input type="checkbox" id="pago-decrementar" checked style="cursor:pointer" />
-        <label for="pago-decrementar" style="font-size:13px;cursor:pointer;color:var(--text-muted)">Descontar una cuota del conteo restante</label>
-      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin-top:6px">El saldo pendiente y las cuotas se recalculan automáticamente al registrar el pago.</p>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" id="cancel-pago">Cancelar</button>
@@ -224,18 +240,20 @@ function renderTabla() {
   }
   tbody.innerHTML = lista.map(p => {
     const cuotasRest = p['Cuotas restantes'] || 0;
-    const pendiente = Math.min(p['Monto total'] || 0, (p['Cuota quincenal'] || 0) * cuotasRest);
+    const saldo = p['Saldo pendiente'] ?? p['Monto total'] ?? 0;
+    const frecuencia = p.Frecuencia || 'Quincenal';
+    const frecBadge = frecuencia === 'Mensual' ? '<span class="badge badge-orange" style="font-size:10px">Mensual</span>' : '';
     const estado = p.Estado || 'Activo';
     const badge = estado === 'Activo' ? 'badge-blue' : estado === 'Pagado' ? 'badge-green' : 'badge-gray';
     const nPagos = contarPagos(p.Historial_Pagos);
     return `<tr>
       <td><strong>${p.Empleado || '—'}</strong></td>
       <td class="num">${fmt(p['Monto total'])}</td>
-      <td class="num">${fmt(p['Cuota quincenal'])}</td>
+      <td class="num">${fmt(p['Cuota quincenal'])} ${frecBadge}</td>
       <td style="text-align:center">${cuotasRest}</td>
-      <td class="num" style="color:var(--orange)">${fmt(pendiente)}</td>
+      <td class="num" style="color:var(--orange)">${fmt(saldo)}</td>
       <td style="text-align:center">
-        <button onclick="verHistorial(${p.id})" style="background:none;border:none;cursor:pointer;color:var(--primary);font-size:12px;text-decoration:underline">
+        <button onclick="verHistorial(${p.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px;text-decoration:underline">
           ${nPagos} pago${nPagos !== 1 ? 's' : ''}
         </button>
       </td>
@@ -300,12 +318,15 @@ function abrirPago(id) {
   const p = allPrestamos.find(x => x.id == id);
   if (!p) return;
   document.getElementById('pago-prestamo-id').value = id;
-  document.getElementById('pago-prestamo-info').textContent =
-    `${p.Empleado} · cuota C$${fmt(p['Cuota quincenal'])} · ${p['Cuotas restantes'] || 0} cuotas restantes`;
+  document.getElementById('pago-prestamo-info').textContent = `${p.Empleado} — ingresa el monto que abonará`;
+  const saldo = p['Saldo pendiente'] ?? p['Monto total'] ?? 0;
+  const cuota = p['Cuota quincenal'] || 0;
+  document.getElementById('pago-saldo-val').textContent = fmt(saldo);
+  document.getElementById('pago-cuota-val').textContent = fmt(cuota);
+  document.getElementById('pago-saldo-info').style.display = '';
   document.getElementById('pago-fecha').value = new Date().toISOString().split('T')[0];
-  document.getElementById('pago-monto').value = p['Cuota quincenal'] || '';
+  document.getElementById('pago-monto').value = Math.min(cuota, saldo); // sugerir la cuota o el saldo si es menor
   document.getElementById('pago-notas').value = '';
-  document.getElementById('pago-decrementar').checked = true;
   document.getElementById('alert-pago').className = 'alert';
   document.getElementById('modal-pago').classList.add('open');
 }
@@ -321,8 +342,6 @@ document.getElementById('save-pago').addEventListener('click', async () => {
   const fecha       = document.getElementById('pago-fecha').value;
   const monto       = parseFloat(document.getElementById('pago-monto').value);
   const notas       = document.getElementById('pago-notas').value.trim();
-  const decrementar = document.getElementById('pago-decrementar').checked;
-
   if (!fecha) { showAlert('alert-pago', 'Indica la fecha del pago', 'error'); return; }
   if (!monto || monto <= 0) { showAlert('alert-pago', 'Ingresa el monto', 'error'); return; }
 
@@ -333,12 +352,11 @@ document.getElementById('save-pago').addEventListener('click', async () => {
   const historialActual = p.Historial_Pagos || '';
   const nuevoHistorial  = historialActual ? `${historialActual}\n${entry}` : entry;
 
-  const fields = { 'Historial_Pagos': nuevoHistorial };
-  if (decrementar) {
-    const nuevasCuotas = Math.max(0, (p['Cuotas restantes'] || 0) - 1);
-    fields['Cuotas restantes'] = nuevasCuotas;
-    if (nuevasCuotas <= 0) fields['Estado'] = 'Pagado';
-  }
+  // El backend recalcula saldo y cuotas automáticamente con monto_pagado
+  const fields = {
+    monto_pagado: monto,
+    historial_pagos: nuevoHistorial,
+  };
 
   const btn = document.getElementById('save-pago');
   btn.disabled = true; btn.textContent = 'Registrando...';
@@ -366,6 +384,7 @@ document.getElementById('btn-nuevo').addEventListener('click', () => {
   document.getElementById('pr-cuota').value = '';
   document.getElementById('pr-cuotas').value = '';
   document.getElementById('pr-cuotas')._editadoManual = false;
+  document.getElementById('pr-frecuencia').value = 'Quincenal';
   document.getElementById('pr-estado').value = 'Activo';
   document.getElementById('pr-ultima-cuota').style.display = 'none';
   document.getElementById('alert-form').className = 'alert';
@@ -381,10 +400,9 @@ function editarPrestamo(id) {
   document.getElementById('pr-monto').value = p['Monto total'] || '';
   document.getElementById('pr-cuota').value = p['Cuota quincenal'] || '';
   document.getElementById('pr-cuotas').value = p['Cuotas restantes'] || '';
-  document.getElementById('pr-cuotas')._editadoManual = true; // al editar, respetar el valor guardado
+  document.getElementById('pr-frecuencia').value = p.Frecuencia || 'Quincenal';
   document.getElementById('pr-estado').value = p.Estado || 'Activo';
   document.getElementById('alert-form').className = 'alert';
-  // Mostrar aviso si aplica
   document.getElementById('pr-cuotas')._editadoManual = false;
   recalcularCuotas();
   document.getElementById('pr-cuotas')._editadoManual = true;
@@ -466,6 +484,7 @@ document.getElementById('save-pr').addEventListener('click', async () => {
     'Monto total': monto,
     'Cuota quincenal': cuota,
     'Cuotas restantes': cuotas || Math.ceil(monto / cuota),
+    'Frecuencia': document.getElementById('pr-frecuencia').value,
     'Estado': document.getElementById('pr-estado').value,
   };
 

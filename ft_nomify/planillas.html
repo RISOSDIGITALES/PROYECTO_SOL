@@ -79,6 +79,11 @@
       <div class="form-group">
         <label>Período (fecha de la quincena) *</label>
         <input type="date" id="gen-periodo" />
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button type="button" id="btn-q15" class="btn btn-ghost btn-sm" style="font-size:12px">📅 Día 15</button>
+          <button type="button" id="btn-qfin" class="btn btn-ghost btn-sm" style="font-size:12px">📅 Fin de mes</button>
+        </div>
+        <div id="aviso-fecha" style="display:none;margin-top:6px;font-size:11px;color:var(--orange)"></div>
       </div>
       <div class="form-group">
         <label>Tipo de planilla</label>
@@ -101,6 +106,20 @@
 <script>
 let allPlanillas = [];
 let filtroActivo = 'todas';
+
+// Devuelve YYYY-MM-15 o YYYY-MM-DD (último del mes) según qué quincena es más cercana
+function quincena15(y, m) { return `${y}-${String(m).padStart(2,'0')}-15`; }
+function quincenaFin(y, m) {
+  const last = new Date(y, m, 0).getDate(); // día 0 del mes siguiente = último del mes actual
+  return `${y}-${String(m).padStart(2,'0')}-${String(last).padStart(2,'0')}`;
+}
+function nextQuincena() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1; // 1-12
+  const day = d.getDate();
+  return day <= 15 ? quincena15(y, m) : quincenaFin(y, m);
+}
 
 onReady(['Master', 'Colaborador'], () => {
   initLayout();
@@ -160,11 +179,11 @@ document.querySelectorAll('.tab').forEach(btn => {
 });
 
 document.getElementById('btn-generar').addEventListener('click', () => {
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('gen-periodo').value = today;
+  document.getElementById('gen-periodo').value = nextQuincena();
   document.getElementById('gen-tipo').value = '';
   document.getElementById('alert-gen').className = 'alert';
   document.getElementById('gen-preview').style.display = 'none';
+  document.getElementById('aviso-fecha').style.display = 'none';
   document.getElementById('modal-gen').classList.add('open');
 });
 
@@ -172,6 +191,33 @@ document.getElementById('btn-generar').addEventListener('click', () => {
   document.getElementById(id).addEventListener('click', () => {
     document.getElementById('modal-gen').classList.remove('open');
   });
+});
+
+// Botones de quincena rápida
+document.getElementById('btn-q15').addEventListener('click', () => {
+  const d = new Date();
+  document.getElementById('gen-periodo').value = quincena15(d.getFullYear(), d.getMonth() + 1);
+  document.getElementById('aviso-fecha').style.display = 'none';
+});
+document.getElementById('btn-qfin').addEventListener('click', () => {
+  const d = new Date();
+  document.getElementById('gen-periodo').value = quincenaFin(d.getFullYear(), d.getMonth() + 1);
+  document.getElementById('aviso-fecha').style.display = 'none';
+});
+
+// Validar que la fecha sea quincena válida (día 15 o último del mes)
+document.getElementById('gen-periodo').addEventListener('change', () => {
+  const val = document.getElementById('gen-periodo').value;
+  if (!val) return;
+  const [y, m, d] = val.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  const aviso = document.getElementById('aviso-fecha');
+  if (d !== 15 && d !== lastDay) {
+    aviso.style.display = '';
+    aviso.textContent = `⚠️ Fecha inusual — las quincenas normalmente son el día 15 o el ${lastDay} del mes`;
+  } else {
+    aviso.style.display = 'none';
+  }
 });
 
 document.getElementById('save-gen').addEventListener('click', async () => {
