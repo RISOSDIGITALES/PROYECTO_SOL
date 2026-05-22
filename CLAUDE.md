@@ -732,13 +732,13 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ### 2026-05-22 (Jueves)
 
-La sesión arrancó retomando los pendientes de Nomify tras el descubrimiento del día anterior de que las conversaciones de Claude Code no se sincronizan entre máquinas. Se identificaron varias cosas que se hicieron en una sesión que no quedaron registradas en CLAUDE.md: se limpió `index.html` de todas las referencias a Netlify Identity, se añadieron columnas y tablas faltantes en la base MariaDB local, y se detectaron dos bugs. El primero: el botón de Usuarios/Configuración no aparecía en la UI aunque el usuario era Master — posiblemente `initLayout()` estaba ocultándolo indebidamente. El segundo: en `usuarios.html`, el select de rol solo dejaba asignar "Master", no aparecía la opción "Colaborador" disponible.
+El día estuvo dedicado a atender las indicaciones del correo que mandó Don Walter ayer, donde señalaba los puntos de corrección necesarios para la entrega del proyecto. Antes de arrancar con los cambios, Don Walter se dio el tiempo de explicar cada punto con detalle para que no hubiera confusiones ni errores en la implementación.
 
-También se confirmó que las carpetas en Windows quedaron renombradas: el frontend es ahora `ft_nomify/` (no `planilla-web/`), el backend sigue siendo `bk_nomify/`. Se actualizó CLAUDE.md para reflejar este cambio en toda la sección de Nomify, incluyendo la referencia al `express.static()` en server.js que debe apuntar a `'../ft_nomify'`.
+Con eso claro, se trabajó en Nomify: se completaron ajustes pendientes en los archivos HTML del frontend, se eliminaron archivos obsoletos de Netlify que ya no se usan, y se corrigió una página que había quedado sin actualizar de la migración anterior. También se resolvieron dos bugs que estaban pendientes y se actualizó la documentación general del proyecto.
 
-Se dio el comando de clonado del repo correcto: `git clone -b sol/feature-inicial https://github.com/WX-MDA/Nomify.git`. La sesión actual (conectada solo a `risosdigitales`) no puede pushear a `WX-MDA/Nomify` directamente, por lo que quedó pendiente abrir una nueva sesión conectada al repo correcto para hacer el push de todos los archivos del backend y frontend.
+Por la tarde se intentó levantar el servidor en Windows para probar el estado actual, pero una cadena de obstáculos menores no lo permitió y se dejó para mañana con calma.
 
-Pendiente al cierre: nueva sesión con acceso a `WX-MDA/Nomify` para pushear el código, corregir los dos bugs detectados, y luego en la máquina Windows: `git pull origin sol/feature-inicial` para bajar los cambios.
+Si Dios quiere, esta semana Nomify estará terminado y listo para uso real.
 
 ---
 
