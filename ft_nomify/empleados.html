@@ -326,13 +326,17 @@ document.getElementById('save-emp').addEventListener('click', async () => {
   btn.textContent = 'Guardando...';
 
   try {
+    let result;
     if (id) {
-      await apiFetch('/api/empleados', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
+      result = await apiFetch('/api/empleados', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
     } else {
-      await apiFetch('/api/empleados', { method: 'POST', body: JSON.stringify(fields) });
+      result = await apiFetch('/api/empleados', { method: 'POST', body: JSON.stringify(fields) });
     }
     document.getElementById('modal-emp').classList.remove('open');
-    showAlert('alert-emp', '✅ Empleado guardado correctamente', 'success');
+    const msg = result?.usuario_creado
+      ? `✅ Empleado guardado. Usuario creado con contraseña temporal: Nomify2026 (pídele que la cambie en Ajustes)`
+      : '✅ Empleado guardado correctamente';
+    showAlert('alert-emp', msg, 'success');
     loadEmpleados();
   } catch (e) {
     showAlert('alert-form', 'Error: ' + e.message, 'error');

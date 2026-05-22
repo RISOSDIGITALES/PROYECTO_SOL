@@ -1,6 +1,27 @@
 const router = require('express').Router();
+const bcrypt = require('bcryptjs');
 const db = require('../db');
 const { requireAuth, requireMaster } = require('../auth');
+
+// Sincroniza (crea o actualiza) el usuario de un empleado cuando tiene email + rol
+async function syncUsuario(empleadoId, nombre, email, rol) {
+  if (!email || !rol) return null;
+  const [existing] = await db.query('SELECT id FROM usuarios WHERE email = ?', [email]);
+  if (existing.length) {
+    await db.query(
+      'UPDATE usuarios SET nombre = ?, rol = ?, empleado_id = ? WHERE email = ?',
+      [nombre, rol, empleadoId, email]
+    );
+    return { created: false };
+  } else {
+    const hash = bcrypt.hashSync('Nomify2026', 10);
+    await db.query(
+      'INSERT INTO usuarios (nombre, email, password_hash, rol, empleado_id) VALUES (?,?,?,?,?)',
+      [nombre, email, hash, rol, empleadoId]
+    );
+    return { created: true };
+  }
+}
 
 const GET_SQL = `
   SELECT id, nombre AS Nombre, cargo AS Cargo,
@@ -51,8 +72,11 @@ router.post('/', requireAuth, requireMaster, async (req, res) => {
        m.inss_base || 'Salario Completo', m.ir_fijo || 0, m.email, m.rol || 'Empleado',
        m.fecha_ingreso || null, m.activo !== undefined ? (m.activo ? 1 : 0) : 1]
     );
-    const [rows] = await db.query(GET_SQL.replace('ORDER BY nombre ASC', 'WHERE id = ?'), [r.insertId]);
-    res.status(201).json(rows[0]);
+    const empId = r.insertId;
+    // Auto-crear usuario si tiene email y rol
+    const sync = await syncUsuario(empId, m.nombre, m.email, m.rol);
+    const [rows] = await db.query(GET_SQL + ' WHERE id = ?', [empId]);
+    res.status(201).json({ ...rows[0], usuario_creado: sync?.created ?? false });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -72,8 +96,13 @@ async function patchHandler(req, res) {
   vals.push(id);
   try {
     await db.query(`UPDATE empleados SET ${sets.join(', ')} WHERE id = ?`, vals);
-    const [rows] = await db.query(GET_SQL.replace('ORDER BY nombre ASC', 'WHERE id = ?'), [id]);
-    res.json(rows[0]);
+    const [rows] = await db.query(GET_SQL + ' WHERE id = ?', [id]);
+    const emp = rows[0];
+    // Sincronizar usuario si el empleado tiene email y rol
+    if (emp && emp.Email && emp.Rol) {
+      await syncUsuario(id, emp.Nombre, emp.Email, emp.Rol);
+    }
+    res.json(emp);
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
 
