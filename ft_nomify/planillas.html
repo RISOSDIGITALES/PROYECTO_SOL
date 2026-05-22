@@ -177,19 +177,26 @@ function renderTabla() {
     return;
   }
 
+  // Formatea cualquier fecha/datetime a DD/MM/YYYY
+  function fmtFecha(val) {
+    if (!val) return '—';
+    const s = String(val).substring(0, 10); // toma solo YYYY-MM-DD
+    const [y, m, d] = s.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
   tbody.innerHTML = lista.map(p => {
     const tipo = p.Tipo || '';
     const tipoBadge = tipo === 'Con Seguro' ? 'badge-blue' : tipo === 'Sin Seguro' ? 'badge-orange' : 'badge-gray';
     const estado = p.Estado || 'Borrador';
     const estadoBadge = estado === 'Pagada' ? 'badge-green' : estado === 'Borrador' ? 'badge-gray' : 'badge-blue';
-    const periodoVal = p['Período'] || '';
+    const periodoVal = String(p['Período'] || '').substring(0, 10); // siempre YYYY-MM-DD
     const periodo = encodeURIComponent(periodoVal);
-    const tipoEnc = encodeURIComponent(tipo);
-    const fechaPago = p['Fecha de pago'] || periodoVal;
+    const fechaPago = fmtFecha(p['Fecha de pago'] || periodoVal);
     return `<tr>
-      <td><strong>${periodoVal || '—'}</strong></td>
+      <td><strong>${fmtFecha(periodoVal)}</strong></td>
       <td>${tipo ? `<span class="badge ${tipoBadge}">${tipo}</span>` : '—'}</td>
-      <td>${fechaPago || '—'}</td>
+      <td>${fechaPago}</td>
       <td style="text-align:center">${p['Total empleados'] || '—'}</td>
       <td class="num">${fmt(p['Total bruto'])}</td>
       <td class="num" style="color:var(--red)">${fmt(p['Total deducciones'])}</td>
@@ -270,21 +277,11 @@ document.getElementById('save-gen').addEventListener('click', async () => {
       body: JSON.stringify({ periodo, tipo: tipo || undefined }),
     });
 
-    document.getElementById('gen-preview').style.display = 'block';
-    document.getElementById('gen-preview').innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div><span style="color:var(--text-muted)">Empleados</span><br><strong>${result.empleados}</strong></div>
-        <div><span style="color:var(--text-muted)">Período</span><br><strong>${result.periodo}</strong></div>
-        <div><span style="color:var(--text-muted)">Total bruto</span><br><strong>${fmt(result.totalBruto)}</strong></div>
-        <div><span style="color:var(--text-muted)">Deducciones</span><br><strong style="color:var(--red)">${fmt(result.totalDeducciones)}</strong></div>
-        <div style="grid-column:1/-1"><span style="color:var(--text-muted)">Total neto</span><br><strong style="font-size:18px;color:var(--green)">${fmt(result.totalNeto)}</strong></div>
-      </div>
-    `;
-
-    showAlert('alert-gen', '✅ Planilla generada correctamente', 'success');
     allPlanillas = await apiFetch('/api/planillas');
     renderTabla();
-    btn.textContent = 'Generar otra';
+    document.getElementById('modal-gen').classList.remove('open');
+    showAlert('alert-pl', `✅ Planilla generada — ${result.empleados} empleado(s) · neto ${fmt(result.totalNeto)}`, 'success');
+    btn.textContent = 'Calcular y generar';
   } catch (e) {
     showAlert('alert-gen', 'Error: ' + e.message, 'error');
     btn.textContent = 'Calcular y generar';
