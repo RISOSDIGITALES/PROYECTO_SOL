@@ -99,10 +99,12 @@ router.post('/calcular', requireAuth, async (req, res) => {
       const empAdel      = adelantosPor[emp.id] || [];
       const descAdelanto = Math.round(empAdel.reduce((s, a) => s + parseFloat(a.monto || 0), 0) * 100) / 100;
       const empPrest     = prestamosPor[emp.id] || [];
-      // Préstamos mensuales solo se descuentan en la primera quincena (día 15)
-      const prestActivos = empPrest.filter(p =>
-        (p.frecuencia || 'Quincenal') !== 'Mensual' || isFirstQuincena
-      );
+      // Préstamos mensuales: descuentan solo en la quincena elegida (día 15 o fin de mes)
+      const prestActivos = empPrest.filter(p => {
+        if ((p.frecuencia || 'Quincenal') !== 'Mensual') return true;
+        const dia = p.frecuencia_dia || '15';
+        return dia === '15' ? isFirstQuincena : !isFirstQuincena;
+      });
       const descPrestamo = Math.round(prestActivos.reduce((s, p) => {
         const saldo = parseFloat(p.saldo_pendiente ?? p.monto_total ?? 0);
         const cuota = parseFloat(p.cuota_quincenal || 0);
@@ -133,7 +135,8 @@ router.post('/calcular', requireAuth, async (req, res) => {
           cuotas_restantes: p.cuotas_restantes || 0,
           cuota_quincenal:  parseFloat(p.cuota_quincenal  || 0),
           saldo_pendiente:  parseFloat(p.saldo_pendiente ?? p.monto_total ?? 0),
-          frecuencia:       p.frecuencia || 'Quincenal',
+          frecuencia:       p.frecuencia     || 'Quincenal',
+          frecuencia_dia:   p.frecuencia_dia || '15',
           historial_pagos:  p.historial_pagos  || '',
         })),
         deduccionesIds: empDed.map(d => d.id),

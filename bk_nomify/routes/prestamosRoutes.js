@@ -9,6 +9,7 @@ const GET_SQL = `
     p.cuotas_restantes AS \`Cuotas restantes\`,
     COALESCE(p.saldo_pendiente, p.monto_total) AS \`Saldo pendiente\`,
     COALESCE(p.frecuencia, 'Quincenal') AS Frecuencia,
+    COALESCE(p.frecuencia_dia, '15') AS Frecuencia_Dia,
     p.estado AS Estado,
     p.historial_pagos AS Historial_Pagos,
     p.notas, p.empleado_id
@@ -40,13 +41,14 @@ router.post('/', requireAuth, async (req, res) => {
   const monto_total     = b.monto_total     ?? b['Monto total'];
   const cuota_quincenal = b.cuota_quincenal ?? b['Cuota quincenal'];
   const cuotas_restantes = b.cuotas_restantes ?? b['Cuotas restantes'] ?? Math.ceil(monto_total / cuota_quincenal);
-  const frecuencia      = b.frecuencia      ?? b['Frecuencia'] ?? 'Quincenal';
-  const estado          = b.estado          ?? b['Estado']     ?? 'Activo';
+  const frecuencia      = b.frecuencia      ?? b['Frecuencia']     ?? 'Quincenal';
+  const frecuencia_dia  = b.frecuencia_dia  ?? b['Frecuencia_Dia'] ?? '15';
+  const estado          = b.estado          ?? b['Estado']         ?? 'Activo';
   const notas           = b.notas           ?? b['Concepto'];
   try {
     const [r] = await db.query(
-      'INSERT INTO prestamos (empleado_id, monto_total, cuota_quincenal, cuotas_restantes, frecuencia, saldo_pendiente, estado, notas) VALUES (?,?,?,?,?,?,?,?)',
-      [empleado_id, monto_total, cuota_quincenal, cuotas_restantes, frecuencia, monto_total, estado, notas]
+      'INSERT INTO prestamos (empleado_id, monto_total, cuota_quincenal, cuotas_restantes, frecuencia, frecuencia_dia, saldo_pendiente, estado, notas) VALUES (?,?,?,?,?,?,?,?,?)',
+      [empleado_id, monto_total, cuota_quincenal, cuotas_restantes, frecuencia, frecuencia_dia, monto_total, estado, notas]
     );
     const [rows] = await db.query(`${GET_SQL} WHERE p.id = ?`, [r.insertId]);
     res.status(201).json(rows[0]);
@@ -92,6 +94,7 @@ async function patchHandler(req, res) {
     estado:           b.estado           ?? b['Estado'],
     cuota_quincenal:  b.cuota_quincenal  ?? b['Cuota quincenal'],
     frecuencia:       b.frecuencia       ?? b['Frecuencia'],
+    frecuencia_dia:   b.frecuencia_dia   ?? b['Frecuencia_Dia'],
     notas:            b.notas,
   };
   const sets = [], vals = [];
