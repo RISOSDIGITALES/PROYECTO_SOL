@@ -87,8 +87,9 @@
         <div class="form-group">
           <label>Rol *</label>
           <select id="usr-rol">
-            <option value="Master">Master</option>
-            <option value="Colaborador">Colaborador</option>
+            <option value="Master">Master (acceso total)</option>
+            <option value="Colaborador">Colaborador (su planilla)</option>
+            <option value="Empleado">Empleado (solo ve su recibo)</option>
           </select>
         </div>
         <div class="form-group" id="row-planilla">
@@ -161,7 +162,7 @@ function renderTabla() {
       <td><strong>${u.nombre || '—'}</strong></td>
       <td style="font-size:13px">${u.email}</td>
       <td><span class="badge ${badge}">${u.rol}</span></td>
-      <td style="font-size:13px;color:var(--text-muted)">${u.planillas_acceso || '— todas —'}</td>
+      <td style="font-size:13px;color:var(--text-muted)">${u.planillas_acceso || (u.rol === 'Colaborador' ? '<span style="color:var(--orange);font-size:12px">⚠ Sin planilla asignada</span>' : '— todas —')}</td>
       <td style="font-size:12px;color:var(--text-muted)">${fmtFecha(u.created_at)}</td>
       <td style="display:flex;gap:6px">
         <button class="btn btn-icon btn-sm" onclick="editar('${u.id}')">&#x270F;&#xFE0F;</button>
@@ -171,9 +172,10 @@ function renderTabla() {
   }).join('');
 }
 
-// Mostrar/ocultar campo planilla según rol
+// Mostrar/ocultar campo planilla según rol (solo Colaborador lo necesita)
 document.getElementById('usr-rol').addEventListener('change', function() {
   document.getElementById('row-planilla').style.display = this.value === 'Colaborador' ? '' : 'none';
+  if (this.value !== 'Colaborador') document.getElementById('usr-planilla').value = '';
 });
 
 function abrirModal(u = null) {

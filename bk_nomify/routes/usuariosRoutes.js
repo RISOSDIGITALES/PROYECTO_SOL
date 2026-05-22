@@ -21,7 +21,7 @@ router.post('/', requireAuth, requireMaster, async (req, res) => {
   if (!email) return res.status(400).json({ error: 'El email es requerido' });
   // Contraseña estándar si no se especifica
   if (!password) password = 'Nomify2026';
-  if (!['Master', 'Colaborador'].includes(rol)) return res.status(400).json({ error: 'Rol inválido' });
+  if (!['Master', 'Colaborador', 'Empleado'].includes(rol)) return res.status(400).json({ error: 'Rol inválido' });
   if (rol === 'Colaborador' && !planillas_acceso)
     return res.status(400).json({ error: 'Colaborador requiere planillas_acceso' });
   try {
