@@ -143,8 +143,10 @@ let allExtras = [];
 let filtroTipo = 'todos';
 let filtroEmpleado = '';
 let pendingDeleteId = null;
+let _esMaster = false;
 
-onReady(['Master', 'Colaborador'], () => {
+onReady(['Master', 'Colaborador'], async () => {
+  _esMaster = (await getMyInfo()).rol === 'Master';
   initLayout();
   loadAll();
 });
@@ -204,8 +206,8 @@ function renderTabla() {
     <td class="num">${fmt(x.Monto)}</td>
     <td>${x['Pagar en quincena'] || '—'}</td>
     <td style="display:flex;gap:6px">
-      <button class="btn btn-icon btn-sm" onclick="editar('${x.id}')">✏️</button>
-      <button class="btn btn-icon btn-sm" onclick="confirmarEliminar('${x.id}')" style="color:var(--red)">🗑️</button>
+      ${_esMaster ? `<button class="btn btn-icon btn-sm" onclick="editar(${x.id})">✏️</button>` : ''}
+      ${_esMaster ? `<button class="btn btn-icon btn-sm" onclick="confirmarEliminar(${x.id})" style="color:var(--red)">🗑️</button>` : ''}
     </td>
   </tr>`).join('');
 }
@@ -276,7 +278,7 @@ function abrirModalExt(x = null) {
 }
 
 document.getElementById('btn-nuevo').addEventListener('click', () => abrirModalExt());
-function editar(id) { abrirModalExt(allExtras.find(e => e.id === id)); }
+function editar(id) { abrirModalExt(allExtras.find(e => e.id == id)); }
 
 ['close-modal','cancel-ext'].forEach(id => {
   document.getElementById(id).addEventListener('click', () => {

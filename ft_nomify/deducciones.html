@@ -163,8 +163,13 @@
 let allDed = [];
 let filtroEstado = 'todos';
 let filtroEmpleado = '';
+let _esMaster = false;
 
-onReady(['Master', 'Colaborador'], () => { initLayout(); loadAll(); });
+onReady(['Master', 'Colaborador'], async () => {
+  _esMaster = (await getMyInfo()).rol === 'Master';
+  initLayout();
+  loadAll();
+});
 
 async function loadAll() {
   const hoy = new Date();
@@ -215,7 +220,7 @@ async function pausar(id) {
       method: 'PATCH',
       body: JSON.stringify({ id, Pausado: true }),
     });
-    const idx = allDed.findIndex(x => x.id === id);
+    const idx = allDed.findIndex(x => x.id == id);
     if (idx >= 0) allDed[idx].Pausado = true;
     renderTabla();
     showAlert('alert-ded', 'Deducción pausada — no se descontará aunque coincida la quincena', 'success');
@@ -230,7 +235,7 @@ async function reactivar(id) {
       method: 'PATCH',
       body: JSON.stringify({ id, Pausado: false }),
     });
-    const idx = allDed.findIndex(x => x.id === id);
+    const idx = allDed.findIndex(x => x.id == id);
     if (idx >= 0) allDed[idx].Pausado = false;
     renderTabla();
     showAlert('alert-ded', 'Deducción reactivada — se descontará en la quincena indicada', 'success');
@@ -261,10 +266,10 @@ function renderTabla() {
     const creado = fmtFecha(d._createdTime);
     const acciones = [];
     if (estado === 'Pendiente' && !pausado) {
-      acciones.push(`<button class="btn btn-icon btn-sm" title="Editar" onclick="editar('${d.id}')">✏️</button>`);
-      acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--navy2);border:1px solid var(--border);border-radius:4px;cursor:pointer" onclick="pausar('${d.id}')">Pausar</button>`);
+      if (_esMaster) acciones.push(`<button class="btn btn-icon btn-sm" title="Editar" onclick="editar(${d.id})">✏️</button>`);
+      acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--navy2);border:1px solid var(--border);border-radius:4px;cursor:pointer" onclick="pausar(${d.id})">Pausar</button>`);
     } else if (pausado) {
-      acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--navy2);border:1px solid var(--border);border-radius:4px;cursor:pointer" onclick="reactivar('${d.id}')">Reactivar</button>`);
+      acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--navy2);border:1px solid var(--border);border-radius:4px;cursor:pointer" onclick="reactivar(${d.id})">Reactivar</button>`);
     }
     return `<tr>
       <td><strong>${d.Empleado || '—'}</strong></td>
@@ -307,7 +312,7 @@ function abrirModal(d = null) {
 }
 
 document.getElementById('btn-nuevo').addEventListener('click', () => abrirModal());
-function editar(id) { abrirModal(allDed.find(x => x.id === id)); }
+function editar(id) { abrirModal(allDed.find(x => x.id == id)); }
 
 ['close-modal', 'cancel-ded'].forEach(id => {
   document.getElementById(id).addEventListener('click', () => {

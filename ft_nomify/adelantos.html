@@ -107,8 +107,10 @@
 let allAdelantos = [];
 let filtroEstado = 'pendiente';
 let filtroEmpleado = '';
+let _esMaster = false;
 
-onReady(['Master', 'Colaborador'], () => {
+onReady(['Master', 'Colaborador'], async () => {
+  _esMaster = (await getMyInfo()).rol === 'Master';
   initLayout();
   loadAll();
 });
@@ -168,10 +170,10 @@ function renderTabla() {
     const creado = fmtFecha(a._createdTime);
     const acciones = [];
     if (estado === 'Pendiente' && !pausado) {
-      acciones.push(`<button class="btn btn-icon btn-sm" title="Editar" onclick="editarAdelanto('${a.id}')">✏️</button>`);
-      acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer" onclick="pausar('${a.id}')">Pausar</button>`);
+      if (_esMaster) acciones.push(`<button class="btn btn-icon btn-sm" title="Editar" onclick="editarAdelanto(${a.id})">✏️</button>`);
+      acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer" onclick="pausar(${a.id})">Pausar</button>`);
     } else if (pausado) {
-      acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer" onclick="reactivar('${a.id}')">Reactivar</button>`);
+      acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer" onclick="reactivar(${a.id})">Reactivar</button>`);
     }
     return `<tr>
       <td><strong>${a.Empleado || '—'}</strong></td>
@@ -204,7 +206,7 @@ async function pausar(id) {
       method: 'PATCH',
       body: JSON.stringify({ id, Pausado: true }),
     });
-    const idx = allAdelantos.findIndex(x => x.id === id);
+    const idx = allAdelantos.findIndex(x => x.id == id);
     if (idx >= 0) allAdelantos[idx].Pausado = true;
     renderTabla();
     showAlert('alert-adel', 'Adelanto pausado — no se descontará aunque coincida la quincena', 'success');
@@ -219,7 +221,7 @@ async function reactivar(id) {
       method: 'PATCH',
       body: JSON.stringify({ id, Pausado: false }),
     });
-    const idx = allAdelantos.findIndex(x => x.id === id);
+    const idx = allAdelantos.findIndex(x => x.id == id);
     if (idx >= 0) allAdelantos[idx].Pausado = false;
     renderTabla();
     showAlert('alert-adel', 'Adelanto reactivado — se descontará en la quincena indicada', 'success');
@@ -239,7 +241,7 @@ document.getElementById('btn-nuevo').addEventListener('click', () => {
 });
 
 function editarAdelanto(id) {
-  const a = allAdelantos.find(x => x.id === id);
+  const a = allAdelantos.find(x => x.id == id);
   if (!a) return;
   document.getElementById('modal-titulo-adel').textContent = 'Editar Adelanto';
   document.getElementById('adel-id').value = a.id;
