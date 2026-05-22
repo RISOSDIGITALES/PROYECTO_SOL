@@ -44,4 +44,22 @@ router.get('/me', requireAuth, (req, res) => {
   });
 });
 
+// PATCH /api/auth/perfil — actualizar propio nombre y/o contraseña
+router.patch('/perfil', requireAuth, async (req, res) => {
+  const { nombre, password } = req.body;
+  const sets = [], vals = [];
+  if (nombre !== undefined) { sets.push('nombre = ?'); vals.push(nombre); }
+  if (password) {
+    if (password.length < 6) return res.status(400).json({ error: 'Contraseña mínimo 6 caracteres' });
+    sets.push('password_hash = ?');
+    vals.push(bcrypt.hashSync(password, 10));
+  }
+  if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
+  vals.push(req.user.id);
+  try {
+    await db.query(`UPDATE usuarios SET ${sets.join(', ')} WHERE id = ?`, vals);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports = router;
