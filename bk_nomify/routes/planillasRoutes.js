@@ -17,7 +17,7 @@ router.get('/', requireAuth, async (req, res) => {
     const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
     const [rows] = await db.query(
       `SELECT p.id,
-        p.periodo AS \`Período\`,
+        DATE_FORMAT(p.periodo, '%Y-%m-%d') AS \`Período\`,
         p.tipo AS Tipo,
         p.estado AS Estado,
         p.total_bruto AS \`Total bruto\`,
@@ -177,14 +177,29 @@ router.post('/calcular', requireAuth, async (req, res) => {
 
     for (const d of detalles) {
       for (const p of d.prestamosData) {
-        const pagoReal     = Math.min(p.cuota_quincenal, p.saldo_pendiente); // no pagar más de lo que queda
-        const newSaldo     = Math.max(0, Math.round((p.saldo_pendiente - pagoReal) * 100) / 100);
-        const nuevasCuotas = Math.max(0, p.cuotas_restantes - 1);
-        const entry        = `${periodo} | C$${pagoReal.toFixed(2)} | Descuento quincena`;
-        const nuevoHist    = p.historial_pagos ? `${p.historial_pagos}\n${entry}` : entry;
+        const pagoReal = Math.min(p.cuota_quincenal, p.saldo_pendiente);
+
+        // Registrar el pago en pagos_prestamos (fuente de verdad)
         await conn.query(
-          'UPDATE prestamos SET cuotas_restantes = ?, saldo_pendiente = ?, estado = ?, historial_pagos = ? WHERE id = ?',
-          [nuevasCuotas, newSaldo, newSaldo <= 0 ? 'Pagado' : 'Activo', nuevoHist, p.id]
+          'INSERT INTO pagos_prestamos (prestamo_id, fecha, monto, tipo, concepto) VALUES (?,?,?,?,?)',
+          [p.id, periodo, pagoReal, 'Quincena', `Planilla ${periodo}`]
+        );
+
+        // Recalcular saldo desde monto_total - suma real de pagos
+        const [[{ total_pagado, monto_total }]] = await conn.query(
+          `SELECT COALESCE(SUM(pp.monto), 0) AS total_pagado, pr.monto_total
+           FROM prestamos pr
+           LEFT JOIN pagos_prestamos pp ON pp.prestamo_id = pr.id
+           WHERE pr.id = ?
+           GROUP BY pr.id`,
+          [p.id]
+        );
+        const saldoFinal   = Math.max(0, Math.round((parseFloat(monto_total) - parseFloat(total_pagado)) * 100) / 100);
+        const nuevasCuotas = saldoFinal > 0 ? Math.ceil(saldoFinal / p.cuota_quincenal) : 0;
+
+        await conn.query(
+          'UPDATE prestamos SET cuotas_restantes = ?, saldo_pendiente = ?, estado = ? WHERE id = ?',
+          [nuevasCuotas, saldoFinal, saldoFinal <= 0 ? 'Pagado' : 'Activo', p.id]
         );
       }
     }

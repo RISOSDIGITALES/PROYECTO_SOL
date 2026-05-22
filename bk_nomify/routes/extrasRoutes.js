@@ -7,7 +7,7 @@ const GET_SQL = `
     x.tipo AS Tipo,
     x.descripcion AS Concepto,
     x.monto AS Monto,
-    x.pagar_en AS \`Pagar en quincena\`,
+    DATE_FORMAT(x.pagar_en, '%Y-%m-%d') AS \`Pagar en quincena\`,
     x.empleado_id
   FROM extras x
   JOIN empleados e ON x.empleado_id = e.id`;

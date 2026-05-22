@@ -5,10 +5,10 @@ const { requireAuth } = require('../auth');
 const GET_SQL = `
   SELECT a.id, e.nombre AS Empleado,
     a.monto AS Monto,
-    a.descontar_en AS \`Descontar en quincena\`,
+    DATE_FORMAT(a.descontar_en, '%Y-%m-%d') AS \`Descontar en quincena\`,
     a.estado AS Estado,
     a.pausado AS Pausado,
-    a.fecha_registro AS \`_createdTime\`,
+    DATE_FORMAT(a.fecha_registro, '%Y-%m-%d') AS \`_createdTime\`,
     a.empleado_id
   FROM adelantos a
   JOIN empleados e ON a.empleado_id = e.id`;

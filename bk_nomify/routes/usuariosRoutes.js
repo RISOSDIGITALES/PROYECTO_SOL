@@ -16,8 +16,11 @@ router.get('/', requireAuth, requireMaster, async (req, res) => {
 
 // POST /api/usuarios — crear usuario
 router.post('/', requireAuth, requireMaster, async (req, res) => {
-  const { nombre, email, password, rol, planillas_acceso } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
+  const { nombre, email, rol, planillas_acceso } = req.body;
+  let { password } = req.body;
+  if (!email) return res.status(400).json({ error: 'El email es requerido' });
+  // Contraseña estándar si no se especifica
+  if (!password) password = 'Nomify2026';
   if (!['Master', 'Colaborador'].includes(rol)) return res.status(400).json({ error: 'Rol inválido' });
   if (rol === 'Colaborador' && !planillas_acceso)
     return res.status(400).json({ error: 'Colaborador requiere planillas_acceso' });

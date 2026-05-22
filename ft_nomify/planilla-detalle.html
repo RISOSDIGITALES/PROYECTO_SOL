@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Detalle Planilla — Nicaragua</title>
+  <title>Detalle Planilla — Nomify</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
   
   <style>
@@ -16,7 +16,7 @@
 <body>
 <div class="layout">
   <aside class="sidebar">
-    <div class="sidebar-logo"><h2>🧮 Planilla</h2><p>Nicaragua</p></div>
+    <div class="sidebar-logo"><h2>Nomify</h2></div>
     <nav>
       <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
       <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
@@ -80,16 +80,23 @@
 onReady(['Master', 'Colaborador'], () => {
   initLayout();
   const params = new URLSearchParams(window.location.search);
-  const periodo = params.get('periodo') || '';
-  const tipo    = params.get('tipo') || '';
-  document.getElementById('titulo-planilla').textContent = periodo || 'Detalle';
+  const planillaId = params.get('id') || '';
+  const periodo    = params.get('periodo') || '';  // YYYY-MM-DD
+  const tipo       = params.get('tipo')    || '';
+  // Mostrar como DD/MM/YYYY en el título
+  const [py, pm, pd] = periodo.split('-');
+  const periodoDisplay = periodo ? `${pd}/${pm}/${py}` : 'Detalle';
+  document.getElementById('titulo-planilla').textContent = periodoDisplay;
   document.getElementById('sub-planilla').textContent = tipo ? `Planilla ${tipo}` : 'Planilla';
-  loadDetalle(periodo, tipo);
+  loadDetalle(planillaId, periodo, tipo);
 });
 
-async function loadDetalle(periodo, tipo) {
+async function loadDetalle(planillaId, periodo, tipo) {
   try {
-    const qs = `?periodo=${encodeURIComponent(periodo)}&tipo=${encodeURIComponent(tipo)}`;
+    // Preferir planilla_id para evitar duplicados si hay varias planillas el mismo día
+    const qs = planillaId
+      ? `?planilla_id=${encodeURIComponent(planillaId)}`
+      : `?periodo=${encodeURIComponent(periodo)}&tipo=${encodeURIComponent(tipo)}`;
     const detalles = await apiFetch('/api/detalle' + qs);
 
     if (detalles.length === 0) {
@@ -98,13 +105,15 @@ async function loadDetalle(periodo, tipo) {
       return;
     }
 
-    const totBruto = detalles.reduce((s, d) => s + (d.salario_quincenal || 0), 0);
-    const totInss  = detalles.reduce((s, d) => s + (d.inss || 0), 0);
-    const totPrest = detalles.reduce((s, d) => s + (d.desc_prestamo || 0), 0);
-    const totAdel  = detalles.reduce((s, d) => s + (d.desc_adelanto || 0), 0);
-    const totExtra = detalles.reduce((s, d) => s + (d.extras || 0), 0);
-    const totDesc  = detalles.reduce((s, d) => s + (d.total_deducciones || 0), 0);
-    const totNeto  = detalles.reduce((s, d) => s + (d.neto || 0), 0);
+    // parseFloat evita NaN cuando mysql2 devuelve DECIMAL como string
+    const pf = (v) => parseFloat(v) || 0;
+    const totBruto = detalles.reduce((s, d) => s + pf(d.salario_quincenal), 0);
+    const totInss  = detalles.reduce((s, d) => s + pf(d.inss), 0);
+    const totPrest = detalles.reduce((s, d) => s + pf(d.desc_prestamo), 0);
+    const totAdel  = detalles.reduce((s, d) => s + pf(d.desc_adelanto), 0);
+    const totExtra = detalles.reduce((s, d) => s + pf(d.extras), 0);
+    const totDesc  = detalles.reduce((s, d) => s + pf(d.total_deducciones), 0);
+    const totNeto  = detalles.reduce((s, d) => s + pf(d.neto), 0);
 
     document.getElementById('resumen-cards').innerHTML = `
       <div class="card"><div class="label">Empleados</div><div class="value">${detalles.length}</div></div>

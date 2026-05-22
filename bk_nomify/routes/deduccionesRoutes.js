@@ -7,10 +7,10 @@ const GET_SQL = `
     IFNULL(d.concepto, d.descripcion) AS Concepto,
     IF(d.concepto IS NULL OR d.concepto = '', '', d.descripcion) AS \`Descripción\`,
     d.monto AS Monto,
-    d.descontar_en AS \`Descontar en quincena\`,
+    DATE_FORMAT(d.descontar_en, '%Y-%m-%d') AS \`Descontar en quincena\`,
     d.estado AS Estado,
     d.pausado AS Pausado,
-    d.fecha_registro AS \`_createdTime\`,
+    DATE_FORMAT(d.fecha_registro, '%Y-%m-%d') AS \`_createdTime\`,
     d.empleado_id
   FROM deducciones d
   JOIN empleados e ON d.empleado_id = e.id`;

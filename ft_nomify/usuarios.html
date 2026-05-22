@@ -9,7 +9,7 @@
 <body>
 <div class="layout">
   <aside class="sidebar">
-    <div class="sidebar-logo"><h2>🧮 Nomify</h2><p>Planilla Nicaragua</p></div>
+    <div class="sidebar-logo"><h2>Nomify</h2></div>
     <nav>
       <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
       <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
@@ -75,10 +75,13 @@
         <label>Email *</label>
         <input type="email" id="usr-email" placeholder="correo@ejemplo.com" />
       </div>
-      <div class="form-group">
-        <label id="label-password">Contraseña *</label>
-        <input type="password" id="usr-password" placeholder="Mínimo 6 caracteres" />
+      <div class="form-group" id="row-password">
+        <label id="label-password">Nueva contraseña</label>
+        <input type="password" id="usr-password" placeholder="Dejar en blanco para no cambiarla" />
         <small style="color:var(--text-muted);font-size:11px" id="hint-password"></small>
+      </div>
+      <div id="info-password-nueva" style="display:none;padding:8px 12px;background:var(--navy2);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text-muted)">
+        🔑 Contraseña inicial: <strong style="color:var(--text)">Nomify2026</strong> — el usuario puede cambiarla desde Ajustes
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -182,8 +185,10 @@ function abrirModal(u = null) {
   document.getElementById('usr-rol').value = u?.rol || 'Colaborador';
   document.getElementById('usr-planilla').value = u?.planillas_acceso || '';
   document.getElementById('row-planilla').style.display = (u?.rol || 'Colaborador') === 'Colaborador' ? '' : 'none';
-  document.getElementById('label-password').textContent = u ? 'Nueva contraseña' : 'Contraseña *';
-  document.getElementById('hint-password').textContent = u ? 'Dejar en blanco para no cambiarla' : '';
+  // Al crear: ocultar campo password y mostrar info de contraseña estándar
+  // Al editar: mostrar campo de cambio de contraseña
+  document.getElementById('row-password').style.display = u ? '' : 'none';
+  document.getElementById('info-password-nueva').style.display = u ? 'none' : '';
   document.getElementById('alert-form').className = 'alert';
   document.getElementById('modal-usr').classList.add('open');
 }
@@ -206,9 +211,9 @@ document.getElementById('save-usr').addEventListener('click', async () => {
   const planilla = document.getElementById('usr-planilla').value;
 
   if (!email) { showAlert('alert-form', 'El email es requerido', 'error'); return; }
-  if (!id && !password) { showAlert('alert-form', 'La contraseña es requerida', 'error'); return; }
   if (rol === 'Colaborador' && !planilla) { showAlert('alert-form', 'Selecciona la planilla asignada', 'error'); return; }
 
+  // password solo se envía si se llenó (edición); al crear el backend usa Nomify2026
   const body = { nombre, email, rol, planillas_acceso: rol === 'Colaborador' ? planilla : null };
   if (password) body.password = password;
 

@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Préstamos — Planilla Nicaragua</title>
+  <title>Préstamos — Nomify</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar">
-    <div class="sidebar-logo"><h2>🧮 Planilla</h2><p>Nicaragua</p></div>
+    <div class="sidebar-logo"><h2>Nomify</h2></div>
     <nav>
       <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
       <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
@@ -181,7 +181,7 @@
 <div class="overlay" id="modal-historial">
   <div class="modal" style="max-width:520px">
     <div class="modal-header">
-      <h3 id="historial-titulo">Historial de pagos</h3>
+      <h3 id="historial-titulo">Detalle del préstamo</h3>
       <button class="modal-close" id="close-historial">×</button>
     </div>
     <div class="modal-body" id="historial-body" style="max-height:400px;overflow-y:auto"></div>
@@ -230,9 +230,9 @@ async function loadAll() {
   }
 }
 
-function contarPagos(historial) {
-  if (!historial) return 0;
-  return historial.trim().split('\n').filter(l => l.trim()).length;
+// Num pagos viene directo de la DB (COUNT de pagos_prestamos)
+function contarPagos(p) {
+  return p['Num pagos'] ?? 0;
 }
 
 function renderTabla() {
@@ -252,7 +252,7 @@ function renderTabla() {
     const frecBadge = frecuencia === 'Mensual' ? '<span class="badge badge-orange" style="font-size:10px">Mensual</span>' : '';
     const estado = p.Estado || 'Activo';
     const badge = estado === 'Activo' ? 'badge-blue' : estado === 'Pagado' ? 'badge-green' : 'badge-gray';
-    const nPagos = contarPagos(p.Historial_Pagos);
+    const nPagos = contarPagos(p);
     return `<tr>
       <td><strong>${p.Empleado || '—'}</strong></td>
       <td class="num">${fmt(p['Monto total'])}</td>
@@ -287,32 +287,78 @@ document.getElementById('filtro-empleado').addEventListener('change', e => {
   renderTabla();
 });
 
-function verHistorial(id) {
+async function verHistorial(id) {
   const p = allPrestamos.find(x => x.id == id);
   if (!p) return;
-  document.getElementById('historial-titulo').textContent = `Historial — ${p.Empleado}`;
-
-  const pagos = (p.Historial_Pagos || '').trim().split('\n').filter(l => l.trim());
-  if (pagos.length === 0) {
-    document.getElementById('historial-body').innerHTML =
-      '<p style="color:var(--text-muted);text-align:center;padding:24px 0">No hay pagos registrados aún.<br><small>Los pagos aparecen aquí al generar planilla o al registrar un pago directo.</small></p>';
-  } else {
-    const rows = [...pagos].reverse().map(linea => {
-      const [fecha, monto, tipo, notas] = linea.split('|').map(s => s.trim());
-      const esPagoDirecto = (tipo || '').toLowerCase().includes('directo');
-      return `<div style="display:grid;grid-template-columns:90px 1fr auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
-        <div style="font-size:12px;color:var(--text-muted)">${fecha || '—'}</div>
-        <div>
-          <div style="font-weight:600">${monto || '—'}</div>
-          ${notas ? `<div style="font-size:12px;color:var(--text-muted)">${notas}</div>` : ''}
-        </div>
-        <span class="badge ${esPagoDirecto ? 'badge-blue' : 'badge-gray'}">${esPagoDirecto ? 'Pago directo' : 'Quincena'}</span>
-      </div>`;
-    }).join('');
-    document.getElementById('historial-body').innerHTML =
-      `<div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">${pagos.length} pago(s) — más reciente primero</div>${rows}`;
-  }
+  document.getElementById('historial-titulo').textContent = `Préstamo — ${p.Empleado}`;
+  document.getElementById('historial-body').innerHTML = '<div style="text-align:center;padding:24px"><div class="spinner"></div></div>';
   document.getElementById('modal-historial').classList.add('open');
+  try {
+    const pagos = await apiFetch(`/api/prestamos/${id}/pagos`);
+
+    const montoTotal   = parseFloat(p['Monto total'] || 0);
+    const saldo        = parseFloat(p['Saldo pendiente'] || 0);
+    const totalPagado  = Math.round((montoTotal - saldo) * 100) / 100;
+    const pct          = montoTotal > 0 ? Math.min(100, Math.round(totalPagado / montoTotal * 100)) : 0;
+    const cuota        = parseFloat(p['Cuota quincenal'] || 0);
+    const cuotasRest   = p['Cuotas restantes'] || 0;
+    const frecuencia   = p.Frecuencia || 'Quincenal';
+    const freDia       = frecuencia === 'Mensual' ? ` (día ${p.Frecuencia_Dia === 'Fin' ? 'último' : p.Frecuencia_Dia})` : '';
+
+    const resumen = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:var(--navy2);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:2px">Monto original</div>
+          <div style="font-size:16px;font-weight:700">${fmt(montoTotal)}</div>
+        </div>
+        <div style="background:var(--navy2);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:2px">Saldo pendiente</div>
+          <div style="font-size:16px;font-weight:700;color:${saldo > 0 ? 'var(--orange)' : 'var(--green2)'}">${fmt(saldo)}</div>
+        </div>
+        <div style="background:var(--navy2);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:2px">Total pagado</div>
+          <div style="font-size:16px;font-weight:700;color:var(--green2)">${fmt(totalPagado)}</div>
+        </div>
+        <div style="background:var(--navy2);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:2px">Cuotas restantes</div>
+          <div style="font-size:16px;font-weight:700">${cuotasRest} × ${fmt(cuota)}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${frecuencia}${freDia}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+          <span style="color:var(--text-muted)">Progreso del pago</span>
+          <span style="font-weight:600">${pct}%</span>
+        </div>
+        <div style="background:var(--navy2);border-radius:4px;height:8px;overflow:hidden">
+          <div style="width:${pct}%;background:var(--green2);height:100%;border-radius:4px;transition:width .3s"></div>
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;border-top:1px solid var(--border);padding-top:12px">
+        Historial de pagos (${pagos.length})
+      </div>`;
+
+    if (pagos.length === 0) {
+      document.getElementById('historial-body').innerHTML = resumen +
+        '<p style="color:var(--text-muted);text-align:center;padding:16px 0">No hay pagos registrados aún.</p>';
+    } else {
+      const rows = pagos.map(pg => {
+        const esDirecto = (pg.tipo || '').toLowerCase().includes('directo');
+        return `<div style="display:grid;grid-template-columns:90px 1fr auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:12px;color:var(--text-muted)">${pg.fecha || '—'}</div>
+          <div>
+            <div style="font-weight:600">${fmt(pg.monto)}</div>
+            ${pg.concepto ? `<div style="font-size:12px;color:var(--text-muted)">${pg.concepto}</div>` : ''}
+          </div>
+          <span class="badge ${esDirecto ? 'badge-blue' : 'badge-gray'}">${esDirecto ? 'Pago directo' : 'Quincena'}</span>
+        </div>`;
+      }).join('');
+      document.getElementById('historial-body').innerHTML = resumen + rows;
+    }
+  } catch (e) {
+    document.getElementById('historial-body').innerHTML =
+      `<p style="color:var(--red);padding:16px">Error: ${e.message}</p>`;
+  }
 }
 
 ['close-historial','cancel-historial'].forEach(id => {
@@ -352,17 +398,11 @@ document.getElementById('save-pago').addEventListener('click', async () => {
   if (!fecha) { showAlert('alert-pago', 'Indica la fecha del pago', 'error'); return; }
   if (!monto || monto <= 0) { showAlert('alert-pago', 'Ingresa el monto', 'error'); return; }
 
-  const p = allPrestamos.find(x => x.id == prestamoId);
-  if (!p) return;
-
-  const entry = `${fecha} | C$${monto.toFixed(2)} | Pago directo${notas ? ' | ' + notas : ''}`;
-  const historialActual = p.Historial_Pagos || '';
-  const nuevoHistorial  = historialActual ? `${historialActual}\n${entry}` : entry;
-
-  // El backend recalcula saldo y cuotas automáticamente con monto_pagado
+  // El backend inserta en pagos_prestamos y recalcula saldo automáticamente
   const fields = {
     monto_pagado: monto,
-    historial_pagos: nuevoHistorial,
+    fecha,
+    concepto: notas,
   };
 
   const btn = document.getElementById('save-pago');

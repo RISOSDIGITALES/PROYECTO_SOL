@@ -3,24 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Recibo de Pago — Nicaragua</title>
+  <title>Recibo de Pago — Nomify</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
   <style>
     .recibo-wrap {
       max-width: 680px;
       margin: 0 auto;
       background: #fff;
-      color: #111;
+      color: #222;
       border: 1px solid #ccc;
       font-family: Arial, sans-serif;
       font-size: 13px;
     }
     .recibo-header {
-      background: #1a1a2e;
+      background: #2c3e50;
       color: #fff;
       text-align: center;
       padding: 14px 12px 10px;
-      font-size: 15px;
+      font-size: 16px;
       font-weight: bold;
       letter-spacing: 0.5px;
     }
@@ -28,32 +28,32 @@
       display: block;
       font-size: 12px;
       font-weight: normal;
-      opacity: 0.8;
-      margin-top: 2px;
+      color: #fff;
+      margin-top: 3px;
     }
-    .recibo-section { border-bottom: 1px solid #e0e0e0; }
+    .recibo-section { border-bottom: 1px solid #d8d8d8; }
     .recibo-section-title {
-      background: #f5f5f5;
+      background: #eaeaea;
       padding: 5px 14px;
       font-size: 11px;
-      font-weight: bold;
+      font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: #555;
-      border-bottom: 1px solid #e0e0e0;
+      letter-spacing: 0.6px;
+      color: #333;
+      border-bottom: 1px solid #d8d8d8;
     }
     .recibo-row {
       display: flex;
       justify-content: space-between;
       padding: 6px 14px;
-      border-bottom: 1px solid #f0f0f0;
+      border-bottom: 1px solid #efefef;
     }
     .recibo-row:last-child { border-bottom: none; }
-    .recibo-row .label { color: #555; }
-    .recibo-row .value { font-weight: 600; text-align: right; }
-    .recibo-row.subtotal { background: #fafafa; font-weight: 700; }
+    .recibo-row .label { color: #444; }
+    .recibo-row .value { font-weight: 600; text-align: right; color: #111; }
+    .recibo-row.subtotal { background: #f5f5f5; font-weight: 700; }
     .recibo-row.neto {
-      background: #1a1a2e;
+      background: #2c3e50;
       color: #fff;
       font-size: 15px;
       font-weight: 700;
@@ -61,11 +61,11 @@
     }
     .recibo-row.neto .label,
     .recibo-row.neto .value { color: #fff; }
-    .recibo-row.descuento .value { color: #555; }
+    .recibo-row.descuento .value { color: #333; }
     .firma-area {
       padding: 20px 14px 16px;
       font-size: 12px;
-      color: #555;
+      color: #444;
     }
     .firma-area .linea {
       border-top: 1px solid #333;
@@ -74,20 +74,32 @@
       text-align: center;
       font-size: 11px;
       padding-top: 4px;
-      color: #666;
+      color: #555;
     }
     @media print {
-      .sidebar, .topbar { display: none !important; }
-      .main { margin-left: 0 !important; padding: 0 !important; }
-      .content { padding: 0 !important; }
-      body { background: #fff !important; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      html, body { margin: 0; padding: 0; background: #fff !important; }
+      .sidebar, .topbar, #btn-volver, #btn-print { display: none !important; }
+      .layout { display: block !important; }
+      .main  { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+      .content { padding: 0 !important; margin: 0 !important; }
+      .recibo-wrap {
+        max-width: 100% !important;
+        border: none !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+      }
+      .recibo-section-title { font-weight: 800 !important; color: #000 !important; }
+      .recibo-row .label { color: #222 !important; }
+      .recibo-row .value { color: #000 !important; }
+      .firma-area { color: #333 !important; }
     }
   </style>
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar">
-    <div class="sidebar-logo"><h2>🧮 Planilla</h2><p>Nicaragua</p></div>
+    <div class="sidebar-logo"><h2>Nomify</h2></div>
     <nav>
       <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
       <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
@@ -134,7 +146,9 @@ onReady(['Master', 'Colaborador'], () => {
   const p = new URLSearchParams(window.location.search);
   const empleadoId = p.get('empleado_id') || '';
   const periodo    = p.get('periodo')      || '';
-  document.getElementById('sub-recibo').textContent = `Período ${periodo}`;
+  const [ry, rm, rd] = (periodo || '').split('-');
+  const periodoFmt = (ry && rm && rd) ? `${rd}/${rm}/${ry}` : periodo;
+  document.getElementById('sub-recibo').textContent = `Período ${periodoFmt}`;
   const volverUrl = `/planilla-detalle.html?periodo=${encodeURIComponent(periodo)}`;
   document.getElementById('btn-volver').href = volverUrl;
   loadRecibo(empleadoId, periodo);
@@ -161,6 +175,10 @@ async function loadRecibo(empleadoId, periodo) {
 }
 
 function renderRecibo(data, periodo) {
+  // Formatear periodo como DD/MM/YYYY para mostrar
+  const [py, pm, pd] = (periodo || '').split('-');
+  const periodoDisplay = (py && pm && pd) ? `${pd}/${pm}/${py}` : periodo;
+
   const emp  = data.empleado    || {};
   const det  = data.detalle     || {};
   const adel = data.adelantos   || [];
@@ -221,8 +239,8 @@ function renderRecibo(data, periodo) {
   document.getElementById('recibo-container').innerHTML = `
     <div class="recibo-wrap">
       <div class="recibo-header">
-        MD Arthur — Planilla Nicaragua
-        <span>Quincena del período ${periodo}</span>
+        <strong>Recibo de Pago</strong>
+        <span>Quincena del período ${periodoDisplay}</span>
       </div>
 
       <div class="recibo-section">
@@ -259,8 +277,8 @@ function renderRecibo(data, periodo) {
 
       <div class="firma-area" style="display:flex;justify-content:space-between;align-items:flex-end">
         <div>
-          He recibido de MD Arthur SA la suma de <strong>${cs(netoAPagar)}</strong> Córdobas Netos
-          correspondiente a la quincena del período <strong>${periodo}</strong>.
+          He recibido la suma de <strong>${cs(netoAPagar)}</strong> Córdobas Netos
+          correspondiente a la quincena del período <strong>${periodoDisplay}</strong>.
           <div class="linea">Firma del empleado</div>
         </div>
         <div>

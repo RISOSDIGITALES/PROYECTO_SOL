@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard — Planilla Nicaragua</title>
+  <title>Dashboard — Nomify</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar">
-    <div class="sidebar-logo"><h2>🧮 Planilla</h2><p>Nicaragua</p></div>
+    <div class="sidebar-logo"><h2>Nomify</h2></div>
     <nav>
       <a href="/index.html" class="active"><span class="icon">📊</span> Dashboard</a>
       <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
@@ -213,13 +213,17 @@ async function loadDashboard() {
       const badge = tipo === 'Con Seguro' ? 'badge-blue' : tipo === 'Sin Seguro' ? 'badge-orange' : 'badge-gray';
       const estado = p.Estado || 'Borrador';
       const estadoBadge = estado === 'Pagada' ? 'badge-green' : 'badge-gray';
+      // Normalizar siempre a YYYY-MM-DD (por si la DB devuelve datetime completo)
+      const periodoVal = String(p['Período'] || '').substring(0, 10);
+      const [py, pm, pd] = periodoVal.split('-');
+      const periodoDisplay = periodoVal ? `${pd}/${pm}/${py}` : '—';
       return `<tr>
-        <td><strong>${p['Período'] || '—'}</strong></td>
+        <td><strong>${periodoDisplay}</strong></td>
         <td>${tipo ? `<span class="badge ${badge}">${tipo}</span>` : '—'}</td>
         <td class="num">${fmt(p['Total bruto'])}</td>
         <td class="num"><strong>${fmt(p['Total neto'])}</strong></td>
         <td><span class="badge ${estadoBadge}">${estado}</span></td>
-        <td><a href="/planilla-detalle.html?periodo=${encodeURIComponent(p['Período'])}&tipo=${encodeURIComponent(tipo)}" class="btn btn-icon btn-sm">👁</a></td>
+        <td><a href="/planilla-detalle.html?id=${p.id}&periodo=${encodeURIComponent(periodoVal)}" class="btn btn-icon btn-sm">👁</a></td>
       </tr>`;
     }).join('');
   } catch (e) {
