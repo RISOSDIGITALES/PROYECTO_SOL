@@ -165,6 +165,13 @@ let filtroEstado = 'todos';
 let filtroEmpleado = '';
 let _esMaster = false;
 
+function esQuincenaValida(fecha) {
+  if (!fecha) return false;
+  const [y, m, d] = fecha.split('-').map(Number);
+  const ultimoDia = new Date(y, m, 0).getDate();
+  return d === 15 || d === ultimoDia;
+}
+
 onReady(['Master', 'Planillero'], async () => {
   _esMaster = (await getMyInfo()).rol === 'Master';
   initLayout();
@@ -333,6 +340,12 @@ document.getElementById('save-ded').addEventListener('click', async () => {
   if (!concepto) { showAlert('alert-form', 'Selecciona un concepto', 'error'); return; }
   if (!monto || monto <= 0) { showAlert('alert-form', 'Ingresa un monto válido', 'error'); return; }
   if (!fecha) { showAlert('alert-form', 'Selecciona la quincena de descuento', 'error'); return; }
+  if (!esQuincenaValida(fecha)) {
+    const [y, m] = fecha.split('-').map(Number);
+    const ult = new Date(y, m, 0).getDate();
+    showAlert('alert-form', `La fecha debe ser el día 15 o el último día del mes (${ult}/${String(m).padStart(2,'0')}/${y})`, 'error');
+    return;
+  }
 
   const fields = {
     Empleado: empleado,

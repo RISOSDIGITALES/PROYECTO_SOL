@@ -16,6 +16,8 @@ const { requireAuth, requireAdmin } = require('./auth');
   // Renombrar Colaborador → Planillero en datos existentes
   await run("UPDATE usuarios  SET rol='Planillero' WHERE rol='Colaborador'");
   await run("UPDATE empleados SET rol='Planillero' WHERE rol='Colaborador'");
+  // Agregar columna concepto a deducciones si no existe
+  await run("ALTER TABLE deducciones ADD COLUMN IF NOT EXISTS concepto VARCHAR(100) DEFAULT NULL AFTER empleado_id");
   console.log('[migrations] OK');
 })();
 

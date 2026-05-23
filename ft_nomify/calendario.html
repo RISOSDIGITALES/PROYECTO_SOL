@@ -186,6 +186,20 @@
   </div>
 </div>
 
+<!-- MODAL DETALLE DEL DÍA -->
+<div class="overlay" id="modal-dia">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h3 id="modal-dia-titulo" style="text-transform:capitalize">—</h3>
+      <button class="modal-close" id="close-modal-dia">×</button>
+    </div>
+    <div class="modal-body" id="modal-dia-body" style="max-height:420px;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-modal-dia">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <script src="/assets/js/auth.js"></script>
 <script src="/assets/js/feriados.js"></script>
 <script>
@@ -200,9 +214,75 @@ let allExtras     = [];
 let empColorMap   = {};
 let empColorIdx   = 0;
 let filtroEmpCal  = '';
+let calDayCache   = {}; // eventos por dStr, se llena en renderCal()
 
 // Normaliza fecha a YYYY-MM-DD (primeros 10 chars)
 const norm = s => s ? String(s).substring(0, 10) : '';
+
+// ── MODAL DETALLE DÍA ──────────────────────────────────────────────────────
+['close-modal-dia','cancel-modal-dia'].forEach(id => {
+  document.getElementById(id)?.addEventListener('click', () => {
+    document.getElementById('modal-dia').classList.remove('open');
+  });
+});
+
+function mostrarDia(dStr) {
+  const ev = calDayCache[dStr];
+  if (!ev) return;
+  const [y, m, d] = dStr.split('-').map(Number);
+  const fechaObj = new Date(y, m - 1, d);
+  const titulo = fechaObj.toLocaleDateString('es-NI', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  document.getElementById('modal-dia-titulo').textContent = titulo;
+
+  const items = [];
+
+  if (ev.esQui) {
+    items.push(`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:20px">📋</span>
+      <div><div style="font-weight:600;color:var(--green2)">Día de quincena</div>
+      <div style="font-size:12px;color:var(--text-muted)">Se procesa la planilla de este período</div></div>
+    </div>`);
+  }
+
+  if (ev.esFeriado) {
+    items.push(`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:20px">🎌</span>
+      <div><div style="font-weight:600;color:#c39bd3">Feriado nacional</div>
+      <div style="font-size:12px;color:var(--text-muted)">${ev.ferNombre}</div></div>
+    </div>`);
+  }
+
+  ev.vacsHoy.forEach(v => {
+    items.push(`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:20px">🏖</span>
+      <div><div style="font-weight:600">${v.Empleado}</div>
+      <div style="font-size:12px;color:var(--text-muted)">Vacaciones — ${v.Tipo} · ${v.Dias} días (${norm(v.Fecha_Inicio)} → ${norm(v.Fecha_Fin)})</div></div>
+    </div>`);
+  });
+
+  ev.adelHoy.forEach(a => {
+    items.push(`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:20px">⚡</span>
+      <div><div style="font-weight:600">${a.Empleado}</div>
+      <div style="font-size:12px;color:var(--text-muted)">Adelanto a descontar · <strong style="color:var(--orange)">${fmt(a.Monto)}</strong> · Estado: ${a.Estado || 'Pendiente'}</div></div>
+    </div>`);
+  });
+
+  ev.extHoy.forEach(x => {
+    items.push(`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:20px">⭐</span>
+      <div><div style="font-weight:600">${x.Empleado}</div>
+      <div style="font-size:12px;color:var(--text-muted)">${x.Tipo}${x.Concepto ? ' — ' + x.Concepto : ''} · <strong style="color:var(--green2)">${fmt(x.Monto)}</strong></div></div>
+    </div>`);
+  });
+
+  if (!items.length) {
+    items.push(`<p style="color:var(--text-muted);text-align:center;padding:20px 0">Sin movimientos registrados este día</p>`);
+  }
+
+  document.getElementById('modal-dia-body').innerHTML = items.join('');
+  document.getElementById('modal-dia').classList.add('open');
+}
 
 onReady(['Master', 'Planillero'], () => {
   initLayout();
@@ -307,47 +387,57 @@ function renderCal() {
   const quincena15  = `${mesStr}-15`;
   const quincenaFin = `${mesStr}-${String(ultimoDia).padStart(2,'0')}`;
 
+  calDayCache = {}; // limpiar caché del mes anterior
+
   let html = DIAS_SEM.map(d => `<div class="cal-dow">${d}</div>`).join('');
   for (let i = 0; i < primerDia; i++) html += `<div class="cal-cell vacio"></div>`;
 
   for (let dia = 1; dia <= ultimoDia; dia++) {
     const dStr      = `${mesStr}-${String(dia).padStart(2,'0')}`;
-    const esFeriado = showFer && !!ferMap[dStr];
-    const esQui     = showQui && (dStr === quincena15 || dStr === quincenaFin);
+    const esFeriado = !!ferMap[dStr]; // siempre calcular para el caché (independiente del filtro visual)
+    const esQui     = (dStr === quincena15 || dStr === quincenaFin);
     const esHoy     = dStr === todayStr;
-    const vacsHoy   = showVac  ? vacEnDia(dStr) : [];
-    const adelHoy   = showAdel ? adelantosEnDia(dStr) : [];
-    const extHoy    = showExt  ? extrasEnDia(dStr)    : [];
+    const vacsHoy   = vacEnDia(dStr);       // siempre para el caché
+    const adelHoy   = adelantosEnDia(dStr); // siempre para el caché
+    const extHoy    = extrasEnDia(dStr);    // siempre para el caché
+
+    // Guardar en caché para el popup (independiente de los filtros visuales)
+    calDayCache[dStr] = { esFeriado, ferNombre: ferMap[dStr] || '', esQui, vacsHoy, adelHoy, extHoy };
 
     let cls = 'cal-cell';
-    if (esHoy)     cls += ' hoy';
-    if (esQui)     cls += ' quincena';
-    if (esFeriado) cls += ' feriado';
+    if (esHoy)              cls += ' hoy';
+    if (esQui && showQui)   cls += ' quincena';
+    if (esFeriado && showFer) cls += ' feriado';
+
+    // El cursor pointer indica que se puede hacer clic
+    const tieneEventos = esQui || esFeriado || vacsHoy.length || adelHoy.length || extHoy.length;
+    const cursorStyle  = tieneEventos ? 'cursor:pointer' : '';
 
     let tags = '';
-    if (esQui)     tags += `<div class="cal-tag tag-quincena">📋 Quincena</div>`;
-    if (esFeriado) tags += `<div class="cal-tag tag-feriado" title="${ferMap[dStr]}">🎌 ${ferMap[dStr]}</div>`;
-    vacsHoy.forEach(v => {
+    if (esQui && showQui)     tags += `<div class="cal-tag tag-quincena">📋 Quincena</div>`;
+    if (esFeriado && showFer) tags += `<div class="cal-tag tag-feriado" title="${ferMap[dStr]}">🎌 ${ferMap[dStr]}</div>`;
+    if (showVac) vacsHoy.forEach(v => {
       const color = empColorMap[v.Empleado] || 'tag-vac-0';
       tags += `<div class="cal-tag ${color}" title="${v.Empleado} — ${v.Tipo}">🏖 ${v.Empleado.split(' ')[0]}</div>`;
     });
-    // Agrupar adelantos por empleado si hay varios
-    if (adelHoy.length === 1) {
-      const a = adelHoy[0];
-      const emp = (a.Empleado || '').split(' ')[0];
-      tags += `<div class="cal-tag tag-adelanto" title="Adelanto ${a.Empleado} C$${a.Monto}">⚡ ${emp}</div>`;
-    } else if (adelHoy.length > 1) {
-      tags += `<div class="cal-tag tag-adelanto" title="${adelHoy.length} adelantos">⚡ ${adelHoy.length} adelantos</div>`;
+    if (showAdel) {
+      if (adelHoy.length === 1) {
+        const a = adelHoy[0];
+        tags += `<div class="cal-tag tag-adelanto" title="Adelanto ${a.Empleado} C$${a.Monto}">⚡ ${(a.Empleado||'').split(' ')[0]}</div>`;
+      } else if (adelHoy.length > 1) {
+        tags += `<div class="cal-tag tag-adelanto">⚡ ${adelHoy.length} adelantos</div>`;
+      }
     }
-    if (extHoy.length === 1) {
-      const x = extHoy[0];
-      const emp = (x.Empleado || '').split(' ')[0];
-      tags += `<div class="cal-tag tag-extra" title="${x.Tipo} ${x.Empleado} C$${x.Monto}">⭐ ${emp}</div>`;
-    } else if (extHoy.length > 1) {
-      tags += `<div class="cal-tag tag-extra" title="${extHoy.length} extras">⭐ ${extHoy.length} extras</div>`;
+    if (showExt) {
+      if (extHoy.length === 1) {
+        const x = extHoy[0];
+        tags += `<div class="cal-tag tag-extra" title="${x.Tipo} ${x.Empleado} C$${x.Monto}">⭐ ${(x.Empleado||'').split(' ')[0]}</div>`;
+      } else if (extHoy.length > 1) {
+        tags += `<div class="cal-tag tag-extra">⭐ ${extHoy.length} extras</div>`;
+      }
     }
 
-    html += `<div class="${cls}">
+    html += `<div class="${cls}" style="${cursorStyle}" onclick="mostrarDia('${dStr}')">
       <div class="cal-num">${dia}</div>
       <div class="cal-tags">${tags}</div>
     </div>`;
