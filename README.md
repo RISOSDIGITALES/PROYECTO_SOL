@@ -111,5 +111,219 @@ Nomify/
 | Rol | Acceso |
 |-----|--------|
 | **Master** | Acceso total — empleados, planillas, usuarios |
-| **Planillero** | Gestiona planillas (Con Seguro y Sin Seguro) |
+| **Planillero** | Genera planillas, solo lectura en el resto |
 | **Empleado** | Solo ve su propio recibo de pago |
+
+---
+
+## Despliegue en servidor (producción)
+
+Esta sección explica cómo publicar Nomify en un servidor Linux con un subdominio propio, por ejemplo `nomina.orison.us`.
+
+### Requisitos del servidor
+
+- Ubuntu 20.04 / 22.04 (o Debian equivalente)
+- Acceso SSH con usuario con privilegios `sudo`
+- Un dominio o subdominio apuntando a la IP del servidor (registro DNS tipo A)
+
+---
+
+### 1. Instalar Node.js en el servidor
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+node -v   # debe mostrar v20.x.x
+```
+
+---
+
+### 2. Instalar MariaDB
+
+```bash
+sudo apt update
+sudo apt install -y mariadb-server
+sudo mysql_secure_installation   # seguir el asistente: poner contraseña root, responder Y a todo
+```
+
+Crear la base de datos y el usuario de la app:
+
+```sql
+sudo mariadb -u root -p
+
+CREATE DATABASE planilla_nicaragua CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'nomify'@'localhost' IDENTIFIED BY 'una_contraseña_segura';
+GRANT ALL PRIVILEGES ON planilla_nicaragua.* TO 'nomify'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+Importar el respaldo SQL incluido en el repositorio:
+
+```bash
+sudo mariadb -u nomify -p planilla_nicaragua < /ruta/al/repo/bk_nomify/resp\ db/NOMIFY\ DB.sql
+```
+
+---
+
+### 3. Clonar el repositorio
+
+```bash
+cd /var/www
+sudo git clone https://github.com/WX-MDA/Nomify.git
+sudo chown -R $USER:$USER /var/www/Nomify
+cd /var/www/Nomify/bk_nomify
+```
+
+---
+
+### 4. Configurar variables de entorno
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+Ajustar con los valores reales de producción:
+
+```env
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=nomify
+DB_PASSWORD=una_contraseña_segura
+DB_NAME=planilla_nicaragua
+JWT_SECRET=cadena_larga_y_aleatoria_minimo_32_caracteres
+PORT=3000
+```
+
+> **Importante:** el `JWT_SECRET` debe ser una cadena larga y aleatoria. Podés generar una con:
+> ```bash
+> node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+> ```
+
+---
+
+### 5. Instalar dependencias del backend
+
+```bash
+cd /var/www/Nomify/bk_nomify
+npm install --production
+```
+
+---
+
+### 6. Instalar PM2 y levantar el backend
+
+PM2 es un gestor de procesos que mantiene el servidor corriendo aunque se reinicie la máquina.
+
+```bash
+sudo npm install -g pm2
+
+# Iniciar la app
+pm2 start server.js --name nomify
+
+# Guardar la configuración para que arranque automáticamente al reiniciar el servidor
+pm2 save
+pm2 startup   # ejecutar el comando que PM2 indique en pantalla
+```
+
+Comandos útiles de PM2:
+
+```bash
+pm2 status          # ver si la app está corriendo
+pm2 logs nomify     # ver logs en tiempo real
+pm2 restart nomify  # reiniciar la app (por ejemplo, tras un cambio)
+pm2 stop nomify     # detener la app
+```
+
+---
+
+### 7. Instalar y configurar Nginx
+
+Nginx actúa como proxy inverso: recibe las peticiones del dominio y las redirige al puerto 3000 donde corre Node.js.
+
+```bash
+sudo apt install -y nginx
+```
+
+Crear el archivo de configuración del sitio:
+
+```bash
+sudo nano /etc/nginx/sites-available/nomify
+```
+
+Pegar el siguiente contenido (reemplazá `nomina.orison.us` con tu subdominio real):
+
+```nginx
+server {
+    listen 80;
+    server_name nomina.orison.us;
+
+    # Frontend — archivos estáticos
+    location / {
+        root /var/www/Nomify/ft_nomify;
+        index login.html;
+        try_files $uri $uri/ /login.html;
+    }
+
+    # Backend — proxy al puerto 3000
+    location /api/ {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+Activar el sitio y recargar Nginx:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/nomify /etc/nginx/sites-enabled/
+sudo nginx -t          # verificar que la config no tenga errores
+sudo systemctl reload nginx
+```
+
+---
+
+### 8. Activar HTTPS con Let's Encrypt (recomendado)
+
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d nomina.orison.us
+```
+
+Certbot modifica automáticamente la configuración de Nginx para usar HTTPS. Los certificados se renuevan solos.
+
+---
+
+### 9. Verificar que todo funciona
+
+1. Abrir el navegador en `http://nomina.orison.us` (o `https://` si configuraste SSL)
+2. Debe aparecer la pantalla de login de Nomify
+3. Iniciar sesión con el usuario Master
+4. Si es la primera vez, crear el usuario Master desde el servidor:
+
+```bash
+cd /var/www/Nomify/bk_nomify
+node create-admin.js
+```
+
+---
+
+### Resumen del stack en producción
+
+```
+Internet
+    │
+    ▼
+ Nginx (puerto 80/443)
+    │
+    ├── /          → ft_nomify/  (archivos estáticos HTML/CSS/JS)
+    │
+    └── /api/      → Node.js : 3000  (backend Express)
+                          │
+                          └── MariaDB : 3306
+```
