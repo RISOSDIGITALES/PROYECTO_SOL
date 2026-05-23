@@ -43,13 +43,12 @@
               <th>Nombre</th>
               <th>Email</th>
               <th>Rol</th>
-              <th>Planilla asignada</th>
               <th>Creado</th>
               <th></th>
             </tr>
           </thead>
           <tbody id="tabla-usuarios">
-            <tr class="loading-row"><td colspan="6"><div class="spinner"></div></td></tr>
+            <tr class="loading-row"><td colspan="5"><div class="spinner"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -67,6 +66,20 @@
     <div class="modal-body">
       <div id="alert-form" class="alert"></div>
       <input type="hidden" id="usr-id" />
+      <input type="hidden" id="usr-empleado-id" />
+
+      <!-- Búsqueda de empleado existente (solo al crear) -->
+      <div class="form-group" id="row-empleado-vinculo">
+        <label>Vincular con empleado existente</label>
+        <input type="text" id="usr-empleado-search"
+          placeholder="Escribir nombre del empleado..."
+          list="empleados-datalist" autocomplete="off" />
+        <datalist id="empleados-datalist"></datalist>
+        <small style="color:var(--muted);font-size:11px">
+          Al seleccionar, se completan nombre y correo automáticamente
+        </small>
+      </div>
+
       <div class="form-group">
         <label>Nombre</label>
         <input type="text" id="usr-nombre" placeholder="Nombre completo" />
@@ -83,23 +96,13 @@
       <div id="info-password-nueva" style="display:none;padding:8px 12px;background:var(--navy2);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text-muted)">
         🔑 Contraseña inicial: <strong style="color:var(--text)">Nomify2026</strong> — el usuario puede cambiarla desde Ajustes
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Rol *</label>
-          <select id="usr-rol">
-            <option value="Master">Master (acceso total)</option>
-            <option value="Planillero">Planillero (gestiona planillas)</option>
-            <option value="Empleado">Empleado (solo ve su recibo)</option>
-          </select>
-        </div>
-        <div class="form-group" id="row-planilla">
-          <label>Planilla asignada *</label>
-          <select id="usr-planilla">
-            <option value="">— seleccionar —</option>
-            <option value="Con Seguro">Con Seguro</option>
-            <option value="Sin Seguro">Sin Seguro</option>
-          </select>
-        </div>
+      <div class="form-group" style="margin-top:12px">
+        <label>Rol *</label>
+        <select id="usr-rol">
+          <option value="Master">Master (acceso total)</option>
+          <option value="Planillero">Planillero (gestiona planillas)</option>
+          <option value="Empleado">Empleado (solo ve su recibo)</option>
+        </select>
       </div>
     </div>
     <div class="modal-footer">
@@ -129,6 +132,7 @@
 <script src="/assets/js/auth.js"></script>
 <script>
 let allUsuarios = [];
+let allEmpleados = [];
 let pendingDeleteId = null;
 
 onReady(['Master'], () => {
@@ -153,43 +157,78 @@ function fmtFecha(iso) {
 function renderTabla() {
   const tbody = document.getElementById('tabla-usuarios');
   if (!allUsuarios.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty">No hay usuarios registrados</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">No hay usuarios registrados</td></tr>';
     return;
   }
   tbody.innerHTML = allUsuarios.map(u => {
-    const badge = u.rol === 'Master' ? 'badge-blue' : 'badge-gray';
+    const badge = u.rol === 'Master' ? 'badge-blue'
+                : u.rol === 'Planillero' ? 'badge-orange'
+                : 'badge-gray';
     return `<tr>
       <td><strong>${u.nombre || '—'}</strong></td>
       <td style="font-size:13px">${u.email}</td>
       <td><span class="badge ${badge}">${u.rol}</span></td>
-      <td style="font-size:13px;color:var(--text-muted)">${u.planillas_acceso || (u.rol === 'Planillero' ? '<span style="color:var(--orange);font-size:12px">⚠ Sin planilla asignada</span>' : '— todas —')}</td>
       <td style="font-size:12px;color:var(--text-muted)">${fmtFecha(u.created_at)}</td>
       <td style="display:flex;gap:6px">
         <button class="btn btn-icon btn-sm" onclick="editar('${u.id}')">&#x270F;&#xFE0F;</button>
-        <button class="btn btn-icon btn-sm" onclick="confirmarEliminar('${u.id}','${u.nombre || u.email}')" style="color:var(--red)">&#x1F5D1;&#xFE0F;</button>
+        <button class="btn btn-icon btn-sm" onclick="confirmarEliminar('${u.id}','${(u.nombre || u.email).replace(/'/g, "\\'")}')" style="color:var(--red)">&#x1F5D1;&#xFE0F;</button>
       </td>
     </tr>`;
   }).join('');
 }
 
-// Mostrar/ocultar campo planilla según rol (solo Planillero lo requiere)
-document.getElementById('usr-rol').addEventListener('change', function() {
-  document.getElementById('row-planilla').style.display = this.value === 'Planillero' ? '' : 'none';
-  if (this.value !== 'Planillero') document.getElementById('usr-planilla').value = '';
+/* ── Búsqueda de empleados para vincular ── */
+async function loadEmpleadosParaVinculo() {
+  try {
+    if (!allEmpleados.length) {
+      allEmpleados = await apiFetch('/api/empleados');
+    }
+    // Excluir empleados cuyo email ya tiene usuario
+    const emailsUsados = new Set(
+      allUsuarios.map(u => (u.email || '').toLowerCase()).filter(Boolean)
+    );
+    const disponibles = allEmpleados.filter(
+      e => e.Activo && !(e.Email && emailsUsados.has(e.Email.toLowerCase()))
+    );
+    const dl = document.getElementById('empleados-datalist');
+    dl.innerHTML = disponibles.map(e => `<option value="${e.Nombre}"></option>`).join('');
+  } catch (e) { /* silencioso */ }
+}
+
+document.getElementById('usr-empleado-search').addEventListener('input', function () {
+  const val = this.value.trim();
+  const emp = allEmpleados.find(e => e.Nombre === val);
+  if (emp) {
+    document.getElementById('usr-nombre').value = emp.Nombre || '';
+    document.getElementById('usr-email').value  = emp.Email  || '';
+    document.getElementById('usr-empleado-id').value = emp.id;
+  } else {
+    document.getElementById('usr-empleado-id').value = '';
+  }
 });
 
+/* ── Modal ── */
 function abrirModal(u = null) {
   document.getElementById('modal-titulo').textContent = u ? 'Editar Usuario' : 'Nuevo Usuario';
-  document.getElementById('usr-id').value = u?.id || '';
-  document.getElementById('usr-nombre').value = u?.nombre || '';
-  document.getElementById('usr-email').value = u?.email || '';
-  document.getElementById('usr-password').value = '';
-  document.getElementById('usr-rol').value = u?.rol || 'Planillero';
-  document.getElementById('usr-planilla').value = u?.planillas_acceso || '';
-  document.getElementById('row-planilla').style.display = (u?.rol || 'Planillero') === 'Planillero' ? '' : 'none';
-  // Al crear: ocultar campo password y mostrar info de contraseña estándar
-  // Al editar: mostrar campo de cambio de contraseña
-  document.getElementById('row-password').style.display = u ? '' : 'none';
+  document.getElementById('usr-id').value          = u?.id          || '';
+  document.getElementById('usr-empleado-id').value = u?.empleado_id || '';
+  document.getElementById('usr-nombre').value      = u?.nombre      || '';
+  document.getElementById('usr-email').value       = u?.email       || '';
+  document.getElementById('usr-password').value    = '';
+  document.getElementById('usr-rol').value         = u?.rol         || 'Planillero';
+
+  // Sección "vincular empleado" solo al crear
+  const rowVinculo = document.getElementById('row-empleado-vinculo');
+  document.getElementById('usr-empleado-search').value = '';
+  if (u) {
+    rowVinculo.style.display = 'none';
+  } else {
+    rowVinculo.style.display = '';
+    loadEmpleadosParaVinculo();
+  }
+
+  // Campo contraseña: ocultar al crear (se asigna Nomify2026 automáticamente)
+  document.getElementById('row-password').style.display      = u ? '' : 'none';
   document.getElementById('info-password-nueva').style.display = u ? 'none' : '';
   document.getElementById('alert-form').className = 'alert';
   document.getElementById('modal-usr').classList.add('open');
@@ -198,26 +237,26 @@ function abrirModal(u = null) {
 document.getElementById('btn-nuevo').addEventListener('click', () => abrirModal());
 function editar(id) { abrirModal(allUsuarios.find(u => u.id == id)); }
 
-['close-modal','cancel-usr'].forEach(id => {
+['close-modal', 'cancel-usr'].forEach(id => {
   document.getElementById(id).addEventListener('click', () => {
     document.getElementById('modal-usr').classList.remove('open');
   });
 });
 
+/* ── Guardar ── */
 document.getElementById('save-usr').addEventListener('click', async () => {
-  const id       = document.getElementById('usr-id').value;
-  const nombre   = document.getElementById('usr-nombre').value.trim();
-  const email    = document.getElementById('usr-email').value.trim();
-  const password = document.getElementById('usr-password').value;
-  const rol      = document.getElementById('usr-rol').value;
-  const planilla = document.getElementById('usr-planilla').value;
+  const id         = document.getElementById('usr-id').value;
+  const nombre     = document.getElementById('usr-nombre').value.trim();
+  const email      = document.getElementById('usr-email').value.trim();
+  const password   = document.getElementById('usr-password').value;
+  const rol        = document.getElementById('usr-rol').value;
+  const empleadoId = document.getElementById('usr-empleado-id').value;
 
   if (!email) { showAlert('alert-form', 'El email es requerido', 'error'); return; }
-  if (rol === 'Planillero' && !planilla) { showAlert('alert-form', 'Selecciona la planilla asignada', 'error'); return; }
 
-  // password solo se envía si se llenó (edición); al crear el backend usa Nomify2026
-  const body = { nombre, email, rol, planillas_acceso: rol === 'Planillero' ? planilla : null };
-  if (password) body.password = password;
+  const body = { nombre, email, rol };
+  if (empleadoId) body.empleado_id = parseInt(empleadoId);
+  if (password)   body.password = password;
 
   const btn = document.getElementById('save-usr');
   btn.disabled = true; btn.textContent = 'Guardando...';
@@ -229,7 +268,8 @@ document.getElementById('save-usr').addEventListener('click', async () => {
     }
     document.getElementById('modal-usr').classList.remove('open');
     showAlert('alert-usr', '✅ Usuario guardado', 'success');
-    allUsuarios = await apiFetch('/api/usuarios');
+    allEmpleados = []; // forzar recarga la próxima vez
+    allUsuarios  = await apiFetch('/api/usuarios');
     renderTabla();
   } catch (e) {
     showAlert('alert-form', 'Error: ' + e.message, 'error');
@@ -238,13 +278,14 @@ document.getElementById('save-usr').addEventListener('click', async () => {
   }
 });
 
+/* ── Eliminar ── */
 function confirmarEliminar(id, nombre) {
   pendingDeleteId = id;
   document.getElementById('confirm-nombre').textContent = nombre;
   document.getElementById('modal-confirm').classList.add('open');
 }
 
-['close-confirm','cancel-confirm'].forEach(id => {
+['close-confirm', 'cancel-confirm'].forEach(id => {
   document.getElementById(id).addEventListener('click', () => {
     document.getElementById('modal-confirm').classList.remove('open');
     pendingDeleteId = null;

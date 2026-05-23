@@ -7,7 +7,7 @@ const { requireAuth, requireMaster } = require('../auth');
 router.get('/', requireAuth, requireMaster, async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT id, nombre, email, rol, planillas_acceso, created_at
+      `SELECT id, nombre, email, rol, empleado_id, created_at
        FROM usuarios ORDER BY nombre ASC`
     );
     res.json(rows);
@@ -16,22 +16,20 @@ router.get('/', requireAuth, requireMaster, async (req, res) => {
 
 // POST /api/usuarios — crear usuario
 router.post('/', requireAuth, requireMaster, async (req, res) => {
-  const { nombre, email, rol, planillas_acceso } = req.body;
+  const { nombre, email, rol, empleado_id } = req.body;
   let { password } = req.body;
   if (!email) return res.status(400).json({ error: 'El email es requerido' });
   // Contraseña estándar si no se especifica
   if (!password) password = 'Nomify2026';
   if (!['Master', 'Planillero', 'Empleado'].includes(rol)) return res.status(400).json({ error: 'Rol inválido' });
-  if (rol === 'Planillero' && !planillas_acceso)
-    return res.status(400).json({ error: 'Planillero requiere planillas_acceso' });
   try {
     const hash = await bcrypt.hash(password, 10);
     const [r] = await db.query(
-      'INSERT INTO usuarios (nombre, email, password_hash, rol, planillas_acceso) VALUES (?,?,?,?,?)',
-      [nombre || null, email, hash, rol, planillas_acceso || null]
+      'INSERT INTO usuarios (nombre, email, password_hash, rol, empleado_id) VALUES (?,?,?,?,?)',
+      [nombre || null, email, hash, rol, empleado_id || null]
     );
     const [rows] = await db.query(
-      'SELECT id, nombre, email, rol, planillas_acceso, created_at FROM usuarios WHERE id = ?', [r.insertId]
+      'SELECT id, nombre, email, rol, empleado_id, created_at FROM usuarios WHERE id = ?', [r.insertId]
     );
     res.status(201).json(rows[0]);
   } catch (e) {
@@ -42,12 +40,12 @@ router.post('/', requireAuth, requireMaster, async (req, res) => {
 
 // PATCH /api/usuarios/:id — editar usuario
 router.patch('/:id', requireAuth, requireMaster, async (req, res) => {
-  const { nombre, email, password, rol, planillas_acceso } = req.body;
+  const { nombre, email, password, rol, empleado_id } = req.body;
   const sets = [], vals = [];
-  if (nombre !== undefined) { sets.push('nombre = ?'); vals.push(nombre); }
-  if (email !== undefined) { sets.push('email = ?'); vals.push(email); }
-  if (rol !== undefined) { sets.push('rol = ?'); vals.push(rol); }
-  if (planillas_acceso !== undefined) { sets.push('planillas_acceso = ?'); vals.push(planillas_acceso || null); }
+  if (nombre !== undefined)     { sets.push('nombre = ?');      vals.push(nombre); }
+  if (email !== undefined)      { sets.push('email = ?');       vals.push(email); }
+  if (rol !== undefined)        { sets.push('rol = ?');         vals.push(rol); }
+  if (empleado_id !== undefined){ sets.push('empleado_id = ?'); vals.push(empleado_id || null); }
   if (password) {
     const hash = await bcrypt.hash(password, 10);
     sets.push('password_hash = ?'); vals.push(hash);
@@ -57,7 +55,7 @@ router.patch('/:id', requireAuth, requireMaster, async (req, res) => {
   try {
     await db.query(`UPDATE usuarios SET ${sets.join(', ')} WHERE id = ?`, vals);
     const [rows] = await db.query(
-      'SELECT id, nombre, email, rol, planillas_acceso, created_at FROM usuarios WHERE id = ?', [req.params.id]
+      'SELECT id, nombre, email, rol, empleado_id, created_at FROM usuarios WHERE id = ?', [req.params.id]
     );
     res.json(rows[0]);
   } catch (e) { res.status(500).json({ error: e.message }); }

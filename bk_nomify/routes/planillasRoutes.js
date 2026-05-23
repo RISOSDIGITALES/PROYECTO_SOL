@@ -8,13 +8,8 @@ const INSS_RATE = 0.07;
 // GET /api/planillas
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const conds = [];
     const params = [];
-    if (req.user.rol === 'Planillero' && req.user.planillas_acceso) {
-      conds.push('p.tipo = ?');
-      params.push(req.user.planillas_acceso);
-    }
-    const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+    const where = '';
     const [rows] = await db.query(
       `SELECT p.id,
         DATE_FORMAT(p.periodo, '%Y-%m-%d') AS \`Período\`,
@@ -40,10 +35,6 @@ router.get('/', requireAuth, async (req, res) => {
 router.post('/calcular', requireAuth, async (req, res) => {
   let { periodo, tipo } = req.body;
   if (!periodo) return res.status(400).json({ error: 'Se requiere periodo (YYYY-MM-DD)' });
-  // Planillero solo puede generar su tipo asignado
-  if (req.user.rol === 'Planillero' && req.user.planillas_acceso) {
-    tipo = req.user.planillas_acceso;
-  }
 
   const conn = await db.getConnection();
   try {

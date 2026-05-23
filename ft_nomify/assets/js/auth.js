@@ -83,9 +83,6 @@ function initLayout() {
         <label>Confirmar contraseña</label>
         <input type="password" id="ajustes-password2" placeholder="Repetir nueva contraseña" style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 12px;font-size:14px;box-sizing:border-box" />
       </div>
-      <div id="ajustes-master-section" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
-        <a href="/usuarios.html" class="btn btn-ghost" style="width:100%;text-align:center;display:block">👤 Administrar usuarios</a>
-      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" id="cancel-ajustes">Cancelar</button>
@@ -155,8 +152,6 @@ function initLayout() {
     document.getElementById('ajustes-password').value    = '';
     document.getElementById('ajustes-password2').value   = '';
     document.getElementById('alert-ajustes').className   = 'alert';
-    const masterSection = document.getElementById('ajustes-master-section');
-    if (masterSection) masterSection.style.display = myInfo.rol === 'Master' ? '' : 'none';
     document.getElementById('modal-ajustes').classList.add('open');
   });
 

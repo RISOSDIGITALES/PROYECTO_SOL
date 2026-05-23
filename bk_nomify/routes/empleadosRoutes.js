@@ -6,8 +6,7 @@ const { requireAuth, requireMaster } = require('../auth');
 // Sincroniza (crea o actualiza) el usuario de un empleado cuando tiene email + rol
 async function syncUsuario(empleadoId, nombre, email, rol, tipoPlanilla) {
   if (!email || !rol) return null;
-  // Planillero accede solo a su tipo de planilla; Empleado y Master no necesitan filtro
-  const planillasAcceso = rol === 'Planillero' ? (tipoPlanilla || null) : null;
+  const planillasAcceso = null; // planillas_acceso ya no restringe — Planillero ve todas
   const [existing] = await db.query('SELECT id FROM usuarios WHERE email = ?', [email]);
   if (existing.length) {
     await db.query(
@@ -51,15 +50,8 @@ function mapBody(b) {
 
 router.get('/', requireAuth, async (req, res) => {
   try {
-    let sql = GET_SQL;
-    const params = [];
-    // Planillero solo ve su tipo de planilla
-    if (req.user.rol === 'Planillero' && req.user.planillas_acceso) {
-      sql += ' WHERE tipo_planilla = ?';
-      params.push(req.user.planillas_acceso);
-    }
-    sql += ' ORDER BY nombre ASC';
-    const [rows] = await db.query(sql, params);
+    const sql = GET_SQL + ' ORDER BY nombre ASC';
+    const [rows] = await db.query(sql);
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
