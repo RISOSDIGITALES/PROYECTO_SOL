@@ -183,12 +183,13 @@ async function loadEmpleadosParaVinculo() {
     if (!allEmpleados.length) {
       allEmpleados = await apiFetch('/api/empleados');
     }
-    // Excluir empleados cuyo email ya tiene usuario
-    const emailsUsados = new Set(
-      allUsuarios.map(u => (u.email || '').toLowerCase()).filter(Boolean)
-    );
+    // Excluir empleados que ya tienen usuario (por id o por email)
+    const emailsUsados = new Set(allUsuarios.map(u => (u.email || '').toLowerCase()).filter(Boolean));
+    const idsUsados = new Set(allUsuarios.map(u => u.empleado_id).filter(Boolean));
     const disponibles = allEmpleados.filter(
-      e => e.Activo && !(e.Email && emailsUsados.has(e.Email.toLowerCase()))
+      e => e.Activo &&
+        !idsUsados.has(e.id) &&
+        !(e.Email && emailsUsados.has(e.Email.toLowerCase()))
     );
     const dl = document.getElementById('empleados-datalist');
     dl.innerHTML = disponibles.map(e => `<option value="${e.Nombre}"></option>`).join('');

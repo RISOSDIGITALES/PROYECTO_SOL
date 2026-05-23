@@ -108,7 +108,7 @@ async function patchHandler(req, res) {
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
 
-router.patch('/', requireAuth, patchHandler);
-router.patch('/:id', requireAuth, patchHandler);
+router.patch('/', requireAuth, requireMaster, patchHandler);
+router.patch('/:id', requireAuth, requireMaster, patchHandler);
 
 module.exports = router;

@@ -162,6 +162,7 @@
 let allVac = [];
 let allEmpleados = [];
 let filtroEmp = '';
+let _esMaster = false;
 
 function fd(s) {
   if (!s) return '—';
@@ -170,7 +171,15 @@ function fd(s) {
   return `${d}/${m}/${y}`;
 }
 
-onReady(['Master', 'Planillero'], () => { initLayout(); loadAll(); });
+onReady(['Master', 'Planillero'], async () => {
+  _esMaster = (await getMyInfo()).rol === 'Master';
+  initLayout();
+  if (!_esMaster) {
+    document.getElementById('btn-nuevo').style.display = 'none';
+    document.getElementById('btn-pagar').style.display = 'none';
+  }
+  loadAll();
+});
 
 function calcAntiguedad(fechaIngreso) {
   if (!fechaIngreso) return { meses: 0, label: '—', cumple6: null, falta6Label: null };
@@ -312,7 +321,7 @@ function renderHistorial() {
     <td><span class="badge ${estBadge(v.Estado)}">${v.Estado || '—'}</span></td>
     <td style="font-size:12px;color:var(--muted)">${v.Notas || ''}</td>
     <td>
-      ${v.Estado !== 'Completada' ? `<button class="btn btn-icon btn-sm" onclick="eliminar(${v.id})" style="color:var(--red)">🗑️</button>` : ''}
+      ${v.Estado !== 'Completada' && _esMaster ? `<button class="btn btn-icon btn-sm" onclick="eliminar(${v.id})" style="color:var(--red)">🗑️</button>` : ''}
     </td>
   </tr>`).join('');
 }

@@ -61,10 +61,11 @@
                 <th>Cuotas rest.</th>
                 <th>Saldo pendiente</th>
                 <th>Estado</th>
+                <th></th>
               </tr>
             </thead>
             <tbody id="tabla-prestamos">
-              <tr class="loading-row"><td colspan="5"><div class="spinner"></div></td></tr>
+              <tr class="loading-row"><td colspan="6"><div class="spinner"></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -78,11 +79,12 @@
               <tr>
                 <th>Monto</th>
                 <th>Quincena descuento</th>
+                <th>Fecha registrado</th>
                 <th>Estado</th>
               </tr>
             </thead>
             <tbody id="tabla-adelantos">
-              <tr class="loading-row"><td colspan="3"><div class="spinner"></div></td></tr>
+              <tr class="loading-row"><td colspan="4"><div class="spinner"></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -126,6 +128,20 @@
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HISTORIAL PRÉSTAMO -->
+<div class="overlay" id="modal-historial-pr">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <h3 id="historial-pr-titulo">Historial de abonos</h3>
+      <button class="modal-close" id="close-historial-pr">×</button>
+    </div>
+    <div class="modal-body" id="historial-pr-body" style="max-height:420px;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-historial-pr">Cerrar</button>
     </div>
   </div>
 </div>
@@ -224,7 +240,7 @@ async function cargarPrestamos() {
     const rows = await apiFetch(`/api/prestamos?empleado_id=${_empleadoId}`);
     const tbody = document.getElementById('tabla-prestamos');
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty">No tienes préstamos registrados</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">No tienes préstamos registrados</td></tr>';
       return;
     }
     tbody.innerHTML = rows.map(p => {
@@ -240,10 +256,11 @@ async function cargarPrestamos() {
         <td style="text-align:center">${cuotas}</td>
         <td class="num" style="color:${saldo > 0 ? 'var(--orange)' : 'var(--green2)'}">${cs(saldo)}</td>
         <td><span class="badge ${badge}">${estado}</span></td>
+        <td><button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text)" onclick="verHistorialPrestamo(${p.id})">📋 Historial</button></td>
       </tr>`;
     }).join('');
   } catch (e) {
-    document.getElementById('tabla-prestamos').innerHTML = `<tr><td colspan="5" class="empty">Error: ${e.message}</td></tr>`;
+    document.getElementById('tabla-prestamos').innerHTML = `<tr><td colspan="6" class="empty">Error: ${e.message}</td></tr>`;
   }
 }
 
@@ -255,7 +272,7 @@ async function cargarAdelantos() {
     const rows = await apiFetch(`/api/adelantos?empleado_id=${_empleadoId}`);
     const tbody = document.getElementById('tabla-adelantos');
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="3" class="empty">No tienes adelantos registrados</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="empty">No tienes adelantos registrados</td></tr>';
       return;
     }
     tbody.innerHTML = rows.map(a => {
@@ -266,11 +283,12 @@ async function cargarAdelantos() {
       return `<tr>
         <td class="num">${cs(a.Monto)}</td>
         <td>${a['Descontar en quincena'] || '—'}</td>
+        <td style="font-size:12px;color:var(--text-muted)">${fd(a._createdTime)}</td>
         <td><span class="badge ${badge}">${label}</span></td>
       </tr>`;
     }).join('');
   } catch (e) {
-    document.getElementById('tabla-adelantos').innerHTML = `<tr><td colspan="3" class="empty">Error: ${e.message}</td></tr>`;
+    document.getElementById('tabla-adelantos').innerHTML = `<tr><td colspan="4" class="empty">Error: ${e.message}</td></tr>`;
   }
 }
 
@@ -329,6 +347,49 @@ const loaders = {
   extras:      cargarExtras,
   deducciones: cargarDeducciones,
 };
+
+// ── HISTORIAL DE ABONOS (PRÉSTAMOS) ────────────────────────────────────────
+async function verHistorialPrestamo(id) {
+  document.getElementById('historial-pr-titulo').textContent = 'Historial de abonos';
+  document.getElementById('historial-pr-body').innerHTML =
+    '<div style="text-align:center;padding:24px"><div class="spinner"></div></div>';
+  document.getElementById('modal-historial-pr').classList.add('open');
+  try {
+    const pagos = await apiFetch(`/api/prestamos/${id}/pagos`);
+    if (!pagos.length) {
+      document.getElementById('historial-pr-body').innerHTML =
+        '<p style="color:var(--text-muted);text-align:center;padding:20px 0">No hay abonos registrados aún.</p>';
+      return;
+    }
+    const total = pagos.reduce((s, pg) => s + parseFloat(pg.monto || 0), 0);
+    const rows = pagos.map(pg => {
+      const esDirecto = (pg.tipo || '').toLowerCase().includes('directo');
+      return `<div style="display:grid;grid-template-columns:90px 1fr auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--text-muted)">${pg.fecha || '—'}</div>
+        <div>
+          <div style="font-weight:600">${cs(pg.monto)}</div>
+          ${pg.concepto ? `<div style="font-size:12px;color:var(--text-muted)">${pg.concepto}</div>` : ''}
+        </div>
+        <span class="badge ${esDirecto ? 'badge-blue' : 'badge-gray'}">${esDirecto ? 'Directo' : 'Quincena'}</span>
+      </div>`;
+    }).join('');
+    document.getElementById('historial-pr-body').innerHTML =
+      rows +
+      `<div style="display:flex;justify-content:space-between;padding:10px 0;font-weight:700;border-top:2px solid var(--border);margin-top:4px">
+        <span>Total abonado</span>
+        <span style="color:var(--green2)">${cs(total)}</span>
+      </div>`;
+  } catch (e) {
+    document.getElementById('historial-pr-body').innerHTML =
+      `<p style="color:var(--red);padding:16px">Error: ${e.message}</p>`;
+  }
+}
+
+['close-historial-pr', 'cancel-historial-pr'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-historial-pr').classList.remove('open');
+  });
+});
 
 onReady(null, () => { initPage(); });
 </script>

@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
-const { requireAuth } = require('../auth');
+const { requireAuth, requireMaster } = require('../auth');
 
 const GET_SQL = `
   SELECT a.id, e.nombre AS Empleado,
@@ -31,7 +31,7 @@ async function resolveEmpleadoId(db, body) {
   return null;
 }
 
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, requireMaster, async (req, res) => {
   const b = req.body;
   const empleado_id = await resolveEmpleadoId(db, b);
   if (!empleado_id) return res.status(400).json({ error: 'Empleado requerido' });
@@ -71,7 +71,7 @@ async function patchHandler(req, res) {
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
 
-router.patch('/', requireAuth, patchHandler);
-router.patch('/:id', requireAuth, patchHandler);
+router.patch('/', requireAuth, requireMaster, patchHandler);
+router.patch('/:id', requireAuth, requireMaster, patchHandler);
 
 module.exports = router;
