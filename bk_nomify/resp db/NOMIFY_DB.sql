@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: May 23, 2026 at 02:05 PM
+-- Generation Time: May 25, 2026 at 09:05 PM
 -- Server version: 8.4.3
 -- PHP Version: 8.3.30
 
@@ -92,6 +92,18 @@ CREATE TABLE `detalle_planilla` (
   `total_deducciones` decimal(12,2) DEFAULT '0.00'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `detalle_planilla`
+--
+
+INSERT INTO `detalle_planilla` (`id`, `planilla_id`, `empleado_id`, `salario_quincenal`, `inss`, `ir`, `deducciones_prestamos`, `deducciones_adelantos`, `deducciones_otras`, `extras`, `vacaciones_pagadas`, `neto`, `periodo`, `tipo_planilla`, `desc_prestamo`, `desc_adelanto`, `desc_deducciones`, `total_deducciones`) VALUES
+(5, 7, 1, '6000.00', '420.00', '0.00', '0.00', '0.00', '0.00', '0.00', '0.00', '4380.00', '2026-05-31', 'Con Seguro', '1200.00', '0.00', '0.00', '1620.00'),
+(6, 7, 2, '7000.00', '490.00', '0.00', '0.00', '0.00', '0.00', '0.00', '0.00', '6510.00', '2026-05-31', 'Con Seguro', '0.00', '0.00', '0.00', '490.00'),
+(7, 7, 3, '5000.00', '0.00', '0.00', '0.00', '0.00', '0.00', '500.00', '0.00', '5500.00', '2026-05-31', 'Sin Seguro', '0.00', '0.00', '0.00', '0.00'),
+(8, 8, 3, '5000.00', '0.00', '0.00', '0.00', '0.00', '0.00', '500.00', '0.00', '5500.00', '2026-05-31', 'Sin Seguro', '0.00', '0.00', '0.00', '0.00'),
+(9, 9, 1, '6000.00', '420.00', '0.00', '0.00', '0.00', '0.00', '0.00', '0.00', '4380.00', '2026-05-31', 'Con Seguro', '1200.00', '0.00', '0.00', '1620.00'),
+(10, 9, 2, '7000.00', '490.00', '0.00', '0.00', '0.00', '0.00', '0.00', '0.00', '6510.00', '2026-05-31', 'Con Seguro', '0.00', '0.00', '0.00', '490.00');
+
 -- --------------------------------------------------------
 
 --
@@ -111,17 +123,39 @@ CREATE TABLE `empleados` (
   `planillas_acceso` json DEFAULT NULL,
   `activo` tinyint(1) DEFAULT '1',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `fecha_ingreso` date DEFAULT NULL
+  `fecha_ingreso` date DEFAULT NULL,
+  `ir_tipo` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT 'Sin IR',
+  `empresa_id` int DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `empleados`
 --
 
-INSERT INTO `empleados` (`id`, `nombre`, `cargo`, `tipo_planilla`, `salario_bruto`, `inss_base`, `ir_fijo`, `email`, `rol`, `planillas_acceso`, `activo`, `created_at`, `fecha_ingreso`) VALUES
-(1, 'Solange Carolina Torrez Perez', 'RONE', 'Con Seguro', '12000.00', 'Salario Mínimo', '0.00', 'anget3747@gmail.com', 'Empleado', NULL, 1, '2026-05-22 14:13:48', '2026-01-12'),
-(2, 'Karla Falcon', 'counter', 'Con Seguro', '14000.00', 'Salario Completo', '0.00', 'anget3747@gmail.com', 'Planillero', NULL, 1, '2026-05-22 20:53:50', '2025-03-21'),
-(3, 'NIDIA GOMEZ', 'limpieza', 'Con Seguro', '10000.00', 'Salario Completo', '0.00', NULL, 'Empleado', NULL, 1, '2026-05-23 13:13:43', '2024-06-13');
+INSERT INTO `empleados` (`id`, `nombre`, `cargo`, `tipo_planilla`, `salario_bruto`, `inss_base`, `ir_fijo`, `email`, `rol`, `planillas_acceso`, `activo`, `created_at`, `fecha_ingreso`, `ir_tipo`, `empresa_id`) VALUES
+(1, 'Solange Carolina Torrez Perez', 'RONE', 'Con Seguro', '12000.00', 'Salario Mínimo', NULL, 'anget3747@gmail.com', 'Empleado', NULL, 1, '2026-05-22 14:13:48', '2026-01-12', 'Sin IR', 1),
+(2, 'Karla Falcon', 'counter', 'Con Seguro', '14000.00', 'Salario Completo', NULL, 'anget3747@gmail.com', 'Empleado', NULL, 1, '2026-05-22 20:53:50', '2025-03-21', 'Sin IR', 2),
+(3, 'NIDIA GOMEZ', 'limpieza', 'Sin Seguro', '10000.00', 'Salario Completo', NULL, NULL, 'Empleado', NULL, 1, '2026-05-23 13:13:43', '2024-06-13', 'Sin IR', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `empresas`
+--
+
+CREATE TABLE `empresas` (
+  `id` int NOT NULL,
+  `nombre` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `empresas`
+--
+
+INSERT INTO `empresas` (`id`, `nombre`, `created_at`) VALUES
+(1, 'RISOS DIGITALES', '2026-05-25 20:23:56'),
+(2, 'CRATING EXPRESS', '2026-05-25 20:36:05');
 
 -- --------------------------------------------------------
 
@@ -171,7 +205,9 @@ CREATE TABLE `pagos_prestamos` (
 INSERT INTO `pagos_prestamos` (`id`, `prestamo_id`, `fecha`, `monto`, `tipo`, `concepto`, `created_at`) VALUES
 (1, 1, '2026-05-22', '800.00', 'Abono directo', 'abono1', '2026-05-22 15:44:51'),
 (2, 1, '2026-05-22', '500.00', 'Abono directo', 'abono2', '2026-05-22 19:17:22'),
-(3, 1, '2026-05-31', '1200.00', 'Quincena', 'Planilla 2026-05-31', '2026-05-22 20:59:10');
+(3, 1, '2026-05-31', '1200.00', 'Quincena', 'Planilla 2026-05-31', '2026-05-22 20:59:10'),
+(4, 1, '2026-05-31', '1200.00', 'Quincena', 'Planilla 2026-05-31', '2026-05-23 14:29:21'),
+(5, 1, '2026-05-31', '1200.00', 'Quincena', 'Planilla 2026-05-31', '2026-05-23 19:29:27');
 
 -- --------------------------------------------------------
 
@@ -189,8 +225,18 @@ CREATE TABLE `planillas` (
   `total_bruto` decimal(12,2) DEFAULT '0.00',
   `total_deducciones` decimal(12,2) DEFAULT '0.00',
   `total_neto` decimal(12,2) DEFAULT '0.00',
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `empresa_id` int DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `planillas`
+--
+
+INSERT INTO `planillas` (`id`, `periodo`, `tipo`, `fecha_generacion`, `generado_por`, `estado`, `total_bruto`, `total_deducciones`, `total_neto`, `created_at`, `empresa_id`) VALUES
+(7, '2026-05-31', '', '2026-05-23 14:29:21', NULL, 'Borrador', '18500.00', '2110.00', '16390.00', '2026-05-23 14:29:21', NULL),
+(8, '2026-05-31', 'Sin Seguro', '2026-05-23 19:29:14', NULL, 'Borrador', '5500.00', '0.00', '5500.00', '2026-05-23 19:29:14', NULL),
+(9, '2026-05-31', 'Con Seguro', '2026-05-23 19:29:27', NULL, 'Borrador', '13000.00', '2110.00', '10890.00', '2026-05-23 19:29:27', NULL);
 
 -- --------------------------------------------------------
 
@@ -219,7 +265,7 @@ CREATE TABLE `prestamos` (
 --
 
 INSERT INTO `prestamos` (`id`, `empleado_id`, `monto_total`, `cuota_quincenal`, `cuotas_restantes`, `estado`, `fecha_inicio`, `notas`, `historial_pagos`, `created_at`, `frecuencia`, `saldo_pendiente`, `frecuencia_dia`) VALUES
-(1, 1, '5000.00', '1200.00', 3, 'Activo', NULL, NULL, NULL, '2026-05-22 14:20:52', 'Quincenal', '2500.00', '15'),
+(1, 1, '5000.00', '1200.00', 1, 'Activo', NULL, NULL, NULL, '2026-05-22 14:20:52', 'Quincenal', '100.00', '15'),
 (2, 2, '5000.00', '2000.00', 3, 'Suspendido', NULL, NULL, NULL, '2026-05-22 21:00:45', 'Mensual', '5000.00', 'Fin');
 
 -- --------------------------------------------------------
@@ -236,16 +282,17 @@ CREATE TABLE `usuarios` (
   `empleado_id` int DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `nombre` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `planillas_acceso` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL
+  `planillas_acceso` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `empresas_acceso` text COLLATE utf8mb4_unicode_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `usuarios`
 --
 
-INSERT INTO `usuarios` (`id`, `email`, `password_hash`, `rol`, `empleado_id`, `created_at`, `nombre`, `planillas_acceso`) VALUES
-(1, 'risosadmi@gmail.com', '$2a$10$vazd6lq7USa46G3kiwVrtOnIw7ygDMHYWXjgpgJukMSi5dIdtlwLq', 'Admin', NULL, '2026-05-20 19:30:25', NULL, NULL),
-(5, 'anget3747@gmail.com', '$2a$10$fNp8vSE2gGNyW.TpRRRqfuTrzNbOxZ/0exOrbOVU3hZX35JhXK.ti', 'Empleado', NULL, '2026-05-23 13:39:07', 'Solange Carolina Torrez Perez', NULL);
+INSERT INTO `usuarios` (`id`, `email`, `password_hash`, `rol`, `empleado_id`, `created_at`, `nombre`, `planillas_acceso`, `empresas_acceso`) VALUES
+(1, 'risosadmi@gmail.com', '$2a$10$vazd6lq7USa46G3kiwVrtOnIw7ygDMHYWXjgpgJukMSi5dIdtlwLq', 'Admin', NULL, '2026-05-20 19:30:25', NULL, NULL, NULL),
+(8, 'anget3747@gmail.com', '$2a$10$pdWPkaotKXfc9wfzCSjnF.ev/NBCBM6TrWNaazwc88NzZA40aAH0m', 'Empleado', 2, '2026-05-23 19:31:05', 'Karla Falcon', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -275,7 +322,8 @@ INSERT INTO `vacaciones` (`id`, `empleado_id`, `tipo`, `dias`, `monto`, `fecha_i
 (1, 3, 'Pagadas', '5.00', '1550.00', '2026-05-25', '2026-05-29', '2026-05-23', 'Vacaciones pagadas', '2026-05-23 13:25:50', 'Aprobada'),
 (2, 3, 'Pagadas', '20.00', '6200.00', '2026-01-05', '2026-01-30', '2026-05-23', 'Vacaciones pagadas', '2026-05-23 13:26:46', 'Aprobada'),
 (3, 3, 'Pagadas', '22.00', '6820.00', '2026-04-01', '2026-04-30', '2026-05-23', NULL, '2026-05-23 13:27:14', 'Aprobada'),
-(4, 2, 'Pagadas', '15.00', '6510.00', '2026-05-03', '2026-05-23', '2026-05-23', 'Vacaciones pagadas', '2026-05-23 13:27:56', 'Aprobada');
+(4, 2, 'Pagadas', '15.00', '6510.00', '2026-05-03', '2026-05-23', '2026-05-23', 'Vacaciones pagadas', '2026-05-23 13:27:56', 'Aprobada'),
+(5, 3, 'Pagadas', '12.00', '3720.00', '2026-03-10', '2026-03-25', '2026-05-23', 'Vacaciones pagadas', '2026-05-23 14:27:27', 'Aprobada');
 
 --
 -- Indexes for dumped tables
@@ -307,6 +355,12 @@ ALTER TABLE `detalle_planilla`
 -- Indexes for table `empleados`
 --
 ALTER TABLE `empleados`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `empresas`
+--
+ALTER TABLE `empresas`
   ADD PRIMARY KEY (`id`);
 
 --
@@ -371,13 +425,19 @@ ALTER TABLE `deducciones`
 -- AUTO_INCREMENT for table `detalle_planilla`
 --
 ALTER TABLE `detalle_planilla`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `empleados`
 --
 ALTER TABLE `empleados`
   MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `empresas`
+--
+ALTER TABLE `empresas`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `extras`
@@ -389,13 +449,13 @@ ALTER TABLE `extras`
 -- AUTO_INCREMENT for table `pagos_prestamos`
 --
 ALTER TABLE `pagos_prestamos`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `planillas`
 --
 ALTER TABLE `planillas`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `prestamos`
@@ -407,13 +467,13 @@ ALTER TABLE `prestamos`
 -- AUTO_INCREMENT for table `usuarios`
 --
 ALTER TABLE `usuarios`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `vacaciones`
 --
 ALTER TABLE `vacaciones`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- Constraints for dumped tables
