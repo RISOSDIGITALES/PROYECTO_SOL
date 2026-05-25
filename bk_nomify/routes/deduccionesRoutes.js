@@ -19,7 +19,7 @@ router.get('/', requireAuth, async (req, res) => {
   try {
     const conds = [], params = [];
     if (req.query.empleado_id) { conds.push('d.empleado_id = ?'); params.push(req.query.empleado_id); }
-    if (req.empresaId) { conds.push('e.empresa_id = ?'); params.push(req.empresaId); }
+    if (req.empresaId) { conds.push('(e.empresa_id = ? OR e.empresa_id IS NULL)'); params.push(req.empresaId); }
     const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
     let rows;
     try {

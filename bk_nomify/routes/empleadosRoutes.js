@@ -54,7 +54,7 @@ function mapBody(b) {
 router.get('/', requireAuth, async (req, res) => {
   try {
     const conds = [], params = [];
-    if (req.empresaId) { conds.push('empresa_id = ?'); params.push(req.empresaId); }
+    if (req.empresaId) { conds.push('(empresa_id = ? OR empresa_id IS NULL)'); params.push(req.empresaId); }
     const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
     const [rows] = await db.query(`${GET_SQL} ${where} ORDER BY nombre ASC`, params);
     res.json(rows);
