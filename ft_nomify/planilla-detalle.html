@@ -101,10 +101,15 @@ onReady(['Master', 'Planillero'], () => {
   const periodo    = params.get('periodo') || '';  // YYYY-MM-DD
   const tipo       = params.get('tipo')    || '';
   // Mostrar como DD/MM/YYYY en el título
-  const [py, pm, pd] = periodo.split('-');
-  const periodoDisplay = periodo ? `${pd}/${pm}/${py}` : 'Detalle';
-  document.getElementById('titulo-planilla').textContent = periodoDisplay;
-  document.getElementById('sub-planilla').textContent = tipo ? `Planilla ${tipo}` : 'Planilla';
+  function formatPeriodo(iso) {
+    if (!iso) return 'Detalle';
+    const [y, m, d] = iso.split('-').map(Number);
+    const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    const diaInicio = d <= 15 ? 1 : 16;
+    return `${diaInicio} al ${d} de ${meses[m-1]} de ${y}`;
+  }
+  document.getElementById('titulo-planilla').textContent = periodo ? formatPeriodo(periodo) : 'Detalle';
+  document.getElementById('sub-planilla').textContent = (tipo ? `Planilla ${tipo}` : 'Planilla') + (planillaId ? ` · #${planillaId}` : '');
   loadDetalle(planillaId, periodo, tipo);
 });
 

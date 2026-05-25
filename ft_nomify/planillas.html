@@ -46,6 +46,7 @@
         <table>
           <thead>
             <tr>
+              <th style="width:48px;text-align:center">#</th>
               <th>Período</th>
               <th>Tipo</th>
               <th>Fecha de pago</th>
@@ -58,7 +59,7 @@
             </tr>
           </thead>
           <tbody id="tabla-planillas">
-            <tr class="loading-row"><td colspan="9"><div class="spinner"></div></td></tr>
+            <tr class="loading-row"><td colspan="10"><div class="spinner"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -77,11 +78,15 @@
       <div id="alert-gen" class="alert"></div>
       <p style="margin:0 0 16px;color:var(--text-muted);font-size:13px">Se calculará la quincena para todos los empleados activos del tipo seleccionado.</p>
       <div class="form-group">
-        <label>Período (fecha de la quincena) *</label>
+        <label>Período *</label>
         <input type="date" id="gen-periodo" />
         <div style="display:flex;gap:8px;margin-top:6px">
           <button type="button" id="btn-q15" class="btn btn-ghost btn-sm" style="font-size:12px">📅 Día 15</button>
           <button type="button" id="btn-qfin" class="btn btn-ghost btn-sm" style="font-size:12px">📅 Fin de mes</button>
+        </div>
+        <!-- Descripción legible del rango de la quincena -->
+        <div id="periodo-label" style="margin-top:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:13px;color:var(--text);display:none">
+          📅 <span id="periodo-label-text"></span>
         </div>
         <div id="aviso-fecha" style="display:none;margin-top:6px;font-size:11px;color:var(--orange)"></div>
       </div>
@@ -106,6 +111,15 @@
 <script>
 let allPlanillas = [];
 let filtroActivo = 'todas';
+
+// Convierte YYYY-MM-DD a "1 al 15 de mayo de 2026" o "16 al 31 de mayo de 2026"
+function formatPeriodo(isoDate) {
+  if (!isoDate) return '—';
+  const [y, m, d] = String(isoDate).substring(0, 10).split('-').map(Number);
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const diaInicio = d <= 15 ? 1 : 16;
+  return `${diaInicio} al ${d} de ${meses[m - 1]} de ${y}`;
+}
 
 // Devuelve YYYY-MM-15 o YYYY-MM-DD (último del mes) según qué quincena es más cercana
 function quincena15(y, m) { return `${y}-${String(m).padStart(2,'0')}-15`; }
@@ -173,14 +187,14 @@ function renderTabla() {
 
   const tbody = document.getElementById('tabla-planillas');
   if (lista.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" class="empty">No hay planillas registradas</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="empty">No hay planillas registradas</td></tr>';
     return;
   }
 
-  // Formatea cualquier fecha/datetime a DD/MM/YYYY
+  // DD/MM/YYYY para fecha de pago
   function fmtFecha(val) {
     if (!val) return '—';
-    const s = String(val).substring(0, 10); // toma solo YYYY-MM-DD
+    const s = String(val).substring(0, 10);
     const [y, m, d] = s.split('-');
     return `${d}/${m}/${y}`;
   }
@@ -190,11 +204,12 @@ function renderTabla() {
     const tipoBadge = tipo === 'Con Seguro' ? 'badge-blue' : tipo === 'Sin Seguro' ? 'badge-orange' : 'badge-gray';
     const estado = p.Estado || 'Borrador';
     const estadoBadge = estado === 'Pagada' ? 'badge-green' : estado === 'Borrador' ? 'badge-gray' : 'badge-blue';
-    const periodoVal = String(p['Período'] || '').substring(0, 10); // siempre YYYY-MM-DD
+    const periodoVal = String(p['Período'] || '').substring(0, 10);
     const periodo = encodeURIComponent(periodoVal);
     const fechaPago = fmtFecha(p['Fecha de pago'] || periodoVal);
     return `<tr>
-      <td><strong>${fmtFecha(periodoVal)}</strong></td>
+      <td style="text-align:center;color:var(--text-muted);font-size:12px;font-weight:600">#${p.id}</td>
+      <td><strong>${formatPeriodo(periodoVal)}</strong></td>
       <td>${tipo ? `<span class="badge ${tipoBadge}">${tipo}</span>` : '—'}</td>
       <td>${fechaPago}</td>
       <td style="text-align:center">${p['Total empleados'] || '—'}</td>
@@ -222,6 +237,7 @@ document.getElementById('btn-generar').addEventListener('click', () => {
   document.getElementById('alert-gen').className = 'alert';
   document.getElementById('gen-preview').style.display = 'none';
   document.getElementById('aviso-fecha').style.display = 'none';
+  actualizarPeriodoLabel();
   document.getElementById('modal-gen').classList.add('open');
 });
 
@@ -234,17 +250,20 @@ document.getElementById('btn-generar').addEventListener('click', () => {
 // Botones de quincena rápida
 document.getElementById('btn-q15').addEventListener('click', () => {
   document.getElementById('gen-periodo').value = next15();
-  document.getElementById('aviso-fecha').style.display = 'none';
+  actualizarPeriodoLabel();
 });
 document.getElementById('btn-qfin').addEventListener('click', () => {
   document.getElementById('gen-periodo').value = nextFin();
-  document.getElementById('aviso-fecha').style.display = 'none';
+  actualizarPeriodoLabel();
 });
 
-// Validar que la fecha sea quincena válida (día 15 o último del mes)
-document.getElementById('gen-periodo').addEventListener('change', () => {
+function actualizarPeriodoLabel() {
   const val = document.getElementById('gen-periodo').value;
-  if (!val) return;
+  const labelWrap = document.getElementById('periodo-label');
+  const labelText = document.getElementById('periodo-label-text');
+  if (!val) { labelWrap.style.display = 'none'; return; }
+  labelText.textContent = formatPeriodo(val);
+  labelWrap.style.display = '';
   const [y, m, d] = val.split('-').map(Number);
   const lastDay = new Date(y, m, 0).getDate();
   const aviso = document.getElementById('aviso-fecha');
@@ -254,7 +273,8 @@ document.getElementById('gen-periodo').addEventListener('change', () => {
   } else {
     aviso.style.display = 'none';
   }
-});
+}
+document.getElementById('gen-periodo').addEventListener('change', actualizarPeriodoLabel);
 
 document.getElementById('save-gen').addEventListener('click', async () => {
   const periodo = document.getElementById('gen-periodo').value;

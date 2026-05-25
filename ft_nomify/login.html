@@ -27,7 +27,25 @@
           Iniciar sesión
         </button>
       </div>
-      <p style="text-align:center;margin-top:14px;font-size:12px;color:var(--muted);">
+      <p style="text-align:center;margin-top:12px;font-size:12px;">
+        <a id="link-forgot" href="#" style="color:var(--text-muted);text-decoration:none;">¿Olvidaste tu contraseña?</a>
+      </p>
+
+      <!-- Formulario de recuperación (oculto por defecto) -->
+      <div id="panel-forgot" style="display:none;margin-top:8px;display:none;flex-direction:column;gap:10px">
+        <p style="margin:0;font-size:13px;color:var(--text-muted);text-align:center">Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.</p>
+        <div id="alert-forgot" class="alert"></div>
+        <input type="email" id="inp-forgot-email" placeholder="Tu correo electrónico"
+          style="padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;" />
+        <button class="btn btn-primary" id="btn-forgot-send" style="width:100%;justify-content:center;font-size:14px;padding:11px;">
+          Enviar enlace de recuperación
+        </button>
+        <p style="text-align:center;margin:0;font-size:12px;">
+          <a id="link-back-login" href="#" style="color:var(--text-muted);text-decoration:none;">← Volver al inicio de sesión</a>
+        </p>
+      </div>
+
+      <p style="text-align:center;margin-top:10px;font-size:12px;color:var(--muted);">
         Solo personal autorizado
       </p>
     </div>
@@ -88,6 +106,53 @@
       const btn = document.getElementById('btn-toggle-pass');
       if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
       else { inp.type = 'password'; btn.textContent = '👁'; }
+    });
+
+    // ── Recuperación de contraseña ───────────────────────────────────────────
+    const panelLogin  = document.querySelector('.login-box > div[style]');   // form principal
+    const panelForgot = document.getElementById('panel-forgot');
+    const alertForgot = document.getElementById('alert-forgot');
+
+    function mostrarForgot() {
+      document.getElementById('alert-login').className = 'alert';
+      document.getElementById('btn-login').closest('div[style]').style.display = 'none';
+      document.querySelector('#link-forgot').style.display = 'none';
+      panelForgot.style.display = 'flex';
+      document.getElementById('inp-forgot-email').value = document.getElementById('inp-email').value || '';
+      alertForgot.className = 'alert';
+    }
+    function mostrarLogin() {
+      document.getElementById('btn-login').closest('div[style]').style.display = '';
+      document.querySelector('#link-forgot').style.display = '';
+      panelForgot.style.display = 'none';
+    }
+
+    document.getElementById('link-forgot').addEventListener('click', e => { e.preventDefault(); mostrarForgot(); });
+    document.getElementById('link-back-login').addEventListener('click', e => { e.preventDefault(); mostrarLogin(); });
+
+    document.getElementById('btn-forgot-send').addEventListener('click', async () => {
+      const email = document.getElementById('inp-forgot-email').value.trim();
+      if (!email) {
+        alertForgot.className = 'alert alert-error show';
+        alertForgot.textContent = 'Ingresa tu correo electrónico';
+        return;
+      }
+      const btn = document.getElementById('btn-forgot-send');
+      btn.disabled = true; btn.textContent = 'Enviando...';
+      try {
+        await fetch('/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        alertForgot.className = 'alert alert-success show';
+        alertForgot.textContent = '✅ Si ese correo existe, recibirás el enlace en breve. Revisá tu bandeja de entrada.';
+        btn.textContent = 'Enviado ✓';
+      } catch (e) {
+        alertForgot.className = 'alert alert-error show';
+        alertForgot.textContent = 'Error al enviar. Intenta de nuevo.';
+        btn.disabled = false; btn.textContent = 'Enviar enlace de recuperación';
+      }
     });
   </script>
 </body>
