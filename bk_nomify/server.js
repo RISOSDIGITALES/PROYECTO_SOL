@@ -18,6 +18,13 @@ const { requireAuth, requireAdmin } = require('./auth');
   await run("UPDATE empleados SET rol='Planillero' WHERE rol='Colaborador'");
   // Agregar columna concepto a deducciones si no existe
   await run("ALTER TABLE deducciones ADD COLUMN IF NOT EXISTS concepto VARCHAR(100) DEFAULT NULL AFTER empleado_id");
+  // ── v1.1: empresas, empresa_id, ir_tipo, ir_fijo, empresas_acceso ─────────
+  await run("CREATE TABLE IF NOT EXISTS empresas (id INT AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(255) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+  await run("ALTER TABLE empleados  ADD COLUMN IF NOT EXISTS empresa_id INT DEFAULT NULL");
+  await run("ALTER TABLE empleados  ADD COLUMN IF NOT EXISTS ir_tipo VARCHAR(20) DEFAULT 'Sin IR'");
+  await run("ALTER TABLE empleados  ADD COLUMN IF NOT EXISTS ir_fijo DECIMAL(12,2) DEFAULT NULL");
+  await run("ALTER TABLE planillas  ADD COLUMN IF NOT EXISTS empresa_id INT DEFAULT NULL");
+  await run("ALTER TABLE usuarios   ADD COLUMN IF NOT EXISTS empresas_acceso TEXT DEFAULT NULL");
   console.log('[migrations] OK');
 })();
 
@@ -40,6 +47,7 @@ app.use('/api/planillas',  require('./routes/planillasRoutes'));
 app.use('/api/detalle',   require('./routes/detalleRoutes'));
 app.use('/api/recibo',    require('./routes/reciboRoutes'));
 app.use('/api/usuarios',  require('./routes/usuariosRoutes'));
+app.use('/api/empresas',  require('./routes/empresasRoutes'));
 
 // Todas las demás rutas devuelven el HTML correspondiente
 app.get('*', (req, res) => {

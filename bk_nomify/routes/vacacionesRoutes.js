@@ -17,8 +17,10 @@ const GET_SQL = `
 
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const where = req.query.empleado_id ? 'WHERE v.empleado_id = ?' : '';
-    const params = req.query.empleado_id ? [req.query.empleado_id] : [];
+    const conds = [], params = [];
+    if (req.query.empleado_id) { conds.push('v.empleado_id = ?'); params.push(req.query.empleado_id); }
+    if (req.empresaId) { conds.push('e.empresa_id = ?'); params.push(req.empresaId); }
+    const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
     const [rows] = await db.query(`${GET_SQL} ${where} ORDER BY v.id DESC`, params);
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }

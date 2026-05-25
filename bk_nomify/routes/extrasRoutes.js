@@ -17,6 +17,7 @@ router.get('/', requireAuth, async (req, res) => {
     const conds = [], params = [];
     if (req.query.empleado_id) { conds.push('x.empleado_id = ?'); params.push(req.query.empleado_id); }
     if (req.query.tipo) { conds.push('x.tipo = ?'); params.push(req.query.tipo); }
+    if (req.empresaId) { conds.push('e.empresa_id = ?'); params.push(req.empresaId); }
     const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
     const [rows] = await db.query(`${GET_SQL} ${where} ORDER BY x.id DESC`, params);
     res.json(rows);

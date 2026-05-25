@@ -29,8 +29,9 @@ const GET_SQL = `
     salario_bruto AS \`Salario bruto mensual\`,
     tipo_planilla AS Tipo_Planilla,
     DATE_FORMAT(fecha_ingreso, '%Y-%m-%d') AS \`Fecha de ingreso\`,
-    inss_base AS INSS_Base, ir_fijo AS IR, activo AS Activo,
-    email AS Email, rol AS Rol
+    inss_base AS INSS_Base, ir_fijo AS IR, ir_tipo AS IR_Tipo,
+    activo AS Activo, email AS Email, rol AS Rol,
+    empresa_id AS Empresa_ID
   FROM empleados`;
 
 function mapBody(b) {
@@ -41,17 +42,21 @@ function mapBody(b) {
     salario_bruto: b.salario_bruto ?? b['Salario bruto mensual'],
     inss_base:     b.inss_base     ?? b['INSS_Base'],
     ir_fijo:       b.ir_fijo       ?? b['IR'],
+    ir_tipo:       b.ir_tipo       ?? b['IR_Tipo'],
     email:         b.email         ?? b['Email'],
     rol:           b.rol           ?? b['Rol'],
     fecha_ingreso: b.fecha_ingreso ?? b['Fecha de ingreso'],
     activo:        b.activo        !== undefined ? b.activo : b['Activo'],
+    empresa_id:    b.empresa_id    ?? b['Empresa_ID'],
   };
 }
 
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const sql = GET_SQL + ' ORDER BY nombre ASC';
-    const [rows] = await db.query(sql);
+    const conds = [], params = [];
+    if (req.empresaId) { conds.push('empresa_id = ?'); params.push(req.empresaId); }
+    const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+    const [rows] = await db.query(`${GET_SQL} ${where} ORDER BY nombre ASC`, params);
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -65,11 +70,12 @@ router.post('/', requireAuth, requireMaster, async (req, res) => {
       const [dup] = await db.query('SELECT id FROM empleados WHERE email = ?', [m.email]);
       if (dup.length) return res.status(400).json({ error: 'Ese correo ya está registrado, por favor usa otro' });
     }
+    const empresaId = m.empresa_id || req.empresaId || null;
     const [r] = await db.query(
-      'INSERT INTO empleados (nombre, cargo, tipo_planilla, salario_bruto, inss_base, ir_fijo, email, rol, fecha_ingreso, activo) VALUES (?,?,?,?,?,?,?,?,?,?)',
+      'INSERT INTO empleados (nombre, cargo, tipo_planilla, salario_bruto, inss_base, ir_fijo, ir_tipo, email, rol, fecha_ingreso, activo, empresa_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
       [m.nombre, m.cargo, m.tipo_planilla || 'Con Seguro', m.salario_bruto || 0,
-       m.inss_base || 'Salario Completo', m.ir_fijo || 0, m.email, m.rol || 'Empleado',
-       m.fecha_ingreso || null, m.activo !== undefined ? (m.activo ? 1 : 0) : 1]
+       m.inss_base || 'Salario Completo', m.ir_fijo || null, m.ir_tipo || 'Sin IR', m.email, m.rol || 'Empleado',
+       m.fecha_ingreso || null, m.activo !== undefined ? (m.activo ? 1 : 0) : 1, empresaId]
     );
     const empId = r.insertId;
     // Auto-crear usuario si tiene email y rol
@@ -87,7 +93,7 @@ async function patchHandler(req, res) {
   if (!id) return res.status(400).json({ error: 'Se requiere id' });
 
   const m = mapBody(req.body);
-  const MYSQL_NAMES = ['nombre','cargo','tipo_planilla','salario_bruto','inss_base','ir_fijo','email','rol','fecha_ingreso','activo','planillas_acceso'];
+  const MYSQL_NAMES = ['nombre','cargo','tipo_planilla','salario_bruto','inss_base','ir_fijo','ir_tipo','email','rol','fecha_ingreso','activo','planillas_acceso','empresa_id'];
   const sets = [], vals = [];
   for (const c of MYSQL_NAMES) {
     if (m[c] !== undefined) { sets.push(`${c} = ?`); vals.push(m[c] !== '' ? m[c] : null); }

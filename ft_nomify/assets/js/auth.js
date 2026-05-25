@@ -159,22 +159,169 @@ function initLayout() {
     _myInfo = null;
     localStorage.removeItem('planilla_token');
     localStorage.removeItem('planilla_user');
+    localStorage.removeItem('planilla_empresa_id');
     window.location.href = '/login.html';
   });
 
   getMyInfo().then(info => {
     const link = document.getElementById('link-usuarios');
     if (link && info.rol !== 'Master') link.style.display = 'none';
+    // Cargar selector de empresa en el sidebar
+    _loadEmpresaSelector();
   });
+}
+
+async function _loadEmpresaSelector() {
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar) return;
+  // Evitar duplicados
+  if (document.getElementById('empresa-selector-wrap')) return;
+
+  try {
+    const info = await getMyInfo().catch(() => ({}));
+    // Obtener empresas disponibles para este usuario
+    const empresas = await apiFetch('/api/empresas');
+    if (!empresas || empresas.length === 0) {
+      // Sin empresas: si es Master, mostrar solo el botón de crear
+      if (info.rol === 'Master') {
+        const wrap = document.createElement('div');
+        wrap.id = 'empresa-selector-wrap';
+        wrap.style.cssText = 'padding:8px 16px 4px;border-bottom:1px solid var(--border);margin-bottom:4px';
+        wrap.innerHTML = `<button id="btn-gestionar-empresas" style="width:100%;background:none;border:1px dashed var(--border);color:var(--text-muted);border-radius:6px;font-size:12px;cursor:pointer;padding:6px 8px">🏢 Crear primera empresa</button>`;
+        const logo = sidebar.querySelector('.sidebar-logo');
+        if (logo && logo.nextSibling) sidebar.insertBefore(wrap, logo.nextSibling);
+        else sidebar.appendChild(wrap);
+        document.getElementById('btn-gestionar-empresas').addEventListener('click', _abrirModalEmpresas);
+      }
+      return;
+    }
+
+    const saved = localStorage.getItem('planilla_empresa_id');
+    // Si no hay seleccionada o la guardada ya no existe en la lista, usar la primera
+    const validIds = empresas.map(e => String(e.id));
+    const currentId = (saved && validIds.includes(saved)) ? saved : String(empresas[0].id);
+    if (!saved || !validIds.includes(saved)) {
+      localStorage.setItem('planilla_empresa_id', currentId);
+    }
+
+    const options = empresas.map(e =>
+      `<option value="${e.id}" ${String(e.id) === currentId ? 'selected' : ''}>${e.nombre}</option>`
+    ).join('');
+
+    const esMaster = info.rol === 'Master';
+    const wrap = document.createElement('div');
+    wrap.id = 'empresa-selector-wrap';
+    wrap.style.cssText = 'padding:8px 16px 4px;border-bottom:1px solid var(--border);margin-bottom:4px';
+    wrap.innerHTML = `
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:4px">Empresa</div>
+      <select id="empresa-select" style="width:100%;background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:13px;cursor:pointer">
+        ${options}
+      </select>
+      ${esMaster ? `<button id="btn-gestionar-empresas" style="width:100%;margin-top:4px;background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;text-align:left;padding:2px 0">⚙ Gestionar empresas</button>` : ''}`;
+
+    // Insertar justo después del .sidebar-logo
+    const logo = sidebar.querySelector('.sidebar-logo');
+    if (logo && logo.nextSibling) sidebar.insertBefore(wrap, logo.nextSibling);
+    else sidebar.appendChild(wrap);
+
+    document.getElementById('empresa-select').addEventListener('change', (e) => {
+      localStorage.setItem('planilla_empresa_id', e.target.value);
+      window.location.reload();
+    });
+
+    if (esMaster) {
+      document.getElementById('btn-gestionar-empresas')?.addEventListener('click', () => {
+        _abrirModalEmpresas();
+      });
+    }
+  } catch (_) {
+    // Si falla (sin empresas, error de red) no bloquear la UI
+  }
+}
+
+async function _abrirModalEmpresas() {
+  // Inyectar modal una sola vez
+  if (!document.getElementById('modal-empresas')) {
+    document.body.insertAdjacentHTML('beforeend', `
+<div class="overlay" id="modal-empresas">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>🏢 Gestionar empresas</h3>
+      <button class="modal-close" id="close-modal-empresas">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-empresas" class="alert"></div>
+      <ul id="lista-empresas" style="list-style:none;padding:0;margin:0 0 12px"></ul>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="inp-empresa-nombre" placeholder="Nombre de nueva empresa"
+          style="flex:1;background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 12px;font-size:13px" />
+        <button class="btn btn-primary" id="btn-add-empresa">Agregar</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="close-modal-empresas2">Cerrar</button>
+    </div>
+  </div>
+</div>`);
+
+    ['close-modal-empresas', 'close-modal-empresas2'].forEach(id =>
+      document.getElementById(id).addEventListener('click', () =>
+        document.getElementById('modal-empresas').classList.remove('open'))
+    );
+
+    document.getElementById('btn-add-empresa').addEventListener('click', async () => {
+      const nombre = document.getElementById('inp-empresa-nombre').value.trim();
+      if (!nombre) return;
+      try {
+        await apiFetch('/api/empresas', { method: 'POST', body: JSON.stringify({ nombre }) });
+        document.getElementById('inp-empresa-nombre').value = '';
+        showAlert('alert-empresas', '✅ Empresa agregada', 'success');
+        await _refreshListaEmpresas();
+        // Recargar selector en sidebar
+        window.location.reload();
+      } catch (e) { showAlert('alert-empresas', 'Error: ' + e.message, 'error'); }
+    });
+  }
+
+  await _refreshListaEmpresas();
+  document.getElementById('modal-empresas').classList.add('open');
+}
+
+async function _refreshListaEmpresas() {
+  try {
+    const lista = await apiFetch('/api/empresas');
+    const ul = document.getElementById('lista-empresas');
+    if (!lista.length) {
+      ul.innerHTML = '<li style="color:var(--text-muted);font-size:13px">No hay empresas registradas</li>';
+      return;
+    }
+    ul.innerHTML = lista.map(em => `
+      <li style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:13px">${em.nombre}</span>
+        <button onclick="_deleteEmpresa(${em.id})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px" title="Eliminar">🗑</button>
+      </li>`).join('');
+  } catch (_) {}
+}
+
+async function _deleteEmpresa(id) {
+  if (!confirm('¿Eliminar esta empresa? Los empleados vinculados quedarán sin empresa asignada.')) return;
+  try {
+    await apiFetch(`/api/empresas/${id}`, { method: 'DELETE' });
+    showAlert('alert-empresas', '✅ Empresa eliminada', 'success');
+    await _refreshListaEmpresas();
+    window.location.reload();
+  } catch (e) { showAlert('alert-empresas', 'Error: ' + e.message, 'error'); }
 }
 
 async function apiFetch(path, options = {}) {
   const token = getToken();
+  const empresaId = localStorage.getItem('planilla_empresa_id');
   const res = await fetch(path, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(empresaId ? { 'X-Empresa-ID': empresaId } : {}),
       ...(options.headers || {}),
     },
   });

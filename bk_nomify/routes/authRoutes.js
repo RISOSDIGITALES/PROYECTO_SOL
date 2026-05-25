@@ -21,6 +21,7 @@ router.post('/login', async (req, res) => {
       nombre: user.nombre,
       empleado_id: user.empleado_id,
       planillas_acceso: user.planillas_acceso || null,
+      empresas_acceso: user.empresas_acceso || null,
     });
     res.json({
       token,
@@ -28,6 +29,7 @@ router.post('/login', async (req, res) => {
       nombre: user.nombre,
       email: user.email,
       planillas_acceso: user.planillas_acceso || null,
+      empresas_acceso: user.empresas_acceso || null,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -41,6 +43,7 @@ router.get('/me', requireAuth, (req, res) => {
     nombre: req.user.nombre,
     empleado_id: req.user.empleado_id,
     planillas_acceso: req.user.planillas_acceso || null,
+    empresas_acceso: req.user.empresas_acceso || null,
   });
 });
 

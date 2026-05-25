@@ -26,6 +26,7 @@ router.get('/', requireAuth, async (req, res) => {
     if (planilla_id) {
       const conds = ['d.planilla_id = ?'];
       const params = [planilla_id];
+      if (req.empresaId) { conds.push('e.empresa_id = ?'); params.push(req.empresaId); }
       const [rows] = await db.query(
         `SELECT d.*, e.nombre
          FROM detalle_planilla d

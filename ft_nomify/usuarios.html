@@ -104,6 +104,14 @@
           <option value="Empleado">Empleado (solo ve su recibo)</option>
         </select>
       </div>
+      <!-- Acceso a empresas — solo visible cuando Rol=Planillero y hay 2+ empresas -->
+      <div class="form-group" id="row-empresas-acceso" style="display:none;margin-top:12px">
+        <label>Acceso a empresas</label>
+        <small style="display:block;color:var(--text-muted);font-size:11px;margin-bottom:6px">
+          Sin selección = acceso a todas las empresas asignadas
+        </small>
+        <div id="empresas-checkboxes" style="display:flex;flex-direction:column;gap:6px;max-height:140px;overflow-y:auto;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:8px 12px"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" id="cancel-usr">Cancelar</button>
@@ -133,10 +141,13 @@
 <script>
 let allUsuarios = [];
 let allEmpleados = [];
+let allEmpresas = [];
 let pendingDeleteId = null;
 
-onReady(['Master'], () => {
+onReady(['Master'], async () => {
   initLayout();
+  // Cargar empresas para el selector de acceso
+  try { allEmpresas = await apiFetch('/api/empresas'); } catch (_) {}
   loadUsuarios();
 });
 
@@ -209,6 +220,13 @@ document.getElementById('usr-empleado-search').addEventListener('input', functio
 });
 
 /* ── Modal ── */
+function _toggleEmpresasAcceso() {
+  const rol = document.getElementById('usr-rol').value;
+  const rowEmp = document.getElementById('row-empresas-acceso');
+  // Solo mostrar si Planillero Y hay 2 o más empresas
+  rowEmp.style.display = (rol === 'Planillero' && allEmpresas.length >= 2) ? '' : 'none';
+}
+
 function abrirModal(u = null) {
   document.getElementById('modal-titulo').textContent = u ? 'Editar Usuario' : 'Nuevo Usuario';
   document.getElementById('usr-id').value          = u?.id          || '';
@@ -231,10 +249,24 @@ function abrirModal(u = null) {
   // Campo contraseña: ocultar al crear (se asigna Nomify2026 automáticamente)
   document.getElementById('row-password').style.display      = u ? '' : 'none';
   document.getElementById('info-password-nueva').style.display = u ? 'none' : '';
+
+  // Empresas acceso — rellenar checkboxes
+  const container = document.getElementById('empresas-checkboxes');
+  let currentAcceso = [];
+  try { if (u?.empresas_acceso) currentAcceso = JSON.parse(u.empresas_acceso); } catch (_) {}
+  container.innerHTML = allEmpresas.map(em => `
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+      <input type="checkbox" value="${em.id}" ${currentAcceso.includes(em.id) ? 'checked' : ''}
+        style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer" />
+      ${em.nombre}
+    </label>`).join('');
+  _toggleEmpresasAcceso();
+
   document.getElementById('alert-form').className = 'alert';
   document.getElementById('modal-usr').classList.add('open');
 }
 
+document.getElementById('usr-rol').addEventListener('change', _toggleEmpresasAcceso);
 document.getElementById('btn-nuevo').addEventListener('click', () => abrirModal());
 function editar(id) { abrirModal(allUsuarios.find(u => u.id == id)); }
 
@@ -255,9 +287,17 @@ document.getElementById('save-usr').addEventListener('click', async () => {
 
   if (!email) { showAlert('alert-form', 'El email es requerido', 'error'); return; }
 
+  // Empresas acceso (Planillero)
+  let empresasAcceso = null;
+  if (rol === 'Planillero' && allEmpresas.length >= 2) {
+    const checked = [...document.querySelectorAll('#empresas-checkboxes input[type=checkbox]:checked')];
+    if (checked.length > 0) empresasAcceso = checked.map(c => parseInt(c.value));
+  }
+
   const body = { nombre, email, rol };
   if (empleadoId) body.empleado_id = parseInt(empleadoId);
   if (password)   body.password = password;
+  body.empresas_acceso = empresasAcceso; // null si no aplica
 
   const btn = document.getElementById('save-usr');
   btn.disabled = true; btn.textContent = 'Guardando...';

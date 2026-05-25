@@ -126,8 +126,24 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>IR mensual (C$)</label>
-          <input type="number" id="emp-ir" placeholder="Vacío = cálculo automático" step="0.01" min="0" />
+          <label>Tipo de IR</label>
+          <select id="emp-ir-tipo">
+            <option value="Sin IR">Sin IR</option>
+            <option value="Automático">Automático (DGI — tabla progresiva)</option>
+            <option value="Fijo">IR Fijo (mensual)</option>
+          </select>
+        </div>
+        <div class="form-group" id="emp-ir-fijo-group">
+          <label>IR fijo mensual (C$)</label>
+          <input type="number" id="emp-ir-fijo" placeholder="0.00" step="0.01" min="0" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Empresa</label>
+          <select id="emp-empresa">
+            <option value="">— Sin asignar —</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Estado</label>
@@ -164,6 +180,7 @@
 <script>
 let allEmpleados = [];
 let _esMaster = false;
+let _allEmpresas = [];
 
 async function _init() {
   initLayout();
@@ -171,11 +188,22 @@ async function _init() {
   _esMaster = info.rol === 'Master';
   if (!_esMaster) {
     document.getElementById('btn-nuevo').style.display = 'none';
-    ['emp-salario','emp-tipo','emp-inss-base','emp-ir','emp-email','emp-rol'].forEach(id => {
+    ['emp-salario','emp-tipo','emp-inss-base','emp-ir-tipo','emp-ir-fijo','emp-email','emp-rol','emp-empresa'].forEach(id => {
       const el = document.getElementById(id);
       if (el) { el.disabled = true; el.style.opacity = '0.55'; }
     });
   }
+  // Cargar empresas para el select del formulario
+  try {
+    _allEmpresas = await apiFetch('/api/empresas');
+    const sel = document.getElementById('emp-empresa');
+    _allEmpresas.forEach(em => {
+      const opt = document.createElement('option');
+      opt.value = em.id;
+      opt.textContent = em.nombre;
+      sel.appendChild(opt);
+    });
+  } catch (_) {}
   loadEmpleados();
 }
 
@@ -231,11 +259,17 @@ document.getElementById('btn-nuevo').addEventListener('click', () => {
   document.getElementById('emp-ingreso').value = '';
   document.getElementById('emp-tipo').value = 'Con Seguro';
   document.getElementById('emp-inss-base').value = 'Salario Completo';
-  document.getElementById('emp-ir').value = '';
+  document.getElementById('emp-ir-tipo').value = 'Sin IR';
+  document.getElementById('emp-ir-fijo').value = '';
+  // Pre-seleccionar empresa activa si hay una
+  const empresaActual = localStorage.getItem('planilla_empresa_id');
+  document.getElementById('emp-empresa').value = empresaActual || '';
   document.getElementById('emp-activo').value = 'true';
   document.getElementById('emp-email').value = '';
   document.getElementById('emp-rol').value = '';
   document.getElementById('alert-form').className = 'alert';
+  toggleInssBase();
+  toggleIRFijo();
   document.getElementById('modal-emp').classList.add('open');
 });
 
@@ -260,12 +294,15 @@ function abrirFormEditar(id) {
   document.getElementById('emp-ingreso').value = e['Fecha de ingreso'] || '';
   document.getElementById('emp-tipo').value = e['Tipo_Planilla'] || 'Con Seguro';
   document.getElementById('emp-inss-base').value = e['INSS_Base'] || 'Salario Completo';
-  document.getElementById('emp-ir').value = e['IR'] ?? '';
+  document.getElementById('emp-ir-tipo').value = e['IR_Tipo'] || 'Sin IR';
+  document.getElementById('emp-ir-fijo').value = e['IR'] ?? '';
+  document.getElementById('emp-empresa').value = e['Empresa_ID'] || '';
   document.getElementById('emp-activo').value = e.Activo ? 'true' : 'false';
   document.getElementById('emp-email').value = e['Email'] || '';
   document.getElementById('emp-rol').value = e['Rol'] || '';
   document.getElementById('alert-form').className = 'alert';
   toggleInssBase();
+  toggleIRFijo();
   document.getElementById('modal-emp').classList.add('open');
 }
 
@@ -284,11 +321,26 @@ document.getElementById('ok-confirm-edit').addEventListener('click', () => {
 
 function toggleInssBase() {
   const tipo = document.getElementById('emp-tipo').value;
-  const row = document.getElementById('emp-inss-base').closest('.form-group');
-  row.style.opacity = tipo === 'Sin Seguro' ? '0.35' : '1';
-  row.style.pointerEvents = tipo === 'Sin Seguro' ? 'none' : '';
+  const sinSeguro = tipo === 'Sin Seguro';
+  const rowInss = document.getElementById('emp-inss-base').closest('.form-group');
+  rowInss.style.opacity = sinSeguro ? '0.35' : '1';
+  rowInss.style.pointerEvents = sinSeguro ? 'none' : '';
+  // IR no aplica a Sin Seguro
+  const rowIrTipo = document.getElementById('emp-ir-tipo').closest('.form-group');
+  rowIrTipo.style.opacity = sinSeguro ? '0.35' : '1';
+  rowIrTipo.style.pointerEvents = sinSeguro ? 'none' : '';
+  if (sinSeguro) {
+    document.getElementById('emp-ir-tipo').value = 'Sin IR';
+    toggleIRFijo();
+  }
+}
+function toggleIRFijo() {
+  const irTipo = document.getElementById('emp-ir-tipo').value;
+  const group = document.getElementById('emp-ir-fijo-group');
+  group.style.display = irTipo === 'Fijo' ? '' : 'none';
 }
 document.getElementById('emp-tipo').addEventListener('change', toggleInssBase);
+document.getElementById('emp-ir-tipo').addEventListener('change', toggleIRFijo);
 
 ['close-modal','cancel-emp'].forEach(id => {
   document.getElementById(id).addEventListener('click', () => {
@@ -305,7 +357,10 @@ document.getElementById('save-emp').addEventListener('click', async () => {
   if (!salario || salario <= 0) { showAlert('alert-form', 'Ingresa un salario válido', 'error'); return; }
 
   const emailVal = document.getElementById('emp-email').value.trim();
-  const rolVal = document.getElementById('emp-rol').value;
+  const rolVal   = document.getElementById('emp-rol').value;
+  const irTipo   = document.getElementById('emp-ir-tipo').value;
+  const irFijoEl = document.getElementById('emp-ir-fijo');
+  const empresaEl = document.getElementById('emp-empresa');
   const fields = {
     'Nombre': nombre,
     'Cargo': document.getElementById('emp-cargo').value.trim(),
@@ -313,7 +368,9 @@ document.getElementById('save-emp').addEventListener('click', async () => {
     'Fecha de ingreso': document.getElementById('emp-ingreso').value || undefined,
     'Tipo_Planilla': document.getElementById('emp-tipo').value,
     'INSS_Base': document.getElementById('emp-inss-base').value,
-    'IR': document.getElementById('emp-ir').value !== '' ? parseFloat(document.getElementById('emp-ir').value) : undefined,
+    'IR_Tipo': irTipo,
+    'IR': (irTipo === 'Fijo' && irFijoEl.value !== '') ? parseFloat(irFijoEl.value) : null,
+    'Empresa_ID': empresaEl.value ? parseInt(empresaEl.value) : null,
     'Activo': document.getElementById('emp-activo').value === 'true',
     'Email': emailVal || undefined,
     'Rol': rolVal || undefined,

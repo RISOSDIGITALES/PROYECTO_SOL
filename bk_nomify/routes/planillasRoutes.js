@@ -5,11 +5,21 @@ const { requireAuth, requireMaster } = require('../auth');
 const SALARIO_MINIMO = 10913.54;
 const INSS_RATE = 0.07;
 
+// ── Cálculo IR progresivo DGI Nicaragua (sobre ingreso anual neto de INSS) ──
+function calcularIRAnual(ingresoAnual) {
+  if (ingresoAnual <= 100000) return 0;
+  if (ingresoAnual <= 200000) return (ingresoAnual - 100000) * 0.15;
+  if (ingresoAnual <= 350000) return 15000 + (ingresoAnual - 200000) * 0.20;
+  if (ingresoAnual <= 500000) return 45000 + (ingresoAnual - 350000) * 0.25;
+  return 82500 + (ingresoAnual - 500000) * 0.30;
+}
+
 // GET /api/planillas
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const params = [];
-    const where = '';
+    const conds = [], params = [];
+    if (req.empresaId) { conds.push('p.empresa_id = ?'); params.push(req.empresaId); }
+    const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
     const [rows] = await db.query(
       `SELECT p.id,
         DATE_FORMAT(p.periodo, '%Y-%m-%d') AS \`Período\`,
@@ -40,9 +50,11 @@ router.post('/calcular', requireAuth, async (req, res) => {
   try {
     await conn.beginTransaction();
 
+    const empresaId = req.empresaId || null;
     let empQuery = 'SELECT * FROM empleados WHERE activo = 1';
     const empParams = [];
     if (tipo) { empQuery += ' AND tipo_planilla = ?'; empParams.push(tipo); }
+    if (empresaId) { empQuery += ' AND empresa_id = ?'; empParams.push(empresaId); }
     const [empleados] = await conn.query(empQuery, empParams);
     if (!empleados.length) {
       await conn.rollback(); conn.release();
@@ -86,7 +98,23 @@ router.post('/calcular', requireAuth, async (req, res) => {
         inss = Math.round(base / 2 * INSS_RATE * 100) / 100;
       }
 
-      const ir           = parseFloat(emp.ir_fijo || 0);
+      // ── IR según ir_tipo (solo aplica Con Seguro) ─────────────────────────
+      let ir = 0;
+      const irTipo = emp.ir_tipo || 'Sin IR';
+      if (emp.tipo_planilla !== 'Sin Seguro') {
+        if (irTipo === 'Fijo') {
+          // ir_fijo es mensual → dividir entre 2 para quincenal
+          ir = Math.round(parseFloat(emp.ir_fijo || 0) / 2 * 100) / 100;
+        } else if (irTipo === 'Automático') {
+          // Base para INSS (la misma usada arriba)
+          const baseInss = emp.inss_base === 'Salario Minimo' ? SALARIO_MINIMO : salarioMensual;
+          const inssLaboral = baseInss * INSS_RATE;
+          const salarioNetoMensual = salarioMensual - inssLaboral;
+          const ingresoAnual = salarioNetoMensual * 12;
+          const irAnual = calcularIRAnual(ingresoAnual);
+          ir = Math.round(irAnual / 24 * 100) / 100; // ÷12 meses ÷2 quincenas
+        }
+      }
       const empAdel      = adelantosPor[emp.id] || [];
       const descAdelanto = Math.round(empAdel.reduce((s, a) => s + parseFloat(a.monto || 0), 0) * 100) / 100;
       const empPrest     = prestamosPor[emp.id] || [];
@@ -139,8 +167,8 @@ router.post('/calcular', requireAuth, async (req, res) => {
     totalNeto  = Math.round(totalNeto  * 100) / 100;
 
     const [planillaResult] = await conn.query(
-      'INSERT INTO planillas (periodo, tipo, estado, total_bruto, total_deducciones, total_neto) VALUES (?,?,?,?,?,?)',
-      [periodo, tipo || '', 'Borrador', totalBruto, totalDesc, totalNeto]
+      'INSERT INTO planillas (periodo, tipo, estado, total_bruto, total_deducciones, total_neto, empresa_id) VALUES (?,?,?,?,?,?,?)',
+      [periodo, tipo || '', 'Borrador', totalBruto, totalDesc, totalNeto, empresaId]
     );
     const planillaId = planillaResult.insertId;
 
