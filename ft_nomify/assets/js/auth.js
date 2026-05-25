@@ -44,16 +44,49 @@ function initLayout() {
   const el = document.getElementById('user-email');
   if (el) el.textContent = info.email || '';
 
-  // Inyectar botón Ajustes en el sidebar footer (antes del btn-logout)
+  // Inyectar botón Ajustes + menú desplegable en el sidebar footer
   const footer = document.querySelector('.sidebar-footer');
   if (footer && !document.getElementById('btn-ajustes')) {
+    // Menú popup (aparece hacia arriba)
+    const menu = document.createElement('div');
+    menu.id = 'ajustes-menu';
+    menu.style.cssText = `
+      display:none;position:absolute;bottom:calc(100% + 6px);left:0;right:0;
+      background:var(--navy, #1e2a3a);border:1px solid var(--border);
+      border-radius:8px;overflow:hidden;box-shadow:0 -4px 16px rgba(0,0,0,.35);z-index:200`;
+    menu.innerHTML = `
+      <button id="menu-ajustes-perfil" style="width:100%;background:none;border:none;color:var(--text);padding:11px 16px;text-align:left;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px">
+        👤 Mi perfil
+      </button>`;
+    // Hover effect vía JS (sin depender de CSS externo)
+    menu.querySelector('#menu-ajustes-perfil').addEventListener('mouseenter', function(){ this.style.background='var(--hover, rgba(255,255,255,.07))'; });
+    menu.querySelector('#menu-ajustes-perfil').addEventListener('mouseleave', function(){ this.style.background='none'; });
+
     const btnAjustes = document.createElement('button');
     btnAjustes.id = 'btn-ajustes';
     btnAjustes.className = 'btn-ajustes';
     btnAjustes.textContent = '⚙️ Ajustes';
+
+    // Wrapper con position:relative para anclar el menú
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative';
+    wrap.appendChild(menu);
+    wrap.appendChild(btnAjustes);
+
     const btnLogout = footer.querySelector('#btn-logout');
-    if (btnLogout) footer.insertBefore(btnAjustes, btnLogout);
-    else footer.appendChild(btnAjustes);
+    if (btnLogout) footer.insertBefore(wrap, btnLogout);
+    else footer.appendChild(wrap);
+
+    // Toggle menú al hacer clic en Ajustes
+    btnAjustes.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = menu.style.display !== 'none';
+      menu.style.display = isOpen ? 'none' : 'block';
+    });
+
+    // Cerrar menú al hacer clic fuera
+    document.addEventListener('click', () => { menu.style.display = 'none'; });
+    menu.addEventListener('click', (e) => e.stopPropagation());
   }
 
   // Inyectar modal de Ajustes (una sola vez en el body)
@@ -144,8 +177,9 @@ function initLayout() {
     });
   }
 
-  // Abrir modal al hacer clic en Ajustes
-  document.getElementById('btn-ajustes')?.addEventListener('click', async () => {
+  // Abrir modal de perfil desde el ítem del menú
+  document.getElementById('menu-ajustes-perfil')?.addEventListener('click', async () => {
+    document.getElementById('ajustes-menu').style.display = 'none';
     const myInfo = await getMyInfo();
     document.getElementById('ajustes-nombre').value      = myInfo.nombre || '';
     document.getElementById('ajustes-email').value       = myInfo.email  || '';
