@@ -3,7 +3,13 @@ const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
 const db = require('../db');
 const { signToken, requireAuth } = require('../auth');
-const { enviarResetPassword, enviarConfirmacionCambioPassword } = require('../mailer');
+let enviarResetPassword = async () => {};
+let enviarConfirmacionCambioPassword = async () => {};
+try {
+  const mailer = require('../mailer');
+  enviarResetPassword = mailer.enviarResetPassword;
+  enviarConfirmacionCambioPassword = mailer.enviarConfirmacionCambioPassword;
+} catch (_) { /* nodemailer no disponible — correos desactivados */ }
 
 const SECRET = process.env.JWT_SECRET || 'dev_secret';
 const DEFAULT_PASS = 'Nomify2026';

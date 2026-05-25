@@ -1,7 +1,10 @@
-const nodemailer = require('nodemailer');
+// Carga nodemailer de forma lazy — si no está instalado, los correos se omiten
+let nodemailer;
+try { nodemailer = require('nodemailer'); } catch (_) { nodemailer = null; }
 
 // Crea el transporter una sola vez usando las variables de entorno
 function createTransport() {
+  if (!nodemailer) throw new Error('nodemailer no instalado — ejecutá npm install en bk_nomify/');
   return nodemailer.createTransport({
     host:   process.env.SMTP_HOST,
     port:   parseInt(process.env.SMTP_PORT || '587'),
