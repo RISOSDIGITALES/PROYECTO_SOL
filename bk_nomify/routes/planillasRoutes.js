@@ -2,6 +2,18 @@ const router = require('express').Router();
 const db = require('../db');
 const { requireAuth, requireMaster } = require('../auth');
 
+// Lazy-load generador de PDF y mailer — no crashea si no están instalados
+let generarReportePlanilla = null;
+let pdfFormatPeriodo = null;
+try {
+  const pdf = require('../pdfGenerator');
+  generarReportePlanilla = pdf.generarReportePlanilla;
+  pdfFormatPeriodo       = pdf.formatPeriodo;
+} catch (_) {}
+
+let enviarReportePlanilla = async () => { throw new Error('Mailer no disponible'); };
+try { enviarReportePlanilla = require('../mailer').enviarReportePlanilla; } catch (_) {}
+
 const SALARIO_MINIMO = 10913.54;
 const INSS_RATE = 0.07;
 
@@ -230,6 +242,48 @@ router.post('/calcular', requireAuth, async (req, res) => {
 
   } catch (e) {
     await conn.rollback(); conn.release();
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/planillas/:id/enviar-reporte — genera PDF y lo envía por correo
+router.post('/:id/enviar-reporte', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email destinatario requerido' });
+  if (!process.env.SMTP_HOST)
+    return res.status(400).json({ error: 'SMTP no configurado en el servidor. Agrega las variables de correo en .env' });
+  if (!generarReportePlanilla)
+    return res.status(500).json({ error: 'pdfkit no instalado — ejecuta npm install en bk_nomify/' });
+
+  try {
+    const [[planillaRows], [detalles]] = await Promise.all([
+      db.query(`
+        SELECT p.*, emp.nombre AS empresa_nombre
+        FROM planillas p
+        LEFT JOIN empresas emp ON p.empresa_id = emp.id
+        WHERE p.id = ?`, [id]),
+      db.query(`
+        SELECT d.*, e.nombre
+        FROM detalle_planilla d
+        JOIN empleados e ON d.empleado_id = e.id
+        WHERE d.planilla_id = ?
+        ORDER BY e.nombre ASC`, [id]),
+    ]);
+
+    const planilla = planillaRows[0];
+    if (!planilla) return res.status(404).json({ error: 'Planilla no encontrada' });
+
+    const empresa = planilla.empresa_id
+      ? { id: planilla.empresa_id, nombre: planilla.empresa_nombre }
+      : null;
+
+    const pdfBuffer  = await generarReportePlanilla({ empresa, planilla, detalles });
+    const periodoStr = pdfFormatPeriodo ? pdfFormatPeriodo(planilla.periodo) : String(planilla.periodo).substring(0, 10);
+    await enviarReportePlanilla(email, null, pdfBuffer, periodoStr);
+
+    res.json({ ok: true, mensaje: `Reporte enviado a ${email}` });
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });

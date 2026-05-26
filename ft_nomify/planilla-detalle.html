@@ -60,6 +60,7 @@
       </div>
       <div style="display:flex;gap:8px">
         <a href="/planillas.html" class="btn btn-ghost btn-sm">← Volver</a>
+        <button class="btn btn-ghost btn-sm" id="btn-email-reporte">📧 Enviar por correo</button>
         <button class="btn btn-ghost btn-sm" id="btn-print">🖨 Imprimir</button>
       </div>
     </div>
@@ -88,6 +89,27 @@
           <tfoot id="tabla-totales"></tfoot>
         </table>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Enviar reporte por correo -->
+<div class="overlay" id="modal-email-reporte">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>📧 Enviar reporte por correo</h3>
+      <button class="modal-close" id="close-email-reporte">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-email-reporte" class="alert"></div>
+      <p style="margin:0 0 14px;font-size:13px;color:var(--text-muted)">Se generará un PDF del reporte completo y se enviará al correo indicado.</p>
+      <label style="display:block;font-size:13px;margin-bottom:6px;color:var(--text-muted)">Correo destinatario</label>
+      <input type="email" id="inp-email-reporte" placeholder="ejemplo@correo.com"
+        style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-email-reporte">Cancelar</button>
+      <button class="btn btn-primary" id="btn-send-reporte">Enviar PDF</button>
     </div>
   </div>
 </div>
@@ -174,6 +196,51 @@ async function loadDetalle(planillaId, periodo, tipo) {
 }
 
 document.getElementById('btn-print').addEventListener('click', () => window.print());
+
+// ── Modal enviar reporte por correo ─────────────────────────────────────────
+document.getElementById('btn-email-reporte').addEventListener('click', () => {
+  document.getElementById('alert-email-reporte').className = 'alert';
+  document.getElementById('btn-send-reporte').disabled = false;
+  document.getElementById('btn-send-reporte').textContent = 'Enviar PDF';
+  document.getElementById('modal-email-reporte').classList.add('open');
+  document.getElementById('inp-email-reporte').focus();
+});
+
+['close-email-reporte', 'cancel-email-reporte'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () =>
+    document.getElementById('modal-email-reporte').classList.remove('open')
+  )
+);
+
+document.getElementById('btn-send-reporte').addEventListener('click', async () => {
+  const email   = document.getElementById('inp-email-reporte').value.trim();
+  const alertEl = document.getElementById('alert-email-reporte');
+  const btn     = document.getElementById('btn-send-reporte');
+  if (!email) {
+    alertEl.className = 'alert alert-error show';
+    alertEl.textContent = 'Ingresa un correo destinatario';
+    return;
+  }
+  if (!planillaId) {
+    alertEl.className = 'alert alert-error show';
+    alertEl.textContent = 'No se puede enviar: ID de planilla no disponible';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Generando PDF...';
+  alertEl.className = 'alert';
+  try {
+    const data = await apiFetch(`/api/planillas/${planillaId}/enviar-reporte`, 'POST', { email });
+    alertEl.className = 'alert alert-success show';
+    alertEl.textContent = data.mensaje || 'Reporte enviado correctamente';
+    btn.textContent = 'Enviado ✓';
+  } catch (e) {
+    alertEl.className = 'alert alert-error show';
+    alertEl.textContent = e.message;
+    btn.disabled = false;
+    btn.textContent = 'Enviar PDF';
+  }
+});
 </script>
 </body>
 </html>

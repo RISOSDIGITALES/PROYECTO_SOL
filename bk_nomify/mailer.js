@@ -105,4 +105,86 @@ async function enviarConfirmacionCambioPassword(email, nombre) {
   });
 }
 
-module.exports = { enviarResetPassword, enviarConfirmacionCambioPassword };
+// ── Correo con reporte de planilla PDF ───────────────────────────────────────
+async function enviarReportePlanilla(email, nombre, pdfBuffer, periodoStr) {
+  const safePeriodo = (periodoStr || '').replace(/[^a-z0-9-]/gi, '-');
+  const transport = createTransport();
+  await transport.sendMail({
+    from:    `"Nomify Sistema" <${APP_FROM()}>`,
+    to:      email,
+    subject: `📊 Reporte de Planilla ${periodoStr} — Nomify`,
+    html: `<!DOCTYPE html>
+<html lang="es">
+<body style="font-family:sans-serif;background:#f5f5f5;margin:0;padding:24px">
+  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)">
+    <div style="background:#1a2236;padding:24px 32px">
+      <h1 style="color:#fff;margin:0;font-size:22px">Nomify</h1>
+      <p style="color:#8899aa;margin:4px 0 0;font-size:13px">Sistema de planilla</p>
+    </div>
+    <div style="padding:28px 32px">
+      <h2 style="color:#1a2236;margin:0 0 10px;font-size:17px">📊 Reporte de Planilla</h2>
+      <p style="color:#444;font-size:14px;line-height:1.6;margin:0 0 16px">
+        ${nombre ? `Hola <strong>${nombre}</strong>,<br><br>` : ''}
+        Adjunto encontrarás el reporte de planilla correspondiente al período
+        <strong>${periodoStr}</strong>.
+      </p>
+      <p style="color:#888;font-size:12px;margin:0">El reporte está adjunto en formato PDF.</p>
+    </div>
+    <div style="background:#f0f4f8;padding:14px 32px;font-size:11px;color:#aaa;text-align:center">
+      Nomify · Sistema de planilla · Solo personal autorizado
+    </div>
+  </div>
+</body></html>`,
+    attachments: [{
+      filename: `reporte-planilla-${safePeriodo}.pdf`,
+      content:  pdfBuffer,
+      contentType: 'application/pdf',
+    }],
+  });
+}
+
+// ── Correo con recibo individual PDF ─────────────────────────────────────────
+async function enviarReciboEmpleado(email, nombre, pdfBuffer, periodoStr) {
+  const safeNombre  = (nombre  || 'empleado').replace(/[^a-z0-9]/gi, '-');
+  const safePeriodo = (periodoStr || '').replace(/[^a-z0-9-]/gi, '-');
+  const transport = createTransport();
+  await transport.sendMail({
+    from:    `"Nomify Sistema" <${APP_FROM()}>`,
+    to:      email,
+    subject: `🧾 Tu recibo de pago ${periodoStr} — Nomify`,
+    html: `<!DOCTYPE html>
+<html lang="es">
+<body style="font-family:sans-serif;background:#f5f5f5;margin:0;padding:24px">
+  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)">
+    <div style="background:#1a2236;padding:24px 32px">
+      <h1 style="color:#fff;margin:0;font-size:22px">Nomify</h1>
+      <p style="color:#8899aa;margin:4px 0 0;font-size:13px">Sistema de planilla</p>
+    </div>
+    <div style="padding:28px 32px">
+      <h2 style="color:#1a2236;margin:0 0 10px;font-size:17px">🧾 Recibo de Pago</h2>
+      <p style="color:#444;font-size:14px;line-height:1.6;margin:0 0 16px">
+        Hola${nombre ? ` <strong>${nombre}</strong>` : ''},<br><br>
+        Adjunto encontrarás tu recibo de pago correspondiente al período
+        <strong>${periodoStr}</strong>.
+      </p>
+      <p style="color:#888;font-size:12px;margin:0">El recibo está adjunto en formato PDF.</p>
+    </div>
+    <div style="background:#f0f4f8;padding:14px 32px;font-size:11px;color:#aaa;text-align:center">
+      Nomify · Sistema de planilla · Información confidencial
+    </div>
+  </div>
+</body></html>`,
+    attachments: [{
+      filename: `recibo-${safeNombre}-${safePeriodo}.pdf`,
+      content:  pdfBuffer,
+      contentType: 'application/pdf',
+    }],
+  });
+}
+
+module.exports = {
+  enviarResetPassword,
+  enviarConfirmacionCambioPassword,
+  enviarReportePlanilla,
+  enviarReciboEmpleado,
+};

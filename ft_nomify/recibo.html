@@ -131,6 +131,7 @@
       </div>
       <div style="display:flex;gap:8px">
         <a id="btn-volver" href="/planilla-detalle.html" class="btn btn-ghost btn-sm">← Volver</a>
+        <button class="btn btn-ghost btn-sm" id="btn-email-recibo">📧 Enviar por correo</button>
         <button class="btn btn-sm" onclick="window.print()" style="background:var(--green);color:#fff">🖨 Imprimir / PDF</button>
       </div>
     </div>
@@ -140,6 +141,27 @@
       <div id="recibo-container">
         <div style="text-align:center;padding:40px"><div class="spinner"></div></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Enviar recibo por correo -->
+<div class="overlay" id="modal-email-recibo">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>📧 Enviar recibo por correo</h3>
+      <button class="modal-close" id="close-email-recibo">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-email-recibo" class="alert"></div>
+      <p style="margin:0 0 14px;font-size:13px;color:var(--text-muted)">Se generará un PDF del recibo de pago y se enviará al correo indicado.</p>
+      <label style="display:block;font-size:13px;margin-bottom:6px;color:var(--text-muted)">Correo destinatario</label>
+      <input type="email" id="inp-email-recibo" placeholder="ejemplo@correo.com"
+        style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-email-recibo">Cancelar</button>
+      <button class="btn btn-primary" id="btn-send-recibo">Enviar PDF</button>
     </div>
   </div>
 </div>
@@ -185,6 +207,9 @@ async function loadRecibo(empleadoId, periodo) {
     const qs = `?empleado_id=${encodeURIComponent(empleadoId)}&periodo=${encodeURIComponent(periodo)}`;
     const data = await apiFetch('/api/recibo' + qs);
     renderRecibo(data, periodo);
+    // Pre-llenar el input de email con el del empleado si está disponible
+    const emailEmp = data.empleado?.email || '';
+    if (emailEmp) document.getElementById('inp-email-recibo').value = emailEmp;
   } catch (e) {
     showAlert('alert-recibo', 'Error cargando recibo: ' + e.message, 'error');
     document.getElementById('recibo-container').innerHTML = '';
@@ -305,6 +330,52 @@ function renderRecibo(data, periodo) {
     </div>
   `;
 }
+// ── Modal enviar recibo por correo ───────────────────────────────────────────
+document.getElementById('btn-email-recibo').addEventListener('click', () => {
+  document.getElementById('alert-email-recibo').className = 'alert';
+  document.getElementById('btn-send-recibo').disabled = false;
+  document.getElementById('btn-send-recibo').textContent = 'Enviar PDF';
+  document.getElementById('modal-email-recibo').classList.add('open');
+  document.getElementById('inp-email-recibo').focus();
+});
+
+['close-email-recibo', 'cancel-email-recibo'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () =>
+    document.getElementById('modal-email-recibo').classList.remove('open')
+  )
+);
+
+document.getElementById('btn-send-recibo').addEventListener('click', async () => {
+  const p      = new URLSearchParams(window.location.search);
+  const empId  = p.get('empleado_id') || '';
+  const per    = p.get('periodo') || '';
+  const email  = document.getElementById('inp-email-recibo').value.trim();
+  const alertEl = document.getElementById('alert-email-recibo');
+  const btn    = document.getElementById('btn-send-recibo');
+  if (!email) {
+    alertEl.className = 'alert alert-error show';
+    alertEl.textContent = 'Ingresa un correo destinatario';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Generando PDF...';
+  alertEl.className = 'alert';
+  try {
+    const data = await apiFetch('/api/recibo/enviar', 'POST', {
+      email,
+      empleado_id: empId,
+      periodo:     per,
+    });
+    alertEl.className = 'alert alert-success show';
+    alertEl.textContent = data.mensaje || 'Recibo enviado correctamente';
+    btn.textContent = 'Enviado ✓';
+  } catch (e) {
+    alertEl.className = 'alert alert-error show';
+    alertEl.textContent = e.message;
+    btn.disabled = false;
+    btn.textContent = 'Enviar PDF';
+  }
+});
 </script>
 </body>
 </html>
