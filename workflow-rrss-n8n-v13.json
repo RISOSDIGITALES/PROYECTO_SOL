@@ -1,0 +1,1793 @@
+{
+  "updatedAt": "2026-05-18T19:19:06.407Z",
+  "createdAt": "2026-05-15T15:53:30.951Z",
+  "id": "wyO1f93A66imn9qw",
+  "name": "RRSS Automation — Crating Express v1.3 (G54)",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-empresa",
+      "name": "📊 Obtener Perfil Empresa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1056,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID + '/productos-servicios' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-productos",
+      "name": "📦 Obtener Servicios Activos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1312,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID + '/rrss/ideas' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-tema",
+      "name": "📅 Obtener Próximo Tema Semanal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1552,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-records",
+              "leftValue": "={{ ($json.data?.length || $json.items?.length || $json.records?.length || (Array.isArray($json) ? $json.length : 0)) }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-hay-tema",
+      "name": "🔍 ¿Hay tema disponible?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('📊 Obtener Perfil Empresa').item.json.data.emails[0] }}",
+        "subject": "⚠️ RRSS Automation — Sin temas disponibles esta semana",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;color:#333;\"><div style=\"background:#305468;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0;\"><strong>Growth54 — Reporte Automático</strong></div><div style=\"padding:16px 20px;border:1px solid #ddd;border-top:none;border-radius:0 0 6px 6px;\"><p><strong>Workflow:</strong> RRSS Automation — Crating Express</p><p><strong>Fecha:</strong> {{new Date().toLocaleString(\"es-US\",{timeZone:\"America/New_York\"})}}</p><p><strong>Estado:</strong> ✅ Completado</p><hr style=\"border:none;border-top:1px solid #eee;margin:12px 0;\"><p style=\"color:#c0392b;\"><strong>⚠️ No hay temas disponibles.</strong></p><p>Corre el Generador de Temas para añadir nuevos temas a la cola.</p></div></div>",
+        "options": {
+          "senderName": "Growth54"
+        }
+      },
+      "id": "sin-tema-notif",
+      "name": "⚠️ Sin temas disponibles",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        496
+      ],
+      "webhookId": "e370cf52-d32c-42fe-9d31-ba4c3e9f5193",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TESHSjzjMCpCxBBk",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ====================================================\n// Preparar Contexto para IA — G54 Framework\n// Supports G54 API format (array / {data:[]} / {items:[]}) + Airtable fallback\n// ====================================================\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\nconst empresa = empresaRaw.data || empresaRaw.fields || empresaRaw || {};\n\nconst productosRaw = $('📦 Obtener Servicios Activos').item.json;\nconst productosData = productosRaw.data || productosRaw.items || productosRaw.records || (Array.isArray(productosRaw) ? productosRaw : []);\n\n// G54 ideas — supports array, {data:[]}, {items:[]}, {records:[]}\nconst temaRaw = $('📅 Obtener Próximo Tema Semanal').item.json;\nconst temaList = temaRaw.data || temaRaw.items || temaRaw.records || (Array.isArray(temaRaw) ? temaRaw : [temaRaw]);\nconst temaItem = (Array.isArray(temaList) ? temaList[0] : temaList) || temaRaw || {};\nconst tema = temaItem.fields || temaItem || {};\nconst temaId = temaItem.id || temaItem.social_idea_id || temaItem.tema_id || null;\n\n// G54 estrategia (continueOnFail — might be null if not configured)\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\nconst servicios = productosData\n  .map(p => {\n    const f = p.fields || p;\n    const nombre = f.nombre || f['Nombre de Servicio'] || '';\n    const desc   = f.descripcion || f['Descripción comercial'] || '';\n    return `- ${nombre}: ${desc}`.slice(0, 200);\n  })\n  .join('\\n');\n\nreturn [{\n  json: {\n    // Empresa\n    empresa_nombre:          empresa.nombre_empresa || empresa['\\ufeffnombre_empresa'] || 'Crating Express',\n    empresa_descripcion:     empresa.descripcion_corta || empresa['descripción_corta'] || '',\n    empresa_propuesta_valor: empresa.propuesta_valor || '',\n    empresa_ciudad:          empresa.ciudad_base || empresa['ciudad base'] || 'Miami, FL',\n    empresa_web:             empresa.sitio_web || empresa['sitio_web'] || 'cratingexpress.com',\n    empresa_telefono:        empresa.telefono || empresa['teléfono'] || '',\n    servicios_resumen:       servicios,\n    // Tema\n    tema_id:                 temaId,\n    tema_texto:              tema.topic || tema.tema || tema['Tema'] || '',\n    tema_descripcion:        tema.description || tema.descripcion || tema['Descripcion'] || '',\n    tema_palabras_clave:     tema.keyword || tema.palabras_clave || tema['Palabras_Clave'] || '',\n    keyword_principal:       tema.keyword || tema.keyword_principal || tema['Keyword_Principal'] || '',\n    tema_semana:             tema.semana || tema['Semana'] || 0,\n    tema_plataforma:         tema.platform || tema.plataforma || 'Instagram',\n    fecha_post:              new Date().toLocaleDateString('es-US', {timeZone: 'America/New_York'}),\n    // Estrategia G54\n    estrategia_objetivo:     estrategia.objetivo || '',\n    estrategia_audiencia:    estrategia.audiencia || '',\n    estrategia_tono:         estrategia.tono || 'profesional y directo',\n    estrategia_cta:          estrategia.cta_principal || 'Solicitar cotización en cratingexpress.com/request-a-quote/',\n    estrategia_embudo:       estrategia.embudo || 'TOFU-MOFU',\n    estrategia_pilares:      Array.isArray(estrategia.pilares) ? estrategia.pilares.join(', ') : (estrategia.pilares || ''),\n  }\n}];\n"
+      },
+      "id": "preparar-contexto",
+      "name": "🔧 Preparar Contexto para IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDgMayvXomDq8Mx3fwTVtYi9eDjU5cxGOU",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"contents\": [{\"role\": \"user\", \"parts\": [{\"text\": {{ JSON.stringify(\"Eres un Content Strategist especializado en SEO/AEO/GEO para empresas industriales en Miami.\\n\\nEMPRESA: {{ $json.empresa_nombre }}\\nDESCRIPCI\\u00d3N: {{ $json.empresa_descripcion }}\\nPROPUESTA DE VALOR: {{ $json.empresa_propuesta_valor }}\\nCIUDAD: {{ $json.empresa_ciudad }} | WEB: {{ $json.empresa_web }}\\nSERVICIOS:\\n{{ $json.servicios_resumen }}\\n\\nESTRATEGIA G54:\\n- Objetivo: {{ $json.estrategia_objetivo || 'Generar leads de embalaje industrial' }}\\n- Audiencia: {{ $json.estrategia_audiencia || 'Empresas exportadoras y de log\\u00edstica en Miami' }}\\n- Tono: {{ $json.estrategia_tono || 'profesional y directo' }}\\n- CTA principal: {{ $json.estrategia_cta || 'cratingexpress.com/request-a-quote/' }}\\n- Pilares: {{ $json.estrategia_pilares || 'embalaje industrial, exportaci\\u00f3n, log\\u00edstica Miami' }}\\n\\nTEMA SEMANAL: {{ $json.tema_texto }}\\nDESCRIPCI\\u00d3N DEL TEMA: {{ $json.tema_descripcion || '' }}\\nKEYWORD PRINCIPAL: {{ $json.keyword_principal || $json.tema_palabras_clave || '' }}\\n\\n=== PROCESO DE 8 PASOS G54 ===\\n\\nPASO 1 \\u2014 INTENCI\\u00d3N DE B\\u00daSQUEDA\\nAnaliza qu\\u00e9 intenci\\u00f3n tiene el usuario al buscar sobre este tema.\\nElige: informacional | comercial | transaccional | local\\n\\nPASO 2 \\u2014 KEYWORDS\\nIdentifica 3-5 palabras clave secundarias relacionadas con el tema y la empresa.\\n\\nPASO 3 \\u2014 AEO (Answer Engine Optimization)\\nRedacta 2-3 oraciones que respondan directamente y espec\\u00edficamente la pregunta impl\\u00edcita del tema.\\nDebe ser una respuesta directa al estilo \\\"La respuesta a [tema] es...\\\", optimizada para IA y b\\u00fasqueda conversacional.\\n\\nPASO 4 \\u2014 HOOK\\nPrimera frase impactante de m\\u00e1x 12 palabras. Usa el keyword principal. Genera curiosidad o urgencia real.\\n\\nPASO 5 \\u2014 DESARROLLO\\nCuerpo del post: 2-3 p\\u00e1rrafos, m\\u00e1x 200 palabras. Incluye datos concretos, beneficios y prueba social de Crating Express.\\n\\nPASO 6 \\u2014 GEO\\nIncorpora referencias geogr\\u00e1ficas espec\\u00edficas relevantes: Miami, South Florida, Miami-Dade, exportaci\\u00f3n USA.\\n\\nPASO 7 \\u2014 ADAPTACI\\u00d3N\\nAjusta el tono para redes sociales en espa\\u00f1ol \\u2014 natural, directo, NO corporativo ni gen\\u00e9rico.\\n\\nPASO 8 \\u2014 CTA + HASHTAGS\\nCTA con URL OBLIGATORIO. 10 hashtags relevantes.\\n\\nREGLAS:\\n- Los embalajes son siempre DE MADERA \\u2014 es el diferenciador clave\\n- CTA SIEMPRE incluye: cratingexpress.com/request-a-quote/ o cratingexpress.com\\n- ISPM-15/NIMF-15 solo para exportaciones internacionales\\n- M\\u00e1x 200 palabras en 'mensaje'\\n- NUNCA inventar premios, certificaciones o datos falsos\\n\\nDevuelve \\u00daNICAMENTE este JSON (sin markdown, sin texto adicional):\\n{\\n  \\\"intencion_busqueda\\\": \\\"informacional|comercial|transaccional|local\\\",\\n  \\\"keywords_secundarias\\\": [\\\"kw1\\\", \\\"kw2\\\", \\\"kw3\\\"],\\n  \\\"respuesta_aeo\\\": \\\"2-3 oraciones respondiendo directamente la pregunta impl\\u00edcita, optimizado para b\\u00fasqueda IA\\\",\\n  \\\"hook\\\": \\\"Primera frase impactante m\\u00e1x 12 palabras\\\",\\n  \\\"mensaje\\\": \\\"Cuerpo 2-3 p\\u00e1rrafos con referencias GEO, m\\u00e1x 200 palabras\\\",\\n  \\\"geo_menciones\\\": \\\"Miami, South Florida\\\",\\n  \\\"cta\\\": \\\"Llamada a la acci\\u00f3n con URL obligatorio\\\",\\n  \\\"hashtags\\\": \\\"#hash1 #hash2 #hash3 #hash4 #hash5 #hash6 #hash7 #hash8 #hash9 #hash10\\\",\\n  \\\"texto_canva_titulo\\\": \\\"T\\u00cdTULO EN MAY\\u00daSCULAS M\\u00c1XIMO 8 PALABRAS\\\",\\n  \\\"texto_canva_subtitulo\\\": \\\"Subt\\u00edtulo m\\u00e1ximo 15 palabras\\\"\\n}\") }}]}], \"systemInstruction\": {\"parts\": [{\"text\": \"Eres un experto en Content Strategy con enfoque SEO/AEO/GEO para empresas de embalaje industrial en Miami. SIEMPRE devuelves JSON válido, sin markdown, sin explicaciones adicionales.\"}]}}",
+        "options": {}
+      },
+      "id": "generar-post-es",
+      "name": "🤖 Generar Post en Español",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2304,
+        304
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "check-gemini-es",
+              "leftValue": "={{ $json.candidates?.length || 0 }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-gemini-ok-es",
+      "name": "🔀 ¿Gemini OK? (ES)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer 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"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\": \"llama-3.3-70b-versatile\", \"messages\": [{\"role\": \"system\", \"content\": \"Eres un experto en marketing digital y copywriting para empresas de servicios industriales en Miami. Tu especialidad es crear contenido auténtico, persuasivo y orientado a conversión para redes sociales. Siempre respondes en formato JSON válido sin texto adicional.\"}, {\"role\": \"user\", \"content\": {{ JSON.stringify(\"Crea un post para redes sociales en ESPAÑOL para la siguiente empresa:\\n\\n**EMPRESA:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_nombre + \"\\n**DESCRIPCIÓN:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_descripcion + \"\\n**PROPUESTA DE VALOR:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_propuesta_valor + \"\\n**CIUDAD:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_ciudad + \"\\n**WEB:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_web + \"\\n**SERVICIOS:**\\n\" + $('🔧 Preparar Contexto para IA').item.json.servicios_resumen + \"\\n\\n**TEMA DE ESTA SEMANA:** \" + $('🔧 Preparar Contexto para IA').item.json.tema_texto + \"\\n**DESCRIPCIÓN DEL TEMA:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_descripcion || '') + \"\\n**PALABRAS CLAVE:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_palabras_clave || '') + \"\\n\\nDevuelve un JSON con los siguientes campos:\\n- hook: primera frase impactante máximo 12 palabras\\n- mensaje: cuerpo del mensaje 2-3 párrafos máximo 180 palabras\\n- cta: llamada a la acción máximo 15 palabras\\n- hashtags: 10 hashtags comenzando con #\\n- texto_canva_titulo: título visual máximo 8 palabras EN MAYÚSCULAS\\n- texto_canva_subtitulo: subtítulo máximo 15 palabras\\n\\nResponde ÚNICAMENTE con el JSON, sin texto adicional.\") }}}], \"temperature\": 0.75, \"max_tokens\": 1500, \"response_format\": {\"type\": \"json_object\"}}",
+        "options": {}
+      },
+      "id": "grok-post-es",
+      "name": "🤖 Groq: Post Español (Fallback)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2512,
+        304
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResponse = $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text || $input.item.json.choices?.[0]?.message?.content || '{}';\nlet post;\ntry {\n  post = JSON.parse(aiResponse);\n} catch(e) {\n  const match = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  post = match ? JSON.parse(match[0]) : {};\n}\n\nconst contexto = $('🔧 Preparar Contexto para IA').item.json;\n\n// Normalizar hashtags: array → string\nconst rawHashtags = post.hashtags || '';\nconst hashtags = Array.isArray(rawHashtags) ? rawHashtags.join(' ') : rawHashtags;\n\n// Garantizar URL en el CTA (por si Groq no lo incluye)\nconst QUOTE_URL = 'cratingexpress.com/request-a-quote/';\nlet cta = post.cta || '';\nif (!cta.includes('cratingexpress.com') && !cta.includes('http')) {\n  cta = cta.trim() + ' → ' + QUOTE_URL;\n}\n\nreturn [{\n  json: {\n    ...contexto,\n    hook_es: post.hook || '',\n    mensaje_es: post.mensaje || '',\n    cta_es: cta,\n    hashtags: hashtags,\n    texto_canva_titulo: post.texto_canva_titulo || '',\n    texto_canva_subtitulo: post.texto_canva_subtitulo || ''\n  }\n}];"
+      },
+      "id": "parsear-post-es",
+      "name": "🔍 Parsear Post Español",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2624,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDgMayvXomDq8Mx3fwTVtYi9eDjU5cxGOU",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":{{ JSON.stringify(\"Based on this weekly theme and Spanish content, write platform-specific English social media posts for Crating Express (wood packaging, Miami FL). Write natural English — do NOT translate literally.\\n\\nWeekly Theme: \" + $json.tema_texto + \"\\nTheme Description: \" + ($json.tema_descripcion || \"\") + \"\\nKeywords: \" + ($json.keyword_principal || \"\") + \"\\n\\nSpanish reference:\\n- Hook: \" + $json.hook_es + \"\\n- Message: \" + $json.mensaje_es + \"\\n- CTA: \" + $json.cta_es + \"\\n\\nFACEBOOK rules:\\n- 4 short paragraphs. Max 320 words total. Conversational B2B tone, not salesy.\\n- Paragraph 1: hook — open with an insight or pain point about freight damage or crating.\\n- Paragraph 2: social proof — mention working with Miami freight forwarders, logistics companies, or industrial exporters. Keep it specific and credible.\\n- Paragraph 3: urgency — one natural line tied to shipping realities: port deadlines, Q2/Q3 peak season, 48-72 hr lead times, or limited custom crate capacity. Do NOT invent fake discounts or countdowns.\\n- Paragraph 4: CTA — end with both links on separate lines:\\n  💬 WhatsApp us: wa.me/17863948380\\n  📋 Free quote: cratingexpress.com/request-a-quote/\\n- facebook_hashtags: EXACTLY 5 hashtags separated by spaces. #ISPM15 is MANDATORY. Pick 4 more from: #WoodCrating #CustomCrating #MiamiLogistics #IndustrialPackaging #FreightProtection #ShippingExperts #WoodPackaging #ExportCrating.\\n\\nINSTAGRAM rules:\\n- instagram_lines[0]: strong hook sentence with 1-2 emojis\\n- instagram_lines[1]: 2-3 key benefits — include one credibility cue (e.g. ISPM-15 certified, trusted by Miami exporters, 48-hr turnaround)\\n- instagram_lines[2]: CTA line — exactly: 📩 WhatsApp +1 786-394-8380 or link in bio for a free quote\\n- instagram_lines[3]: empty string\\n- instagram_hashtags: EXACTLY 13 hashtags. 3 high-competition from (#packaging #logistics #shipping #manufacturing #miami), 5 medium from (#woodpackaging #customcrating #industrialpackaging #woodencrates #freightprotection), 5 niche from (#ISPM15 #woodcrating #exportcrating #cratingexpress #miamilogistics #exportpackaging).\\n\\nSLIDES TEXT rules:\\n- texto_canva_titulo_en: 4-6 impactful English words (visual headline for the post image)\\n- texto_canva_subtitulo_en: 8-12 English words describing the key benefit\\n\\nReturn ONLY this JSON structure, no extra text:\\n{\"texto_canva_titulo_en\":\"...\",\"texto_canva_subtitulo_en\":\"...\",\"facebook_paragraphs\":[\"p1\",\"p2\",\"p3\",\"p4\"],\"facebook_hashtags\":\"#ISPM15 #WoodCrating ...\",\"instagram_lines\":[\"hook\",\"benefits\",\"cta\",\"\"],\"instagram_hashtags\":\"13 hashtags here\"}\") }}}]}],\"systemInstruction\":{\"parts\":[{\"text\":\"You are a professional social media copywriter for Crating Express, a wood packaging and industrial crating company in Miami, FL. You write natural, authentic English for B2B audiences. Always respond with valid JSON only.\"}]},\"generationConfig\":{\"temperature\":0.72,\"maxOutputTokens\":2000,\"responseMimeType\":\"application/json\"}}",
+        "options": {}
+      },
+      "id": "generar-versiones-en",
+      "name": "🌐 Generar Versiones en Inglés",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2768,
+        304
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-gemini-en",
+              "leftValue": "={{ $json.candidates?.length || 0 }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-gemini-ok-en",
+      "name": "🔀 ¿Gemini OK? (EN)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2928,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer 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"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  model: 'llama-3.3-70b-versatile',\n  messages: [\n    { role: 'system', content: 'You are a professional social media copywriter for Crating Express, a custom wood crating company in Miami FL. Write authentic English for B2B audiences. Always respond with valid JSON only.' },\n    { role: 'user', content: [\n      'Based on this weekly theme and Spanish content, write English social media posts for Crating Express (wood packaging, Miami FL). Write natural English, do NOT translate literally.',\n      '',\n      'Weekly Theme: ' + ($('🔍 Parsear Post Español').item.json.tema_texto || ''),\n      'Theme Description: ' + ($('🔍 Parsear Post Español').item.json.tema_descripcion || ''),\n      'Keywords: ' + ($('🔍 Parsear Post Español').item.json.keyword_principal || ''),\n      '',\n      'Spanish reference:',\n      '- Hook: ' + ($('🔍 Parsear Post Español').item.json.hook_es || ''),\n      '- Message: ' + ($('🔍 Parsear Post Español').item.json.mensaje_es || ''),\n      '- CTA: ' + ($('🔍 Parsear Post Español').item.json.cta_es || ''),\n      '',\n      'FACEBOOK: 4 paragraphs, max 320 words, B2B tone. Paragraph 4 must end with wa.me/17863948380 and cratingexpress.com/request-a-quote/. facebook_hashtags: exactly 5, #ISPM15 mandatory + 4 from #WoodCrating #CustomCrating #MiamiLogistics #IndustrialPackaging #FreightProtection #ShippingExperts #WoodPackaging #ExportCrating.',\n      '',\n      'INSTAGRAM: instagram_lines[0]=hook with 1-2 emojis, instagram_lines[1]=2-3 benefits including ISPM-15 or 48hr turnaround, instagram_lines[2]=CTA WhatsApp +1 786-394-8380 or link in bio, instagram_lines[3]=empty string. instagram_hashtags: exactly 13 from #ISPM15 #packaging #logistics #miami #woodpackaging #customcrating #industrialpackaging #woodencrates #freightprotection #woodcrating #exportcrating #cratingexpress #miamilogistics #exportpackaging.',\n      '',\n      'SLIDES: texto_canva_titulo_en=4-6 impactful words, texto_canva_subtitulo_en=8-12 words describing key benefit.',\n      '',\n      'Return ONLY this JSON: {\"texto_canva_titulo_en\":\"\",\"texto_canva_subtitulo_en\":\"\",\"facebook_paragraphs\":[\"p1\",\"p2\",\"p3\",\"p4\"],\"facebook_hashtags\":\"\",\"instagram_lines\":[\"hook\",\"benefits\",\"cta\",\"\"],\"instagram_hashtags\":\"\"}'\n    ].join('\\n') }\n  ],\n  temperature: 0.72,\n  max_tokens: 2000,\n  response_format: { type: 'json_object' }\n} }}",
+        "options": {}
+      },
+      "id": "grok-versiones-en",
+      "name": "🌐 Groq: Versiones Inglés (Fallback)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3056,
+        576
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResponse = $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text\n  || $input.item.json.choices?.[0]?.message?.content || '{}';\n\nlet versiones;\ntry { versiones = JSON.parse(aiResponse); }\ncatch(e) {\n  const m = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  versiones = m ? JSON.parse(m[0]) : {};\n}\n\nconst prevData = $('🔍 Parsear Post Español').item.json;\n\n// ── Array → paragraph string ───────────────────────────────────────────────\nfunction fromArray(arr) {\n  if (Array.isArray(arr) && arr.length > 0)\n    return arr.map(p => p.trim()).filter(p => p.length > 0).join('\\n\\n');\n  return null;\n}\n\n// ── Smart split for plain text ─────────────────────────────────────────────\nfunction smartSplit(text, spp) {\n  if (!text) return '';\n  text = text.trim();\n  const hashIdx = text.search(/(^|\\s)#\\w/);\n  let body = hashIdx > 0 ? text.slice(0, hashIdx).trim() : text;\n  const tags = hashIdx > 0 ? text.slice(hashIdx).trim() : '';\n  const sentences = body.match(/[^.!?]+[.!?]+/g) || [body];\n  const paragraphs = [];\n  for (let i = 0; i < sentences.length; i += spp) {\n    const chunk = sentences.slice(i, i + spp).join(' ').trim();\n    if (chunk) paragraphs.push(chunk);\n  }\n  if (tags) paragraphs.push(tags);\n  return paragraphs.join('\\n\\n');\n}\n\n// ── Instagram split ─────────────────────────────────────────────────────────\nfunction splitInstagram(arr, text) {\n  const joined = fromArray(arr);\n  if (joined) return joined;\n  if (!text) return '';\n  text = text.trim();\n  const hashIdx = text.search(/(^|\\s)#\\w/);\n  const tags = hashIdx > 0 ? text.slice(hashIdx).trim() : '';\n  const body = hashIdx > 0 ? text.slice(0, hashIdx).trim() : text;\n  const lines = body.split(/\\s{2,}|\\n/).map(l => l.trim()).filter(l => l);\n  const ctaIdx = lines.findIndex(l => /cratingexpress|free|visit|request|link in bio/i.test(l));\n  let parts = [];\n  if (ctaIdx > 0) {\n    parts.push(lines.slice(0, ctaIdx).join(' '));\n    parts.push(lines.slice(ctaIdx).join(' '));\n  } else {\n    const mid = Math.ceil(lines.length / 2);\n    parts.push(lines.slice(0, mid).join(' '));\n    if (lines.slice(mid).length) parts.push(lines.slice(mid).join(' '));\n  }\n  if (tags) parts.push(tags);\n  return parts.filter(p => p).join('\\n\\n');\n}\n\n// ── Hashtag enforcement ────────────────────────────────────────────────────\nfunction enforceHashtags(raw, count, required, pool) {\n  const found = (raw || '').match(/#[A-Za-z0-9_]+/g) || [];\n  const seen = new Set();\n  const final = [];\n  required.forEach(function(h) { if (!seen.has(h)) { seen.add(h); final.push(h); } });\n  found.forEach(function(h)    { if (!seen.has(h) && final.length < count) { seen.add(h); final.push(h); } });\n  for (let i = 0; i < pool.length && final.length < count; i++) {\n    if (!seen.has(pool[i])) { seen.add(pool[i]); final.push(pool[i]); }\n  }\n  return final.slice(0, count).join(' ');\n}\n\nconst FB_POOL = ['#WoodCrating','#CustomCrating','#MiamiLogistics','#IndustrialPackaging',\n  '#FreightProtection','#ShippingExperts','#WoodPackaging','#ExportCrating'];\nconst IG_POOL = ['#packaging','#logistics','#shipping','#manufacturing','#miami',\n  '#woodpackaging','#customcrating','#industrialpackaging','#woodencrates','#freightprotection',\n  '#woodcrating','#exportcrating','#cratingexpress','#miamilogistics','#exportpackaging'];\n\nconst fbHashtags = enforceHashtags(versiones.facebook_hashtags, 5, ['#ISPM15'], FB_POOL);\nconst igHashtags = enforceHashtags(versiones.instagram_hashtags, 13, ['#ISPM15'], IG_POOL);\n\nconst fbBody = fromArray(versiones.facebook_paragraphs) || smartSplit(versiones.facebook, 2) || '';\nconst igBody = splitInstagram(versiones.instagram_lines, versiones.instagram) || '';\n\nconst fbClean = fbBody.replace(/#[A-Za-z0-9_]+/g, '').replace(/\\n{3,}/g, '\\n\\n').trim();\nconst igClean = igBody.replace(/#[A-Za-z0-9_]+/g, '').replace(/\\n{3,}/g, '\\n\\n').trim();\n\n// ── UTM Tracking ─────────────────────────────────────────────────────────────\nfunction addUtm(text, source, medium, campaign) {\n  if (!text) return text;\n  return text.replace(\n    /https?:\\/\\/(www\\.)?cratingexpress\\.com(\\/[^\\s\"'<>\\)]*)?/g,\n    function(match) {\n      if (match.includes('utm_source')) return match;\n      const sep = match.includes('?') ? '&' : '?';\n      return match + sep + 'utm_source=' + source +\n             '&utm_medium=' + medium + '&utm_campaign=' + campaign;\n    }\n  );\n}\n\nreturn [{\n  json: {\n    ...prevData,\n    texto_canva_titulo_en:    versiones.texto_canva_titulo_en    || prevData.texto_canva_titulo   || '',\n    texto_canva_subtitulo_en: versiones.texto_canva_subtitulo_en || prevData.texto_canva_subtitulo || '',\n    post_facebook_en:  addUtm(fbClean + '\\n\\n' + fbHashtags, 'facebook',  'social', 'rrss-automation'),\n    post_instagram_en: addUtm(igClean + '\\n\\n' + igHashtags, 'instagram', 'social', 'rrss-automation'),\n  }\n}];"
+      },
+      "id": "parsear-versiones-en",
+      "name": "🔍 Parsear Versiones Inglés",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3168,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/agent/rrss/posts' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  \"company_id\": $('⚙️ Config Growth54').item.json.G54_COMPANY_ID,\n  \"posts\": [{\n    \"tema\": $json.tema_texto || $json.topic || '',\n    \"platform\": $json.tema_plataforma || 'all',\n    \"social_idea_id\": $json.tema_id || null,\n    \"copy_instagram\": $json.post_instagram_en || $json.contenido_instagram || '',\n    \"copy_facebook\": $json.post_facebook_en || $json.contenido_facebook || '',\n    \"copy_linkedin\": $json.post_linkedin_en || $json.contenido_linkedin || '',\n    \"hooks\": [$json.hook_es || '', $json.hook_en || ''].filter(Boolean),\n    \"cta\": $json.cta_es || $json.cta || '',\n    \"imagen_prompt\": $json.texto_canva_titulo || '',\n    \"intencion_busqueda\": $json.intencion_busqueda || '',\n    \"keywords_secundarias\": $json.keywords_secundarias || [],\n    \"respuesta_aeo\": $json.respuesta_aeo || '',\n    \"geo_menciones\": $json.geo_menciones || 'Miami, South Florida'\n  }]\n}) }}",
+        "options": {}
+      },
+      "id": "crear-registro-airtable",
+      "name": "💾 Crear Registro en G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3312,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/rrss/ideas/' + $('🔍 Parsear Versiones Inglés').item.json.tema_id + '/status' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"status\": \"procesando\"}",
+        "options": {}
+      },
+      "id": "actualizar-tema-en-proceso",
+      "name": "🔄 Tema → En Proceso",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3488,
+        304
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": []
+        },
+        "options": {}
+      },
+      "id": "actualizar-urls-airtable",
+      "name": "🔗 [Skip] Actualizar URLs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        5904,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('📊 Obtener Perfil Empresa').item.json.data.emails[0] }}",
+        "subject": "=[REVISIÓN RRSS] Post Semana {{ $('🔍 Parsear Versiones Inglés').item.json.tema_semana }} – {{ $('🔍 Parsear Versiones Inglés').item.json.tema_texto }}",
+        "message": "=<!DOCTYPE html>\n<html>\n<body style='font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 20px; color: #333;'>\n\n<div style='background: #1a1a2e; color: white; padding: 20px; border-radius: 8px 8px 0 0;'>\n  <h1 style='margin: 0; font-size: 22px;'>📱 Revisión de Post RRSS</h1>\n  <p style='margin: 5px 0 0; opacity: 0.8;'>Semana {{ $('🔍 Parsear Versiones Inglés').item.json.tema_semana }} — {{ $('🔍 Parsear Versiones Inglés').item.json.fecha_post }}</p>\n</div>\n\n<div style='border: 1px solid #ddd; padding: 20px; border-top: none;'>\n  <h2 style='color: #1a1a2e;'>📌 Tema: {{ $('🔍 Parsear Versiones Inglés').item.json.tema_texto }}</h2>\n\n  <div style='background: #f8f9fa; border-left: 4px solid #6c63ff; padding: 15px; margin: 15px 0; border-radius: 4px;'>\n    <h3 style='margin-top: 0; color: #6c63ff;'>🇪🇸 Post Base (Español)</h3>\n    <p><strong>Hook:</strong> {{ $('🔍 Parsear Versiones Inglés').item.json.hook_es }}</p>\n    <p><strong>Mensaje:</strong> {{ $('🔍 Parsear Versiones Inglés').item.json.mensaje_es }}</p>\n    <p><strong>CTA:</strong> {{ $('🔍 Parsear Versiones Inglés').item.json.cta_es }}</p>\n    <p><strong>Hashtags:</strong> {{ $('🔍 Parsear Versiones Inglés').item.json.hashtags }}</p>\n  </div>\n\n  <div style='background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 15px 0; border-radius: 4px;'>\n    <h3 style='margin-top: 0; color: #856404;'>📘 Facebook (English)</h3>\n    <p>{{ $('🔍 Parsear Versiones Inglés').item.json.post_facebook_en.replace(/\\n\\n/g, '<br><br>').replace(/\\n/g, '<br>') }}</p>\n  </div>\n\n  <div style='background: #fce4ec; border-left: 4px solid #e91e63; padding: 15px; margin: 15px 0; border-radius: 4px;'>\n    <h3 style='margin-top: 0; color: #880e4f;'>📸 Instagram (English)</h3>\n    <p>{{ $('🔍 Parsear Versiones Inglés').item.json.post_instagram_en.replace(/\\n\\n/g, '<br><br>').replace(/\\n/g, '<br>') }}</p>\n  </div>\n\n  <div style='background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 15px; margin: 15px 0; border-radius: 4px;'>\n    <h3 style='margin-top: 0; color: #2e7d32;'>🖼️ Imagen del Post (Google Slides)</h3>\n    <p><strong>Título:</strong> {{ $('🔍 Parsear Versiones Inglés').item.json.texto_canva_titulo }}</p>\n    <p><strong>Subtítulo:</strong> {{ $('🔍 Parsear Versiones Inglés').item.json.texto_canva_subtitulo }}</p>\n    <div style='text-align:center; margin: 15px 0;'>\n      <img src='{{ $(\"🖼️ Slides: Obtener Thumbnail\").item.json.contentUrl }}' style='max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);' />\n    </div>\n    <p style='text-align:center;'><a href='{{ $(\"📁 Subir a Google Drive\").item.json.webViewLink }}' style='color:#2e7d32;'>📁 Ver en Google Drive</a></p>\n  </div>\n\n  <hr style='border: none; border-top: 2px solid #eee; margin: 30px 0;'>\n\n  <div style='text-align: center; padding: 10px 0;'>\n    <h3 style='color: #1a1a2e; margin-bottom: 8px;'>¿En qué plataformas publicar?</h3>\n    <p style='color: #666; font-size: 13px; margin: 0 0 18px;'>Elige las plataformas y haz clic para aprobar:</p>\n\n    <a href='{{ 'https://n8n.mdarthurdigital.com/webhook/aprobar-post?recordId=' + ($('💾 Crear Registro en G54').item.json.data?.posts?.[0]?.id || $('💾 Crear Registro en G54').item.json.id || '') + '&temaId=' + $('🔍 Parsear Versiones Inglés').item.json.tema_id + '&imageUrl=' + encodeURIComponent('https://docs.google.com/presentation/d/' + $('📋 Slides: Copiar Template').item.json.id + '/export/png?id=' + $('📋 Slides: Copiar Template').item.json.id + '&pageid=p1') + '&facebook=true&instagram=true&action=aprobar' }}'\n       style='display:inline-block;border-radius:6px;text-decoration:none;font-size:15px;font-weight:bold;padding:12px 22px;margin:6px;background:#28a745;color:white;'>\n      ✅ Todas (FB + IG)\n    </a><br>\n\n    <a href='{{ 'https://n8n.mdarthurdigital.com/webhook/aprobar-post?recordId=' + ($('💾 Crear Registro en G54').item.json.data?.posts?.[0]?.id || $('💾 Crear Registro en G54').item.json.id || '') + '&temaId=' + $('🔍 Parsear Versiones Inglés').item.json.tema_id + '&imageUrl=' + encodeURIComponent('https://docs.google.com/presentation/d/' + $('📋 Slides: Copiar Template').item.json.id + '/export/png?id=' + $('📋 Slides: Copiar Template').item.json.id + '&pageid=p1') + '&facebook=true&instagram=false&action=aprobar' }}'\n       style='display:inline-block;border-radius:6px;text-decoration:none;font-size:15px;font-weight:bold;padding:12px 22px;margin:6px;background:#1877F2;color:white;'>\n      📘 Solo Facebook\n    </a>\n\n    <a href='{{ 'https://n8n.mdarthurdigital.com/webhook/aprobar-post?recordId=' + ($('💾 Crear Registro en G54').item.json.data?.posts?.[0]?.id || $('💾 Crear Registro en G54').item.json.id || '') + '&temaId=' + $('🔍 Parsear Versiones Inglés').item.json.tema_id + '&imageUrl=' + encodeURIComponent('https://docs.google.com/presentation/d/' + $('📋 Slides: Copiar Template').item.json.id + '/export/png?id=' + $('📋 Slides: Copiar Template').item.json.id + '&pageid=p1') + '&facebook=false&instagram=true&action=aprobar' }}'\n       style='display:inline-block;border-radius:6px;text-decoration:none;font-size:15px;font-weight:bold;padding:12px 22px;margin:6px;background:#E1306C;color:white;'>\n      📸 Solo Instagram\n    </a><br>\n\n    <a href='{{ 'https://n8n.mdarthurdigital.com/webhook/aprobar-post?recordId=' + ($('💾 Crear Registro en G54').item.json.data?.posts?.[0]?.id || $('💾 Crear Registro en G54').item.json.id || '') + '&temaId=' + $('🔍 Parsear Versiones Inglés').item.json.tema_id + '&action=rechazar' }}'\n       style='display:inline-block;border-radius:6px;text-decoration:none;font-size:15px;font-weight:bold;padding:12px 22px;margin:6px;background:#dc3545;color:white;margin-top:14px;'>\n      ❌ RECHAZAR\n    </a>\n  </div>\n\n  <p style='text-align: center; margin-top: 20px; color: #666; font-size: 12px;'>Ver registro completo en <a href='https://airtable.com/appUOYi54iBfaDcLn/tbl3ThftAg1Q36roD'>Airtable → Contenidos Crating Express</a></p>\n</div>\n\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "enviar-email-aprobacion",
+      "name": "📧 Email de Aprobación",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        6816,
+        320
+      ],
+      "webhookId": "4a2aabc9-3425-49fe-9e7a-5a2adfb20e78",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TESHSjzjMCpCxBBk",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": []
+        },
+        "options": {}
+      },
+      "id": "marcar-email-enviado",
+      "name": "✉️ [Skip] Marcar Email",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7104,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.contentUrl }}",
+        "options": {}
+      },
+      "id": "descargar-imagen-png",
+      "name": "⬇️ Descargar Imagen PNG",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5472,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "name": "={{ 'post_semana_' + $('🔍 Parsear Versiones Inglés').item.json.tema_semana + '.png' }}",
+        "driveId": {
+          "__rl": true,
+          "value": "MyDrive",
+          "mode": "list",
+          "cachedResultName": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "10A-FlyJeHtO6Fi50o3uzabr9LseqIH1f",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "subir-google-drive",
+      "name": "📁 Subir a Google Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        5680,
+        304
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "5UKwJtdnQeutQ6mg",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://cratingexpress.com/wp-json/wp/v2/media",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "search",
+              "value": "={{ $('🔍 Parsear Versiones Inglés').item.json.keyword_principal || $('🔍 Parsear Versiones Inglés').item.json.texto_canva_titulo || 'embalaje' }}"
+            },
+            {
+              "name": "per_page",
+              "value": "5"
+            },
+            {
+              "name": "media_type",
+              "value": "image"
+            },
+            {
+              "name": "_fields",
+              "value": "id,source_url,alt_text,title"
+            },
+            {
+              "name": "mime_type",
+              "value": "image/jpeg,image/png"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "wp-buscar-imagen",
+      "name": "🔎 WP: Buscar Imagen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        3696,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/drive/v3/files/134-ojOjBOKq0tNSqJL7paOdslEcwHeURYbvfVoQSTYk/copy",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"name\": {{ JSON.stringify('Post ' + $('🔍 Parsear Versiones Inglés').item.json.tema_semana + ' - ' + $('🔍 Parsear Versiones Inglés').item.json.tema_texto) }}}",
+        "options": {}
+      },
+      "id": "slides-copiar-template",
+      "name": "📋 Slides: Copiar Template",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4064,
+        304
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "7t2xPBRoZ9Zn8Xys",
+          "name": "SEARCH KEYWORDS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://slides.googleapis.com/v1/presentations/' + $('📋 Slides: Copiar Template').item.json.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "options": {}
+      },
+      "id": "slides-obtener-estructura",
+      "name": "📄 Slides: Obtener Estructura",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4464,
+        304
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "7t2xPBRoZ9Zn8Xys",
+          "name": "SEARCH KEYWORDS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const estructura = $input.first().json;\nconst parsear = $('🔍 Parsear Versiones Inglés').item.json;\nconst wpItem = $('🖼️ WP: Seleccionar Imagen').first().json;\nconst presentacionId = $('📋 Slides: Copiar Template').item.json.id;\n\nconst slideId = estructura.slides?.[0]?.objectId || 'p1';\nconst pageElements = estructura.slides?.[0]?.pageElements || [];\n\nconst wpImageUrl = wpItem?.source_url || null;\nconst titulo = parsear.texto_canva_titulo_en || parsear.texto_canva_titulo || 'Post Title';\n\n// TEXT requests\nconst textRequests = [\n  { replaceAllText: { containsText: { text: '[titulo_post]', matchCase: true }, replaceText: titulo } },\n  { replaceAllText: { containsText: { text: '[descripcion_post]', matchCase: true }, replaceText: parsear.texto_canva_subtitulo_en || parsear.texto_canva_subtitulo || 'Post description' } }\n];\n\nconst titleShape = pageElements.find(el =>\n  (el.shape?.text?.textElements || []).some(te => (te.textRun?.content || '').includes('[titulo_post]'))\n);\nif (titleShape) {\n  let fontSize = 52;\n  if (titulo.length > 15) fontSize = 40;\n  if (titulo.length > 22) fontSize = 32;\n  if (titulo.length > 30) fontSize = 26;\n  textRequests.push({\n    updateTextStyle: {\n      objectId: titleShape.objectId,\n      textRange: { type: 'ALL' },\n      style: { fontSize: { magnitude: fontSize, unit: 'PT' } },\n      fields: 'fontSize'\n    }\n  });\n}\n\n// IMAGE: use replaceImage on the existing image element in the template\nlet imageRequest = null;\nif (wpImageUrl) {\n  const imageElement = pageElements.find(el => el.image !== undefined);\n  if (imageElement) {\n    imageRequest = {\n      requests: [{\n        replaceImage: {\n          imageObjectId: imageElement.objectId,\n          url: wpImageUrl,\n          imageReplaceMethod: 'CENTER_CROP'\n        }\n      }]\n    };\n  }\n}\n\nreturn [{ json: { presentacionId, textRequests, imageRequest, wpImageUrl, titulo, subtitulo: parsear.texto_canva_subtitulo } }];\n"
+      },
+      "id": "slides-preparar-reemplazo",
+      "name": "🔧 Slides: Preparar Reemplazo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4704,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://slides.googleapis.com/v1/presentations/' + $('📋 Slides: Copiar Template').item.json.id + ':batchUpdate' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ requests: $json.textRequests }) }}",
+        "options": {}
+      },
+      "id": "slides-reemplazar-todo",
+      "name": "✏️ Slides: Reemplazar Todo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4864,
+        304
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "7t2xPBRoZ9Zn8Xys",
+          "name": "SEARCH KEYWORDS"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://slides.googleapis.com/v1/presentations/' + $('📋 Slides: Copiar Template').item.json.id + '/pages/p1/thumbnail?thumbnailProperties.thumbnailSize=LARGE' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "options": {}
+      },
+      "id": "slides-obtener-thumbnail",
+      "name": "🖼️ Slides: Obtener Thumbnail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5264,
+        304
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "7t2xPBRoZ9Zn8Xys",
+          "name": "SEARCH KEYWORDS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": []
+        },
+        "options": {}
+      },
+      "id": "guardar-resultados-airtable",
+      "name": "📊 [Skip] Guardar Resultados",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6352,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": []
+        },
+        "options": {}
+      },
+      "id": "preparar-airtable-json",
+      "name": "🛠️ [Skip] Preparar JSON",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6128,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": []
+        },
+        "options": {}
+      },
+      "id": "patch-preview-url",
+      "name": "📎 [Skip] Guardar URL Preview",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6544,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://slides.googleapis.com/v1/presentations/' + $('🔧 Slides: Preparar Reemplazo').item.json.presentacionId + ':batchUpdate' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('🔧 Slides: Preparar Reemplazo').item.json.imageRequest) }}",
+        "options": {}
+      },
+      "id": "slides-reemplazar-imagen",
+      "name": "🖼️ Slides: Reemplazar Imagen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        5056,
+        304
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "7t2xPBRoZ9Zn8Xys",
+          "name": "SEARCH KEYWORDS"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Seleccionar imagen de WordPress relevante al tema (alt texts en español)\nconst raw = $input.first().json;\nconst wpResults = Array.isArray(raw.body) ? raw.body : \n                  (typeof raw.body === 'string' ? JSON.parse(raw.body || '[]') : []);\n\nconst WP_BASE = 'https://cratingexpress.com/wp-json/wp/v2/media';\nconst FIELDS = 'id,source_url,alt_text,title,mime_type';\nconst MIME_FILTER = 'image/jpeg,image/png';\nconst ALLOWED_MIME = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp'];\nconst LOGO_KEYWORDS = ['logo', 'brand', 'icon', 'badge', 'seal', 'stamp', 'cert', 'award', 'photoroom', 'fondo'];\n\n// Usar hook_es y titulo — son específicos del post y en español (como los alt texts)\nconst parsear = $('🔍 Parsear Versiones Inglés').item.json;\nconst hookEs = parsear.hook_es || '';\nconst titulo = parsear.texto_canva_titulo || '';\nconst subtitulo = parsear.texto_canva_subtitulo || '';\n\n// Extraer palabras clave en español del tema actual\nconst allText = (hookEs + ' ' + titulo + ' ' + subtitulo).toLowerCase();\nconst stopWords = ['para','como','con','que','los','las','del','una','por','sus','nos','nuestro','tus','este','esta','son','han','más'];\nconst themeWords = allText\n  .replace(/[^a-záéíóúñü0-9 ]/g, ' ')\n  .split(/\\s+/)\n  .filter(w => w.length > 3 && !stopWords.includes(w))\n  .slice(0, 6);\n\nconsole.log('Theme keywords (ES):', themeWords);\nconsole.log('Hook:', hookEs, '| Título:', titulo);\n\nfunction isAllowed(item) {\n  const mime = (item.mime_type || '').toLowerCase();\n  const url = (item.source_url || '').toLowerCase();\n  if (!ALLOWED_MIME.some(m => mime.includes(m)) && url.endsWith('.webp')) return false;\n  return true;\n}\n\nfunction isLogo(item) {\n  const combined = [(item.source_url||''), (item.alt_text||''), (item.title?.rendered||'')].join(' ').toLowerCase();\n  return LOGO_KEYWORDS.some(kw => combined.includes(kw));\n}\n\nfunction scoreRelevance(item) {\n  const alt = (item.alt_text || item.title?.rendered || '').toLowerCase();\n  let score = 0;\n  for (const word of themeWords) {\n    if (alt.includes(word)) score += 3;\n  }\n  // Bonus por palabras del hook en español\n  const hookWords = hookEs.toLowerCase().split(/\\s+/).filter(w => w.length > 3);\n  for (const w of hookWords) {\n    if (alt.includes(w)) score += 5;\n  }\n  return score;\n}\n\nasync function searchImages(searchTerm) {\n  try {\n    const resp = await this.helpers.httpRequest({\n      method: 'GET',\n      url: `${WP_BASE}?search=${encodeURIComponent(searchTerm)}&per_page=20&media_type=image&mime_type=${MIME_FILTER}&_fields=${FIELDS}`,\n    });\n    return (Array.isArray(resp) ? resp : []).filter(isAllowed).filter(i => !isLogo(i));\n  } catch(e) { return []; }\n}\n\n// 1. Buscar con hook en español\nlet candidates = [];\nif (hookEs) {\n  candidates.push(...await searchImages.call(this, hookEs));\n}\n\n// 2. Buscar con las primeras 3 palabras del título\nconst tituloShort = titulo.split(' ').slice(0, 3).join(' ');\nif (tituloShort && tituloShort !== hookEs) {\n  const more = await searchImages.call(this, tituloShort);\n  const ids = new Set(candidates.map(c => c.id));\n  candidates.push(...more.filter(r => !ids.has(r.id)));\n}\n\n// 3. Si no hay resultados, buscar con palabras clave individuales\nif (candidates.length === 0) {\n  for (const word of themeWords.slice(0, 3)) {\n    const more = await searchImages.call(this, word);\n    const ids = new Set(candidates.map(c => c.id));\n    candidates.push(...more.filter(r => !ids.has(r.id)));\n    if (candidates.length >= 5) break;\n  }\n}\n\nconsole.log('Candidates:', candidates.length);\n\nif (candidates.length > 0) {\n  const scored = candidates.map(item => ({ item, score: scoreRelevance(item) }));\n  scored.sort((a, b) => b.score - a.score);\n  // Elegir aleatoriamente entre el top 5\n  const topN = Math.min(5, scored.length);\n  const idx = Math.floor(Math.random() * topN);\n  const chosen = scored[idx];\n  console.log('Chosen (score=' + chosen.score + '):', chosen.item.source_url);\n  console.log('Alt:', chosen.item.alt_text);\n  return [{ json: { source_url: chosen.item.source_url, alt_text: chosen.item.alt_text || '' } }];\n}\n\n// Fallback: últimas 20 imágenes sin logos, aleatorio\ntry {\n  const latest = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `${WP_BASE}?per_page=20&media_type=image&mime_type=${MIME_FILTER}&_fields=${FIELDS}`,\n  });\n  const items = (Array.isArray(latest) ? latest : []).filter(isAllowed).filter(i => !isLogo(i));\n  if (items.length > 0) {\n    const idx = Math.floor(Math.random() * Math.min(10, items.length));\n    return [{ json: { source_url: items[idx].source_url, alt_text: '' } }];\n  }\n} catch(e) {}\n\nreturn [{ json: { \n  source_url: 'https://cratingexpress.com/wp-content/uploads/2024/08/CE_2_EN-scaled.jpg',\n  alt_text: 'Crating Express wooden packaging'\n} }];\n"
+      },
+      "id": "wp-seleccionar-imagen",
+      "name": "🖼️ WP: Seleccionar Imagen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3888,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://www.googleapis.com/drive/v3/files/' + $('📋 Slides: Copiar Template').item.json.id + '/permissions' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"role\": \"reader\", \"type\": \"anyone\"}",
+        "options": {}
+      },
+      "id": "share-slides-451479c1",
+      "name": "📢 Slides: Compartir Público",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4288,
+        304
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "7t2xPBRoZ9Zn8Xys",
+          "name": "SEARCH KEYWORDS"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "path": "aprobar-post",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "wh-apr",
+      "name": "🔔 Webhook: Aprobar Post",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        704
+      ],
+      "webhookId": "aprobar-post-rrss"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.query.action }}",
+              "rightValue": "aprobar",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-apr",
+      "name": "🔀 ¿Aprobar o Rechazar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        464,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize G54 post data to match downstream node expectations\n// The approval webhook carries recordId = G54 post ID\nconst recordId = $('🔔 Webhook: Aprobar Post').item.json.query.recordId;\n\n// Try to get post content from the generation flow via static data\n// Since this is a separate execution, we use the data passed through webhook query params\n// The email approval buttons already carry all needed info in query params\n\n// Build normalized fields from query params or fallback\nconst query = $('🔔 Webhook: Aprobar Post').item.json.query || {};\n\nreturn [{\n  json: {\n    id: recordId || '',\n    fields: {\n      Post_Facebook_EN: query.fb_copy || '',\n      Post_Instagram_EN: query.ig_copy || '',\n      tema: query.tema || '',\n      g54_post_id: recordId || ''\n    }\n  }\n}];\n"
+      },
+      "id": "at-get",
+      "name": "📋 Obtener Contenido G54",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        592
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hook.eu1.make.com/bwpl4etk96ofj7hm1sz6ce6bvr4rb2rm",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"post_facebook_en\": {{ JSON.stringify($json.fields.Post_Facebook_EN) }},\n  \"post_instagram_en\": {{ JSON.stringify($json.fields.Post_Instagram_EN) }},\n  \"image_url\": {{ JSON.stringify($('🔔 Webhook: Aprobar Post').item.json.query.imageUrl) }},\n  \"publish_facebook\": {{ JSON.stringify($('🔔 Webhook: Aprobar Post').item.json.query.facebook || 'true') }},\n  \"publish_instagram\": {{ JSON.stringify($('🔔 Webhook: Aprobar Post').item.json.query.instagram || 'true') }}\n}",
+        "options": {}
+      },
+      "id": "mk-apr",
+      "name": "📣 Publicar en Redes (Make.com)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        912,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/rrss/posts/' + $('🔔 Webhook: Aprobar Post').item.json.query.recordId + '/status' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"status\": \"publicado\"}",
+        "options": {}
+      },
+      "id": "at-pub",
+      "name": "✅ Estado: Publicado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        592
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/rrss/ideas/' + $('🔔 Webhook: Aprobar Post').item.json.query.temaId + '/status' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"status\": \"completado\"}",
+        "options": {}
+      },
+      "id": "at-tema",
+      "name": "🏁 Tema → Completado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        592
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/rrss/posts/' + $('🔔 Webhook: Aprobar Post').item.json.query.recordId + '/status' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"status\": \"rechazado\"}",
+        "options": {}
+      },
+      "id": "at-rej",
+      "name": "❌ Estado: Rechazado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        688,
+        832
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<!DOCTYPE html>\n<html>\n<head><meta charset=\"utf-8\"><title>Post Aprobado</title>\n<style>body{font-family:Arial,sans-serif;background:#f0f4f8;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}\n.card{background:white;padding:48px 56px;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1);text-align:center;max-width:420px}\nh2{color:#22c55e;font-size:28px;margin:0 0 12px} p{color:#555;font-size:16px;margin:0}\n.icon{font-size:56px;margin-bottom:16px}</style></head>\n<body><div class=\"card\">\n<div class=\"icon\">✅</div>\n<h2>Post Aprobado</h2>\n<p>El post fue publicado exitosamente en <strong>Instagram</strong> y <strong>Facebook</strong>.</p>\n</div></body></html>",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "resp-apr",
+      "name": "✅ Responder: Aprobado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        688
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<!DOCTYPE html>\n<html>\n<head><meta charset=\"utf-8\"><title>Post Rechazado</title>\n<style>body{font-family:Arial,sans-serif;background:#f0f4f8;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}\n.card{background:white;padding:48px 56px;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1);text-align:center;max-width:420px}\nh2{color:#ef4444;font-size:28px;margin:0 0 12px} p{color:#555;font-size:16px;margin:0}\n.icon{font-size:56px;margin-bottom:16px}</style></head>\n<body><div class=\"card\">\n<div class=\"icon\">❌</div>\n<h2>Post Rechazado</h2>\n<p>El post fue marcado como rechazado y <strong>no será publicado</strong>.</p>\n</div></body></html>",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "resp-rej",
+      "name": "❌ Responder: Rechazado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        832
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('📊 Obtener Perfil Empresa').item.json.data.emails[0] }}",
+        "subject": "=RRSS Publicado — {{ $json.tema || \"Post\" }} | {{ new Date().toLocaleDateString(\"es-US\") }}",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;color:#333;\"><div style=\"background:#305468;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0;\"><strong>Growth54 — Reporte Automático</strong></div><div style=\"padding:16px 20px;border:1px solid #ddd;border-top:none;border-radius:0 0 6px 6px;\"><p><strong>Workflow:</strong> RRSS Automation — Crating Express</p><p><strong>Fecha:</strong> {{new Date().toLocaleString(\"es-US\",{timeZone:\"America/New_York\"})}}</p><p><strong>Estado:</strong> ✅ Completado</p><hr style=\"border:none;border-top:1px solid #eee;margin:12px 0;\"><p><strong>Tema publicado:</strong> {{ $json.tema || \"N/A\" }}</p><p><strong>Plataformas:</strong> Según configuración Make.com</p><p><strong>Slide generado:</strong> ✅</p><p><strong>Registro en Airtable:</strong> ✅</p></div></div>",
+        "options": {
+          "senderName": "Growth54"
+        }
+      },
+      "id": "aad7ea15-82f9-4bf5-8c6a-3c0a6a183048",
+      "name": "📊 Reporte Growth54",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1728,
+        544
+      ],
+      "webhookId": "00868cbf-155c-4193-a0ea-cd0ee75e827c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TESHSjzjMCpCxBBk",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "g54-base-url",
+              "name": "G54_BASE_URL",
+              "value": "https://apigrowth.mdarthurdigital.com",
+              "type": "string"
+            },
+            {
+              "id": "g54-n8n-token",
+              "name": "G54_N8N_TOKEN",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "g54-agent-token",
+              "name": "G54_AGENT_TOKEN",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "g54-company-id",
+              "name": "G54_COMPANY_ID",
+              "value": "1",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "config-g54",
+      "name": "⚙️ Config Growth54",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        704,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rrss-automation-g54",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-g54-rrss",
+      "name": "🔔 Webhook G54",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        80,
+        304
+      ],
+      "webhookId": "72f3bfda-c352-455b-8e4a-cccbcab00981"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\": true, \"workflow\": \"rrss_automation\", \"company_id\": \"={{ $json.company_id }}\", \"status\": \"iniciado\"}",
+        "options": {}
+      },
+      "id": "respond-g54-rrss",
+      "name": "📤 Responder Webhook G54",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        288,
+        144
+      ]
+    },
+    {
+      "id": "obtener-estrategia-g54",
+      "name": "🎯 Obtener Estrategia RRSS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        304
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID + '/rrss/estrategia' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "⏰ Trigger Semanal (Lunes 9am)": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config Growth54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Obtener Perfil Empresa": {
+      "main": [
+        [
+          {
+            "node": "📦 Obtener Servicios Activos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Obtener Servicios Activos": {
+      "main": [
+        [
+          {
+            "node": "📅 Obtener Próximo Tema Semanal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📅 Obtener Próximo Tema Semanal": {
+      "main": [
+        [
+          {
+            "node": "🔍 ¿Hay tema disponible?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 ¿Hay tema disponible?": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Contexto para IA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⚠️ Sin temas disponibles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Contexto para IA": {
+      "main": [
+        [
+          {
+            "node": "🤖 Generar Post en Español",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Generar Post en Español": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Gemini OK? (ES)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Gemini OK? (ES)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Post Español",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🤖 Groq: Post Español (Fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Groq: Post Español (Fallback)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Post Español",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Parsear Post Español": {
+      "main": [
+        [
+          {
+            "node": "🌐 Generar Versiones en Inglés",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 Generar Versiones en Inglés": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Gemini OK? (EN)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Gemini OK? (EN)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Versiones Inglés",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🌐 Groq: Versiones Inglés (Fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 Groq: Versiones Inglés (Fallback)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Versiones Inglés",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Parsear Versiones Inglés": {
+      "main": [
+        [
+          {
+            "node": "💾 Crear Registro en G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Tema → En Proceso": {
+      "main": [
+        [
+          {
+            "node": "🔎 WP: Buscar Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 [Skip] Actualizar URLs": {
+      "main": [
+        [
+          {
+            "node": "🛠️ [Skip] Preparar JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Email de Aprobación": {
+      "main": [
+        [
+          {
+            "node": "✉️ [Skip] Marcar Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✉️ [Skip] Marcar Email": {
+      "main": [
+        []
+      ]
+    },
+    "⬇️ Descargar Imagen PNG": {
+      "main": [
+        [
+          {
+            "node": "📁 Subir a Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📁 Subir a Google Drive": {
+      "main": [
+        [
+          {
+            "node": "🔗 [Skip] Actualizar URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔎 WP: Buscar Imagen": {
+      "main": [
+        [
+          {
+            "node": "🖼️ WP: Seleccionar Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Slides: Copiar Template": {
+      "main": [
+        [
+          {
+            "node": "📢 Slides: Compartir Público",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📄 Slides: Obtener Estructura": {
+      "main": [
+        [
+          {
+            "node": "🔧 Slides: Preparar Reemplazo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Slides: Preparar Reemplazo": {
+      "main": [
+        [
+          {
+            "node": "✏️ Slides: Reemplazar Todo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✏️ Slides: Reemplazar Todo": {
+      "main": [
+        [
+          {
+            "node": "🖼️ Slides: Reemplazar Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🖼️ Slides: Obtener Thumbnail": {
+      "main": [
+        [
+          {
+            "node": "⬇️ Descargar Imagen PNG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🛠️ [Skip] Preparar JSON": {
+      "main": [
+        [
+          {
+            "node": "📊 [Skip] Guardar Resultados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 [Skip] Guardar Resultados": {
+      "main": [
+        [
+          {
+            "node": "📎 [Skip] Guardar URL Preview",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🖼️ Slides: Reemplazar Imagen": {
+      "main": [
+        [
+          {
+            "node": "🖼️ Slides: Obtener Thumbnail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🖼️ WP: Seleccionar Imagen": {
+      "main": [
+        [
+          {
+            "node": "📋 Slides: Copiar Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📎 [Skip] Guardar URL Preview": {
+      "main": [
+        [
+          {
+            "node": "📧 Email de Aprobación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📢 Slides: Compartir Público": {
+      "main": [
+        [
+          {
+            "node": "📄 Slides: Obtener Estructura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📣 Publicar en Redes (Make.com)": {
+      "main": [
+        [
+          {
+            "node": "✅ Estado: Publicado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔔 Webhook: Aprobar Post": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Aprobar o Rechazar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Aprobar o Rechazar?": {
+      "main": [
+        [
+          {
+            "node": "📋 Obtener Contenido G54",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❌ Estado: Rechazado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Obtener Contenido G54": {
+      "main": [
+        [
+          {
+            "node": "📣 Publicar en Redes (Make.com)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Estado: Publicado": {
+      "main": [
+        [
+          {
+            "node": "🏁 Tema → Completado",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📊 Reporte Growth54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏁 Tema → Completado": {
+      "main": [
+        [
+          {
+            "node": "✅ Responder: Aprobado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❌ Estado: Rechazado": {
+      "main": [
+        [
+          {
+            "node": "❌ Responder: Rechazado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Crear Registro en G54": {
+      "main": [
+        [
+          {
+            "node": "🔄 Tema → En Proceso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔔 Webhook G54": {
+      "main": [
+        [
+          {
+            "node": "📤 Responder Webhook G54",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "⚙️ Config Growth54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ Ejecutar Manualmente": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config Growth54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Config Growth54": {
+      "main": [
+        [
+          {
+            "node": "🎯 Obtener Estrategia RRSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎯 Obtener Estrategia RRSS": {
+      "main": [
+        [
+          {
+            "node": "📊 Obtener Perfil Empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "CKOju9JVnSMymfKv",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:⏰ Trigger Semanal (Lunes 9am)": {
+      "recurrenceRules": []
+    },
+    "node:⏰ Trigger Jueves 9am": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": null,
+  "pinData": {},
+  "versionId": "90cf7c8f-b489-413c-b201-724351b79d5e",
+  "activeVersionId": null,
+  "versionCounter": 40,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-05-15T15:53:30.954Z",
+      "createdAt": "2026-05-15T15:53:30.954Z",
+      "role": "workflow:owner",
+      "workflowId": "wyO1f93A66imn9qw",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "updatedAt": "2026-03-16T19:58:01.773Z",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}
