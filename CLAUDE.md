@@ -23,7 +23,7 @@ SOCIAL MEDIA → TRAFFIC → WEBSITE → LEADS → SALES → RETARGETING (SEM)
 
 | Módulo | Nombre | Estado | Agentes IA |
 |---|---|---|---|
-| **1** | **Social Media (RRSS)** | ✅ v1.3 listo | Strategist, Content, Distribution, Community, Sales, Analytics |
+| **1** | **Social Media (RRSS)** | ✅ v1.3 listo | Strategist ✅, Content ✅, Distribution, Community, Sales, Analytics |
 | **2** | **SEO / AEO / GEO** | 🔜 Próximo | SEO Strategist, Content SEO, Technical SEO, Analytics SEO |
 | **3** | **SEM (Paid Ads)** | ⏳ Pendiente | Ads Strategist, Ads Creative, Campaign Manager, Ads Analytics |
 | **4** | **Web Development** | ⏳ Pendiente | UX/UI, Web Builder, Conversion Optimizer |
@@ -90,7 +90,7 @@ G54_COMPANY_ID = 1   (Crating Express)
 
 ### Agentes del módulo (a construir secuencialmente):
 1. ✅ **Content AI** — genera posts con framework 8 pasos SEO/AEO/GEO (hecho)
-2. 🔜 **Strategist AI** — define estrategia RRSS, llena `estrategia` en G54
+2. ✅ **Strategist AI** — define estrategia RRSS (9 pasos SEO/AEO/GEO), llena `estrategia` en G54. ID: `gPGiAG9dSlSwtbRp`. Archivo: `workflow-strategist-ai-g54.json`
 3. ⏳ **Distribution AI** — publica en plataformas
 4. ⏳ **Community AI** — responde comentarios/mensajes
 5. ⏳ **Sales AI** — identifica oportunidades de venta
