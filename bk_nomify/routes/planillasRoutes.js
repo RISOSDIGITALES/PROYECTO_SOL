@@ -34,6 +34,7 @@ router.get('/', requireAuth, async (req, res) => {
     const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
     const [rows] = await db.query(
       `SELECT p.id,
+        p.folio AS folio,
         DATE_FORMAT(p.periodo, '%Y-%m-%d') AS \`Período\`,
         p.tipo AS Tipo,
         p.estado AS Estado,
@@ -178,9 +179,17 @@ router.post('/calcular', requireAuth, async (req, res) => {
     totalDesc  = Math.round(totalDesc  * 100) / 100;
     totalNeto  = Math.round(totalNeto  * 100) / 100;
 
+    // Folio secuencial por empresa (o global si empresa_id es NULL)
+    // NULL-safe: empresa_id <=> ? permite comparar con NULL correctamente
+    const [[folioRow]] = await conn.query(
+      'SELECT COALESCE(MAX(folio), 0) + 1 AS next_folio FROM planillas WHERE empresa_id <=> ?',
+      [empresaId]
+    );
+    const nextFolio = folioRow.next_folio || 1;
+
     const [planillaResult] = await conn.query(
-      'INSERT INTO planillas (periodo, tipo, estado, total_bruto, total_deducciones, total_neto, empresa_id) VALUES (?,?,?,?,?,?,?)',
-      [periodo, tipo || '', 'Borrador', totalBruto, totalDesc, totalNeto, empresaId]
+      'INSERT INTO planillas (periodo, tipo, estado, total_bruto, total_deducciones, total_neto, empresa_id, folio) VALUES (?,?,?,?,?,?,?,?)',
+      [periodo, tipo || '', 'Borrador', totalBruto, totalDesc, totalNeto, empresaId, nextFolio]
     );
     const planillaId = planillaResult.insertId;
 

@@ -116,22 +116,17 @@
 
 <script src="/assets/js/auth.js"></script>
 <script>
+// Extraer params FUERA de onReady para que los event listeners los puedan usar
+const _p        = new URLSearchParams(window.location.search);
+const planillaId = _p.get('id')      || '';
+const periodo    = _p.get('periodo') || '';
+const tipo       = _p.get('tipo')    || '';
+const folio      = _p.get('folio')   || planillaId;
+
 onReady(['Master', 'Planillero'], () => {
   initLayout();
-  const params = new URLSearchParams(window.location.search);
-  const planillaId = params.get('id') || '';
-  const periodo    = params.get('periodo') || '';  // YYYY-MM-DD
-  const tipo       = params.get('tipo')    || '';
-  // Mostrar como DD/MM/YYYY en el título
-  function formatPeriodo(iso) {
-    if (!iso) return 'Detalle';
-    const [y, m, d] = iso.split('-').map(Number);
-    const meses = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
-    const diaInicio = d <= 15 ? 1 : 16;
-    return `Del ${diaInicio}-${d} de ${meses[m-1]} ${y}`;
-  }
-  document.getElementById('titulo-planilla').textContent = periodo ? formatPeriodo(periodo) : 'Detalle';
-  document.getElementById('sub-planilla').textContent = (tipo ? `Planilla ${tipo}` : 'Planilla') + (planillaId ? ` · #${planillaId}` : '');
+  document.getElementById('titulo-planilla').textContent = periodo ? fmtPeriodo(periodo) : 'Detalle';
+  document.getElementById('sub-planilla').textContent = (tipo ? `Planilla ${tipo}` : 'Planilla') + (folio ? ` · #${folio}` : '');
   loadDetalle(planillaId, periodo, tipo);
 });
 

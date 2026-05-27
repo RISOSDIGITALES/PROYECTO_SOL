@@ -238,30 +238,92 @@ async function _loadEmpresaSelector() {
       localStorage.setItem('planilla_empresa_id', currentId);
     }
 
-    const options = empresas.map(e =>
-      `<option value="${e.id}" ${String(e.id) === currentId ? 'selected' : ''}>${e.nombre}</option>`
-    ).join('');
+    const selectedNombre = (empresas.find(e => String(e.id) === currentId) || empresas[0]).nombre;
+
+    // Empleado: sólo texto estático, sin dropdown ni gestionar
+    if (info.rol === 'Empleado') {
+      const wrap = document.createElement('div');
+      wrap.id = 'empresa-selector-wrap';
+      wrap.style.cssText = 'padding:8px 16px 4px;border-bottom:1px solid var(--border);margin-bottom:4px';
+      wrap.innerHTML = `
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#95a5a6;margin-bottom:4px">Empresa</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);padding:4px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${selectedNombre}</div>`;
+      const logo = sidebar.querySelector('.sidebar-logo');
+      if (logo && logo.nextSibling) sidebar.insertBefore(wrap, logo.nextSibling);
+      else sidebar.appendChild(wrap);
+      return;
+    }
 
     const esMaster = info.rol === 'Master';
+
+    // ── Custom dropdown (100% CSS controlado, sin nativo del OS) ──────────────
     const wrap = document.createElement('div');
     wrap.id = 'empresa-selector-wrap';
     wrap.style.cssText = 'padding:8px 16px 4px;border-bottom:1px solid var(--border);margin-bottom:4px';
     wrap.innerHTML = `
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:4px">Empresa</div>
-      <select id="empresa-select" style="width:100%;background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:13px;cursor:pointer">
-        ${options}
-      </select>
-      ${esMaster ? `<button id="btn-gestionar-empresas" style="width:100%;margin-top:4px;background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;text-align:left;padding:2px 0">⚙ Gestionar empresas</button>` : ''}`;
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#95a5a6;margin-bottom:4px">Empresa</div>
+      <div id="empresa-custom-dd" style="position:relative;width:100%">
+        <div id="empresa-dd-trigger" style="
+          display:flex;justify-content:space-between;align-items:center;
+          background:#263447;border:1px solid #34495e;color:#ecf0f1;
+          border-radius:6px;padding:7px 10px;font-size:13px;cursor:pointer;
+          user-select:none;transition:border-color .15s;
+        ">
+          <span id="empresa-dd-text" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${selectedNombre}</span>
+          <span style="font-size:10px;margin-left:8px;opacity:.6;flex-shrink:0">▾</span>
+        </div>
+        <ul id="empresa-dd-list" style="
+          display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;
+          background:#1e2d3d;border:1px solid #34495e;border-radius:6px;
+          list-style:none;padding:4px 0;margin:0;z-index:1000;
+          box-shadow:0 8px 24px rgba(0,0,0,.55);max-height:220px;overflow-y:auto;
+        ">
+          ${empresas.map(e => `
+            <li data-value="${e.id}" style="
+              padding:8px 12px;font-size:13px;cursor:pointer;
+              color:${String(e.id) === currentId ? '#2ecc71' : '#ecf0f1'};
+              font-weight:${String(e.id) === currentId ? '600' : 'normal'};
+            ">${e.nombre}</li>
+          `).join('')}
+        </ul>
+      </div>
+      ${esMaster ? `<button id="btn-gestionar-empresas" style="width:100%;margin-top:4px;background:none;border:none;color:#95a5a6;font-size:11px;cursor:pointer;text-align:left;padding:2px 0">⚙ Gestionar empresas</button>` : ''}`;
 
     // Insertar justo después del .sidebar-logo
     const logo = sidebar.querySelector('.sidebar-logo');
     if (logo && logo.nextSibling) sidebar.insertBefore(wrap, logo.nextSibling);
     else sidebar.appendChild(wrap);
 
-    document.getElementById('empresa-select').addEventListener('change', (e) => {
-      localStorage.setItem('planilla_empresa_id', e.target.value);
-      window.location.reload();
+    const ddTrigger = document.getElementById('empresa-dd-trigger');
+    const ddList    = document.getElementById('empresa-dd-list');
+
+    // Hover en opciones
+    ddList.querySelectorAll('li').forEach(li => {
+      li.addEventListener('mouseenter', () => { li.style.background = 'rgba(255,255,255,.08)'; });
+      li.addEventListener('mouseleave', () => { li.style.background = 'transparent'; });
+      li.addEventListener('click', (e) => {
+        e.stopPropagation();
+        ddList.style.display = 'none';
+        ddTrigger.style.borderColor = '#34495e';
+        localStorage.setItem('planilla_empresa_id', li.dataset.value);
+        window.location.reload();
+      });
     });
+
+    // Abrir/cerrar al hacer clic en el trigger
+    ddTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = ddList.style.display !== 'none';
+      ddList.style.display = isOpen ? 'none' : 'block';
+      ddTrigger.style.borderColor = isOpen ? '#34495e' : '#2ecc71';
+    });
+
+    // Cerrar al hacer clic fuera
+    document.addEventListener('click', () => {
+      ddList.style.display = 'none';
+      ddTrigger.style.borderColor = '#34495e';
+    });
+    ddList.addEventListener('click', e => e.stopPropagation());
 
     if (esMaster) {
       document.getElementById('btn-gestionar-empresas')?.addEventListener('click', () => {
@@ -407,6 +469,18 @@ function fmt(n) {
   return 'C$ ' + Number(n || 0).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// Convierte YYYY-MM-DD → "1-15 de Mayo 2026" o "16-31 de Mayo 2026"
+function fmtPeriodo(isoDate) {
+  if (!isoDate) return '—';
+  const s = String(isoDate).substring(0, 10);
+  const [y, m, d] = s.split('-').map(Number);
+  if (!y || !m || !d) return s;
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                 'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const diaInicio = d <= 15 ? 1 : 16;
+  return `${diaInicio}-${d} de ${meses[m - 1]} ${y}`;
+}
+
 function showAlert(id, msg, type = 'success') {
   const el = document.getElementById(id);
   if (!el) return;
@@ -415,4 +489,4 @@ function showAlert(id, msg, type = 'success') {
   if (type === 'success') setTimeout(() => el.classList.remove('show'), 3500);
 }
 
-window.AppAuth = { onReady, requireAuth, requireAuthRole, initLayout, getToken, apiFetch, getMyInfo, isMaster, isAdmin, canEdit, fmt, showAlert };
+window.AppAuth = { onReady, requireAuth, requireAuthRole, initLayout, getToken, apiFetch, getMyInfo, isMaster, isAdmin, canEdit, fmt, fmtPeriodo, showAlert };

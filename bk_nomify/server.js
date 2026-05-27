@@ -25,6 +25,10 @@ const { requireAuth, requireAdmin } = require('./auth');
   await run("ALTER TABLE empleados  ADD COLUMN IF NOT EXISTS ir_fijo DECIMAL(12,2) DEFAULT NULL");
   await run("ALTER TABLE planillas  ADD COLUMN IF NOT EXISTS empresa_id INT DEFAULT NULL");
   await run("ALTER TABLE usuarios   ADD COLUMN IF NOT EXISTS empresas_acceso TEXT DEFAULT NULL");
+  // ── v1.3: folio secuencial por empresa ───────────────────────────────────
+  // Usar SHOW COLUMNS porque ADD COLUMN IF NOT EXISTS no está soportado en MySQL < 5.8
+  const [folioCol] = await db.query('SHOW COLUMNS FROM planillas LIKE "folio"').catch(() => [[]]);
+  if (folioCol.length === 0) await run("ALTER TABLE planillas ADD COLUMN folio INT DEFAULT NULL");
   console.log('[migrations] OK');
 })();
 
@@ -48,6 +52,7 @@ app.use('/api/detalle',   require('./routes/detalleRoutes'));
 app.use('/api/recibo',    require('./routes/reciboRoutes'));
 app.use('/api/usuarios',  require('./routes/usuariosRoutes'));
 app.use('/api/empresas',  require('./routes/empresasRoutes'));
+app.use('/api/reportes',  require('./routes/reportesRoutes'));
 
 // Todas las demás rutas devuelven el HTML correspondiente
 app.get('*', (req, res) => {

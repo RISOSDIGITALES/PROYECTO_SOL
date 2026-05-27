@@ -127,6 +127,63 @@
     }
     .leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
     .leg-dot  { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+    /* Encabezado visible solo al imprimir */
+    #cal-print-header { display: none; }
+
+    @media print {
+      .sidebar, .topbar, .cal-toolbar, .cal-legend, #modal-dia,
+      #btn-export-pdf { display: none !important; }
+
+      body  { background: #fff !important; color: #000 !important; }
+      .layout { display: block !important; }
+      .main { margin-left: 0 !important; padding: 0 !important; }
+      .content { padding: 8px 12px !important; }
+      .table-wrap { border: none !important; background: transparent !important;
+                    padding: 8px !important; box-shadow: none !important; }
+
+      #cal-print-header {
+        display: flex !important;
+        justify-content: space-between;
+        align-items: flex-end;
+        padding: 0 0 12px;
+        border-bottom: 2px solid #000;
+        margin-bottom: 10px;
+      }
+      #cal-print-mes  { font-size: 38px; font-weight: 900; color: #000; line-height: 1; }
+      #cal-print-anio { font-size: 38px; font-weight: 900; color: #000; line-height: 1; }
+      #cal-print-sub  { font-size: 12px; color: #555; margin-top: 3px; }
+
+      .cal-grid { gap: 2px !important; }
+      .cal-dow  { color: #000 !important; font-weight: 700 !important;
+                  border-bottom: 1px solid #bbb !important; }
+      .cal-cell {
+        background: #fff !important;
+        border: 1px solid #ccc !important;
+        border-radius: 6px !important;
+        min-height: 68px !important;
+      }
+      .cal-cell.vacio  { border: none !important; background: transparent !important; }
+      .cal-cell.hoy    { border: 2px solid #000 !important; }
+      .cal-cell.quincena { background: #f0faf4 !important; border-color: #9dd3b7 !important; }
+      .cal-cell.feriado  { background: #f5f0fa !important; border-color: #c4a8e4 !important; }
+      .cal-num { color: #000 !important; }
+      .cal-cell.hoy      .cal-num { color: #000 !important; font-weight: 900 !important; }
+      .cal-cell.quincena .cal-num { color: #166534 !important; }
+      .cal-cell.feriado  .cal-num { color: #5b21b6 !important; }
+      .cal-tag {
+        background: rgba(0,0,0,.08) !important;
+        color: #222 !important;
+        font-size: 8px !important;
+      }
+      .tag-quincena { background: rgba(22,101,52,.14)  !important; color: #166534 !important; }
+      .tag-feriado  { background: rgba(91,33,182,.14)  !important; color: #5b21b6 !important; }
+      .tag-adelanto { background: rgba(185,28,28,.14)  !important; color: #b91c1c !important; }
+      .tag-extra    { background: rgba(161,98,7,.14)   !important; color: #a16207 !important; }
+      .tag-vac-0, .tag-vac-1, .tag-vac-2, .tag-vac-3, .tag-vac-4 {
+        background: rgba(29,78,216,.14) !important; color: #1d4ed8 !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -154,8 +211,22 @@
   <div class="main">
     <div class="topbar">
       <div><h1>Calendario</h1><span class="sub">Todos los movimientos de planilla</span></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 Imprimir</button>
+        <button class="btn btn-ghost btn-sm" id="btn-export-pdf">📥 Descargar PDF</button>
+        <button class="btn btn-ghost btn-sm" id="btn-email-cal">📧 Enviar</button>
+      </div>
     </div>
     <div class="content">
+
+      <!-- Solo visible al imprimir -->
+      <div id="cal-print-header">
+        <div>
+          <div id="cal-print-mes"></div>
+          <div id="cal-print-sub" style="font-size:12px;color:#555;margin-top:3px">Nomify · Sistema de planilla</div>
+        </div>
+        <div id="cal-print-anio"></div>
+      </div>
 
       <div class="cal-toolbar">
         <div class="cal-mes">
@@ -180,6 +251,7 @@
           <div style="grid-column:1/-1;text-align:center;padding:40px"><div class="spinner"></div></div>
         </div>
         <div class="cal-legend" id="cal-legend"></div>
+        <div id="cal-eventos-lista"></div>
       </div>
 
     </div>
@@ -196,6 +268,27 @@
     <div class="modal-body" id="modal-dia-body" style="max-height:420px;overflow-y:auto"></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" id="cancel-modal-dia">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal enviar calendario por correo -->
+<div class="overlay" id="modal-email-cal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>📧 Enviar calendario por correo</h3>
+      <button class="modal-close" id="close-email-cal">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-email-cal" class="alert"></div>
+      <p style="margin:0 0 14px;font-size:13px;color:var(--text-muted)">Se generará un PDF del calendario del mes actual y se enviará al correo indicado.</p>
+      <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:6px">Correo destinatario *</label>
+      <input type="email" id="inp-email-cal" placeholder="ejemplo@correo.com"
+        style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-email-cal">Cancelar</button>
+      <button class="btn btn-primary" id="send-email-cal">Enviar PDF</button>
     </div>
   </div>
 </div>
@@ -371,6 +464,11 @@ function renderCal() {
   const showExt  = document.getElementById('chk-extras').checked;
 
   document.getElementById('cal-titulo').textContent = `${MESES[viewMonth]} ${viewYear}`;
+  // Actualizar encabezado para impresión
+  const _pm = document.getElementById('cal-print-mes');
+  const _pa = document.getElementById('cal-print-anio');
+  if (_pm) _pm.textContent = MESES[viewMonth].toUpperCase();
+  if (_pa) _pa.textContent = viewYear;
 
   const primerDia = new Date(viewYear, viewMonth, 1).getDay();
   const ultimoDia = new Date(viewYear, viewMonth + 1, 0).getDate();
@@ -444,6 +542,7 @@ function renderCal() {
   }
 
   document.getElementById('cal-grid').innerHTML = html;
+  renderEventosList();
 
   const legendItems = [
     { color: 'border:2px solid var(--green2)', label: 'Hoy' },
@@ -463,6 +562,221 @@ function renderCal() {
     `<div class="leg-item"><div class="leg-dot" style="${it.color}"></div>${it.label}</div>`
   ).join('');
 }
+
+// ── Lista de actividades del mes (debajo de la cuadrícula) ───────────────────
+function renderEventosList() {
+  const mm       = String(viewMonth + 1).padStart(2, '0');
+  const lastDay  = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const mesStart = `${viewYear}-${mm}-01`;
+  const mesEnd   = `${viewYear}-${mm}-${String(lastDay).padStart(2,'0')}`;
+  const items    = [];
+
+  // Quincenas
+  const showQui = document.getElementById('chk-quincenas').checked;
+  if (showQui) {
+    items.push({ tipo:'quincena', icon:'📋', fecha:`${viewYear}-${mm}-15`,
+      label: fmtPeriodo(`${viewYear}-${mm}-15`), nombre:'Pago de planilla' });
+    items.push({ tipo:'quincena', icon:'📋', fecha:mesEnd,
+      label: fmtPeriodo(mesEnd), nombre:'Pago de planilla' });
+  }
+
+  // Feriados
+  const showFer = document.getElementById('chk-feriados').checked;
+  if (showFer) {
+    try {
+      const fers = feriadosEnRango(mesStart, mesEnd);
+      fers.forEach(f => items.push({ tipo:'feriado', icon:'🎌', fecha:f.fecha,
+        label: parseInt(f.fecha.substring(8,10)) + ' de ' + MESES[viewMonth],
+        nombre: f.nombre }));
+    } catch(_) {}
+  }
+
+  // Vacaciones
+  const showVac = document.getElementById('chk-vacaciones').checked;
+  if (showVac) {
+    allVacaciones.forEach(v => {
+      const ini = norm(v.Fecha_Inicio);
+      const fin = norm(v.Fecha_Fin);
+      if (!ini || !fin || fin < mesStart || ini > mesEnd) return;
+      if (filtroEmpCal && v.Empleado !== filtroEmpCal) return;
+      const d1 = parseInt((ini < mesStart ? mesStart : ini).substring(8,10));
+      const d2 = parseInt((fin > mesEnd   ? mesEnd   : fin).substring(8,10));
+      const label = d1 === d2
+        ? `${d1} de ${MESES[viewMonth]}`
+        : `${d1}–${d2} de ${MESES[viewMonth]}`;
+      items.push({ tipo:'vacacion', icon:'🏖', fecha:ini, label,
+        nombre: v.Empleado || '—', sub: `${v.Dias} días · ${v.Tipo || ''}` });
+    });
+  }
+
+  // Adelantos
+  const showAdel = document.getElementById('chk-adelantos').checked;
+  if (showAdel) {
+    allAdelantos.forEach(a => {
+      const fecha = norm(a['Descontar en quincena']);
+      if (!fecha || !fecha.startsWith(`${viewYear}-${mm}`)) return;
+      items.push({ tipo:'adelanto', icon:'⚡', fecha, label: fmtPeriodo(fecha),
+        nombre: a.Empleado || '—', sub: fmt(a.Monto) });
+    });
+  }
+
+  // Extras
+  const showExt = document.getElementById('chk-extras').checked;
+  if (showExt) {
+    allExtras.forEach(x => {
+      const fecha = norm(x['Pagar en quincena']);
+      if (!fecha || !fecha.startsWith(`${viewYear}-${mm}`)) return;
+      items.push({ tipo:'extra', icon:'⭐', fecha, label: fmtPeriodo(fecha),
+        nombre: x.Empleado || '—', sub: `${x.Tipo || ''} · ${fmt(x.Monto)}` });
+    });
+  }
+
+  items.sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
+
+  const el = document.getElementById('cal-eventos-lista');
+  if (!items.length) { el.innerHTML = ''; return; }
+
+  const COLOR = { quincena:'var(--green2)', feriado:'#c39bd3', vacacion:'#5dade2', adelanto:'#f1948a', extra:'#f4d03f' };
+
+  el.innerHTML = `
+    <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:12px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+                  color:var(--text-muted);margin-bottom:10px">Actividades del mes</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px">
+        ${items.map(it => `
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;
+                      background:var(--navy2);border:1px solid var(--border);border-radius:6px">
+            <span style="font-size:14px;line-height:1.5">${it.icon}</span>
+            <div style="min-width:0;flex:1">
+              <div style="font-size:12px;font-weight:600;color:${COLOR[it.tipo]||'var(--text)'};
+                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.nombre}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${it.label}${it.sub ? ' · ' + it.sub : ''}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+// ── Modal email calendario ────────────────────────────────────────────────────
+document.getElementById('btn-email-cal').addEventListener('click', () => {
+  document.getElementById('alert-email-cal').className = 'alert';
+  document.getElementById('send-email-cal').disabled = false;
+  document.getElementById('send-email-cal').textContent = 'Enviar PDF';
+  document.getElementById('modal-email-cal').classList.add('open');
+  document.getElementById('inp-email-cal').focus();
+});
+['close-email-cal','cancel-email-cal'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () =>
+    document.getElementById('modal-email-cal').classList.remove('open')
+  )
+);
+document.getElementById('send-email-cal').addEventListener('click', async () => {
+  const email  = document.getElementById('inp-email-cal').value.trim();
+  const alertEl = document.getElementById('alert-email-cal');
+  const btn    = document.getElementById('send-email-cal');
+  if (!email) {
+    alertEl.className = 'alert alert-error show';
+    alertEl.textContent = 'Ingresa un correo destinatario';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Generando...'; alertEl.className = 'alert';
+  try {
+    const eventos = _buildEventos();
+    const data = await apiFetch('/api/reportes/calendario/enviar', {
+      method: 'POST',
+      body: JSON.stringify({ email, mes: viewMonth + 1, anio: viewYear, eventos }),
+    });
+    alertEl.className = 'alert alert-success show';
+    alertEl.textContent = data.mensaje || '✅ Enviado correctamente';
+    btn.textContent = 'Enviado ✓';
+  } catch (e) {
+    alertEl.className = 'alert alert-error show'; alertEl.textContent = e.message;
+    btn.disabled = false; btn.textContent = 'Enviar PDF';
+  }
+});
+
+// ── Descargar PDF del calendario ─────────────────────────────────────────────
+// Construye el array de eventos del mes actual (usado por descarga y email)
+function _buildEventos() {
+  const mm       = String(viewMonth + 1).padStart(2, '0');
+  const lastDay  = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const mesStart = `${viewYear}-${mm}-01`;
+  const mesEnd   = `${viewYear}-${mm}-${String(lastDay).padStart(2,'0')}`;
+  const eventos  = [];
+
+  // Quincenas (puntuales)
+  eventos.push({ fecha: `${viewYear}-${mm}-15`,                              tipo: 'quincena' });
+  eventos.push({ fecha: `${viewYear}-${mm}-${String(lastDay).padStart(2,'0')}`, tipo: 'quincena' });
+
+  // Feriados (puntuales)
+  try {
+    const fers = feriadosEnRango(mesStart, mesEnd);
+    fers.forEach(f => eventos.push({ fecha: f.fecha, tipo: 'feriado', texto: f.nombre }));
+  } catch(_) {}
+
+  // Vacaciones — como rangos recortados al mes (1 evento por empleado, no por día)
+  allVacaciones.forEach(v => {
+    const ini = norm(v.Fecha_Inicio);
+    const fin = norm(v.Fecha_Fin);
+    if (!ini || !fin || fin < mesStart || ini > mesEnd) return;
+    eventos.push({
+      fecha:    ini < mesStart ? mesStart : ini,
+      fechaFin: fin > mesEnd   ? mesEnd   : fin,
+      tipo:     'vacacion',
+      texto:    v.Empleado || '',
+    });
+  });
+
+  // Adelantos (puntuales)
+  allAdelantos.forEach(a => {
+    const fecha = norm(a['Descontar en quincena']);
+    if (fecha && fecha.startsWith(`${viewYear}-${mm}`))
+      eventos.push({ fecha, tipo: 'adelanto', texto: a.Empleado || '' });
+  });
+
+  // Extras (puntuales)
+  allExtras.forEach(x => {
+    const fecha = norm(x['Pagar en quincena']);
+    if (fecha && fecha.startsWith(`${viewYear}-${mm}`))
+      eventos.push({ fecha, tipo: 'extra', texto: x.Empleado || '' });
+  });
+
+  return eventos;
+}
+
+document.getElementById('btn-export-pdf').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-export-pdf');
+  const mm  = String(viewMonth + 1).padStart(2, '0');
+  btn.disabled = true; btn.textContent = 'Generando...';
+  try {
+    const token     = getToken();
+    const empresaId = localStorage.getItem('planilla_empresa_id');
+    const resp = await fetch('/api/reportes/calendario', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token     ? { Authorization: `Bearer ${token}` }  : {}),
+        ...(empresaId ? { 'X-Empresa-ID': empresaId }         : {}),
+      },
+      body: JSON.stringify({ mes: viewMonth + 1, anio: viewYear, eventos: _buildEventos() }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ error: resp.statusText }));
+      throw new Error(err.error || 'Error al generar PDF');
+    }
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `calendario-${viewYear}-${mm}.pdf`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    btn.textContent = 'Descargado ✓';
+    setTimeout(() => { btn.disabled = false; btn.textContent = '📥 Descargar PDF'; }, 2000);
+  } catch (e) {
+    alert('Error: ' + e.message);
+    btn.disabled = false; btn.textContent = '📥 Descargar PDF';
+  }
+});
 </script>
 </body>
 </html>

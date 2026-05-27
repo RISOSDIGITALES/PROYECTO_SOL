@@ -23,10 +23,10 @@ function formatPeriodo(iso) {
   const s = String(iso).substring(0, 10);
   const [y, m, d] = s.split('-').map(Number);
   if (!y || !m || !d) return s;
-  const meses = ['enero','febrero','marzo','abril','mayo','junio',
-                 'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                 'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const diaInicio = d <= 15 ? 1 : 16;
-  return `${diaInicio} al ${d} de ${meses[m - 1]} de ${y}`;
+  return `${diaInicio}-${d} de ${meses[m - 1]} ${y}`;
 }
 
 function hline(doc, x1, x2, y, color = '#e2e8f0') {
@@ -317,4 +317,383 @@ function generarReciboEmpleado({ empresa, empleado, detalle, extras = [], adelan
   });
 }
 
-module.exports = { generarReportePlanilla, generarReciboEmpleado, formatPeriodo };
+// ── Lista genérica (landscape) ─────────────────────────────────────────────────
+/**
+ * @param {object}  opts
+ * @param {string}  opts.titulo        — Ej: "Historial de Préstamos"
+ * @param {string}  [opts.subtitulo]   — Ej: "Todos los empleados"
+ * @param {Array}   opts.columnas      — [{ label, width, align }]
+ * @param {Array}   opts.filas         — [[val, val, ...], ...]
+ * @param {Array}   [opts.totales]     — fila de pie opcional
+ * @returns {Promise<Buffer>}
+ */
+function generarListaPDF({ titulo, subtitulo, columnas, filas, totales = null }) {
+  checkFallback();
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 36, size: 'LETTER', layout: 'landscape' });
+    const bufs = [];
+    doc.on('data', d => bufs.push(d));
+    doc.on('end', () => resolve(Buffer.concat(bufs)));
+    doc.on('error', reject);
+
+    const W  = doc.page.width;  // 792 landscape
+    const M  = 36;
+    const CW = W - M * 2;       // 720
+
+    // Header
+    doc.rect(M, M, CW, 52).fill(PRIMARY);
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(18).text('Nomify', M + 16, M + 11);
+    doc.fillColor('#8899aa').font('Helvetica').fontSize(9).text('Sistema de planilla', M + 16, M + 31);
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(13)
+       .text(titulo, M + 210, M + 12, { width: CW - 225 });
+    if (subtitulo) {
+      doc.fillColor('#8899aa').font('Helvetica').fontSize(9)
+         .text(subtitulo, M + 210, M + 28, { width: CW - 225 });
+    }
+
+    let y = M + 64;
+
+    // Escalar columnas para que sumen exactamente CW
+    const totalW = columnas.reduce((s, c) => s + c.width, 0);
+    const scale  = CW / totalW;
+    const cols   = columnas.map(c => ({ ...c, w: Math.floor(c.width * scale) }));
+    const usedW  = cols.reduce((s, c) => s + c.w, 0);
+    cols[cols.length - 1].w += CW - usedW; // corregir redondeo
+
+    function drawHeader(yy) {
+      doc.rect(M, yy, CW, 20).fill(PRIMARY);
+      let cx = M;
+      cols.forEach(col => {
+        doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(7.5)
+           .text(col.label, cx + 4, yy + 6, { width: col.w - 8, align: col.align || 'left' });
+        cx += col.w;
+      });
+      return yy + 20;
+    }
+
+    y = drawHeader(y);
+    const ROW_H = 17;
+
+    (filas || []).forEach((fila, idx) => {
+      if (y + ROW_H > doc.page.height - 50) {
+        doc.addPage({ layout: 'landscape' });
+        y = M;
+        y = drawHeader(y);
+      }
+      doc.rect(M, y, CW, ROW_H).fill(idx % 2 === 0 ? '#f8fafc' : '#ffffff');
+      let cx = M;
+      fila.forEach((val, i) => {
+        const col = cols[i];
+        if (!col) return;
+        doc.fillColor(TEXT).font('Helvetica').fontSize(7.5)
+           .text(String(val ?? '—'), cx + 4, y + 5, { width: col.w - 8, align: col.align || 'left' });
+        cx += col.w;
+      });
+      hline(doc, M, M + CW, y + ROW_H);
+      y += ROW_H;
+    });
+
+    // Fila totales
+    if (totales && totales.length) {
+      if (y + 22 > doc.page.height - 50) { doc.addPage({ layout: 'landscape' }); y = M; }
+      doc.rect(M, y, CW, 22).fill(PRIMARY);
+      let cx = M;
+      totales.forEach((val, i) => {
+        const col = cols[i];
+        if (!col) return;
+        doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(8)
+           .text(String(val ?? ''), cx + 4, y + 7, { width: col.w - 8, align: col.align || 'left' });
+        cx += col.w;
+      });
+    }
+
+    // Footer
+    doc.fillColor(MUTED).font('Helvetica').fontSize(7.5)
+       .text(`Nomify · Sistema de planilla · Generado el ${new Date().toLocaleString('es-NI')}`,
+             M, doc.page.height - 26, { width: CW, align: 'center' });
+
+    doc.end();
+  });
+}
+
+/**
+ * Genera un PDF de calendario mensual con grilla 7 columnas.
+ * @param {number} opts.mes       — 1-12
+ * @param {number} opts.anio
+ * @param {Array}  opts.eventos   — [
+ *   { fecha:'YYYY-MM-DD', tipo, texto }            ← evento puntual
+ *   { fecha:'YYYY-MM-DD', fechaFin:'YYYY-MM-DD', tipo, texto } ← rango (vacaciones)
+ * ]
+ * @returns {Promise<Buffer>}
+ */
+function generarCalendarioPDF({ mes, anio, eventos = [] }) {
+  checkFallback();
+  return new Promise((resolve, reject) => {
+    // bottom: 0 → pdfkit no agrega páginas automáticas al colocar pie
+    const doc  = new PDFDocument({ size: 'LETTER', margins: { top: 30, bottom: 0, left: 30, right: 30 } });
+    const bufs = [];
+    doc.on('data', d => bufs.push(d));
+    doc.on('end', () => resolve(Buffer.concat(bufs)));
+    doc.on('error', reject);
+
+    const W  = doc.page.width;   // 612
+    const H  = doc.page.height;  // 792
+    const M  = 30;
+    const CW = W - M * 2;        // 552
+
+    // Espacio reservado: más para actividades, grid más compacto
+    const EVLIST_RESERVE = 210;
+    const FOOTER_RESERVE = 22;
+
+    const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                      'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const DOW_ES   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    const mesNombre = MESES_ES[(mes - 1) % 12] || '';
+
+    // Separar eventos de rango (vacaciones) de eventos puntuales
+    const rangeEvs   = [];   // [{fecha, fechaFin, tipo, texto}]
+    const pointEvMap = {};   // {dStr: [{tipo, texto}]}
+
+    eventos.forEach(ev => {
+      if (ev.fechaFin) {
+        rangeEvs.push(ev);
+      } else {
+        if (!pointEvMap[ev.fecha]) pointEvMap[ev.fecha] = [];
+        pointEvMap[ev.fecha].push({ tipo: ev.tipo || '', texto: ev.texto || '' });
+      }
+    });
+
+    // Devuelve todos los eventos (puntuales + rangos) para una celda
+    function getCellEvs(dStr) {
+      const evs = [...(pointEvMap[dStr] || [])];
+      rangeEvs.forEach(ev => {
+        if (dStr >= ev.fecha && dStr <= ev.fechaFin)
+          evs.push({ tipo: ev.tipo || '', texto: ev.texto || '' });
+      });
+      return evs;
+    }
+
+    // ── HEADER — estilo limpio (fondo blanco, texto oscuro) ─────────────────────
+    // Fondo blanco del área del header
+    doc.rect(M, M, CW, 56).fill('#ffffff');
+    // Nombre del mes grande a la izquierda
+    doc.fillColor(PRIMARY).font('Helvetica-Bold').fontSize(28)
+       .text(mesNombre.toUpperCase(), M, M + 6, { lineBreak: false });
+    // Año grande a la derecha
+    doc.fillColor('#64748b').font('Helvetica-Bold').fontSize(28)
+       .text(String(anio), M, M + 6, { width: CW, align: 'right', lineBreak: false });
+    // Subtítulo
+    doc.fillColor(MUTED).font('Helvetica').fontSize(8)
+       .text('Nomify · Sistema de planilla', M, M + 38, { lineBreak: false });
+    // Línea separadora
+    doc.save().strokeColor(PRIMARY).lineWidth(1.5)
+       .moveTo(M, M + 52).lineTo(M + CW, M + 52).stroke().restore();
+
+    let y = M + 60;
+
+    // ── CABECERAS DE DÍAS ──────────────────────────────────────────────────────
+    const DOW_H   = 16;
+    const cellW   = Math.floor(CW / 7);
+    const lastExt = CW - cellW * 7;
+    const cX = c => M + c * cellW;
+    const cW = c => c === 6 ? cellW + lastExt : cellW;
+
+    DOW_ES.forEach((d, c) => {
+      doc.fillColor('#64748b').font('Helvetica-Bold').fontSize(7)
+         .text(d.toUpperCase(), cX(c), y + 4, { width: cW(c), align: 'center', lineBreak: false });
+    });
+    // Línea debajo de cabeceras
+    hline(doc, M, M + CW, y + DOW_H - 1, '#cbd5e1');
+    y += DOW_H;
+
+    // ── CUADRÍCULA ───────────────────────────────────────────────────────────
+    const firstDow    = new Date(anio, mes - 1, 1).getDay();
+    const daysInMonth = new Date(anio, mes, 0).getDate();
+    const numRows     = Math.ceil((firstDow + daysInMonth) / 7);
+    const GRID_H      = H - y - EVLIST_RESERVE - FOOTER_RESERVE - M;
+    const cellH       = Math.floor(GRID_H / numRows);
+
+    const todayStr = new Date().toISOString().substring(0, 10);
+    const TYPE_CLR = {
+      quincena: '#16a34a', feriado:  '#7c3aed',
+      vacacion: '#2563eb', adelanto: '#dc2626', extra: '#d97706',
+    };
+    // Colores de fondo de celda para tipos especiales (opacidad real)
+    const TYPE_BG = {
+      quincena: [22, 163, 74,  0.08],  // verde muy suave
+      feriado:  [124, 58, 237, 0.08],  // violeta muy suave
+    };
+
+    for (let r = 0; r < numRows; r++) {
+      for (let c = 0; c < 7; c++) {
+        const idx = r * 7 + c;
+        const day = idx - firstDow + 1;
+        const cx  = cX(c);
+        const cy  = y + r * cellH;
+        const cw  = cW(c);
+
+        // Celda vacía
+        if (day < 1 || day > daysInMonth) {
+          doc.save().strokeColor('#e2e8f0').lineWidth(0.3)
+             .roundedRect(cx + 1, cy + 1, cw - 2, cellH - 2, 4).stroke().restore();
+          continue;
+        }
+
+        const mm   = String(mes).padStart(2, '0');
+        const dd   = String(day).padStart(2, '0');
+        const dStr = `${anio}-${mm}-${dd}`;
+        const evs  = getCellEvs(dStr);
+
+        const isQui = evs.some(e => e.tipo === 'quincena');
+        const isFer = evs.some(e => e.tipo === 'feriado');
+        const isHoy = dStr === todayStr;
+
+        // Fondo + borde redondeado de celda
+        const RR = 4; // radio de esquinas
+        const bClr = isHoy ? '#16a34a' : isQui ? '#86efac' : isFer ? '#c4b5fd' : '#e2e8f0';
+        const bW   = isHoy ? 1.5 : 0.4;
+        const bgFill = isQui ? [22,163,74,0.08] : isFer ? [124,58,237,0.08] : null;
+
+        doc.save();
+        // Fondo
+        if (bgFill) {
+          const [r2, g2, b2, a2] = bgFill;
+          doc.fillOpacity(a2).fillColor(`rgb(${r2},${g2},${b2})`)
+             .roundedRect(cx + 1, cy + 1, cw - 2, cellH - 2, RR).fill();
+        } else {
+          doc.fillOpacity(1).fillColor('#ffffff')
+             .roundedRect(cx + 1, cy + 1, cw - 2, cellH - 2, RR).fill();
+        }
+        // Borde
+        doc.fillOpacity(1).strokeColor(bClr).lineWidth(bW)
+           .roundedRect(cx + 1, cy + 1, cw - 2, cellH - 2, RR).stroke();
+        doc.restore();
+
+        // Número del día
+        const numClr = isHoy ? '#16a34a' : isQui ? '#15803d' : isFer ? '#6d28d9' : '#1e293b';
+        doc.fillColor(numClr).font('Helvetica-Bold').fontSize(8.5)
+           .text(String(day), cx + 3, cy + 3, { width: 16, align: 'left', lineBreak: false });
+
+        // Etiquetas de eventos (texto con punto de color, sin rectángulo de fondo)
+        let ey = cy + 14;
+        evs.forEach(ev => {
+          if (ey > cy + cellH - 5 || !ev.texto) return;
+          const clr = TYPE_CLR[ev.tipo] || MUTED;
+          const txt = ev.texto.length > 10 ? ev.texto.substring(0, 9) + '…' : ev.texto;
+          // Punto de color sólido
+          doc.save().fillOpacity(1).fillColor(clr).circle(cx + 4, ey + 3, 2).fill().restore();
+          // Texto
+          doc.fillColor(clr).font('Helvetica').fontSize(5.8)
+             .text(txt, cx + 8, ey, { width: cw - 10, lineBreak: false });
+          ey += 8;
+        });
+      }
+    }
+
+    // ── ACTIVIDADES DEL MES ───────────────────────────────────────────────────
+    const gridBottom = y + numRows * cellH;
+    const listTop    = gridBottom + 8;
+    const MAX_EV_Y   = H - FOOTER_RESERVE - 4;
+
+    const TYPE_LABEL = {
+      quincena: 'Quincena', feriado: 'Feriado',
+      vacacion: 'Vacación', adelanto: 'Adelanto', extra: 'Extra',
+    };
+    const MESES_ES2 = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                       'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+    const evList = [];
+
+    // Vacaciones (rangos) — una fila por empleado
+    const seenRange = new Set();
+    rangeEvs.forEach(ev => {
+      const key = `${ev.tipo}|${ev.texto}|${ev.fecha}|${ev.fechaFin}`;
+      if (seenRange.has(key)) return;
+      seenRange.add(key);
+      const [, m1, d1] = ev.fecha.split('-').map(Number);
+      const [, m2, d2] = ev.fechaFin.split('-').map(Number);
+      const dateLabel = m1 === m2
+        ? `${d1}–${d2} de ${MESES_ES2[m1 - 1]}`
+        : `${d1} ${MESES_ES2[m1 - 1]} – ${d2} ${MESES_ES2[m2 - 1]}`;
+      evList.push({ dateLabel, tipo: ev.tipo, texto: ev.texto, sortKey: ev.fecha });
+    });
+
+    // Eventos puntuales
+    const seenPoint = new Set();
+    [...new Set(Object.keys(pointEvMap))].sort().forEach(dStr => {
+      const [, md, dd] = dStr.split('-').map(Number);
+      const dateLabel  = `${dd} de ${MESES_ES2[md - 1]}`;
+      pointEvMap[dStr].forEach(ev => {
+        const key = `${dStr}|${ev.tipo}|${ev.texto}`;
+        if (seenPoint.has(key)) return;
+        seenPoint.add(key);
+        evList.push({ dateLabel, tipo: ev.tipo, texto: ev.texto, sortKey: dStr });
+      });
+    });
+
+    evList.sort((a, b) => (a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : 0));
+
+    if (evList.length > 0 && listTop + 20 < MAX_EV_Y) {
+      // Título sección
+      hline(doc, M, M + CW, listTop, '#cbd5e1');
+      doc.fillColor('#64748b').font('Helvetica-Bold').fontSize(7)
+         .text('ACTIVIDADES DEL MES', M, listTop + 4,
+               { characterSpacing: 0.6, lineBreak: false });
+
+      // Tarjetas en dos columnas — más grandes y espaciadas
+      const CARD_H   = 28;
+      const CARD_GAP = 5;
+      const colW2    = Math.floor(CW / 2) - 4;
+      const lx1      = M;
+      const lx2      = M + Math.floor(CW / 2) + 4;
+      let ly1 = listTop + 14, ly2 = listTop + 14;
+
+      evList.forEach((ev, idx) => {
+        const isRight = idx % 2 === 1;
+        const lx = isRight ? lx2 : lx1;
+        const ly = isRight ? ly2 : ly1;
+        if (ly + CARD_H > MAX_EV_Y) return;
+
+        const clr = TYPE_CLR[ev.tipo] || MUTED;
+        const lbl = TYPE_LABEL[ev.tipo] || ev.tipo;
+
+        // Fondo de tarjeta con esquinas redondeadas
+        doc.save()
+           .fillOpacity(0.06).fillColor(clr)
+           .roundedRect(lx, ly, colW2, CARD_H, 4).fill()
+           .restore();
+        // Borde izquierdo de color
+        doc.save()
+           .fillOpacity(1).fillColor(clr)
+           .roundedRect(lx, ly, 3, CARD_H, 2).fill()
+           .restore();
+        // Badge tipo (arriba)
+        doc.fillColor(clr).font('Helvetica-Bold').fontSize(6.5)
+           .text(lbl, lx + 8, ly + 5, { lineBreak: false });
+        // Nombre en negrita
+        const nombre = ev.texto || '';
+        if (nombre) {
+          const badgeW = doc.widthOfString(lbl, { fontSize: 6.5 });
+          doc.fillColor(TEXT).font('Helvetica-Bold').fontSize(7)
+             .text(nombre, lx + 10 + badgeW, ly + 4.5,
+                   { width: colW2 - 14 - badgeW, lineBreak: false });
+        }
+        // Fecha / detalle (abajo)
+        doc.fillColor(MUTED).font('Helvetica').fontSize(6.5)
+           .text(ev.dateLabel, lx + 8, ly + 16, { lineBreak: false });
+
+        if (isRight) ly2 += CARD_H + CARD_GAP;
+        else         ly1 += CARD_H + CARD_GAP;
+      });
+    }
+
+    // ── PIE DE PÁGINA ─────────────────────────────────────────────────────────
+    doc.fillColor(MUTED).font('Helvetica').fontSize(6.5)
+       .text(`Nomify · Sistema de planilla · Generado el ${new Date().toLocaleDateString('es-NI')}`,
+             M, H - FOOTER_RESERVE + 6, { width: CW, align: 'center', lineBreak: false });
+
+    doc.end();
+  });
+}
+
+module.exports = { generarReportePlanilla, generarReciboEmpleado, generarListaPDF, generarCalendarioPDF, formatPeriodo };

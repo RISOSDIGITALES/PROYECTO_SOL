@@ -132,7 +132,8 @@
       <div style="display:flex;gap:8px">
         <a id="btn-volver" href="/planilla-detalle.html" class="btn btn-ghost btn-sm">← Volver</a>
         <button class="btn btn-ghost btn-sm" id="btn-email-recibo">📧 Enviar por correo</button>
-        <button class="btn btn-sm" onclick="window.print()" style="background:var(--green);color:#fff">🖨 Imprimir / PDF</button>
+        <button class="btn btn-ghost btn-sm" id="btn-descargar-recibo">⬇ Descargar PDF</button>
+        <button class="btn btn-sm" onclick="window.print()" style="background:var(--green);color:#fff">🖨 Imprimir</button>
       </div>
     </div>
 
@@ -173,9 +174,7 @@ onReady(['Master', 'Planillero', 'Empleado'], async () => {
   const p = new URLSearchParams(window.location.search);
   const empleadoId = p.get('empleado_id') || '';
   const periodo    = p.get('periodo')      || '';
-  const [ry, rm, rd] = (periodo || '').split('-');
-  const periodoFmt = (ry && rm && rd) ? `${rd}/${rm}/${ry}` : periodo;
-  document.getElementById('sub-recibo').textContent = `Período ${periodoFmt}`;
+  document.getElementById('sub-recibo').textContent = `Período ${fmtPeriodo(periodo)}`;
 
   // Adaptar sidebar y botón volver según rol
   const myInfo = await getMyInfo();
@@ -217,9 +216,7 @@ async function loadRecibo(empleadoId, periodo) {
 }
 
 function renderRecibo(data, periodo) {
-  // Formatear periodo como DD/MM/YYYY para mostrar
-  const [py, pm, pd] = (periodo || '').split('-');
-  const periodoDisplay = (py && pm && pd) ? `${pd}/${pm}/${py}` : periodo;
+  const periodoDisplay = fmtPeriodo(periodo);
 
   const emp  = data.empleado    || {};
   const det  = data.detalle     || {};
@@ -330,6 +327,48 @@ function renderRecibo(data, periodo) {
     </div>
   `;
 }
+// ── Descargar PDF ────────────────────────────────────────────────────────────
+document.getElementById('btn-descargar-recibo').addEventListener('click', async () => {
+  const p     = new URLSearchParams(window.location.search);
+  const empId = p.get('empleado_id') || '';
+  const per   = p.get('periodo') || '';
+  const btn   = document.getElementById('btn-descargar-recibo');
+  btn.disabled = true;
+  btn.textContent = 'Generando...';
+  try {
+    const token     = getToken();
+    const empresaId = localStorage.getItem('planilla_empresa_id');
+    const headers   = {
+      'Content-Type': 'application/json',
+      ...(token     ? { Authorization: `Bearer ${token}` }       : {}),
+      ...(empresaId ? { 'X-Empresa-ID': empresaId }              : {}),
+    };
+    const resp = await fetch(
+      `/api/recibo/descargar?empleado_id=${encodeURIComponent(empId)}&periodo=${encodeURIComponent(per)}`,
+      { headers }
+    );
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ error: resp.statusText }));
+      throw new Error(err.error || 'Error al descargar');
+    }
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `recibo-${per}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    btn.textContent = 'Descargado ✓';
+    setTimeout(() => { btn.disabled = false; btn.textContent = '⬇ Descargar PDF'; }, 2000);
+  } catch (e) {
+    showAlert('alert-recibo', 'Error al descargar: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = '⬇ Descargar PDF';
+  }
+});
+
 // ── Modal enviar recibo por correo ───────────────────────────────────────────
 document.getElementById('btn-email-recibo').addEventListener('click', () => {
   document.getElementById('alert-email-recibo').className = 'alert';

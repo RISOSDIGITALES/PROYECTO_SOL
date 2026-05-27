@@ -31,7 +31,10 @@
   <div class="main">
     <div class="topbar">
       <div><h1>Planillas</h1><span class="sub">Historial de quincenas</span></div>
-      <button class="btn btn-primary" id="btn-generar">⚡ Generar planilla</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" id="btn-email-pl">📧 Enviar historial</button>
+        <button class="btn btn-primary" id="btn-generar">⚡ Generar planilla</button>
+      </div>
     </div>
     <div class="content">
       <div id="alert-pl" class="alert"></div>
@@ -63,6 +66,36 @@
           </tbody>
         </table>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ENVIAR HISTORIAL POR CORREO -->
+<div class="overlay" id="modal-email-pl">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>📧 Enviar historial de planillas</h3>
+      <button class="modal-close" id="close-email-pl">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-email-pl" class="alert"></div>
+      <p style="margin:0 0 14px;font-size:13px;color:var(--text-muted)">Se generará un PDF con el historial de planillas y se enviará al correo indicado.</p>
+      <div class="form-group">
+        <label>Correo destinatario *</label>
+        <input type="email" id="inp-email-pl" placeholder="ejemplo@correo.com" />
+      </div>
+      <div class="form-group">
+        <label>Tipo de planilla</label>
+        <select id="sel-tipo-email-pl">
+          <option value="">Todas</option>
+          <option value="Con Seguro">Con Seguro</option>
+          <option value="Sin Seguro">Sin Seguro</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-email-pl">Cancelar</button>
+      <button class="btn btn-primary" id="send-email-pl">Enviar PDF</button>
     </div>
   </div>
 </div>
@@ -112,14 +145,8 @@
 let allPlanillas = [];
 let filtroActivo = 'todas';
 
-// Convierte YYYY-MM-DD a "Del 1-15 de MAYO 2026"
-function formatPeriodo(isoDate) {
-  if (!isoDate) return '—';
-  const [y, m, d] = String(isoDate).substring(0, 10).split('-').map(Number);
-  const meses = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
-  const diaInicio = d <= 15 ? 1 : 16;
-  return `Del ${diaInicio}-${d} de ${meses[m - 1]} ${y}`;
-}
+// Usa fmtPeriodo global de auth.js: "1-15 de Mayo 2026"
+function formatPeriodo(isoDate) { return fmtPeriodo(isoDate); }
 
 // Devuelve YYYY-MM-15 o YYYY-MM-DD (último del mes) según qué quincena es más cercana
 function quincena15(y, m) { return `${y}-${String(m).padStart(2,'0')}-15`; }
@@ -207,8 +234,9 @@ function renderTabla() {
     const periodoVal = String(p['Período'] || '').substring(0, 10);
     const periodo = encodeURIComponent(periodoVal);
     const fechaPago = fmtFecha(p['Fecha de pago'] || periodoVal);
+    const folio = p.folio != null ? p.folio : p.id;
     return `<tr>
-      <td style="text-align:center;color:var(--text-muted);font-size:12px;font-weight:600">#${p.id}</td>
+      <td style="text-align:center;color:var(--text-muted);font-size:12px;font-weight:600">#${folio}</td>
       <td><strong>${formatPeriodo(periodoVal)}</strong></td>
       <td>${tipo ? `<span class="badge ${tipoBadge}">${tipo}</span>` : '—'}</td>
       <td>${fechaPago}</td>
@@ -217,7 +245,7 @@ function renderTabla() {
       <td class="num" style="color:var(--red)">${fmt(p['Total deducciones'])}</td>
       <td class="num"><strong>${fmt(p['Total neto'])}</strong></td>
       <td><span class="badge ${estadoBadge}">${estado}</span></td>
-      <td><a href="/planilla-detalle.html?id=${p.id}&periodo=${periodo}" class="btn btn-ghost btn-sm">Ver detalle</a></td>
+      <td><a href="/planilla-detalle.html?id=${p.id}&periodo=${periodo}&folio=${folio}" class="btn btn-ghost btn-sm">Ver detalle</a></td>
     </tr>`;
   }).join('');
 }
@@ -275,6 +303,47 @@ function actualizarPeriodoLabel() {
   }
 }
 document.getElementById('gen-periodo').addEventListener('change', actualizarPeriodoLabel);
+
+// ── Modal enviar historial por correo ─────────────────────────────────────────
+document.getElementById('btn-email-pl').addEventListener('click', () => {
+  document.getElementById('alert-email-pl').className = 'alert';
+  document.getElementById('send-email-pl').disabled = false;
+  document.getElementById('send-email-pl').textContent = 'Enviar PDF';
+  document.getElementById('inp-email-pl').value = '';
+  document.getElementById('sel-tipo-email-pl').value = '';
+  document.getElementById('modal-email-pl').classList.add('open');
+  document.getElementById('inp-email-pl').focus();
+});
+['close-email-pl','cancel-email-pl'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () =>
+    document.getElementById('modal-email-pl').classList.remove('open')
+  )
+);
+document.getElementById('send-email-pl').addEventListener('click', async () => {
+  const email   = document.getElementById('inp-email-pl').value.trim();
+  const tipo    = document.getElementById('sel-tipo-email-pl').value;
+  const alertEl = document.getElementById('alert-email-pl');
+  const btn     = document.getElementById('send-email-pl');
+  if (!email) {
+    alertEl.className = 'alert alert-error show';
+    alertEl.textContent = 'Ingresa un correo destinatario';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Generando...'; alertEl.className = 'alert';
+  try {
+    const data = await apiFetch('/api/reportes/enviar', {
+      method: 'POST',
+      body: JSON.stringify({ email, categoria: 'planillas', tipo: tipo || undefined }),
+    });
+    alertEl.className = 'alert alert-success show';
+    alertEl.textContent = data.mensaje || '✅ Enviado correctamente';
+    btn.textContent = 'Enviado ✓';
+  } catch (e) {
+    alertEl.className = 'alert alert-error show';
+    alertEl.textContent = e.message;
+    btn.disabled = false; btn.textContent = 'Enviar PDF';
+  }
+});
 
 document.getElementById('save-gen').addEventListener('click', async () => {
   const periodo = document.getElementById('gen-periodo').value;

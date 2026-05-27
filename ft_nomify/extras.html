@@ -44,6 +44,7 @@
       <div><h1>Extras</h1><span class="sub">Bonos, feriados trabajados y turnos extra</span></div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost btn-sm" id="btn-print" onclick="window.print()">🖨 Imprimir</button>
+        <button class="btn btn-ghost btn-sm" id="btn-email">📧 Enviar historial</button>
         <button class="btn btn-primary" id="btn-nuevo">+ Nuevo extra</button>
       </div>
     </div>
@@ -150,6 +151,35 @@
   </div>
 </div>
 
+<!-- MODAL ENVIAR HISTORIAL -->
+<div class="overlay" id="modal-email-hist">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>📧 Enviar historial por correo</h3>
+      <button class="modal-close" id="close-email-hist">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-email-hist" class="alert"></div>
+      <p style="margin:0 0 14px;font-size:13px;color:var(--text-muted)">Se generará un PDF del historial y se enviará al correo indicado.</p>
+      <div class="form-group">
+        <label>Correo destinatario *</label>
+        <input type="email" id="inp-email-hist" placeholder="ejemplo@correo.com"
+          style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;" />
+      </div>
+      <div class="form-group">
+        <label>Empleado (opcional)</label>
+        <select id="sel-email-hist" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;">
+          <option value="">Todos los empleados</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-email-hist">Cancelar</button>
+      <button class="btn btn-primary" id="send-email-hist">Enviar PDF</button>
+    </div>
+  </div>
+</div>
+
 <script src="/assets/js/feriados.js"></script>
 <script src="/assets/js/auth.js"></script>
 <script>
@@ -178,7 +208,7 @@ async function loadAll() {
     const sel = document.getElementById('ext-empleado');
     const filtroSel = document.getElementById('filtro-empleado');
     activos.forEach(e => {
-      [sel, filtroSel].forEach(s => {
+      [sel, filtroSel, document.getElementById('sel-email-hist')].forEach(s => {
         const opt = document.createElement('option');
         opt.value = e.Nombre;
         opt.textContent = e.Nombre;
@@ -366,6 +396,40 @@ document.getElementById('ok-confirm').addEventListener('click', async () => {
     showAlert('alert-ext', 'Error al eliminar: ' + e.message, 'error');
   } finally {
     pendingDeleteId = null;
+  }
+});
+
+// ── Email historial ──────────────────────────────────────────────────────────
+document.getElementById('btn-email').addEventListener('click', () => {
+  document.getElementById('alert-email-hist').className = 'alert';
+  document.getElementById('inp-email-hist').value = '';
+  document.getElementById('send-email-hist').disabled = false;
+  document.getElementById('send-email-hist').textContent = 'Enviar PDF';
+  document.getElementById('modal-email-hist').classList.add('open');
+});
+['close-email-hist','cancel-email-hist'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () =>
+    document.getElementById('modal-email-hist').classList.remove('open')
+  )
+);
+document.getElementById('send-email-hist').addEventListener('click', async () => {
+  const email    = document.getElementById('inp-email-hist').value.trim();
+  const empleado = document.getElementById('sel-email-hist').value;
+  const alertEl  = document.getElementById('alert-email-hist');
+  const btn      = document.getElementById('send-email-hist');
+  if (!email) { alertEl.className = 'alert alert-error show'; alertEl.textContent = 'Ingresa un correo destinatario'; return; }
+  btn.disabled = true; btn.textContent = 'Generando PDF...'; alertEl.className = 'alert';
+  try {
+    const data = await apiFetch('/api/reportes/enviar', {
+      method: 'POST',
+      body: JSON.stringify({ categoria: 'extras', email, empleado: empleado || undefined }),
+    });
+    alertEl.className = 'alert alert-success show';
+    alertEl.textContent = data.mensaje || '✅ Enviado correctamente';
+    btn.textContent = 'Enviado ✓';
+  } catch (e) {
+    alertEl.className = 'alert alert-error show'; alertEl.textContent = e.message;
+    btn.disabled = false; btn.textContent = 'Enviar PDF';
   }
 });
 </script>

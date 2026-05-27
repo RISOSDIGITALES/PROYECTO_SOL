@@ -38,6 +38,15 @@ router.get('/', requireAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// GET /api/prestamos/:id — detalle de un préstamo específico
+router.get('/:id', requireAuth, async (req, res) => {
+  try {
+    const [rows] = await db.query(`${GET_SQL} WHERE p.id = ?`, [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Préstamo no encontrado' });
+    res.json(rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // GET /api/prestamos/:id/pagos — historial real de la tabla pagos_prestamos
 router.get('/:id/pagos', requireAuth, async (req, res) => {
   try {

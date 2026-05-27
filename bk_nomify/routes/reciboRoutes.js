@@ -61,6 +61,56 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/recibo/descargar?empleado_id=X&periodo=Y — devuelve PDF como archivo descargable
+router.get('/descargar', requireAuth, async (req, res) => {
+  const { empleado_id, periodo } = req.query;
+  if (!empleado_id || !periodo)
+    return res.status(400).json({ error: 'Se requiere ?empleado_id= y ?periodo=' });
+  if (!generarReciboEmpleado)
+    return res.status(500).json({ error: 'pdfkit no instalado — ejecuta npm install en bk_nomify/' });
+
+  if (req.user.rol === 'Empleado' && String(req.user.empleado_id) !== String(empleado_id))
+    return res.status(403).json({ error: 'No autorizado para descargar este recibo' });
+
+  const [anio, mes, dia] = periodo.split('-').map(Number);
+  const esQ1     = dia <= 15;
+  const mm       = String(mes).padStart(2, '0');
+  const ultDia   = new Date(anio, mes, 0).getDate();
+  const fechaIni = `${anio}-${mm}-${esQ1 ? '01' : '16'}`;
+  const fechaFin = `${anio}-${mm}-${esQ1 ? '15' : String(ultDia).padStart(2, '0')}`;
+
+  try {
+    const [[empRows], [detRows], [adelantos], [extras], [deducciones], [vacaciones]] = await Promise.all([
+      db.query(`SELECT e.*, emp.nombre AS empresa_nombre
+                FROM empleados e LEFT JOIN empresas emp ON e.empresa_id = emp.id
+                WHERE e.id = ?`, [empleado_id]),
+      db.query('SELECT * FROM detalle_planilla WHERE empleado_id = ? AND periodo = ?', [empleado_id, periodo]),
+      db.query('SELECT * FROM adelantos WHERE empleado_id = ? AND descontar_en = ?', [empleado_id, periodo]),
+      db.query('SELECT * FROM extras WHERE empleado_id = ? AND pagar_en = ?', [empleado_id, periodo]),
+      db.query('SELECT * FROM deducciones WHERE empleado_id = ? AND descontar_en = ?', [empleado_id, periodo]),
+      db.query(`SELECT * FROM vacaciones WHERE empleado_id = ? AND tipo = 'Pagadas'
+                AND fecha_inicio >= ? AND fecha_inicio <= ?`, [empleado_id, fechaIni, fechaFin]),
+    ]);
+
+    const empleado = empRows[0];
+    if (!empleado) return res.status(404).json({ error: 'Empleado no encontrado' });
+    const detalle  = detRows[0] || {};
+    const empresa  = empleado.empresa_id
+      ? { id: empleado.empresa_id, nombre: empleado.empresa_nombre }
+      : null;
+
+    const pdfBuffer = await generarReciboEmpleado({ empresa, empleado, detalle, extras, adelantos, deducciones, vacaciones, periodo });
+    const slug      = (empleado.nombre || 'empleado').replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '');
+    const filename  = `recibo-${slug}-${periodo}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(pdfBuffer);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // POST /api/recibo/enviar — genera PDF del recibo y lo envía por correo
 router.post('/enviar', requireAuth, async (req, res) => {
   const { email, empleado_id, periodo } = req.body;

@@ -44,6 +44,7 @@
       <div><h1>Préstamos</h1><span class="sub">Autorizados por Don Marc · cuota quincenal</span></div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost btn-sm" id="btn-print" onclick="window.print()">🖨 Imprimir</button>
+        <button class="btn btn-ghost btn-sm" id="btn-email">📧 Enviar historial</button>
         <button class="btn btn-primary" id="btn-nuevo">+ Nuevo préstamo</button>
       </div>
     </div>
@@ -192,6 +193,35 @@
   </div>
 </div>
 
+<!-- MODAL ENVIAR HISTORIAL POR CORREO -->
+<div class="overlay" id="modal-email-pr">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>📧 Enviar historial por correo</h3>
+      <button class="modal-close" id="close-email-pr">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-email-pr" class="alert"></div>
+      <p style="margin:0 0 14px;font-size:13px;color:var(--text-muted)">Se generará un PDF del historial y se enviará al correo indicado.</p>
+      <div class="form-group">
+        <label>Correo destinatario *</label>
+        <input type="email" id="inp-email-pr" placeholder="ejemplo@correo.com"
+          style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;" />
+      </div>
+      <div class="form-group">
+        <label>Empleado (opcional)</label>
+        <select id="sel-email-pr" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;">
+          <option value="">Todos los empleados</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-email-pr">Cancelar</button>
+      <button class="btn btn-primary" id="send-email-pr">Enviar PDF</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL HISTORIAL -->
 <div class="overlay" id="modal-historial">
   <div class="modal" style="max-width:520px">
@@ -231,8 +261,9 @@ async function loadAll() {
     const activos = empleados.filter(e => e.Activo);
     const sel = document.getElementById('pr-empleado');
     const filtroSel = document.getElementById('filtro-empleado');
+    const emailSel = document.getElementById('sel-email-pr');
     activos.forEach(e => {
-      [sel, filtroSel].forEach(s => {
+      [sel, filtroSel, emailSel].forEach(s => {
         const opt = document.createElement('option');
         opt.value = e.Nombre;
         opt.textContent = e.Nombre;
@@ -280,7 +311,7 @@ function renderTabla() {
       </td>
       <td><span class="badge ${badge}">${estado}</span></td>
       <td style="display:flex;gap:4px;flex-wrap:wrap">
-        <button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text)" onclick="verHistorial(${p.id})">📋 Detalle</button>
+        <button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text)" onclick="window.open('/prestamo-detalle.html?id=${p.id}','_blank')">📋 Detalle</button>
         ${_esMaster ? `<button class="btn btn-icon btn-sm" title="Editar" onclick="editarPrestamo(${p.id})">&#9999;&#65039;</button>` : ''}
         ${_esMaster && estado === 'Activo' ? `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text)" onclick="abrirPago(${p.id})">+ Pago</button>` : ''}
         ${_esMaster && estado === 'Activo' ? `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text-muted)" onclick="cambiarEstadoPrestamo(${p.id},'Suspendido')">⏸ Pausar</button>` : ''}
@@ -437,6 +468,42 @@ document.getElementById('save-pago').addEventListener('click', async () => {
     showAlert('alert-pago', 'Error: ' + e.message, 'error');
   } finally {
     btn.disabled = false; btn.textContent = 'Registrar';
+  }
+});
+
+// ── Email historial préstamos ────────────────────────────────────────────────
+document.getElementById('btn-email').addEventListener('click', () => {
+  document.getElementById('alert-email-pr').className = 'alert';
+  document.getElementById('inp-email-pr').value = '';
+  document.getElementById('send-email-pr').disabled = false;
+  document.getElementById('send-email-pr').textContent = 'Enviar PDF';
+  document.getElementById('modal-email-pr').classList.add('open');
+});
+['close-email-pr','cancel-email-pr'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () =>
+    document.getElementById('modal-email-pr').classList.remove('open')
+  )
+);
+document.getElementById('send-email-pr').addEventListener('click', async () => {
+  const email    = document.getElementById('inp-email-pr').value.trim();
+  const empleado = document.getElementById('sel-email-pr').value;
+  const alertEl  = document.getElementById('alert-email-pr');
+  const btn      = document.getElementById('send-email-pr');
+  if (!email) { alertEl.className = 'alert alert-error show'; alertEl.textContent = 'Ingresa un correo destinatario'; return; }
+  btn.disabled = true; btn.textContent = 'Generando PDF...';
+  alertEl.className = 'alert';
+  try {
+    const data = await apiFetch('/api/reportes/enviar', {
+      method: 'POST',
+      body: JSON.stringify({ categoria: 'prestamos', email, empleado: empleado || undefined }),
+    });
+    alertEl.className = 'alert alert-success show';
+    alertEl.textContent = data.mensaje || '✅ Enviado correctamente';
+    btn.textContent = 'Enviado ✓';
+  } catch (e) {
+    alertEl.className = 'alert alert-error show';
+    alertEl.textContent = e.message;
+    btn.disabled = false; btn.textContent = 'Enviar PDF';
   }
 });
 

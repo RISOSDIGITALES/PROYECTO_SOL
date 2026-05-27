@@ -182,9 +182,48 @@ async function enviarReciboEmpleado(email, nombre, pdfBuffer, periodoStr) {
   });
 }
 
+// ── Correo con historial de categoría (préstamos, adelantos, etc.) ────────────
+async function enviarReporteLista(email, nombre, pdfBuffer, titulo) {
+  const safeNombre = (titulo || 'reporte').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  const transport = createTransport();
+  await transport.sendMail({
+    from:    `"Nomify Sistema" <${APP_FROM()}>`,
+    to:      email,
+    subject: `📋 ${titulo} — Nomify`,
+    html: `<!DOCTYPE html>
+<html lang="es">
+<body style="font-family:sans-serif;background:#f5f5f5;margin:0;padding:24px">
+  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)">
+    <div style="background:#1a2236;padding:24px 32px">
+      <h1 style="color:#fff;margin:0;font-size:22px">Nomify</h1>
+      <p style="color:#8899aa;margin:4px 0 0;font-size:13px">Sistema de planilla</p>
+    </div>
+    <div style="padding:28px 32px">
+      <h2 style="color:#1a2236;margin:0 0 10px;font-size:17px">📋 ${titulo}</h2>
+      <p style="color:#444;font-size:14px;line-height:1.6;margin:0 0 16px">
+        ${nombre ? `Hola <strong>${nombre}</strong>,<br><br>` : ''}
+        Adjunto encontrarás el historial de <strong>${titulo}</strong> generado el
+        <strong>${new Date().toLocaleDateString('es-NI', { dateStyle: 'long' })}</strong>.
+      </p>
+      <p style="color:#888;font-size:12px;margin:0">El reporte está adjunto en formato PDF.</p>
+    </div>
+    <div style="background:#f0f4f8;padding:14px 32px;font-size:11px;color:#aaa;text-align:center">
+      Nomify · Sistema de planilla · Solo personal autorizado
+    </div>
+  </div>
+</body></html>`,
+    attachments: [{
+      filename: `${safeNombre}-${new Date().toISOString().substring(0,10)}.pdf`,
+      content:  pdfBuffer,
+      contentType: 'application/pdf',
+    }],
+  });
+}
+
 module.exports = {
   enviarResetPassword,
   enviarConfirmacionCambioPassword,
   enviarReportePlanilla,
   enviarReciboEmpleado,
+  enviarReporteLista,
 };
