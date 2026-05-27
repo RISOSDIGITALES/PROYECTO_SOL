@@ -147,7 +147,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ====================================================\n// Preparar Contexto para IA — G54 Field Mapping\n// G54 API fields:\n//   company: name, description, value_proposition, base_city, website, emails[], phones[]\n//   products: name, description, keywords[]\n//   ideas: id, topic, keyword, platform, description\n//   estrategia: objetivo, audiencia, tono, cta_principal, embudo, pilares[]\n// ====================================================\n\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\n// G54 wraps in .data, Airtable uses .fields\nconst empresa = empresaRaw.data || empresaRaw.fields || empresaRaw || {};\n\nconst productosRaw = $('📦 Obtener Servicios Activos').item.json;\n// G54: { company_id, data: [{id, name, description, keywords[]}] }\nconst productosData = productosRaw.data || productosRaw.items || productosRaw.records || (Array.isArray(productosRaw) ? productosRaw : []);\n\n// G54 ideas response: { data: [{id, topic, keyword, platform, description}] }\nconst temaRaw = $('📅 Obtener Próximo Tema Semanal').item.json;\nconst temaList = temaRaw.data || temaRaw.items || temaRaw.records || (Array.isArray(temaRaw) ? temaRaw : [temaRaw]);\nconst temaItem = (Array.isArray(temaList) ? temaList[0] : temaList) || {};\nconst tema = temaItem.fields || temaItem || {};\nconst temaId = temaItem.id || temaItem.social_idea_id || temaItem.tema_id || null;\n\n// Estrategia (continueOnFail — null if not configured yet)\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\n// Build product/service summary — handles G54 (name/description) and Airtable fallback\nconst servicios = productosData\n  .filter(p => (p.fields || p).is_active !== false)\n  .map(p => {\n    const f = p.fields || p;\n    const nombre = f.name || f.nombre || f['Nombre de Servicio'] || '';\n    const desc   = f.description || f.descripcion || f['Descripción comercial'] || '';\n    const kws    = Array.isArray(f.keywords) ? f.keywords.slice(0,3).join(', ') : '';\n    return `- ${nombre}: ${desc}${kws ? ' [' + kws + ']' : ''}`.slice(0, 220);\n  })\n  .join('\\n');\n\nreturn [{\n  json: {\n    // ---- Empresa (G54 field names first, Airtable fallback) ----\n    empresa_nombre:          empresa.name || empresa.nombre_empresa || empresa['\\ufeffnombre_empresa'] || 'Crating Express',\n    empresa_descripcion:     empresa.description || empresa.descripcion_corta || '',\n    empresa_propuesta_valor: empresa.value_proposition || empresa.propuesta_valor || '',\n    empresa_ciudad:          empresa.base_city || empresa.ciudad_base || empresa['ciudad base'] || 'Miami, FL',\n    empresa_web:             empresa.website || empresa.sitio_web || 'cratingexpress.com',\n    empresa_telefono:        (empresa.phones || [])[0] || empresa.telefono || '',\n    empresa_email:           (empresa.emails || [])[0] || 'cratingexpress01@gmail.com',\n    empresa_geografia:       empresa.geography || empresa.coverage || 'Miami / South Florida',\n    empresa_competidores:    (empresa.competitors_known || []).slice(0,3).map(c => c.name).join(', '),\n    servicios_resumen:       servicios,\n    // ---- Tema / Idea G54 ----\n    tema_id:                 temaId,\n    tema_texto:              tema.topic || tema.tema || tema['Tema'] || '',\n    tema_descripcion:        tema.description || tema.descripcion || tema['Descripcion'] || '',\n    tema_palabras_clave:     (Array.isArray(tema.keywords) ? tema.keywords.join(', ') : tema.keywords) || tema.keyword || tema.palabras_clave || '',\n    keyword_principal:       tema.keyword || tema.keyword_principal || tema['Keyword_Principal'] || '',\n    tema_semana:             tema.week || tema.semana || tema['Semana'] || 0,\n    tema_plataforma:         tema.platform || tema.plataforma || 'Instagram',\n    fecha_post:              new Date().toLocaleDateString('es-US', {timeZone: 'America/New_York'}),\n    // ---- Estrategia G54 ----\n    estrategia_objetivo:     estrategia.objetivo || estrategia.primary_goal || empresa.primary_goal || '',\n    estrategia_audiencia:    estrategia.audiencia || estrategia.target_market || empresa.target_market || '',\n    estrategia_tono:         estrategia.tono || 'profesional, directo y humano',\n    estrategia_cta:          estrategia.cta_principal || 'Solicitar cotización: cratingexpress.com/request-a-quote/',\n    estrategia_embudo:       estrategia.embudo || 'TOFU-MOFU',\n    estrategia_pilares:      Array.isArray(estrategia.pilares) ? estrategia.pilares.join(', ') : (estrategia.pilares || 'embalaje industrial, exportación, logística Miami'),\n  }\n}];\n"
+        "jsCode": "// ====================================================\n// Preparar Contexto para IA — G54 Field Mapping\n// G54 API fields:\n//   company: name, description, value_proposition, base_city, website, emails[], phones[]\n//   products: name, description, keywords[]\n//   ideas: id, topic, keyword, platform, description\n//   estrategia: objetivo, audiencia, tono, cta_principal, embudo, pilares[]\n// ====================================================\n\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\n// G54 wraps in .data, Airtable uses .fields\nconst empresa = empresaRaw.data || empresaRaw.fields || empresaRaw || {};\n\nconst productosRaw = $('📦 Obtener Servicios Activos').item.json;\n// G54: { company_id, data: [{id, name, description, keywords[]}] }\nconst productosData = productosRaw.data || productosRaw.items || productosRaw.records || (Array.isArray(productosRaw) ? productosRaw : []);\n\n// G54 ideas response: { data: [{id, topic, keyword, platform, description}] }\nconst temaRaw = $('📅 Obtener Próximo Tema Semanal').item.json;\nconst temaList = temaRaw.data || temaRaw.items || temaRaw.records || (Array.isArray(temaRaw) ? temaRaw : [temaRaw]);\nconst temaItem = (Array.isArray(temaList) ? temaList[0] : temaList) || {};\nconst tema = temaItem.fields || temaItem || {};\nconst temaId = temaItem.id || temaItem.social_idea_id || temaItem.tema_id || null;\n\n// Estrategia (continueOnFail — null if not configured yet)\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\n// Build product/service summary — handles G54 (name/description) and Airtable fallback\nconst servicios = productosData\n  .filter(p => (p.fields || p).is_active !== false)\n  .map(p => {\n    const f = p.fields || p;\n    const nombre = f.name || f.nombre || f['Nombre de Servicio'] || '';\n    const desc   = f.description || f.descripcion || f['Descripción comercial'] || '';\n    const kws    = Array.isArray(f.keywords) ? f.keywords.slice(0,3).join(', ') : '';\n    return `- ${nombre}: ${desc}${kws ? ' [' + kws + ']' : ''}`.slice(0, 220);\n  })\n  .join('\\n');\n\nreturn [{\n  json: {\n    // ---- Empresa (G54 field names first, Airtable fallback) ----\n    empresa_nombre:          empresa.name || empresa.nombre_empresa || empresa['\\ufeffnombre_empresa'] || 'Crating Express',\n    empresa_descripcion:     empresa.description || empresa.descripcion_corta || '',\n    empresa_propuesta_valor: empresa.value_proposition || empresa.propuesta_valor || '',\n    empresa_ciudad:          empresa.base_city || empresa.ciudad_base || empresa['ciudad base'] || 'Miami, FL',\n    empresa_web:             empresa.website || empresa.sitio_web || 'cratingexpress.com',\n    empresa_telefono:        (empresa.phones || [])[0] || empresa.telefono || '',\n    empresa_email:           (empresa.emails || [])[0] || 'cratingexpress01@gmail.com',\n    empresa_geografia:       empresa.geography || empresa.coverage || 'Miami / South Florida',\n    empresa_competidores:    (empresa.competitors_known || []).slice(0,3).map(c => c.name).join(', '),\n    servicios_resumen:       servicios,\n    // ---- Tema / Idea G54 ----\n    tema_id:                 temaId,\n    tema_texto:              tema.topic || tema.tema || tema['Tema'] || '',\n    tema_descripcion:        tema.description || tema.descripcion || tema['Descripcion'] || '',\n    tema_palabras_clave:     (Array.isArray(tema.keywords) ? tema.keywords.join(', ') : tema.keywords) || tema.keyword || tema.palabras_clave || '',\n    keyword_principal:       tema.keyword || tema.keyword_principal || tema['Keyword_Principal'] || '',\n    tema_semana:             tema.week || tema.semana || tema['Semana'] || 0,\n    tema_plataforma:         tema.platform || tema.plataforma || 'Instagram',\n    fecha_post:              new Date().toLocaleDateString('es-US', {timeZone: 'America/New_York'}),\n    // ---- Estrategia G54 ----\n    estrategia_objetivo:     estrategia.objetivo || estrategia.primary_goal || empresa.primary_goal || '',\n    estrategia_audiencia:    estrategia.audiencia || estrategia.target_market || empresa.target_market || '',\n    estrategia_tono:         estrategia.tono || 'profesional, directo y humano',\n    estrategia_cta:          estrategia.cta_principal || 'Solicitar cotización: cratingexpress.com/request-a-quote/',\n    estrategia_embudo:       estrategia.embudo || 'TOFU-MOFU',\n    estrategia_pilares:      Array.isArray(estrategia.pilares) ? estrategia.pilares.join(', ') : (estrategia.pilares || 'embalaje industrial, exportación, logística Miami'),\n    // ---- Imagen (G54 provee la URL — subida por usuario o generada por Image AI) ----\n    imagen_url:              tema.imagen_url || tema.image_url || null,\n    imagen_specs:            tema.imagen_specs || tema.image_specs || '',\n  }\n}];\n"
       },
       "id": "preparar-contexto",
       "name": "🔧 Preparar Contexto para IA",
@@ -556,45 +556,22 @@
     },
     {
       "parameters": {
-        "url": "https://cratingexpress.com/wp-json/wp/v2/media",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
+        "assignments": {
+          "assignments": [
             {
-              "name": "search",
-              "value": "={{ $('🔍 Parsear Versiones Inglés').item.json.keyword_principal || $('🔍 Parsear Versiones Inglés').item.json.texto_canva_titulo || 'embalaje' }}"
-            },
-            {
-              "name": "per_page",
-              "value": "5"
-            },
-            {
-              "name": "media_type",
-              "value": "image"
-            },
-            {
-              "name": "_fields",
-              "value": "id,source_url,alt_text,title"
-            },
-            {
-              "name": "mime_type",
-              "value": "image/jpeg,image/png"
+              "id": "imagen-url",
+              "name": "imagen_url",
+              "value": "={{ $('🔧 Preparar Contexto para IA').item.json.imagen_url || '' }}",
+              "type": "string"
             }
           ]
         },
-        "options": {
-          "response": {
-            "response": {
-              "fullResponse": true,
-              "neverError": true
-            }
-          }
-        }
+        "options": {}
       },
       "id": "wp-buscar-imagen",
-      "name": "🔎 WP: Buscar Imagen",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
+      "name": "🖼️ Obtener URL de Imagen",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
         3696,
         304
@@ -659,7 +636,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const estructura = $input.first().json;\nconst parsear = $('🔍 Parsear Versiones Inglés').item.json;\nconst wpItem = $('🖼️ WP: Seleccionar Imagen').first().json;\nconst presentacionId = $('📋 Slides: Copiar Template').item.json.id;\n\nconst slideId = estructura.slides?.[0]?.objectId || 'p1';\nconst pageElements = estructura.slides?.[0]?.pageElements || [];\n\nconst wpImageUrl = wpItem?.source_url || null;\nconst titulo = parsear.texto_canva_titulo_en || parsear.texto_canva_titulo || 'Post Title';\n\n// TEXT requests\nconst textRequests = [\n  { replaceAllText: { containsText: { text: '[titulo_post]', matchCase: true }, replaceText: titulo } },\n  { replaceAllText: { containsText: { text: '[descripcion_post]', matchCase: true }, replaceText: parsear.texto_canva_subtitulo_en || parsear.texto_canva_subtitulo || 'Post description' } }\n];\n\nconst titleShape = pageElements.find(el =>\n  (el.shape?.text?.textElements || []).some(te => (te.textRun?.content || '').includes('[titulo_post]'))\n);\nif (titleShape) {\n  let fontSize = 52;\n  if (titulo.length > 15) fontSize = 40;\n  if (titulo.length > 22) fontSize = 32;\n  if (titulo.length > 30) fontSize = 26;\n  textRequests.push({\n    updateTextStyle: {\n      objectId: titleShape.objectId,\n      textRange: { type: 'ALL' },\n      style: { fontSize: { magnitude: fontSize, unit: 'PT' } },\n      fields: 'fontSize'\n    }\n  });\n}\n\n// IMAGE: use replaceImage on the existing image element in the template\nlet imageRequest = null;\nif (wpImageUrl) {\n  const imageElement = pageElements.find(el => el.image !== undefined);\n  if (imageElement) {\n    imageRequest = {\n      requests: [{\n        replaceImage: {\n          imageObjectId: imageElement.objectId,\n          url: wpImageUrl,\n          imageReplaceMethod: 'CENTER_CROP'\n        }\n      }]\n    };\n  }\n}\n\nreturn [{ json: { presentacionId, textRequests, imageRequest, wpImageUrl, titulo, subtitulo: parsear.texto_canva_subtitulo } }];\n"
+        "jsCode": "const estructura = $input.first().json;\nconst parsear = $('🔍 Parsear Versiones Inglés').item.json;\nconst wpItem = $('🖼️ Obtener URL de Imagen').first().json;\nconst presentacionId = $('📋 Slides: Copiar Template').item.json.id;\n\nconst slideId = estructura.slides?.[0]?.objectId || 'p1';\nconst pageElements = estructura.slides?.[0]?.pageElements || [];\n\nconst wpImageUrl = wpItem?.imagen_url || null;\nconst titulo = parsear.texto_canva_titulo_en || parsear.texto_canva_titulo || 'Post Title';\n\n// TEXT requests\nconst textRequests = [\n  { replaceAllText: { containsText: { text: '[titulo_post]', matchCase: true }, replaceText: titulo } },\n  { replaceAllText: { containsText: { text: '[descripcion_post]', matchCase: true }, replaceText: parsear.texto_canva_subtitulo_en || parsear.texto_canva_subtitulo || 'Post description' } }\n];\n\nconst titleShape = pageElements.find(el =>\n  (el.shape?.text?.textElements || []).some(te => (te.textRun?.content || '').includes('[titulo_post]'))\n);\nif (titleShape) {\n  let fontSize = 52;\n  if (titulo.length > 15) fontSize = 40;\n  if (titulo.length > 22) fontSize = 32;\n  if (titulo.length > 30) fontSize = 26;\n  textRequests.push({\n    updateTextStyle: {\n      objectId: titleShape.objectId,\n      textRange: { type: 'ALL' },\n      style: { fontSize: { magnitude: fontSize, unit: 'PT' } },\n      fields: 'fontSize'\n    }\n  });\n}\n\n// IMAGE: use replaceImage on the existing image element in the template\nlet imageRequest = null;\nif (wpImageUrl) {\n  const imageElement = pageElements.find(el => el.image !== undefined);\n  if (imageElement) {\n    imageRequest = {\n      requests: [{\n        replaceImage: {\n          imageObjectId: imageElement.objectId,\n          url: wpImageUrl,\n          imageReplaceMethod: 'CENTER_CROP'\n        }\n      }]\n    };\n  }\n}\n\nreturn [{ json: { presentacionId, textRequests, imageRequest, wpImageUrl, titulo, subtitulo: parsear.texto_canva_subtitulo } }];\n"
       },
       "id": "slides-preparar-reemplazo",
       "name": "🔧 Slides: Preparar Reemplazo",
@@ -811,12 +788,15 @@
     },
     {
       "parameters": {
-        "jsCode": "// Seleccionar imagen de WordPress relevante al tema (alt texts en español)\nconst raw = $input.first().json;\nconst wpResults = Array.isArray(raw.body) ? raw.body : \n                  (typeof raw.body === 'string' ? JSON.parse(raw.body || '[]') : []);\n\nconst WP_BASE = 'https://cratingexpress.com/wp-json/wp/v2/media';\nconst FIELDS = 'id,source_url,alt_text,title,mime_type';\nconst MIME_FILTER = 'image/jpeg,image/png';\nconst ALLOWED_MIME = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp'];\nconst LOGO_KEYWORDS = ['logo', 'brand', 'icon', 'badge', 'seal', 'stamp', 'cert', 'award', 'photoroom', 'fondo'];\n\n// Usar hook_es y titulo — son específicos del post y en español (como los alt texts)\nconst parsear = $('🔍 Parsear Versiones Inglés').item.json;\nconst hookEs = parsear.hook_es || '';\nconst titulo = parsear.texto_canva_titulo || '';\nconst subtitulo = parsear.texto_canva_subtitulo || '';\n\n// Extraer palabras clave en español del tema actual\nconst allText = (hookEs + ' ' + titulo + ' ' + subtitulo).toLowerCase();\nconst stopWords = ['para','como','con','que','los','las','del','una','por','sus','nos','nuestro','tus','este','esta','son','han','más'];\nconst themeWords = allText\n  .replace(/[^a-záéíóúñü0-9 ]/g, ' ')\n  .split(/\\s+/)\n  .filter(w => w.length > 3 && !stopWords.includes(w))\n  .slice(0, 6);\n\nconsole.log('Theme keywords (ES):', themeWords);\nconsole.log('Hook:', hookEs, '| Título:', titulo);\n\nfunction isAllowed(item) {\n  const mime = (item.mime_type || '').toLowerCase();\n  const url = (item.source_url || '').toLowerCase();\n  if (!ALLOWED_MIME.some(m => mime.includes(m)) && url.endsWith('.webp')) return false;\n  return true;\n}\n\nfunction isLogo(item) {\n  const combined = [(item.source_url||''), (item.alt_text||''), (item.title?.rendered||'')].join(' ').toLowerCase();\n  return LOGO_KEYWORDS.some(kw => combined.includes(kw));\n}\n\nfunction scoreRelevance(item) {\n  const alt = (item.alt_text || item.title?.rendered || '').toLowerCase();\n  let score = 0;\n  for (const word of themeWords) {\n    if (alt.includes(word)) score += 3;\n  }\n  // Bonus por palabras del hook en español\n  const hookWords = hookEs.toLowerCase().split(/\\s+/).filter(w => w.length > 3);\n  for (const w of hookWords) {\n    if (alt.includes(w)) score += 5;\n  }\n  return score;\n}\n\nasync function searchImages(searchTerm) {\n  try {\n    const resp = await this.helpers.httpRequest({\n      method: 'GET',\n      url: `${WP_BASE}?search=${encodeURIComponent(searchTerm)}&per_page=20&media_type=image&mime_type=${MIME_FILTER}&_fields=${FIELDS}`,\n    });\n    return (Array.isArray(resp) ? resp : []).filter(isAllowed).filter(i => !isLogo(i));\n  } catch(e) { return []; }\n}\n\n// 1. Buscar con hook en español\nlet candidates = [];\nif (hookEs) {\n  candidates.push(...await searchImages.call(this, hookEs));\n}\n\n// 2. Buscar con las primeras 3 palabras del título\nconst tituloShort = titulo.split(' ').slice(0, 3).join(' ');\nif (tituloShort && tituloShort !== hookEs) {\n  const more = await searchImages.call(this, tituloShort);\n  const ids = new Set(candidates.map(c => c.id));\n  candidates.push(...more.filter(r => !ids.has(r.id)));\n}\n\n// 3. Si no hay resultados, buscar con palabras clave individuales\nif (candidates.length === 0) {\n  for (const word of themeWords.slice(0, 3)) {\n    const more = await searchImages.call(this, word);\n    const ids = new Set(candidates.map(c => c.id));\n    candidates.push(...more.filter(r => !ids.has(r.id)));\n    if (candidates.length >= 5) break;\n  }\n}\n\nconsole.log('Candidates:', candidates.length);\n\nif (candidates.length > 0) {\n  const scored = candidates.map(item => ({ item, score: scoreRelevance(item) }));\n  scored.sort((a, b) => b.score - a.score);\n  // Elegir aleatoriamente entre el top 5\n  const topN = Math.min(5, scored.length);\n  const idx = Math.floor(Math.random() * topN);\n  const chosen = scored[idx];\n  console.log('Chosen (score=' + chosen.score + '):', chosen.item.source_url);\n  console.log('Alt:', chosen.item.alt_text);\n  return [{ json: { source_url: chosen.item.source_url, alt_text: chosen.item.alt_text || '' } }];\n}\n\n// Fallback: últimas 20 imágenes sin logos, aleatorio\ntry {\n  const latest = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `${WP_BASE}?per_page=20&media_type=image&mime_type=${MIME_FILTER}&_fields=${FIELDS}`,\n  });\n  const items = (Array.isArray(latest) ? latest : []).filter(isAllowed).filter(i => !isLogo(i));\n  if (items.length > 0) {\n    const idx = Math.floor(Math.random() * Math.min(10, items.length));\n    return [{ json: { source_url: items[idx].source_url, alt_text: '' } }];\n  }\n} catch(e) {}\n\nreturn [{ json: { \n  source_url: 'https://cratingexpress.com/wp-content/uploads/2024/08/CE_2_EN-scaled.jpg',\n  alt_text: 'Crating Express wooden packaging'\n} }];\n"
+        "assignments": {
+          "assignments": []
+        },
+        "options": {}
       },
       "id": "wp-seleccionar-imagen",
-      "name": "🖼️ WP: Seleccionar Imagen",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "name": "🖼️ [Skip] WP Seleccionar",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
         3888,
         304
@@ -1410,7 +1390,7 @@
       "main": [
         [
           {
-            "node": "🔎 WP: Buscar Imagen",
+            "node": "🖼️ Obtener URL de Imagen",
             "type": "main",
             "index": 0
           }
@@ -1460,17 +1440,6 @@
         [
           {
             "node": "🔗 [Skip] Actualizar URLs",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔎 WP: Buscar Imagen": {
-      "main": [
-        [
-          {
-            "node": "🖼️ WP: Seleccionar Imagen",
             "type": "main",
             "index": 0
           }
@@ -1559,17 +1528,6 @@
         [
           {
             "node": "🖼️ Slides: Obtener Thumbnail",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🖼️ WP: Seleccionar Imagen": {
-      "main": [
-        [
-          {
-            "node": "📋 Slides: Copiar Template",
             "type": "main",
             "index": 0
           }
@@ -1741,6 +1699,28 @@
         [
           {
             "node": "📊 Obtener Perfil Empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🖼️ Obtener URL de Imagen": {
+      "main": [
+        [
+          {
+            "node": "🖼️ [Skip] WP Seleccionar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🖼️ [Skip] WP Seleccionar": {
+      "main": [
+        [
+          {
+            "node": "📋 Slides: Copiar Template",
             "type": "main",
             "index": 0
           }
