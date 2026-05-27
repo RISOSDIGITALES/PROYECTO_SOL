@@ -1,8 +1,125 @@
-# RRSS Automation — Crating Express
+# PROYECTO SOL — G54 Platform + Crating Express + Nomify
 
 ## Qué es este proyecto
 
-Automatización completa de redes sociales para **Crating Express** (empresa de embalaje/crating industrial en Miami, FL). Funciona en **n8n** con dos workflows JSON importables.
+Tres líneas de trabajo en un mismo repositorio:
+1. **G54 Platform** — plataforma de adquisición digital multi-módulo (ver sección G54 abajo)
+2. **Crating Express** — cliente piloto de G54 (embalaje industrial, Miami FL)
+3. **Nomify** — sistema de planilla para Nicaragua (Express + MariaDB)
+
+---
+
+# G54 — Plataforma de Adquisición Digital
+
+## Arquitectura G54
+
+G54 es una plataforma completa de adquisición digital. Tiene 4 módulos, cada uno con agentes IA especializados en n8n.
+
+```
+SOCIAL MEDIA → TRAFFIC → WEBSITE → LEADS → SALES → RETARGETING (SEM)
+     ↑              ↑         ↑           ↑
+  Módulo 1       Módulo 2   Módulo 4   Módulo 3
+```
+
+| Módulo | Nombre | Estado | Agentes IA |
+|---|---|---|---|
+| **1** | **Social Media (RRSS)** | ✅ v1.3 listo | Strategist, Content, Distribution, Community, Sales, Analytics |
+| **2** | **SEO / AEO / GEO** | 🔜 Próximo | SEO Strategist, Content SEO, Technical SEO, Analytics SEO |
+| **3** | **SEM (Paid Ads)** | ⏳ Pendiente | Ads Strategist, Ads Creative, Campaign Manager, Ads Analytics |
+| **4** | **Web Development** | ⏳ Pendiente | UX/UI, Web Builder, Conversion Optimizer |
+
+**Flujo estratégico:** RRSS genera demanda → SEO captura → Website convierte → SEM acelera → Analytics retroalimenta
+
+## G54 API — Conexión verificada
+
+- **API Base URL:** `https://apigrowth.mdarthurdigital.com` (test/dev activo)
+- **Producción:** `https://api.growth54.com` (no activa aún)
+- **Auth:** `N8N_API_TOKEN` (read) y `AGENT_API_TOKEN` (write) via Bearer — **en dev mode, tokens vacíos funcionan sin auth**
+- **Admin panel:** `https://growth.mdarthurdigital.com/admin`
+- **Comprobado en vivo 2026-05-27**: endpoints responden sin tokens
+
+### Endpoints n8n (read — N8N_TOKEN):
+
+| Endpoint | Respuesta |
+|---|---|
+| `GET /api/n8n/companies/{id}` | Perfil empresa completo |
+| `GET /api/n8n/companies/{id}/productos-servicios` | Servicios activos |
+| `GET /api/n8n/companies/{id}/rrss/estrategia` | Estrategia RRSS (lo llena el Strategist AI) |
+| `GET /api/n8n/companies/{id}/rrss/ideas` | Ideas aprobadas en cola |
+| `GET /api/n8n/companies/{id}/rrss/posts` | Posts generados |
+
+### Endpoints agent (write — AGENT_TOKEN):
+
+| Endpoint | Uso |
+|---|---|
+| `POST /api/agent/rrss/posts` | Guardar post generado |
+| `POST /api/agent/rrss/ideas` | Guardar ideas nuevas |
+| `POST /api/agent/rrss/estrategia` | Guardar estrategia (Strategist AI) |
+| `PUT /api/rrss/ideas/{id}/status` | Actualizar estado idea |
+| `PUT /api/rrss/posts/{id}/status` | Actualizar estado post |
+
+### Config node n8n (⚙️ Config Growth54):
+```
+G54_BASE_URL   = https://apigrowth.mdarthurdigital.com
+G54_N8N_TOKEN  = ""  (vacío = dev mode, acepta sin auth)
+G64_AGENT_TOKEN = "" (vacío = dev mode, acepta sin auth)
+G54_COMPANY_ID = 1   (Crating Express)
+```
+
+### Datos en G54 para Crating Express (company_id=1):
+- **Empresa:** nombre, descripción, value_proposition, base_city, website, emails[], phones[]
+- **7 productos/servicios** cargados (name, description, keywords[])
+- **Email empresa:** cratingexpress01@gmail.com
+- **Estrategia:** `null` — la llenará el Strategist AI (agente separado, por construir)
+- **Ideas:** `[]` — se agregan desde el panel admin o via Strategist AI
+
+### Patrón de integración (mismo para todos los módulos):
+```
+⚙️ Config G54 → 🎯 Obtener [Datos Módulo] → 🔧 Preparar Contexto
+→ 🤖 Generar contenido (Gemini + Groq fallback)
+→ 💾 POST /api/agent/[módulo]/[recurso]
+→ Estado updates via PUT /api/[módulo]/[recurso]/{id}/status
+```
+
+**Regla clave:** todo lo configurable (prompts, instrucciones, parámetros) viene de la API de G54, no hardcodeado en n8n.
+
+## G54 — Módulo 1: Social Media (RRSS)
+
+**Workflow n8n:** `RRSS Automation — Crating Express v1.3 (G54)` (ID: `wyO1f93A66imn9qw`)
+**Archivo:** `workflow-rrss-n8n-v13.json`
+
+### Agentes del módulo (a construir secuencialmente):
+1. ✅ **Content AI** — genera posts con framework 8 pasos SEO/AEO/GEO (hecho)
+2. 🔜 **Strategist AI** — define estrategia RRSS, llena `estrategia` en G54
+3. ⏳ **Distribution AI** — publica en plataformas
+4. ⏳ **Community AI** — responde comentarios/mensajes
+5. ⏳ **Sales AI** — identifica oportunidades de venta
+6. ⏳ **Analytics AI** — reportes de métricas
+
+### Framework 8 pasos (Content AI v1.3):
+1. Intención de búsqueda (informacional/comercial/transaccional/local)
+2. Keywords secundarias (3-5)
+3. AEO — respuesta directa para búsqueda por IA
+4. Hook con keyword principal
+5. Desarrollo (datos + prueba social)
+6. GEO (Miami, South Florida, Miami-Dade)
+7. Adaptación tono redes sociales
+8. CTA con URL obligatorio + hashtags
+
+### Estado actual v1.3:
+- ✅ Lee empresa y servicios desde G54 API
+- ✅ Lee ideas aprobadas desde G54
+- ✅ Guarda posts generados en G54
+- ✅ Email de aprobación con botones Aprobar/Rechazar
+- ✅ Publica FB/IG via Make.com al aprobar
+- ✅ Actualiza estados en G54 (procesando/publicado/rechazado/completado)
+- ✅ 0 tokens hardcodeados de Airtable
+- ⚠️ Estrategia usa fallbacks (primary_goal, target_market) hasta que Strategist AI la llene
+- ⚠️ Ideas queue vacía — necesita ideas aprobadas en el panel G54
+
+---
+
+# RRSS Automation — Crating Express
 
 ## Archivos
 
@@ -522,6 +639,7 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 46. **Migración Nomify completada** (2026-05-21): todo el stack de Planilla Nicaragua migrado de Netlify/Airtable a Express+MariaDB+JWT; todos los HTML actualizados con `onReady(roles,fn)` JWT, `netlify/functions/` eliminado, `usuarios.html` creado, backend completo en `planilla-server/`; pendiente push a `WX-MDA/Nomify` rama `sol/feature-inicial`
 47. **Carpetas renombradas Nomify** (2026-05-22): frontend `planilla-web/` → `ft_nomify/`, backend ya era `bk_nomify/`; `server.js` debe usar `'../ft_nomify'` en `express.static()`; CLAUDE.md actualizado para reflejar nueva estructura
 48. **Bugs detectados en sesión perdida** (2026-05-22): `index.html` limpiado de referencias Netlify; columnas/tablas faltantes añadidas en MariaDB; bug: botón de Usuarios/Configuración no visible en la UI; bug: `usuarios.html` selector de rol solo muestra "Master", no permite asignar "Colaborador"
+49. **G54 RRSS v1.3 deployada** (2026-05-27): workflow `wyO1f93A66imn9qw` migrado completamente a G54 API — framework 8 pasos SEO/AEO/GEO, 0 tokens Airtable hardcodeados, lee empresa/servicios/ideas desde G54, guarda posts en G54, estados vía G54 API. Conexión verificada en vivo sin tokens (dev mode). Arquitectura G54 documentada: 4 módulos (RRSS ✅, SEO 🔜, SEM ⏳, Web ⏳).
 
 ## Nomify — Planilla Nicaragua (Express + MariaDB)
 
