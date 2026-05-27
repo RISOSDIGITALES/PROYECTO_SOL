@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-26T13:44:44.754Z",
+  "updatedAt": "2026-05-27T19:42:16.432Z",
   "createdAt": "2026-04-04T14:58:41.470Z",
   "id": "eCOX3ogMjToxZsh9",
   "name": "CE WhatsApp Engine - Sistema de Conversión",
@@ -9,7 +9,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 🟢 CE WhatsApp Engine — G54\n\n**Fuente de datos:** G54 API\n- Empresa y productos: `/api/n8n/companies/{id}`\n- WA Config (agente, prompts, follow-up): `/api/n8n/companies/{id}/whatsapp/config` _(cuando G54 lo implemente)_\n- Leads: Airtable (temporal hasta G54 WA endpoint)\n\n**Variables n8n requeridas:**\n`G54_N8N_TOKEN`, `G54_AGENT_TOKEN`, `G54_COMPANY_ID`\n`AIRTABLE_TOKEN`, `FB_ACCESS_TOKEN`, `WA_PHONE_NUMBER_ID`\n\n**Nombre del agente:** editable en G54 → campo `agent_name`",
+        "content": "## 🟢 CE WhatsApp Engine — G54\n\n**Todo desde G54 API — cero tokens hardcodeados**\n\n**G54 endpoints activos:**\n- Empresa: `/api/n8n/companies/{id}`\n- Productos: `/api/n8n/companies/{id}/productos-servicios`\n\n**G54 endpoints pendientes:**\n- WA Config (agente, prompts, credenciales Meta): `/api/n8n/companies/{id}/whatsapp/config`\n- Leads: `/api/n8n/companies/{id}/wa/leads` + `/api/agent/wa/leads`\n\n**Solo vars n8n:** `G54_N8N_TOKEN`, `G54_AGENT_TOKEN`, `G54_COMPANY_ID`",
         "height": 200,
         "width": 400,
         "color": 5
@@ -176,16 +176,16 @@
     },
     {
       "parameters": {
-        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54').item.json.G54_COMPANY_ID + '/wa/leads' }}",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
             {
-              "name": "filterByFormula",
-              "value": "={Telefono}='+{{ $('🔧 Extraer Mensaje y Teléfono').item.json.telefono }}'"
+              "name": "phone",
+              "value": "={{ $('🔧 Extraer Mensaje y Teléfono').item.json.telefono }}"
             },
             {
-              "name": "maxRecords",
+              "name": "limit",
               "value": "1"
             }
           ]
@@ -195,7 +195,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.AIRTABLE_TOKEN }}"
+              "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_N8N_TOKEN }}"
             }
           ]
         },
@@ -208,11 +208,12 @@
       "position": [
         672,
         800
-      ]
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
-        "jsCode": "const msgData = $('🔧 Extraer Mensaje y Teléfono').item.json;\nconst empresaRaw = $('🏢 Obtener Empresa G54').item.json;\nconst waConfigRaw = $('⚙️ Obtener WA Config G54').item.json;\nconst leadData = $('📋 Buscar Lead Existente').item.json;\nconst productosRaw = $('📦 Obtener Productos G54').item.json;\n\n// G54 field mapping\nconst empresa = empresaRaw.data || empresaRaw || {};\nconst waConfig = waConfigRaw?.data || {};\n\n// Agent identity — configurable from G54 WA Config (agent_name field)\nconst nombre_agente = waConfig.agent_name || 'Alex';\n\n// Company data (G54 field names)\nconst empresa_nombre = empresa.name || 'Crating Express';\nconst empresa_descripcion = empresa.description || '';\nconst empresa_ciudad = empresa.base_city || 'Miami, FL';\nconst empresa_web = empresa.website || '';\nconst emailVendedor = (empresa.emails || []).join(',') || 'risosadmi@gmail.com';\n\n// WA Config — from G54 when endpoint is ready, fallback to defaults\nconst bienvenida = waConfig.welcome_message\n  || `Hola 👋 gracias por contactarnos. Soy ${nombre_agente}, el asistente de ${empresa_nombre}. ¿En qué te puedo ayudar?`;\nconst instruccionesIA = waConfig.ia_instructions || '';\nconst promptTemplate = waConfig.system_prompt || '';\nconst followup24 = waConfig.followup_24h || '';\nconst followup72 = waConfig.followup_72h || '';\n\n// Products catalog from G54\nconst productos = productosRaw.data || [];\nconst catalogoProductos = productos.map(p => {\n  const nombre = p.name || '';\n  const desc = p.description || '';\n  const kw = (p.keywords || []).join(', ');\n  return `• ${nombre}: ${desc}${kw ? ' [' + kw + ']' : ''}`;\n}).filter(l => l.length > 3).join('\\n');\n\n// Lead data (Airtable — until G54 adds WA leads endpoint)\nconst leadExistente = leadData.records?.[0];\nconst leadId = leadExistente?.id || null;\nconst leadFields = leadExistente?.fields || {};\n\nlet datosRecolectados = {\n  producto: leadFields.Respuesta_1 || null,\n  medidas: leadFields.Respuesta_2 || null,\n  fecha: leadFields.Respuesta_3 || null,\n  tipo_cajon: null,\n  proteccion_extra: null,\n  direccion: null,\n  correo_contacto: null\n};\n\ntry {\n  const notas = leadFields.Notas || '';\n  if (notas && notas.trim().startsWith('{')) {\n    const stored = JSON.parse(notas);\n    if (stored.tipo_cajon) datosRecolectados.tipo_cajon = stored.tipo_cajon;\n    if (stored.proteccion_extra) datosRecolectados.proteccion_extra = stored.proteccion_extra;\n    if (stored.direccion) datosRecolectados.direccion = stored.direccion;\n    if (stored.correo_contacto) datosRecolectados.correo_contacto = stored.correo_contacto;\n    if (stored.nombre_cliente) datosRecolectados.nombre_cliente = stored.nombre_cliente;\n  }\n} catch(e) {}\n\nif (!datosRecolectados.nombre_cliente && leadFields.Nombre_Contacto) {\n  datosRecolectados.nombre_cliente = leadFields.Nombre_Contacto;\n}\n\nconst notasObj = (() => { try { const n = leadFields.Notas || '{}'; return n.trim().startsWith('{') ? JSON.parse(n) : {}; } catch(e) { return {}; } })();\nconst estado = leadFields.Estado || 'Nuevo';\nconst cotizacionEnviada = notasObj.cotizacion_enviada === true || ['Lead Caliente','Cotizacion_Enviada','Calificado'].includes(estado);\nconst historial = leadFields.Historial_Mensajes || '';\nconst esNuevo = !leadId;\n\n// Build prompt — supports {{AGENTE}}, {{EMPRESA}}, {{CATALOGO}}, {{INSTRUCCIONES}}\nconst promptSistema = promptTemplate\n  .replace(/\\{\\{AGENTE\\}\\}/g, nombre_agente)\n  .replace(/\\{\\{EMPRESA\\}\\}/g, empresa_nombre)\n  .replace(/\\{\\{CATALOGO\\}\\}/g, catalogoProductos)\n  .replace(/\\{\\{INSTRUCCIONES\\}\\}/g, instruccionesIA ? 'Instrucciones adicionales: ' + instruccionesIA : '')\n  .trim();\n\n// Greeting based on Miami time (UTC-4 EDT)\nconst horaMiami = (new Date().getUTCHours() - 4 + 24) % 24;\nconst saludoHora = horaMiami >= 6 && horaMiami < 12 ? 'buenos días'\n  : horaMiami >= 12 && horaMiami < 19 ? 'buenas tardes'\n  : 'buenas noches';\n\nconst cleanCheck = v => (!v || v === 'desconocido' || v === 'null' || v === 'undefined') ? null : v;\nconst dR = datosRecolectados;\nlet proximoPaso;\nif (cotizacionEnviada) {\n  proximoPaso = 'POST_COTIZACION';\n} else if (esNuevo) {\n  proximoPaso = 'PRIMER_CONTACTO';\n} else if (!cleanCheck(dR.nombre_cliente)) {\n  proximoPaso = 'PEDIR_NOMBRE';\n} else if (!cleanCheck(dR.producto)) {\n  proximoPaso = 'PEDIR_PRODUCTO';\n} else if (!cleanCheck(dR.medidas)) {\n  proximoPaso = 'PEDIR_MEDIDAS';\n} else if (!cleanCheck(dR.tipo_cajon)) {\n  proximoPaso = 'PEDIR_TIPO_CAJON';\n} else if (dR.proteccion_extra === null || dR.proteccion_extra === undefined || dR.proteccion_extra === 'desconocido') {\n  proximoPaso = 'PEDIR_PROTECCION';\n} else {\n  proximoPaso = 'LISTO_PARA_COTIZAR';\n}\n\nreturn [{ json: {\n  telefono: msgData.telefono,\n  texto: msgData.texto,\n  nombreContacto: msgData.nombreContacto || '',\n  emailVendedor,\n  nombre_agente,\n  empresa_nombre,\n  empresa_descripcion,\n  empresa_ciudad,\n  instruccionesIA,\n  bienvenida,\n  followup24,\n  followup72,\n  leadId,\n  estado,\n  historial,\n  datosRecolectados,\n  cotizacionEnviada,\n  esNuevo,\n  saludoHora,\n  catalogoProductos,\n  promptSistema,\n  proximoPaso\n} }];"
+        "jsCode": "const msgData = $('🔧 Extraer Mensaje y Teléfono').item.json;\nconst empresaRaw = $('🏢 Obtener Empresa G54').item.json;\nconst waConfigRaw = $('⚙️ Obtener WA Config G54').item.json;\nconst leadRaw = $('📋 Buscar Lead Existente').item.json;\nconst productosRaw = $('📦 Obtener Productos G54').item.json;\n\n// G54 field mapping\nconst empresa = empresaRaw.data || empresaRaw || {};\nconst waConfig = waConfigRaw?.data || {};\n\n// Agent identity — configurable desde G54 WA Config (campo agent_name)\nconst nombre_agente = waConfig.agent_name || 'Alex';\n\n// Company data (G54 field names)\nconst empresa_nombre = empresa.name || 'Crating Express';\nconst empresa_descripcion = empresa.description || '';\nconst empresa_ciudad = empresa.base_city || 'Miami, FL';\nconst empresa_web = empresa.website || '';\nconst emailVendedor = (empresa.emails || []).join(',') || 'risosadmi@gmail.com';\n\n// WA Config — desde G54, fallback a defaults hasta que el endpoint exista\nconst bienvenida = waConfig.welcome_message\n  || `Hola 👋 gracias por contactarnos. Soy ${nombre_agente}, el asistente de ${empresa_nombre}. ¿En qué te puedo ayudar?`;\nconst instruccionesIA = waConfig.ia_instructions || '';\nconst promptTemplate = waConfig.system_prompt || '';\nconst followup24 = waConfig.followup_24h || '';\nconst followup72 = waConfig.followup_72h || '';\n\n// Products catalog desde G54\nconst productos = productosRaw.data || [];\nconst catalogoProductos = productos.map(p => {\n  const nombre = p.name || '';\n  const desc = p.description || '';\n  const kw = (p.keywords || []).join(', ');\n  return `• ${nombre}: ${desc}${kw ? ' [' + kw + ']' : ''}`;\n}).filter(l => l.length > 3).join('\\n');\n\n// Lead data — formato G54: { data: [{ id, phone, name, estado, historial, datos, clasificacion, cotizacion_enviada }] }\nconst leads = leadRaw?.data || [];\nconst leadExistente = leads[0] || null;\nconst leadId = leadExistente?.id || null;\nconst leadDatos = leadExistente?.datos || {};\nconst estado = leadExistente?.estado || 'Nuevo';\nconst historial = leadExistente?.historial || '';\nconst esNuevo = !leadId;\nconst cotizacionEnviada = leadExistente?.cotizacion_enviada === true || ['Lead Caliente','Cotizacion_Enviada','Calificado'].includes(estado);\n\nlet datosRecolectados = {\n  nombre_cliente: leadDatos.nombre_cliente || leadExistente?.name || null,\n  producto: leadDatos.producto || null,\n  medidas: leadDatos.medidas || null,\n  fecha: leadDatos.fecha || null,\n  tipo_cajon: leadDatos.tipo_cajon || null,\n  proteccion_extra: leadDatos.proteccion_extra !== undefined ? leadDatos.proteccion_extra : null,\n  direccion: leadDatos.direccion || null,\n  correo_contacto: leadDatos.correo_contacto || null\n};\n\n// Build prompt — soporta {{AGENTE}} {{EMPRESA}} {{CATALOGO}} {{INSTRUCCIONES}}\nconst promptSistema = promptTemplate\n  .replace(/\\{\\{AGENTE\\}\\}/g, nombre_agente)\n  .replace(/\\{\\{EMPRESA\\}\\}/g, empresa_nombre)\n  .replace(/\\{\\{CATALOGO\\}\\}/g, catalogoProductos)\n  .replace(/\\{\\{INSTRUCCIONES\\}\\}/g, instruccionesIA ? 'Instrucciones adicionales: ' + instruccionesIA : '')\n  .trim();\n\n// Saludo hora Miami (UTC-4)\nconst horaMiami = (new Date().getUTCHours() - 4 + 24) % 24;\nconst saludoHora = horaMiami >= 6 && horaMiami < 12 ? 'buenos días'\n  : horaMiami >= 12 && horaMiami < 19 ? 'buenas tardes'\n  : 'buenas noches';\n\nconst cleanCheck = v => (!v || v === 'desconocido' || v === 'null' || v === 'undefined') ? null : v;\nconst dR = datosRecolectados;\nlet proximoPaso;\nif (cotizacionEnviada)             proximoPaso = 'POST_COTIZACION';\nelse if (esNuevo)                  proximoPaso = 'PRIMER_CONTACTO';\nelse if (!cleanCheck(dR.nombre_cliente)) proximoPaso = 'PEDIR_NOMBRE';\nelse if (!cleanCheck(dR.producto))       proximoPaso = 'PEDIR_PRODUCTO';\nelse if (!cleanCheck(dR.medidas))        proximoPaso = 'PEDIR_MEDIDAS';\nelse if (!cleanCheck(dR.tipo_cajon))     proximoPaso = 'PEDIR_TIPO_CAJON';\nelse if (dR.proteccion_extra === null || dR.proteccion_extra === undefined || dR.proteccion_extra === 'desconocido')\n                                   proximoPaso = 'PEDIR_PROTECCION';\nelse                               proximoPaso = 'LISTO_PARA_COTIZAR';\n\nreturn [{ json: {\n  telefono: msgData.telefono,\n  texto: msgData.texto,\n  nombreContacto: msgData.nombreContacto || '',\n  emailVendedor,\n  nombre_agente,\n  empresa_nombre,\n  empresa_descripcion,\n  empresa_ciudad,\n  instruccionesIA,\n  bienvenida,\n  followup24,\n  followup72,\n  leadId,\n  estado,\n  historial,\n  datosRecolectados,\n  cotizacionEnviada,\n  esNuevo,\n  saludoHora,\n  catalogoProductos,\n  promptSistema,\n  proximoPaso\n} }];"
       },
       "id": "preparar-contexto",
       "name": "🔧 Preparar Contexto IA",
@@ -282,13 +283,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
+        "url": "={{ 'https://graph.facebook.com/v19.0/' + $('⚙️ Obtener WA Config G54').item.json?.data?.phone_number_id + '/messages' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer EAALcI7uQ5DkBRQZCmn8bV2laZBaYe929AtdjIw4NZCKnuOZB0i2ZApaUXvEYiwcXUZCM4ZBRCQZAYq36ioDOZANd1F2pZCncwvhGuUMmAafdP3GBwXWXbA56TvBAyv7xH8hVvfpcUbhWzYhHlGvOVnhve0ZAxYJCZApm9fn5ampBTR6ZBZCTJRseZCAR4K2xNmyTPSVcAZDZD"
+              "value": "={{ 'Bearer ' + $('⚙️ Obtener WA Config G54').item.json?.data?.wa_access_token }}"
             },
             {
               "name": "Content-Type",
@@ -314,13 +315,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/agent/wa/leads' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.AIRTABLE_TOKEN }}"
+              "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_AGENT_TOKEN }}"
             },
             {
               "name": "Content-Type",
@@ -330,7 +331,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ (() => {\n  const fields = {\n    Telefono: '+' + $json.telefono,\n    Nombre: $json.nombreContacto || '',\n    Estado: $json.nuevoEstado,\n    Respuesta_1: $json.datosRecolectados.producto || '',\n    Respuesta_2: $json.datosRecolectados.medidas || '',\n    Respuesta_3: $json.datosRecolectados.fecha || '',\n    Notas: JSON.stringify({ tipo_cajon: $json.datosRecolectados.tipo_cajon || null, proteccion_extra: $json.datosRecolectados.proteccion_extra || null, direccion: $json.datosRecolectados.direccion || null, correo_contacto: $json.datosRecolectados.correo_contacto || null, cotizacion_enviada: $json.cotizador_enviado === true || $('🔧 Preparar Contexto IA').item.json.cotizacionEnviada === true }),\n    Origen: $json.origen || 'Desconocido',\n    Descripcion_Lead: $json.resumen_lead || '',\n    Nombre_Contacto: $json.nombreContacto || '',\n    Ultima_Actividad: new Date().toISOString(),\n    Historial_Mensajes: $json.nuevoHistorial,\n    Fecha_Inicio: new Date().toISOString(),\n    Ultima_Interaccion: new Date().toISOString()\n  };\n  if ($json.clasificacion) fields.Clasificacion = $json.clasificacion;\n  return JSON.stringify({ records: [{ fields }] });\n})() }}",
+        "jsonBody": "={{ JSON.stringify({\n  company_id: Number($('⚙️ Config G54').item.json.G54_COMPANY_ID),\n  phone: '+' + $json.telefono,\n  name: $json.nombreContacto || '',\n  estado: $json.nuevoEstado,\n  origen: $json.origen || 'WhatsApp',\n  historial: $json.nuevoHistorial || '',\n  datos: $json.datosRecolectados || {},\n  resumen: $json.resumen_lead || '',\n  clasificacion: $json.clasificacion || 'Frio'\n}) }}",
         "options": {}
       },
       "id": "guardar-lead",
@@ -340,7 +341,8 @@
       "position": [
         2640,
         640
-      ]
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -363,13 +365,17 @@
     },
     {
       "parameters": {
-        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+        "url": "={{ $('⚙️ Config G54 Follow-up').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54 Follow-up').item.json.G54_COMPANY_ID + '/wa/leads' }}",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
             {
-              "name": "filterByFormula",
-              "value": "AND(OR({Estado}='Calificado',{Estado}='Nuevo',{Estado}='En calificación'),IS_BEFORE({Ultima_Interaccion}, DATEADD(NOW(),-23,'hours')))"
+              "name": "status",
+              "value": "active"
+            },
+            {
+              "name": "no_response_hours",
+              "value": "23"
             }
           ]
         },
@@ -378,7 +384,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('⚙️ Config G54 Follow-up').item.json.AIRTABLE_TOKEN }}"
+              "value": "={{ 'Bearer ' + $('⚙️ Config G54 Follow-up').item.json.G54_N8N_TOKEN }}"
             }
           ]
         },
@@ -391,11 +397,12 @@
       "position": [
         464,
         752
-      ]
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
-        "jsCode": "const data = $input.item.json;\nconst records = data.records || [];\nconst now = new Date();\nconst results = [];\n\nfor (const record of records) {\n  const fields = record.fields;\n  const ultimaInteraccion = new Date(fields.Ultima_Actividad);\n  const horasDiff = (now - ultimaInteraccion) / (1000 * 60 * 60);\n  \n  let tipoFollowup = null;\n  if (horasDiff >= 72) tipoFollowup = '72h';\n  else if (horasDiff >= 24) tipoFollowup = '24h';\n  \n  if (tipoFollowup) {\n    results.push({\n      json: {\n        recordId: record.id,\n        telefono: fields.Telefono,\n        nombre: fields.Nombre,\n        tipoFollowup,\n        estado: fields.Estado\n      }\n    });\n  }\n}\n\nreturn results;"
+        "jsCode": "const data = $input.item.json;\nconst leads = data.data || data.records || [];\nconst now = new Date();\nconst results = [];\n\nfor (const lead of leads) {\n  const ultimaActividad = new Date(lead.ultima_actividad || lead.fields?.Ultima_Actividad || lead.fields?.Ultima_Interaccion);\n  const horasDiff = (now - ultimaActividad) / (1000 * 60 * 60);\n  let tipoFollowup = null;\n  if (horasDiff >= 72)      tipoFollowup = '72h';\n  else if (horasDiff >= 24) tipoFollowup = '24h';\n  if (tipoFollowup) {\n    results.push({ json: {\n      leadId: lead.id || lead.fields?.id || lead.id,\n      telefono: (lead.phone || lead.fields?.Telefono || '').replace(/^\\+/,''),\n      nombre: lead.name || lead.fields?.Nombre || '',\n      tipoFollowup,\n      estado: lead.estado || lead.fields?.Estado || ''\n    }});\n  }\n}\nreturn results;"
       },
       "id": "procesar-followups",
       "name": "🔧 Procesar Follow-ups",
@@ -423,29 +430,14 @@
               "value": "={{ $vars.G54_N8N_TOKEN || '' }}"
             },
             {
+              "name": "G54_AGENT_TOKEN",
+              "type": "stringValue",
+              "value": "={{ $vars.G54_AGENT_TOKEN || '' }}"
+            },
+            {
               "name": "G54_COMPANY_ID",
               "type": "stringValue",
               "value": "={{ $vars.G54_COMPANY_ID || '1' }}"
-            },
-            {
-              "name": "AIRTABLE_TOKEN",
-              "type": "stringValue",
-              "value": "={{ $vars.AIRTABLE_TOKEN || '' }}"
-            },
-            {
-              "name": "WA_PHONE_NUMBER_ID",
-              "type": "stringValue",
-              "value": "={{ $vars.WA_PHONE_NUMBER_ID || '1083260611538246' }}"
-            },
-            {
-              "name": "WA_FOLLOWUP_24H",
-              "type": "stringValue",
-              "value": "Hola 👋 solo quería confirmar si aún necesitas ayuda con tu embalaje. Seguimos disponibles en Crating Express, Miami."
-            },
-            {
-              "name": "WA_FOLLOWUP_72H",
-              "type": "stringValue",
-              "value": "Seguimos disponibles si necesitas cotización o asesoría para embalaje industrial en Miami 👍"
             }
           ]
         }
@@ -455,20 +447,20 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        912,
-        752
+        464,
+        864
       ]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ 'https://graph.facebook.com/v19.0/' + $('⚙️ Config G54 Follow-up').item.json.WA_PHONE_NUMBER_ID + '/messages' }}",
+        "url": "={{ 'https://graph.facebook.com/v19.0/' + $('⚙️ WA Config G54 Follow-up').item.json?.data?.phone_number_id + '/messages' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $vars.FB_ACCESS_TOKEN }}"
+              "value": "={{ 'Bearer ' + $('⚙️ WA Config G54 Follow-up').item.json?.data?.wa_access_token }}"
             },
             {
               "name": "Content-Type",
@@ -478,7 +470,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.telefono, type: 'text', text: { body: $json.tipoFollowup === '24h' ? $('⚙️ Config G54 Follow-up').item.json.WA_FOLLOWUP_24H : $('⚙️ Config G54 Follow-up').item.json.WA_FOLLOWUP_72H } }) }}",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.telefono, type: 'text', text: { body: $json.tipoFollowup === '24h' ? ($('⚙️ WA Config G54 Follow-up').item.json?.data?.followup_24h || 'Hola 👋 solo quería confirmar si aún necesitas ayuda con tu embalaje.') : ($('⚙️ WA Config G54 Follow-up').item.json?.data?.followup_72h || 'Seguimos disponibles si necesitas cotización o asesoría 👍') } }) }}",
         "options": {}
       },
       "id": "enviar-followup",
@@ -493,13 +485,13 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads/{{ $json.recordId }}",
+        "url": "={{ $('⚙️ Config G54 Follow-up').item.json.G54_BASE_URL + '/api/agent/wa/leads/' + $json.leadId }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('⚙️ Config G54 Follow-up').item.json.AIRTABLE_TOKEN }}"
+              "value": "={{ 'Bearer ' + $('⚙️ Config G54 Follow-up').item.json.G54_AGENT_TOKEN }}"
             },
             {
               "name": "Content-Type",
@@ -509,7 +501,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ fields: { Estado: 'Follow-up ' + $json.tipoFollowup, Ultima_Interaccion: new Date().toISOString() } }) }}",
+        "jsonBody": "={{ JSON.stringify({ estado: 'Follow-up ' + $json.tipoFollowup, ultima_actividad: new Date().toISOString() }) }}",
         "options": {}
       },
       "id": "actualizar-estado-followup",
@@ -519,7 +511,8 @@
       "position": [
         1344,
         752
-      ]
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -557,13 +550,13 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads/{{ $json.leadId }}",
+        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/agent/wa/leads/' + $json.leadId }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.AIRTABLE_TOKEN }}"
+              "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_AGENT_TOKEN }}"
             },
             {
               "name": "Content-Type",
@@ -573,7 +566,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ (() => {\n  const fields = {\n    Estado: $json.nuevoEstado,\n    Respuesta_1: $json.datosRecolectados.producto || '',\n    Respuesta_2: $json.datosRecolectados.medidas || '',\n    Respuesta_3: $json.datosRecolectados.fecha || '',\n    Notas: JSON.stringify({ tipo_cajon: $json.datosRecolectados.tipo_cajon || null, proteccion_extra: $json.datosRecolectados.proteccion_extra || null, direccion: $json.datosRecolectados.direccion || null, correo_contacto: $json.datosRecolectados.correo_contacto || null, cotizacion_enviada: $json.cotizador_enviado === true || $('🔧 Preparar Contexto IA').item.json.cotizacionEnviada === true }),\n    Descripcion_Lead: $json.resumen_lead || '',\n    Nombre_Contacto: $json.nombreContacto || '',\n    Ultima_Actividad: new Date().toISOString(),\n    Historial_Mensajes: $json.nuevoHistorial,\n    Ultima_Interaccion: new Date().toISOString()\n  };\n  if ($json.clasificacion) fields.Clasificacion = $json.clasificacion;\n  return JSON.stringify({ fields });\n})() }}",
+        "jsonBody": "={{ JSON.stringify({\n  estado: $json.nuevoEstado,\n  name: $json.nombreContacto || '',\n  historial: $json.nuevoHistorial || '',\n  datos: $json.datosRecolectados || {},\n  resumen: $json.resumen_lead || '',\n  clasificacion: $json.clasificacion || 'Frio',\n  ultima_actividad: new Date().toISOString()\n}) }}",
         "options": {}
       },
       "id": "patch-actualizar-lead",
@@ -583,7 +576,8 @@
       "position": [
         2640,
         848
-      ]
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -771,13 +765,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://graph.facebook.com/v17.0/1083260611538246/messages",
+        "url": "={{ 'https://graph.facebook.com/v19.0/' + $('⚙️ Obtener WA Config G54').item.json?.data?.phone_number_id + '/messages' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$vars.IG_ACCESS_TOKEN}}"
+              "value": "={{ 'Bearer ' + $('⚙️ Obtener WA Config G54').item.json?.data?.wa_access_token }}"
             }
           ]
         },
@@ -996,19 +990,33 @@
               "name": "G54_COMPANY_ID",
               "type": "stringValue",
               "value": "={{ $vars.G54_COMPANY_ID || '1' }}"
-            },
-            {
-              "name": "AIRTABLE_TOKEN",
-              "type": "stringValue",
-              "value": "={{ $vars.AIRTABLE_TOKEN || '' }}"
-            },
-            {
-              "name": "WA_PHONE_NUMBER_ID",
-              "type": "stringValue",
-              "value": "={{ $vars.WA_PHONE_NUMBER_ID || '1083260611538246' }}"
             }
           ]
         }
+      }
+    },
+    {
+      "id": "wa-config-followup",
+      "name": "⚙️ WA Config G54 Follow-up",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        912,
+        752
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "url": "={{ $('⚙️ Config G54 Follow-up').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54 Follow-up').item.json.G54_COMPANY_ID + '/whatsapp/config' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config G54 Follow-up').item.json.G54_N8N_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
       }
     }
   ],
@@ -1170,7 +1178,7 @@
       "main": [
         [
           {
-            "node": "📋 Obtener Leads Sin Respuesta",
+            "node": "⚙️ Config G54 Follow-up",
             "type": "main",
             "index": 0
           }
@@ -1192,7 +1200,7 @@
       "main": [
         [
           {
-            "node": "⚙️ Config G54 Follow-up",
+            "node": "⚙️ WA Config G54 Follow-up",
             "type": "main",
             "index": 0
           }
@@ -1366,7 +1374,7 @@
       "main": [
         [
           {
-            "node": "📤 Enviar Follow-up WhatsApp",
+            "node": "📋 Obtener Leads Sin Respuesta",
             "type": "main",
             "index": 0
           }
@@ -1378,6 +1386,17 @@
         [
           {
             "node": "🏢 Obtener Empresa G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ WA Config G54 Follow-up": {
+      "main": [
+        [
+          {
+            "node": "📤 Enviar Follow-up WhatsApp",
             "type": "main",
             "index": 0
           }
@@ -1397,9 +1416,9 @@
   },
   "meta": null,
   "pinData": {},
-  "versionId": "3582fc7d-83fd-4a96-b152-2de36dc8c7d5",
+  "versionId": "329cb121-f631-4c63-8919-fe288cfbdf73",
   "activeVersionId": null,
-  "versionCounter": 276,
+  "versionCounter": 277,
   "triggerCount": 2,
   "shared": [
     {
