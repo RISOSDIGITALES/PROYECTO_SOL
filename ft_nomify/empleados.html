@@ -44,6 +44,7 @@
           <thead>
             <tr>
               <th>Nombre</th>
+              <th>Cédula</th>
               <th>Cargo</th>
               <th>Salario mensual</th>
               <th>Tipo planilla</th>
@@ -53,7 +54,7 @@
             </tr>
           </thead>
           <tbody id="tabla-empleados">
-            <tr class="loading-row"><td colspan="7"><div class="spinner"></div></td></tr>
+            <tr class="loading-row"><td colspan="8"><div class="spinner"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -94,14 +95,17 @@
           <input type="text" id="emp-nombre" placeholder="Nombre Apellido" />
         </div>
         <div class="form-group">
-          <label>Cargo</label>
-          <input type="text" id="emp-cargo" placeholder="Ej: Auxiliar Contable" />
+          <label>Cédula de identidad</label>
+          <input type="text" id="emp-cedula" placeholder="000-000000-0000A"
+            maxlength="16" autocomplete="off"
+            style="font-family:monospace;letter-spacing:.04em" />
+          <small style="color:var(--text-muted);font-size:11px">Formato: 000-000000-0000A</small>
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Salario bruto mensual (C$) *</label>
-          <input type="number" id="emp-salario" placeholder="0.00" step="0.01" />
+          <label>Cargo</label>
+          <input type="text" id="emp-cargo" placeholder="Ej: Auxiliar Contable" />
         </div>
         <div class="form-group">
           <label>Fecha de ingreso</label>
@@ -109,6 +113,10 @@
         </div>
       </div>
       <div class="form-row">
+        <div class="form-group">
+          <label>Salario bruto mensual (C$) *</label>
+          <input type="number" id="emp-salario" placeholder="0.00" step="0.01" />
+        </div>
         <div class="form-group">
           <label>Tipo de planilla *</label>
           <select id="emp-tipo">
@@ -188,7 +196,7 @@ async function _init() {
   _esMaster = info.rol === 'Master';
   if (!_esMaster) {
     document.getElementById('btn-nuevo').style.display = 'none';
-    ['emp-salario','emp-tipo','emp-inss-base','emp-ir-tipo','emp-ir-fijo','emp-email','emp-rol','emp-empresa'].forEach(id => {
+    ['emp-cedula','emp-salario','emp-tipo','emp-inss-base','emp-ir-tipo','emp-ir-fijo','emp-email','emp-rol','emp-empresa'].forEach(id => {
       const el = document.getElementById(id);
       if (el) { el.disabled = true; el.style.opacity = '0.55'; }
     });
@@ -223,7 +231,7 @@ async function loadEmpleados() {
 function renderTabla(lista) {
   const tbody = document.getElementById('tabla-empleados');
   if (lista.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">No hay empleados registrados</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">No hay empleados registrados</td></tr>';
     return;
   }
   tbody.innerHTML = lista.map(e => {
@@ -232,6 +240,7 @@ function renderTabla(lista) {
     const activo = e.Activo;
     return `<tr>
       <td><strong>${e.Nombre || '—'}</strong></td>
+      <td style="font-family:monospace;font-size:12px">${e.Cedula || '—'}</td>
       <td>${e.Cargo || '—'}</td>
       <td class="num">${fmt(e['Salario bruto mensual'])}</td>
       <td><span class="badge ${tipoBadge}">${tipo}</span></td>
@@ -245,8 +254,9 @@ function renderTabla(lista) {
 document.getElementById('buscador').addEventListener('input', e => {
   const q = e.target.value.toLowerCase();
   renderTabla(allEmpleados.filter(emp =>
-    (emp.Nombre || '').toLowerCase().includes(q) ||
-    (emp.Cargo || '').toLowerCase().includes(q)
+    (emp.Nombre  || '').toLowerCase().includes(q) ||
+    (emp.Cargo   || '').toLowerCase().includes(q) ||
+    (emp.Cedula  || '').toLowerCase().includes(q)
   ));
 });
 
@@ -254,6 +264,7 @@ document.getElementById('btn-nuevo').addEventListener('click', () => {
   document.getElementById('modal-titulo').textContent = 'Nuevo Empleado';
   document.getElementById('emp-id').value = '';
   document.getElementById('emp-nombre').value = '';
+  document.getElementById('emp-cedula').value = '';
   document.getElementById('emp-cargo').value = '';
   document.getElementById('emp-salario').value = '';
   document.getElementById('emp-ingreso').value = '';
@@ -289,6 +300,7 @@ function abrirFormEditar(id) {
   document.getElementById('modal-titulo').textContent = 'Editar Empleado';
   document.getElementById('emp-id').value = e.id;
   document.getElementById('emp-nombre').value = e.Nombre || '';
+  document.getElementById('emp-cedula').value = e.Cedula || '';
   document.getElementById('emp-cargo').value = e.Cargo || '';
   document.getElementById('emp-salario').value = e['Salario bruto mensual'] || '';
   document.getElementById('emp-ingreso').value = e['Fecha de ingreso'] || '';
@@ -342,6 +354,26 @@ function toggleIRFijo() {
 document.getElementById('emp-tipo').addEventListener('change', toggleInssBase);
 document.getElementById('emp-ir-tipo').addEventListener('change', toggleIRFijo);
 
+// ── Máscara de cédula: ###-######-####L ──────────────────────────────────
+document.getElementById('emp-cedula').addEventListener('input', function () {
+  // Extraer solo dígitos y letras, luego reconstruir con guiones
+  const raw = this.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+  let out = '';
+  for (let i = 0; i < raw.length && i < 14; i++) {
+    // Posiciones 0-2: dígitos, pos 3: guion, 3-8: dígitos, pos 9: guion, 9-12: dígitos, pos 13: letra
+    if (i === 3 || i === 9) out += '-';
+    const ch = raw[i];
+    if (i < 3 || (i >= 3 && i < 9) || (i >= 9 && i < 13)) {
+      // Solo dígitos en estas posiciones
+      if (/\d/.test(ch)) out += ch;
+    } else if (i === 13) {
+      // Solo letra en la última posición
+      if (/[A-Z]/.test(ch)) out += ch;
+    }
+  }
+  this.value = out;
+});
+
 ['close-modal','cancel-emp'].forEach(id => {
   document.getElementById(id).addEventListener('click', () => {
     document.getElementById('modal-emp').classList.remove('open');
@@ -350,11 +382,17 @@ document.getElementById('emp-ir-tipo').addEventListener('change', toggleIRFijo);
 
 document.getElementById('save-emp').addEventListener('click', async () => {
   const id = document.getElementById('emp-id').value;
-  const nombre = document.getElementById('emp-nombre').value.trim();
+  const nombre  = document.getElementById('emp-nombre').value.trim();
+  const cedula  = document.getElementById('emp-cedula').value.trim().toUpperCase();
   const salario = parseFloat(document.getElementById('emp-salario').value);
 
   if (!nombre) { showAlert('alert-form', 'El nombre es obligatorio', 'error'); return; }
   if (!salario || salario <= 0) { showAlert('alert-form', 'Ingresa un salario válido', 'error'); return; }
+  if (cedula && !/^\d{3}-\d{6}-\d{4}[A-Z]$/.test(cedula)) {
+    showAlert('alert-form', 'Formato de cédula inválido. Debe ser: 000-000000-0000A', 'error');
+    document.getElementById('emp-cedula').focus();
+    return;
+  }
 
   const emailVal = document.getElementById('emp-email').value.trim();
   const rolVal   = document.getElementById('emp-rol').value;
@@ -363,6 +401,7 @@ document.getElementById('save-emp').addEventListener('click', async () => {
   const empresaEl = document.getElementById('emp-empresa');
   const fields = {
     'Nombre': nombre,
+    'Cedula': cedula || undefined,
     'Cargo': document.getElementById('emp-cargo').value.trim(),
     'Salario bruto mensual': salario,
     'Fecha de ingreso': document.getElementById('emp-ingreso').value || undefined,

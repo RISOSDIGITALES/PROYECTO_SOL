@@ -24,8 +24,11 @@ async function syncUsuario(empleadoId, nombre, email, rol, tipoPlanilla) {
   }
 }
 
+// Cédula nicaragüense: ###-######-####L
+const CEDULA_RE = /^\d{3}-\d{6}-\d{4}[A-Za-z]$/;
+
 const GET_SQL = `
-  SELECT id, nombre AS Nombre, cargo AS Cargo,
+  SELECT id, nombre AS Nombre, cedula AS Cedula, cargo AS Cargo,
     salario_bruto AS \`Salario bruto mensual\`,
     tipo_planilla AS Tipo_Planilla,
     DATE_FORMAT(fecha_ingreso, '%Y-%m-%d') AS \`Fecha de ingreso\`,
@@ -37,6 +40,7 @@ const GET_SQL = `
 function mapBody(b) {
   return {
     nombre:        b.nombre        ?? b['Nombre'],
+    cedula:        b.cedula        ?? b['Cedula'],
     cargo:         b.cargo         ?? b['Cargo'],
     tipo_planilla: b.tipo_planilla ?? b['Tipo_Planilla'],
     salario_bruto: b.salario_bruto ?? b['Salario bruto mensual'],
@@ -64,16 +68,24 @@ router.get('/', requireAuth, async (req, res) => {
 router.post('/', requireAuth, requireMaster, async (req, res) => {
   const m = mapBody(req.body);
   if (!m.nombre) return res.status(400).json({ error: 'Nombre requerido' });
+  if (m.cedula && !CEDULA_RE.test(m.cedula))
+    return res.status(400).json({ error: 'Formato de cédula inválido. Usa ###-######-####L (ej: 001-010590-0012A)' });
   try {
     // Verificar correo duplicado antes de insertar
     if (m.email) {
       const [dup] = await db.query('SELECT id FROM empleados WHERE email = ?', [m.email]);
       if (dup.length) return res.status(400).json({ error: 'Ese correo ya está registrado, por favor usa otro' });
     }
+    // Verificar cédula duplicada
+    if (m.cedula) {
+      const [dupC] = await db.query('SELECT id FROM empleados WHERE cedula = ?', [m.cedula.toUpperCase()]);
+      if (dupC.length) return res.status(400).json({ error: 'Esa cédula ya está registrada en otro empleado' });
+    }
     const empresaId = m.empresa_id || req.empresaId || null;
     const [r] = await db.query(
-      'INSERT INTO empleados (nombre, cargo, tipo_planilla, salario_bruto, inss_base, ir_fijo, ir_tipo, email, rol, fecha_ingreso, activo, empresa_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
-      [m.nombre, m.cargo, m.tipo_planilla || 'Con Seguro', m.salario_bruto || 0,
+      'INSERT INTO empleados (nombre, cedula, cargo, tipo_planilla, salario_bruto, inss_base, ir_fijo, ir_tipo, email, rol, fecha_ingreso, activo, empresa_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+      [m.nombre, m.cedula ? m.cedula.toUpperCase() : null,
+       m.cargo, m.tipo_planilla || 'Con Seguro', m.salario_bruto || 0,
        m.inss_base || 'Salario Completo', m.ir_fijo || null, m.ir_tipo || 'Sin IR', m.email, m.rol || 'Empleado',
        m.fecha_ingreso || null, m.activo !== undefined ? (m.activo ? 1 : 0) : 1, empresaId]
     );
@@ -93,7 +105,14 @@ async function patchHandler(req, res) {
   if (!id) return res.status(400).json({ error: 'Se requiere id' });
 
   const m = mapBody(req.body);
-  const MYSQL_NAMES = ['nombre','cargo','tipo_planilla','salario_bruto','inss_base','ir_fijo','ir_tipo','email','rol','fecha_ingreso','activo','planillas_acceso','empresa_id'];
+  if (m.cedula && !CEDULA_RE.test(m.cedula))
+    return res.status(400).json({ error: 'Formato de cédula inválido. Usa ###-######-####L (ej: 001-010590-0012A)' });
+  if (m.cedula) {
+    m.cedula = m.cedula.toUpperCase();
+    const [dupC] = await db.query('SELECT id FROM empleados WHERE cedula = ? AND id != ?', [m.cedula, id]);
+    if (dupC.length) return res.status(400).json({ error: 'Esa cédula ya está registrada en otro empleado' });
+  }
+  const MYSQL_NAMES = ['nombre','cedula','cargo','tipo_planilla','salario_bruto','inss_base','ir_fijo','ir_tipo','email','rol','fecha_ingreso','activo','planillas_acceso','empresa_id'];
   const sets = [], vals = [];
   for (const c of MYSQL_NAMES) {
     if (m[c] !== undefined) { sets.push(`${c} = ?`); vals.push(m[c] !== '' ? m[c] : null); }
