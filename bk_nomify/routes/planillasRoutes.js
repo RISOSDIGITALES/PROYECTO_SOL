@@ -47,7 +47,7 @@ router.get('/', requireAuth, async (req, res) => {
        LEFT JOIN detalle_planilla d ON p.id = d.planilla_id
        ${where}
        GROUP BY p.id
-       ORDER BY p.periodo DESC`,
+       ORDER BY p.periodo DESC, p.id DESC`,
       params
     );
     res.json(rows);
