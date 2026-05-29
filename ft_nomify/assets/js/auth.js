@@ -360,13 +360,9 @@ async function _abrirModalEmpresas() {
     <div class="modal-body">
       <div id="alert-empresas" class="alert"></div>
       <ul id="lista-empresas" style="list-style:none;padding:0;margin:0 0 14px"></ul>
-      <div style="display:flex;gap:8px">
-        <input type="text" id="inp-empresa-nombre" placeholder="Nombre / razón social de nueva empresa"
-          style="flex:1;background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 12px;font-size:13px" />
-        <button class="btn btn-primary" id="btn-add-empresa">Agregar</button>
-      </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-footer" style="justify-content:space-between">
+      <button class="btn btn-primary" id="btn-add-empresa">+ Nueva empresa</button>
       <button class="btn btn-ghost" id="close-modal-empresas2">Cerrar</button>
     </div>
   </div>
@@ -377,15 +373,9 @@ async function _abrirModalEmpresas() {
         document.getElementById('modal-empresas').classList.remove('open'))
     );
 
-    document.getElementById('btn-add-empresa').addEventListener('click', async () => {
-      const nombre = document.getElementById('inp-empresa-nombre').value.trim();
-      if (!nombre) return;
-      try {
-        await apiFetch('/api/empresas', { method: 'POST', body: JSON.stringify({ nombre }) });
-        document.getElementById('inp-empresa-nombre').value = '';
-        showAlert('alert-empresas', '✅ Empresa creada. Haz clic en ⚙ para completar su información.', 'success');
-        await _refreshListaEmpresas();
-      } catch (e) { showAlert('alert-empresas', 'Error: ' + e.message, 'error'); }
+    // "Nueva empresa" → abre el modal de configuración en modo creación (null = nuevo)
+    document.getElementById('btn-add-empresa').addEventListener('click', () => {
+      _abrirConfigEmpresa(null);
     });
   }
 
@@ -504,9 +494,9 @@ async function _abrirConfigEmpresa(empresaId) {
       reader.readAsDataURL(file);
     });
 
-    // Guardar
+    // Guardar (crea o edita según si hay empresaId)
     document.getElementById('save-config-empresa').addEventListener('click', async () => {
-      const id     = document.getElementById('modal-config-empresa').dataset.empresaId;
+      const id     = document.getElementById('modal-config-empresa').dataset.empresaId || '';
       const nombre = document.getElementById('cfg-nombre').value.trim();
       if (!nombre) { showAlert('alert-config-empresa', 'La razón social es obligatoria', 'error'); return; }
 
@@ -523,12 +513,20 @@ async function _abrirConfigEmpresa(empresaId) {
       const btn = document.getElementById('save-config-empresa');
       btn.disabled = true; btn.textContent = 'Guardando...';
       try {
-        await apiFetch(`/api/empresas/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
-        showAlert('alert-config-empresa', '✅ Configuración guardada', 'success');
-        // Actualizar nombre en la lista visible
+        if (id) {
+          // Editar empresa existente
+          await apiFetch(`/api/empresas/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+        } else {
+          // Crear empresa nueva
+          const nueva = await apiFetch('/api/empresas', { method: 'POST', body: JSON.stringify(body) });
+          // Seleccionarla automáticamente si no hay ninguna activa
+          if (!localStorage.getItem('planilla_empresa_id'))
+            localStorage.setItem('planilla_empresa_id', String(nueva.id));
+        }
+        showAlert('alert-config-empresa', '✅ Empresa guardada correctamente', 'success');
         await _refreshListaEmpresas();
-        // Si es la empresa activa, recargar sidebar para reflejar cambios
-        if (localStorage.getItem('planilla_empresa_id') === String(id)) {
+        // Si es la empresa activa, recargar sidebar
+        if (!id || localStorage.getItem('planilla_empresa_id') === String(id)) {
           setTimeout(() => window.location.reload(), 800);
         }
       } catch (e) {
@@ -539,11 +537,17 @@ async function _abrirConfigEmpresa(empresaId) {
     });
   }
 
-  // Cargar datos de la empresa (incluye logo)
+  // Preparar modal
   const modal = document.getElementById('modal-config-empresa');
-  modal.dataset.empresaId = empresaId;
+  modal.dataset.empresaId = empresaId || '';
 
-  // Reset
+  // Título según modo
+  const h3 = modal.querySelector('.modal-header h3');
+  if (h3) h3.textContent = empresaId ? '⚙ Configuración Compañía' : '🏢 Nueva Empresa';
+  const btnGuardar = document.getElementById('save-config-empresa');
+  if (btnGuardar) btnGuardar.textContent = empresaId ? 'Guardar cambios' : 'Crear empresa';
+
+  // Reset de campos
   document.getElementById('cfg-nombre').value    = '';
   document.getElementById('cfg-ruc').value       = '';
   document.getElementById('cfg-correo').value    = '';
@@ -554,18 +558,21 @@ async function _abrirConfigEmpresa(empresaId) {
   delete preview.dataset.logo;
   document.getElementById('alert-config-empresa').className = 'alert';
 
-  try {
-    const emp = await apiFetch(`/api/empresas/${empresaId}`);
-    document.getElementById('cfg-nombre').value    = emp.nombre    || '';
-    document.getElementById('cfg-ruc').value       = emp.ruc       || '';
-    document.getElementById('cfg-correo').value    = emp.correo    || '';
-    document.getElementById('cfg-telefono').value  = emp.telefono  || '';
-    document.getElementById('cfg-direccion').value = emp.direccion || '';
-    if (emp.logo) {
-      preview.innerHTML = `<img src="${emp.logo}" style="width:100%;height:100%;object-fit:contain" />`;
-      preview.dataset.logo = emp.logo;
-    }
-  } catch (_) {}
+  // Si es edición, cargar datos existentes
+  if (empresaId) {
+    try {
+      const emp = await apiFetch(`/api/empresas/${empresaId}`);
+      document.getElementById('cfg-nombre').value    = emp.nombre    || '';
+      document.getElementById('cfg-ruc').value       = emp.ruc       || '';
+      document.getElementById('cfg-correo').value    = emp.correo    || '';
+      document.getElementById('cfg-telefono').value  = emp.telefono  || '';
+      document.getElementById('cfg-direccion').value = emp.direccion || '';
+      if (emp.logo) {
+        preview.innerHTML = `<img src="${emp.logo}" style="width:100%;height:100%;object-fit:contain" />`;
+        preview.dataset.logo = emp.logo;
+      }
+    } catch (_) {}
+  }
 
   modal.classList.add('open');
 }
