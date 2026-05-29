@@ -201,17 +201,33 @@ async function _init() {
       if (el) { el.disabled = true; el.style.opacity = '0.55'; }
     });
   }
-  // Cargar empresas para el select del formulario
+  // Cargar empresas y configurar el selector
   try {
     _allEmpresas = await apiFetch('/api/empresas');
+  } catch (_) { _allEmpresas = []; }
+
+  const btnNuevo = document.getElementById('btn-nuevo');
+  if (_allEmpresas.length === 0) {
+    // Sin empresas — bloquear creación y avisar
+    btnNuevo.disabled = true;
+    btnNuevo.style.opacity = '0.45';
+    btnNuevo.title = 'Crea una empresa primero';
+    showAlert('alert-emp',
+      '⚠️ No hay ninguna empresa registrada. Crea una en el menú lateral (Gestionar empresas) antes de agregar empleados.',
+      'error');
+  } else {
+    // Fijar la empresa activa en el select y bloquearlo
+    const empresaId = localStorage.getItem('planilla_empresa_id') || String(_allEmpresas[0].id);
+    const empresaNombre = (_allEmpresas.find(e => String(e.id) === empresaId) || _allEmpresas[0]).nombre;
     const sel = document.getElementById('emp-empresa');
-    _allEmpresas.forEach(em => {
-      const opt = document.createElement('option');
-      opt.value = em.id;
-      opt.textContent = em.nombre;
-      sel.appendChild(opt);
-    });
-  } catch (_) {}
+    sel.innerHTML = `<option value="${empresaId}">${empresaNombre}</option>`;
+    sel.disabled = true;
+    sel.style.cursor = 'not-allowed';
+    // Actualizar label para aclarar que es automático
+    const lbl = sel.closest('.form-group')?.querySelector('label');
+    if (lbl) lbl.innerHTML = 'Empresa <span style="font-weight:400;font-size:11px;color:var(--text-muted)">(empresa activa)</span>';
+  }
+
   loadEmpleados();
 }
 
@@ -272,9 +288,7 @@ document.getElementById('btn-nuevo').addEventListener('click', () => {
   document.getElementById('emp-inss-base').value = 'Salario Completo';
   document.getElementById('emp-ir-tipo').value = 'Sin IR';
   document.getElementById('emp-ir-fijo').value = '';
-  // Pre-seleccionar empresa activa si hay una
-  const empresaActual = localStorage.getItem('planilla_empresa_id');
-  document.getElementById('emp-empresa').value = empresaActual || '';
+  // La empresa ya está fijada y bloqueada desde _init(), no se toca aquí
   document.getElementById('emp-activo').value = 'true';
   document.getElementById('emp-email').value = '';
   document.getElementById('emp-rol').value = '';

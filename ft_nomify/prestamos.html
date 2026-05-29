@@ -141,6 +141,10 @@
           <div id="pr-ultima-cuota" style="display:none;margin-top:6px;padding:7px 10px;background:var(--navy2);border:1px solid var(--orange);border-radius:6px;font-size:12px;color:var(--orange)"></div>
         </div>
       </div>
+      <div class="form-group">
+        <label>Concepto / Comentario <span style="font-weight:400;font-size:11px;color:var(--text-muted)">(opcional)</span></label>
+        <input type="text" id="pr-notas" placeholder="Ej: Préstamo para motocicleta, gastos médicos, emergencia familiar…" />
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" id="cancel-pr">Cancelar</button>
@@ -301,7 +305,10 @@ function renderTabla() {
     const badge = estado === 'Activo' ? 'badge-blue' : estado === 'Pagado' ? 'badge-green' : 'badge-gray';
     const nPagos = contarPagos(p);
     return `<tr>
-      <td><strong>${p.Empleado || '—'}</strong></td>
+      <td>
+        <strong>${p.Empleado || '—'}</strong>
+        ${p.notas ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px" title="${p.notas}">${p.notas}</div>` : ''}
+      </td>
       <td class="num">${fmt(p['Monto total'])}</td>
       <td class="num">${fmt(p['Cuota quincenal'])} ${frecBadge}</td>
       <td style="text-align:center">${cuotasRest}</td>
@@ -519,6 +526,7 @@ document.getElementById('btn-nuevo').addEventListener('click', () => {
   document.getElementById('pr-frecuencia-dia').value = '15';
   document.getElementById('pr-frecuencia-dia-wrap').style.display = 'none';
   document.getElementById('pr-estado').value = 'Activo';
+  document.getElementById('pr-notas').value = '';
   document.getElementById('pr-ultima-cuota').style.display = 'none';
   document.getElementById('alert-form').className = 'alert';
   document.getElementById('modal-pr').classList.add('open');
@@ -537,6 +545,7 @@ function editarPrestamo(id) {
   document.getElementById('pr-frecuencia-dia').value = p.Frecuencia_Dia || '15';
   document.getElementById('pr-frecuencia-dia-wrap').style.display = p.Frecuencia === 'Mensual' ? '' : 'none';
   document.getElementById('pr-estado').value = p.Estado || 'Activo';
+  document.getElementById('pr-notas').value = p.notas || '';
   document.getElementById('alert-form').className = 'alert';
   document.getElementById('pr-cuotas')._editadoManual = false;
   recalcularCuotas();
@@ -631,6 +640,7 @@ document.getElementById('save-pr').addEventListener('click', async () => {
   if (!monto || monto <= 0) { showAlert('alert-form', 'Ingresa el monto total', 'error'); return; }
   if (!cuota || cuota <= 0) { showAlert('alert-form', 'Ingresa la cuota quincenal', 'error'); return; }
 
+  const notasVal = document.getElementById('pr-notas').value.trim();
   const fields = {
     'Empleado': empleado,
     'Monto total': monto,
@@ -639,6 +649,7 @@ document.getElementById('save-pr').addEventListener('click', async () => {
     'Frecuencia': document.getElementById('pr-frecuencia').value,
     'Frecuencia_Dia': document.getElementById('pr-frecuencia-dia').value,
     'Estado': document.getElementById('pr-estado').value,
+    ...(notasVal ? { 'Concepto': notasVal } : {}),
   };
 
   const btn = document.getElementById('save-pr');
