@@ -517,6 +517,7 @@ function generarCalendarioPDF({ mes, anio, eventos = [] }) {
     const TYPE_CLR = {
       quincena: '#16a34a', feriado:  '#7c3aed',
       vacacion: '#2563eb', adelanto: '#dc2626', extra: '#d97706',
+      cumple:   '#db2777',
     };
     // Colores de fondo de celda para tipos especiales (opacidad real)
     const TYPE_BG = {
@@ -598,6 +599,7 @@ function generarCalendarioPDF({ mes, anio, eventos = [] }) {
     const TYPE_LABEL = {
       quincena: 'Quincena', feriado: 'Feriado',
       vacacion: 'Vacación', adelanto: 'Adelanto', extra: 'Extra',
+      cumple:   'Cumpleaños',
     };
     const MESES_ES2 = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
                        'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];

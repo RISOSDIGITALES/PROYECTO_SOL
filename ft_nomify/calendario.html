@@ -111,6 +111,7 @@
     .tag-feriado  { background: rgba(155,89,182,.2);  color: #c39bd3; }
     .tag-adelanto { background: rgba(231,76,60,.2);   color: #f1948a; }
     .tag-extra    { background: rgba(241,196,15,.2);  color: #f4d03f; }
+    .tag-cumple   { background: rgba(236,72,153,.22); color: #f472b6; }
     .tag-vac-0    { background: rgba(52,152,219,.25); color: #5dade2; }
     .tag-vac-1    { background: rgba(230,126,34,.25); color: #f0a347; }
     .tag-vac-2    { background: rgba(231,76,60,.25);  color: #f1948a; }
@@ -183,6 +184,7 @@
       .tag-vac-0, .tag-vac-1, .tag-vac-2, .tag-vac-3, .tag-vac-4 {
         background: rgba(29,78,216,.14) !important; color: #1d4ed8 !important;
       }
+      .tag-cumple { background: rgba(131,24,67,.14) !important; color: #831843 !important; }
     }
   </style>
 </head>
@@ -301,13 +303,14 @@ const DIAS_SEM = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 const VAC_COLORS = ['tag-vac-0','tag-vac-1','tag-vac-2','tag-vac-3','tag-vac-4'];
 
 let viewYear, viewMonth;
-let allVacaciones = [];
-let allAdelantos  = [];
-let allExtras     = [];
-let empColorMap   = {};
-let empColorIdx   = 0;
-let filtroEmpCal  = '';
-let calDayCache   = {}; // eventos por dStr, se llena en renderCal()
+let allVacaciones  = [];
+let allAdelantos   = [];
+let allExtras      = [];
+let allCumpleanos  = []; // { nombre, mmdd:'MM-DD' }
+let empColorMap    = {};
+let empColorIdx    = 0;
+let filtroEmpCal   = '';
+let calDayCache    = {}; // eventos por dStr, se llena en renderCal()
 
 // Normaliza fecha a YYYY-MM-DD (primeros 10 chars)
 const norm = s => s ? String(s).substring(0, 10) : '';
@@ -421,6 +424,11 @@ async function loadDatos() {
     allAdelantos  = adelantos.filter(a => a.Estado !== 'Descontado');
     allExtras     = extras;
 
+    // Cumpleaños: extraer MM-DD de fecha_nacimiento
+    allCumpleanos = empleados
+      .filter(e => e.Activo && e.Fecha_Nacimiento)
+      .map(e => ({ nombre: e.Nombre, mmdd: e.Fecha_Nacimiento.substring(5) })); // 'MM-DD'
+
     const activos = empleados.filter(e => e.Activo);
     activos.forEach(e => {
       empColorMap[e.Nombre] = VAC_COLORS[empColorIdx % VAC_COLORS.length];
@@ -451,6 +459,11 @@ function adelantosEnDia(dStr) {
 
 function extrasEnDia(dStr) {
   return allExtras.filter(x => norm(x['Pagar en quincena']) === dStr);
+}
+
+function cumpleEnDia(dStr) {
+  const mmdd = dStr.substring(5); // 'MM-DD'
+  return allCumpleanos.filter(c => c.mmdd === mmdd);
 }
 
 function renderCal() {
@@ -495,12 +508,13 @@ function renderCal() {
     const esFeriado = !!ferMap[dStr]; // siempre calcular para el caché (independiente del filtro visual)
     const esQui     = (dStr === quincena15 || dStr === quincenaFin);
     const esHoy     = dStr === todayStr;
-    const vacsHoy   = vacEnDia(dStr);       // siempre para el caché
-    const adelHoy   = adelantosEnDia(dStr); // siempre para el caché
-    const extHoy    = extrasEnDia(dStr);    // siempre para el caché
+    const vacsHoy    = vacEnDia(dStr);       // siempre para el caché
+    const adelHoy    = adelantosEnDia(dStr); // siempre para el caché
+    const extHoy     = extrasEnDia(dStr);    // siempre para el caché
+    const cumpleHoy  = cumpleEnDia(dStr);    // siempre para el caché
 
     // Guardar en caché para el popup (independiente de los filtros visuales)
-    calDayCache[dStr] = { esFeriado, ferNombre: ferMap[dStr] || '', esQui, vacsHoy, adelHoy, extHoy };
+    calDayCache[dStr] = { esFeriado, ferNombre: ferMap[dStr] || '', esQui, vacsHoy, adelHoy, extHoy, cumpleHoy };
 
     let cls = 'cal-cell';
     if (esHoy)              cls += ' hoy';
@@ -508,7 +522,7 @@ function renderCal() {
     if (esFeriado && showFer) cls += ' feriado';
 
     // El cursor pointer indica que se puede hacer clic
-    const tieneEventos = esQui || esFeriado || vacsHoy.length || adelHoy.length || extHoy.length;
+    const tieneEventos = esQui || esFeriado || vacsHoy.length || adelHoy.length || extHoy.length || cumpleHoy.length;
     const cursorStyle  = tieneEventos ? 'cursor:pointer' : '';
 
     let tags = '';
@@ -534,6 +548,9 @@ function renderCal() {
         tags += `<div class="cal-tag tag-extra">⭐ ${extHoy.length} extras</div>`;
       }
     }
+    cumpleHoy.forEach(c => {
+      tags += `<div class="cal-tag tag-cumple" title="Cumpleaños de ${c.nombre}">🎂 ${c.nombre.split(' ')[0]}</div>`;
+    });
 
     html += `<div class="${cls}" style="${cursorStyle}" onclick="mostrarDia('${dStr}')">
       <div class="cal-num">${dia}</div>
@@ -544,12 +561,15 @@ function renderCal() {
   document.getElementById('cal-grid').innerHTML = html;
   renderEventosList();
 
+  const mm4leg = String(viewMonth + 1).padStart(2, '0');
+  const hayCumpleMes = allCumpleanos.some(c => c.mmdd.startsWith(mm4leg + '-'));
   const legendItems = [
     { color: 'border:2px solid var(--green2)', label: 'Hoy' },
     ...(showQui  ? [{ color: 'background:rgba(46,204,113,.2);border:1px solid rgba(46,204,113,.4)', label: 'Quincena' }] : []),
     ...(showFer  ? [{ color: 'background:rgba(155,89,182,.2);border:1px solid rgba(155,89,182,.4)', label: 'Feriado' }] : []),
     ...(showAdel ? [{ color: 'background:rgba(231,76,60,.2)', label: 'Adelanto' }] : []),
     ...(showExt  ? [{ color: 'background:rgba(241,196,15,.2)', label: 'Extra' }] : []),
+    ...(hayCumpleMes ? [{ color: 'background:rgba(236,72,153,.22)', label: '🎂 Cumpleaños' }] : []),
   ];
   if (showVac) {
     Object.keys(empColorMap).forEach(nombre => {
@@ -631,12 +651,23 @@ function renderEventosList() {
     });
   }
 
+  // Cumpleaños del mes
+  const mm5 = String(viewMonth + 1).padStart(2, '0');
+  allCumpleanos.forEach(c => {
+    if (!c.mmdd.startsWith(mm5 + '-')) return;
+    const dia   = parseInt(c.mmdd.substring(3));
+    const fecha = `${viewYear}-${mm5}-${String(dia).padStart(2,'0')}`;
+    items.push({ tipo:'cumple', icon:'🎂', fecha,
+      label: `${dia} de ${MESES[viewMonth]}`,
+      nombre: c.nombre, sub: 'Cumpleaños' });
+  });
+
   items.sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
 
   const el = document.getElementById('cal-eventos-lista');
   if (!items.length) { el.innerHTML = ''; return; }
 
-  const COLOR = { quincena:'var(--green2)', feriado:'#c39bd3', vacacion:'#5dade2', adelanto:'#f1948a', extra:'#f4d03f' };
+  const COLOR = { quincena:'var(--green2)', feriado:'#c39bd3', vacacion:'#5dade2', adelanto:'#f1948a', extra:'#f4d03f', cumple:'#f472b6' };
 
   el.innerHTML = `
     <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:12px">
@@ -739,6 +770,12 @@ function _buildEventos() {
     const fecha = norm(x['Pagar en quincena']);
     if (fecha && fecha.startsWith(`${viewYear}-${mm}`))
       eventos.push({ fecha, tipo: 'extra', texto: x.Empleado || '' });
+  });
+
+  // Cumpleaños (puntuales — día del mes actual)
+  allCumpleanos.forEach(c => {
+    if (!c.mmdd.startsWith(mm + '-')) return;
+    eventos.push({ fecha: `${viewYear}-${mm}-${c.mmdd.substring(3)}`, tipo: 'cumple', texto: c.nombre });
   });
 
   return eventos;

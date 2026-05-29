@@ -27,8 +27,25 @@ async function syncUsuario(empleadoId, nombre, email, rol, tipoPlanilla) {
 // Cédula nicaragüense: ###-######-####L
 const CEDULA_RE = /^\d{3}-\d{6}-\d{4}[A-Za-z]$/;
 
+// Extrae la fecha de nacimiento de los 6 dígitos centrales de la cédula (DDMMYY)
+function parseBirthFromCedula(cedula) {
+  if (!cedula || !CEDULA_RE.test(cedula)) return null;
+  const mid  = cedula.split('-')[1];            // DDMMYY
+  const dd   = parseInt(mid.substring(0, 2));
+  const mm   = parseInt(mid.substring(2, 4));
+  const yy   = parseInt(mid.substring(4, 6));
+  if (dd < 1 || dd > 31 || mm < 1 || mm > 12) return null;
+  const thisYY = new Date().getFullYear() % 100; // 26 en 2026
+  const yyyy   = yy <= thisYY ? 2000 + yy : 1900 + yy;
+  const d = new Date(yyyy, mm - 1, dd);
+  if (d.getMonth() !== mm - 1) return null;     // fecha inválida (ej: 31 feb)
+  return `${yyyy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+}
+
 const GET_SQL = `
-  SELECT id, nombre AS Nombre, cedula AS Cedula, cargo AS Cargo,
+  SELECT id, nombre AS Nombre, cedula AS Cedula,
+    DATE_FORMAT(fecha_nacimiento, '%Y-%m-%d') AS Fecha_Nacimiento,
+    cargo AS Cargo,
     salario_bruto AS \`Salario bruto mensual\`,
     tipo_planilla AS Tipo_Planilla,
     DATE_FORMAT(fecha_ingreso, '%Y-%m-%d') AS \`Fecha de ingreso\`,
@@ -39,9 +56,10 @@ const GET_SQL = `
 
 function mapBody(b) {
   return {
-    nombre:        b.nombre        ?? b['Nombre'],
-    cedula:        b.cedula        ?? b['Cedula'],
-    cargo:         b.cargo         ?? b['Cargo'],
+    nombre:           b.nombre           ?? b['Nombre'],
+    cedula:           b.cedula           ?? b['Cedula'],
+    fecha_nacimiento: b.fecha_nacimiento ?? b['Fecha_Nacimiento'],
+    cargo:            b.cargo            ?? b['Cargo'],
     tipo_planilla: b.tipo_planilla ?? b['Tipo_Planilla'],
     salario_bruto: b.salario_bruto ?? b['Salario bruto mensual'],
     inss_base:     b.inss_base     ?? b['INSS_Base'],
@@ -70,6 +88,8 @@ router.post('/', requireAuth, requireMaster, async (req, res) => {
   if (!m.nombre) return res.status(400).json({ error: 'Nombre requerido' });
   if (m.cedula && !CEDULA_RE.test(m.cedula))
     return res.status(400).json({ error: 'Formato de cédula inválido. Usa ###-######-####L (ej: 001-010590-0012A)' });
+  // Auto-calcular cumpleaños desde la cédula si no viene explícito
+  if (m.cedula && !m.fecha_nacimiento) m.fecha_nacimiento = parseBirthFromCedula(m.cedula);
   try {
     // Verificar correo duplicado antes de insertar
     if (m.email) {
@@ -83,8 +103,8 @@ router.post('/', requireAuth, requireMaster, async (req, res) => {
     }
     const empresaId = m.empresa_id || req.empresaId || null;
     const [r] = await db.query(
-      'INSERT INTO empleados (nombre, cedula, cargo, tipo_planilla, salario_bruto, inss_base, ir_fijo, ir_tipo, email, rol, fecha_ingreso, activo, empresa_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
-      [m.nombre, m.cedula ? m.cedula.toUpperCase() : null,
+      'INSERT INTO empleados (nombre, cedula, fecha_nacimiento, cargo, tipo_planilla, salario_bruto, inss_base, ir_fijo, ir_tipo, email, rol, fecha_ingreso, activo, empresa_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+      [m.nombre, m.cedula ? m.cedula.toUpperCase() : null, m.fecha_nacimiento || null,
        m.cargo, m.tipo_planilla || 'Con Seguro', m.salario_bruto || 0,
        m.inss_base || 'Salario Completo', m.ir_fijo || null, m.ir_tipo || 'Sin IR', m.email, m.rol || 'Empleado',
        m.fecha_ingreso || null, m.activo !== undefined ? (m.activo ? 1 : 0) : 1, empresaId]
@@ -111,8 +131,10 @@ async function patchHandler(req, res) {
     m.cedula = m.cedula.toUpperCase();
     const [dupC] = await db.query('SELECT id FROM empleados WHERE cedula = ? AND id != ?', [m.cedula, id]);
     if (dupC.length) return res.status(400).json({ error: 'Esa cédula ya está registrada en otro empleado' });
+    // Auto-calcular cumpleaños si no se envió explícito
+    if (!m.fecha_nacimiento) m.fecha_nacimiento = parseBirthFromCedula(m.cedula);
   }
-  const MYSQL_NAMES = ['nombre','cedula','cargo','tipo_planilla','salario_bruto','inss_base','ir_fijo','ir_tipo','email','rol','fecha_ingreso','activo','planillas_acceso','empresa_id'];
+  const MYSQL_NAMES = ['nombre','cedula','fecha_nacimiento','cargo','tipo_planilla','salario_bruto','inss_base','ir_fijo','ir_tipo','email','rol','fecha_ingreso','activo','planillas_acceso','empresa_id'];
   const sets = [], vals = [];
   for (const c of MYSQL_NAMES) {
     if (m[c] !== undefined) { sets.push(`${c} = ?`); vals.push(m[c] !== '' ? m[c] : null); }

@@ -25,11 +25,12 @@
     .cal-cell-emp.feriado   .cal-num-emp { color:#c39bd3; }
     .cal-tags-emp { margin-top:3px;display:flex;flex-direction:column;gap:2px; }
     .cal-tag-emp  { font-size:9px;padding:1px 4px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4; }
-    .tag-e-qui  { background:rgba(46,204,113,.2);  color:#2ecc71; }
-    .tag-e-fer  { background:rgba(155,89,182,.2);  color:#c39bd3; }
-    .tag-e-vac  { background:rgba(52,152,219,.25); color:#5dade2; }
-    .tag-e-adel { background:rgba(231,76,60,.2);   color:#f1948a; }
-    .tag-e-ext  { background:rgba(241,196,15,.2);  color:#f4d03f; }
+    .tag-e-qui   { background:rgba(46,204,113,.2);  color:#2ecc71; }
+    .tag-e-fer   { background:rgba(155,89,182,.2);  color:#c39bd3; }
+    .tag-e-vac   { background:rgba(52,152,219,.25); color:#5dade2; }
+    .tag-e-adel  { background:rgba(231,76,60,.2);   color:#f1948a; }
+    .tag-e-ext   { background:rgba(241,196,15,.2);  color:#f4d03f; }
+    .tag-e-cumple{ background:rgba(236,72,153,.22); color:#f472b6; }
     .cal-legend-emp { display:flex;gap:14px;margin-top:12px;flex-wrap:wrap;padding:10px 0 0;border-top:1px solid var(--border); }
     .leg-item-emp { display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted); }
     .leg-dot-emp  { width:10px;height:10px;border-radius:2px;flex-shrink:0; }
@@ -79,9 +80,10 @@
                       font-size:8px !important; }
       .tag-e-qui  { background:rgba(22,101,52,.14)  !important; color:#166534 !important; }
       .tag-e-fer  { background:rgba(91,33,182,.14)  !important; color:#5b21b6 !important; }
-      .tag-e-vac  { background:rgba(29,78,216,.14)  !important; color:#1d4ed8 !important; }
-      .tag-e-adel { background:rgba(185,28,28,.14)  !important; color:#b91c1c !important; }
-      .tag-e-ext  { background:rgba(161,98,7,.14)   !important; color:#a16207 !important; }
+      .tag-e-vac   { background:rgba(29,78,216,.14)  !important; color:#1d4ed8 !important; }
+      .tag-e-adel  { background:rgba(185,28,28,.14)  !important; color:#b91c1c !important; }
+      .tag-e-ext   { background:rgba(161,98,7,.14)   !important; color:#a16207 !important; }
+      .tag-e-cumple{ background:rgba(131,24,67,.14)  !important; color:#831843 !important; }
 
       /* ── Lista de actividades del mes ── */
       #cal-eventos-lista-emp { display:block !important; }
@@ -487,7 +489,7 @@ const DIAS_CAL   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 const normD = s => s ? String(s).substring(0, 10) : '';
 
 let _calYear, _calMonth;
-let _calVac = [], _calAdel = [], _calExt = [];
+let _calVac = [], _calAdel = [], _calExt = [], _calCumple = [];
 let _calLoaded = false;
 
 async function cargarCalendario() {
@@ -498,14 +500,18 @@ async function cargarCalendario() {
   _calMonth = hoy.getMonth();
 
   try {
-    const [vac, adel, ext] = await Promise.all([
+    const [vac, adel, ext, emps] = await Promise.all([
       apiFetch(`/api/vacaciones?empleado_id=${_empleadoId}`),
       apiFetch(`/api/adelantos?empleado_id=${_empleadoId}`),
       apiFetch(`/api/extras?empleado_id=${_empleadoId}`),
+      apiFetch('/api/empleados'),
     ]);
-    _calVac  = (vac  || []).filter(v => v.Estado !== 'Pendiente');
-    _calAdel = (adel || []).filter(a => a.Estado !== 'Descontado');
-    _calExt  = ext  || [];
+    _calVac    = (vac  || []).filter(v => v.Estado !== 'Pendiente');
+    _calAdel   = (adel || []).filter(a => a.Estado !== 'Descontado');
+    _calExt    = ext  || [];
+    _calCumple = (emps || [])
+      .filter(e => e.Activo && e.Fecha_Nacimiento)
+      .map(e => ({ nombre: e.Nombre, mmdd: e.Fecha_Nacimiento.substring(5) }));
   } catch (_) {}
 
   // Controles de navegación
@@ -552,8 +558,9 @@ function renderCalEmp() {
       const ini = normD(v.Fecha_Inicio), fin = normD(v.Fecha_Fin);
       return ini && fin && dStr >= ini && dStr <= fin;
     });
-    const adelHoy = _calAdel.filter(a => normD(a['Descontar en quincena']) === dStr);
-    const extHoy  = _calExt.filter(x => normD(x['Pagar en quincena']) === dStr);
+    const adelHoy   = _calAdel.filter(a => normD(a['Descontar en quincena']) === dStr);
+    const extHoy    = _calExt.filter(x => normD(x['Pagar en quincena']) === dStr);
+    const cumpleHoy = _calCumple.filter(c => c.mmdd === dStr.substring(5));
 
     let cls = 'cal-cell-emp';
     if (esHoy) cls += ' hoy';
@@ -566,6 +573,7 @@ function renderCalEmp() {
     vacsHoy.forEach(() => { tags += `<div class="cal-tag-emp tag-e-vac">🏖 Vacaciones</div>`; });
     adelHoy.forEach(a => { tags += `<div class="cal-tag-emp tag-e-adel">⚡ ${fmt(a.Monto)}</div>`; });
     extHoy.forEach(x  => { tags += `<div class="cal-tag-emp tag-e-ext">⭐ ${x.Tipo||'Extra'}</div>`; });
+    cumpleHoy.forEach(c => { tags += `<div class="cal-tag-emp tag-e-cumple" title="Cumpleaños de ${c.nombre}">🎂 ${c.nombre.split(' ')[0]}</div>`; });
 
     html += `<div class="${cls}">
       <div class="cal-num-emp">${dia}</div>
@@ -583,6 +591,8 @@ function renderCalEmp() {
     { style:'background:rgba(52,152,219,.3)',                            label:'Vacaciones' },
     { style:'background:rgba(231,76,60,.2)',                             label:'Adelanto' },
     { style:'background:rgba(241,196,15,.2)',                            label:'Extra' },
+    ...(_calCumple.some(c => c.mmdd.startsWith(String(_calMonth+1).padStart(2,'0')+'-'))
+      ? [{ style:'background:rgba(236,72,153,.22)', label:'🎂 Cumpleaños' }] : []),
   ].map(it => `<div class="leg-item-emp"><div class="leg-dot-emp" style="${it.style}"></div>${it.label}</div>`).join('');
 
   // Actividades del mes
@@ -591,7 +601,7 @@ function renderCalEmp() {
 
 function renderActividadesEmp(mesStr, ultimoDia, ferMap, q15, qFin) {
   const items = [];
-  const COLOR = { quincena:'var(--green2)', feriado:'#c39bd3', vacacion:'#5dade2', adelanto:'#f1948a', extra:'#f4d03f' };
+  const COLOR = { quincena:'var(--green2)', feriado:'#c39bd3', vacacion:'#5dade2', adelanto:'#f1948a', extra:'#f4d03f', cumple:'#f472b6' };
 
   // Quincenas
   items.push({ tipo:'quincena', icon:'📋', fecha:q15,  label:fmtPeriodo(q15),  nombre:'Pago de planilla' });
@@ -630,6 +640,17 @@ function renderActividadesEmp(mesStr, ultimoDia, ferMap, q15, qFin) {
     if (!f || !f.startsWith(mesStr)) return;
     items.push({ tipo:'extra', icon:'⭐', fecha:f, label:fmtPeriodo(f),
       nombre: x.Tipo||'Extra', sub:fmt(x.Monto) });
+  });
+
+  // Cumpleaños del mes
+  const mm6 = String(_calMonth + 1).padStart(2, '0');
+  _calCumple.forEach(c => {
+    if (!c.mmdd.startsWith(mm6 + '-')) return;
+    const dia   = parseInt(c.mmdd.substring(3));
+    const fecha = `${_calYear}-${mm6}-${String(dia).padStart(2,'0')}`;
+    items.push({ tipo:'cumple', icon:'🎂', fecha,
+      label: `${dia} de ${MESES_CAL[_calMonth]}`,
+      nombre: c.nombre, sub: 'Cumpleaños' });
   });
 
   items.sort((a, b) => a.fecha < b.fecha ? -1 : 1);
@@ -691,6 +712,12 @@ function _buildEventosEmp() {
     const f = normD(x['Pagar en quincena']);
     if (f && f.startsWith(`${_calYear}-${mm}`))
       eventos.push({ fecha:f, tipo:'extra', texto: x.Tipo||'Extra' });
+  });
+
+  // Cumpleaños del mes
+  _calCumple.forEach(c => {
+    if (!c.mmdd.startsWith(mm + '-')) return;
+    eventos.push({ fecha:`${_calYear}-${mm}-${c.mmdd.substring(3)}`, tipo:'cumple', texto:c.nombre });
   });
 
   return eventos;
