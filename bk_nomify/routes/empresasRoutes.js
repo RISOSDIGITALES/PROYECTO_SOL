@@ -1,48 +1,79 @@
 const express = require('express');
-const router = express.Router();
-const db = require('../db');
+const router  = express.Router();
+const db      = require('../db');
 const { requireAuth, requireMaster } = require('../auth');
 
-// GET /api/empresas — todos los usuarios autenticados pueden listar empresas
+const CAMPOS = ['nombre', 'ruc', 'correo', 'telefono', 'direccion', 'logo'];
+
+// GET /api/empresas — lista todas (sin logo para no inflar la respuesta)
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT id, nombre FROM empresas ORDER BY nombre ASC');
-    // Si el usuario es Planillero con empresas_acceso, filtrar solo las suyas
+    const [rows] = await db.query(
+      'SELECT id, nombre, ruc, correo, telefono, direccion FROM empresas ORDER BY nombre ASC'
+    );
     if (req.user.rol === 'Planillero' && req.user.empresas_acceso) {
       try {
         const allowed = JSON.parse(req.user.empresas_acceso);
-        const filtradas = rows.filter(e => allowed.includes(e.id));
-        return res.json(filtradas);
+        return res.json(rows.filter(e => allowed.includes(e.id)));
       } catch (_) {}
     }
     res.json(rows);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/empresas/:id — detalle completo incluyendo logo
+router.get('/:id', requireAuth, async (req, res) => {
+  try {
+    const [[row]] = await db.query(
+      'SELECT id, nombre, ruc, correo, telefono, direccion, logo FROM empresas WHERE id = ?',
+      [req.params.id]
+    );
+    if (!row) return res.status(404).json({ error: 'Empresa no encontrada' });
+    res.json(row);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // POST /api/empresas — solo Master
 router.post('/', requireAuth, requireMaster, async (req, res) => {
   try {
     const { nombre } = req.body;
-    if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'Nombre requerido' });
-    const [result] = await db.query('INSERT INTO empresas (nombre) VALUES (?)', [nombre.trim()]);
-    res.status(201).json({ id: result.insertId, nombre: nombre.trim() });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+    if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'Razón social requerida' });
+    const vals = CAMPOS.map(c => {
+      const v = req.body[c];
+      return (c === 'logo') ? (v ?? null) : (v?.trim?.() ?? v ?? null);
+    });
+    const [result] = await db.query(
+      `INSERT INTO empresas (${CAMPOS.join(', ')}) VALUES (${CAMPOS.map(() => '?').join(', ')})`,
+      vals
+    );
+    const [[created]] = await db.query(
+      'SELECT id, nombre, ruc, correo, telefono, direccion FROM empresas WHERE id = ?',
+      [result.insertId]
+    );
+    res.status(201).json(created);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // PATCH /api/empresas/:id — solo Master
 router.patch('/:id', requireAuth, requireMaster, async (req, res) => {
   try {
-    const { nombre } = req.body;
-    if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'Nombre requerido' });
-    await db.query('UPDATE empresas SET nombre = ? WHERE id = ?', [nombre.trim(), req.params.id]);
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+    const sets = [], vals = [];
+    for (const c of CAMPOS) {
+      if (req.body[c] !== undefined) {
+        sets.push(`${c} = ?`);
+        const v = req.body[c];
+        vals.push((c === 'logo') ? (v ?? null) : (v?.trim?.() ?? v ?? null));
+      }
+    }
+    if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
+    vals.push(req.params.id);
+    await db.query(`UPDATE empresas SET ${sets.join(', ')} WHERE id = ?`, vals);
+    const [[updated]] = await db.query(
+      'SELECT id, nombre, ruc, correo, telefono, direccion FROM empresas WHERE id = ?',
+      [req.params.id]
+    );
+    res.json(updated);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // DELETE /api/empresas/:id — solo Master
@@ -50,9 +81,7 @@ router.delete('/:id', requireAuth, requireMaster, async (req, res) => {
   try {
     await db.query('DELETE FROM empresas WHERE id = ?', [req.params.id]);
     res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 module.exports = router;

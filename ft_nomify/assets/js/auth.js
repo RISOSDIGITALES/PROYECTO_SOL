@@ -269,7 +269,9 @@ async function _loadEmpresaSelector() {
           border-radius:6px;padding:7px 10px;font-size:13px;cursor:pointer;
           user-select:none;transition:border-color .15s;
         ">
-          <span id="empresa-dd-text" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${selectedNombre}</span>
+          <span id="empresa-dd-text" style="display:flex;align-items:center;gap:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            <span id="empresa-dd-logo"></span>${selectedNombre}
+          </span>
           <span style="font-size:10px;margin-left:8px;opacity:.6;flex-shrink:0">▾</span>
         </div>
         <ul id="empresa-dd-list" style="
@@ -330,26 +332,36 @@ async function _loadEmpresaSelector() {
         _abrirModalEmpresas();
       });
     }
+
+    // Cargar logo de la empresa activa en el selector
+    try {
+      const empDetail = await apiFetch(`/api/empresas/${currentId}`);
+      const logoSpan  = document.getElementById('empresa-dd-logo');
+      if (logoSpan && empDetail.logo) {
+        logoSpan.innerHTML = `<img src="${empDetail.logo}"
+          style="width:20px;height:20px;object-fit:contain;border-radius:3px;flex-shrink:0" />`;
+      }
+    } catch (_) {}
+
   } catch (_) {
     // Si falla (sin empresas, error de red) no bloquear la UI
   }
 }
 
 async function _abrirModalEmpresas() {
-  // Inyectar modal una sola vez
   if (!document.getElementById('modal-empresas')) {
     document.body.insertAdjacentHTML('beforeend', `
 <div class="overlay" id="modal-empresas">
-  <div class="modal" style="max-width:420px">
+  <div class="modal" style="max-width:460px">
     <div class="modal-header">
       <h3>🏢 Gestionar empresas</h3>
       <button class="modal-close" id="close-modal-empresas">×</button>
     </div>
     <div class="modal-body">
       <div id="alert-empresas" class="alert"></div>
-      <ul id="lista-empresas" style="list-style:none;padding:0;margin:0 0 12px"></ul>
+      <ul id="lista-empresas" style="list-style:none;padding:0;margin:0 0 14px"></ul>
       <div style="display:flex;gap:8px">
-        <input type="text" id="inp-empresa-nombre" placeholder="Nombre de nueva empresa"
+        <input type="text" id="inp-empresa-nombre" placeholder="Nombre / razón social de nueva empresa"
           style="flex:1;background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 12px;font-size:13px" />
         <button class="btn btn-primary" id="btn-add-empresa">Agregar</button>
       </div>
@@ -371,10 +383,8 @@ async function _abrirModalEmpresas() {
       try {
         await apiFetch('/api/empresas', { method: 'POST', body: JSON.stringify({ nombre }) });
         document.getElementById('inp-empresa-nombre').value = '';
-        showAlert('alert-empresas', '✅ Empresa agregada', 'success');
+        showAlert('alert-empresas', '✅ Empresa creada. Haz clic en ⚙ para completar su información.', 'success');
         await _refreshListaEmpresas();
-        // Recargar selector en sidebar
-        window.location.reload();
       } catch (e) { showAlert('alert-empresas', 'Error: ' + e.message, 'error'); }
     });
   }
@@ -392,11 +402,172 @@ async function _refreshListaEmpresas() {
       return;
     }
     ul.innerHTML = lista.map(em => `
-      <li style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
-        <span style="font-size:13px">${em.nombre}</span>
-        <button onclick="_deleteEmpresa(${em.id})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px" title="Eliminar">🗑</button>
+      <li style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);gap:8px">
+        <span style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${em.nombre}</span>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button onclick="_abrirConfigEmpresa(${em.id})"
+            style="background:rgba(46,204,113,.12);border:1px solid rgba(46,204,113,.3);color:#2ecc71;
+                   border-radius:5px;font-size:11px;padding:3px 8px;cursor:pointer">⚙ Configurar</button>
+          <button onclick="_deleteEmpresa(${em.id})"
+            style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px" title="Eliminar">🗑</button>
+        </div>
       </li>`).join('');
   } catch (_) {}
+}
+
+// ── Modal Configuración Compañía ────────────────────────────────────────────
+async function _abrirConfigEmpresa(empresaId) {
+  // Inyectar modal una sola vez
+  if (!document.getElementById('modal-config-empresa')) {
+    document.body.insertAdjacentHTML('beforeend', `
+<div class="overlay" id="modal-config-empresa">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3>⚙ Configuración Compañía</h3>
+      <button class="modal-close" id="close-config-empresa">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-config-empresa" class="alert"></div>
+
+      <!-- Logo -->
+      <div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:18px">
+        <div id="cfg-logo-preview"
+          style="width:100px;height:100px;border:2px dashed var(--border);border-radius:8px;
+                 display:flex;align-items:center;justify-content:center;background:var(--navy2);
+                 overflow:hidden;flex-shrink:0;cursor:pointer" title="Clic para cambiar logo"
+          onclick="document.getElementById('cfg-logo-input').click()">
+          <span style="font-size:28px">🏢</span>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px">Logotipo</div>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('cfg-logo-input').click()"
+            style="font-size:12px">Seleccionar archivo</button>
+          <input type="file" id="cfg-logo-input" accept="image/*" style="display:none" />
+          <div style="font-size:11px;color:var(--text-muted);margin-top:6px">PNG, JPG o SVG. Máx 2 MB.</div>
+        </div>
+      </div>
+
+      <!-- Campos -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>Razón Social *</label>
+          <input type="text" id="cfg-nombre" placeholder="Nombre legal de la empresa" />
+        </div>
+        <div class="form-group">
+          <label>RUC</label>
+          <input type="text" id="cfg-ruc" placeholder="Ej: J24115091004X" style="font-family:monospace" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Correo electrónico</label>
+          <input type="email" id="cfg-correo" placeholder="empresa@correo.com" />
+        </div>
+        <div class="form-group">
+          <label>Número de teléfono</label>
+          <input type="text" id="cfg-telefono" placeholder="+505 8150 8813" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Dirección</label>
+        <textarea id="cfg-direccion" rows="2"
+          style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:6px;
+                 color:var(--text);padding:8px 12px;font-size:13px;resize:vertical;box-sizing:border-box"
+          placeholder="De la Rotonda El Periodista, 3c al norte…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-config-empresa">Cancelar</button>
+      <button class="btn btn-primary" id="save-config-empresa">Guardar cambios</button>
+    </div>
+  </div>
+</div>`);
+
+    ['close-config-empresa', 'cancel-config-empresa'].forEach(id =>
+      document.getElementById(id)?.addEventListener('click', () =>
+        document.getElementById('modal-config-empresa').classList.remove('open'))
+    );
+
+    // Preview del logo al seleccionar archivo
+    document.getElementById('cfg-logo-input').addEventListener('change', function () {
+      const file = this.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        showAlert('alert-config-empresa', 'El archivo supera 2 MB', 'error'); return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const preview = document.getElementById('cfg-logo-preview');
+        preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:contain" />`;
+        preview.dataset.logo = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Guardar
+    document.getElementById('save-config-empresa').addEventListener('click', async () => {
+      const id     = document.getElementById('modal-config-empresa').dataset.empresaId;
+      const nombre = document.getElementById('cfg-nombre').value.trim();
+      if (!nombre) { showAlert('alert-config-empresa', 'La razón social es obligatoria', 'error'); return; }
+
+      const logoEl = document.getElementById('cfg-logo-preview');
+      const body = {
+        nombre,
+        ruc:       document.getElementById('cfg-ruc').value.trim()       || null,
+        correo:    document.getElementById('cfg-correo').value.trim()     || null,
+        telefono:  document.getElementById('cfg-telefono').value.trim()   || null,
+        direccion: document.getElementById('cfg-direccion').value.trim()  || null,
+        ...(logoEl.dataset.logo ? { logo: logoEl.dataset.logo } : {}),
+      };
+
+      const btn = document.getElementById('save-config-empresa');
+      btn.disabled = true; btn.textContent = 'Guardando...';
+      try {
+        await apiFetch(`/api/empresas/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+        showAlert('alert-config-empresa', '✅ Configuración guardada', 'success');
+        // Actualizar nombre en la lista visible
+        await _refreshListaEmpresas();
+        // Si es la empresa activa, recargar sidebar para reflejar cambios
+        if (localStorage.getItem('planilla_empresa_id') === String(id)) {
+          setTimeout(() => window.location.reload(), 800);
+        }
+      } catch (e) {
+        showAlert('alert-config-empresa', 'Error: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Guardar cambios';
+      }
+    });
+  }
+
+  // Cargar datos de la empresa (incluye logo)
+  const modal = document.getElementById('modal-config-empresa');
+  modal.dataset.empresaId = empresaId;
+
+  // Reset
+  document.getElementById('cfg-nombre').value    = '';
+  document.getElementById('cfg-ruc').value       = '';
+  document.getElementById('cfg-correo').value    = '';
+  document.getElementById('cfg-telefono').value  = '';
+  document.getElementById('cfg-direccion').value = '';
+  const preview = document.getElementById('cfg-logo-preview');
+  preview.innerHTML = '<span style="font-size:28px">🏢</span>';
+  delete preview.dataset.logo;
+  document.getElementById('alert-config-empresa').className = 'alert';
+
+  try {
+    const emp = await apiFetch(`/api/empresas/${empresaId}`);
+    document.getElementById('cfg-nombre').value    = emp.nombre    || '';
+    document.getElementById('cfg-ruc').value       = emp.ruc       || '';
+    document.getElementById('cfg-correo').value    = emp.correo    || '';
+    document.getElementById('cfg-telefono').value  = emp.telefono  || '';
+    document.getElementById('cfg-direccion').value = emp.direccion || '';
+    if (emp.logo) {
+      preview.innerHTML = `<img src="${emp.logo}" style="width:100%;height:100%;object-fit:contain" />`;
+      preview.dataset.logo = emp.logo;
+    }
+  } catch (_) {}
+
+  modal.classList.add('open');
 }
 
 async function _deleteEmpresa(id) {
