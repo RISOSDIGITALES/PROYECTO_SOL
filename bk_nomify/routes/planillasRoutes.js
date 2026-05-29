@@ -56,7 +56,7 @@ router.get('/', requireAuth, async (req, res) => {
 
 // POST /api/planillas/calcular — solo Master puede generar planilla global; Planillero solo su tipo
 router.post('/calcular', requireAuth, async (req, res) => {
-  let { periodo, tipo } = req.body;
+  let { periodo, tipo, forzar } = req.body;
   if (!periodo) return res.status(400).json({ error: 'Se requiere periodo (YYYY-MM-DD)' });
 
   const conn = await db.getConnection();
@@ -64,6 +64,26 @@ router.post('/calcular', requireAuth, async (req, res) => {
     await conn.beginTransaction();
 
     const empresaId = req.empresaId || null;
+
+    // ── Verificar si ya existe planilla para este período y empresa ───────────
+    if (!forzar) {
+      const tipoFiltro = tipo || null;
+      const [[dup]] = await conn.query(
+        `SELECT id, folio FROM planillas
+         WHERE DATE(periodo) = ? AND empresa_id <=> ?
+           AND (? IS NULL OR tipo = ?)`,
+        [periodo.substring(0, 10), empresaId, tipoFiltro, tipoFiltro]
+      );
+      if (dup) {
+        await conn.rollback(); conn.release();
+        return res.status(409).json({
+          error: `Ya existe la planilla #${dup.folio} para este período. Envía { forzar: true } para generar de todas formas.`,
+          planilla_existente: dup.id,
+          folio: dup.folio,
+        });
+      }
+    }
+
     let empQuery = 'SELECT * FROM empleados WHERE activo = 1';
     const empParams = [];
     if (tipo) { empQuery += ' AND tipo_planilla = ?'; empParams.push(tipo); }
@@ -253,6 +273,20 @@ router.post('/calcular', requireAuth, async (req, res) => {
     await conn.rollback(); conn.release();
     res.status(500).json({ error: e.message });
   }
+});
+
+// PATCH /api/planillas/:id/estado — cambia el estado de una planilla
+router.patch('/:id/estado', requireAuth, requireMaster, async (req, res) => {
+  const { id } = req.params;
+  const { estado } = req.body;
+  const ESTADOS = ['Borrador', 'Pagada', 'Anulada'];
+  if (!estado || !ESTADOS.includes(estado))
+    return res.status(400).json({ error: `Estado inválido. Usa: ${ESTADOS.join(', ')}` });
+  try {
+    await db.query('UPDATE planillas SET estado = ? WHERE id = ?', [estado, id]);
+    const [[row]] = await db.query('SELECT estado, folio FROM planillas WHERE id = ?', [id]);
+    res.json({ ok: true, estado: row?.estado, folio: row?.folio });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // POST /api/planillas/:id/enviar-reporte — genera PDF y lo envía por correo

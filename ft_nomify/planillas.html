@@ -193,10 +193,28 @@ function nextFin() {
   return quincenaFin(ny, nm);
 }
 
-onReady(['Master', 'Planillero'], () => {
+let _esMaster = false;
+onReady(['Master', 'Planillero'], async () => {
   initLayout();
+  const info = await getMyInfo();
+  _esMaster = info.rol === 'Master';
   loadPlanillas();
 });
+
+async function cambiarEstado(planillaId, nuevoEstado) {
+  if (!confirm(`¿Marcar esta planilla como "${nuevoEstado}"?`)) return;
+  try {
+    await apiFetch(`/api/planillas/${planillaId}/estado`, {
+      method: 'PATCH',
+      body: JSON.stringify({ estado: nuevoEstado }),
+    });
+    allPlanillas = await apiFetch('/api/planillas');
+    renderTabla();
+    showAlert('alert-pl', `✅ Estado actualizado a "${nuevoEstado}"`, 'success');
+  } catch (e) {
+    showAlert('alert-pl', 'Error: ' + e.message, 'error');
+  }
+}
 
 async function loadPlanillas() {
   try {
@@ -230,11 +248,19 @@ function renderTabla() {
     const tipo = p.Tipo || '';
     const tipoBadge = tipo === 'Con Seguro' ? 'badge-blue' : tipo === 'Sin Seguro' ? 'badge-orange' : 'badge-gray';
     const estado = p.Estado || 'Borrador';
-    const estadoBadge = estado === 'Pagada' ? 'badge-green' : estado === 'Borrador' ? 'badge-gray' : 'badge-blue';
+    const estadoBadge = estado === 'Pagada' ? 'badge-green' : estado === 'Anulada' ? 'badge-red' : 'badge-gray';
     const periodoVal = String(p['Período'] || '').substring(0, 10);
     const periodo = encodeURIComponent(periodoVal);
     const fechaPago = fmtFecha(p['Fecha de pago'] || periodoVal);
     const folio = p.folio != null ? p.folio : p.id;
+    // Botón para cambiar estado (solo Master)
+    const btnEstado = _esMaster ? (() => {
+      if (estado === 'Borrador')
+        return `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:rgba(46,204,113,.15);border:1px solid rgba(46,204,113,.4);color:#2ecc71;border-radius:4px;cursor:pointer" onclick="cambiarEstado(${p.id},'Pagada')">✓ Marcar pagada</button>`;
+      if (estado === 'Pagada')
+        return `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);border-radius:4px;cursor:pointer" onclick="cambiarEstado(${p.id},'Borrador')">↩ Revertir</button>`;
+      return '';
+    })() : '';
     return `<tr>
       <td style="text-align:center;color:var(--text-muted);font-size:12px;font-weight:600">#${folio}</td>
       <td><strong>${formatPeriodo(periodoVal)}</strong></td>
@@ -244,7 +270,10 @@ function renderTabla() {
       <td class="num">${fmt(p['Total bruto'])}</td>
       <td class="num" style="color:var(--red)">${fmt(p['Total deducciones'])}</td>
       <td class="num"><strong>${fmt(p['Total neto'])}</strong></td>
-      <td><span class="badge ${estadoBadge}">${estado}</span></td>
+      <td style="white-space:nowrap">
+        <span class="badge ${estadoBadge}">${estado}</span>
+        ${btnEstado}
+      </td>
       <td><a href="/planilla-detalle.html?id=${p.id}&periodo=${periodo}&folio=${folio}" class="btn btn-ghost btn-sm">Ver detalle</a></td>
     </tr>`;
   }).join('');
@@ -372,7 +401,36 @@ document.getElementById('save-gen').addEventListener('click', async () => {
     showAlert('alert-pl', `✅ Planilla generada — ${result.empleados} empleado(s) · neto ${fmt(result.totalNeto)}`, 'success');
     btn.textContent = 'Calcular y generar';
   } catch (e) {
-    showAlert('alert-gen', 'Error: ' + e.message, 'error');
+    // Error 409 = ya existe planilla para ese período → ofrecer forzar
+    if (e.message && e.message.includes('Ya existe')) {
+      showAlert('alert-gen', '', 'error');
+      const alertEl = document.getElementById('alert-gen');
+      alertEl.className = 'alert alert-error show';
+      alertEl.innerHTML = `⚠️ ${e.message.split('.')[0]}.<br><br>
+        <button id="btn-forzar-gen" class="btn btn-sm" style="background:rgba(231,76,60,.2);border:1px solid var(--red);color:var(--red);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">
+          Generar de todas formas (período duplicado)
+        </button>`;
+      document.getElementById('btn-forzar-gen').addEventListener('click', async () => {
+        alertEl.className = 'alert';
+        btn.disabled = true; btn.textContent = 'Calculando...';
+        try {
+          const r2 = await apiFetch('/api/planillas/calcular', {
+            method: 'POST',
+            body: JSON.stringify({ periodo, tipo: tipo || undefined, forzar: true }),
+          });
+          allPlanillas = await apiFetch('/api/planillas');
+          renderTabla();
+          document.getElementById('modal-gen').classList.remove('open');
+          showAlert('alert-pl', `✅ Planilla generada — ${r2.empleados} empleado(s) · neto ${fmt(r2.totalNeto)}`, 'success');
+        } catch (e2) {
+          showAlert('alert-gen', 'Error: ' + e2.message, 'error');
+        } finally {
+          btn.disabled = false; btn.textContent = 'Calcular y generar';
+        }
+      });
+    } else {
+      showAlert('alert-gen', 'Error: ' + e.message, 'error');
+    }
     btn.textContent = 'Calcular y generar';
   } finally {
     btn.disabled = false;
