@@ -216,16 +216,32 @@ async function _loadEmpresaSelector() {
     // Obtener empresas disponibles para este usuario
     const empresas = await apiFetch('/api/empresas');
     if (!empresas || empresas.length === 0) {
-      // Sin empresas: si es Master, mostrar solo el botón de crear
       if (info.rol === 'Master') {
+        // Mostrar botón en sidebar
         const wrap = document.createElement('div');
         wrap.id = 'empresa-selector-wrap';
         wrap.style.cssText = 'padding:8px 16px 4px;border-bottom:1px solid var(--border);margin-bottom:4px';
-        wrap.innerHTML = `<button id="btn-gestionar-empresas" style="width:100%;background:none;border:1px dashed var(--border);color:var(--text-muted);border-radius:6px;font-size:12px;cursor:pointer;padding:6px 8px">🏢 Crear primera empresa</button>`;
+        wrap.innerHTML = `<button id="btn-gestionar-empresas" style="width:100%;background:none;border:1px dashed rgba(46,204,113,.5);color:#2ecc71;border-radius:6px;font-size:12px;cursor:pointer;padding:6px 8px">🏢 Crear primera empresa</button>`;
         const logo = sidebar.querySelector('.sidebar-logo');
         if (logo && logo.nextSibling) sidebar.insertBefore(wrap, logo.nextSibling);
         else sidebar.appendChild(wrap);
-        document.getElementById('btn-gestionar-empresas').addEventListener('click', _abrirModalEmpresas);
+        document.getElementById('btn-gestionar-empresas').addEventListener('click', _abrirConfigEmpresa.bind(null, null));
+
+        // ── Abrir modal automáticamente la primera vez ──────────────────────
+        // Solo en páginas principales (no en login/recibo)
+        if (!window._empresaModalShown && document.querySelector('.sidebar')) {
+          window._empresaModalShown = true;
+          setTimeout(() => _abrirConfigEmpresa(null), 400);
+        }
+      } else {
+        // No Master sin empresa: mostrar aviso
+        const wrap = document.createElement('div');
+        wrap.id = 'empresa-selector-wrap';
+        wrap.style.cssText = 'padding:8px 16px 4px;border-bottom:1px solid var(--border);margin-bottom:4px';
+        wrap.innerHTML = `<div style="font-size:11px;color:var(--text-muted);padding:6px 0">Sin empresa asignada.<br>Contacta al administrador.</div>`;
+        const logo = sidebar.querySelector('.sidebar-logo');
+        if (logo && logo.nextSibling) sidebar.insertBefore(wrap, logo.nextSibling);
+        else sidebar.appendChild(wrap);
       }
       return;
     }
