@@ -5,6 +5,67 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard — Nomify</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
+  <style>
+    /* ── KPI cards mejoradas ─────────────────────────── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .kpi { background: var(--navy2); border: 1px solid var(--border);
+           border-radius: 10px; padding: 16px 18px; position: relative; overflow: hidden; }
+    .kpi-icon { font-size: 22px; margin-bottom: 6px; display: block; }
+    .kpi-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase;
+                 letter-spacing: .05em; margin-bottom: 4px; }
+    .kpi-value { font-size: 22px; font-weight: 800; color: var(--text); line-height: 1; }
+    .kpi-sub   { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .kpi-accent { border-color: rgba(46,204,113,.35); }
+    .kpi-accent .kpi-value { color: var(--green2); }
+    .kpi-orange { border-color: rgba(230,126,34,.35); }
+    .kpi-orange .kpi-value { color: var(--orange); }
+    .kpi-red    { border-color: rgba(231,76,60,.35); }
+    .kpi-red    .kpi-value  { color: var(--red); }
+    .kpi-blue   { border-color: rgba(52,152,219,.35); }
+    .kpi-blue   .kpi-value  { color: #5dade2; }
+
+    /* ── Layout de 2 columnas ────────────────────────── */
+    .dash-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; margin-bottom: 20px; }
+    .dash-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    @media (max-width: 1100px) {
+      .dash-grid { grid-template-columns: 1fr; }
+      .dash-grid-3 { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* ── Gráfico de barras CSS ───────────────────────── */
+    .chart-wrap { padding: 16px 16px 8px; }
+    .chart-bars { display: flex; align-items: flex-end; gap: 6px; height: 120px; }
+    .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .bar { width: 100%; border-radius: 4px 4px 0 0; min-height: 2px; transition: height .3s;
+           background: linear-gradient(180deg, rgba(46,204,113,.9), rgba(46,204,113,.5)); }
+    .bar.aguinaldo { background: linear-gradient(180deg, rgba(52,152,219,.9), rgba(52,152,219,.5)); }
+    .bar-lbl { font-size: 9px; color: var(--text-muted); text-align: center; white-space: nowrap; }
+    .bar-val { font-size: 8px; color: var(--text-muted); }
+
+    /* ── Lista de items ──────────────────────────────── */
+    .item-row { display: flex; align-items: center; gap: 10px; padding: 9px 16px;
+                border-bottom: 1px solid var(--border); font-size: 13px; }
+    .item-row:last-child { border-bottom: none; }
+    .item-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--surface);
+                   display: flex; align-items: center; justify-content: center;
+                   font-size: 14px; flex-shrink: 0; }
+    .item-info { flex: 1; min-width: 0; }
+    .item-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-meta { font-size: 11px; color: var(--text-muted); }
+    .item-right { text-align: right; flex-shrink: 0; }
+
+    /* ── Alerta card ─────────────────────────────────── */
+    .alert-item { display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+                  border-radius: 6px; margin-bottom: 6px; font-size: 12px; }
+    .alert-item.warn { background: rgba(230,126,34,.12); border: 1px solid rgba(230,126,34,.3); }
+    .alert-item.info { background: rgba(52,152,219,.10); border: 1px solid rgba(52,152,219,.3); }
+    .alert-item.ok   { background: rgba(46,204,113,.10); border: 1px solid rgba(46,204,113,.3); }
+  </style>
 </head>
 <body>
 <div class="layout">
@@ -35,65 +96,87 @@
         <h1>Dashboard</h1>
         <span class="sub" id="periodo-actual">—</span>
       </div>
-      <a href="/planillas.html" class="btn btn-primary">⚡ Generar planilla</a>
+      <div style="display:flex;gap:8px">
+        <a href="/liquidacion.html" class="btn btn-ghost">📄 Liquidaciones</a>
+        <a href="/planillas.html" class="btn btn-primary">⚡ Generar planilla</a>
+      </div>
     </div>
 
     <div class="content">
       <div id="alert-main" class="alert"></div>
 
-      <div class="cards" style="margin-bottom:12px">
-        <div class="card">
-          <div class="label">Empleados activos</div>
-          <div class="value" id="stat-empleados">—</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:4px" id="stat-tipos">—</div>
+      <!-- ── KPIs ────────────────────────────────────────────── -->
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi"><span class="kpi-icon">👥</span><div class="kpi-label">Empleados activos</div>
+          <div class="kpi-value" id="k-emp">—</div><div class="kpi-sub" id="k-emp-sub">—</div></div>
+        <div class="kpi kpi-accent"><span class="kpi-icon">💵</span><div class="kpi-label">Neto última quincena</div>
+          <div class="kpi-value" id="k-neto">—</div><div class="kpi-sub" id="k-neto-sub">—</div></div>
+        <div class="kpi kpi-orange"><span class="kpi-icon">🏢</span><div class="kpi-label">Costo empresa (última)</div>
+          <div class="kpi-value" id="k-costo">—</div><div class="kpi-sub" style="color:var(--orange);font-size:10px">INSS pat. + INATEC incl.</div></div>
+        <div class="kpi kpi-blue"><span class="kpi-icon">💰</span><div class="kpi-label">Préstamos activos</div>
+          <div class="kpi-value" id="k-prest">—</div><div class="kpi-sub" id="k-prest-sub">—</div></div>
+        <div class="kpi kpi-red"><span class="kpi-icon">⚡</span><div class="kpi-label">Adelantos pendientes</div>
+          <div class="kpi-value" id="k-adel">—</div><div class="kpi-sub" id="k-adel-sub">—</div></div>
+        <div class="kpi"><span class="kpi-icon">📅</span><div class="kpi-label">Próxima quincena</div>
+          <div class="kpi-value" id="k-prox" style="font-size:15px">—</div>
+          <div class="kpi-sub" id="k-prox-sub">—</div></div>
+      </div>
+
+      <!-- ── Gráfico + Cumpleaños ─────────────────────────────── -->
+      <div class="dash-grid">
+
+        <!-- Gráfico nómina 6 meses -->
+        <div class="table-wrap" style="margin-bottom:0">
+          <div class="table-header">
+            <h3>📈 Nómina últimos 6 meses</h3>
+            <span style="font-size:11px;color:var(--text-muted)">Total neto pagado por quincena</span>
+          </div>
+          <div class="chart-wrap">
+            <div class="chart-bars" id="chart-bars">
+              <div style="color:var(--text-muted);font-size:12px;padding:20px">Cargando...</div>
+            </div>
+          </div>
+          <div id="chart-resumen" style="padding:8px 16px 12px;font-size:12px;color:var(--text-muted);border-top:1px solid var(--border)"></div>
         </div>
-        <div class="card">
-          <div class="label">Préstamos activos</div>
-          <div class="value" id="stat-prestamos">—</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:4px" id="stat-prestamos-monto">—</div>
-        </div>
-        <div class="card">
-          <div class="label">Adelantos pendientes</div>
-          <div class="value red" id="stat-adelantos">—</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:4px" id="stat-adelantos-monto">—</div>
-        </div>
-        <div class="card">
-          <div class="label">Deducciones pendientes</div>
-          <div class="value orange" id="stat-deducciones">—</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:4px" id="stat-deducciones-monto">—</div>
-        </div>
-        <div class="card">
-          <div class="label">Próxima quincena</div>
-          <div class="value" id="stat-proxima" style="font-size:18px">—</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:4px" id="stat-proxima-dias">—</div>
+
+        <!-- Panel derecho: cumpleaños + alertas -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+
+          <!-- Próximos cumpleaños -->
+          <div class="table-wrap" style="margin-bottom:0">
+            <div class="table-header">
+              <h3>🎂 Próximos cumpleaños</h3>
+              <span style="font-size:11px;color:var(--text-muted)">Próximos 30 días</span>
+            </div>
+            <div id="lista-cumples">
+              <div style="padding:16px;color:var(--text-muted);font-size:12px">Cargando...</div>
+            </div>
+          </div>
+
+          <!-- Alertas rápidas -->
+          <div class="table-wrap" style="margin-bottom:0">
+            <div class="table-header"><h3>🔔 Alertas</h3></div>
+            <div id="lista-alertas" style="padding:12px 16px">
+              <div style="color:var(--text-muted);font-size:12px">Cargando...</div>
+            </div>
+          </div>
+
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;align-items:start">
-        <div class="table-wrap" style="margin-bottom:0">
-          <div class="table-header">
-            <h3>Próximos feriados</h3>
-            <span style="font-size:11px;color:var(--text-muted)">Nicaragua</span>
-          </div>
-          <div id="lista-feriados" style="padding:0 0 8px">
-            <div style="padding:16px;color:var(--text-muted);font-size:13px">Cargando...</div>
-          </div>
-        </div>
+      <!-- ── Planillas recientes + Préstamos ──────────────────── -->
+      <div class="dash-grid">
 
         <div class="table-wrap" style="margin-bottom:0">
           <div class="table-header">
             <h3>Últimas planillas</h3>
-            <a href="/planillas.html" class="btn btn-ghost btn-sm">Ver todas</a>
+            <a href="/planillas.html" class="btn btn-ghost btn-sm">Ver todas →</a>
           </div>
           <table>
             <thead>
               <tr>
-                <th>Período</th>
-                <th>Tipo</th>
-                <th>Total bruto</th>
-                <th>Total neto</th>
-                <th>Estado</th>
-                <th></th>
+                <th>#</th><th>Período</th><th>Tipo</th>
+                <th>Neto</th><th>Estado</th><th></th>
               </tr>
             </thead>
             <tbody id="tabla-planillas">
@@ -101,6 +184,29 @@
             </tbody>
           </table>
         </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <!-- Préstamos por vencer -->
+          <div class="table-wrap" style="margin-bottom:0">
+            <div class="table-header">
+              <h3>💰 Préstamos activos</h3>
+              <a href="/prestamos.html" class="btn btn-ghost btn-sm">Ver todos →</a>
+            </div>
+            <div id="lista-prestamos">
+              <div style="padding:16px;color:var(--text-muted);font-size:12px">Cargando...</div>
+            </div>
+          </div>
+
+          <!-- Feriados -->
+          <div class="table-wrap" style="margin-bottom:0">
+            <div class="table-header">
+              <h3>🎌 Próximos feriados</h3>
+              <span style="font-size:11px;color:var(--text-muted)">Nicaragua</span>
+            </div>
+            <div id="lista-feriados"></div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -109,123 +215,274 @@
 <script src="/assets/js/auth.js"></script>
 <script src="/assets/js/feriados.js"></script>
 <script>
-onReady(['Master', 'Planillero'], () => {
-  initLayout();
-  loadDashboard();
-});
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MESES_L = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const cs = n => 'C$ ' + parseFloat(n||0).toLocaleString('es-NI',{minimumFractionDigits:2,maximumFractionDigits:2});
 
-function setPeriodoLabel() {
-  const hoy = new Date();
-  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const d = hoy.getDate(), m = hoy.getMonth(), y = hoy.getFullYear();
-  const ultimo = new Date(y, m + 1, 0).getDate();
-  const periodo = d <= 15
-    ? `Quincena actual: 1–15 ${meses[m]} ${y}`
-    : `Quincena actual: 16–${ultimo} ${meses[m]} ${y}`;
-  document.getElementById('periodo-actual').textContent = periodo;
+onReady(['Master','Planillero'], () => { initLayout(); loadDashboard(); });
+
+// ── Período actual ───────────────────────────────────────────────────────────
+function setPeriodo() {
+  const hoy = new Date(), d = hoy.getDate(), m = hoy.getMonth(), y = hoy.getFullYear();
+  const ult = new Date(y, m+1, 0).getDate();
+  document.getElementById('periodo-actual').textContent =
+    d <= 15 ? `Quincena actual: 1–15 ${MESES_L[m]} ${y}`
+            : `Quincena actual: 16–${ult} ${MESES_L[m]} ${y}`;
 }
 
 function proximaQuincena() {
-  const hoy = new Date();
-  const d = hoy.getDate(), m = hoy.getMonth(), y = hoy.getFullYear();
-  const ultimo = new Date(y, m + 1, 0).getDate();
-  let target;
-  if (d < 15) {
-    target = new Date(y, m, 15);
-  } else if (d < ultimo) {
-    target = new Date(y, m, ultimo);
-  } else {
-    target = new Date(y, m + 1, 15);
-  }
-  const yyyy = target.getFullYear();
-  const mm = String(target.getMonth()+1).padStart(2,'0');
-  const dd = String(target.getDate()).padStart(2,'0');
-  return `${yyyy}-${mm}-${dd}`;
+  const hoy = new Date(), d = hoy.getDate(), m = hoy.getMonth(), y = hoy.getFullYear();
+  const ult = new Date(y, m+1, 0).getDate();
+  let t = d < 15 ? new Date(y,m,15) : d < ult ? new Date(y,m,ult) : new Date(y,m+1,15);
+  return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
 }
 
-function renderFeriados() {
-  const lista = proximosFeriados(6);
-  if (lista.length === 0) {
-    document.getElementById('lista-feriados').innerHTML =
-      '<div style="padding:16px;color:var(--text-muted);font-size:13px">Sin feriados próximos</div>';
+// ── Gráfico barras ───────────────────────────────────────────────────────────
+function renderChart(planillas) {
+  // Agrupar por mes: sumar total_neto de quincenas normales
+  const byMonth = {};
+  planillas.forEach(p => {
+    if (p.Tipo === 'Aguinaldo') return;
+    const mes = String(p['Período'] || '').substring(0, 7);
+    if (!mes) return;
+    byMonth[mes] = (byMonth[mes] || 0) + parseFloat(p['Total neto'] || 0);
+  });
+
+  // Últimos 6 meses distintos
+  const meses = Object.keys(byMonth).sort().slice(-6);
+  if (!meses.length) {
+    document.getElementById('chart-bars').innerHTML =
+      '<div style="color:var(--text-muted);font-size:12px;padding:20px">Sin datos de planillas aún</div>';
     return;
   }
-  document.getElementById('lista-feriados').innerHTML = lista.map(f => {
-    const dias = diasHasta(f.fecha);
-    const badge = f.tipo === 'managua' ? 'badge-gray' : 'badge-blue';
-    const labelDias = dias === 0 ? '<strong style="color:var(--red)">Hoy</strong>'
-                    : dias === 1 ? '<span style="color:var(--orange)">Mañana</span>'
-                    : `<span style="color:var(--text-muted)">en ${dias} días</span>`;
-    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--border)">
-      <div style="flex:0 0 46px;text-align:center;background:var(--surface);border-radius:6px;padding:4px 0;border:1px solid var(--border)">
-        <div style="font-size:16px;font-weight:700;line-height:1">${new Date(f.fecha+'T00:00:00').getDate()}</div>
-        <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">${nomMes(f.fecha).split(' ')[1]}</div>
+
+  const maxVal = Math.max(...meses.map(m => byMonth[m]), 1);
+  const totalPeriodo = meses.reduce((s, m) => s + byMonth[m], 0);
+
+  document.getElementById('chart-bars').innerHTML = meses.map(mes => {
+    const val   = byMonth[mes];
+    const pct   = Math.max(2, Math.round(val / maxVal * 100));
+    const [y, m] = mes.split('-');
+    return `<div class="bar-col">
+      <div class="bar-val">${val >= 1000 ? (val/1000).toFixed(0)+'K' : val.toFixed(0)}</div>
+      <div class="bar" style="height:${pct}%"></div>
+      <div class="bar-lbl">${MESES[parseInt(m)-1]}<br>${y.substring(2)}</div>
+    </div>`;
+  }).join('');
+
+  const promedio = totalPeriodo / meses.length;
+  document.getElementById('chart-resumen').innerHTML =
+    `Promedio mensual: <strong>${cs(promedio)}</strong> &nbsp;·&nbsp;
+     Total período: <strong>${cs(totalPeriodo)}</strong>`;
+}
+
+// ── Cumpleaños próximos ──────────────────────────────────────────────────────
+function renderCumples(empleados) {
+  const hoy  = new Date();
+  const hoyY = hoy.getFullYear();
+
+  const proximos = empleados
+    .filter(e => e.Activo && e.Fecha_Nacimiento)
+    .map(e => {
+      const [, mm, dd] = e.Fecha_Nacimiento.split('-').map(Number);
+      let cumple = new Date(hoyY, mm-1, dd);
+      if (cumple < hoy) cumple = new Date(hoyY+1, mm-1, dd);
+      const dias = Math.round((cumple - hoy) / 86400000);
+      return { ...e, cumpleDate: cumple, diasFalta: dias, mes: mm, dia: dd };
+    })
+    .filter(e => e.diasFalta <= 30)
+    .sort((a, b) => a.diasFalta - b.diasFalta);
+
+  const el = document.getElementById('lista-cumples');
+  if (!proximos.length) {
+    el.innerHTML = '<div style="padding:14px 16px;color:var(--text-muted);font-size:12px">Sin cumpleaños en los próximos 30 días 🎉</div>';
+    return;
+  }
+  el.innerHTML = proximos.map(e => {
+    const hoy0 = e.diasFalta === 0;
+    const label = hoy0 ? '<strong style="color:#f472b6">¡Hoy!</strong>'
+      : e.diasFalta === 1 ? '<span style="color:#f472b6">Mañana</span>'
+      : `<span style="color:var(--text-muted)">en ${e.diasFalta} días</span>`;
+    return `<div class="item-row">
+      <div class="item-avatar" style="background:rgba(236,72,153,.15);color:#f472b6">🎂</div>
+      <div class="item-info">
+        <div class="item-name">${e.Nombre}</div>
+        <div class="item-meta">${e.Cargo || '—'} · ${e.dia} de ${MESES_L[e.mes-1]}</div>
       </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.nombre}</div>
-        <div style="font-size:11px;margin-top:2px">${labelDias}</div>
-      </div>
-      <span class="badge ${badge}" style="font-size:10px">${f.tipo === 'managua' ? 'Mng' : 'Nic'}</span>
+      <div class="item-right">${label}</div>
     </div>`;
   }).join('');
 }
 
+// ── Alertas ──────────────────────────────────────────────────────────────────
+function renderAlertas(prestamos, adelantos, planillas) {
+  const alertas = [];
+
+  // Préstamos por terminar (≤ 2 cuotas)
+  prestamos.filter(p => p.Estado === 'Activo' && (p['Cuotas restantes'] || 0) <= 2 && (p['Cuotas restantes'] || 0) > 0)
+    .forEach(p => alertas.push({ tipo:'warn', icon:'💰',
+      texto: `${p.Empleado} — préstamo a punto de terminar (${p['Cuotas restantes']} cuota${p['Cuotas restantes']>1?'s':''})` }));
+
+  // Adelantos pendientes de esta quincena
+  const proxQ = proximaQuincena();
+  const adelProx = adelantos.filter(a => {
+    const f = String(a['Descontar en quincena']||'').substring(0,10);
+    return f === proxQ && a.Estado === 'Pendiente';
+  });
+  if (adelProx.length) alertas.push({ tipo:'info', icon:'⚡',
+    texto: `${adelProx.length} adelanto${adelProx.length>1?'s':''} a descontar en la próxima quincena` });
+
+  // Planillas pendientes de pago
+  const enBorrador = planillas.filter(p => p.Estado === 'Borrador' || !p.Estado).length;
+  if (enBorrador > 0) alertas.push({ tipo:'warn', icon:'📋',
+    texto: `${enBorrador} planilla${enBorrador>1?'s':''} en estado Borrador sin marcar como pagada` });
+
+  if (!alertas.length) alertas.push({ tipo:'ok', icon:'✅', texto: 'Todo en orden, sin alertas pendientes' });
+
+  document.getElementById('lista-alertas').innerHTML = alertas.map(a =>
+    `<div class="alert-item ${a.tipo}"><span>${a.icon}</span><span>${a.texto}</span></div>`
+  ).join('');
+}
+
+// ── Lista de préstamos activos ───────────────────────────────────────────────
+function renderPrestamos(prestamos) {
+  const activos = prestamos.filter(p => p.Estado === 'Activo').slice(0, 5);
+  const el = document.getElementById('lista-prestamos');
+  if (!activos.length) {
+    el.innerHTML = '<div style="padding:14px 16px;color:var(--text-muted);font-size:12px">Sin préstamos activos</div>';
+    return;
+  }
+  el.innerHTML = activos.map(p => {
+    const saldo = parseFloat(p['Saldo pendiente'] || p['Monto total'] || 0);
+    const pct   = p['Monto total'] > 0 ? Math.round((1 - saldo/p['Monto total'])*100) : 0;
+    return `<div class="item-row">
+      <div class="item-info">
+        <div class="item-name">${p.Empleado}</div>
+        <div style="margin-top:4px;background:var(--border);border-radius:3px;height:4px;width:100%">
+          <div style="height:100%;border-radius:3px;width:${pct}%;background:var(--green2)"></div>
+        </div>
+        <div class="item-meta" style="margin-top:2px">${pct}% pagado · ${p['Cuotas restantes']||0} cuotas</div>
+      </div>
+      <div class="item-right" style="color:var(--orange);font-weight:600;font-size:12px">${cs(saldo)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Feriados ─────────────────────────────────────────────────────────────────
+function renderFeriados() {
+  const lista = proximosFeriados(5);
+  const el = document.getElementById('lista-feriados');
+  if (!lista.length) { el.innerHTML = '<div style="padding:14px 16px;color:var(--text-muted);font-size:12px">Sin feriados próximos</div>'; return; }
+  el.innerHTML = lista.map(f => {
+    const dias = diasHasta(f.fecha);
+    const badge = f.tipo === 'managua' ? 'badge-gray' : 'badge-blue';
+    const lbl = dias === 0 ? '<strong style="color:var(--red)">Hoy</strong>'
+      : dias === 1 ? '<span style="color:var(--orange)">Mañana</span>'
+      : `<span style="color:var(--text-muted)">en ${dias}d</span>`;
+    const d = new Date(f.fecha+'T00:00:00');
+    return `<div class="item-row">
+      <div class="item-avatar" style="background:var(--surface);font-size:12px;font-weight:700;color:var(--text)">
+        ${d.getDate()}<br><span style="font-size:8px;font-weight:400">${MESES[d.getMonth()]}</span>
+      </div>
+      <div class="item-info">
+        <div class="item-name" style="font-size:12px">${f.nombre}</div>
+        <div>${lbl} &nbsp;<span class="badge ${badge}" style="font-size:9px">${f.tipo==='managua'?'Mng':'Nic'}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Main ─────────────────────────────────────────────────────────────────────
 async function loadDashboard() {
-  setPeriodoLabel();
-  const proxFecha = proximaQuincena();
-  const proxDias = diasHasta(proxFecha);
-  document.getElementById('stat-proxima').textContent = proxFecha;
-  document.getElementById('stat-proxima-dias').textContent =
-    proxDias === 0 ? '¡Es hoy!' : `en ${proxDias} día${proxDias !== 1 ? 's' : ''}`;
+  setPeriodo();
   renderFeriados();
+
+  // Próxima quincena
+  const proxQ = proximaQuincena();
+  const diasProx = diasHasta(proxQ);
+  document.getElementById('k-prox').textContent = fmtPeriodo(proxQ);
+  document.getElementById('k-prox-sub').textContent =
+    diasProx === 0 ? '¡Es hoy!' : `en ${diasProx} día${diasProx!==1?'s':''}`;
+
   try {
-    const [empleados, planillas, prestamos, adelantos, deducciones] = await Promise.all([
+    const [empleados, planillas, prestamos, adelantos] = await Promise.all([
       apiFetch('/api/empleados'),
       apiFetch('/api/planillas'),
       apiFetch('/api/prestamos').catch(() => []),
       apiFetch('/api/adelantos').catch(() => []),
-      apiFetch('/api/deducciones').catch(() => []),
     ]);
+
+    // ── Empleados ───────────────────────────────────────────────────────────
     const activos = empleados.filter(e => e.Activo);
-    const conSeg = activos.filter(e => (e.Tipo_Planilla || 'Con Seguro') !== 'Sin Seguro').length;
-    const sinSeg = activos.filter(e => e.Tipo_Planilla === 'Sin Seguro').length;
-    document.getElementById('stat-empleados').textContent = activos.length;
-    document.getElementById('stat-tipos').textContent = `${conSeg} con seguro · ${sinSeg} sin seguro`;
-    const prestActivos = prestamos.filter(p => p.Estado === 'Activo');
-    const montoPrest = prestActivos.reduce((s, p) => s + ((p['Cuota quincenal'] || 0) * (p['Cuotas restantes'] || 0)), 0);
-    document.getElementById('stat-prestamos').textContent = prestActivos.length;
-    document.getElementById('stat-prestamos-monto').textContent = `${fmt(montoPrest)} pendiente`;
-    const adelPend = adelantos.filter(a => (a.Estado || 'Pendiente') === 'Pendiente' && !a.Pausado);
-    const montoAdel = adelPend.reduce((s, a) => s + (a.Monto || 0), 0);
-    document.getElementById('stat-adelantos').textContent = adelPend.length;
-    document.getElementById('stat-adelantos-monto').textContent = fmt(montoAdel);
-    const dedPend = deducciones.filter(d => (d.Estado || 'Pendiente') === 'Pendiente' && !d.Pausado);
-    const montoDed = dedPend.reduce((s, d) => s + (d.Monto || 0), 0);
-    document.getElementById('stat-deducciones').textContent = dedPend.length;
-    document.getElementById('stat-deducciones-monto').textContent = fmt(montoDed);
-    const tbody = document.getElementById('tabla-planillas');
-    const recientes = planillas.slice(0, 8);
-    if (recientes.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty">No hay planillas generadas aún</td></tr>';
-      return;
+    const conSeg  = activos.filter(e => e.Tipo_Planilla !== 'Sin Seguro').length;
+    const sinSeg  = activos.filter(e => e.Tipo_Planilla === 'Sin Seguro').length;
+    document.getElementById('k-emp').textContent     = activos.length;
+    document.getElementById('k-emp-sub').textContent = `${conSeg} con seguro · ${sinSeg} sin seguro`;
+
+    // ── Última planilla ─────────────────────────────────────────────────────
+    const ultimaP = planillas.filter(p => p.Tipo !== 'Aguinaldo')[0];
+    if (ultimaP) {
+      document.getElementById('k-neto').textContent    = cs(ultimaP['Total neto']);
+      document.getElementById('k-neto-sub').textContent = fmtPeriodo(String(ultimaP['Período']||'').substring(0,10));
+      const costo = parseFloat(ultimaP['Total bruto']||0)
+        + parseFloat(ultimaP.total_inss_patronal||0)
+        + parseFloat(ultimaP.total_inatec||0);
+      document.getElementById('k-costo').textContent = cs(costo || ultimaP['Total bruto']);
+    } else {
+      document.getElementById('k-neto').textContent  = 'C$ 0.00';
+      document.getElementById('k-costo').textContent = 'C$ 0.00';
     }
-    tbody.innerHTML = recientes.map(p => {
-      const tipo = p.Tipo || '';
-      const badge = tipo === 'Con Seguro' ? 'badge-blue' : tipo === 'Sin Seguro' ? 'badge-orange' : 'badge-gray';
-      const estado = p.Estado || 'Borrador';
-      const estadoBadge = estado === 'Pagada' ? 'badge-green' : 'badge-gray';
-      // Normalizar siempre a YYYY-MM-DD (por si la DB devuelve datetime completo)
-      const periodoVal = String(p['Período'] || '').substring(0, 10);
-      const periodoDisplay = periodoVal ? fmtPeriodo(periodoVal) : '—';
-      return `<tr>
-        <td><strong>${periodoDisplay}</strong></td>
-        <td>${tipo ? `<span class="badge ${badge}">${tipo}</span>` : '—'}</td>
-        <td class="num">${fmt(p['Total bruto'])}</td>
-        <td class="num"><strong>${fmt(p['Total neto'])}</strong></td>
-        <td><span class="badge ${estadoBadge}">${estado}</span></td>
-        <td><a href="/planilla-detalle.html?id=${p.id}&periodo=${encodeURIComponent(periodoVal)}" class="btn btn-icon btn-sm">👁</a></td>
-      </tr>`;
-    }).join('');
+
+    // ── Préstamos ───────────────────────────────────────────────────────────
+    const prestActivos = prestamos.filter(p => p.Estado === 'Activo');
+    const saldoTotal   = prestActivos.reduce((s, p) => s + parseFloat(p['Saldo pendiente']||p['Monto total']||0), 0);
+    document.getElementById('k-prest').textContent    = prestActivos.length;
+    document.getElementById('k-prest-sub').textContent = `${cs(saldoTotal)} saldo total`;
+
+    // ── Adelantos ───────────────────────────────────────────────────────────
+    const adelPend = adelantos.filter(a => a.Estado === 'Pendiente' && !a.Pausado);
+    const montoAdel = adelPend.reduce((s, a) => s + parseFloat(a.Monto||0), 0);
+    document.getElementById('k-adel').textContent    = adelPend.length;
+    document.getElementById('k-adel-sub').textContent = cs(montoAdel);
+
+    // ── Gráfico ─────────────────────────────────────────────────────────────
+    renderChart(planillas);
+
+    // ── Cumpleaños ──────────────────────────────────────────────────────────
+    renderCumples(empleados);
+
+    // ── Alertas ─────────────────────────────────────────────────────────────
+    renderAlertas(prestamos, adelantos, planillas);
+
+    // ── Lista préstamos ─────────────────────────────────────────────────────
+    renderPrestamos(prestamos);
+
+    // ── Últimas planillas ───────────────────────────────────────────────────
+    const recientes = planillas.slice(0, 7);
+    const tbody = document.getElementById('tabla-planillas');
+    if (!recientes.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">No hay planillas generadas aún</td></tr>';
+    } else {
+      tbody.innerHTML = recientes.map(p => {
+        const tipo  = p.Tipo || '';
+        const badge = tipo === 'Con Seguro' ? 'badge-blue'
+          : tipo === 'Sin Seguro' ? 'badge-orange'
+          : tipo === 'Aguinaldo'  ? 'badge-green' : 'badge-gray';
+        const estado = p.Estado || 'Borrador';
+        const eBadge = estado === 'Pagada' ? 'badge-green' : 'badge-gray';
+        const periodoVal = String(p['Período']||'').substring(0,10);
+        return `<tr>
+          <td style="color:var(--text-muted);font-size:11px">#${p.folio??p.id}</td>
+          <td><strong style="font-size:12px">${periodoVal ? fmtPeriodo(periodoVal) : '—'}</strong></td>
+          <td>${tipo ? `<span class="badge ${badge}" style="font-size:9px">${tipo}</span>` : '—'}</td>
+          <td class="num" style="font-size:12px">${cs(p['Total neto'])}</td>
+          <td><span class="badge ${eBadge}" style="font-size:9px">${estado}</span></td>
+          <td><a href="/planilla-detalle.html?id=${p.id}&periodo=${encodeURIComponent(periodoVal)}&folio=${p.folio??p.id}"
+               class="btn btn-icon btn-sm">👁</a></td>
+        </tr>`;
+      }).join('');
+    }
+
   } catch (e) {
     showAlert('alert-main', 'Error cargando datos: ' + e.message, 'error');
   }
