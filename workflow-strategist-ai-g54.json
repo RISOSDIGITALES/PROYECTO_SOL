@@ -1,1 +1,477 @@
-{"name": "🧠 Strategist AI — RRSS G54 v1.1", "nodes": [{"id": "trigger-strategist", "name": "🕐 Ejecutar Strategist AI", "type": "n8n-nodes-base.manualTrigger", "typeVersion": 1, "position": [240, 304], "parameters": {}}, {"id": "config-g54-strat", "name": "⚙️ Config G54", "type": "n8n-nodes-base.set", "typeVersion": 3.4, "position": [480, 304], "parameters": {"assignments": {"assignments": [{"id": "g54-base-url", "name": "G54_BASE_URL", "value": "https://apigrowth.mdarthurdigital.com", "type": "string"}, {"id": "g54-n8n-token", "name": "G54_N8N_TOKEN", "value": "", "type": "string"}, {"id": "g54-agent-token", "name": "G54_AGENT_TOKEN", "value": "", "type": "string"}, {"id": "g54-company-id", "name": "G54_COMPANY_ID", "value": "1", "type": "string"}]}, "options": {}}}, {"id": "empresa-g54-strat", "name": "🏢 Obtener Empresa G54", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [720, 304], "parameters": {"url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54').item.json.G54_COMPANY_ID }}", "sendHeaders": true, "headerParameters": {"parameters": [{"name": "Authorization", "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_N8N_TOKEN }}"}, {"name": "Accept", "value": "application/json"}]}, "options": {}}}, {"id": "productos-g54-strat", "name": "📦 Obtener Productos G54", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [960, 304], "parameters": {"url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54').item.json.G54_COMPANY_ID + '/productos-servicios' }}", "sendHeaders": true, "headerParameters": {"parameters": [{"name": "Authorization", "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_N8N_TOKEN }}"}, {"name": "Accept", "value": "application/json"}]}, "options": {}}}, {"id": "keywords-g54-strat", "name": "🔍 Obtener Keywords G54", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [1200, 304], "parameters": {"url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54').item.json.G54_COMPANY_ID + '/keywords' }}", "sendHeaders": true, "headerParameters": {"parameters": [{"name": "Authorization", "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_N8N_TOKEN }}"}, {"name": "Accept", "value": "application/json"}]}, "options": {}}}, {"id": "preparar-strat", "name": "🔧 Preparar Contexto", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [1440, 304], "parameters": {"jsCode": "const cfg     = $('⚙️ Config G54').item.json;\nconst empRaw  = $('🏢 Obtener Empresa G54').item.json;\nconst prodRaw = $('📦 Obtener Productos G54').item.json;\nconst kwRaw   = $('🔍 Obtener Keywords G54').item.json;\n\nconst emp   = empRaw.data  || empRaw  || {};\nconst prods = prodRaw.data || prodRaw || [];\nconst allKw = (kwRaw.data  || kwRaw   || []).filter(k => k.estado === 'activa');\n\nconst empresa_nombre = emp.name              || '';\nconst industria      = emp.industry          || '';\nconst descripcion    = emp.description       || '';\nconst valor          = emp.value_proposition || '';\nconst ciudad         = emp.base_city         || '';\nconst web            = emp.website           || '';\nconst objetivo       = emp.primary_goal      || '';\nconst audiencia      = emp.target_market     || '';\nconst geografia      = emp.geography         || '';\nconst email          = (emp.emails||[])[0]   || '';\n\nconst catalogo = prods.map(p => {\n  const kw = (p.keywords||[]).join(', ');\n  return `• ${p.name||''}: ${p.description||''}${kw?' ['+kw+']':''}`;\n}).join('\\n');\n\nconst kwByIntencion = { local: [], comercial: [], informacional: [], transaccional: [] };\nfor (const k of allKw) {\n  const intent = k.intencion || 'informacional';\n  if (kwByIntencion[intent]) kwByIntencion[intent].push(k.keyword);\n  else kwByIntencion.informacional.push(k.keyword);\n}\n\nconst kwSection = `KEYWORDS EXISTENTES EN G54 (priorizar estas — NO inventar nuevas):\n• Local/GEO: ${kwByIntencion.local.join(' | ') || 'N/A'}\n• Comercial: ${kwByIntencion.comercial.join(' | ') || 'N/A'}\n• Informacional: ${kwByIntencion.informacional.join(' | ') || 'N/A'}\n• Transaccional: ${kwByIntencion.transaccional.join(' | ') || 'N/A'}`;\n\nconst prompt = `Actúa como un estratega senior especializado en crecimiento orgánico basado en SEO, AEO y GEO.\n\nTu función es diseñar una estrategia de contenido que capture demanda, responda preguntas y sea reutilizable por IA.\n\nNEGOCIO: ${empresa_nombre}\nINDUSTRIA: ${industria}\nDESCRIPCIÓN: ${descripcion}\nPROPUESTA DE VALOR: ${valor}\nCIUDAD BASE: ${ciudad} | WEB: ${web}\nCOBERTURA: ${geografia}\nOBJETIVO PRINCIPAL: ${objetivo}\nMERCADO OBJETIVO: ${audiencia}\n\nPRODUCTOS / SERVICIOS:\n${catalogo}\n\n${kwSection}\n\nEntrega ÚNICAMENTE un JSON válido con esta estructura exacta (sin markdown, sin texto extra):\n{\n  \"resumen_estrategico\": \"2-3 párrafos concisos\",\n  \"objetivo\": \"leads|tráfico|posicionamiento|ventas\",\n  \"audiencia\": \"descripción del público objetivo\",\n  \"tono\": \"tono de comunicación recomendado\",\n  \"cta\": \"URL de conversión principal\",\n  \"pilares\": \"pilar1, pilar2, pilar3\",\n  \"keyword_strategy\": {\n    \"principales\": [\"kw principal 1\",\"kw principal 2\"],\n    \"secundarias\": [\"kw sec 1\",\"kw sec 2\",\"kw sec 3\"],\n    \"long_tail\": [\"frase larga 1\",\"frase larga 2\",\"frase larga 3\"]\n  },\n  \"mapa_preguntas_aeo\": [\"¿pregunta real 1?\",\"¿pregunta real 2?\",\"¿pregunta real 3?\"],\n  \"clusters\": [\n    {\"nombre\":\"Cluster 1\",\"keywords\":[\"kw\"],\"tipo\":\"TOFU\"},\n    {\"nombre\":\"Cluster 2\",\"keywords\":[\"kw\"],\"tipo\":\"MOFU\"},\n    {\"nombre\":\"Cluster 3\",\"keywords\":[\"kw\"],\"tipo\":\"BOFU\"}\n  ],\n  \"embudo\": {\n    \"tofu\": [\"tema educativo 1\",\"tema educativo 2\"],\n    \"mofu\": [\"comparativa 1\",\"autoridad 1\"],\n    \"bofu\": [\"testimonio 1\",\"oferta 1\"]\n  },\n  \"canales\": [\"canal1\",\"canal2\"],\n  \"plan_semanal\": {\"tofu\":3,\"mofu\":2,\"bofu\":1},\n  \"kpis\": {\n    \"seo\": [\"alcance\",\"impresiones\",\"tráfico\"],\n    \"aeo\": [\"respuestas guardadas\",\"engagement útil\"],\n    \"geo\": [\"citas en IA\",\"visibilidad IA\"],\n    \"negocio\": [\"leads\",\"conversiones\",\"costo por lead\"]\n  }\n}\n\nINSTRUCCIÓN CLAVE: Para keyword_strategy, usa EXCLUSIVAMENTE las keywords de la sección KEYWORDS EXISTENTES EN G54. Distribúyelas entre principales, secundarias y long_tail según relevancia e intención. No inventes keywords nuevas.\n\nNo generes contenido de redes. Piensa como arquitecto de visibilidad orgánica. Sé específico y accionable para ${empresa_nombre} en ${ciudad}.`;\n\nreturn [{ json: { empresa_nombre, industria, descripcion, valor, ciudad, web, objetivo, audiencia, geografia, email, catalogo, prompt, company_id: cfg.G54_COMPANY_ID, keywords_count: allKw.length } }];"}}, {"id": "gemini-strategist", "name": "🧠 Gemini: Strategist AI", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [1680, 304], "continueOnFail": true, "parameters": {"method": "POST", "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDgMayvXomDq8Mx3fwTVtYi9eDjU5cxGOU", "sendHeaders": true, "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]}, "sendBody": true, "specifyBody": "json", "jsonBody": "={\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":{{ JSON.stringify($json.prompt) }}}]}],\"generationConfig\":{\"temperature\":0.7,\"maxOutputTokens\":4096}}", "options": {}}}, {"id": "if-gemini-strat", "name": "🔀 ¿Gemini OK?", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [1920, 304], "parameters": {"conditions": {"options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1}, "conditions": [{"id": "check-cand", "leftValue": "={{ $json.candidates?.length || 0 }}", "rightValue": 0, "operator": {"type": "number", "operation": "gt"}}], "combinator": "and"}, "options": {}}}, {"id": "groq-strategist", "name": "🧠 Groq: Fallback Strategist", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [1920, 480], "continueOnFail": true, "parameters": {"method": "POST", "url": "https://api.groq.com/openai/v1/chat/completions", "sendHeaders": true, "headerParameters": {"parameters": [{"name": "Authorization", "value": "=Bearer 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"}, {"name": "Content-Type", "value": "application/json"}]}, "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify({\n  model: 'llama-3.3-70b-versatile',\n  messages: [\n    { role: 'system', content: 'Eres un estratega senior de marketing digital especializado en SEO, AEO y GEO. Responde ÚNICAMENTE con JSON válido, sin markdown ni texto adicional.' },\n    { role: 'user',   content: $('🔧 Preparar Contexto').item.json.prompt }\n  ],\n  temperature: 0.7,\n  max_tokens: 4096\n}) }}", "options": {}}}, {"id": "parsear-strat", "name": "🔍 Parsear Estrategia", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [2160, 304], "parameters": {"jsCode": "const raw = $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text\n  || $input.item.json.choices?.[0]?.message?.content || '{}';\n\nlet est;\ntry { est = JSON.parse(raw); }\ncatch(e) {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  est = m ? JSON.parse(m[0]) : {};\n}\n\nconst ctx = $('🔧 Preparar Contexto').item.json;\n\nreturn [{ json: {\n  company_id:          Number(ctx.company_id) || 1,\n  resumen_estrategico: est.resumen_estrategico || '',\n  objetivo:            est.objetivo  || ctx.objetivo || '',\n  audiencia:           est.audiencia || ctx.audiencia|| '',\n  tono:                est.tono      || 'profesional y directo',\n  cta:                 est.cta       || ctx.web + '/contact' || '',\n  pilares:             est.pilares   || '',\n  keyword_strategy:    est.keyword_strategy   || {},\n  mapa_preguntas_aeo:  est.mapa_preguntas_aeo || [],\n  clusters:            est.clusters  || [],\n  embudo:              est.embudo    || {},\n  canales:             est.canales   || [],\n  plan_semanal:        est.plan_semanal || { tofu:3, mofu:2, bofu:1 },\n  kpis:                est.kpis      || {},\n  empresa_nombre:      ctx.empresa_nombre,\n  email:               ctx.email\n} }];"}}, {"id": "guardar-strat-g54", "name": "💾 Guardar Estrategia G54", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [2400, 304], "continueOnFail": true, "parameters": {"method": "POST", "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/agent/rrss/estrategia' }}", "sendHeaders": true, "headerParameters": {"parameters": [{"name": "Authorization", "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_AGENT_TOKEN }}"}, {"name": "Content-Type", "value": "application/json"}]}, "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify($json) }}", "options": {}}}, {"id": "email-strat-ok", "name": "📧 Notificación: Estrategia Lista", "type": "n8n-nodes-base.gmail", "typeVersion": 2.1, "position": [2640, 304], "credentials": {"gmailOAuth2": {"id": "TESHSjzjMCpCxBBk", "name": "Gmail account"}}, "parameters": {"sendTo": "={{ $('🔧 Preparar Contexto').item.json.email }}", "subject": "={{ '🧠 Estrategia G54 generada — ' + $('🔧 Preparar Contexto').item.json.empresa_nombre }}", "message": "={{ (() => {\n  const e = $('🔍 Parsear Estrategia').item.json;\n  return '<h2>🧠 Estrategia G54 lista para ' + e.empresa_nombre + '</h2>'\n    + '<h3>Resumen estratégico</h3><p>' + e.resumen_estrategico + '</p>'\n    + '<h3>Keywords principales</h3><p>' + (e.keyword_strategy?.principales||[]).join(', ') + '</p>'\n    + '<h3>Canales</h3><p>' + (e.canales||[]).join(', ') + '</p>'\n    + '<h3>Plan semanal</h3><p>TOFU: ' + (e.plan_semanal?.tofu||3) + ' | MOFU: ' + (e.plan_semanal?.mofu||2) + ' | BOFU: ' + (e.plan_semanal?.bofu||1) + '</p>'\n    + '<p><em>Estrategia guardada en G54. El Content AI la usará en la próxima ejecución.</em></p>';\n})() }}", "options": {"mimeType": "html"}}}, {"id": "sticky-strategist", "name": "📋 INFO", "type": "n8n-nodes-base.stickyNote", "typeVersion": 1, "position": [240, 96], "parameters": {"content": "## 🧠 Strategist AI — G54 v1.1\n\n**Qué hace:**\n- Lee empresa, productos Y keywords desde G54\n- Genera estrategia SEO/AEO/GEO usando las keywords reales de G54\n- Guarda en G54 `/api/agent/rrss/estrategia`\n- Content AI la usa automáticamente en la próxima ejecución\n\n**Trigger:** Manual — ejecutar al incorporar cliente nuevo o actualizar estrategia\n\n**Output:** keyword_strategy (desde G54), AEO map, clusters, embudo, canales, plan semanal, KPIs", "height": 160, "width": 700, "color": 4}}], "connections": {"🕐 Ejecutar Strategist AI": {"main": [[{"node": "⚙️ Config G54", "type": "main", "index": 0}]]}, "⚙️ Config G54": {"main": [[{"node": "🏢 Obtener Empresa G54", "type": "main", "index": 0}]]}, "🏢 Obtener Empresa G54": {"main": [[{"node": "📦 Obtener Productos G54", "type": "main", "index": 0}]]}, "📦 Obtener Productos G54": {"main": [[{"node": "🔍 Obtener Keywords G54", "type": "main", "index": 0}]]}, "🔍 Obtener Keywords G54": {"main": [[{"node": "🔧 Preparar Contexto", "type": "main", "index": 0}]]}, "🔧 Preparar Contexto": {"main": [[{"node": "🧠 Gemini: Strategist AI", "type": "main", "index": 0}]]}, "🧠 Gemini: Strategist AI": {"main": [[{"node": "🔀 ¿Gemini OK?", "type": "main", "index": 0}]]}, "🔀 ¿Gemini OK?": {"main": [[{"node": "🔍 Parsear Estrategia", "type": "main", "index": 0}], [{"node": "🧠 Groq: Fallback Strategist", "type": "main", "index": 0}]]}, "🧠 Groq: Fallback Strategist": {"main": [[{"node": "🔍 Parsear Estrategia", "type": "main", "index": 0}]]}, "🔍 Parsear Estrategia": {"main": [[{"node": "💾 Guardar Estrategia G54", "type": "main", "index": 0}]]}, "💾 Guardar Estrategia G54": {"main": [[{"node": "📧 Notificación: Estrategia Lista", "type": "main", "index": 0}]]}}, "settings": {"executionOrder": "v1", "callerPolicy": "workflowsFromSameOwner", "availableInMCP": false}, "staticData": null}
+{
+  "name": "🧠 Strategist AI — RRSS G54 v2.0",
+  "nodes": [
+    {
+      "id": "trigger-strategist",
+      "name": "🕐 Ejecutar Strategist AI",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        304
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "config-g54-strat",
+      "name": "⚙️ Config G54",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        304
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "g54-base-url",
+              "name": "G54_BASE_URL",
+              "value": "https://apigrowth.mdarthurdigital.com",
+              "type": "string"
+            },
+            {
+              "id": "g54-n8n-token",
+              "name": "G54_N8N_TOKEN",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "g54-agent-token",
+              "name": "G54_AGENT_TOKEN",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "g54-company-id",
+              "name": "G54_COMPANY_ID",
+              "value": "1",
+              "type": "string"
+            },
+            {
+              "id": "g54-plan-horizonte",
+              "name": "G54_PLAN_HORIZONTE",
+              "value": "3 meses",
+              "type": "string"
+            },
+            {
+              "id": "g54-frecuencia",
+              "name": "G54_FRECUENCIA_SEMANAL",
+              "value": "3",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "empresa-g54-strat",
+      "name": "🏢 Obtener Empresa G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        304
+      ],
+      "parameters": {
+        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54').item.json.G54_COMPANY_ID }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_N8N_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "productos-g54-strat",
+      "name": "📦 Obtener Productos G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        304
+      ],
+      "parameters": {
+        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54').item.json.G54_COMPANY_ID + '/productos-servicios' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_N8N_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "keywords-g54-strat",
+      "name": "🔍 Obtener Keywords G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        304
+      ],
+      "parameters": {
+        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54').item.json.G54_COMPANY_ID + '/keywords' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_N8N_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "preparar-strat",
+      "name": "🔧 Preparar Contexto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        304
+      ],
+      "parameters": {
+        "jsCode": "const cfg      = $('⚙️ Config G54').item.json;\nconst empRaw   = $('🏢 Obtener Empresa G54').item.json;\nconst prodRaw  = $('📦 Obtener Productos G54').item.json;\nconst kwRaw    = $('🔍 Obtener Keywords G54').item.json;\n\nconst emp   = empRaw.data  || empRaw  || {};\nconst prods = prodRaw.data || prodRaw || [];\nconst allKw = (kwRaw.data  || kwRaw   || []).filter(k => k.estado === 'activa');\n\n// Parámetros del plan\nconst tiempo_horizonte   = cfg.G54_PLAN_HORIZONTE      || '3 meses';\nconst frecuencia_semanal = Number(cfg.G54_FRECUENCIA_SEMANAL) || 3;\n\nconst mesesMap = { '1 mes':4, '2 meses':9, '3 meses':13, '4 meses':17, '6 meses':26, '12 meses':52 };\nconst semanas  = mesesMap[tiempo_horizonte] || 13;\nconst total_ideas = semanas * frecuencia_semanal;\n\n// Datos empresa\nconst empresa_nombre = emp.name              || '';\nconst industria      = emp.industry          || '';\nconst descripcion    = emp.description       || '';\nconst valor          = emp.value_proposition || '';\nconst ciudad         = emp.base_city         || '';\nconst web            = emp.website           || '';\nconst objetivo       = emp.primary_goal      || '';\nconst audiencia      = emp.target_market     || '';\nconst geografia      = emp.geography         || '';\nconst email          = (emp.emails||[])[0]   || '';\n\n// Catálogo\nconst catalogo = prods.map(p => {\n  const kw = (p.keywords||[]).join(', ');\n  return `• ${p.name||''}: ${p.description||''}${kw?' ['+kw+']':''}`;\n}).join('\\n');\n\n// Keywords por intención\nconst kwByIntencion = { local:[], comercial:[], informacional:[], transaccional:[] };\nfor (const k of allKw) {\n  const intent = k.intencion || 'informacional';\n  if (kwByIntencion[intent]) kwByIntencion[intent].push(k.keyword);\n  else kwByIntencion.informacional.push(k.keyword);\n}\nconst kwSection = `KEYWORDS EXISTENTES EN G54 (usar estas — NO inventar nuevas):\n• Local/GEO:     ${kwByIntencion.local.join(' | ')         || 'N/A'}\n• Comercial:     ${kwByIntencion.comercial.join(' | ')     || 'N/A'}\n• Informacional: ${kwByIntencion.informacional.join(' | ') || 'N/A'}\n• Transaccional: ${kwByIntencion.transaccional.join(' | ') || 'N/A'}`;\n\n// Competidores (embebidos en el GET de empresa)\nconst competidores = (emp.competitors_known || []).filter(c => c.is_active);\nconst competidoresSection = competidores.length\n  ? competidores.map(c => `• ${c.name}: ${c.url}`).join('\\n')\n  : 'No registrados — inferir principales competidores del nicho en la ciudad base.';\nconst competidoresNombres = competidores.length\n  ? competidores.map(c => c.name).join(', ')\n  : 'los competidores del nicho';\n\n// Distribución TOFU/MOFU/BOFU\nconst dist_tofu = Math.round(total_ideas * 0.5);\nconst dist_mofu = Math.round(total_ideas * 0.3);\nconst dist_bofu = total_ideas - dist_tofu - dist_mofu;\nconst dist_txt  = `TOFU ${dist_tofu} posts (50%) · MOFU ${dist_mofu} posts (30%) · BOFU ${dist_bofu} posts (20%)`;\n\nconst prompt = `Actúa como un estratega senior especializado en crecimiento orgánico basado en SEO, AEO y GEO.\n\nTu función es generar la estrategia de contenido base de la empresa para los próximos ${tiempo_horizonte}. Esta estrategia será usada por todos los agentes del sistema G54 (Content AI, Distribution AI, Analytics AI) como referencia para cada pieza de contenido que produzcan.\n\nNEGOCIO: ${empresa_nombre}\nINDUSTRIA: ${industria}\nDESCRIPCIÓN: ${descripcion}\nPROPUESTA DE VALOR: ${valor}\nCIUDAD BASE: ${ciudad} | WEB: ${web}\nCOBERTURA: ${geografia}\nOBJETIVO PRINCIPAL: ${objetivo}\nMERCADO OBJETIVO: ${audiencia}\nHORIZONTE DEL PLAN: ${tiempo_horizonte} (${semanas} semanas)\nPUBLICACIONES POR SEMANA: ${frecuencia_semanal}\nTOTAL POSTS DEL PLAN: ${total_ideas}\n\nPRODUCTOS / SERVICIOS:\n${catalogo}\n\n${kwSection}\n\nCOMPETIDORES CONOCIDOS:\n${competidoresSection}\n\nEntrega ÚNICAMENTE un JSON válido con esta estructura exacta (sin markdown, sin texto extra):\n{\n  \"objetivo\": \"objetivo principal de la estrategia de contenido\",\n  \"audiencia\": \"descripción detallada del público objetivo\",\n  \"tono\": \"tono de comunicación recomendado\",\n  \"frecuencia\": \"${frecuencia_semanal} veces por semana — Día1, Día2, Día3. [breve justificación basada en comportamiento de la audiencia B2B]\",\n  \"director_cta\": \"${web}/contacto\",\n  \"embudo\": \"TOFU: [qué tipo de contenido y por qué] | MOFU: [qué tipo y por qué] | BOFU: [qué tipo y por qué]\",\n  \"plataformas\": \"Plataforma1, Plataforma2, Plataforma3\",\n  \"pilares\": \"Pilar1, Pilar2, Pilar3\",\n  \"kpis\": \"KPI1, KPI2, KPI3, KPI4\",\n  \"resumen_estrategico\": \"2-3 párrafos: posicionamiento frente a competidores, propuesta de valor diferenciadora, enfoque SEO/AEO/GEO y cómo el plan de ${tiempo_horizonte} construye autoridad progresiva\",\n  \"keyword_strategy\": {\n    \"principales\": [\"kw1\",\"kw2\",\"kw3\"],\n    \"secundarias\": [\"kw1\",\"kw2\",\"kw3\",\"kw4\"],\n    \"long_tail\": [\"frase1\",\"frase2\",\"frase3\",\"frase4\",\"frase5\"]\n  },\n  \"mapa_preguntas_aeo\": [\"¿pregunta1?\",\"¿pregunta2?\",\"¿pregunta3?\",\"¿pregunta4?\",\"¿pregunta5?\",\"¿pregunta6?\",\"¿pregunta7?\",\"¿pregunta8?\"],\n  \"faqs\": [\"¿FAQ1?\",\"¿FAQ2?\",\"¿FAQ3?\",\"¿FAQ4?\",\"¿FAQ5?\"],\n  \"clusters\": [\n    {\"nombre\":\"Nombre cluster\",\"keywords\":[\"kw1\",\"kw2\"],\"tipo\":\"TOFU\"},\n    {\"nombre\":\"Nombre cluster\",\"keywords\":[\"kw1\",\"kw2\"],\"tipo\":\"MOFU\"},\n    {\"nombre\":\"Nombre cluster\",\"keywords\":[\"kw1\",\"kw2\"],\"tipo\":\"BOFU\"}\n  ],\n  \"plan_publicacion\": {\n    \"dias_semana\": [\"Día1\",\"Día2\",\"Día3\"],\n    \"publicaciones_semana\": ${frecuencia_semanal},\n    \"distribucion_embudo\": {\"tofu\":${dist_tofu},\"mofu\":${dist_mofu},\"bofu\":${dist_bofu}}\n  },\n  \"ideas_plan\": [\n    {\"semana\":1,\"dia\":\"Día1\",\"titulo\":\"Título del post\",\"tipo\":\"TOFU\",\"keyword\":\"keyword principal\",\"plataforma\":\"Instagram\"},\n    {\"semana\":1,\"dia\":\"Día2\",\"titulo\":\"Título del post\",\"tipo\":\"TOFU\",\"keyword\":\"keyword principal\",\"plataforma\":\"Facebook\"}\n  ]\n}\n\nINSTRUCCIONES CLAVE:\n1. Para keyword_strategy usa EXCLUSIVAMENTE las keywords de la sección KEYWORDS EXISTENTES EN G54. Clasifícalas sin inventar nuevas.\n2. Para ideas_plan genera EXACTAMENTE ${total_ideas} ideas que cubran TODAS las ${semanas} semanas del plan. Distribución: ${dist_txt}. Cada semana debe tener exactamente ${frecuencia_semanal} ideas.\n3. Los días de publicación deben basarse en el comportamiento de audiencias B2B industriales. Incluye la justificación breve en el campo frecuencia.\n4. El resumen_estrategico debe mencionar explícitamente cómo ${empresa_nombre} se diferencia de: ${competidoresNombres}.\n5. Sé específico y accionable para ${empresa_nombre} en ${ciudad}.`;\n\nreturn [{ json: {\n  empresa_nombre, industria, descripcion, valor, ciudad, web,\n  objetivo, audiencia, geografia, email, catalogo, prompt,\n  company_id: cfg.G54_COMPANY_ID,\n  keywords_count: allKw.length,\n  competidores_count: competidores.length,\n  tiempo_horizonte, frecuencia_semanal, semanas, total_ideas\n} }];"
+      }
+    },
+    {
+      "id": "gemini-strategist",
+      "name": "🧠 Gemini: Strategist AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        304
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDgMayvXomDq8Mx3fwTVtYi9eDjU5cxGOU",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":{{ JSON.stringify($json.prompt) }}}]}],\"generationConfig\":{\"temperature\":0.7,\"maxOutputTokens\":8192}}",
+        "options": {}
+      }
+    },
+    {
+      "id": "if-gemini-strat",
+      "name": "🔀 ¿Gemini OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        304
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "check-cand",
+              "leftValue": "={{ $json.candidates?.length || 0 }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "groq-strategist",
+      "name": "🧠 Groq: Fallback Strategist",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        480
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer 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"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'llama-3.3-70b-versatile',\n  messages: [\n    { role: 'system', content: 'Eres un estratega senior de marketing digital especializado en SEO, AEO y GEO. Responde ÚNICAMENTE con JSON válido, sin markdown ni texto adicional.' },\n    { role: 'user',   content: $('🔧 Preparar Contexto').item.json.prompt }\n  ],\n  temperature: 0.7,\n  max_tokens: 8000\n}) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "parsear-strat",
+      "name": "🔍 Parsear Estrategia",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        304
+      ],
+      "parameters": {
+        "jsCode": "const raw = $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text\n  || $input.item.json.choices?.[0]?.message?.content || '{}';\n\nlet est;\ntry { est = JSON.parse(raw); }\ncatch(e) {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  try { est = m ? JSON.parse(m[0]) : {}; } catch(e2) { est = {}; }\n}\n\nconst ctx = $('🔧 Preparar Contexto').item.json;\n\nreturn [{ json: {\n  company_id:          Number(ctx.company_id) || 1,\n  // Campos del modal G54\n  objetivo:            est.objetivo             || ctx.objetivo  || '',\n  audiencia:           est.audiencia            || ctx.audiencia || '',\n  tono:                est.tono                 || 'profesional y directo',\n  frecuencia:          est.frecuencia           || '',\n  director_cta:        est.director_cta         || ctx.web       || '',\n  embudo:              est.embudo               || '',\n  plataformas:         est.plataformas          || '',\n  pilares:             est.pilares              || '',\n  kpis:                est.kpis                 || '',\n  // Campos extendidos\n  resumen_estrategico: est.resumen_estrategico  || '',\n  keyword_strategy:    est.keyword_strategy     || {},\n  mapa_preguntas_aeo:  est.mapa_preguntas_aeo   || [],\n  faqs:                est.faqs                 || [],\n  clusters:            est.clusters             || [],\n  plan_publicacion:    est.plan_publicacion     || {},\n  ideas_plan:          est.ideas_plan           || [],\n  // Meta\n  empresa_nombre:      ctx.empresa_nombre,\n  email:               ctx.email,\n  tiempo_horizonte:    ctx.tiempo_horizonte,\n  total_ideas:         ctx.total_ideas,\n  ideas_generadas:     (est.ideas_plan||[]).length\n} }];"
+      }
+    },
+    {
+      "id": "guardar-strat-g54",
+      "name": "💾 Guardar Estrategia G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        304
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/agent/rrss/estrategia' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "email-strat-ok",
+      "name": "📧 Notificación: Estrategia Lista",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2640,
+        304
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TESHSjzjMCpCxBBk",
+          "name": "Gmail account"
+        }
+      },
+      "parameters": {
+        "sendTo": "={{ $('🔧 Preparar Contexto').item.json.email }}",
+        "subject": "={{ '🧠 Estrategia G54 v2 generada — ' + $('🔧 Preparar Contexto').item.json.empresa_nombre + ' (' + $('🔧 Preparar Contexto').item.json.tiempo_horizonte + ')' }}",
+        "message": "={{ (() => {\n  const e = $('🔍 Parsear Estrategia').item.json;\n  const ideas = (e.ideas_plan||[]).length;\n  return '<h2>🧠 Estrategia G54 lista — ' + e.empresa_nombre + '</h2>'\n    + '<p><strong>Horizonte:</strong> ' + (e.tiempo_horizonte||'') + ' · <strong>Posts planificados:</strong> ' + ideas + ' de ' + (e.total_ideas||0) + ' esperados</p>'\n    + '<h3>Resumen estratégico</h3><p>' + e.resumen_estrategico + '</p>'\n    + '<h3>Frecuencia</h3><p>' + e.frecuencia + '</p>'\n    + '<h3>Plataformas</h3><p>' + e.plataformas + '</p>'\n    + '<h3>Pilares</h3><p>' + e.pilares + '</p>'\n    + '<h3>Keywords principales</h3><p>' + (e.keyword_strategy?.principales||[]).join(', ') + '</p>'\n    + '<h3>FAQs del nicho</h3><ul>' + (e.faqs||[]).map(f=>'<li>'+f+'</li>').join('') + '</ul>'\n    + '<p><em>Estrategia guardada en G54. El Content AI la usará en la próxima ejecución.</em></p>';\n})() }}",
+        "options": {
+          "mimeType": "html"
+        }
+      }
+    },
+    {
+      "id": "sticky-strategist",
+      "name": "📋 INFO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        96
+      ],
+      "parameters": {
+        "content": "## 🧠 Strategist AI — G54 v2.0\n\n**Qué hace:**\n1. Lee empresa (incluye competitors_known), productos y keywords desde G54\n2. Usa horizonte de tiempo y frecuencia del nodo Config\n3. Genera estrategia completa: campos del modal G54 + FAQs + ideas_plan para todo el período\n4. Guarda en G54 `/api/agent/rrss/estrategia`\n5. Envía email con resumen y conteo de ideas generadas\n\n**Config antes de ejecutar:**\n- `G54_PLAN_HORIZONTE` → '1 mes' | '3 meses' | '6 meses' | '12 meses'\n- `G54_FRECUENCIA_SEMANAL` → número de posts por semana\n\n**Output:** objetivo, audiencia, tono, frecuencia, director_cta, embudo, plataformas, pilares, kpis + ideas_plan completo del período",
+        "height": 200,
+        "width": 800,
+        "color": 4
+      }
+    }
+  ],
+  "connections": {
+    "🕐 Ejecutar Strategist AI": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Config G54": {
+      "main": [
+        [
+          {
+            "node": "🏢 Obtener Empresa G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 Obtener Empresa G54": {
+      "main": [
+        [
+          {
+            "node": "📦 Obtener Productos G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Obtener Productos G54": {
+      "main": [
+        [
+          {
+            "node": "🔍 Obtener Keywords G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Obtener Keywords G54": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Contexto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Contexto": {
+      "main": [
+        [
+          {
+            "node": "🧠 Gemini: Strategist AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 Gemini: Strategist AI": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Gemini OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Gemini OK?": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Estrategia",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🧠 Groq: Fallback Strategist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 Groq: Fallback Strategist": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Estrategia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Parsear Estrategia": {
+      "main": [
+        [
+          {
+            "node": "💾 Guardar Estrategia G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Guardar Estrategia G54": {
+      "main": [
+        [
+          {
+            "node": "📧 Notificación: Estrategia Lista",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null
+}
