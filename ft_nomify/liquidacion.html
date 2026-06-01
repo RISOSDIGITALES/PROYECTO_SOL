@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Liquidaciones — Nomify</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <style>
+    .liq-card { background:var(--navy2);border:1px solid var(--border);border-radius:8px;padding:14px 18px;margin-bottom:8px; }
+    .liq-row  { display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;border-bottom:1px solid rgba(255,255,255,.05); }
+    .liq-row:last-child { border-bottom:none; }
+    .liq-label { color:var(--text-muted); }
+    .liq-val   { font-weight:600;color:var(--text); }
+    .liq-total { background:rgba(46,204,113,.07);border-color:rgba(46,204,113,.3); }
+    .liq-total .liq-val { color:var(--green2);font-size:18px; }
+    @media print {
+      .sidebar,.topbar,.topbar-actions,#btn-nueva,.btn-ghost,
+      #alert-liq,.table-wrap { display:none !important; }
+      body { background:#fff !important; }
+      .layout { display:block !important; }
+      .main { margin-left:0 !important; }
+      .content { padding:8px 16px !important; }
+      .liq-card { border:1px solid #ccc !important; background:#fff !important; break-inside:avoid; }
+      .liq-label { color:#555 !important; }
+      .liq-val   { color:#000 !important; }
+      #seccion-preview { display:block !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>Nomify</h2></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+      <a href="/extras.html"><span class="icon">⭐</span> Extras</a>
+      <a href="/deducciones.html"><span class="icon">➖</span> Otras Deducciones</a>
+      <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
+      <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
+      <a href="/liquidacion.html" class="active"><span class="icon">📄</span> Liquidaciones</a>
+      <a href="/usuarios.html" id="link-usuarios"><span class="icon">👤</span> Usuarios</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Liquidaciones</h1><span class="sub">Cálculo de prestaciones al finalizar relación laboral</span></div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary" id="btn-nueva">+ Nueva liquidación</button>
+      </div>
+    </div>
+    <div class="content">
+      <div id="alert-liq" class="alert"></div>
+      <div class="table-wrap">
+        <div class="table-header"><h3>Historial de liquidaciones</h3></div>
+        <table>
+          <thead>
+            <tr>
+              <th>Empleado</th>
+              <th>Cargo</th>
+              <th>Fecha baja</th>
+              <th>Motivo</th>
+              <th>Servicio</th>
+              <th class="num">Vacaciones</th>
+              <th class="num">Aguinaldo</th>
+              <th class="num">Indemnización</th>
+              <th class="num"><strong>Total</strong></th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-liq">
+            <tr class="loading-row"><td colspan="11"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUEVA LIQUIDACIÓN -->
+<div class="overlay" id="modal-liq">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h3 id="liq-modal-titulo">📄 Nueva Liquidación</h3>
+      <button class="modal-close" id="close-liq">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-liq-form" class="alert"></div>
+
+      <!-- Paso 1: datos básicos -->
+      <div id="liq-paso1">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Empleado *</label>
+            <select id="liq-empleado">
+              <option value="">Seleccionar...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Fecha de baja *</label>
+            <input type="date" id="liq-fecha-baja" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Motivo de salida</label>
+          <select id="liq-motivo">
+            <option value="Renuncia voluntaria">Renuncia voluntaria</option>
+            <option value="Despido sin causa justificada">Despido sin causa justificada</option>
+            <option value="Despido con causa justificada">Despido con causa justificada</option>
+            <option value="Mutuo acuerdo">Mutuo acuerdo</option>
+            <option value="Fin de contrato">Fin de contrato</option>
+            <option value="Fallecimiento">Fallecimiento</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="liq-indemnizar" style="width:16px;height:16px" />
+              Incluir indemnización por antigüedad
+            </label>
+            <small style="color:var(--text-muted);font-size:11px">1 mes de salario por año trabajado</small>
+          </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="liq-preaviso" style="width:16px;height:16px" />
+              Incluir preaviso no gozado
+            </label>
+            <small style="color:var(--text-muted);font-size:11px">Según tiempo de servicio (7 días a 2 meses)</small>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notas (opcional)</label>
+          <input type="text" id="liq-notas" placeholder="Observaciones sobre la liquidación..." />
+        </div>
+        <div style="text-align:right;margin-top:4px">
+          <button class="btn btn-primary" id="btn-calcular-liq">Calcular →</button>
+        </div>
+      </div>
+
+      <!-- Paso 2: resultado del cálculo -->
+      <div id="liq-paso2" style="display:none">
+        <div id="liq-resumen-emp" style="margin-bottom:16px;padding:10px 14px;background:var(--surface);
+             border-radius:6px;border:1px solid var(--border)"></div>
+
+        <div class="liq-card">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);
+               margin-bottom:8px">Desglose de prestaciones</div>
+          <div class="liq-row">
+            <span class="liq-label">🏖 Vacaciones acumuladas (<span id="r-dias-vac"></span> días)</span>
+            <span class="liq-val" id="r-monto-vac"></span>
+          </div>
+          <div class="liq-row">
+            <span class="liq-label">🎄 Aguinaldo proporcional (<span id="r-meses-agui"></span> meses)</span>
+            <span class="liq-val" id="r-monto-agui"></span>
+          </div>
+          <div class="liq-row" id="row-indem" style="display:none">
+            <span class="liq-label">⚖️ Indemnización (<span id="r-anios"></span> años de servicio)</span>
+            <span class="liq-val" id="r-monto-indem"></span>
+          </div>
+          <div class="liq-row" id="row-prev" style="display:none">
+            <span class="liq-label">📅 Preaviso no gozado (<span id="r-dias-prev"></span> días)</span>
+            <span class="liq-val" id="r-monto-prev"></span>
+          </div>
+        </div>
+
+        <div class="liq-card liq-total" style="margin-top:8px">
+          <div class="liq-row" style="border:none">
+            <span style="font-size:15px;font-weight:700;color:var(--green2)">TOTAL A PAGAR</span>
+            <span class="liq-val" id="r-total"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" id="liq-footer">
+      <button class="btn btn-ghost" id="cancel-liq">Cancelar</button>
+      <button class="btn btn-ghost" id="btn-recalcular" style="display:none">← Recalcular</button>
+      <button class="btn btn-ghost" id="btn-imprimir-liq" style="display:none">🖨 Imprimir</button>
+      <button class="btn btn-primary" id="btn-guardar-liq" style="display:none">✓ Guardar y dar de baja</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script>
+let allEmpleados = [];
+let _calculo     = null;
+
+const cs = n => 'C$ ' + parseFloat(n || 0).toLocaleString('es-NI', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+onReady(['Master', 'Planillero'], async () => {
+  initLayout();
+  await cargarEmpleados();
+  cargarLiquidaciones();
+});
+
+async function cargarEmpleados() {
+  try {
+    allEmpleados = await apiFetch('/api/empleados');
+    const sel = document.getElementById('liq-empleado');
+    // Solo empleados activos
+    allEmpleados.filter(e => e.Activo).forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.id;
+      opt.textContent = e.Nombre + (e.Cargo ? ` — ${e.Cargo}` : '');
+      sel.appendChild(opt);
+    });
+  } catch (_) {}
+}
+
+async function cargarLiquidaciones() {
+  try {
+    const lista = await apiFetch('/api/liquidaciones');
+    const tbody = document.getElementById('tabla-liq');
+    if (!lista.length) {
+      tbody.innerHTML = '<tr><td colspan="11" class="empty">No hay liquidaciones registradas</td></tr>';
+      return;
+    }
+    tbody.innerHTML = lista.map(l => {
+      const estadoBadge = l.estado === 'Pagada' ? 'badge-green' : 'badge-gray';
+      return `<tr>
+        <td><strong>${l.empleado_nombre || '—'}</strong></td>
+        <td>${l.cargo || '—'}</td>
+        <td>${l.fecha_baja || '—'}</td>
+        <td style="font-size:12px;color:var(--text-muted)">${l.motivo || '—'}</td>
+        <td style="font-size:12px">${parseFloat(l.anios_servicio||0).toFixed(1)} años</td>
+        <td class="num">${cs(l.monto_vacaciones)}</td>
+        <td class="num">${cs(l.monto_aguinaldo)}</td>
+        <td class="num">${cs(l.monto_indemnizacion)}</td>
+        <td class="num"><strong style="color:var(--green2)">${cs(l.total)}</strong></td>
+        <td><span class="badge ${estadoBadge}">${l.estado}</span></td>
+        <td style="display:flex;gap:4px">
+          ${l.estado === 'Pendiente'
+            ? `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:rgba(46,204,113,.15);
+               border:1px solid rgba(46,204,113,.4);color:#2ecc71;border-radius:4px;cursor:pointer"
+               onclick="marcarPagada(${l.id})">✓ Pagada</button>` : ''}
+        </td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    showAlert('alert-liq', 'Error: ' + e.message, 'error');
+  }
+}
+
+async function marcarPagada(id) {
+  if (!confirm('¿Marcar esta liquidación como pagada?')) return;
+  try {
+    await apiFetch(`/api/liquidaciones/${id}/estado`, {
+      method: 'PATCH', body: JSON.stringify({ estado: 'Pagada' })
+    });
+    cargarLiquidaciones();
+    showAlert('alert-liq', '✅ Liquidación marcada como pagada', 'success');
+  } catch (e) { showAlert('alert-liq', 'Error: ' + e.message, 'error'); }
+}
+
+// ── Abrir modal ──────────────────────────────────────────────────────────────
+document.getElementById('btn-nueva').addEventListener('click', () => {
+  resetModal();
+  document.getElementById('modal-liq').classList.add('open');
+});
+
+['close-liq','cancel-liq'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-liq').classList.remove('open');
+  })
+);
+
+document.getElementById('btn-recalcular').addEventListener('click', () => {
+  document.getElementById('liq-paso1').style.display = '';
+  document.getElementById('liq-paso2').style.display = 'none';
+  document.getElementById('btn-recalcular').style.display = 'none';
+  document.getElementById('btn-imprimir-liq').style.display = 'none';
+  document.getElementById('btn-guardar-liq').style.display = 'none';
+});
+
+function resetModal() {
+  document.getElementById('alert-liq-form').className = 'alert';
+  document.getElementById('liq-empleado').value = '';
+  document.getElementById('liq-fecha-baja').value = new Date().toISOString().substring(0,10);
+  document.getElementById('liq-motivo').value = 'Renuncia voluntaria';
+  document.getElementById('liq-indemnizar').checked = false;
+  document.getElementById('liq-preaviso').checked = false;
+  document.getElementById('liq-notas').value = '';
+  document.getElementById('liq-paso1').style.display = '';
+  document.getElementById('liq-paso2').style.display = 'none';
+  document.getElementById('btn-recalcular').style.display = 'none';
+  document.getElementById('btn-imprimir-liq').style.display = 'none';
+  document.getElementById('btn-guardar-liq').style.display = 'none';
+  _calculo = null;
+}
+
+// ── Calcular ─────────────────────────────────────────────────────────────────
+document.getElementById('btn-calcular-liq').addEventListener('click', async () => {
+  const empId    = document.getElementById('liq-empleado').value;
+  const fechaBaja= document.getElementById('liq-fecha-baja').value;
+  if (!empId) { showAlert('alert-liq-form', 'Selecciona un empleado', 'error'); return; }
+  if (!fechaBaja) { showAlert('alert-liq-form', 'Ingresa la fecha de baja', 'error'); return; }
+
+  const btn = document.getElementById('btn-calcular-liq');
+  btn.disabled = true; btn.textContent = 'Calculando...';
+  try {
+    _calculo = await apiFetch('/api/liquidaciones/calcular', {
+      method: 'POST',
+      body: JSON.stringify({
+        empleado_id: empId,
+        fecha_baja:  fechaBaja,
+        indemnizar:  document.getElementById('liq-indemnizar').checked,
+        preaviso:    document.getElementById('liq-preaviso').checked,
+      }),
+    });
+    mostrarResultado(_calculo);
+  } catch (e) {
+    showAlert('alert-liq-form', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Calcular →';
+  }
+});
+
+function mostrarResultado(c) {
+  // Resumen del empleado
+  document.getElementById('liq-resumen-emp').innerHTML = `
+    <div style="font-weight:700;font-size:14px">${c.empleado || '—'}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
+      ${c.cargo || ''} · Ingresó: ${c.fecha_ingreso || '—'} ·
+      <strong style="color:var(--text)">${parseFloat(c.anios_servicio||0).toFixed(1)} años de servicio
+      (${c.meses_servicio} meses)</strong> · Salario: ${cs(c.salario_mensual)}
+    </div>`;
+
+  document.getElementById('r-dias-vac').textContent   = parseFloat(c.dias_vacaciones||0).toFixed(2);
+  document.getElementById('r-monto-vac').textContent  = cs(c.monto_vacaciones);
+  document.getElementById('r-meses-agui').textContent = c.meses_aguinaldo;
+  document.getElementById('r-monto-agui').textContent = cs(c.monto_aguinaldo);
+  document.getElementById('r-total').textContent      = cs(c.total);
+
+  const rowIndem = document.getElementById('row-indem');
+  if (c.aplica_indemnizacion) {
+    document.getElementById('r-anios').textContent       = parseFloat(c.anios_servicio||0).toFixed(1);
+    document.getElementById('r-monto-indem').textContent = cs(c.monto_indemnizacion);
+    rowIndem.style.display = '';
+  } else { rowIndem.style.display = 'none'; }
+
+  const rowPrev = document.getElementById('row-prev');
+  if (c.aplica_preaviso) {
+    document.getElementById('r-dias-prev').textContent  = c.dias_preaviso;
+    document.getElementById('r-monto-prev').textContent = cs(c.monto_preaviso);
+    rowPrev.style.display = '';
+  } else { rowPrev.style.display = 'none'; }
+
+  document.getElementById('liq-paso1').style.display = 'none';
+  document.getElementById('liq-paso2').style.display = '';
+  document.getElementById('btn-recalcular').style.display = '';
+  document.getElementById('btn-imprimir-liq').style.display = '';
+  document.getElementById('btn-guardar-liq').style.display = '';
+}
+
+// ── Imprimir ─────────────────────────────────────────────────────────────────
+document.getElementById('btn-imprimir-liq').addEventListener('click', () => {
+  window.print();
+});
+
+// ── Guardar ──────────────────────────────────────────────────────────────────
+document.getElementById('btn-guardar-liq').addEventListener('click', async () => {
+  if (!confirm('¿Confirmar liquidación? El empleado será marcado como INACTIVO en el sistema.')) return;
+
+  const btn = document.getElementById('btn-guardar-liq');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    await apiFetch('/api/liquidaciones', {
+      method: 'POST',
+      body: JSON.stringify({
+        empleado_id: document.getElementById('liq-empleado').value,
+        fecha_baja:  document.getElementById('liq-fecha-baja').value,
+        motivo:      document.getElementById('liq-motivo').value,
+        indemnizar:  document.getElementById('liq-indemnizar').checked,
+        preaviso:    document.getElementById('liq-preaviso').checked,
+        notas:       document.getElementById('liq-notas').value.trim() || null,
+      }),
+    });
+    document.getElementById('modal-liq').classList.remove('open');
+    showAlert('alert-liq', '✅ Liquidación guardada. Empleado marcado como inactivo.', 'success');
+    // Recargar empleados (el dado de baja ya no aparece en el select)
+    allEmpleados = await apiFetch('/api/empleados');
+    cargarLiquidaciones();
+  } catch (e) {
+    showAlert('alert-liq-form', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '✓ Guardar y dar de baja';
+  }
+});
+
+// Auto-marcar indemnización según motivo
+document.getElementById('liq-motivo').addEventListener('change', function() {
+  const motivo = this.value;
+  const indem  = document.getElementById('liq-indemnizar');
+  const prev   = document.getElementById('liq-preaviso');
+  if (motivo === 'Despido sin causa justificada') {
+    indem.checked = true; prev.checked = true;
+  } else if (motivo === 'Renuncia voluntaria' || motivo === 'Despido con causa justificada') {
+    indem.checked = false; prev.checked = false;
+  }
+});
+</script>
+</body>
+</html>

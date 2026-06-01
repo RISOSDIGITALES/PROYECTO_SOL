@@ -51,8 +51,9 @@ app.use('/api/planillas',  require('./routes/planillasRoutes'));
 app.use('/api/detalle',   require('./routes/detalleRoutes'));
 app.use('/api/recibo',    require('./routes/reciboRoutes'));
 app.use('/api/usuarios',  require('./routes/usuariosRoutes'));
-app.use('/api/empresas',  require('./routes/empresasRoutes'));
-app.use('/api/reportes',  require('./routes/reportesRoutes'));
+app.use('/api/empresas',     require('./routes/empresasRoutes'));
+app.use('/api/reportes',     require('./routes/reportesRoutes'));
+app.use('/api/liquidaciones',require('./routes/liquidacionRoutes'));
 
 // Todas las demás rutas devuelven el HTML correspondiente
 app.get('*', (req, res) => {
