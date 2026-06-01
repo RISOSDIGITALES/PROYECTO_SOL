@@ -54,6 +54,7 @@ app.use('/api/usuarios',  require('./routes/usuariosRoutes'));
 app.use('/api/empresas',     require('./routes/empresasRoutes'));
 app.use('/api/reportes',     require('./routes/reportesRoutes'));
 app.use('/api/liquidaciones',require('./routes/liquidacionRoutes'));
+app.use('/api/export',       require('./routes/exportRoutes'));
 
 // Todas las demás rutas devuelven el HTML correspondiente
 app.get('*', (req, res) => {
