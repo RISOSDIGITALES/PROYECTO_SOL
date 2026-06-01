@@ -33,6 +33,7 @@
       <div><h1>Planillas</h1><span class="sub">Historial de quincenas</span></div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost" id="btn-email-pl">📧 Enviar historial</button>
+        <button class="btn btn-ghost" id="btn-aguinaldo" style="border-color:rgba(46,204,113,.4);color:#2ecc71">🎄 Aguinaldo</button>
         <button class="btn btn-primary" id="btn-generar">⚡ Generar planilla</button>
       </div>
     </div>
@@ -96,6 +97,33 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" id="cancel-email-pl">Cancelar</button>
       <button class="btn btn-primary" id="send-email-pl">Enviar PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AGUINALDO -->
+<div class="overlay" id="modal-aguinaldo">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3>🎄 Generar Aguinaldo (13° mes)</h3>
+      <button class="modal-close" id="close-aguinaldo">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-aguinaldo" class="alert"></div>
+      <p style="margin:0 0 16px;color:var(--text-muted);font-size:13px">
+        Se calculará el aguinaldo proporcional de cada empleado activo según su
+        fecha de ingreso. <strong>Exento de INSS e IR</strong> según la ley laboral nicaragüense.
+      </p>
+      <div class="form-group">
+        <label>Año del aguinaldo *</label>
+        <select id="aguinaldo-anio" style="background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 12px;font-size:13px;width:100%"></select>
+      </div>
+      <div id="aguinaldo-preview" style="display:none;margin-top:12px;padding:12px;background:var(--surface);
+           border-radius:8px;border:1px solid rgba(46,204,113,.3);font-size:13px;color:var(--text-muted)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-aguinaldo">Cancelar</button>
+      <button class="btn btn-primary" id="save-aguinaldo" style="background:#2ecc71;border-color:#2ecc71">Calcular y generar</button>
     </div>
   </div>
 </div>
@@ -246,7 +274,10 @@ function renderTabla() {
 
   tbody.innerHTML = lista.map(p => {
     const tipo = p.Tipo || '';
-    const tipoBadge = tipo === 'Con Seguro' ? 'badge-blue' : tipo === 'Sin Seguro' ? 'badge-orange' : 'badge-gray';
+    const tipoBadge = tipo === 'Con Seguro' ? 'badge-blue'
+      : tipo === 'Sin Seguro' ? 'badge-orange'
+      : tipo === 'Aguinaldo'  ? 'badge-green'
+      : 'badge-gray';
     const estado = p.Estado || 'Borrador';
     const estadoBadge = estado === 'Pagada' ? 'badge-green' : estado === 'Anulada' ? 'badge-red' : 'badge-gray';
     const periodoVal = String(p['Período'] || '').substring(0, 10);
@@ -371,6 +402,76 @@ document.getElementById('send-email-pl').addEventListener('click', async () => {
     alertEl.className = 'alert alert-error show';
     alertEl.textContent = e.message;
     btn.disabled = false; btn.textContent = 'Enviar PDF';
+  }
+});
+
+// ── Aguinaldo ─────────────────────────────────────────────────────────────────
+document.getElementById('btn-aguinaldo').addEventListener('click', () => {
+  // Poblar selector de año: año actual y los 2 anteriores
+  const anioActual = new Date().getFullYear();
+  const sel = document.getElementById('aguinaldo-anio');
+  sel.innerHTML = [anioActual, anioActual-1, anioActual-2]
+    .map(y => `<option value="${y}">${y}</option>`).join('');
+  document.getElementById('alert-aguinaldo').className = 'alert';
+  document.getElementById('aguinaldo-preview').style.display = 'none';
+  document.getElementById('save-aguinaldo').disabled = false;
+  document.getElementById('save-aguinaldo').textContent = 'Calcular y generar';
+  document.getElementById('modal-aguinaldo').classList.add('open');
+});
+
+['close-aguinaldo','cancel-aguinaldo'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () =>
+    document.getElementById('modal-aguinaldo').classList.remove('open'))
+);
+
+document.getElementById('save-aguinaldo').addEventListener('click', async () => {
+  const anio = document.getElementById('aguinaldo-anio').value;
+  const periodo = `${anio}-12-01`;
+  const btn = document.getElementById('save-aguinaldo');
+  btn.disabled = true; btn.textContent = 'Calculando...';
+  document.getElementById('alert-aguinaldo').className = 'alert';
+
+  try {
+    const result = await apiFetch('/api/planillas/calcular', {
+      method: 'POST',
+      body: JSON.stringify({ periodo, tipo: 'Aguinaldo' }),
+    });
+    allPlanillas = await apiFetch('/api/planillas');
+    renderTabla();
+    document.getElementById('modal-aguinaldo').classList.remove('open');
+    showAlert('alert-pl',
+      `🎄 Aguinaldo ${anio} generado — ${result.empleados} empleado(s) · Total: ${fmt(result.totalAguinaldo)}`,
+      'success');
+  } catch (e) {
+    if (e.message && e.message.includes('Ya existe')) {
+      const alertEl = document.getElementById('alert-aguinaldo');
+      alertEl.className = 'alert alert-error show';
+      alertEl.innerHTML = `⚠️ ${e.message.split('.')[0]}.<br><br>
+        <button id="btn-forzar-agui" class="btn btn-sm"
+          style="background:rgba(46,204,113,.15);border:1px solid rgba(46,204,113,.4);
+                 color:#2ecc71;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">
+          Regenerar de todas formas
+        </button>`;
+      document.getElementById('btn-forzar-agui').addEventListener('click', async () => {
+        alertEl.className = 'alert';
+        btn.disabled = true; btn.textContent = 'Calculando...';
+        try {
+          const r2 = await apiFetch('/api/planillas/calcular', {
+            method: 'POST',
+            body: JSON.stringify({ periodo, tipo: 'Aguinaldo', forzar: true }),
+          });
+          allPlanillas = await apiFetch('/api/planillas');
+          renderTabla();
+          document.getElementById('modal-aguinaldo').classList.remove('open');
+          showAlert('alert-pl', `🎄 Aguinaldo ${anio} regenerado — ${r2.empleados} empleado(s) · ${fmt(r2.totalAguinaldo)}`, 'success');
+        } catch (e2) {
+          showAlert('alert-aguinaldo', 'Error: ' + e2.message, 'error');
+        } finally { btn.disabled = false; btn.textContent = 'Calcular y generar'; }
+      });
+    } else {
+      showAlert('alert-aguinaldo', 'Error: ' + e.message, 'error');
+    }
+    btn.disabled = false; btn.textContent = 'Calcular y generar';
   }
 });
 

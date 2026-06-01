@@ -56,10 +56,27 @@ router.get('/', requireAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Calcula meses trabajados en el año para aguinaldo ────────────────────────
+function calcMesesAguinaldo(fechaIngreso, anio) {
+  const anioNum  = parseInt(anio);
+  const refInicio = new Date(anioNum, 0, 1);   // 1 ene del año
+  const refFin    = new Date(anioNum, 11, 1);  // 1 dic del año (base de cálculo)
+  const desde     = fechaIngreso ? new Date(fechaIngreso) : refInicio;
+  const inicioReal = desde > refInicio ? desde : refInicio;
+  if (inicioReal > refFin) return 0;
+  // Meses completos entre inicioReal y 1-dic
+  const meses = (refFin.getFullYear() - inicioReal.getFullYear()) * 12
+    + refFin.getMonth() - inicioReal.getMonth();
+  return Math.min(12, Math.max(0, meses));
+}
+
 // POST /api/planillas/calcular — solo Master puede generar planilla global; Planillero solo su tipo
 router.post('/calcular', requireAuth, async (req, res) => {
   let { periodo, tipo, forzar } = req.body;
   if (!periodo) return res.status(400).json({ error: 'Se requiere periodo (YYYY-MM-DD)' });
+
+  // ── Aguinaldo: desviar a ruta especial ───────────────────────────────────────
+  if (tipo === 'Aguinaldo') return calcularAguinaldo(req, res, periodo, forzar);
 
   const conn = await db.getConnection();
   try {
@@ -295,6 +312,111 @@ router.post('/calcular', requireAuth, async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// ── Aguinaldo (13° mes) ────────────────────────────────────────────────────────
+async function calcularAguinaldo(req, res, periodo, forzar) {
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const empresaId = req.empresaId || null;
+    const anio = String(periodo).substring(0, 4);
+
+    // Verificar duplicado (tipo='Aguinaldo' para este año y empresa)
+    if (!forzar) {
+      const [[dup]] = await conn.query(
+        `SELECT id, folio FROM planillas
+         WHERE YEAR(periodo) = ? AND tipo = 'Aguinaldo' AND empresa_id <=> ?`,
+        [anio, empresaId]
+      );
+      if (dup) {
+        await conn.rollback(); conn.release();
+        return res.status(409).json({
+          error: `Ya existe el aguinaldo #${dup.folio} para ${anio}. Envía { forzar: true } para regenerar.`,
+          planilla_existente: dup.id, folio: dup.folio,
+        });
+      }
+    }
+
+    let empQuery = 'SELECT * FROM empleados WHERE activo = 1';
+    const empParams = [];
+    if (empresaId) { empQuery += ' AND empresa_id = ?'; empParams.push(empresaId); }
+    const [empleados] = await conn.query(empQuery, empParams);
+    if (!empleados.length) {
+      await conn.rollback(); conn.release();
+      return res.status(400).json({ error: 'No hay empleados activos' });
+    }
+
+    const detalles = [];
+    let totalAguinaldo = 0;
+
+    for (const emp of empleados) {
+      const salarioMensual = parseFloat(emp.salario_bruto || 0);
+      const meses = calcMesesAguinaldo(emp.fecha_ingreso, anio);
+      if (meses <= 0) continue; // no trabajó en este año
+
+      const aguinaldo = Math.round(salarioMensual * (meses / 12) * 100) / 100;
+      totalAguinaldo += aguinaldo;
+
+      detalles.push({
+        empleado_id: emp.id,
+        tipo_planilla: emp.tipo_planilla || 'Con Seguro',
+        salario_quincenal: aguinaldo,  // reutilizamos el campo para el monto
+        inss: 0, ir: 0,
+        desc_prestamo: 0, desc_adelanto: 0,
+        extras: 0, desc_deducciones: 0,
+        total_deducciones: 0,
+        neto: aguinaldo,
+        inss_patronal: 0, inatec: 0,
+        meses_trabajados: meses,
+      });
+    }
+
+    if (!detalles.length) {
+      await conn.rollback(); conn.release();
+      return res.status(400).json({ error: 'Ningún empleado tiene meses trabajados en ' + anio });
+    }
+
+    totalAguinaldo = Math.round(totalAguinaldo * 100) / 100;
+
+    const [[folioRow]] = await conn.query(
+      'SELECT COALESCE(MAX(folio), 0) + 1 AS next_folio FROM planillas WHERE empresa_id <=> ?',
+      [empresaId]
+    );
+
+    const [r] = await conn.query(
+      `INSERT INTO planillas
+       (periodo, tipo, estado, total_bruto, total_deducciones, total_neto,
+        total_inss_patronal, total_inatec, costo_total_empresa, empresa_id, folio)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      [`${anio}-12-01`, 'Aguinaldo', 'Borrador',
+       totalAguinaldo, 0, totalAguinaldo, 0, 0, totalAguinaldo,
+       empresaId, folioRow.next_folio || 1]
+    );
+    const planillaId = r.insertId;
+
+    for (const d of detalles) {
+      await conn.query(
+        `INSERT INTO detalle_planilla
+         (planilla_id, empleado_id, periodo, tipo_planilla, salario_quincenal, inss, ir,
+          desc_prestamo, desc_adelanto, extras, desc_deducciones, total_deducciones, neto,
+          inss_patronal, inatec, meses_trabajados)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [planillaId, d.empleado_id, `${anio}-12-01`, d.tipo_planilla,
+         d.salario_quincenal, 0, 0, 0, 0, 0, 0, 0, d.neto, 0, 0, d.meses_trabajados]
+      );
+    }
+
+    await conn.commit(); conn.release();
+    res.json({
+      ok: true, planillaId, anio, tipo: 'Aguinaldo',
+      empleados: detalles.length, totalAguinaldo,
+    });
+  } catch (e) {
+    await conn.rollback(); conn.release();
+    res.status(500).json({ error: e.message });
+  }
+}
 
 // PATCH /api/planillas/:id/estado — cambia el estado de una planilla
 router.patch('/:id/estado', requireAuth, requireMaster, async (req, res) => {

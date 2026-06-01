@@ -152,6 +152,49 @@ async function loadDetalle(planillaId, periodo, tipo) {
 
     // parseFloat evita NaN cuando mysql2 devuelve DECIMAL como string
     const pf = (v) => parseFloat(v) || 0;
+
+    // ── Vista especial para Aguinaldo ─────────────────────────────────────────
+    if (tipo === 'Aguinaldo') {
+      const anio = String(periodo).substring(0, 4);
+      const totAguinaldo = detalles.reduce((s,d) => s + pf(d.neto), 0);
+      document.getElementById('resumen-cards').innerHTML = `
+        <div class="card"><div class="label">Empleados</div><div class="value">${detalles.length}</div></div>
+        <div class="card" style="border-color:rgba(46,204,113,.5)">
+          <div class="label" style="color:#2ecc71">Total Aguinaldo ${anio}</div>
+          <div class="value green" style="font-size:22px;font-weight:800">${fmt(totAguinaldo)}</div>
+        </div>
+        <div class="card">
+          <div class="label">Exento de</div>
+          <div class="value" style="font-size:13px;margin-top:4px;color:var(--text-muted)">INSS laboral · IR</div>
+        </div>`;
+      document.querySelector('#tabla-detalle').closest('table').querySelector('thead tr').innerHTML = `
+        <th>Empleado</th>
+        <th style="color:var(--text-muted)">Salario mensual</th>
+        <th style="color:#2ecc71">Meses trabajados</th>
+        <th style="color:#2ecc71"><strong>🎄 Aguinaldo</strong></th>
+        <th></th>`;
+      document.getElementById('tabla-detalle').innerHTML = detalles.map(d => {
+        const meses = pf(d.meses_trabajados) || 12;
+        const salMensual = meses > 0 ? pf(d.neto) / meses * 12 : 0;
+        return `<tr>
+          <td><strong>${d.nombre || '—'}</strong></td>
+          <td class="num" style="color:var(--text-muted)">${fmt(salMensual)}</td>
+          <td class="num" style="color:#2ecc71">${meses} / 12</td>
+          <td class="num"><strong style="color:#2ecc71;font-size:15px">${fmt(d.neto)}</strong></td>
+          <td><a href="/recibo.html?empleado_id=${d.empleado_id}&periodo=${encodeURIComponent(periodo)}&tipo=Aguinaldo"
+                 class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 8px">🧾 Recibo</a></td>
+        </tr>`;
+      }).join('');
+      document.getElementById('tabla-totales').innerHTML = `
+        <tr style="border-top:2px solid var(--border);background:rgba(0,0,0,.2)">
+          <td style="padding:12px 16px;font-weight:700">TOTAL AGUINALDO</td>
+          <td></td><td></td>
+          <td class="num" style="padding:12px 8px;color:#2ecc71;font-weight:800;font-size:16px">${fmt(totAguinaldo)}</td>
+          <td></td>
+        </tr>`;
+      document.getElementById('seccion-patronal').innerHTML = '';
+      return;
+    }
     const totBruto       = detalles.reduce((s, d) => s + pf(d.salario_quincenal), 0);
     const totInss        = detalles.reduce((s, d) => s + pf(d.inss), 0);
     const totPrest       = detalles.reduce((s, d) => s + pf(d.desc_prestamo), 0);
