@@ -74,17 +74,20 @@
             <tr>
               <th>Empleado</th>
               <th>Salario quincenal</th>
-              <th>INSS (7%)</th>
+              <th>INSS lab. (7%)</th>
               <th>Desc. préstamo</th>
               <th>Desc. adelanto</th>
               <th>Extras</th>
               <th>Total desc.</th>
               <th><strong>Neto a recibir</strong></th>
+              <th style="border-left:2px solid var(--border);color:var(--orange)">INSS pat. (21.5%)</th>
+              <th style="color:var(--orange)">INATEC (2%)</th>
+              <th style="color:var(--orange)"><strong>Costo empresa</strong></th>
               <th></th>
             </tr>
           </thead>
           <tbody id="tabla-detalle">
-            <tr class="loading-row"><td colspan="8"><div class="spinner"></div></td></tr>
+            <tr class="loading-row"><td colspan="12"><div class="spinner"></div></td></tr>
           </tbody>
           <tfoot id="tabla-totales"></tfoot>
         </table>
@@ -146,43 +149,69 @@ async function loadDetalle(planillaId, periodo, tipo) {
 
     // parseFloat evita NaN cuando mysql2 devuelve DECIMAL como string
     const pf = (v) => parseFloat(v) || 0;
-    const totBruto = detalles.reduce((s, d) => s + pf(d.salario_quincenal), 0);
-    const totInss  = detalles.reduce((s, d) => s + pf(d.inss), 0);
-    const totPrest = detalles.reduce((s, d) => s + pf(d.desc_prestamo), 0);
-    const totAdel  = detalles.reduce((s, d) => s + pf(d.desc_adelanto), 0);
-    const totExtra = detalles.reduce((s, d) => s + pf(d.extras), 0);
-    const totDesc  = detalles.reduce((s, d) => s + pf(d.total_deducciones), 0);
-    const totNeto  = detalles.reduce((s, d) => s + pf(d.neto), 0);
+    const totBruto       = detalles.reduce((s, d) => s + pf(d.salario_quincenal), 0);
+    const totInss        = detalles.reduce((s, d) => s + pf(d.inss), 0);
+    const totPrest       = detalles.reduce((s, d) => s + pf(d.desc_prestamo), 0);
+    const totAdel        = detalles.reduce((s, d) => s + pf(d.desc_adelanto), 0);
+    const totExtra       = detalles.reduce((s, d) => s + pf(d.extras), 0);
+    const totDesc        = detalles.reduce((s, d) => s + pf(d.total_deducciones), 0);
+    const totNeto        = detalles.reduce((s, d) => s + pf(d.neto), 0);
+    const totPatronal    = detalles.reduce((s, d) => s + pf(d.inss_patronal), 0);
+    const totInatec      = detalles.reduce((s, d) => s + pf(d.inatec), 0);
+    const totCostoEmp    = totBruto + totPatronal + totInatec;
 
     document.getElementById('resumen-cards').innerHTML = `
       <div class="card"><div class="label">Empleados</div><div class="value">${detalles.length}</div></div>
       <div class="card"><div class="label">Total bruto</div><div class="value" style="font-size:18px">${fmt(totBruto)}</div></div>
       <div class="card"><div class="label">Total deducciones</div><div class="value red" style="font-size:18px">${fmt(totDesc)}</div></div>
-      <div class="card"><div class="label">Total neto</div><div class="value green" style="font-size:18px">${fmt(totNeto)}</div></div>
+      <div class="card"><div class="label">Neto a pagar</div><div class="value green" style="font-size:18px">${fmt(totNeto)}</div></div>
+      <div class="card" style="border-color:var(--orange)">
+        <div class="label" style="color:var(--orange)">INSS Patronal</div>
+        <div class="value" style="font-size:18px;color:var(--orange)">${fmt(totPatronal)}</div>
+      </div>
+      <div class="card" style="border-color:var(--orange)">
+        <div class="label" style="color:var(--orange)">INATEC</div>
+        <div class="value" style="font-size:18px;color:var(--orange)">${fmt(totInatec)}</div>
+      </div>
+      <div class="card" style="border-color:var(--orange);background:rgba(230,126,34,.06)">
+        <div class="label" style="color:var(--orange)">Costo total empresa</div>
+        <div class="value" style="font-size:18px;color:var(--orange);font-weight:800">${fmt(totCostoEmp)}</div>
+      </div>
     `;
 
-    document.getElementById('tabla-detalle').innerHTML = detalles.map(d => `<tr>
-      <td><strong>${d.nombre || '—'}</strong></td>
-      <td class="num">${fmt(d.salario_quincenal)}</td>
-      <td class="num" style="color:var(--red)">${fmt(d.inss)}</td>
-      <td class="num" style="color:var(--red)">${fmt(d.desc_prestamo)}</td>
-      <td class="num" style="color:var(--red)">${fmt(d.desc_adelanto)}</td>
-      <td class="num" style="color:var(--green2)">${fmt(d.extras)}</td>
-      <td class="num" style="color:var(--red)"><strong>${fmt(d.total_deducciones)}</strong></td>
-      <td class="num"><strong style="color:var(--green2)">${fmt(d.neto)}</strong></td>
-      <td><a href="/recibo.html?empleado_id=${d.empleado_id}&periodo=${encodeURIComponent(periodo)}" class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 8px">🧾 Recibo</a></td>
-    </tr>`).join('');
+    document.getElementById('tabla-detalle').innerHTML = detalles.map(d => {
+      const costoEmp = pf(d.salario_quincenal) + pf(d.inss_patronal) + pf(d.inatec);
+      return `<tr>
+        <td><strong>${d.nombre || '—'}</strong></td>
+        <td class="num">${fmt(d.salario_quincenal)}</td>
+        <td class="num" style="color:var(--red)">${fmt(d.inss)}</td>
+        <td class="num" style="color:var(--red)">${fmt(d.desc_prestamo)}</td>
+        <td class="num" style="color:var(--red)">${fmt(d.desc_adelanto)}</td>
+        <td class="num" style="color:var(--green2)">${fmt(d.extras)}</td>
+        <td class="num" style="color:var(--red)"><strong>${fmt(d.total_deducciones)}</strong></td>
+        <td class="num"><strong style="color:var(--green2)">${fmt(d.neto)}</strong></td>
+        <td class="num" style="border-left:2px solid var(--border);color:var(--orange)">${fmt(d.inss_patronal)}</td>
+        <td class="num" style="color:var(--orange)">${fmt(d.inatec)}</td>
+        <td class="num" style="color:var(--orange);font-weight:700">${fmt(costoEmp)}</td>
+        <td><a href="/recibo.html?empleado_id=${d.empleado_id}&periodo=${encodeURIComponent(periodo)}" class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 8px">🧾 Recibo</a></td>
+      </tr>`;
+    }).join('');
 
+    const sep = 'border-left:2px solid var(--border);';
     document.getElementById('tabla-totales').innerHTML = `
       <tr style="border-top:2px solid var(--border);background:rgba(0,0,0,.2)">
         <td style="padding:12px 16px;font-weight:700;font-size:13px">TOTALES</td>
-        <td class="num" style="padding:12px 16px;font-weight:700">${fmt(totBruto)}</td>
-        <td class="num" style="padding:12px 16px;color:var(--red);font-weight:700">${fmt(totInss)}</td>
-        <td class="num" style="padding:12px 16px;color:var(--red);font-weight:700">${fmt(totPrest)}</td>
-        <td class="num" style="padding:12px 16px;color:var(--red);font-weight:700">${fmt(totAdel)}</td>
-        <td class="num" style="padding:12px 16px;color:var(--green2);font-weight:700">${fmt(totExtra)}</td>
-        <td class="num" style="padding:12px 16px;color:var(--red);font-weight:700">${fmt(totDesc)}</td>
-        <td class="num" style="padding:12px 16px;color:var(--green2);font-weight:700;font-size:15px">${fmt(totNeto)}</td>
+        <td class="num" style="padding:12px 8px;font-weight:700">${fmt(totBruto)}</td>
+        <td class="num" style="padding:12px 8px;color:var(--red);font-weight:700">${fmt(totInss)}</td>
+        <td class="num" style="padding:12px 8px;color:var(--red);font-weight:700">${fmt(totPrest)}</td>
+        <td class="num" style="padding:12px 8px;color:var(--red);font-weight:700">${fmt(totAdel)}</td>
+        <td class="num" style="padding:12px 8px;color:var(--green2);font-weight:700">${fmt(totExtra)}</td>
+        <td class="num" style="padding:12px 8px;color:var(--red);font-weight:700">${fmt(totDesc)}</td>
+        <td class="num" style="padding:12px 8px;color:var(--green2);font-weight:700;font-size:15px">${fmt(totNeto)}</td>
+        <td class="num" style="padding:12px 8px;color:var(--orange);font-weight:700;${sep}">${fmt(totPatronal)}</td>
+        <td class="num" style="padding:12px 8px;color:var(--orange);font-weight:700">${fmt(totInatec)}</td>
+        <td class="num" style="padding:12px 8px;color:var(--orange);font-weight:800;font-size:15px">${fmt(totCostoEmp)}</td>
+        <td></td>
       </tr>`;
 
   } catch (e) {

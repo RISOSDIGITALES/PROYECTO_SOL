@@ -14,8 +14,10 @@ try {
 let enviarReportePlanilla = async () => { throw new Error('Mailer no disponible'); };
 try { enviarReportePlanilla = require('../mailer').enviarReportePlanilla; } catch (_) {}
 
-const SALARIO_MINIMO = 10913.54;
-const INSS_RATE = 0.07;
+const SALARIO_MINIMO      = 10913.54;
+const INSS_RATE           = 0.07;   // laboral (empleado)
+const INSS_PATRONAL_RATE  = 0.215;  // patronal (empresa) — tasa vigente Nicaragua
+const INATEC_RATE         = 0.02;   // aporte patronal al INATEC
 
 // ── Cálculo IR progresivo DGI Nicaragua (sobre ingreso anual neto de INSS) ──
 function calcularIRAnual(ingresoAnual) {
@@ -170,6 +172,15 @@ router.post('/calcular', requireAuth, async (req, res) => {
       const totalDeducciones = Math.round((inss + ir + descAdelanto + descPrestamo + descDed) * 100) / 100;
       const neto             = Math.round((salarioQuincenal + totalExtras - totalDeducciones) * 100) / 100;
 
+      // ── Costo patronal (no afecta el neto del empleado) ──────────────────
+      let inss_patronal = 0, inatec = 0;
+      if (emp.tipo_planilla !== 'Sin Seguro') {
+        const basePatronal = emp.inss_base === 'Salario Minimo' ? SALARIO_MINIMO : salarioMensual;
+        inss_patronal = Math.round(basePatronal / 2 * INSS_PATRONAL_RATE * 100) / 100;
+      }
+      inatec = Math.round(salarioQuincenal * INATEC_RATE * 100) / 100;
+      const costoEmpresa = Math.round((salarioQuincenal + inss_patronal + inatec) * 100) / 100;
+
       totalBruto += salarioQuincenal + totalExtras;
       totalDesc  += totalDeducciones;
       totalNeto  += neto;
@@ -181,6 +192,7 @@ router.post('/calcular', requireAuth, async (req, res) => {
         desc_adelanto: descAdelanto, desc_prestamo: descPrestamo,
         extras: totalExtras, desc_deducciones: descDed,
         total_deducciones: totalDeducciones, neto,
+        inss_patronal, inatec, costo_empresa: costoEmpresa,
         adelantosIds:  empAdel.map(a => a.id),
         prestamosData: prestActivos.map(p => ({
           id: p.id,
@@ -198,9 +210,11 @@ router.post('/calcular', requireAuth, async (req, res) => {
     totalBruto = Math.round(totalBruto * 100) / 100;
     totalDesc  = Math.round(totalDesc  * 100) / 100;
     totalNeto  = Math.round(totalNeto  * 100) / 100;
+    const totalInssPatronal = Math.round(detalles.reduce((s,d) => s + (d.inss_patronal||0), 0) * 100) / 100;
+    const totalInatec       = Math.round(detalles.reduce((s,d) => s + (d.inatec||0), 0) * 100) / 100;
+    const costoTotalEmpresa = Math.round((totalBruto + totalInssPatronal + totalInatec) * 100) / 100;
 
-    // Folio secuencial por empresa (o global si empresa_id es NULL)
-    // NULL-safe: empresa_id <=> ? permite comparar con NULL correctamente
+    // Folio secuencial por empresa
     const [[folioRow]] = await conn.query(
       'SELECT COALESCE(MAX(folio), 0) + 1 AS next_folio FROM planillas WHERE empresa_id <=> ?',
       [empresaId]
@@ -208,8 +222,12 @@ router.post('/calcular', requireAuth, async (req, res) => {
     const nextFolio = folioRow.next_folio || 1;
 
     const [planillaResult] = await conn.query(
-      'INSERT INTO planillas (periodo, tipo, estado, total_bruto, total_deducciones, total_neto, empresa_id, folio) VALUES (?,?,?,?,?,?,?,?)',
-      [periodo, tipo || '', 'Borrador', totalBruto, totalDesc, totalNeto, empresaId, nextFolio]
+      `INSERT INTO planillas
+       (periodo, tipo, estado, total_bruto, total_deducciones, total_neto,
+        total_inss_patronal, total_inatec, costo_total_empresa, empresa_id, folio)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      [periodo, tipo || '', 'Borrador', totalBruto, totalDesc, totalNeto,
+       totalInssPatronal, totalInatec, costoTotalEmpresa, empresaId, nextFolio]
     );
     const planillaId = planillaResult.insertId;
 
@@ -217,11 +235,13 @@ router.post('/calcular', requireAuth, async (req, res) => {
       await conn.query(
         `INSERT INTO detalle_planilla
          (planilla_id, empleado_id, periodo, tipo_planilla, salario_quincenal, inss, ir,
-          desc_prestamo, desc_adelanto, extras, desc_deducciones, total_deducciones, neto)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          desc_prestamo, desc_adelanto, extras, desc_deducciones, total_deducciones, neto,
+          inss_patronal, inatec)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [planillaId, d.empleado_id, periodo, d.tipo_planilla, d.salario_quincenal,
          d.inss, d.ir, d.desc_prestamo, d.desc_adelanto, d.extras,
-         d.desc_deducciones, d.total_deducciones, d.neto]
+         d.desc_deducciones, d.total_deducciones, d.neto,
+         d.inss_patronal, d.inatec]
       );
     }
 
@@ -267,7 +287,8 @@ router.post('/calcular', requireAuth, async (req, res) => {
     await conn.commit(); conn.release();
 
     res.json({ ok: true, planillaId, periodo, tipo: tipo || 'Todos',
-      empleados: detalles.length, totalBruto, totalDeducciones: totalDesc, totalNeto });
+      empleados: detalles.length, totalBruto, totalDeducciones: totalDesc, totalNeto,
+      totalInssPatronal, totalInatec, costoTotalEmpresa });
 
   } catch (e) {
     await conn.rollback(); conn.release();
