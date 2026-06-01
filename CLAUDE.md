@@ -23,7 +23,7 @@ SOCIAL MEDIA → TRAFFIC → WEBSITE → LEADS → SALES → RETARGETING (SEM)
 
 | Módulo | Nombre | Estado | Agentes IA |
 |---|---|---|---|
-| **1** | **Social Media (RRSS)** | ✅ v1.3 listo | Strategist ✅, Content ✅, Distribution, Community, Sales, Analytics |
+| **1** | **Social Media (RRSS)** | ✅ v1.4 listo | Strategist ✅ v2.0, Content ✅ v1.4, Distribution ✅ v1.0, Community, Sales, Analytics |
 | **2** | **SEO / AEO / GEO** | 🔜 Próximo | SEO Strategist, Content SEO, Technical SEO, Analytics SEO |
 | **3** | **SEM (Paid Ads)** | ⏳ Pendiente | Ads Strategist, Ads Creative, Campaign Manager, Ads Analytics |
 | **4** | **Web Development** | ⏳ Pendiente | UX/UI, Web Builder, Conversion Optimizer |
@@ -91,7 +91,7 @@ G54_COMPANY_ID = 1   (Crating Express)
 ### Agentes del módulo (a construir secuencialmente):
 1. ✅ **Content AI** — genera posts con framework 8 pasos SEO/AEO/GEO (hecho)
 2. ✅ **Strategist AI** — define estrategia RRSS (9 pasos SEO/AEO/GEO), llena `estrategia` en G54. ID: `gPGiAG9dSlSwtbRp`. Archivo: `workflow-strategist-ai-g54.json`
-3. ⏳ **Distribution AI** — publica en plataformas
+3. ✅ **Distribution AI** — publica en FB/IG directo via Graph API. ID: `nmOjyvdfTkEo5FVJ`. Archivo: `workflow-distribution-ai-g54.json`
 4. ⏳ **Community AI** — responde comentarios/mensajes
 5. ⏳ **Sales AI** — identifica oportunidades de venta
 6. ⏳ **Analytics AI** — reportes de métricas
@@ -643,6 +643,9 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 50. **G54 WhatsApp Engine migrado** (2026-05-27): workflow `eCOX3ogMjToxZsh9` migrado completamente a G54 API — 0 Airtable, 0 tokens hardcodeados, 0 tokens externos en `$vars`. Todo desde G54: empresa y productos activos (`/api/n8n/companies/{id}` y `/productos-servicios`); credenciales Meta WA, prompts, nombre agente configurable, follow-up desde `GET /api/n8n/companies/{id}/whatsapp/config` (campo `agent_name`, `wa_access_token`, `phone_number_id`, `system_prompt`, etc.); leads desde `GET /api/n8n/companies/{id}/wa/leads` y `POST/PATCH /api/agent/wa/leads` — todos con `continueOnFail: true` hasta que G54 implemente los endpoints. Solo vars n8n: `G54_N8N_TOKEN`, `G54_AGENT_TOKEN`, `G54_COMPANY_ID`. Archivo: `workflow-wa-engine-g54.json`.
 51. **Alex bugs corregidos** (2026-05-29): workflow `zAhV8gEsXD8dCrXq` — (1) loop medidas: instrucción ahora verifica si el mensaje actual tiene dígitos antes de pedir; (2) loop fecha: mismo patrón condicional; (3) fallback tipo_caja cotizador: `cajon_cerrado` → `cajones_cerrados`; (4) extracción numérica de dimensiones desde texto cuando todos_recolectados=true; (5) estado Airtable: `Lead Caliente` → `Calificado` — era la causa raíz de POST_COTIZACION: el PATCH fallaba con 422 porque "Lead Caliente" no es opción válida en el SingleSelect, perdiendo cotizacion_enviada y fecha.
 52. **Strategist AI v1.1** (2026-05-29): workflow `gPGiAG9dSlSwtbRp` — (1) nuevo nodo `🔍 Obtener Keywords G54` lee `/api/n8n/companies/1/keywords` (35 keywords activas por intención: local/comercial/informacional/transaccional); (2) Preparar Contexto las agrupa por intención y las incluye en el prompt con instrucción explícita de usarlas en vez de inventar nuevas; (3) eliminado fallback `|| 'risosadmi@gmail.com'` — email viene solo del perfil G54. Archivo: `workflow-strategist-ai-g54.json`.
+53. **Strategist AI v2.0** (2026-06-01): workflow `gPGiAG9dSlSwtbRp` — rediseño completo con plan temporal configurable. Nuevos campos en ⚙️ Config: `G54_PLAN_HORIZONTE` ('1 mes'…'12 meses') y `G54_FRECUENCIA_SEMANAL` (posts/semana); Preparar Contexto calcula semanas (1m=4, 3m=13, 6m=26, 12m=52), total_ideas y distribución TOFU 50% / MOFU 30% / BOFU 20%; lee `competitors_known` desde perfil G54; genera output completo con 14 campos: objetivo, audiencia, tono, frecuencia, director_cta, embudo, plataformas, pilares, kpis, resumen_estrategico, keyword_strategy, mapa_preguntas_aeo, faqs, clusters, plan_publicacion, ideas_plan (array con una idea por semana para todo el período). Archivo: `workflow-strategist-ai-g54.json`.
+54. **RRSS Content AI v1.4** (2026-06-01): workflow `wyO1f93A66imn9qw` — (1) Make.com removido como intermediario de publicación (nodo `mk-apr` eliminado, también `at-get` que era órfano); (2) status del post al aprobar cambiado de `"publicado"` → `"aprobado"` para que Distribution AI lo recoja; ahora el flujo de aprobación va directo a G54 con estado aprobado sin pasar por Make.com. Archivo: `workflow-rrss-n8n-v13.json`.
+55. **Distribution AI v1.0** (2026-06-01): nuevo workflow `nmOjyvdfTkEo5FVJ` — publica directamente a FB/IG Graph API sin intermediarios. Config node tiene: G54 params + `FB_PAGE_ID`, `FB_ACCESS_TOKEN`, `IG_USER_ID` (configurar con tokens del cliente). Flujo: trigger horario → GET `/rrss/posts?status=aprobado` desde G54 → si tiene imagen: POST a `/{page_id}/photos` (FB) + 2-step container/publish en IG; si no tiene imagen: POST a `/{page_id}/feed` (FB) solo → PUT status `"publicado"` en G54. Archivo: `workflow-distribution-ai-g54.json`.
 
 ## Nomify — Planilla Nicaragua (Express + MariaDB)
 
