@@ -118,6 +118,12 @@
         <div class="form-group">
           <label>Salario bruto mensual (C$) *</label>
           <input type="number" id="emp-salario" placeholder="0.00" step="0.01" />
+          <div id="motivo-salario-wrap" style="display:none;margin-top:6px">
+            <input type="text" id="emp-motivo-salario"
+              placeholder="Motivo del ajuste (ej: Aumento anual, Promoción…)"
+              style="width:100%;background:var(--input);border:1px solid rgba(230,126,34,.5);
+                     border-radius:6px;color:var(--text);padding:7px 10px;font-size:12px;box-sizing:border-box" />
+          </div>
         </div>
         <div class="form-group">
           <label>Tipo de planilla *</label>
@@ -182,6 +188,24 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" id="cancel-emp">Cancelar</button>
       <button class="btn btn-primary" id="save-emp">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HISTORIAL DE SALARIOS -->
+<div class="overlay" id="modal-historial-sal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <h3>📋 Historial de salarios — <span id="hist-emp-nombre"></span></h3>
+      <button class="modal-close" id="close-historial-sal">×</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div id="hist-sal-content" style="padding:8px 0">
+        <div style="padding:20px;text-align:center;color:var(--text-muted)">Cargando...</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="close-historial-sal2">Cerrar</button>
     </div>
   </div>
 </div>
@@ -265,7 +289,11 @@ function renderTabla(lista) {
       <td><span class="badge ${tipoBadge}">${tipo}</span></td>
       <td>${e['Fecha de ingreso'] || '—'}</td>
       <td><span class="badge ${activo ? 'badge-green' : 'badge-gray'}">${activo ? 'Activo' : 'Inactivo'}</span></td>
-      <td>${_esMaster ? `<button class="btn btn-icon btn-sm" onclick="editarEmpleado(${e.id})">✏️</button>` : ''}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-icon btn-sm" title="Ver historial de salarios"
+          onclick="verHistorialSalario(${e.id}, '${(e.Nombre||'').replace(/'/g,"\\'")}')">📋</button>
+        ${_esMaster ? `<button class="btn btn-icon btn-sm" onclick="editarEmpleado(${e.id})">✏️</button>` : ''}
+      </td>
     </tr>`;
   }).join('');
 }
@@ -292,6 +320,9 @@ document.getElementById('btn-nuevo').addEventListener('click', () => {
   document.getElementById('emp-ir-tipo').value = 'Sin IR';
   document.getElementById('emp-ir-fijo').value = '';
   // La empresa ya está fijada y bloqueada desde _init(), no se toca aquí
+  _salarioOriginal = null;
+  document.getElementById('motivo-salario-wrap').style.display = 'none';
+  document.getElementById('emp-motivo-salario').value = '';
   document.getElementById('emp-activo').value = 'true';
   document.getElementById('emp-email').value = '';
   document.getElementById('emp-rol').value = '';
@@ -320,6 +351,9 @@ function abrirFormEditar(id) {
   document.getElementById('emp-cedula').value = e.Cedula || '';
   document.getElementById('emp-cargo').value = e.Cargo || '';
   document.getElementById('emp-salario').value = e['Salario bruto mensual'] || '';
+  _salarioOriginal = parseFloat(e['Salario bruto mensual'] || 0);
+  document.getElementById('motivo-salario-wrap').style.display = 'none';
+  document.getElementById('emp-motivo-salario').value = '';
   document.getElementById('emp-ingreso').value = e['Fecha de ingreso'] || '';
   document.getElementById('emp-tipo').value = e['Tipo_Planilla'] || 'Con Seguro';
   document.getElementById('emp-inss-base').value = e['INSS_Base'] || 'Salario Completo';
@@ -370,6 +404,88 @@ function toggleIRFijo() {
 }
 document.getElementById('emp-tipo').addEventListener('change', toggleInssBase);
 document.getElementById('emp-ir-tipo').addEventListener('change', toggleIRFijo);
+
+// ── Mostrar campo motivo si el salario cambia respecto al original ────────────
+let _salarioOriginal = null;
+document.getElementById('emp-salario').addEventListener('input', function () {
+  const nuevo = parseFloat(this.value) || 0;
+  const wrap  = document.getElementById('motivo-salario-wrap');
+  wrap.style.display = (_salarioOriginal !== null && nuevo !== _salarioOriginal) ? '' : 'none';
+});
+
+// ── Historial de salarios ─────────────────────────────────────────────────────
+document.getElementById('close-historial-sal').addEventListener('click', () =>
+  document.getElementById('modal-historial-sal').classList.remove('open'));
+document.getElementById('close-historial-sal2').addEventListener('click', () =>
+  document.getElementById('modal-historial-sal').classList.remove('open'));
+
+async function verHistorialSalario(empId, nombre) {
+  document.getElementById('hist-emp-nombre').textContent = nombre;
+  document.getElementById('hist-sal-content').innerHTML =
+    '<div style="padding:20px;text-align:center;color:var(--text-muted)">Cargando...</div>';
+  document.getElementById('modal-historial-sal').classList.add('open');
+
+  try {
+    const rows = await apiFetch(`/api/empleados/${empId}/historial-salarios`);
+    // Obtener salario actual del empleado
+    const emp = allEmpleados.find(e => e.id == empId);
+    const salActual = emp ? parseFloat(emp['Salario bruto mensual'] || 0) : null;
+
+    if (!rows.length) {
+      document.getElementById('hist-sal-content').innerHTML = `
+        <div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px">
+          Sin cambios registrados.<br>
+          <small style="font-size:11px">Los cambios se registran automáticamente a partir de ahora.</small>
+        </div>
+        ${salActual !== null ? `<div style="padding:0 20px 16px;font-size:13px;color:var(--text-muted)">
+          Salario actual: <strong style="color:var(--text)">${fmt(salActual)}</strong>
+        </div>` : ''}`;
+      return;
+    }
+
+    document.getElementById('hist-sal-content').innerHTML = `
+      <div style="padding:12px 20px 4px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:var(--text-muted)">${rows.length} cambio${rows.length!==1?'s':''} registrado${rows.length!==1?'s':''}</span>
+        ${salActual !== null ? `<span style="font-size:12px">Salario actual: <strong style="color:var(--green2)">${fmt(salActual)}</strong></span>` : ''}
+      </div>
+      <div style="padding:0 4px">
+        ${rows.map((r, i) => {
+          const subio  = parseFloat(r.salario_nuevo) > parseFloat(r.salario_anterior);
+          const igual  = parseFloat(r.salario_nuevo) === parseFloat(r.salario_anterior);
+          const icono  = igual ? '↔️' : subio ? '📈' : '📉';
+          const color  = igual ? 'var(--text-muted)' : subio ? 'var(--green2)' : 'var(--red)';
+          const diff   = parseFloat(r.salario_nuevo) - parseFloat(r.salario_anterior);
+          const pct    = r.salario_anterior > 0
+            ? ((diff / parseFloat(r.salario_anterior)) * 100).toFixed(1) : '0.0';
+          return `
+          <div style="display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);
+                      ${i === 0 ? 'background:rgba(255,255,255,.03)' : ''}">
+            <div style="display:flex;flex-direction:column;align-items:center;width:40px;flex-shrink:0">
+              <span style="font-size:18px">${icono}</span>
+              ${i < rows.length-1 ? '<div style="flex:1;width:2px;background:var(--border);margin-top:4px"></div>' : ''}
+            </div>
+            <div style="flex:1">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+                <div>
+                  <span style="font-size:13px;color:var(--text-muted)">De</span>
+                  <strong style="font-size:13px;margin:0 6px">${fmt(r.salario_anterior)}</strong>
+                  <span style="font-size:13px;color:var(--text-muted)">→</span>
+                  <strong style="font-size:14px;color:${color};margin-left:6px">${fmt(r.salario_nuevo)}</strong>
+                  <span style="font-size:11px;color:${color};margin-left:8px">(${diff>=0?'+':''}${fmt(Math.abs(diff))} · ${diff>=0?'+':''}${pct}%)</span>
+                </div>
+                <span style="font-size:11px;color:var(--text-muted)">${r.fecha_fmt || r.fecha}</span>
+              </div>
+              ${r.motivo ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px">💬 ${r.motivo}</div>` : ''}
+              ${r.usuario ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">por ${r.usuario}</div>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  } catch (e) {
+    document.getElementById('hist-sal-content').innerHTML =
+      `<div style="padding:20px;color:var(--red);font-size:13px">Error: ${e.message}</div>`;
+  }
+}
 
 // ── Máscara de cédula: ###-######-####L ──────────────────────────────────
 document.getElementById('emp-cedula').addEventListener('input', function () {
@@ -430,6 +546,10 @@ document.getElementById('save-emp').addEventListener('click', async () => {
     'Activo': document.getElementById('emp-activo').value === 'true',
     'Email': emailVal || undefined,
     'Rol': rolVal || undefined,
+    // Motivo del cambio de salario (solo si cambió)
+    ...(document.getElementById('motivo-salario-wrap').style.display !== 'none'
+      ? { motivo_cambio: document.getElementById('emp-motivo-salario').value.trim() || null }
+      : {}),
   };
 
   const btn = document.getElementById('save-emp');

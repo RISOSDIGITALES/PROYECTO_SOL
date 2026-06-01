@@ -144,6 +144,21 @@ async function patchHandler(req, res) {
 
   vals.push(id);
   try {
+    // Si viene salario_bruto, guardar el anterior antes de actualizar
+    if (m.salario_bruto !== undefined) {
+      const [[empActual]] = await db.query('SELECT salario_bruto FROM empleados WHERE id = ?', [id]);
+      const salAnterior = parseFloat(empActual?.salario_bruto || 0);
+      const salNuevo    = parseFloat(m.salario_bruto || 0);
+      if (salAnterior !== salNuevo) {
+        const usuario = req.user?.email || req.user?.nombre || null;
+        const motivo  = req.body.motivo_cambio || null;
+        await db.query(
+          'INSERT INTO historial_salarios (empleado_id, salario_anterior, salario_nuevo, fecha, usuario, motivo) VALUES (?,?,?,CURDATE(),?,?)',
+          [id, salAnterior, salNuevo, usuario, motivo]
+        );
+      }
+    }
+
     await db.query(`UPDATE empleados SET ${sets.join(', ')} WHERE id = ?`, vals);
     const [rows] = await db.query(GET_SQL + ' WHERE id = ?', [id]);
     const emp = rows[0];
@@ -157,5 +172,19 @@ async function patchHandler(req, res) {
 
 router.patch('/', requireAuth, requireMaster, patchHandler);
 router.patch('/:id', requireAuth, requireMaster, patchHandler);
+
+// GET /api/empleados/:id/historial-salarios
+router.get('/:id/historial-salarios', requireAuth, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT h.*, DATE_FORMAT(h.fecha,'%Y-%m-%d') AS fecha_fmt
+       FROM historial_salarios h
+       WHERE h.empleado_id = ?
+       ORDER BY h.created_at DESC`,
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 module.exports = router;
