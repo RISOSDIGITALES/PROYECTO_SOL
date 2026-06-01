@@ -26,9 +26,73 @@ const { requireAuth, requireAdmin } = require('./auth');
   await run("ALTER TABLE planillas  ADD COLUMN IF NOT EXISTS empresa_id INT DEFAULT NULL");
   await run("ALTER TABLE usuarios   ADD COLUMN IF NOT EXISTS empresas_acceso TEXT DEFAULT NULL");
   // ── v1.3: folio secuencial por empresa ───────────────────────────────────
-  // Usar SHOW COLUMNS porque ADD COLUMN IF NOT EXISTS no está soportado en MySQL < 5.8
   const [folioCol] = await db.query('SHOW COLUMNS FROM planillas LIKE "folio"').catch(() => [[]]);
   if (folioCol.length === 0) await run("ALTER TABLE planillas ADD COLUMN folio INT DEFAULT NULL");
+
+  // ── v1.4: perfil completo de empresa ─────────────────────────────────────
+  await run("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS ruc        VARCHAR(30)   DEFAULT NULL");
+  await run("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS correo     VARCHAR(150)  DEFAULT NULL");
+  await run("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS telefono   VARCHAR(30)   DEFAULT NULL");
+  await run("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS direccion  TEXT          DEFAULT NULL");
+  await run("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS logo       MEDIUMTEXT    DEFAULT NULL");
+
+  // ── v1.5: cédula y cumpleaños en empleados ────────────────────────────────
+  await run("ALTER TABLE empleados ADD COLUMN IF NOT EXISTS cedula           VARCHAR(16) DEFAULT NULL");
+  await run("ALTER TABLE empleados ADD COLUMN IF NOT EXISTS fecha_nacimiento DATE        DEFAULT NULL");
+
+  // ── v1.6: INSS patronal e INATEC en planillas ────────────────────────────
+  await run("ALTER TABLE planillas ADD COLUMN IF NOT EXISTS total_inss_patronal DECIMAL(12,2) DEFAULT 0.00");
+  await run("ALTER TABLE planillas ADD COLUMN IF NOT EXISTS total_inatec        DECIMAL(12,2) DEFAULT 0.00");
+  await run("ALTER TABLE planillas ADD COLUMN IF NOT EXISTS costo_total_empresa DECIMAL(12,2) DEFAULT 0.00");
+  await run("ALTER TABLE planillas ADD COLUMN IF NOT EXISTS estado              VARCHAR(50)   DEFAULT 'Borrador'");
+  await run("ALTER TABLE detalle_planilla ADD COLUMN IF NOT EXISTS inss_patronal    DECIMAL(10,2) DEFAULT 0.00");
+  await run("ALTER TABLE detalle_planilla ADD COLUMN IF NOT EXISTS inatec           DECIMAL(10,2) DEFAULT 0.00");
+  await run("ALTER TABLE detalle_planilla ADD COLUMN IF NOT EXISTS meses_trabajados DECIMAL(4,2)  DEFAULT NULL");
+  // UNIQUE(planilla_id, empleado_id) — evitar duplicados
+  await run("ALTER TABLE detalle_planilla ADD UNIQUE KEY uq_planilla_empleado (planilla_id, empleado_id)");
+
+  // ── v1.7: campo notas en préstamos ────────────────────────────────────────
+  await run("ALTER TABLE prestamos ADD COLUMN IF NOT EXISTS notas TEXT DEFAULT NULL");
+
+  // ── v1.8: tablas de liquidación e historial de salarios ──────────────────
+  await run(`CREATE TABLE IF NOT EXISTS liquidaciones (
+    id                   INT AUTO_INCREMENT PRIMARY KEY,
+    empleado_id          INT NOT NULL,
+    empresa_id           INT DEFAULT NULL,
+    fecha_baja           DATE NOT NULL,
+    motivo               VARCHAR(100) DEFAULT 'Renuncia voluntaria',
+    salario_mensual      DECIMAL(12,2) DEFAULT 0,
+    fecha_ingreso        DATE DEFAULT NULL,
+    anios_servicio       DECIMAL(6,2)  DEFAULT 0,
+    meses_servicio       DECIMAL(6,2)  DEFAULT 0,
+    dias_vacaciones      DECIMAL(6,2)  DEFAULT 0,
+    monto_vacaciones     DECIMAL(12,2) DEFAULT 0,
+    meses_aguinaldo      DECIMAL(4,2)  DEFAULT 0,
+    monto_aguinaldo      DECIMAL(12,2) DEFAULT 0,
+    aplica_indemnizacion TINYINT(1)    DEFAULT 0,
+    monto_indemnizacion  DECIMAL(12,2) DEFAULT 0,
+    aplica_preaviso      TINYINT(1)    DEFAULT 0,
+    dias_preaviso        INT           DEFAULT 0,
+    monto_preaviso       DECIMAL(12,2) DEFAULT 0,
+    total                DECIMAL(12,2) DEFAULT 0,
+    notas                TEXT          DEFAULT NULL,
+    estado               VARCHAR(50)   DEFAULT 'Pendiente',
+    created_at           TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (empleado_id) REFERENCES empleados(id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+  await run(`CREATE TABLE IF NOT EXISTS historial_salarios (
+    id               INT AUTO_INCREMENT PRIMARY KEY,
+    empleado_id      INT NOT NULL,
+    salario_anterior DECIMAL(12,2) NOT NULL,
+    salario_nuevo    DECIMAL(12,2) NOT NULL,
+    fecha            DATE NOT NULL,
+    usuario          VARCHAR(150) DEFAULT NULL,
+    motivo           VARCHAR(200) DEFAULT NULL,
+    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (empleado_id) REFERENCES empleados(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
   console.log('[migrations] OK');
 })();
 
