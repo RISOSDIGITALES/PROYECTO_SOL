@@ -647,6 +647,9 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 53. **Strategist AI v2.0** (2026-06-01): workflow `gPGiAG9dSlSwtbRp` — rediseño completo con plan temporal configurable. Nuevos campos en ⚙️ Config: `G54_PLAN_HORIZONTE` ('1 mes'…'12 meses') y `G54_FRECUENCIA_SEMANAL` (posts/semana); Preparar Contexto calcula semanas (1m=4, 3m=13, 6m=26, 12m=52), total_ideas y distribución TOFU 50% / MOFU 30% / BOFU 20%; lee `competitors_known` desde perfil G54; genera output completo con 14 campos: objetivo, audiencia, tono, frecuencia, director_cta, embudo, plataformas, pilares, kpis, resumen_estrategico, keyword_strategy, mapa_preguntas_aeo, faqs, clusters, plan_publicacion, ideas_plan (array con una idea por semana para todo el período). Archivo: `workflow-strategist-ai-g54.json`.
 54. **RRSS Content AI v1.4** (2026-06-01): workflow `wyO1f93A66imn9qw` — (1) Make.com removido como intermediario de publicación (nodo `mk-apr` eliminado, también `at-get` que era órfano); (2) status del post al aprobar cambiado de `"publicado"` → `"aprobado"` para que Distribution AI lo recoja; ahora el flujo de aprobación va directo a G54 con estado aprobado sin pasar por Make.com. Archivo: `workflow-rrss-n8n-v13.json`.
 55. **Distribution AI v1.0** (2026-06-01): nuevo workflow `nmOjyvdfTkEo5FVJ` — publica directamente a FB/IG Graph API sin intermediarios. Config node tiene: G54 params + `FB_PAGE_ID`, `FB_ACCESS_TOKEN`, `IG_USER_ID` (configurar con tokens del cliente). Flujo: trigger horario → GET `/rrss/posts?status=aprobado` desde G54 → si tiene imagen: POST a `/{page_id}/photos` (FB) + 2-step container/publish en IG; si no tiene imagen: POST a `/{page_id}/feed` (FB) solo → PUT status `"publicado"` en G54. Archivo: `workflow-distribution-ai-g54.json`.
+56. **Strategist AI v2.0 commiteado como primera versión funcional** (2026-06-03): genera plan 13 semanas / 39 ideas, guarda estrategia e ideas en G54 confirmado via panel (`ok:true`). Campos reflejados en panel: objetivo, audiencia, tono, plataformas, pilares, KPIs, embudo. Commiteado en `claude/vibrant-volta-zUwsV`.
+57. **Bug fix Content AI — campos vacíos en G54** (2026-06-03): nodo `🖼️ Obtener URL de Imagen` (Set node) solo emitía `{imagen_url:""}` borrando todo el contexto del post. Nodo `💾 Crear Registro en G54` usaba `$json` que quedaba vacío. Fix: jsonBody ahora referencia explícitamente `$('🔍 Parsear Versiones Inglés')` y `$('🔍 Parsear Post Español')`. Post llega completo a G54 con copy Instagram y Facebook.
+58. **Pendiente para mañana** (2026-06-03): consultar con el equipo G54 (1) idioma de los posts — actualmente en inglés, definir si debe ser español o bilingüe; (2) plataforma predeterminada de ideas generadas por el Strategist.
 
 ## Nomify — Planilla Nicaragua (Express + MariaDB)
 
@@ -852,6 +855,20 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 ## Reportes Diarios
 
 > Los últimos 14 días. Anteriores archivados en `PROYECTO-SOL/reportes/`.
+
+---
+
+### 2026-06-03 (Martes)
+
+El día inició verificando el estado de todos los workflows que tenían que haber corrido el lunes y martes. Los tres que presentaron falla fueron los que dependen de Google OAuth: CE Blog, CE Voice Agent Resumen Diario y CE Gmail Monitor, todos caídos por token de refresco expirado. Se indicó el procedimiento para reconectar las credenciales en n8n y la usuaria lo resolvió por su cuenta; el Gmail Monitor confirmó ejecución exitosa poco después.
+
+Con eso resuelto, retomamos el trabajo en G54. La conversación venía de una sesión anterior donde se había dejado pendiente registrar los agentes en el panel de G54. Se verificó que Strategist AI y Content AI ya estaban respondiendo OK (200) desde el panel. Se hizo la prueba del Strategist AI y se confirmó que la estrategia generada está mostrándose correctamente en el panel de G54: objetivo, audiencia, tono, plataformas, pilares, KPIs y embudo, todo reflejado tal cual como lo generó el agente en la última ejecución (exec 7258 del 2 de junio).
+
+Se commiteó el estado funcional del Strategist AI v2.0 con el mensaje "primera versión funcional" al branch claude/vibrant-volta-zUwsV. También se evaluó una herramienta externa llamada Open Claw y Hermes que alguien recomendó; se analizó la comparativa y se concluyó que no aporta nada que no tengamos ya con n8n + G54, con la única excepción del módulo de audio tipo podcast que se anotó como sugerencia futura en CLAUDE.md, usando ElevenLabs que ya tenemos por VAPI.
+
+Luego pasamos a probar el Content AI. Al aprobar una idea desde el panel de G54 el agente corrió pero el post llegó vacío: solo tenía el título del tema, sin copy, sin hashtags, sin nada. Se rastreó la ejecución en n8n y se encontró que el nodo `🖼️ Obtener URL de Imagen` es un Set que solo emite `{imagen_url: ""}`, borrando todos los campos del post generado. El nodo siguiente, `💾 Crear Registro en G54`, usaba `$json` que en ese punto ya no tenía nada. El fix fue cambiar el jsonBody del nodo Crear Registro para que lea los campos directamente desde los nodos de parseo correctos. Después del fix el post llegó completo a G54 con copy de Instagram y Facebook visibles en el modal de revisión.
+
+Quedaron dos dudas anotadas para consultar mañana: el idioma de los posts (actualmente en inglés, definir si debe ser español o bilingüe) y la plataforma predeterminada de las ideas generadas por el Strategist.
 
 ---
 
