@@ -23,7 +23,7 @@ SOCIAL MEDIA → TRAFFIC → WEBSITE → LEADS → SALES → RETARGETING (SEM)
 
 | Módulo | Nombre | Estado | Agentes IA |
 |---|---|---|---|
-| **1** | **Social Media (RRSS)** | ✅ v1.4 listo | Strategist ✅ v2.0, Content ✅ v1.4, Distribution ✅ v1.0, Community, Sales, Analytics |
+| **1** | **Social Media (RRSS)** | ✅ v1.4 listo | Strategist ✅ v3.0, Content ✅ v1.4, Distribution ✅ v1.0, Community, Sales, Analytics |
 | **2** | **SEO / AEO / GEO** | 🔜 Próximo | SEO Strategist, Content SEO, Technical SEO, Analytics SEO |
 | **3** | **SEM (Paid Ads)** | ⏳ Pendiente | Ads Strategist, Ads Creative, Campaign Manager, Ads Analytics |
 | **4** | **Web Development** | ⏳ Pendiente | UX/UI, Web Builder, Conversion Optimizer |
@@ -650,6 +650,7 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 56. **Strategist AI v2.0 commiteado como primera versión funcional** (2026-06-03): genera plan 13 semanas / 39 ideas, guarda estrategia e ideas en G54 confirmado via panel (`ok:true`). Campos reflejados en panel: objetivo, audiencia, tono, plataformas, pilares, KPIs, embudo. Commiteado en `claude/vibrant-volta-zUwsV`.
 57. **Bug fix Content AI — campos vacíos en G54** (2026-06-03): nodo `🖼️ Obtener URL de Imagen` (Set node) solo emitía `{imagen_url:""}` borrando todo el contexto del post. Nodo `💾 Crear Registro en G54` usaba `$json` que quedaba vacío. Fix: jsonBody ahora referencia explícitamente `$('🔍 Parsear Versiones Inglés')` y `$('🔍 Parsear Post Español')`. Post llega completo a G54 con copy Instagram y Facebook.
 58. **Pendiente para mañana** (2026-06-03): consultar con el equipo G54 (1) idioma de los posts — actualmente en inglés, definir si debe ser español o bilingüe; (2) plataforma predeterminada de ideas generadas por el Strategist.
+59. **Strategist AI v3.0** (2026-06-04): nuevo workflow `cT1SS300CjujIyHS`, webhook `strategist-g54-v3`. Agrega trend finder: nodo `📰 Google News RSS` con User-Agent para bypass de bloqueo de Google → `📋 Extraer Titulares RSS` (Code node extrae `<title>` tags con regex, salta título de canal) → `🧠 Gemini: Analizar Tendencias` → `🔍 Parsear Tema Tendencia` → `🗂️ Preparar Ideas Batch v3` (N-1 evergreen + 1 trend por semana). Bug fixes: multi-company (company_id desde webhook, sin hardcode), Groq reemplazado por Gemini para tendencias (evita rate limit doble). Archivo: `workflow-strategist-ai-g54-v3.json`.
 
 ## Nomify — Planilla Nicaragua (Express + MariaDB)
 
@@ -855,6 +856,12 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 ## Reportes Diarios
 
 > Los últimos 14 días. Anteriores archivados en `PROYECTO-SOL/reportes/`.
+
+---
+
+### 2026-06-04 (Miércoles)
+
+Se trabajó en el Strategist AI v3.0, que agrega un módulo de tendencias al flujo existente. El objetivo era que por cada semana se genere N-1 ideas evergreen del plan y 1 idea basada en noticias reales del sector. Se descubrió que Google News RSS bloqueaba el request sin User-Agent — fix aplicado. Se añadió un Code node que extrae los `<title>` del XML con regex. Groq fue reemplazado por Gemini para el análisis de tendencias, ya que Groq ya se usa para el fallback de estrategia y daba rate limit cuando ambos corrían juntos. También se corrigió el bug de multi-empresa: company_id ahora viene del webhook, sin fallback hardcodeado. El workflow quedó actualizado en n8n y guardado como `workflow-strategist-ai-g54-v3.json`. Pendiente: probar flujo completo mañana cuando se renueve el quota de Gemini (se agotó el free tier con las pruebas de hoy).
 
 ---
 
