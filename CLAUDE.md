@@ -860,15 +860,13 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ### 2026-06-03 (Martes)
 
-El día inició verificando el estado de todos los workflows que tenían que haber corrido el lunes y martes. Los tres que presentaron falla fueron los que dependen de Google OAuth: CE Blog, CE Voice Agent Resumen Diario y CE Gmail Monitor, todos caídos por token de refresco expirado. Se indicó el procedimiento para reconectar las credenciales en n8n y la usuaria lo resolvió por su cuenta; el Gmail Monitor confirmó ejecución exitosa poco después.
+Empecé revisando workflows del lunes y martes: CE Blog, Voice Agent Resumen y Gmail Monitor caídos por OAuth Google expirado. Se reconectaron las credenciales y quedaron operativos.
 
-Con eso resuelto, retomamos el trabajo en G54. La conversación venía de una sesión anterior donde se había dejado pendiente registrar los agentes en el panel de G54. Se verificó que Strategist AI y Content AI ya estaban respondiendo OK (200) desde el panel. Se hizo la prueba del Strategist AI y se confirmó que la estrategia generada está mostrándose correctamente en el panel de G54: objetivo, audiencia, tono, plataformas, pilares, KPIs y embudo, todo reflejado tal cual como lo generó el agente en la última ejecución (exec 7258 del 2 de junio).
+Luego confirmé que la estrategia del Strategist AI v2.0 está reflejándose correctamente en el panel G54 con todos sus campos. Se commiteó como "primera versión funcional". También evaluamos Open Claw y Hermes como herramientas externas — no aportan nada que no tengamos, solo se anotó el módulo de audio como sugerencia futura usando ElevenLabs.
 
-Se commiteó el estado funcional del Strategist AI v2.0 con el mensaje "primera versión funcional" al branch claude/vibrant-volta-zUwsV. También se evaluó una herramienta externa llamada Open Claw y Hermes que alguien recomendó; se analizó la comparativa y se concluyó que no aporta nada que no tengamos ya con n8n + G54, con la única excepción del módulo de audio tipo podcast que se anotó como sugerencia futura en CLAUDE.md, usando ElevenLabs que ya tenemos por VAPI.
+Probamos el Content AI: el post llegaba vacío a G54. El bug era que el nodo `🖼️ Obtener URL de Imagen` borraba todo el contexto y el nodo de guardado leía `$json` vacío. Fix: referenciar los nodos de parseo directamente. Después del fix el post llegó completo con copy de Instagram y Facebook.
 
-Luego pasamos a probar el Content AI. Al aprobar una idea desde el panel de G54 el agente corrió pero el post llegó vacío: solo tenía el título del tema, sin copy, sin hashtags, sin nada. Se rastreó la ejecución en n8n y se encontró que el nodo `🖼️ Obtener URL de Imagen` es un Set que solo emite `{imagen_url: ""}`, borrando todos los campos del post generado. El nodo siguiente, `💾 Crear Registro en G54`, usaba `$json` que en ese punto ya no tenía nada. El fix fue cambiar el jsonBody del nodo Crear Registro para que lea los campos directamente desde los nodos de parseo correctos. Después del fix el post llegó completo a G54 con copy de Instagram y Facebook visibles en el modal de revisión.
-
-Quedaron dos dudas anotadas para consultar mañana: el idioma de los posts (actualmente en inglés, definir si debe ser español o bilingüe) y la plataforma predeterminada de las ideas generadas por el Strategist.
+Pendiente para mañana: consultar idioma de posts (actualmente inglés) y plataforma predeterminada de las ideas.
 
 ---
 
