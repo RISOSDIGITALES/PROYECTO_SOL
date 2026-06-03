@@ -388,6 +388,7 @@ Tag `Alex` (ID: `2CrVJWitAB77MgTJ`) aplicado a los 4 workflows del agente:
 - [ ] Probar planilla Nicaragua completa (bloqueado por reinicio n8n)
 - [ ] Recargar saldo DeepSeek o reemplazar con otro fallback
 - [ ] Confirmar aportaciones + marcador de huella en Planilla Nicaragua
+- [ ] **Sugerencia futura — Módulo de audio:** Evaluar Text-to-Speech para convertir posts/artículos en audio (estilo podcast) similar a OpenClaw Voice AI. Complementaría el Módulo 1 RRSS sin reemplazar nada del stack actual. Integración posible: ElevenLabs (ya tenemos cuenta por VAPI) → generar MP3 desde el post aprobado → subir a Drive → opcional: publicar como Reel/Story con audio.
 
 ## Planilla Nicaragua
 
