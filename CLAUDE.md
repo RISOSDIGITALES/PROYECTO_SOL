@@ -88,13 +88,16 @@ G54_COMPANY_ID = 1   (Crating Express)
 **Workflow n8n:** `RRSS Automation — Crating Express v1.3 (G54)` (ID: `wyO1f93A66imn9qw`)
 **Archivo:** `workflow-rrss-n8n-v13.json`
 
-### Agentes del módulo (a construir secuencialmente):
-1. ✅ **Content AI** — genera posts con framework 8 pasos SEO/AEO/GEO (hecho)
-2. ✅ **Strategist AI** — define estrategia RRSS (9 pasos SEO/AEO/GEO), llena `estrategia` en G54. ID: `gPGiAG9dSlSwtbRp`. Archivo: `workflow-strategist-ai-g54.json`
-3. ✅ **Distribution AI** — publica en FB/IG directo via Graph API. ID: `nmOjyvdfTkEo5FVJ`. Archivo: `workflow-distribution-ai-g54.json`
-4. ⏳ **Community AI** — responde comentarios/mensajes
-5. ⏳ **Sales AI** — identifica oportunidades de venta
-6. ⏳ **Analytics AI** — reportes de métricas
+### Agentes del módulo — Estado completo:
+1. ✅ **Content AI v1.4** — genera posts con framework 8 pasos SEO/AEO/GEO. ID: `wyO1f93A66imn9qw`. Archivo: `workflow-rrss-n8n-v13.json`
+2. ✅ **Strategist AI v3.0** — define estrategia + trend finder (NewsAPI). ID: `cT1SS300CjujIyHS`. Archivo: `workflow-strategist-ai-g54-v3.json`
+3. ✅ **Distribution AI v1.0** — publica FB/IG via Graph API directo. ID: `nmOjyvdfTkEo5FVJ`. Archivo: `workflow-distribution-ai-g54.json`
+4. ✅ **Community AI v1.0** — responde comentarios y DMs de FB/IG. ID: `WYGmQcPSOzpvn6yv`. Archivo: `workflow-community-ai-g54.json`
+5. ✅ **Sales AI / WA Engine Motor (G54)** — agente de chat genérico WA + FB/IG DM. ID: `eCOX3ogMjToxZsh9`. Archivo: `workflow-sales-ai-motor-g54.json`
+6. ✅ **Analytics AI Semanal** — reporte lunes 8am. ID: `ocQAzbiftXXOfjct`. Archivo: `workflow-analytics-ai-g54.json`
+7. ✅ **Analytics AI Mensual** — reporte día 1 de cada mes. ID: `BrH8GNURlqynJK1H`. Archivo: `workflow-analytics-ai-mensual-g54.json`
+
+**Todos activos en n8n** (2026-06-04). Alex CE (`zAhV8gEsXD8dCrXq`, path `whatsapp-ce`) es independiente e intocable.
 
 ### Framework 8 pasos (Content AI v1.3):
 1. Intención de búsqueda (informacional/comercial/transaccional/local)
@@ -106,16 +109,86 @@ G54_COMPANY_ID = 1   (Crating Express)
 7. Adaptación tono redes sociales
 8. CTA con URL obligatorio + hashtags
 
-### Estado actual v1.3:
+### Estado actual v1.4:
 - ✅ Lee empresa y servicios desde G54 API
 - ✅ Lee ideas aprobadas desde G54
 - ✅ Guarda posts generados en G54
-- ✅ Email de aprobación con botones Aprobar/Rechazar
-- ✅ Publica FB/IG via Make.com al aprobar
-- ✅ Actualiza estados en G54 (procesando/publicado/rechazado/completado)
-- ✅ 0 tokens hardcodeados de Airtable
-- ⚠️ Estrategia usa fallbacks (primary_goal, target_market) hasta que Strategist AI la llene
-- ⚠️ Ideas queue vacía — necesita ideas aprobadas en el panel G54
+- ✅ Email de aprobación (español únicamente, referencias al parseo ES)
+- ✅ Al aprobar → status `aprobado` en G54 → Distribution AI lo recoge
+- ✅ Distribution AI publica FB/IG directo via Graph API (sin Make.com)
+- ✅ 0 tokens hardcodeados
+
+### Community AI v1.0 — Detalles
+- Webhook: `community-ai-g54` — recibe comentarios FB/IG y DMs
+- Nodo `🔀 ¿Verificación o Evento?` responde hub.challenge para registro en Meta
+- Extrae: plataforma, tipo (comentario/dm), mensaje, usuarioId, pageId
+- Multi-tenant: lee `?company=N` del query param
+- Groq llama-3.3-70b-versatile → respuesta pública máx 3 oraciones
+- Output estructurado: INTENCIÓN / RESPUESTA / LEAD / PREGUNTA / SIGUIENTE PASO
+- Si lead != frío → guarda en G54 via `POST /api/agent/wa/leads`
+- Rutas de respuesta: FB comentario → `/{id}/comments`, IG → `/{id}/replies`, DM → `/me/messages`
+- **PENDIENTE:** registrar webhook en Meta for Developers de CE (ver sección Multi-tenant abajo)
+
+### Sales AI / WA Engine Motor — Detalles
+- Webhook WA: `wa-engine-g54` (genérico — NO es el de Alex que usa `whatsapp-ce`)
+- Webhook FB/IG DM: `sales-ai-social`
+- Agente de chat 100% genérico: comportamiento definido por `system_prompt` en G54 WA Config
+- Sin cotizador, sin campos CE-específicos (medidas, tipo_cajon, etc.)
+- `datos_actualizados` es objeto libre — el prompt define qué recolectar
+- Groq + Gemini fallback, sin modo contingencia hardcodeado
+- **PENDIENTE:** registrar webhooks en Meta + reconstrucción limpia en curso (2026-06-04)
+
+## G54 — Arquitectura Multi-tenant (2026-06-04)
+
+### Decisión arquitectural
+G54 es una plataforma para múltiples clientes simultáneos. La resolución de qué empresa es cuál se hace por **query param en el webhook URL**, no hardcodeado.
+
+**Setup por cliente:**
+1. Cliente crea su Meta App en developers.facebook.com
+2. Registra webhook apuntando a la URL con su company_id:
+   - Community AI: `https://n8n.mdarthurdigital.com/webhook/community-ai-g54?company=N`
+   - Sales AI WA: `https://n8n.mdarthurdigital.com/webhook/wa-engine-g54?company=N`
+   - Sales AI FB/IG DM: `https://n8n.mdarthurdigital.com/webhook/sales-ai-social?company=N`
+3. Cliente genera Page Access Token desde Meta Business Suite y lo sube al panel G54
+4. Distribution AI lee el token desde G54 — sin hardcode
+
+**Patrón implementado en workflows:**
+```
+Webhook (con ?company=N)
+→ ⚙️ Config G54 (base URL + tokens + fallback company=1)
+→ 🔍 Preparar Resolución (lee query.company + extrae phone_number_id o page_id)
+→ 🏢 Resolver Empresa (G54) — GET /api/n8n/wa-phones/{id} o /pages/{id} [continueOnFail]
+→ 🏢 Aplicar Config Empresa (merge: query param > API response > fallback CE)
+→ resto del flujo con company_id dinámico
+```
+
+**Fallback actual:** mientras G54 no implementa los endpoints de resolución, todos usan company_id=1 (CE). El query param ya funciona hoy.
+
+### Pendientes G54 para multi-tenant completo
+- `GET /api/n8n/pages/{page_id}` → `{ company_id, fb_access_token, ig_user_id }`
+- `GET /api/n8n/wa-phones/{phone_number_id}` → `{ company_id, wa_access_token, phone_number_id }`
+- Panel admin: cada cliente sube sus tokens de Meta desde su dashboard
+
+### Meta Tech Provider — Proceso necesario para escalar
+Para que G54 maneje FB/IG de múltiples empresas con UNA sola App (en lugar de una App por cliente), se necesita verificación como Tech Provider en Meta:
+
+**Qué resuelve el Tech Provider:**
+- Clientes conectan su página a G54 via OAuth ("Conectar con Facebook") — sin crear App propia
+- Un solo flujo de autorización cubre: WhatsApp (`whatsapp_business_messaging`), comentarios (`pages_read_engagement`, `instagram_manage_comments`), publicaciones (`pages_manage_posts`, `instagram_content_publish`)
+- Tokens se obtienen automáticamente vía Business Login — cliente no toca ningún portal
+
+**Qué se necesita preparar antes de iniciar:**
+- Política de privacidad pública de G54
+- Demo en video del flujo OAuth completo
+- Descripción de caso de uso por cada permiso solicitado
+
+**Tiempo estimado:** 1-3 semanas de revisión por parte de Meta
+
+**Por ahora:** cada cliente crea su propia App (15 min) y usa el query param `?company=N`. Funciona para los primeros clientes mientras se tramita el Tech Provider.
+
+### Workflows duplicados — nota histórica
+- `zAhV8gEsXD8dCrXq` "CE WhatsApp Engine - Sistema de Conversión doble" — DESACTIVADO. Era un duplicado del workflow de Alex que bloqueaba la activación del Sales AI Motor. Alex original sigue intacto.
+- Alex CE (`zAhV8gEsXD8dCrXq` nombre correcto: "CE WhatsApp Engine - Sistema de Conversión") usa path `whatsapp-ce` y es independiente de la plataforma G54 genérica. NO tocar.
 
 ---
 
