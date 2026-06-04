@@ -130,13 +130,28 @@ G54_COMPANY_ID = 1   (Crating Express)
 - **PENDIENTE:** registrar webhook en Meta for Developers de CE (ver sección Multi-tenant abajo)
 
 ### Sales AI / WA Engine Motor — Detalles
+- **ID:** `eCOX3ogMjToxZsh9` — activo en n8n ✅ (2026-06-04)
+- **Archivo:** `workflow-sales-ai-motor-g54.json`
 - Webhook WA: `wa-engine-g54` (genérico — NO es el de Alex que usa `whatsapp-ce`)
 - Webhook FB/IG DM: `sales-ai-social`
 - Agente de chat 100% genérico: comportamiento definido por `system_prompt` en G54 WA Config
-- Sin cotizador, sin campos CE-específicos (medidas, tipo_cajon, etc.)
-- `datos_actualizados` es objeto libre — el prompt define qué recolectar
-- Groq + Gemini fallback, sin modo contingencia hardcodeado
-- **PENDIENTE:** registrar webhooks en Meta + reconstrucción limpia en curso (2026-06-04)
+- Sin cotizador, sin campos CE-específicos (medidas, tipo_cajon, ISPM-15, etc.)
+- `datos_actualizados` es objeto libre — el prompt define qué recolectar según el negocio
+- Groq llama-3.3-70b-versatile + Gemini 1.5 Flash fallback + fallback estático de emergencia
+- Multi-tenant: `?company=N` → Preparar Resolución → Resolver Empresa (G54) → Aplicar Config Empresa
+- Estados de lead: `Nuevo` → `En calificación` → `Calificado` → `Vendedor notificado`
+- Si clasificacion=caliente → email al vendedor via Gmail (emails desde perfil G54)
+- Follow-up horario: lee leads sin respuesta → envía mensajes 24h/72h desde WA Config G54
+- Token WA y FB/IG vienen de G54 API — 0 hardcodeados
+- **PENDIENTE:** registrar webhooks en Meta for Developers (CE: `?company=1`) cuando el equipo esté listo
+
+**Alex vs Sales AI Motor — diferencia clave:**
+| | Alex (`zAhV8gEsXD8dCrXq`) | Sales AI Motor (`eCOX3ogMjToxZsh9`) |
+|---|---|---|
+| Path WA | `whatsapp-ce` | `wa-engine-g54` |
+| Para quién | Solo Crating Express | Cualquier cliente G54 |
+| Lógica | CE-específica (cotizador, cajones) | 100% genérica via prompt |
+| Tocar | ❌ NUNCA | ✅ Motor de la plataforma |
 
 ## G54 — Arquitectura Multi-tenant (2026-06-04)
 
@@ -724,6 +739,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 57. **Bug fix Content AI — campos vacíos en G54** (2026-06-03): nodo `🖼️ Obtener URL de Imagen` (Set node) solo emitía `{imagen_url:""}` borrando todo el contexto del post. Nodo `💾 Crear Registro en G54` usaba `$json` que quedaba vacío. Fix: jsonBody ahora referencia explícitamente `$('🔍 Parsear Versiones Inglés')` y `$('🔍 Parsear Post Español')`. Post llega completo a G54 con copy Instagram y Facebook.
 58. **Pendiente para mañana** (2026-06-03): consultar con el equipo G54 (1) idioma de los posts — actualmente en inglés, definir si debe ser español o bilingüe; (2) plataforma predeterminada de ideas generadas por el Strategist.
 59. **Strategist AI v3.0** (2026-06-04): nuevo workflow `cT1SS300CjujIyHS`, webhook `strategist-g54-v3`. Agrega trend finder: nodo `📰 Google News RSS` con User-Agent para bypass de bloqueo de Google → `📋 Extraer Titulares RSS` (Code node extrae `<title>` tags con regex, salta título de canal) → `🧠 Gemini: Analizar Tendencias` → `🔍 Parsear Tema Tendencia` → `🗂️ Preparar Ideas Batch v3` (N-1 evergreen + 1 trend por semana). Bug fixes: multi-company (company_id desde webhook, sin hardcode), Groq reemplazado por Gemini para tendencias (evita rate limit doble). Archivo: `workflow-strategist-ai-g54-v3.json`.
+60. **Multi-tenancy G54 implementada** (2026-06-04): patrón `?company=N` query param implementado en Community AI y Sales AI Motor. Patrón: `⚙️ Config G54 → 🔍 Preparar Resolución → 🏢 Resolver Empresa (continueOnFail) → 🏢 Aplicar Config Empresa (merge: query param > API > fallback CE)`. Decisión: Meta Tech Provider necesario para escalar pero por ahora cada cliente crea su App y usa query param. Pendiente G54: endpoints `GET /api/n8n/pages/{id}` y `GET /api/n8n/wa-phones/{id}`.
+61. **Sales AI Motor reconstruido limpio** (2026-06-04): workflow `eCOX3ogMjToxZsh9` reconstruido desde cero sin lógica CE. Webhook WA: `wa-engine-g54`, FB/IG: `sales-ai-social`. Eliminado: cotizador, cajones, medidas, tipo_cajón, ISPM-15, modo contingencia rule-based. `datos_actualizados` es objeto libre. IA: Groq llama-3.3-70b + Gemini fallback. Estados: Nuevo → En calificación → Calificado → Vendedor notificado. Alex (`zAhV8gEsXD8dCrXq`, `whatsapp-ce`) intocable. Activo en n8n. Archivo: `workflow-sales-ai-motor-g54.json`.
 
 ## Nomify — Planilla Nicaragua (Express + MariaDB)
 
@@ -937,6 +954,10 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 El día comenzó resolviendo un problema que se descubrió al probar el agente de estrategia con otra empresa: todo lo que generaba se guardaba siempre en Crating Express sin importar desde qué empresa se activara. Eso era porque el número de empresa estaba escrito fijo en el código. Se corrigió para que el agente reciba el número de empresa como parte del mensaje que lo activa, y se aplicó el mismo fix al agente de contenido. También se notó que al aprobar una idea desde el panel de G54 el sistema no estaba enviando correctamente el ID de esa idea — eso es un bug del lado de G54 que el equipo debe corregir; mientras tanto se dejó un parche para que el agente use la primera idea disponible.
 
 En la tarde se construyó la versión 3 del Strategist AI, que ahora incluye un módulo para detectar temas de tendencia real en lugar de inventarlos. La idea es que por cada semana del plan se generen varias ideas de contenido normal y una basada en algo que esté pasando en el sector en ese momento. Para lograrlo se conectó a NewsAPI, un servicio que provee noticias reales en tiempo real. La IA revisa los titulares, elige el más relevante para la empresa, y luego hace una segunda consulta para verificar que ese tema tenga al menos 5 artículos publicados en los últimos 3 días — si no los tiene, la idea sale como contenido normal sin marcarse como tendencia. Se probó en vivo y funcionó: eligió el tema de "entregas el mismo día para manufactura" basado en una noticia real, la verificación encontró 145 artículos recientes sobre ese tema, y quedó guardado en G54. Pendiente para mañana: definir en qué idioma deben generarse los posts y cuál es la plataforma que el Strategist debe asignar por defecto a las ideas.
+
+En la segunda parte del día se trabajó en multi-tenancy de G54. Se implementó el patrón de resolución de empresa via query param (`?company=N`) en Community AI y Sales AI Motor — ambos leen el param del webhook y lo usan como company_id, con fallback a company_id=1 (CE) mientras G54 no implemente los endpoints de resolución automática. Se discutió el proceso de Meta Tech Provider (necesario para manejar múltiples clientes con una sola App de Meta) y se decidió que por ahora cada cliente configura su propia App y usa el query param. Se documentaron los pasos y prerequisitos para iniciar ese proceso cuando haya muestras de funcionamiento.
+
+Se reconstruyó el Sales AI Motor (`eCOX3ogMjToxZsh9`) desde cero como agente genérico limpio: eliminada toda lógica de CE (cotizador, cajones, medidas, tipo_cajón, ISPM-15, modo contingencia rule-based). El nuevo motor tiene webhook `wa-engine-g54` (WA) y `sales-ai-social` (FB/IG DM), `datos_actualizados` como objeto libre definido por el system_prompt del cliente, Groq + Gemini fallback, y estados de lead genéricos. Alex (`zAhV8gEsXD8dCrXq`, path `whatsapp-ce`) se mantuvo intocable. Workflow subido a n8n y activado. Todos los archivos commiteados en rama `claude/vibrant-volta-zUwsV`.
 
 ---
 
