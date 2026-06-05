@@ -1,10 +1,21 @@
 # PROYECTO SOL — G54 Platform + Crating Express + Nomify
 
+## REGLA ABSOLUTA — G54 Platform
+
+> **NADA específico de ningún cliente puede estar hardcodeado en los agentes de G54.**
+> Los workflows de G54 (`workflow-strategist-ai-g54-v3.json`, `workflow-distribution-ai-g54.json`, `workflow-community-ai-g54.json`, `workflow-sales-ai-motor-g54.json`, `workflow-analytics-ai-g54.json`, `workflow-analytics-ai-mensual-g54.json`) son de la **plataforma**, no de CE.
+> Cualquier restricción, prompt, configuración o dato de un cliente específico (incluyendo CE) va en:
+> - El perfil de empresa en G54 API (`/api/n8n/companies/{id}`)
+> - Airtable del cliente (solo para workflows CE-específicos)
+> - El nodo ⚙️ Config del workflow con `continueOnFail` leyendo de G54
+>
+> **Workflows exclusivos de CE** (sí pueden tener lógica CE): `workflow-rrss-n8n-v13.json`, `workflow-wa-engine-g54.json` (Alex, ID `zAhV8gEsXD8dCrXq`)
+
 ## Qué es este proyecto
 
 Tres líneas de trabajo en un mismo repositorio:
 1. **G54 Platform** — plataforma de adquisición digital multi-módulo (ver sección G54 abajo)
-2. **Crating Express** — cliente piloto de G54 (embalaje industrial, Miami FL)
+2. **Crating Express** — cliente piloto de G54 (embalaje de madera a medida, Miami FL)
 3. **Nomify** — sistema de planilla para Nicaragua (Express + MariaDB)
 
 ---
