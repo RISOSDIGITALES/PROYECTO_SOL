@@ -1,1 +1,1363 @@
-{"updatedAt": "2026-06-01T18:00:09.061Z", "createdAt": "2026-06-01T18:00:09.061Z", "id": "nmOjyvdfTkEo5FVJ", "name": "📢 Distribution AI — Crating Express v1.0 (G54)", "description": null, "active": false, "isArchived": false, "nodes": [{"id": "cfg", "name": "⚙️ Config Distribution", "type": "n8n-nodes-base.set", "typeVersion": 3.4, "position": [0, 300], "parameters": {"mode": "manual", "duplicateItem": false, "assignments": {"assignments": [{"id": "a1", "name": "G54_BASE_URL", "value": "https://apigrowth.mdarthurdigital.com", "type": "string"}, {"id": "a2", "name": "G54_N8N_TOKEN", "value": "", "type": "string"}, {"id": "a3", "name": "G54_AGENT_TOKEN", "value": "", "type": "string"}, {"id": "a4", "name": "G54_COMPANY_ID", "value": "1", "type": "string"}, {"id": "a5", "name": "FB_PAGE_ID", "value": "1713965015486703", "type": "string"}, {"id": "a6", "name": "FB_ACCESS_TOKEN", "value": "FB_TOKEN_REDACTED", "type": "string"}, {"id": "a7", "name": "IG_USER_ID", "value": "17841402206774619", "type": "string"}]}, "options": {}}}, {"id": "trigger", "name": "⏰ Trigger: Cada hora", "type": "n8n-nodes-base.scheduleTrigger", "typeVersion": 1.2, "position": [-220, 300], "parameters": {"rule": {"interval": [{"field": "hours", "hoursInterval": 1}]}}}, {"id": "get-posts", "name": "📥 Obtener Posts Aprobados (G54)", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [220, 300], "continueOnFail": true, "parameters": {"method": "GET", "url": "={{ $('⚙️ Config Distribution').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Distribution').item.json.G54_COMPANY_ID + '/rrss/posts?status=aprobado' }}", "sendHeaders": true, "headerParameters": {"parameters": [{"name": "Authorization", "value": "={{ 'Bearer ' + $('⚙️ Config Distribution').item.json.G54_N8N_TOKEN }}"}, {"name": "Accept", "value": "application/json"}]}, "options": {}}}, {"id": "if-posts", "name": "🔍 ¿Hay posts para publicar?", "type": "n8n-nodes-base.if", "typeVersion": 2.2, "position": [440, 300], "parameters": {"conditions": {"options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1}, "conditions": [{"id": "c1", "leftValue": "={{ Array.isArray($json) ? $json.length : ($json.data ? $json.data.length : 0) }}", "rightValue": 0, "operator": {"type": "number", "operation": "gt"}}], "combinator": "and"}, "options": {}}}, {"id": "no-posts", "name": "⚠️ Sin posts para publicar", "type": "n8n-nodes-base.noOp", "typeVersion": 1, "position": [660, 460], "parameters": {}}, {"id": "norm-posts", "name": "🔧 Normalizar Posts", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [660, 300], "parameters": {"jsCode": "\nconst raw = $input.item.json;\n// API may return array directly or { data: [] }\nconst posts = Array.isArray(raw) ? raw : (raw.data || []);\n// Return one item per post\nreturn posts.map(p => ({ json: p }));\n"}}, {"id": "if-img", "name": "🖼️ ¿Tiene imagen?", "type": "n8n-nodes-base.if", "typeVersion": 2.2, "position": [880, 300], "parameters": {"conditions": {"options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1}, "conditions": [{"id": "c1", "leftValue": "={{ $json.imagen_url || $json.fields?.imagen_url || '' }}", "rightValue": "", "operator": {"type": "string", "operation": "notEquals"}}], "combinator": "and"}, "options": {}}}, {"id": "prep-post", "name": "🔧 Preparar Datos Post", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [880, 140], "parameters": {"jsCode": "\n// Normalize field names (API may use snake_case or nested fields object)\nconst p = $input.item.json;\nconst f = p.fields || p;\n\nconst post_id        = p.id || p.record_id || '';\nconst copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || f.post_facebook  || '';\nconst copy_instagram = f.copy_instagram || f.Post_Instagram_EN || f.post_instagram || '';\nconst imagen_url     = f.imagen_url     || f.imagen            || '';\n\nreturn [{\n  json: {\n    post_id,\n    copy_facebook,\n    copy_instagram,\n    imagen_url,\n    has_image: !!imagen_url,\n  }\n}];\n"}}, {"id": "fb-photo", "name": "📘 FB: Publicar con Foto", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [1100, 140], "continueOnFail": true, "parameters": {"method": "POST", "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config Distribution').item.json.FB_PAGE_ID }}/photos", "sendBody": true, "contentType": "form-urlencoded", "bodyParameters": {"parameters": [{"name": "url", "value": "={{ $('🔧 Preparar Datos Post').item.json.imagen_url }}"}, {"name": "caption", "value": "={{ $('🔧 Preparar Datos Post').item.json.copy_facebook }}"}, {"name": "access_token", "value": "={{ $('⚙️ Config Distribution').item.json.FB_ACCESS_TOKEN }}"}]}, "options": {}}}, {"id": "fb-text", "name": "📘 FB: Publicar Solo Texto", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [1100, 460], "continueOnFail": true, "parameters": {"method": "POST", "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config Distribution').item.json.FB_PAGE_ID }}/feed", "sendBody": true, "contentType": "form-urlencoded", "bodyParameters": {"parameters": [{"name": "message", "value": "={{ $('🔧 Preparar Datos Post').item.json.copy_facebook }}"}, {"name": "access_token", "value": "={{ $('⚙️ Config Distribution').item.json.FB_ACCESS_TOKEN }}"}]}, "options": {}}}, {"id": "ig-container", "name": "📸 IG: Crear Container", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [1320, 140], "continueOnFail": true, "parameters": {"method": "POST", "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config Distribution').item.json.IG_USER_ID }}/media", "sendBody": true, "contentType": "form-urlencoded", "bodyParameters": {"parameters": [{"name": "image_url", "value": "={{ $('🔧 Preparar Datos Post').item.json.imagen_url }}"}, {"name": "caption", "value": "={{ $('🔧 Preparar Datos Post').item.json.copy_instagram }}"}, {"name": "access_token", "value": "={{ $('⚙️ Config Distribution').item.json.FB_ACCESS_TOKEN }}"}]}, "options": {}}}, {"id": "if-ig-ok", "name": "🔀 ¿IG Container OK?", "type": "n8n-nodes-base.if", "typeVersion": 2.2, "position": [1540, 140], "parameters": {"conditions": {"options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1}, "conditions": [{"id": "c1", "leftValue": "={{ $json.id || '' }}", "rightValue": "", "operator": {"type": "string", "operation": "notEquals"}}], "combinator": "and"}, "options": {}}}, {"id": "ig-publish", "name": "📸 IG: Publicar", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [1760, 100], "continueOnFail": true, "parameters": {"method": "POST", "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config Distribution').item.json.IG_USER_ID }}/media_publish", "sendBody": true, "contentType": "form-urlencoded", "bodyParameters": {"parameters": [{"name": "creation_id", "value": "={{ $json.id }}"}, {"name": "access_token", "value": "={{ $('⚙️ Config Distribution').item.json.FB_ACCESS_TOKEN }}"}]}, "options": {}}}, {"id": "ig-skip", "name": "⚠️ IG: Skip (container falló)", "type": "n8n-nodes-base.noOp", "typeVersion": 1, "position": [1760, 200], "parameters": {}}, {"id": "merge-pub", "name": "🔀 Merge Publicaciones", "type": "n8n-nodes-base.merge", "typeVersion": 3, "position": [1980, 300], "parameters": {"mode": "combine", "combinationMode": "mergeByPosition", "options": {}}}, {"id": "g54-pub", "name": "✅ G54: Estado → Publicado", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [2200, 300], "continueOnFail": true, "parameters": {"method": "PUT", "url": "={{ $('⚙️ Config Distribution').item.json.G54_BASE_URL + '/api/rrss/posts/' + $('🔧 Preparar Datos Post').item.json.post_id + '/status' }}", "sendHeaders": true, "headerParameters": {"parameters": [{"name": "Authorization", "value": "={{ 'Bearer ' + $('⚙️ Config Distribution').item.json.G54_AGENT_TOKEN }}"}, {"name": "Content-Type", "value": "application/json"}, {"name": "Accept", "value": "application/json"}]}, "sendBody": true, "specifyBody": "json", "jsonBody": "{\"status\": \"publicado\"}", "options": {}}}, {"id": "reporte", "name": "📊 Reporte Publicación", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [2420, 300], "parameters": {"jsCode": "\nconst postId = $('🔧 Preparar Datos Post').item?.json?.post_id || 'desconocido';\nconst g54Status = $('✅ G54: Estado → Publicado').item?.json?.status || 'sin respuesta';\nconst ts = new Date().toLocaleString('es-CR', {timeZone:'America/New_York'});\n\nreturn [{\n  json: {\n    mensaje: `Post ${postId} publicado en FB/IG y marcado en G54 como publicado.`,\n    timestamp_miami: ts,\n    g54_response: g54Status,\n  }\n}];\n"}}], "connections": {"⏰ Trigger: Cada hora": {"main": [[{"node": "⚙️ Config Distribution", "type": "main", "index": 0}]]}, "⚙️ Config Distribution": {"main": [[{"node": "📥 Obtener Posts Aprobados (G54)", "type": "main", "index": 0}]]}, "📥 Obtener Posts Aprobados (G54)": {"main": [[{"node": "🔍 ¿Hay posts para publicar?", "type": "main", "index": 0}]]}, "🔍 ¿Hay posts para publicar?": {"main": [[{"node": "🔧 Normalizar Posts", "type": "main", "index": 0}], [{"node": "⚠️ Sin posts para publicar", "type": "main", "index": 0}]]}, "🔧 Normalizar Posts": {"main": [[{"node": "🔧 Preparar Datos Post", "type": "main", "index": 0}]]}, "🔧 Preparar Datos Post": {"main": [[{"node": "🖼️ ¿Tiene imagen?", "type": "main", "index": 0}]]}, "🖼️ ¿Tiene imagen?": {"main": [[{"node": "📘 FB: Publicar con Foto", "type": "main", "index": 0}, {"node": "📸 IG: Crear Container", "type": "main", "index": 0}], [{"node": "📘 FB: Publicar Solo Texto", "type": "main", "index": 0}]]}, "📘 FB: Publicar con Foto": {"main": [[{"node": "🔀 Merge Publicaciones", "type": "main", "index": 0}]]}, "📸 IG: Crear Container": {"main": [[{"node": "🔀 ¿IG Container OK?", "type": "main", "index": 0}]]}, "🔀 ¿IG Container OK?": {"main": [[{"node": "📸 IG: Publicar", "type": "main", "index": 0}], [{"node": "⚠️ IG: Skip (container falló)", "type": "main", "index": 0}]]}, "📸 IG: Publicar": {"main": [[{"node": "🔀 Merge Publicaciones", "type": "main", "index": 1}]]}, "⚠️ IG: Skip (container falló)": {"main": [[{"node": "🔀 Merge Publicaciones", "type": "main", "index": 1}]]}, "📘 FB: Publicar Solo Texto": {"main": [[{"node": "✅ G54: Estado → Publicado", "type": "main", "index": 0}]]}, "🔀 Merge Publicaciones": {"main": [[{"node": "✅ G54: Estado → Publicado", "type": "main", "index": 0}]]}, "✅ G54: Estado → Publicado": {"main": [[{"node": "📊 Reporte Publicación", "type": "main", "index": 0}]]}}, "settings": {"executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "errorWorkflow": "", "availableInMCP": false}, "staticData": null, "meta": null, "pinData": null, "versionId": "c267f787-61e3-4b48-ac53-beea40060c0c", "activeVersionId": null, "versionCounter": 1, "triggerCount": 0, "shared": [{"updatedAt": "2026-06-01T18:00:09.070Z", "createdAt": "2026-06-01T18:00:09.070Z", "role": "workflow:owner", "workflowId": "nmOjyvdfTkEo5FVJ", "projectId": "scK6yPpEmlkikl67", "project": {"updatedAt": "2026-03-16T19:58:01.773Z", "createdAt": "2026-03-16T19:56:18.866Z", "id": "scK6yPpEmlkikl67", "name": "Solange  Torrez <risosadmi@gmail.com>", "type": "personal", "icon": null, "description": null, "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"}}], "tags": [], "activeVersion": null}
+{
+  "updatedAt": "2026-06-06T16:29:12.163Z",
+  "createdAt": "2026-06-01T18:00:09.061Z",
+  "id": "nmOjyvdfTkEo5FVJ",
+  "name": "📢 Distribution AI — Crating Express v1.0 (G54)",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "cfg",
+      "name": "⚙️ Config Distribution",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "G54_BASE_URL",
+              "value": "https://apigrowth.mdarthurdigital.com",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "G54_N8N_TOKEN",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "G54_AGENT_TOKEN",
+              "value": "G54_AGENT_TOKEN_REDACTED",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "G54_COMPANY_ID",
+              "value": "1",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "FB_PAGE_ID",
+              "value": "1713965015486703",
+              "type": "string"
+            },
+            {
+              "id": "a6",
+              "name": "FB_ACCESS_TOKEN",
+              "value": "FB_TOKEN_REDACTED",
+              "type": "string"
+            },
+            {
+              "id": "a7",
+              "name": "IG_USER_ID",
+              "value": "17841402206774619",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "trigger",
+      "name": "⏰ Trigger: Cada hora",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -220,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "get-posts",
+      "name": "📥 Obtener Posts Aprobados (G54)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        300
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config Distribution').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Distribution').item.json.G54_COMPANY_ID + '/rrss/posts/to-publish' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Distribution').item.json.G54_N8N_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "if-posts",
+      "name": "🔍 ¿Hay posts para publicar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ Array.isArray($json) ? $json.length : ($json.data ? $json.data.length : 0) }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "no-posts",
+      "name": "⚠️ Sin posts para publicar",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        660,
+        460
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "norm-posts",
+      "name": "🔧 Normalizar Posts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Token y page_id desde G54 (cuando Walter agregue al endpoint to-publish)\n// Por ahora fallback al Config node\nconst config = $('⚙️ Config Distribution').item.json;\n\nconst raw = $input.item.json;\n// API may return array directly or { data: [] }\nconst posts = Array.isArray(raw) ? raw : (raw.data || []);\n// Return one item per post\nreturn posts.map(p => ({ json: p }));\n"
+      }
+    },
+    {
+      "id": "if-img",
+      "name": "🖼️ ¿Tiene imagen?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.imagen_url || $json.fields?.imagen_url || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "prep-post",
+      "name": "🔧 Preparar Datos Post",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        140
+      ],
+      "parameters": {
+        "jsCode": "\n// Normalize field names (API may use snake_case or nested fields object)\nconst p = $input.item.json;\nconst f = p.fields || p;\n\nconst post_id        = p.id || p.record_id || '';\nconst copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || f.post_facebook  || '';\nconst copy_instagram = f.copy_instagram || f.Post_Instagram_EN || f.post_instagram || '';\nconst imagen_url     = f.imagen_url     || f.imagen            || '';\n\nreturn [{\n  json: {\n    post_id,\n    copy_facebook,\n    copy_instagram,\n    imagen_url,\n    has_image: !!imagen_url,\n  }\n}];\n"
+      }
+    },
+    {
+      "id": "fb-photo",
+      "name": "📘 FB: Publicar con Foto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        140
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config Distribution').item.json.FB_PAGE_ID }}/photos",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $('🔧 Preparar Datos Post').item.json.imagen_url }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $('🔧 Preparar Datos Post').item.json.copy_facebook }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('⚙️ Config Distribution').item.json.FB_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "fb-text",
+      "name": "📘 FB: Publicar Solo Texto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        460
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config Distribution').item.json.FB_PAGE_ID }}/feed",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "={{ $('🔧 Preparar Datos Post').item.json.copy_facebook }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('⚙️ Config Distribution').item.json.FB_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ig-container",
+      "name": "📸 IG: Crear Container",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        140
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config Distribution').item.json.IG_USER_ID }}/media",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "image_url",
+              "value": "={{ $('🔧 Preparar Datos Post').item.json.imagen_url }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $('🔧 Preparar Datos Post').item.json.copy_instagram }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('⚙️ Config Distribution').item.json.FB_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "if-ig-ok",
+      "name": "🔀 ¿IG Container OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1540,
+        140
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.id || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ig-publish",
+      "name": "📸 IG: Publicar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        100
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config Distribution').item.json.IG_USER_ID }}/media_publish",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('⚙️ Config Distribution').item.json.FB_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ig-skip",
+      "name": "⚠️ IG: Skip (container falló)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        200
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "merge-pub",
+      "name": "🔀 Merge Publicaciones",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1980,
+        300
+      ],
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      }
+    },
+    {
+      "id": "g54-pub",
+      "name": "✅ G54: Estado → Publicado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        300
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Distribution').item.json.G54_BASE_URL + '/api/agent/rrss/posts/' + $('🔧 Preparar Datos Post').item.json.post_id + '/mark-published' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Distribution').item.json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"post_id_platform\": $(\"🔧 Preparar Datos Post\").item.json.fb_post_id || $(\"🔧 Preparar Datos Post\").item.json.ig_post_id || \"\", \"link_url\": $(\"🔧 Preparar Datos Post\").item.json.link_url || \"\" }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "reporte",
+      "name": "📊 Reporte Publicación",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        300
+      ],
+      "parameters": {
+        "jsCode": "\nconst postId = $('🔧 Preparar Datos Post').item?.json?.post_id || 'desconocido';\nconst g54Status = $('✅ G54: Estado → Publicado').item?.json?.status || 'sin respuesta';\nconst ts = new Date().toLocaleString('es-CR', {timeZone:'America/New_York'});\n\nreturn [{\n  json: {\n    mensaje: `Post ${postId} publicado en FB/IG y marcado en G54 como publicado.`,\n    timestamp_miami: ts,\n    g54_response: g54Status,\n  }\n}];\n"
+      }
+    }
+  ],
+  "connections": {
+    "⏰ Trigger: Cada hora": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config Distribution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Config Distribution": {
+      "main": [
+        [
+          {
+            "node": "📥 Obtener Posts Aprobados (G54)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Obtener Posts Aprobados (G54)": {
+      "main": [
+        [
+          {
+            "node": "🔍 ¿Hay posts para publicar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 ¿Hay posts para publicar?": {
+      "main": [
+        [
+          {
+            "node": "🔧 Normalizar Posts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⚠️ Sin posts para publicar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Normalizar Posts": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Datos Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Datos Post": {
+      "main": [
+        [
+          {
+            "node": "🖼️ ¿Tiene imagen?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🖼️ ¿Tiene imagen?": {
+      "main": [
+        [
+          {
+            "node": "📘 FB: Publicar con Foto",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📸 IG: Crear Container",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📘 FB: Publicar Solo Texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📘 FB: Publicar con Foto": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Publicaciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📸 IG: Crear Container": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿IG Container OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿IG Container OK?": {
+      "main": [
+        [
+          {
+            "node": "📸 IG: Publicar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⚠️ IG: Skip (container falló)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📸 IG: Publicar": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Publicaciones",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "⚠️ IG: Skip (container falló)": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Publicaciones",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "📘 FB: Publicar Solo Texto": {
+      "main": [
+        [
+          {
+            "node": "✅ G54: Estado → Publicado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Merge Publicaciones": {
+      "main": [
+        [
+          {
+            "node": "✅ G54: Estado → Publicado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ G54: Estado → Publicado": {
+      "main": [
+        [
+          {
+            "node": "📊 Reporte Publicación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:⏰ Trigger: Cada hora": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": null,
+  "pinData": null,
+  "versionId": "8f457958-079d-4dfa-b9de-51481633a6c5",
+  "activeVersionId": "8f457958-079d-4dfa-b9de-51481633a6c5",
+  "versionCounter": 23,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-06-01T18:00:09.070Z",
+      "createdAt": "2026-06-01T18:00:09.070Z",
+      "role": "workflow:owner",
+      "workflowId": "nmOjyvdfTkEo5FVJ",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "updatedAt": "2026-03-16T19:58:01.773Z",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-06-06T16:29:12.168Z",
+    "createdAt": "2026-06-06T16:29:12.168Z",
+    "versionId": "8f457958-079d-4dfa-b9de-51481633a6c5",
+    "workflowId": "nmOjyvdfTkEo5FVJ",
+    "nodes": [
+      {
+        "id": "cfg",
+        "name": "⚙️ Config Distribution",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          0,
+          300
+        ],
+        "parameters": {
+          "mode": "manual",
+          "duplicateItem": false,
+          "assignments": {
+            "assignments": [
+              {
+                "id": "a1",
+                "name": "G54_BASE_URL",
+                "value": "https://apigrowth.mdarthurdigital.com",
+                "type": "string"
+              },
+              {
+                "id": "a2",
+                "name": "G54_N8N_TOKEN",
+                "value": "",
+                "type": "string"
+              },
+              {
+                "id": "a3",
+                "name": "G54_AGENT_TOKEN",
+                "value": "G54_AGENT_TOKEN_REDACTED",
+                "type": "string"
+              },
+              {
+                "id": "a4",
+                "name": "G54_COMPANY_ID",
+                "value": "1",
+                "type": "string"
+              },
+              {
+                "id": "a5",
+                "name": "FB_PAGE_ID",
+                "value": "1713965015486703",
+                "type": "string"
+              },
+              {
+                "id": "a6",
+                "name": "FB_ACCESS_TOKEN",
+                "value": "FB_TOKEN_REDACTED",
+                "type": "string"
+              },
+              {
+                "id": "a7",
+                "name": "IG_USER_ID",
+                "value": "17841402206774619",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "trigger",
+        "name": "⏰ Trigger: Cada hora",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          -220,
+          300
+        ],
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "hours",
+                "hoursInterval": 1
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "get-posts",
+        "name": "📥 Obtener Posts Aprobados (G54)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          220,
+          300
+        ],
+        "continueOnFail": true,
+        "parameters": {
+          "method": "GET",
+          "url": "={{ $('⚙️ Config Distribution').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Distribution').item.json.G54_COMPANY_ID + '/rrss/posts?status=aprobado&scheduled_before=' + new Date().toISOString().slice(0,10) }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config Distribution').item.json.G54_N8N_TOKEN }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "if-posts",
+        "name": "🔍 ¿Hay posts para publicar?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          440,
+          300
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 1
+            },
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ Array.isArray($json) ? $json.length : ($json.data ? $json.data.length : 0) }}",
+                "rightValue": 0,
+                "operator": {
+                  "type": "number",
+                  "operation": "gt"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "no-posts",
+        "name": "⚠️ Sin posts para publicar",
+        "type": "n8n-nodes-base.noOp",
+        "typeVersion": 1,
+        "position": [
+          660,
+          460
+        ],
+        "parameters": {}
+      },
+      {
+        "id": "norm-posts",
+        "name": "🔧 Normalizar Posts",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          660,
+          300
+        ],
+        "parameters": {
+          "jsCode": "\nconst raw = $input.item.json;\n// API may return array directly or { data: [] }\nconst posts = Array.isArray(raw) ? raw : (raw.data || []);\n// Return one item per post\nreturn posts.map(p => ({ json: p }));\n"
+        }
+      },
+      {
+        "id": "if-img",
+        "name": "🖼️ ¿Tiene imagen?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          880,
+          300
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 1
+            },
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.imagen_url || $json.fields?.imagen_url || '' }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEquals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "prep-post",
+        "name": "🔧 Preparar Datos Post",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          880,
+          140
+        ],
+        "parameters": {
+          "jsCode": "\n// Normalize field names (API may use snake_case or nested fields object)\nconst p = $input.item.json;\nconst f = p.fields || p;\n\nconst post_id        = p.id || p.record_id || '';\nconst copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || f.post_facebook  || '';\nconst copy_instagram = f.copy_instagram || f.Post_Instagram_EN || f.post_instagram || '';\nconst imagen_url     = f.imagen_url     || f.imagen            || '';\n\nreturn [{\n  json: {\n    post_id,\n    copy_facebook,\n    copy_instagram,\n    imagen_url,\n    has_image: !!imagen_url,\n  }\n}];\n"
+        }
+      },
+      {
+        "id": "fb-photo",
+        "name": "📘 FB: Publicar con Foto",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1100,
+          140
+        ],
+        "continueOnFail": true,
+        "parameters": {
+          "method": "POST",
+          "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config Distribution').item.json.FB_PAGE_ID }}/photos",
+          "sendBody": true,
+          "contentType": "form-urlencoded",
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "url",
+                "value": "={{ $('🔧 Preparar Datos Post').item.json.imagen_url }}"
+              },
+              {
+                "name": "caption",
+                "value": "={{ $('🔧 Preparar Datos Post').item.json.copy_facebook }}"
+              },
+              {
+                "name": "access_token",
+                "value": "={{ $('⚙️ Config Distribution').item.json.FB_ACCESS_TOKEN }}"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "fb-text",
+        "name": "📘 FB: Publicar Solo Texto",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1100,
+          460
+        ],
+        "continueOnFail": true,
+        "parameters": {
+          "method": "POST",
+          "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config Distribution').item.json.FB_PAGE_ID }}/feed",
+          "sendBody": true,
+          "contentType": "form-urlencoded",
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "message",
+                "value": "={{ $('🔧 Preparar Datos Post').item.json.copy_facebook }}"
+              },
+              {
+                "name": "access_token",
+                "value": "={{ $('⚙️ Config Distribution').item.json.FB_ACCESS_TOKEN }}"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "ig-container",
+        "name": "📸 IG: Crear Container",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1320,
+          140
+        ],
+        "continueOnFail": true,
+        "parameters": {
+          "method": "POST",
+          "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config Distribution').item.json.IG_USER_ID }}/media",
+          "sendBody": true,
+          "contentType": "form-urlencoded",
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "image_url",
+                "value": "={{ $('🔧 Preparar Datos Post').item.json.imagen_url }}"
+              },
+              {
+                "name": "caption",
+                "value": "={{ $('🔧 Preparar Datos Post').item.json.copy_instagram }}"
+              },
+              {
+                "name": "access_token",
+                "value": "={{ $('⚙️ Config Distribution').item.json.FB_ACCESS_TOKEN }}"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "if-ig-ok",
+        "name": "🔀 ¿IG Container OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1540,
+          140
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 1
+            },
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.id || '' }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEquals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "ig-publish",
+        "name": "📸 IG: Publicar",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1760,
+          100
+        ],
+        "continueOnFail": true,
+        "parameters": {
+          "method": "POST",
+          "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config Distribution').item.json.IG_USER_ID }}/media_publish",
+          "sendBody": true,
+          "contentType": "form-urlencoded",
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "creation_id",
+                "value": "={{ $json.id }}"
+              },
+              {
+                "name": "access_token",
+                "value": "={{ $('⚙️ Config Distribution').item.json.FB_ACCESS_TOKEN }}"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "ig-skip",
+        "name": "⚠️ IG: Skip (container falló)",
+        "type": "n8n-nodes-base.noOp",
+        "typeVersion": 1,
+        "position": [
+          1760,
+          200
+        ],
+        "parameters": {}
+      },
+      {
+        "id": "merge-pub",
+        "name": "🔀 Merge Publicaciones",
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3,
+        "position": [
+          1980,
+          300
+        ],
+        "parameters": {
+          "mode": "combine",
+          "combinationMode": "mergeByPosition",
+          "options": {}
+        }
+      },
+      {
+        "id": "g54-pub",
+        "name": "✅ G54: Estado → Publicado",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2200,
+          300
+        ],
+        "continueOnFail": true,
+        "parameters": {
+          "method": "PUT",
+          "url": "={{ $('⚙️ Config Distribution').item.json.G54_BASE_URL + '/api/rrss/posts/' + $('🔧 Preparar Datos Post').item.json.post_id + '/status' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config Distribution').item.json.G54_AGENT_TOKEN }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "{\"status\": \"publicado\"}",
+          "options": {}
+        }
+      },
+      {
+        "id": "reporte",
+        "name": "📊 Reporte Publicación",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2420,
+          300
+        ],
+        "parameters": {
+          "jsCode": "\nconst postId = $('🔧 Preparar Datos Post').item?.json?.post_id || 'desconocido';\nconst g54Status = $('✅ G54: Estado → Publicado').item?.json?.status || 'sin respuesta';\nconst ts = new Date().toLocaleString('es-CR', {timeZone:'America/New_York'});\n\nreturn [{\n  json: {\n    mensaje: `Post ${postId} publicado en FB/IG y marcado en G54 como publicado.`,\n    timestamp_miami: ts,\n    g54_response: g54Status,\n  }\n}];\n"
+        }
+      }
+    ],
+    "connections": {
+      "⏰ Trigger: Cada hora": {
+        "main": [
+          [
+            {
+              "node": "⚙️ Config Distribution",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "⚙️ Config Distribution": {
+        "main": [
+          [
+            {
+              "node": "📥 Obtener Posts Aprobados (G54)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📥 Obtener Posts Aprobados (G54)": {
+        "main": [
+          [
+            {
+              "node": "🔍 ¿Hay posts para publicar?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔍 ¿Hay posts para publicar?": {
+        "main": [
+          [
+            {
+              "node": "🔧 Normalizar Posts",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "⚠️ Sin posts para publicar",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Normalizar Posts": {
+        "main": [
+          [
+            {
+              "node": "🔧 Preparar Datos Post",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Preparar Datos Post": {
+        "main": [
+          [
+            {
+              "node": "🖼️ ¿Tiene imagen?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🖼️ ¿Tiene imagen?": {
+        "main": [
+          [
+            {
+              "node": "📘 FB: Publicar con Foto",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "📸 IG: Crear Container",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📘 FB: Publicar Solo Texto",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📘 FB: Publicar con Foto": {
+        "main": [
+          [
+            {
+              "node": "🔀 Merge Publicaciones",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📸 IG: Crear Container": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿IG Container OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿IG Container OK?": {
+        "main": [
+          [
+            {
+              "node": "📸 IG: Publicar",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "⚠️ IG: Skip (container falló)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📸 IG: Publicar": {
+        "main": [
+          [
+            {
+              "node": "🔀 Merge Publicaciones",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "⚠️ IG: Skip (container falló)": {
+        "main": [
+          [
+            {
+              "node": "🔀 Merge Publicaciones",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "📘 FB: Publicar Solo Texto": {
+        "main": [
+          [
+            {
+              "node": "✅ G54: Estado → Publicado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 Merge Publicaciones": {
+        "main": [
+          [
+            {
+              "node": "✅ G54: Estado → Publicado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "✅ G54: Estado → Publicado": {
+        "main": [
+          [
+            {
+              "node": "📊 Reporte Publicación",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-06-06T16:29:12.258Z",
+        "id": 960,
+        "workflowId": "nmOjyvdfTkEo5FVJ",
+        "versionId": "8f457958-079d-4dfa-b9de-51481633a6c5",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      },
+      {
+        "createdAt": "2026-06-06T16:29:12.229Z",
+        "id": 959,
+        "workflowId": "nmOjyvdfTkEo5FVJ",
+        "versionId": "8f457958-079d-4dfa-b9de-51481633a6c5",
+        "event": "deactivated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    ]
+  }
+}
