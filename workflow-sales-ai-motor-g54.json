@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-05T20:42:19.970Z",
+  "updatedAt": "2026-06-06T13:43:02.468Z",
   "createdAt": "2026-04-04T14:58:41.470Z",
   "id": "eCOX3ogMjToxZsh9",
   "name": "\ud83d\udcac Sales AI \u2014 Motor de Conversaci\u00f3n G54",
@@ -50,7 +50,7 @@
             {
               "id": "a3",
               "name": "G54_AGENT_TOKEN",
-              "value": "g54_agent_produccion_2026",
+              "value": "={{ $vars.G54_AGENT_TOKEN || \"\" }}",
               "type": "string"
             },
             {
@@ -906,7 +906,7 @@
             {
               "id": "f3",
               "name": "G54_AGENT_TOKEN",
-              "value": "g54_agent_produccion_2026",
+              "value": "={{ $vars.G54_AGENT_TOKEN || \"\" }}",
               "type": "string"
             },
             {
@@ -1541,9 +1541,9 @@
   },
   "meta": null,
   "pinData": {},
-  "versionId": "2821cd0f-3c28-466f-a4ce-54c057caabcf",
-  "activeVersionId": "2821cd0f-3c28-466f-a4ce-54c057caabcf",
-  "versionCounter": 320,
+  "versionId": "47d0686b-18f5-4690-8ec0-a41a87de8032",
+  "activeVersionId": "47d0686b-18f5-4690-8ec0-a41a87de8032",
+  "versionCounter": 323,
   "triggerCount": 3,
   "shared": [
     {
@@ -1579,9 +1579,9 @@
     }
   ],
   "activeVersion": {
-    "updatedAt": "2026-06-05T20:42:19.973Z",
-    "createdAt": "2026-06-05T20:42:19.973Z",
-    "versionId": "2821cd0f-3c28-466f-a4ce-54c057caabcf",
+    "updatedAt": "2026-06-06T13:43:02.474Z",
+    "createdAt": "2026-06-06T13:43:02.474Z",
+    "versionId": "47d0686b-18f5-4690-8ec0-a41a87de8032",
     "workflowId": "eCOX3ogMjToxZsh9",
     "nodes": [
       {
@@ -2568,7 +2568,7 @@
           700
         ],
         "parameters": {
-          "jsCode": "const leadsRaw = $('\ud83d\udccb Obtener Leads Sin Respuesta').item.json;\nconst leads = leadsRaw?.data || leadsRaw?.records || [];\nconst waConfigRaw = $('\u2699\ufe0f Obtener WA Config Follow-up').item.json;\nconst waConfig = waConfigRaw?.data || {};\n\nconst followup24 = waConfig.followup_24h || 'Hola \ud83d\udc4b \u00bfSigues necesitando ayuda? Aqu\u00ed estamos para asistirte.';\nconst followup72 = waConfig.followup_72h || 'Seguimos disponibles cuando lo necesites \ud83d\udc4d';\nconst wa_access_token = waConfig.wa_access_token || '';\nconst phone_number_id = waConfig.phone_number_id || '';\n\nconst now = new Date();\nconst results = [];\n\nfor (const lead of leads) {\n  const ultimaActividad = new Date(lead.ultima_actividad || lead.created_at || 0);\n  const horasDiff = (now - ultimaActividad) / (1000 * 60 * 60);\n  let tipoFollowup = null;\n  if (horasDiff >= 72) tipoFollowup = '72h';\n  else if (horasDiff >= 24) tipoFollowup = '24h';\n  if (!tipoFollowup) continue;\n\n  const telefono = (lead.phone || '').replace(/^\\+/, '');\n  if (!telefono || telefono.startsWith('fbig_')) continue;\n\n  results.push({ json: {\n    leadId: lead.id,\n    telefono,\n    nombre: lead.name || '',\n    tipoFollowup,\n    estado: lead.estado || '',\n    mensajeFollowup: tipoFollowup === '24h' ? followup24 : followup72,\n    wa_access_token,\n    phone_number_id\n  } });\n}\n\nreturn results.length ? results : [{ json: { skip: true } }];"
+          "jsCode": "const leadsRaw = $('\ud83d\udccb Obtener Leads Sin Respuesta').item.json;\nconst leads = leadsRaw?.data || leadsRaw?.records || [];\n\nlet waConfigRaw = {};\ntry { waConfigRaw = $('\u2699\ufe0f Obtener WA Config Follow-up').item?.json || {}; } catch(e) {}\nconst waConfig = waConfigRaw?.data || {};\n\nconst followup24 = waConfig.followup_24h || 'Hola \ud83d\udc4b \u00bfSigues necesitando ayuda? Aqu\u00ed estamos para asistirte.';\nconst followup72 = waConfig.followup_72h || 'Seguimos disponibles cuando lo necesites \ud83d\udc4d';\nconst wa_access_token = waConfig.wa_access_token || '';\nconst phone_number_id = waConfig.phone_number_id || '';\n\nconst now = new Date();\nconst results = [];\n\nfor (const lead of leads) {\n  const ultimaActividad = new Date(lead.ultima_actividad || lead.created_at || 0);\n  const horasDiff = (now - ultimaActividad) / (1000 * 60 * 60);\n  let tipoFollowup = null;\n  if (horasDiff >= 72) tipoFollowup = '72h';\n  else if (horasDiff >= 24) tipoFollowup = '24h';\n  if (!tipoFollowup) continue;\n\n  const telefono = (lead.phone || '').replace(/^\\+/, '');\n  if (!telefono || telefono.startsWith('fbig_')) continue;\n\n  results.push({ json: {\n    leadId: lead.id,\n    telefono,\n    nombre: lead.name || '',\n    tipoFollowup,\n    estado: lead.estado || '',\n    mensajeFollowup: tipoFollowup === '24h' ? followup24 : followup72,\n    wa_access_token,\n    phone_number_id\n  } });\n}\n\nreturn results.length ? results : [{ json: { skip: true } }];"
         }
       },
       {
@@ -3111,18 +3111,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-06-05T20:42:20.156Z",
-        "id": 908,
+        "createdAt": "2026-06-06T13:43:02.807Z",
+        "id": 940,
         "workflowId": "eCOX3ogMjToxZsh9",
-        "versionId": "2821cd0f-3c28-466f-a4ce-54c057caabcf",
+        "versionId": "47d0686b-18f5-4690-8ec0-a41a87de8032",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-06-05T20:42:20.095Z",
-        "id": 907,
+        "createdAt": "2026-06-06T13:43:02.710Z",
+        "id": 939,
         "workflowId": "eCOX3ogMjToxZsh9",
-        "versionId": "2821cd0f-3c28-466f-a4ce-54c057caabcf",
+        "versionId": "47d0686b-18f5-4690-8ec0-a41a87de8032",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
