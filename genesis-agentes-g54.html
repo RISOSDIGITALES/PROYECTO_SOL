@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estado Agentes n8n — G54 Platform</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0d16;
+      --surface: #111520;
+      --border: #1a2035;
+      --border-hover: #2a3550;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --subtle: #8b98b8;
+
+      --green: #4ade80;
+      --green-bg: #052e16;
+      --green-border: #166534;
+
+      --yellow: #fbbf24;
+      --yellow-bg: #1c1200;
+      --yellow-border: #78350f;
+
+      --red: #f87171;
+      --red-bg: #2d0a0a;
+      --red-border: #7f1d1d;
+
+      --blue: #60a5fa;
+      --blue-bg: #0c1a3a;
+      --blue-border: #1e3a6e;
+
+      --purple: #c084fc;
+      --purple-bg: #1e0840;
+      --purple-border: #4c1d95;
+
+      --accent: #7c3aed;
+      --accent-light: #a78bfa;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    .header {
+      background: linear-gradient(135deg, #0f1628 0%, #1a0a2e 50%, #0a1220 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 40px 36px;
+    }
+    .header-inner { max-width: 1100px; margin: 0 auto; }
+    .header-label {
+      display: inline-block;
+      background: var(--purple-bg);
+      border: 1px solid var(--purple-border);
+      color: var(--purple);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 8px;
+    }
+    .header h1 span { color: var(--accent-light); }
+    .header p {
+      color: var(--subtle);
+      font-size: 15px;
+      max-width: 680px;
+      margin-bottom: 20px;
+    }
+    .header-meta {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .meta-item .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent-light);
+    }
+
+    /* LAYOUT */
+    .container { max-width: 1100px; margin: 0 auto; padding: 40px; }
+    section { margin-bottom: 56px; }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--accent-light);
+      margin-bottom: 20px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title .num {
+      background: var(--purple-bg);
+      border: 1px solid var(--purple-border);
+      color: var(--purple);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    /* BADGES */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .badge.ok     { background: var(--green-bg);  border: 1px solid var(--green-border);  color: var(--green); }
+    .badge.warn   { background: var(--yellow-bg); border: 1px solid var(--yellow-border); color: var(--yellow); }
+    .badge.error  { background: var(--red-bg);    border: 1px solid var(--red-border);    color: var(--red); }
+    .badge.info   { background: var(--blue-bg);   border: 1px solid var(--blue-border);   color: var(--blue); }
+    .badge.purple { background: var(--purple-bg); border: 1px solid var(--purple-border); color: var(--purple); }
+
+    /* SUMMARY TABLE */
+    .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; background: var(--surface); }
+    thead th {
+      background: #0d1120;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #141825; }
+    td { padding: 12px 16px; vertical-align: middle; }
+    td.agent-name { font-weight: 600; color: #f1f5f9; }
+    td.blocked { color: var(--muted); font-size: 12px; }
+
+    /* AGENT CARDS */
+    .cards { display: grid; gap: 20px; }
+
+    .agent-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .agent-card:hover { border-color: var(--border-hover); }
+    .agent-card.status-ok   { border-left: 3px solid var(--green); }
+    .agent-card.status-warn { border-left: 3px solid var(--yellow); }
+
+    .card-header {
+      padding: 20px 24px 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-header-left { flex: 1; }
+    .agent-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 4px;
+    }
+    .agent-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .agent-meta .chip {
+      font-size: 11px;
+      color: var(--muted);
+      background: #0d1120;
+      border: 1px solid var(--border);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .card-body { padding: 20px 24px; display: grid; gap: 16px; }
+
+    .card-desc { color: var(--subtle); line-height: 1.7; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 700px) { .info-grid { grid-template-columns: 1fr; } }
+
+    .info-block { }
+    .info-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .endpoint-list { list-style: none; }
+    .endpoint-list li {
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      padding: 4px 0;
+      color: var(--subtle);
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
+    .endpoint-list li .ep-ok  { color: var(--green); flex-shrink: 0; }
+    .endpoint-list li .ep-miss { color: var(--yellow); flex-shrink: 0; }
+
+    /* MISSING BLOCKS */
+    .missing-block {
+      background: #1a0e00;
+      border: 1px solid var(--yellow-border);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .missing-block.critical {
+      background: var(--red-bg);
+      border-color: var(--red-border);
+    }
+    .missing-header {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--yellow);
+      margin-bottom: 8px;
+    }
+    .missing-block.critical .missing-header { color: var(--red); }
+    .missing-item {
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(251,191,36,0.1);
+    }
+    .missing-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+    .missing-block.critical .missing-item { border-bottom-color: rgba(248,113,113,0.1); }
+    .missing-endpoint {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #f1f5f9;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    .missing-why {
+      font-size: 12px;
+      color: var(--subtle);
+      line-height: 1.6;
+    }
+    .missing-response {
+      background: #0d1120;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin-top: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: var(--blue);
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* PRIORITY LIST */
+    .priority-blocks { display: grid; gap: 16px; }
+    .priority-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .priority-header {
+      padding: 12px 18px;
+      background: #0d1120;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .priority-header strong { color: #f1f5f9; font-size: 13px; }
+    .priority-items { padding: 8px 0; }
+    .priority-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .priority-item:last-child { border-bottom: none; }
+    .priority-num {
+      background: var(--purple-bg);
+      border: 1px solid var(--purple-border);
+      color: var(--purple);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .priority-text { flex: 1; font-size: 13px; color: var(--text); line-height: 1.5; }
+    .priority-text code {
+      font-family: 'Courier New', monospace;
+      background: #0d1120;
+      border: 1px solid var(--border);
+      color: var(--blue);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 11px;
+    }
+    .priority-text .why { color: var(--muted); font-size: 12px; margin-top: 2px; display: block; }
+
+    /* CHECKLIST */
+    .checklist { display: grid; gap: 8px; }
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 16px;
+    }
+    .check-icon {
+      color: var(--green);
+      font-size: 14px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .check-text { font-size: 13px; color: var(--text); line-height: 1.5; }
+    .check-text strong { color: #f1f5f9; }
+    .check-text .sub { color: var(--muted); font-size: 12px; display: block; margin-top: 2px; }
+
+    /* PATTERN CODE */
+    .pattern-block {
+      background: #070a12;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .pattern-bar {
+      background: #0d1120;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    pre {
+      padding: 20px 24px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: #a5b4fc;
+      line-height: 1.8;
+      overflow-x: auto;
+    }
+    pre .comment { color: var(--muted); }
+    pre .node { color: var(--blue); }
+    pre .arrow { color: var(--purple); }
+    pre .note { color: var(--yellow); }
+
+    .note-box {
+      background: var(--blue-bg);
+      border: 1px solid var(--blue-border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--subtle);
+      margin-top: 16px;
+    }
+    .note-box strong { color: var(--blue); }
+
+    /* WEBHOOK URL */
+    .webhook-url {
+      background: #070a12;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 6px 12px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: var(--blue);
+      display: inline-block;
+      word-break: break-all;
+    }
+
+    /* FOOTER */
+    footer {
+      background: #070a12;
+      border-top: 1px solid var(--border);
+      padding: 24px 40px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    footer span { color: var(--subtle); }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div class="header-label">G54 Platform — Módulo 1 RRSS</div>
+    <h1>Estado Agentes n8n — <span>G54 Platform</span></h1>
+    <p>Referencia técnica para el equipo de backend — qué está construido, qué falta y por qué</p>
+    <div class="header-meta">
+      <div class="meta-item"><div class="dot"></div> 6 de junio 2026</div>
+      <div class="meta-item"><div class="dot"></div> 7 agentes n8n documentados</div>
+      <div class="meta-item"><div class="dot"></div> 4 activos · 3 parciales</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- SECCIÓN 1: RESUMEN EJECUTIVO -->
+  <section>
+    <div class="section-title"><span class="num">01</span> Resumen ejecutivo</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Agente</th>
+            <th>Estado</th>
+            <th>Funciona hoy</th>
+            <th>Bloqueado por</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="agent-name">Strategist AI v3.0</td>
+            <td><span class="badge ok">✅ Activo</span></td>
+            <td>Genera estrategia + trend finder</td>
+            <td class="blocked">—</td>
+          </tr>
+          <tr>
+            <td class="agent-name">Content AI v1.4</td>
+            <td><span class="badge ok">✅ Activo</span></td>
+            <td>Genera posts + email aprobación</td>
+            <td class="blocked">Gmail OAuth (reconectar manualmente)</td>
+          </tr>
+          <tr>
+            <td class="agent-name">Distribution AI v1.0</td>
+            <td><span class="badge warn">⚠️ Parcial</span></td>
+            <td>Lee posts to-publish, publica FB/IG</td>
+            <td class="blocked">Token/page_id en response de /posts/to-publish</td>
+          </tr>
+          <tr>
+            <td class="agent-name">Analytics AI Semanal</td>
+            <td><span class="badge ok">✅ Activo</span></td>
+            <td>Reporte lunes 8am, guarda métricas</td>
+            <td class="blocked">—</td>
+          </tr>
+          <tr>
+            <td class="agent-name">Analytics AI Mensual</td>
+            <td><span class="badge ok">✅ Activo</span></td>
+            <td>Reporte día 1 mes, guarda métricas</td>
+            <td class="blocked">—</td>
+          </tr>
+          <tr>
+            <td class="agent-name">Community AI v1.0</td>
+            <td><span class="badge warn">⚠️ Parcial</span></td>
+            <td>Procesa comentarios/DMs FB/IG</td>
+            <td class="blocked">Registro webhook en Meta + endpoint /pages/{page_id}</td>
+          </tr>
+          <tr>
+            <td class="agent-name">Sales AI Motor v1.0</td>
+            <td><span class="badge warn">⚠️ Parcial</span></td>
+            <td>Recibe WA, genera respuesta IA</td>
+            <td class="blocked">empresa-by-phone + wa_empresas + wa_config en BD</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SECCIÓN 2: DETALLE POR AGENTE -->
+  <section>
+    <div class="section-title"><span class="num">02</span> Detalle por agente</div>
+    <div class="cards">
+
+      <!-- AGENTE 1: Strategist AI -->
+      <div class="agent-card status-ok">
+        <div class="card-header">
+          <div class="card-header-left">
+            <div class="agent-title">Strategist AI v3.0</div>
+            <div class="agent-meta">
+              <span class="chip">ID: cT1SS300CjujIyHS</span>
+              <span class="chip">workflow-strategist-ai-g54-v3.json</span>
+              <span class="chip">Trigger: webhook</span>
+            </div>
+          </div>
+          <span class="badge ok">✅ 100% Operativo</span>
+        </div>
+        <div class="card-body">
+          <p class="card-desc">
+            Genera la estrategia RRSS completa para una empresa. Lee perfil, keywords y competidores desde G54.
+            Integra NewsAPI para detectar tendencias reales del sector. Produce un plan semanal de ideas para todo el período configurado (1–12 meses), con distribución TOFU/MOFU/BOFU. Guarda la estrategia e ideas en G54 vía endpoints agent.
+          </p>
+
+          <div>
+            <div class="info-label">Webhook de entrada</div>
+            <div class="webhook-url">POST https://n8n.mdarthurdigital.com/webhook/strategist-g54-v3?company=N</div>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-block">
+              <div class="info-label">Endpoints G54 que usa (✅ funcionan)</div>
+              <ul class="endpoint-list">
+                <li><span class="ep-ok">✅</span> GET /api/n8n/companies/{id}</li>
+                <li><span class="ep-ok">✅</span> GET /api/n8n/companies/{id}/productos-servicios</li>
+                <li><span class="ep-ok">✅</span> GET /api/n8n/companies/{id}/keywords</li>
+                <li><span class="ep-ok">✅</span> POST /api/agent/rrss/estrategia</li>
+                <li><span class="ep-ok">✅</span> POST /api/agent/rrss/ideas</li>
+              </ul>
+            </div>
+            <div class="info-block">
+              <div class="info-label">Endpoints faltantes</div>
+              <ul class="endpoint-list">
+                <li><span class="ep-ok">✅</span> Ninguno — funciona completo</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AGENTE 2: Content AI -->
+      <div class="agent-card status-ok">
+        <div class="card-header">
+          <div class="card-header-left">
+            <div class="agent-title">Content AI v1.4</div>
+            <div class="agent-meta">
+              <span class="chip">ID: wyO1f93A66imn9qw</span>
+              <span class="chip">workflow-rrss-n8n-v13.json</span>
+              <span class="chip">Trigger: webhook</span>
+            </div>
+          </div>
+          <span class="badge ok">✅ Operativo</span>
+        </div>
+        <div class="card-body">
+          <p class="card-desc">
+            Toma una idea aprobada del banco de ideas de G54 y genera el post completo usando el framework SEO/AEO/GEO de 8 pasos (intención de búsqueda, keywords secundarias, respuesta directa para IA, hook, desarrollo con datos, geografía, tono social, CTA). Guarda el post en G54 y envía email de aprobación al cliente. Cuando el cliente aprueba, marca el post como "aprobado" para que Distribution AI lo publique.
+          </p>
+
+          <div>
+            <div class="info-label">Webhook de entrada</div>
+            <div class="webhook-url">POST https://n8n.mdarthurdigital.com/webhook/rrss-automation-g54</div>
+            <div style="margin-top:6px; font-size:12px; color:var(--muted);">Body: <code style="font-family:monospace; background:#0d1120; border:1px solid var(--border); padding:2px 6px; border-radius:3px; color:var(--blue);">{ "company_id": N }</code></div>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-block">
+              <div class="info-label">Endpoints G54 que usa (✅ funcionan)</div>
+              <ul class="endpoint-list">
+                <li><span class="ep-ok">✅</span> GET /api/n8n/companies/{id}</li>
+                <li><span class="ep-ok">✅</span> GET /api/n8n/companies/{id}/productos-servicios</li>
+                <li><span class="ep-ok">✅</span> GET /api/n8n/companies/{id}/rrss/estrategia</li>
+                <li><span class="ep-ok">✅</span> GET /api/n8n/companies/{id}/rrss/ideas</li>
+                <li><span class="ep-ok">✅</span> POST /api/agent/rrss/posts</li>
+                <li><span class="ep-ok">✅</span> PUT /api/rrss/posts/{id}/status</li>
+              </ul>
+            </div>
+            <div class="info-block">
+              <div class="info-label">Endpoints faltantes</div>
+              <ul class="endpoint-list">
+                <li><span class="ep-ok">✅</span> Ninguno de endpoints</li>
+              </ul>
+              <div style="margin-top:12px;" class="missing-block">
+                <div class="missing-header">⚠️ Nota operativa</div>
+                <div class="missing-why">El email de aprobación usa Gmail OAuth2. Las credenciales OAuth expiran periódicamente y requieren reconexión manual desde n8n UI → Settings → Credentials. No es un problema de backend G54.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AGENTE 3: Distribution AI -->
+      <div class="agent-card status-warn">
+        <div class="card-header">
+          <div class="card-header-left">
+            <div class="agent-title">Distribution AI v1.0</div>
+            <div class="agent-meta">
+              <span class="chip">ID: nmOjyvdfTkEo5FVJ</span>
+              <span class="chip">workflow-distribution-ai-g54.json</span>
+              <span class="chip">Trigger: cada hora</span>
+            </div>
+          </div>
+          <span class="badge warn">⚠️ Parcial — multi-tenant bloqueado</span>
+        </div>
+        <div class="card-body">
+          <p class="card-desc">
+            Trigger horario que lee los posts con status "aprobado" desde G54, los publica en Facebook e Instagram via Meta Graph API, y marca cada post como publicado con el ID de plataforma generado por Meta. Soporta posts con imagen (sube la URL a la API de Meta) y posts de texto puro. Arquitectura multi-tenant: un mismo agente publica para múltiples empresas usando los tokens de cada una.
+          </p>
+
+          <div class="info-grid">
+            <div class="info-block">
+              <div class="info-label">Endpoints G54 que usa (✅ funcionan)</div>
+              <ul class="endpoint-list">
+                <li><span class="ep-ok">✅</span> GET /api/n8n/companies/{id}/rrss/posts/to-publish</li>
+                <li><span class="ep-ok">✅</span> POST /api/agent/rrss/posts/{id}/mark-published</li>
+              </ul>
+            </div>
+            <div class="info-block">
+              <div class="info-label">Estado actual</div>
+              <p style="font-size:12px; color:var(--muted);">Funciona solo para Crating Express porque el token de Meta está hardcodeado en el Config node como fallback temporal. Para multi-tenant los tokens deben venir de G54.</p>
+            </div>
+          </div>
+
+          <div class="missing-block critical">
+            <div class="missing-header">🔴 FALTA CRÍTICO — Para que multi-tenant funcione</div>
+            <div class="missing-item">
+              <div class="missing-endpoint">GET /api/n8n/companies/{id}/rrss/posts/to-publish</div>
+              <div class="missing-why">
+                Este endpoint ya existe pero el response de cada post debe incluir tres campos adicionales. El agente llama a <code style="font-family:monospace; background:#0d1120; padding:1px 4px; border-radius:3px; color:var(--blue);">POST /{page_id}/photos</code> y <code style="font-family:monospace; background:#0d1120; padding:1px 4px; border-radius:3px; color:var(--blue);">POST /{ig_user_id}/media</code> en la Graph API de Meta. Sin esos valores, no sabe a qué página publicar ni con qué token autorizar la llamada.
+              </div>
+              <div class="missing-response">// Agregar en cada objeto del array de posts:
+{
+  "id": 123,
+  "content": "...",
+  "image_url": "...",
+  "access_token": "EAAxxxxx...",     // Page Access Token del cliente
+  "page_id": "1713965015486703",     // Facebook Page ID del cliente
+  "instagram_account_id": "17841..." // IG Business Account ID del cliente
+}</div>
+              <div class="missing-why" style="margin-top:8px;">
+                Estos valores vienen de la tabla de redes sociales/configuración de cada empresa en G54. Para CE: page_id <code style="font-family:monospace; background:#0d1120; padding:1px 4px; border-radius:3px; color:var(--blue);">1713965015486703</code>, ig_account_id <code style="font-family:monospace; background:#0d1120; padding:1px 4px; border-radius:3px; color:var(--blue);">17841402206774619</code>.
+              </div>
+            </div>
+            <div class="missing-item">
+              <div class="missing-endpoint">Columnas adicionales en social_posts (o equivalente)</div>
+              <div class="missing-why">Verificar que existen o agregar si faltan:</div>
+              <div class="missing-response">social_account_id    — VARCHAR, nullable
+post_id_platform     — VARCHAR, nullable  (ID devuelto por Meta al publicar)
+error_message        — TEXT, nullable     (para debug si Meta rechaza el post)
+link_url             — VARCHAR, nullable  (URL del post publicado)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AGENTES 4 y 5: Analytics -->
+      <div class="agent-card status-ok">
+        <div class="card-header">
+          <div class="card-header-left">
+            <div class="agent-title">Analytics AI Semanal + Mensual</div>
+            <div class="agent-meta">
+              <span class="chip">IDs: ocQAzbiftXXOfjct / BrH8GNURlqynJK1H</span>
+              <span class="chip">workflow-analytics-ai-g54.json / workflow-analytics-ai-mensual-g54.json</span>
+            </div>
+          </div>
+          <span class="badge ok">✅ Operativos</span>
+        </div>
+        <div class="card-body">
+          <p class="card-desc">
+            Semanal: trigger lunes 8am. Mensual: día 1 de cada mes. Ambos leen posts publicados, leads y métricas desde G54, consultan Facebook/Instagram Graph API para datos de alcance y engagement reales, generan un reporte analítico con Groq (top contenido, bajo rendimiento, recomendaciones SEO/AEO/GEO), envían el reporte por email al cliente y guardan las métricas en G54.
+          </p>
+
+          <div class="info-grid">
+            <div class="info-block">
+              <div class="info-label">Endpoints G54 que usa (✅ funcionan)</div>
+              <ul class="endpoint-list">
+                <li><span class="ep-ok">✅</span> GET /api/n8n/companies/{id}</li>
+                <li><span class="ep-ok">✅</span> GET /api/n8n/companies/{id}/rrss/posts</li>
+                <li><span class="ep-ok">✅</span> GET /api/n8n/companies/{id}/rrss/estrategia</li>
+                <li><span class="ep-ok">✅</span> POST /api/agent/rrss/metricas</li>
+              </ul>
+            </div>
+            <div class="info-block">
+              <div class="info-label">Schema confirmado de /api/agent/rrss/metricas</div>
+              <div class="missing-response" style="margin-top:0; background:#070a12; border-color:var(--green-border); color:var(--green);">// Array — una entrada por plataforma:
+[{
+  "platform": "facebook" | "instagram",
+  "period_start": "2026-06-01",
+  "period_end": "2026-06-07",
+  "posts_publicados": 3,
+  "alcance": 1200,
+  "engagement": 85,
+  "clicks": 42
+}]</div>
+              <div style="margin-top:8px; font-size:12px; color:var(--muted);">Confirmado con ok:true desde G54.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AGENTE 6: Community AI -->
+      <div class="agent-card status-warn">
+        <div class="card-header">
+          <div class="card-header-left">
+            <div class="agent-title">Community AI v1.0</div>
+            <div class="agent-meta">
+              <span class="chip">ID: WYGmQcPSOzpvn6yv</span>
+              <span class="chip">workflow-community-ai-g54.json</span>
+              <span class="chip">Trigger: webhook Meta</span>
+            </div>
+          </div>
+          <span class="badge warn">⚠️ Parcial — multi-tenant bloqueado</span>
+        </div>
+        <div class="card-body">
+          <p class="card-desc">
+            Recibe comentarios y DMs de Facebook e Instagram vía webhook de Meta (incluye verificación hub.challenge para el registro inicial). Extrae el tipo de interacción (comentario público o DM), genera una respuesta con Groq (máx 3 oraciones, tono de marca), clasifica si es un lead caliente y lo guarda en G54. Responde públicamente en FB vía <code style="font-family:monospace; color:var(--blue);">/{id}/comments</code> y en IG vía <code style="font-family:monospace; color:var(--blue);">/{id}/replies</code>.
+          </p>
+
+          <div>
+            <div class="info-label">Webhook de entrada</div>
+            <div class="webhook-url">POST https://n8n.mdarthurdigital.com/webhook/community-ai-g54?company=N</div>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-block">
+              <div class="info-label">Endpoints G54 que usa (✅ funcionan)</div>
+              <ul class="endpoint-list">
+                <li><span class="ep-ok">✅</span> GET /api/n8n/companies/{id}</li>
+                <li><span class="ep-ok">✅</span> POST /api/agent/wa/leads</li>
+              </ul>
+            </div>
+            <div class="info-block">
+              <div class="info-label">Endpoints faltantes</div>
+              <ul class="endpoint-list">
+                <li><span class="ep-miss">⚠️</span> GET /api/n8n/pages/{page_id}</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="missing-block">
+            <div class="missing-header">⚠️ FALTA 1 — Resolución de empresa por page_id</div>
+            <div class="missing-item">
+              <div class="missing-endpoint">GET /api/n8n/pages/{page_id}</div>
+              <div class="missing-why">
+                Cuando Meta envía el webhook de un comentario, el payload incluye el <strong>page_id</strong> de la página donde ocurrió el evento, pero NO el company_id de G54. El agente necesita cruzar ese page_id con la empresa correcta para cargar su configuración. Sin este endpoint usa company_id=1 (Crating Express) como fallback para todos los clientes.
+              </div>
+              <div class="missing-response">// Response esperado:
+{
+  "company_id": 1,
+  "fb_access_token": "EAAxxxxx...",
+  "ig_user_id": "17841402206774619"
+}</div>
+            </div>
+          </div>
+
+          <div class="missing-block">
+            <div class="missing-header">⚠️ FALTA 2 — Registro webhook en Meta (proceso externo, no es código)</div>
+            <div class="missing-item">
+              <div class="missing-why">
+                El webhook <code style="font-family:monospace; background:#0d1120; padding:1px 4px; border-radius:3px; color:var(--blue);">community-ai-g54?company=N</code> debe registrarse en la Meta App de cada cliente desde <strong>developers.facebook.com → Webhooks → Page</strong>. Esto lo configura el admin o el cliente una vez que tiene su Meta App creada. No es backend G54, pero es el paso que desbloquea que lleguen eventos al agente.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AGENTE 7: Sales AI Motor -->
+      <div class="agent-card status-warn">
+        <div class="card-header">
+          <div class="card-header-left">
+            <div class="agent-title">Sales AI Motor v1.0</div>
+            <div class="agent-meta">
+              <span class="chip">ID: eCOX3ogMjToxZsh9</span>
+              <span class="chip">workflow-sales-ai-motor-g54.json</span>
+              <span class="chip">Trigger: webhook WA + webhook FB/IG DM</span>
+            </div>
+          </div>
+          <span class="badge warn">⚠️ Parcial — empresa-by-phone bloqueado</span>
+        </div>
+        <div class="card-body">
+          <p class="card-desc">
+            Motor de conversación genérico multi-tenant para WhatsApp y FB/IG DMs. Sin lógica hardcodeada de ningún cliente. Recibe mensajes, identifica la empresa por phone_number_id (WA) o page_id (FB/IG), carga el system_prompt y catálogo configurado en G54 para esa empresa, mantiene historial de conversación, genera respuestas con Groq (llama-3.3-70b) + Gemini fallback, clasifica leads y envía follow-ups automáticos. El comportamiento del bot es 100% configurable desde G54 sin tocar n8n.
+          </p>
+          <div style="background:var(--purple-bg); border:1px solid var(--purple-border); border-radius:6px; padding:10px 14px; font-size:12px; color:var(--subtle); margin-bottom: 4px;">
+            <strong style="color:var(--purple);">Nota importante:</strong> Este agente (webhook: <code style="font-family:monospace; color:var(--blue);">wa-engine-g54</code>) es independiente de "Alex" de Crating Express (ID: <code style="font-family:monospace; color:var(--blue);">zAhV8gEsXD8dCrXq</code>, webhook: <code style="font-family:monospace; color:var(--blue);">whatsapp-ce</code>). Alex es el bot CE-específico y no debe tocarse.
+          </div>
+
+          <div>
+            <div class="info-label">Webhooks de entrada</div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div class="webhook-url">POST https://n8n.mdarthurdigital.com/webhook/wa-engine-g54?company=N</div>
+              <div class="webhook-url">POST https://n8n.mdarthurdigital.com/webhook/sales-ai-social?company=N</div>
+            </div>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-block">
+              <div class="info-label">Endpoints G54 que usa (✅ funcionan)</div>
+              <ul class="endpoint-list">
+                <li><span class="ep-ok">✅</span> GET /api/n8n/companies/{id}</li>
+                <li><span class="ep-ok">✅</span> GET /api/n8n/companies/{id}/productos-servicios</li>
+              </ul>
+            </div>
+            <div class="info-block">
+              <div class="info-label">Endpoints faltantes</div>
+              <ul class="endpoint-list">
+                <li><span class="ep-miss">⚠️</span> GET /api/agent/wa/empresa-by-phone/{phone_number_id}</li>
+                <li><span class="ep-miss">⚠️</span> POST /api/agent/whatsapp/inbound</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="missing-block critical">
+            <div class="missing-header">🔴 FALTA CRÍTICO 1 — Resolución de empresa por phone_number_id</div>
+            <div class="missing-item">
+              <div class="missing-endpoint">GET /api/agent/wa/empresa-by-phone/{phone_number_id}</div>
+              <div class="missing-why">
+                Cuando WhatsApp envía un mensaje al webhook, el payload incluye el <strong>phone_number_id</strong> del número receptor (el de G54/el cliente), pero NO el company_id. Es el único identificador disponible para resolver qué empresa es y cargar toda su configuración. Sin este endpoint el motor usa company_id=1 como fallback y todos los mensajes van a CE.
+              </div>
+              <div class="missing-response">// Response esperado — todo lo que el bot necesita para funcionar:
+{
+  "company_id": 1,
+  "nombre": "Crating Express",
+  "wa_access_token": "EAAxxxxx...",
+  "phone_number_id": "1083260611538246",
+  "system_prompt": "Eres un agente de ventas de...",
+  "catalogo": "Cajones cerrados, Jaulas...",
+  "faqs": "¿Hacen entregas mismo día? Sí...",
+  "msg_bienvenida": "¡Hola! Soy el asistente de...",
+  "msg_followup_24h": "Hola, ¿tienes alguna duda?",
+  "msg_followup_72h": "Seguimos a tu disposición.",
+  "palabras_lead_caliente": ["cotizar", "precio", "cuando"],
+  "emails_vendedor": ["ventas@empresa.com"]
+}</div>
+              <div class="missing-why" style="margin-top:8px;">
+                Para CE: phone_number_id = <code style="font-family:monospace; background:#0d1120; padding:1px 4px; border-radius:3px; color:var(--blue);">1083260611538246</code>. Este es el primer registro que debe existir cuando se implemente el endpoint.
+              </div>
+            </div>
+          </div>
+
+          <div class="missing-block">
+            <div class="missing-header">⚠️ FALTA 2 — Guardar leads/conversaciones de WhatsApp</div>
+            <div class="missing-item">
+              <div class="missing-endpoint">POST /api/agent/whatsapp/inbound (verificar schema)</div>
+              <div class="missing-why">
+                El agente necesita guardar y actualizar leads de conversación de WhatsApp en el CRM de G54. Verificar que el endpoint acepta el siguiente schema (o ajustar el agente al schema real):
+              </div>
+              <div class="missing-response">// Body enviado por el agente:
+{
+  "company_id": 1,
+  "phone": "+17867880417",
+  "nombre": "Carlos",
+  "canal": "whatsapp",    // o "facebook" | "instagram"
+  "mensaje": "Hola, necesito una caja",
+  "clasificacion": "En calificación",  // Nuevo | En calificación | Calificado | Vendedor notificado
+  "datos_actualizados": { ... },       // objeto libre — definido por el prompt de la empresa
+  "historial": "Cliente: Hola\nAgente: Buenos días..."
+}</div>
+            </div>
+          </div>
+
+          <div class="missing-block">
+            <div class="missing-header">⚠️ FALTA 3 — Registro webhook en Meta</div>
+            <div class="missing-item">
+              <div class="missing-why">
+                Igual que Community AI: los webhooks <code style="font-family:monospace; background:#0d1120; padding:1px 4px; border-radius:3px; color:var(--blue);">wa-engine-g54?company=N</code> y <code style="font-family:monospace; background:#0d1120; padding:1px 4px; border-radius:3px; color:var(--blue);">sales-ai-social?company=N</code> deben registrarse en la Meta App de cada cliente. Para CE: <code style="font-family:monospace; background:#0d1120; padding:1px 4px; border-radius:3px; color:var(--blue);">?company=1</code>. No es código backend — es configuración en Meta for Developers.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- SECCIÓN 3: LO QUE NECESITAMOS DE WALTER -->
+  <section>
+    <div class="section-title"><span class="num">03</span> Lo que necesitamos de Walter — priorizado</div>
+    <div class="priority-blocks">
+
+      <div class="priority-block">
+        <div class="priority-header">
+          <span class="badge error">Bloque A</span>
+          <strong>WhatsApp multi-empresa — desbloquea Sales AI Motor</strong>
+        </div>
+        <div class="priority-items">
+          <div class="priority-item">
+            <span class="priority-num">1</span>
+            <div class="priority-text">
+              Migraciones <code>wa_empresas</code> + <code>wa_config</code> en base de datos (estructura en Genesis RRSS G54)
+              <span class="why">Tablas necesarias para que empresa-by-phone pueda responder la config completa del cliente WA</span>
+            </div>
+          </div>
+          <div class="priority-item">
+            <span class="priority-num">2</span>
+            <div class="priority-text">
+              <code>GET /api/agent/wa/empresa-by-phone/{phone_number_id}</code> — response: company completa + config WA
+              <span class="why">El único punto de entrada del Sales AI Motor. Sin esto, no puede distinguir entre clientes</span>
+            </div>
+          </div>
+          <div class="priority-item">
+            <span class="priority-num">3</span>
+            <div class="priority-text">
+              <code>POST /api/agent/whatsapp/inbound</code> — verificar schema aceptado o crear si no existe
+              <span class="why">Para que el agente guarde/actualice leads de WhatsApp en el CRM de G54</span>
+            </div>
+          </div>
+          <div class="priority-item">
+            <span class="priority-num">4</span>
+            <div class="priority-text">
+              Registrar Crating Express como primera wa_empresa: <code>phone_number_id: 1083260611538246</code>
+              <span class="why">Primer dato real para probar el flujo completo de extremo a extremo</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="priority-block">
+        <div class="priority-header">
+          <span class="badge warn">Bloque B</span>
+          <strong>Distribution AI multi-tenant — desbloquea publicación real</strong>
+        </div>
+        <div class="priority-items">
+          <div class="priority-item">
+            <span class="priority-num">5</span>
+            <div class="priority-text">
+              Agregar al response de <code>GET /api/n8n/companies/{id}/rrss/posts/to-publish</code>: <code>access_token</code>, <code>page_id</code>, <code>instagram_account_id</code> por cada post
+              <span class="why">Sin estos tres campos el agente no puede llamar a la Graph API de Meta en nombre del cliente</span>
+            </div>
+          </div>
+          <div class="priority-item">
+            <span class="priority-num">6</span>
+            <div class="priority-text">
+              Columnas en <code>social_posts</code> (o equivalente): <code>social_account_id</code>, <code>post_id_platform</code>, <code>error_message</code>, <code>link_url</code> — todas nullable
+              <span class="why">Para guardar el resultado de la publicación: ID del post en Meta, errores si los hay, URL del post</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="priority-block">
+        <div class="priority-header">
+          <span class="badge info">Bloque C</span>
+          <strong>Community AI multi-tenant</strong>
+        </div>
+        <div class="priority-items">
+          <div class="priority-item">
+            <span class="priority-num">7</span>
+            <div class="priority-text">
+              <code>GET /api/n8n/pages/{page_id}</code> → <code>{ company_id, fb_access_token, ig_user_id }</code>
+              <span class="why">Para que el Community AI resuelva qué empresa es cuando Meta envía un webhook con page_id</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="priority-block">
+        <div class="priority-header">
+          <span class="badge purple">Bloque D</span>
+          <strong>OAuth y Meta — proceso externo (no es código n8n)</strong>
+        </div>
+        <div class="priority-items">
+          <div class="priority-item">
+            <span class="priority-num">8</span>
+            <div class="priority-text">Meta Business Portfolio verificado</div>
+          </div>
+          <div class="priority-item">
+            <span class="priority-num">9</span>
+            <div class="priority-text">App en Meta for Developers creada (Growth54 Social)</div>
+          </div>
+          <div class="priority-item">
+            <span class="priority-num">10</span>
+            <div class="priority-text">
+              OAuth Meta (<code>metaRedirect</code> + <code>metaCallback</code>) en Laravel
+              <span class="why">Para que clientes puedan conectar su página FB sin crear su propia App</span>
+            </div>
+          </div>
+          <div class="priority-item">
+            <span class="priority-num">11</span>
+            <div class="priority-text">
+              Meta App Review — permisos: <code>pages_manage_posts</code>, <code>instagram_content_publish</code>, <code>pages_read_engagement</code>, <code>instagram_manage_comments</code>, <code>whatsapp_business_messaging</code>
+              <span class="why">Necesario para publicar en páginas de otros (Tech Provider). Tiempo estimado: 1-3 semanas de revisión de Meta</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- SECCIÓN 4: LO QUE YA HICIMOS -->
+  <section>
+    <div class="section-title"><span class="num">04</span> Lo que ya hicimos de nuestra parte</div>
+    <div class="checklist">
+      <div class="check-item">
+        <span class="check-icon">✅</span>
+        <div class="check-text">
+          <strong>Strategist AI v3.0</strong> — genera plan completo con trend finder (NewsAPI), distribución TOFU/MOFU/BOFU, guarda estrategia e ideas en G54 — confirmado con ok:true
+          <span class="sub">ID: cT1SS300CjujIyHS · workflow-strategist-ai-g54-v3.json</span>
+        </div>
+      </div>
+      <div class="check-item">
+        <span class="check-icon">✅</span>
+        <div class="check-text">
+          <strong>Content AI v1.4</strong> — framework SEO/AEO/GEO de 8 pasos, guarda posts completos en G54 con copy Instagram y Facebook, email de aprobación funcional
+          <span class="sub">ID: wyO1f93A66imn9qw · workflow-rrss-n8n-v13.json</span>
+        </div>
+      </div>
+      <div class="check-item">
+        <span class="check-icon">✅</span>
+        <div class="check-text">
+          <strong>Distribution AI</strong> — apunta a <code style="font-family:monospace; background:#0d1120; border:1px solid var(--border); padding:1px 5px; border-radius:3px; color:var(--blue);">/posts/to-publish</code> y <code style="font-family:monospace; background:#0d1120; border:1px solid var(--border); padding:1px 5px; border-radius:3px; color:var(--blue);">/mark-published</code> correctamente. Listo para multi-tenant cuando Walter agregue los tokens al response
+          <span class="sub">ID: nmOjyvdfTkEo5FVJ · workflow-distribution-ai-g54.json</span>
+        </div>
+      </div>
+      <div class="check-item">
+        <span class="check-icon">✅</span>
+        <div class="check-text">
+          <strong>Analytics AI Semanal + Mensual</strong> — guarda métricas con schema correcto (array por plataforma + period_start/period_end), confirmado con ok:true desde G54
+          <span class="sub">IDs: ocQAzbiftXXOfjct / BrH8GNURlqynJK1H</span>
+        </div>
+      </div>
+      <div class="check-item">
+        <span class="check-icon">✅</span>
+        <div class="check-text">
+          <strong>Community AI</strong> — webhook POST corregido, verificación hub.challenge implementada, conexiones de nodos reparadas, clasifica leads y los guarda en G54
+          <span class="sub">ID: WYGmQcPSOzpvn6yv · workflow-community-ai-g54.json</span>
+        </div>
+      </div>
+      <div class="check-item">
+        <span class="check-icon">✅</span>
+        <div class="check-text">
+          <strong>Sales AI Motor</strong> — reconstruido desde cero sin lógica CE, apunta a <code style="font-family:monospace; background:#0d1120; border:1px solid var(--border); padding:1px 5px; border-radius:3px; color:var(--blue);">empresa-by-phone</code>. Listo para cuando Walter suba el endpoint
+          <span class="sub">ID: eCOX3ogMjToxZsh9 · workflow-sales-ai-motor-g54.json</span>
+        </div>
+      </div>
+      <div class="check-item">
+        <span class="check-icon">✅</span>
+        <div class="check-text">
+          <strong>Todos los agentes multi-tenant</strong> — patrón <code style="font-family:monospace; background:#0d1120; border:1px solid var(--border); padding:1px 5px; border-radius:3px; color:var(--blue);">?company=N</code> implementado en todos los webhooks, resolución dinámica de empresa con fallback a company_id=1
+        </div>
+      </div>
+      <div class="check-item">
+        <span class="check-icon">✅</span>
+        <div class="check-text">
+          <strong>0 tokens hardcodeados</strong> en archivos del repo — redactados como placeholders en los JSON. Los tokens viven en las variables n8n y en G54 API
+        </div>
+      </div>
+      <div class="check-item">
+        <span class="check-icon">✅</span>
+        <div class="check-text">
+          <strong>Groq key actualizada</strong> en todos los agentes que la usan + G54_AGENT_TOKEN correcto en todos los agentes
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECCIÓN 5: PATRÓN MULTI-TENANT -->
+  <section>
+    <div class="section-title"><span class="num">05</span> Patrón multi-tenant — para referencia de Walter</div>
+
+    <div class="pattern-block">
+      <div class="pattern-bar">Flujo implementado en n8n (Community AI y Sales AI Motor)</div>
+      <pre><span class="node">Webhook</span> <span class="comment">(con ?company=N en la URL)</span>
+<span class="arrow">  →</span> <span class="node">⚙️ Config G54</span>        <span class="comment">(base URL + tokens globales)</span>
+<span class="arrow">  →</span> <span class="node">🔍 Preparar Resolución</span>  <span class="comment">(extrae phone_number_id o page_id del payload de Meta)</span>
+<span class="arrow">  →</span> <span class="node">🏢 Resolver Empresa</span>     <span class="comment">(GET /api/n8n/pages/{id} o /wa/empresa-by-phone/{id})</span>
+                          <span class="note">continueOnFail: true — si el endpoint no existe, sigue con fallback</span>
+<span class="arrow">  →</span> <span class="node">🏢 Aplicar Config Empresa</span> <span class="comment">(merge: query param > API response > fallback company=1)</span>
+<span class="arrow">  →</span> <span class="comment">resto del flujo con company_id dinámico</span></pre>
+    </div>
+
+    <div class="note-box" style="margin-top:16px;">
+      <strong>Sobre el fallback temporal:</strong> Mientras los endpoints de resolución no existen en G54, todos los mensajes se tratan como si fueran de company_id=1 (Crating Express). El query param <code style="font-family:monospace; background:#0d1120; border:1px solid var(--border); padding:1px 4px; border-radius:3px;">?company=N</code> ya funciona hoy — cuando un cliente configura su webhook apuntando a <code style="font-family:monospace; background:#0d1120; border:1px solid var(--border); padding:1px 4px; border-radius:3px;">?company=2</code>, ese company_id ya se usa correctamente en el flujo. El fallback solo aplica si no se pasa el query param Y el endpoint de resolución falla.
+    </div>
+
+    <div style="margin-top: 20px;">
+      <div class="info-label" style="margin-bottom:12px;">Setup por cada cliente nuevo en G54</div>
+      <div class="priority-block">
+        <div class="priority-items">
+          <div class="priority-item">
+            <span class="priority-num">1</span>
+            <div class="priority-text">Cliente crea su Meta App en <code>developers.facebook.com</code> (15 min)</div>
+          </div>
+          <div class="priority-item">
+            <span class="priority-num">2</span>
+            <div class="priority-text">Registra los webhooks apuntando a la URL con su company_id:
+              <span class="why">Community AI: <code>...webhook/community-ai-g54?company=N</code> · Sales AI WA: <code>...webhook/wa-engine-g54?company=N</code></span>
+            </div>
+          </div>
+          <div class="priority-item">
+            <span class="priority-num">3</span>
+            <div class="priority-text">Genera Page Access Token desde Meta Business Suite y lo sube al panel de G54</div>
+          </div>
+          <div class="priority-item">
+            <span class="priority-num">4</span>
+            <div class="priority-text">G54 almacena phone_number_id / page_id → la resolución automática funciona desde el primer mensaje</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <span>G54 Platform · Módulo 1 RRSS · Documento técnico de entrega · 6 de junio 2026</span>
+  <br>
+  <span style="margin-top:6px; display:block;">Preparado por el equipo de agentes n8n para revisión del equipo de backend</span>
+</footer>
+
+</body>
+</html>

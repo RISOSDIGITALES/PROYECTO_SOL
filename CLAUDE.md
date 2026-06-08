@@ -1,10 +1,21 @@
 # PROYECTO SOL — G54 Platform + Crating Express + Nomify
 
+## REGLA ABSOLUTA — G54 Platform
+
+> **NADA específico de ningún cliente puede estar hardcodeado en los agentes de G54.**
+> Los workflows de G54 (`workflow-strategist-ai-g54-v3.json`, `workflow-distribution-ai-g54.json`, `workflow-community-ai-g54.json`, `workflow-sales-ai-motor-g54.json`, `workflow-analytics-ai-g54.json`, `workflow-analytics-ai-mensual-g54.json`) son de la **plataforma**, no de CE.
+> Cualquier restricción, prompt, configuración o dato de un cliente específico (incluyendo CE) va en:
+> - El perfil de empresa en G54 API (`/api/n8n/companies/{id}`)
+> - Airtable del cliente (solo para workflows CE-específicos)
+> - El nodo ⚙️ Config del workflow con `continueOnFail` leyendo de G54
+>
+> **Workflows exclusivos de CE** (sí pueden tener lógica CE): `workflow-rrss-n8n-v13.json`, `workflow-wa-engine-g54.json` (Alex, ID `zAhV8gEsXD8dCrXq`)
+
 ## Qué es este proyecto
 
 Tres líneas de trabajo en un mismo repositorio:
 1. **G54 Platform** — plataforma de adquisición digital multi-módulo (ver sección G54 abajo)
-2. **Crating Express** — cliente piloto de G54 (embalaje industrial, Miami FL)
+2. **Crating Express** — cliente piloto de G54 (embalaje de madera a medida, Miami FL)
 3. **Nomify** — sistema de planilla para Nicaragua (Express + MariaDB)
 
 ---
@@ -946,6 +957,22 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 ## Reportes Diarios
 
 > Los últimos 14 días. Anteriores archivados en `PROYECTO-SOL/reportes/`.
+
+---
+
+### 2026-06-06 (Viernes)
+
+El día arrancó revisando los errores de los workflows que tenían que correr esa mañana. Dos habían fallado: el Sales AI Motor y el CE Mantenimiento Web. El Sales AI Motor caía porque el nodo de follow-ups intentaba acceder a la configuración WA pero ese nodo no siempre está en el camino de ejecución, así que se envolvió en try/catch con fallback vacío. El CE Mantenimiento Web fallaba en el email de reporte porque el nodo de Config Empresa no está en el path de ejecución normal, se resolvió con una función inmediata con try/catch y fallback al email de admin.
+
+Luego se revisaron los Analytics AI, que estaban funcionando pero con la Groq key vieja. Se actualizó la key en ambos (semanal y mensual) y se agregó continueOnFail en los nodos de Graph API de Facebook e Instagram para que si las métricas de Meta no están disponibles el reporte igual se genere. Se actualizaron los cuatro agentes restantes (Content AI, Strategist, Community AI, Sales AI Motor) con el G54_AGENT_TOKEN correcto y los headers de Groq en formato válido para n8n.
+
+Se corrigió el Content AI para que el company_id sea dinámico desde el webhook en lugar de estar fijo en el Config node, y se eliminó la URL de Crating Express que quedaba hardcodeada en el CTA. En el Strategist se corrigió el formato del header de Authorization de Groq que estaba malformado y causaba ERR_INVALID_CHAR. El Community AI tenía un error más profundo: el objeto de conexiones apuntaba a un nodo con nombre inexistente, lo que causaba code:0 "Workflow could not be started" en cada ejecución. Se corrigió la referencia y el webhook pasó de GET a POST, quedando operativo.
+
+Se probaron todos los agentes que tienen webhook con datos reales o ficticios. Content AI generó un post completo con Groq (Gemini falló por rate limit), lo guardó en G54 con ok:true y envió el email de aprobación, aunque ese último falló por OAuth de Gmail expirado — pendiente reconexión manual desde n8n UI. El Analytics AI se probó con datos ficticios realistas de Crating Express y generó el reporte completo con las secciones SEO/AEO/GEO, top contenido, bajo rendimiento y recomendaciones. En ese proceso se identificó que el agente recomendaba formatos como carrusel que G54 no publica automáticamente, así que se actualizó el prompt de ambos Analytics para que marque esas recomendaciones con la etiqueta "Recomendación manual — fuera de G54". El Sales AI Motor se probó con un mensaje WA simulado y procesó correctamente: extrae el mensaje, llama a G54 por empresa y productos, construye el prompt, genera respuesta con Groq y clasifica el lead. Falló el envío WA y el guardado del lead porque esos endpoints de G54 no existen aún, lo cual era esperado.
+
+En la tarde llegó el documento Genesis RRSS G54 del desarrollador Walter, que es el plan maestro de lo que viene de su lado. Se revisó en detalle y se identificaron varias correcciones: el Distribution AI debía usar /posts/to-publish en lugar de filtrar por status, y /mark-published en lugar de PUT /status; el Analytics AI tenía el schema de métricas mal estructurado (G54 espera un array por plataforma con period_start y period_end, no un objeto plano); el Sales AI Motor estaba apuntando al endpoint equivocado para resolver la empresa, el correcto es /api/agent/wa/empresa-by-phone/{phone_number_id}; y los leads del bot WA deben ir a /api/agent/whatsapp/inbound que ya existe en G54. Se corrigieron los cuatro workflows, se verificó el schema de métricas en vivo (devolvió ok:true, created:2) y se subieron todos a n8n y al repo.
+
+Al cierre se generó el documento genesis-agentes-g54.html para Walter, con el estado de los 7 agentes: descripción, webhook URLs, endpoints que usa cada uno, qué falta construir con el motivo técnico explicado, checklist de lo completado de nuestra parte y el patrón multi-tenant implementado. El documento queda como referencia técnica para coordinar el trabajo entre el equipo de backend y los agentes n8n.
 
 ---
 

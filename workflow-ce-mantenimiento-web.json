@@ -1,0 +1,1127 @@
+{
+  "updatedAt": "2026-05-18T17:32:43.195Z",
+  "createdAt": "2026-04-23T05:21:50.436Z",
+  "id": "T9J845yE4sd8Dde5",
+  "name": "CE Mantenimiento Web - Calendario Autom\u00e1tico",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "maint-sched",
+      "name": "\u23f0 Trigger 9am Diario",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        304
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "maint-manual",
+      "name": "\u25b6\ufe0f Ejecutar Manualmente",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst now   = new Date();\nconst day   = now.getDay();\nconst date  = now.getDate();\nconst month = now.getMonth();\n\nfunction weekOfMonth(d, targetDay) {\n  let count = 0;\n  for (let i = 1; i <= d; i++) {\n    const wd = new Date(now.getFullYear(), month, i).getDay();\n    if (wd === targetDay) count++;\n  }\n  return count;\n}\n\nconst isQuarterMonth = [0, 3, 6, 9].includes(month);\nconst isDecember     = month === 11;\nconst isSaturday     = day === 6;\n\nconst tasks = [];\n\nif (day === 1) tasks.push({ tipo:'semanal', nombre:'Actualizaciones WordPress', descripcion:'Verificaci\u00f3n autom\u00e1tica de actualizaciones de WordPress core, plugins y temas activos en cratingexpress.com.', data:'WP_DATA' });\nif (day === 3) tasks.push({ tipo:'semanal', nombre:'Seguridad y Backups (Sucuri)', descripcion:'An\u00e1lisis de seguridad de cratingexpress.com usando Sucuri SiteCheck. Verificar malware, vulnerabilidades y estado de backups.', data:'SUCURI_DATA' });\nif (day === 5) tasks.push({ tipo:'semanal', nombre:'Indexaci\u00f3n y Posicionamiento SEO', descripcion:'Revisi\u00f3n del estado de indexaci\u00f3n y posicionamiento de cratingexpress.com en Google. Analizar posici\u00f3n para keywords clave del sector.', data:'SERP_DATA' });\n\nif (day === 4) {\n  const week = weekOfMonth(date, 4);\n  if (week === 1) tasks.push({ tipo:'mensual', nombre:'Optimizaci\u00f3n de Base de Datos', descripcion:'Instrucciones y mejores pr\u00e1cticas para optimizaci\u00f3n de base de datos WordPress. Incluir WP-Optimize y checklist de limpieza.', data:null });\n  if (week === 2) tasks.push({ tipo:'mensual', nombre:'Auditor\u00eda de Velocidad (PageSpeed)', descripcion:'An\u00e1lisis de rendimiento cratingexpress.com con datos reales de PageSpeed Insights. Documentar LCP, CLS, TBT y generar recomendaciones.', data:'PAGESPEED_DATA' });\n  if (week === 3) tasks.push({ tipo:'mensual', nombre:'SEO y M\u00e9tricas de Contenido', descripcion:'Revisi\u00f3n SEO de cratingexpress.com. Keywords: crating miami, wood crates miami, export packaging miami. Identificar posici\u00f3n actual y oportunidades.', data:'SERP_DATA' });\n}\n\nif (day === 2 && isQuarterMonth) {\n  const week = weekOfMonth(date, 2);\n  if (week === 2) tasks.push({ tipo:'trimestral', nombre:'UX y Compatibilidad de Navegadores', descripcion:'Checklist de pruebas UX para cratingexpress.com en m\u00faltiples dispositivos y navegadores. Incluir pruebas mobile-first.', data:null });\n  if (week === 3) tasks.push({ tipo:'trimestral', nombre:'Prueba de Formularios y Pasarelas de Pago', descripcion:'Protocolo de prueba para formularios de contacto y pasarelas de pago. Escenarios paso a paso.', data:null });\n}\n\nif (day === 2 && isDecember) {\n  const week = weekOfMonth(date, 2);\n  if (week === 1) tasks.push({ tipo:'anual', nombre:'Renovaci\u00f3n de Dominio y SSL', descripcion:'Checklist de renovaci\u00f3n de dominio cratingexpress.com, certificados SSL y actualizaci\u00f3n de contrase\u00f1as cr\u00edticas.', data:null });\n  if (week === 3) tasks.push({ tipo:'anual', nombre:'Auditor\u00eda Estrat\u00e9gica SEO/AEO Completa', descripcion:'Auditor\u00eda anual SEO/AEO para Crating Express. Keywords, E-E-A-T, metadatos, estructura H1-H3, contenido 1000-1500 palabras.', data:'SERP_DATA' });\n}\n\nconst fechaHoy = now.toLocaleDateString('es-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });\n\nreturn [{ json: {\n  tasks,\n  fechaHoy,\n  hayTareas:     tasks.length > 0 || isSaturday,\n  isSaturday,\n  needsPageSpeed: tasks.some(t => t.data === 'PAGESPEED_DATA'),\n  needsSucuri:    tasks.some(t => t.data === 'SUCURI_DATA'),\n  needsSerp:      tasks.some(t => t.data === 'SERP_DATA'),\n  needsWP:        tasks.some(t => t.data === 'WP_DATA')\n} }];\n"
+      },
+      "id": "maint-tasks",
+      "name": "\ud83d\udcc5 Determinar Tareas de Hoy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-tasks",
+              "leftValue": "={{ $json.hayTareas }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "maint-if",
+      "name": "\u2753 \u00bfHay tareas hoy?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        480,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/pagespeedonline/v5/runPagespeed",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "https://cratingexpress.com"
+            },
+            {
+              "name": "strategy",
+              "value": "mobile"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "maint-pagespeed",
+      "name": "\ud83c\udf10 PageSpeed: Obtener Datos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        208
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://sitecheck.sucuri.net/api/check/",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "scan",
+              "value": "cratingexpress.com"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "maint-sucuri",
+      "name": "\ud83d\udd12 Sucuri: Verificar Seguridad",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        384
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst tareas = $('\ud83d\udcc5 Determinar Tareas de Hoy').first().json;\nconst tasks  = tareas.tasks;\nconst fecha  = tareas.fechaHoy;\n\nlet pageSpeedData = '';\nlet sucuriData    = 'Sucuri: Verificar manualmente en sitecheck.sucuri.net/results/cratingexpress.com';\nlet serpData      = '';\n\ntry {\n  const ps   = $('\ud83c\udf10 PageSpeed: Obtener Datos').first().json;\n  const cats = ps.lighthouseResult?.categories || {};\n  const perf = Math.round((cats.performance?.score || 0) * 100);\n  const seo  = Math.round((cats.seo?.score || 0) * 100);\n  const acc  = Math.round((cats.accessibility?.score || 0) * 100);\n  const lcp  = ps.lighthouseResult?.audits?.['largest-contentful-paint']?.displayValue || 'N/A';\n  const cls  = ps.lighthouseResult?.audits?.['cumulative-layout-shift']?.displayValue || 'N/A';\n  const tbt  = ps.lighthouseResult?.audits?.['total-blocking-time']?.displayValue || 'N/A';\n  pageSpeedData = `PageSpeed Insights (Mobile) \u2014 Performance: ${perf}/100 | SEO: ${seo}/100 | Accessibility: ${acc}/100 | LCP: ${lcp} | CLS: ${cls} | TBT: ${tbt}`;\n} catch(e) {}\n\ntry {\n  const sc    = $('\ud83d\udd12 Sucuri: Verificar Seguridad').first().json;\n  const clean = sc.system?.scan?.site_clean;\n  sucuriData  = `Sucuri SiteCheck: ${clean ? '\u2705 Sitio limpio, sin malware detectado' : '\u26a0\ufe0f Revisar manualmente en sitecheck.sucuri.net'}`;\n} catch(e) {}\n\ntry {\n  const sr = $('\ud83d\udd0d SerpAPI: Posicionamiento SEO').first().json;\n\n  // Keyword 1: crating miami\n  const r1 = sr.keyword1 || {};\n  const pos1 = r1.cePosition ? `posici\u00f3n #${r1.cePosition}` : 'no aparece en top 10';\n  const top1 = (r1.topResults || []).slice(0,3).map((x,i) => `  ${i+1}. ${x.title} (${x.link})`).join('\\n');\n\n  // Keyword 2: wood crates miami\n  const r2 = sr.keyword2 || {};\n  const pos2 = r2.cePosition ? `posici\u00f3n #${r2.cePosition}` : 'no aparece en top 10';\n  const top2 = (r2.topResults || []).slice(0,3).map((x,i) => `  ${i+1}. ${x.title} (${x.link})`).join('\\n');\n\n  // Site index count\n  const indexed = sr.indexedPages || 'N/A';\n\n  serpData = `SerpAPI \u2014 Resultados Google Miami:\\n` +\n    `\u2022 \"crating miami\": Crating Express ${pos1}\\n  Top resultados:\\n${top1}\\n` +\n    `\u2022 \"wood crates miami\": Crating Express ${pos2}\\n  Top resultados:\\n${top2}\\n` +\n    `\u2022 P\u00e1ginas indexadas (site:cratingexpress.com): ${indexed}`;\n} catch(e) {}\n\n\nlet wpData = '';\ntry {\n  const wp = $('\ud83d\udd27 WordPress: Verificar Actualizaciones').first().json;\n  if (!wp.skipped) {\n    wpData = wp.summary + '\\n';\n    if (wp.coreNeedsUpdate) wpData += '\u2022 Core: WordPress ' + wp.wpVersion + ' \u2192 actualizar a ' + wp.wpLatest + '\\n';\n    if (wp.pluginUpdates && wp.pluginUpdates.length > 0) {\n      wpData += '\u2022 Plugins con actualizaci\u00f3n disponible:\\n';\n      wp.pluginUpdates.forEach(p => { wpData += '  - ' + p.name + ': v' + p.current + ' \u2192 v' + p.latest + '\\n'; });\n    }\n    if (wp.upToDate && wp.upToDate.length > 0) wpData += '\u2022 Al d\u00eda: ' + wp.upToDate.length + ' plugin(s) sin actualizaciones pendientes\\n';\n    if (wp.backupTriggered) wpData += '\u2022 \u2705 Backup triggereado via UpdraftPlus\\n';\n  }\n} catch(e) {}\n\nconst taskDescriptions = tasks.map(t => {\n  let desc = `## ${t.tipo.toUpperCase()}: ${t.nombre}\\n${t.descripcion}`;\n  if (t.data === 'PAGESPEED_DATA' && pageSpeedData) desc += `\\n\\nDATOS REALES: ${pageSpeedData}`;\n  if (t.data === 'SUCURI_DATA') desc += `\\n\\nDATOS REALES: ${sucuriData}`;\n  if (t.data === 'SERP_DATA' && serpData) desc += `\\n\\nDATOS REALES:\\n${serpData}`;\n  if (t.data === 'WP_DATA' && wpData) desc += `\\n\\nDATOS REALES:\\n${wpData}`;\n  return desc;\n}).join('\\n\\n---\\n\\n');\n\nconst systemPrompt = `Eres el Maintenance Manager de Crating Express, empresa de embalaje de madera y crating personalizado en Miami, FL. Web: cratingexpress.com. Genera reportes profesionales, directos y orientados a resultados. Usa \"Crating Express\" completo siempre, usa \"disponer\" en lugar de \"ofrecer\".`;\n\nconst userPrompt = `Fecha: ${fecha}\n\nEjecuta y genera el reporte para estas tareas de mantenimiento:\n\n${taskDescriptions}\n\nResponde SOLO con JSON v\u00e1lido:\n{\n  \"subject\": \"Reporte de Tarea: Crating Express - ${fecha}\",\n  \"resumen_texto\": \"resumen en texto plano de m\u00e1ximo 3 l\u00edneas con los hallazgos clave\",\n  \"body_html\": \"HTML con cada secci\u00f3n usando SOLO listas de incisos (<ul><li>). Sin p\u00e1rrafos de texto corrido. Secciones: Hallazgos \u2192 Recomendaciones \u2192 Pr\u00f3ximos Pasos. Cada punto debe ser conciso y directo (m\u00e1ximo 15 palabras por inciso).\"\n}`;\n\nreturn [{ json: { systemPrompt, userPrompt, fecha, tasks: tasks.map(t => t.nombre) } }];\n"
+      },
+      "id": "maint-prompt",
+      "name": "\ud83d\udcdd Preparar Prompt Groq",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer gsk_xh4sNFnhiBX0IIKYo5cLWGdyb3FYnFEJIPiSPuIBTK8MgCmVb"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: \"llama-3.3-70b-versatile\", messages: [{ role: \"system\", content: $json.systemPrompt }, { role: \"user\", content: $json.userPrompt }], temperature: 0.4, max_tokens: 4000, response_format: { type: \"json_object\" } }) }}",
+        "options": {}
+      },
+      "id": "maint-groq",
+      "name": "\ud83e\udd16 Groq: Generar Reporte",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        304
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst raw = $input.item.json.choices?.[0]?.message?.content || '{}';\nlet parsed;\ntry { parsed = JSON.parse(raw); }\ncatch(e) {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  parsed = m ? JSON.parse(m[0]) : {};\n}\nconst fecha = $('\ud83d\udcc5 Determinar Tareas de Hoy').first().json.fechaHoy;\nreturn [{ json: {\n  subject:      parsed.subject      || `Reporte de Mantenimiento: Crating Express \u2014 ${fecha}`,\n  body_html:    parsed.body_html    || `<p>Reporte generado \u2014 ${fecha}</p>`,\n  resumen_texto: parsed.resumen_texto || ''\n}}];\n"
+      },
+      "id": "maint-parse",
+      "name": "\ud83d\udccb Parsear Reporte",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ (() => { try { return $('\ud83d\udd27 Config Empresa').item.json.data.emails[0]; } catch(e) { return 'risosadmi@gmail.com'; } })() }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.body_html }}",
+        "options": {
+          "appendAttribution": false,
+          "ccList": "risosnds@gmail.com",
+          "senderName": "CE Maintenance Manager"
+        }
+      },
+      "id": "maint-email",
+      "name": "\ud83d\udce7 Enviar Reporte a Sol",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1680,
+        304
+      ],
+      "webhookId": "7c16e0ef-78e8-48c6-a695-e435c731210c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TESHSjzjMCpCxBBk",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.semana) staticData.semana = [];\n\nconst parsed   = $('\ud83d\udccb Parsear Reporte').first().json;\nconst tareas   = $('\ud83d\udcc5 Determinar Tareas de Hoy').first().json;\n\n// Only save if there were real tasks today (not just Saturday trigger)\nif (!tareas.tasks || tareas.tasks.length === 0) {\n  return [{ json: { guardado: false, razon: 'Sin tareas hoy' } }];\n}\n\nstaticData.semana.push({\n  fecha:   tareas.fechaHoy,\n  tareas:  tareas.tasks.map(t => t.nombre),\n  resumen: parsed.resumen_texto || '',\n  html:    parsed.body_html || ''\n});\n\nreturn [{ json: { guardado: true, totalDias: staticData.semana.length } }];\n"
+      },
+      "id": "maint-save",
+      "name": "\ud83d\udcbe Guardar en Semana",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-sat",
+              "leftValue": "={{ new Date().getDay() === 6 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "maint-ifsat",
+      "name": "\ud83d\udcc6 \u00bfEs s\u00e1bado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst staticData = $getWorkflowStaticData('global');\nconst semana = staticData.semana || [];\n\nconst now   = new Date();\nconst fecha = now.toLocaleDateString('es-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });\nconst NAVY  = '#305468';\n\nif (semana.length === 0) {\n  // Clear just in case\n  staticData.semana = [];\n  return [{ json: {\n    subject: `Reporte Semanal: Crating Express \u2014 ${fecha}`,\n    body_html: `<div style=\"font-family:Arial,sans-serif;max-width:680px;margin:0 auto;color:#333;\">\n      <div style=\"background:${NAVY};color:#fff;padding:24px 28px;border-radius:8px 8px 0 0;\">\n        <div style=\"font-size:11px;letter-spacing:1px;opacity:.7;text-transform:uppercase;\">Reporte Semanal</div>\n        <h1 style=\"margin:4px 0 0;font-size:22px;\">Crating Express \u2014 Mantenimiento Web</h1>\n        <p style=\"margin:6px 0 0;opacity:.8;font-size:14px;\">${fecha}</p>\n      </div>\n      <div style=\"padding:24px 28px;border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;\">\n        <p>Hola Sol,</p>\n        <p>Esta semana no se registraron tareas de mantenimiento con datos acumulados. El sistema est\u00e1 activo y funcionando.</p>\n        <hr style=\"margin:24px 0;border:none;border-top:1px solid #eee;\">\n        <p style=\"font-size:12px;color:#999;\">CE Maintenance Manager \u2014 Generado autom\u00e1ticamente por n8n</p>\n      </div>\n    </div>`\n  }}];\n}\n\nconst sections = semana.map(dia => `\n  <div style=\"margin-bottom:24px;padding:18px 20px;border:1px solid #e0e0e0;border-radius:8px;\">\n    <h3 style=\"color:${NAVY};margin:0 0 10px;font-size:15px;\">${dia.fecha}</h3>\n    <p style=\"color:#666;font-size:12px;margin:0 0 10px;\">\n      <strong>Tareas ejecutadas:</strong>\n      <ul style=\"margin:4px 0 0;padding-left:18px;color:#444;\">${dia.tareas.map(t => `<li>${t}</li>`).join('')}</ul>\n    </p>\n    ${dia.html}\n  </div>\n`).join('');\n\nconst bodyHtml = `\n<div style=\"font-family:Arial,sans-serif;max-width:680px;margin:0 auto;color:#333;\">\n  <div style=\"background:${NAVY};color:#fff;padding:24px 28px;border-radius:8px 8px 0 0;\">\n    <div style=\"font-size:11px;letter-spacing:1px;opacity:.7;text-transform:uppercase;\">Reporte Semanal</div>\n    <h1 style=\"margin:4px 0 0;font-size:22px;\">Crating Express \u2014 Mantenimiento Web</h1>\n    <p style=\"margin:6px 0 0;opacity:.8;font-size:14px;\">${fecha}</p>\n  </div>\n  <div style=\"padding:24px 28px;border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;\">\n    <p>Hola Sol,</p>\n    <p>Aqu\u00ed est\u00e1 el resumen de todas las tareas de mantenimiento ejecutadas esta semana:</p>\n    ${sections}\n    <hr style=\"margin:24px 0;border:none;border-top:1px solid #eee;\">\n    <p style=\"font-size:12px;color:#999;\">CE Maintenance Manager \u2014 Generado autom\u00e1ticamente por n8n</p>\n  </div>\n</div>`;\n\nstaticData.semana = [];\n\nreturn [{ json: {\n  subject: `Reporte Semanal: Crating Express Mantenimiento Web \u2014 ${fecha}`,\n  body_html: bodyHtml\n}}];\n"
+      },
+      "id": "maint-weekly",
+      "name": "\ud83d\udcca Preparar Reporte Semanal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst tareas = $('\ud83d\udcc5 Determinar Tareas de Hoy').first().json;\nif (!tareas.needsSerp) return [{ json: { skipped: true } }];\n\nconst KEY = '1d34b94358d31e9d8043ae3f1ead005322b022b6b0fdcf1f2699d68c95a9c1b9';\n\nasync function search(q) {\n  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&location=Miami,Florida,United States&hl=en&gl=us&num=10&api_key=${KEY}`;\n  const res = await fetch(url);\n  const data = await res.json();\n  const results = (data.organic_results || []).map((r, i) => ({\n    position: i + 1,\n    title: r.title || '',\n    link: r.link || '',\n    snippet: r.snippet || ''\n  }));\n  const cePosition = results.find(r => r.link.includes('cratingexpress.com'))?.position || null;\n  return { topResults: results.slice(0, 5), cePosition };\n}\n\nasync function countIndexed() {\n  const url = `https://serpapi.com/search.json?q=site:cratingexpress.com&api_key=${KEY}`;\n  const res = await fetch(url);\n  const data = await res.json();\n  return data.search_information?.total_results || 'N/A';\n}\n\nconst [keyword1, keyword2, indexedPages] = await Promise.all([\n  search('crating miami'),\n  search('wood crates miami'),\n  countIndexed()\n]);\n\nreturn [{ json: { keyword1, keyword2, indexedPages } }];\n"
+      },
+      "id": "maint-serp",
+      "name": "\ud83d\udd0d SerpAPI: Posicionamiento SEO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        512
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst tareas = $('\ud83d\udcc5 Determinar Tareas de Hoy').first().json;\nif (!tareas.needsWP) return [{ json: { skipped: true } }];\n\nconst WP_URL = 'https://cratingexpress.com';\nconst AUTH   = 'Basic ' + Buffer.from('risosadmi@gmail.com:drQHDkckRKOGOK2GCW7kfZu4').toString('base64');\nconst H      = { 'Authorization': AUTH, 'Content-Type': 'application/json' };\n\n// 1. Get installed plugins\nlet plugins = [];\ntry {\n  const r = await fetch(WP_URL + '/wp-json/wp/v2/plugins', { headers: H });\n  if (r.ok) plugins = await r.json();\n} catch(e) {}\n\n// 2. Get WP core version\nlet wpVersion = 'desconocida';\ntry {\n  const r = await fetch(WP_URL + '/wp-json/', { headers: H });\n  if (r.ok) { const d = await r.json(); wpVersion = d.version || 'desconocida'; }\n} catch(e) {}\n\n// 3. Check latest WP core\nlet wpLatest = wpVersion;\ntry {\n  const r = await fetch('https://api.wordpress.org/core/version-check/1.7/');\n  if (r.ok) { const d = await r.json(); wpLatest = d.offers?.[0]?.version || wpVersion; }\n} catch(e) {}\n\n// 4. Check each active plugin against WP.org\nconst pluginUpdates = [];\nconst upToDate = [];\nfor (const plugin of plugins) {\n  if (plugin.status !== 'active') continue;\n  const slug = (plugin.plugin || '').split('/')[0];\n  if (!slug) continue;\n  try {\n    const r = await fetch('https://api.wordpress.org/plugins/info/1.0/' + slug + '.json');\n    if (r.ok) {\n      const info = await r.json();\n      if (info.version && info.version !== plugin.version) {\n        pluginUpdates.push({ name: plugin.name, slug, current: plugin.version, latest: info.version });\n      } else {\n        upToDate.push(plugin.name);\n      }\n    }\n  } catch(e) {}\n}\n\nconst coreNeedsUpdate = wpVersion !== wpLatest;\nconst totalUpdates = pluginUpdates.length + (coreNeedsUpdate ? 1 : 0);\n\n// 5. Check UpdraftPlus\nlet hasUpdraftPlus = false;\ntry {\n  const r = await fetch(WP_URL + '/wp-json/updraftplus/v1/', { headers: H });\n  hasUpdraftPlus = r.ok;\n} catch(e) {}\n\n// 6. Trigger backup if available\nlet backupTriggered = false;\nif (hasUpdraftPlus && totalUpdates > 0) {\n  try {\n    const r = await fetch(WP_URL + '/wp-json/updraftplus/v1/backup', {\n      method: 'POST', headers: H, body: JSON.stringify({})\n    });\n    backupTriggered = r.ok;\n  } catch(e) {}\n}\n\nconst summary = totalUpdates === 0\n  ? '\u2705 Todo actualizado \u2014 WordPress ' + wpVersion + ', todos los plugins al d\u00eda'\n  : '\u26a0\ufe0f ' + totalUpdates + ' actualizaci\u00f3n(es) pendiente(s)';\n\nreturn [{ json: {\n  wpVersion, wpLatest, coreNeedsUpdate,\n  pluginUpdates, upToDate, totalUpdates,\n  backupTriggered, hasUpdraftPlus,\n  summary\n}}];\n"
+      },
+      "id": "maint-wp",
+      "name": "\ud83d\udd27 WordPress: Verificar Actualizaciones",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        704
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "maint-merge",
+      "name": "\ud83d\udd00 Merge Datos",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1200,
+        300
+      ],
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      }
+    },
+    {
+      "id": "config-empresa-T9J845yE4sd8Dde5",
+      "name": "\ud83d\udd27 Config Empresa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -600,
+        300
+      ],
+      "parameters": {
+        "url": "https://apigrowth.mdarthurdigital.com/api/n8n/companies/1",
+        "method": "GET",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "\u23f0 Trigger 9am Diario": {
+      "main": [
+        [
+          {
+            "node": "\ud83d\udcc5 Determinar Tareas de Hoy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\u25b6\ufe0f Ejecutar Manualmente": {
+      "main": [
+        [
+          {
+            "node": "\ud83d\udcc5 Determinar Tareas de Hoy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\ud83d\udcc5 Determinar Tareas de Hoy": {
+      "main": [
+        [
+          {
+            "node": "\u2753 \u00bfHay tareas hoy?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\u2753 \u00bfHay tareas hoy?": {
+      "main": [
+        [
+          {
+            "node": "\ud83c\udf10 PageSpeed: Obtener Datos",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "\ud83d\udd12 Sucuri: Verificar Seguridad",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "\ud83d\udd0d SerpAPI: Posicionamiento SEO",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "\ud83d\udd27 WordPress: Verificar Actualizaciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\ud83c\udf10 PageSpeed: Obtener Datos": {
+      "main": [
+        [
+          {
+            "node": "\ud83d\udd00 Merge Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\ud83d\udd12 Sucuri: Verificar Seguridad": {
+      "main": [
+        [
+          {
+            "node": "\ud83d\udd00 Merge Datos",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "\ud83d\udcdd Preparar Prompt Groq": {
+      "main": [
+        [
+          {
+            "node": "\ud83e\udd16 Groq: Generar Reporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\ud83e\udd16 Groq: Generar Reporte": {
+      "main": [
+        [
+          {
+            "node": "\ud83d\udccb Parsear Reporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\ud83d\udccb Parsear Reporte": {
+      "main": [
+        [
+          {
+            "node": "\ud83d\udcbe Guardar en Semana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\ud83d\udcbe Guardar en Semana": {
+      "main": [
+        [
+          {
+            "node": "\ud83d\udcc6 \u00bfEs s\u00e1bado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\ud83d\udcc6 \u00bfEs s\u00e1bado?": {
+      "main": [
+        [
+          {
+            "node": "\ud83d\udcca Preparar Reporte Semanal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "\ud83d\udcca Preparar Reporte Semanal": {
+      "main": [
+        [
+          {
+            "node": "\ud83d\udce7 Enviar Reporte a Sol",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\ud83d\udd0d SerpAPI: Posicionamiento SEO": {
+      "main": [
+        [
+          {
+            "node": "\ud83d\udd00 Merge Datos",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "\ud83d\udd27 WordPress: Verificar Actualizaciones": {
+      "main": [
+        [
+          {
+            "node": "\ud83d\udd00 Merge Datos",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "\ud83d\udd00 Merge Datos": {
+      "main": [
+        [
+          {
+            "node": "\ud83d\udcdd Preparar Prompt Groq",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "CKOju9JVnSMymfKv",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "global": {
+      "semana": []
+    },
+    "node:\u23f0 Trigger 9am Diario": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": null,
+  "pinData": {},
+  "versionId": "347de11b-0d3d-4cf2-ad4d-e0ae6bacf0fc",
+  "activeVersionId": "347de11b-0d3d-4cf2-ad4d-e0ae6bacf0fc",
+  "versionCounter": 66,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-04-23T05:21:50.442Z",
+      "createdAt": "2026-04-23T05:21:50.442Z",
+      "role": "workflow:owner",
+      "workflowId": "T9J845yE4sd8Dde5",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "updatedAt": "2026-03-16T19:58:01.773Z",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-05-18T17:32:43.197Z",
+    "createdAt": "2026-05-18T17:32:43.197Z",
+    "versionId": "347de11b-0d3d-4cf2-ad4d-e0ae6bacf0fc",
+    "workflowId": "T9J845yE4sd8Dde5",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "cronExpression",
+                "expression": "0 9 * * *"
+              }
+            ]
+          }
+        },
+        "id": "maint-sched",
+        "name": "\u23f0 Trigger 9am Diario",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          0,
+          304
+        ]
+      },
+      {
+        "parameters": {},
+        "id": "maint-manual",
+        "name": "\u25b6\ufe0f Ejecutar Manualmente",
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1,
+        "position": [
+          0,
+          480
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "\nconst now   = new Date();\nconst day   = now.getDay();\nconst date  = now.getDate();\nconst month = now.getMonth();\n\nfunction weekOfMonth(d, targetDay) {\n  let count = 0;\n  for (let i = 1; i <= d; i++) {\n    const wd = new Date(now.getFullYear(), month, i).getDay();\n    if (wd === targetDay) count++;\n  }\n  return count;\n}\n\nconst isQuarterMonth = [0, 3, 6, 9].includes(month);\nconst isDecember     = month === 11;\nconst isSaturday     = day === 6;\n\nconst tasks = [];\n\nif (day === 1) tasks.push({ tipo:'semanal', nombre:'Actualizaciones WordPress', descripcion:'Verificaci\u00f3n autom\u00e1tica de actualizaciones de WordPress core, plugins y temas activos en cratingexpress.com.', data:'WP_DATA' });\nif (day === 3) tasks.push({ tipo:'semanal', nombre:'Seguridad y Backups (Sucuri)', descripcion:'An\u00e1lisis de seguridad de cratingexpress.com usando Sucuri SiteCheck. Verificar malware, vulnerabilidades y estado de backups.', data:'SUCURI_DATA' });\nif (day === 5) tasks.push({ tipo:'semanal', nombre:'Indexaci\u00f3n y Posicionamiento SEO', descripcion:'Revisi\u00f3n del estado de indexaci\u00f3n y posicionamiento de cratingexpress.com en Google. Analizar posici\u00f3n para keywords clave del sector.', data:'SERP_DATA' });\n\nif (day === 4) {\n  const week = weekOfMonth(date, 4);\n  if (week === 1) tasks.push({ tipo:'mensual', nombre:'Optimizaci\u00f3n de Base de Datos', descripcion:'Instrucciones y mejores pr\u00e1cticas para optimizaci\u00f3n de base de datos WordPress. Incluir WP-Optimize y checklist de limpieza.', data:null });\n  if (week === 2) tasks.push({ tipo:'mensual', nombre:'Auditor\u00eda de Velocidad (PageSpeed)', descripcion:'An\u00e1lisis de rendimiento cratingexpress.com con datos reales de PageSpeed Insights. Documentar LCP, CLS, TBT y generar recomendaciones.', data:'PAGESPEED_DATA' });\n  if (week === 3) tasks.push({ tipo:'mensual', nombre:'SEO y M\u00e9tricas de Contenido', descripcion:'Revisi\u00f3n SEO de cratingexpress.com. Keywords: crating miami, wood crates miami, export packaging miami. Identificar posici\u00f3n actual y oportunidades.', data:'SERP_DATA' });\n}\n\nif (day === 2 && isQuarterMonth) {\n  const week = weekOfMonth(date, 2);\n  if (week === 2) tasks.push({ tipo:'trimestral', nombre:'UX y Compatibilidad de Navegadores', descripcion:'Checklist de pruebas UX para cratingexpress.com en m\u00faltiples dispositivos y navegadores. Incluir pruebas mobile-first.', data:null });\n  if (week === 3) tasks.push({ tipo:'trimestral', nombre:'Prueba de Formularios y Pasarelas de Pago', descripcion:'Protocolo de prueba para formularios de contacto y pasarelas de pago. Escenarios paso a paso.', data:null });\n}\n\nif (day === 2 && isDecember) {\n  const week = weekOfMonth(date, 2);\n  if (week === 1) tasks.push({ tipo:'anual', nombre:'Renovaci\u00f3n de Dominio y SSL', descripcion:'Checklist de renovaci\u00f3n de dominio cratingexpress.com, certificados SSL y actualizaci\u00f3n de contrase\u00f1as cr\u00edticas.', data:null });\n  if (week === 3) tasks.push({ tipo:'anual', nombre:'Auditor\u00eda Estrat\u00e9gica SEO/AEO Completa', descripcion:'Auditor\u00eda anual SEO/AEO para Crating Express. Keywords, E-E-A-T, metadatos, estructura H1-H3, contenido 1000-1500 palabras.', data:'SERP_DATA' });\n}\n\nconst fechaHoy = now.toLocaleDateString('es-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });\n\nreturn [{ json: {\n  tasks,\n  fechaHoy,\n  hayTareas:     tasks.length > 0 || isSaturday,\n  isSaturday,\n  needsPageSpeed: tasks.some(t => t.data === 'PAGESPEED_DATA'),\n  needsSucuri:    tasks.some(t => t.data === 'SUCURI_DATA'),\n  needsSerp:      tasks.some(t => t.data === 'SERP_DATA'),\n  needsWP:        tasks.some(t => t.data === 'WP_DATA')\n} }];\n"
+        },
+        "id": "maint-tasks",
+        "name": "\ud83d\udcc5 Determinar Tareas de Hoy",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          240,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "cond-tasks",
+                "leftValue": "={{ $json.hayTareas }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "maint-if",
+        "name": "\u2753 \u00bfHay tareas hoy?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          480,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://www.googleapis.com/pagespeedonline/v5/runPagespeed",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "url",
+                "value": "https://cratingexpress.com"
+              },
+              {
+                "name": "strategy",
+                "value": "mobile"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "id": "maint-pagespeed",
+        "name": "\ud83c\udf10 PageSpeed: Obtener Datos",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          720,
+          208
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "url": "https://sitecheck.sucuri.net/api/check/",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "scan",
+                "value": "cratingexpress.com"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "id": "maint-sucuri",
+        "name": "\ud83d\udd12 Sucuri: Verificar Seguridad",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          720,
+          384
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "\nconst tareas = $('\ud83d\udcc5 Determinar Tareas de Hoy').first().json;\nconst tasks  = tareas.tasks;\nconst fecha  = tareas.fechaHoy;\n\nlet pageSpeedData = '';\nlet sucuriData    = 'Sucuri: Verificar manualmente en sitecheck.sucuri.net/results/cratingexpress.com';\nlet serpData      = '';\n\ntry {\n  const ps   = $('\ud83c\udf10 PageSpeed: Obtener Datos').first().json;\n  const cats = ps.lighthouseResult?.categories || {};\n  const perf = Math.round((cats.performance?.score || 0) * 100);\n  const seo  = Math.round((cats.seo?.score || 0) * 100);\n  const acc  = Math.round((cats.accessibility?.score || 0) * 100);\n  const lcp  = ps.lighthouseResult?.audits?.['largest-contentful-paint']?.displayValue || 'N/A';\n  const cls  = ps.lighthouseResult?.audits?.['cumulative-layout-shift']?.displayValue || 'N/A';\n  const tbt  = ps.lighthouseResult?.audits?.['total-blocking-time']?.displayValue || 'N/A';\n  pageSpeedData = `PageSpeed Insights (Mobile) \u2014 Performance: ${perf}/100 | SEO: ${seo}/100 | Accessibility: ${acc}/100 | LCP: ${lcp} | CLS: ${cls} | TBT: ${tbt}`;\n} catch(e) {}\n\ntry {\n  const sc    = $('\ud83d\udd12 Sucuri: Verificar Seguridad').first().json;\n  const clean = sc.system?.scan?.site_clean;\n  sucuriData  = `Sucuri SiteCheck: ${clean ? '\u2705 Sitio limpio, sin malware detectado' : '\u26a0\ufe0f Revisar manualmente en sitecheck.sucuri.net'}`;\n} catch(e) {}\n\ntry {\n  const sr = $('\ud83d\udd0d SerpAPI: Posicionamiento SEO').first().json;\n\n  // Keyword 1: crating miami\n  const r1 = sr.keyword1 || {};\n  const pos1 = r1.cePosition ? `posici\u00f3n #${r1.cePosition}` : 'no aparece en top 10';\n  const top1 = (r1.topResults || []).slice(0,3).map((x,i) => `  ${i+1}. ${x.title} (${x.link})`).join('\\n');\n\n  // Keyword 2: wood crates miami\n  const r2 = sr.keyword2 || {};\n  const pos2 = r2.cePosition ? `posici\u00f3n #${r2.cePosition}` : 'no aparece en top 10';\n  const top2 = (r2.topResults || []).slice(0,3).map((x,i) => `  ${i+1}. ${x.title} (${x.link})`).join('\\n');\n\n  // Site index count\n  const indexed = sr.indexedPages || 'N/A';\n\n  serpData = `SerpAPI \u2014 Resultados Google Miami:\\n` +\n    `\u2022 \"crating miami\": Crating Express ${pos1}\\n  Top resultados:\\n${top1}\\n` +\n    `\u2022 \"wood crates miami\": Crating Express ${pos2}\\n  Top resultados:\\n${top2}\\n` +\n    `\u2022 P\u00e1ginas indexadas (site:cratingexpress.com): ${indexed}`;\n} catch(e) {}\n\n\nlet wpData = '';\ntry {\n  const wp = $('\ud83d\udd27 WordPress: Verificar Actualizaciones').first().json;\n  if (!wp.skipped) {\n    wpData = wp.summary + '\\n';\n    if (wp.coreNeedsUpdate) wpData += '\u2022 Core: WordPress ' + wp.wpVersion + ' \u2192 actualizar a ' + wp.wpLatest + '\\n';\n    if (wp.pluginUpdates && wp.pluginUpdates.length > 0) {\n      wpData += '\u2022 Plugins con actualizaci\u00f3n disponible:\\n';\n      wp.pluginUpdates.forEach(p => { wpData += '  - ' + p.name + ': v' + p.current + ' \u2192 v' + p.latest + '\\n'; });\n    }\n    if (wp.upToDate && wp.upToDate.length > 0) wpData += '\u2022 Al d\u00eda: ' + wp.upToDate.length + ' plugin(s) sin actualizaciones pendientes\\n';\n    if (wp.backupTriggered) wpData += '\u2022 \u2705 Backup triggereado via UpdraftPlus\\n';\n  }\n} catch(e) {}\n\nconst taskDescriptions = tasks.map(t => {\n  let desc = `## ${t.tipo.toUpperCase()}: ${t.nombre}\\n${t.descripcion}`;\n  if (t.data === 'PAGESPEED_DATA' && pageSpeedData) desc += `\\n\\nDATOS REALES: ${pageSpeedData}`;\n  if (t.data === 'SUCURI_DATA') desc += `\\n\\nDATOS REALES: ${sucuriData}`;\n  if (t.data === 'SERP_DATA' && serpData) desc += `\\n\\nDATOS REALES:\\n${serpData}`;\n  if (t.data === 'WP_DATA' && wpData) desc += `\\n\\nDATOS REALES:\\n${wpData}`;\n  return desc;\n}).join('\\n\\n---\\n\\n');\n\nconst systemPrompt = `Eres el Maintenance Manager de Crating Express, empresa de embalaje de madera y crating personalizado en Miami, FL. Web: cratingexpress.com. Genera reportes profesionales, directos y orientados a resultados. Usa \"Crating Express\" completo siempre, usa \"disponer\" en lugar de \"ofrecer\".`;\n\nconst userPrompt = `Fecha: ${fecha}\n\nEjecuta y genera el reporte para estas tareas de mantenimiento:\n\n${taskDescriptions}\n\nResponde SOLO con JSON v\u00e1lido:\n{\n  \"subject\": \"Reporte de Tarea: Crating Express - ${fecha}\",\n  \"resumen_texto\": \"resumen en texto plano de m\u00e1ximo 3 l\u00edneas con los hallazgos clave\",\n  \"body_html\": \"HTML con cada secci\u00f3n usando SOLO listas de incisos (<ul><li>). Sin p\u00e1rrafos de texto corrido. Secciones: Hallazgos \u2192 Recomendaciones \u2192 Pr\u00f3ximos Pasos. Cada punto debe ser conciso y directo (m\u00e1ximo 15 palabras por inciso).\"\n}`;\n\nreturn [{ json: { systemPrompt, userPrompt, fecha, tasks: tasks.map(t => t.nombre) } }];\n"
+        },
+        "id": "maint-prompt",
+        "name": "\ud83d\udcdd Preparar Prompt Groq",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          960,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.groq.com/openai/v1/chat/completions",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "groqApi",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer gsk_xh4sNFnhiBX0IIKYo5cLWGdyb3FYnFEJIPiSPuIBTK8MgCmVb"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ model: \"llama-3.3-70b-versatile\", messages: [{ role: \"system\", content: $json.systemPrompt }, { role: \"user\", content: $json.userPrompt }], temperature: 0.4, max_tokens: 4000, response_format: { type: \"json_object\" } }) }}",
+          "options": {}
+        },
+        "id": "maint-groq",
+        "name": "\ud83e\udd16 Groq: Generar Reporte",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1200,
+          304
+        ],
+        "credentials": {
+          "groqApi": {
+            "id": "jORffbRhRNohHT1B",
+            "name": "Groq account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "\nconst raw = $input.item.json.choices?.[0]?.message?.content || '{}';\nlet parsed;\ntry { parsed = JSON.parse(raw); }\ncatch(e) {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  parsed = m ? JSON.parse(m[0]) : {};\n}\nconst fecha = $('\ud83d\udcc5 Determinar Tareas de Hoy').first().json.fechaHoy;\nreturn [{ json: {\n  subject:      parsed.subject      || `Reporte de Mantenimiento: Crating Express \u2014 ${fecha}`,\n  body_html:    parsed.body_html    || `<p>Reporte generado \u2014 ${fecha}</p>`,\n  resumen_texto: parsed.resumen_texto || ''\n}}];\n"
+        },
+        "id": "maint-parse",
+        "name": "\ud83d\udccb Parsear Reporte",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1440,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "sendTo": "={{ $('\ud83d\udd27 Config Empresa').item.json.data.emails[0] }}",
+          "subject": "={{ $json.subject }}",
+          "message": "={{ $json.body_html }}",
+          "options": {
+            "appendAttribution": false,
+            "ccList": "risosnds@gmail.com",
+            "senderName": "CE Maintenance Manager"
+          }
+        },
+        "id": "maint-email",
+        "name": "\ud83d\udce7 Enviar Reporte a Sol",
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          1680,
+          304
+        ],
+        "webhookId": "7c16e0ef-78e8-48c6-a695-e435c731210c",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "TESHSjzjMCpCxBBk",
+            "name": "Gmail account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.semana) staticData.semana = [];\n\nconst parsed   = $('\ud83d\udccb Parsear Reporte').first().json;\nconst tareas   = $('\ud83d\udcc5 Determinar Tareas de Hoy').first().json;\n\n// Only save if there were real tasks today (not just Saturday trigger)\nif (!tareas.tasks || tareas.tasks.length === 0) {\n  return [{ json: { guardado: false, razon: 'Sin tareas hoy' } }];\n}\n\nstaticData.semana.push({\n  fecha:   tareas.fechaHoy,\n  tareas:  tareas.tasks.map(t => t.nombre),\n  resumen: parsed.resumen_texto || '',\n  html:    parsed.body_html || ''\n});\n\nreturn [{ json: { guardado: true, totalDias: staticData.semana.length } }];\n"
+        },
+        "id": "maint-save",
+        "name": "\ud83d\udcbe Guardar en Semana",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1680,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "cond-sat",
+                "leftValue": "={{ new Date().getDay() === 6 }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "maint-ifsat",
+        "name": "\ud83d\udcc6 \u00bfEs s\u00e1bado?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1920,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "\nconst staticData = $getWorkflowStaticData('global');\nconst semana = staticData.semana || [];\n\nconst now   = new Date();\nconst fecha = now.toLocaleDateString('es-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });\nconst NAVY  = '#305468';\n\nif (semana.length === 0) {\n  // Clear just in case\n  staticData.semana = [];\n  return [{ json: {\n    subject: `Reporte Semanal: Crating Express \u2014 ${fecha}`,\n    body_html: `<div style=\"font-family:Arial,sans-serif;max-width:680px;margin:0 auto;color:#333;\">\n      <div style=\"background:${NAVY};color:#fff;padding:24px 28px;border-radius:8px 8px 0 0;\">\n        <div style=\"font-size:11px;letter-spacing:1px;opacity:.7;text-transform:uppercase;\">Reporte Semanal</div>\n        <h1 style=\"margin:4px 0 0;font-size:22px;\">Crating Express \u2014 Mantenimiento Web</h1>\n        <p style=\"margin:6px 0 0;opacity:.8;font-size:14px;\">${fecha}</p>\n      </div>\n      <div style=\"padding:24px 28px;border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;\">\n        <p>Hola Sol,</p>\n        <p>Esta semana no se registraron tareas de mantenimiento con datos acumulados. El sistema est\u00e1 activo y funcionando.</p>\n        <hr style=\"margin:24px 0;border:none;border-top:1px solid #eee;\">\n        <p style=\"font-size:12px;color:#999;\">CE Maintenance Manager \u2014 Generado autom\u00e1ticamente por n8n</p>\n      </div>\n    </div>`\n  }}];\n}\n\nconst sections = semana.map(dia => `\n  <div style=\"margin-bottom:24px;padding:18px 20px;border:1px solid #e0e0e0;border-radius:8px;\">\n    <h3 style=\"color:${NAVY};margin:0 0 10px;font-size:15px;\">${dia.fecha}</h3>\n    <p style=\"color:#666;font-size:12px;margin:0 0 10px;\">\n      <strong>Tareas ejecutadas:</strong>\n      <ul style=\"margin:4px 0 0;padding-left:18px;color:#444;\">${dia.tareas.map(t => `<li>${t}</li>`).join('')}</ul>\n    </p>\n    ${dia.html}\n  </div>\n`).join('');\n\nconst bodyHtml = `\n<div style=\"font-family:Arial,sans-serif;max-width:680px;margin:0 auto;color:#333;\">\n  <div style=\"background:${NAVY};color:#fff;padding:24px 28px;border-radius:8px 8px 0 0;\">\n    <div style=\"font-size:11px;letter-spacing:1px;opacity:.7;text-transform:uppercase;\">Reporte Semanal</div>\n    <h1 style=\"margin:4px 0 0;font-size:22px;\">Crating Express \u2014 Mantenimiento Web</h1>\n    <p style=\"margin:6px 0 0;opacity:.8;font-size:14px;\">${fecha}</p>\n  </div>\n  <div style=\"padding:24px 28px;border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;\">\n    <p>Hola Sol,</p>\n    <p>Aqu\u00ed est\u00e1 el resumen de todas las tareas de mantenimiento ejecutadas esta semana:</p>\n    ${sections}\n    <hr style=\"margin:24px 0;border:none;border-top:1px solid #eee;\">\n    <p style=\"font-size:12px;color:#999;\">CE Maintenance Manager \u2014 Generado autom\u00e1ticamente por n8n</p>\n  </div>\n</div>`;\n\nstaticData.semana = [];\n\nreturn [{ json: {\n  subject: `Reporte Semanal: Crating Express Mantenimiento Web \u2014 ${fecha}`,\n  body_html: bodyHtml\n}}];\n"
+        },
+        "id": "maint-weekly",
+        "name": "\ud83d\udcca Preparar Reporte Semanal",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2160,
+          208
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "\nconst tareas = $('\ud83d\udcc5 Determinar Tareas de Hoy').first().json;\nif (!tareas.needsSerp) return [{ json: { skipped: true } }];\n\nconst KEY = '1d34b94358d31e9d8043ae3f1ead005322b022b6b0fdcf1f2699d68c95a9c1b9';\n\nasync function search(q) {\n  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&location=Miami,Florida,United States&hl=en&gl=us&num=10&api_key=${KEY}`;\n  const res = await fetch(url);\n  const data = await res.json();\n  const results = (data.organic_results || []).map((r, i) => ({\n    position: i + 1,\n    title: r.title || '',\n    link: r.link || '',\n    snippet: r.snippet || ''\n  }));\n  const cePosition = results.find(r => r.link.includes('cratingexpress.com'))?.position || null;\n  return { topResults: results.slice(0, 5), cePosition };\n}\n\nasync function countIndexed() {\n  const url = `https://serpapi.com/search.json?q=site:cratingexpress.com&api_key=${KEY}`;\n  const res = await fetch(url);\n  const data = await res.json();\n  return data.search_information?.total_results || 'N/A';\n}\n\nconst [keyword1, keyword2, indexedPages] = await Promise.all([\n  search('crating miami'),\n  search('wood crates miami'),\n  countIndexed()\n]);\n\nreturn [{ json: { keyword1, keyword2, indexedPages } }];\n"
+        },
+        "id": "maint-serp",
+        "name": "\ud83d\udd0d SerpAPI: Posicionamiento SEO",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          960,
+          512
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "\nconst tareas = $('\ud83d\udcc5 Determinar Tareas de Hoy').first().json;\nif (!tareas.needsWP) return [{ json: { skipped: true } }];\n\nconst WP_URL = 'https://cratingexpress.com';\nconst AUTH   = 'Basic ' + Buffer.from('risosadmi@gmail.com:drQHDkckRKOGOK2GCW7kfZu4').toString('base64');\nconst H      = { 'Authorization': AUTH, 'Content-Type': 'application/json' };\n\n// 1. Get installed plugins\nlet plugins = [];\ntry {\n  const r = await fetch(WP_URL + '/wp-json/wp/v2/plugins', { headers: H });\n  if (r.ok) plugins = await r.json();\n} catch(e) {}\n\n// 2. Get WP core version\nlet wpVersion = 'desconocida';\ntry {\n  const r = await fetch(WP_URL + '/wp-json/', { headers: H });\n  if (r.ok) { const d = await r.json(); wpVersion = d.version || 'desconocida'; }\n} catch(e) {}\n\n// 3. Check latest WP core\nlet wpLatest = wpVersion;\ntry {\n  const r = await fetch('https://api.wordpress.org/core/version-check/1.7/');\n  if (r.ok) { const d = await r.json(); wpLatest = d.offers?.[0]?.version || wpVersion; }\n} catch(e) {}\n\n// 4. Check each active plugin against WP.org\nconst pluginUpdates = [];\nconst upToDate = [];\nfor (const plugin of plugins) {\n  if (plugin.status !== 'active') continue;\n  const slug = (plugin.plugin || '').split('/')[0];\n  if (!slug) continue;\n  try {\n    const r = await fetch('https://api.wordpress.org/plugins/info/1.0/' + slug + '.json');\n    if (r.ok) {\n      const info = await r.json();\n      if (info.version && info.version !== plugin.version) {\n        pluginUpdates.push({ name: plugin.name, slug, current: plugin.version, latest: info.version });\n      } else {\n        upToDate.push(plugin.name);\n      }\n    }\n  } catch(e) {}\n}\n\nconst coreNeedsUpdate = wpVersion !== wpLatest;\nconst totalUpdates = pluginUpdates.length + (coreNeedsUpdate ? 1 : 0);\n\n// 5. Check UpdraftPlus\nlet hasUpdraftPlus = false;\ntry {\n  const r = await fetch(WP_URL + '/wp-json/updraftplus/v1/', { headers: H });\n  hasUpdraftPlus = r.ok;\n} catch(e) {}\n\n// 6. Trigger backup if available\nlet backupTriggered = false;\nif (hasUpdraftPlus && totalUpdates > 0) {\n  try {\n    const r = await fetch(WP_URL + '/wp-json/updraftplus/v1/backup', {\n      method: 'POST', headers: H, body: JSON.stringify({})\n    });\n    backupTriggered = r.ok;\n  } catch(e) {}\n}\n\nconst summary = totalUpdates === 0\n  ? '\u2705 Todo actualizado \u2014 WordPress ' + wpVersion + ', todos los plugins al d\u00eda'\n  : '\u26a0\ufe0f ' + totalUpdates + ' actualizaci\u00f3n(es) pendiente(s)';\n\nreturn [{ json: {\n  wpVersion, wpLatest, coreNeedsUpdate,\n  pluginUpdates, upToDate, totalUpdates,\n  backupTriggered, hasUpdraftPlus,\n  summary\n}}];\n"
+        },
+        "id": "maint-wp",
+        "name": "\ud83d\udd27 WordPress: Verificar Actualizaciones",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          960,
+          704
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "maint-merge",
+        "name": "\ud83d\udd00 Merge Datos",
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3,
+        "position": [
+          1200,
+          300
+        ],
+        "parameters": {
+          "mode": "combine",
+          "combineBy": "combineAll",
+          "options": {}
+        }
+      },
+      {
+        "id": "config-empresa-T9J845yE4sd8Dde5",
+        "name": "\ud83d\udd27 Config Empresa",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [
+          -600,
+          300
+        ],
+        "parameters": {
+          "url": "https://apigrowth.mdarthurdigital.com/api/n8n/companies/1",
+          "method": "GET",
+          "options": {}
+        }
+      }
+    ],
+    "connections": {
+      "\u23f0 Trigger 9am Diario": {
+        "main": [
+          [
+            {
+              "node": "\ud83d\udcc5 Determinar Tareas de Hoy",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "\u25b6\ufe0f Ejecutar Manualmente": {
+        "main": [
+          [
+            {
+              "node": "\ud83d\udcc5 Determinar Tareas de Hoy",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "\ud83d\udcc5 Determinar Tareas de Hoy": {
+        "main": [
+          [
+            {
+              "node": "\u2753 \u00bfHay tareas hoy?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "\u2753 \u00bfHay tareas hoy?": {
+        "main": [
+          [
+            {
+              "node": "\ud83c\udf10 PageSpeed: Obtener Datos",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "\ud83d\udd12 Sucuri: Verificar Seguridad",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "\ud83d\udd0d SerpAPI: Posicionamiento SEO",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "\ud83d\udd27 WordPress: Verificar Actualizaciones",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "\ud83c\udf10 PageSpeed: Obtener Datos": {
+        "main": [
+          [
+            {
+              "node": "\ud83d\udd00 Merge Datos",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "\ud83d\udd12 Sucuri: Verificar Seguridad": {
+        "main": [
+          [
+            {
+              "node": "\ud83d\udd00 Merge Datos",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "\ud83d\udcdd Preparar Prompt Groq": {
+        "main": [
+          [
+            {
+              "node": "\ud83e\udd16 Groq: Generar Reporte",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "\ud83e\udd16 Groq: Generar Reporte": {
+        "main": [
+          [
+            {
+              "node": "\ud83d\udccb Parsear Reporte",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "\ud83d\udccb Parsear Reporte": {
+        "main": [
+          [
+            {
+              "node": "\ud83d\udcbe Guardar en Semana",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "\ud83d\udcbe Guardar en Semana": {
+        "main": [
+          [
+            {
+              "node": "\ud83d\udcc6 \u00bfEs s\u00e1bado?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "\ud83d\udcc6 \u00bfEs s\u00e1bado?": {
+        "main": [
+          [
+            {
+              "node": "\ud83d\udcca Preparar Reporte Semanal",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          []
+        ]
+      },
+      "\ud83d\udcca Preparar Reporte Semanal": {
+        "main": [
+          [
+            {
+              "node": "\ud83d\udce7 Enviar Reporte a Sol",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "\ud83d\udd0d SerpAPI: Posicionamiento SEO": {
+        "main": [
+          [
+            {
+              "node": "\ud83d\udd00 Merge Datos",
+              "type": "main",
+              "index": 2
+            }
+          ]
+        ]
+      },
+      "\ud83d\udd27 WordPress: Verificar Actualizaciones": {
+        "main": [
+          [
+            {
+              "node": "\ud83d\udd00 Merge Datos",
+              "type": "main",
+              "index": 3
+            }
+          ]
+        ]
+      },
+      "\ud83d\udd00 Merge Datos": {
+        "main": [
+          [
+            {
+              "node": "\ud83d\udcdd Preparar Prompt Groq",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-05-18T17:32:43.319Z",
+        "id": 524,
+        "workflowId": "T9J845yE4sd8Dde5",
+        "versionId": "347de11b-0d3d-4cf2-ad4d-e0ae6bacf0fc",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      },
+      {
+        "createdAt": "2026-05-18T17:32:43.272Z",
+        "id": 523,
+        "workflowId": "T9J845yE4sd8Dde5",
+        "versionId": "347de11b-0d3d-4cf2-ad4d-e0ae6bacf0fc",
+        "event": "deactivated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    ]
+  }
+}
