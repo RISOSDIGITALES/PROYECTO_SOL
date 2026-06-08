@@ -1,0 +1,394 @@
+{
+  "name": "🔍 WP — Identificador de Tipo de Contenido",
+  "nodes": [
+    {
+      "id": "878fb55f-d51d-4c53-8e1b-3de45e22eb82",
+      "name": "▶️ Ejecutar Manualmente",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "f32d4284-18e9-469c-9ef1-5edbf86a6391",
+      "name": "⚙️ Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "82b8bbf4-de3e-4532-a799-e8576ce49a14",
+              "name": "wp_site_url",
+              "value": "https://tu-sitio.com",
+              "type": "string"
+            },
+            {
+              "id": "e5e71b36-773b-4f27-9558-1f2e76487a84",
+              "name": "content_id",
+              "value": "1",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e0619869-4aba-4164-a354-04cbebee6668",
+      "name": "🔍 Verificar como Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config').item.json.wp_site_url }}/wp-json/wp/v2/posts/{{ $('⚙️ Config').item.json.content_id }}",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi"
+      },
+      "credentials": {
+        "wordpressApi": {
+          "id": "zz9tevIHnfrOstlc",
+          "name": "WordPress account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "de9351fc-7af6-433b-88fe-4de4f654a2f0",
+      "name": "🔀 ¿Es un Post?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "5ffc5453-88da-4983-be04-9efed42ad9a6",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "f153553c-cbd2-4251-9989-77650b10a20b",
+      "name": "✅ Es Post",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1100,
+        180
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0e81b154-99df-49ef-b27b-47fc4d67ffee",
+              "name": "tipo",
+              "value": "post",
+              "type": "string"
+            },
+            {
+              "id": "447b7672-7da6-41a7-8949-b321aea43c16",
+              "name": "id",
+              "value": "={{ $('🔍 Verificar como Post').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "766e4b4c-140e-4532-8aef-d63fb6f0b837",
+              "name": "titulo",
+              "value": "={{ $('🔍 Verificar como Post').item.json.title?.rendered }}",
+              "type": "string"
+            },
+            {
+              "id": "0fe63351-7015-4818-a842-b4667f9796cc",
+              "name": "estado",
+              "value": "={{ $('🔍 Verificar como Post').item.json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "bfb1c06f-ba43-470a-b1f2-3e72cb62ac9c",
+              "name": "url",
+              "value": "={{ $('🔍 Verificar como Post').item.json.link }}",
+              "type": "string"
+            },
+            {
+              "id": "7786dbdc-a448-4852-9124-1d3175404d36",
+              "name": "fecha",
+              "value": "={{ $('🔍 Verificar como Post').item.json.date }}",
+              "type": "string"
+            },
+            {
+              "id": "69896553-1369-45cb-aacb-5c2d05232e34",
+              "name": "autor_id",
+              "value": "={{ $('🔍 Verificar como Post').item.json.author }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e450c698-5105-4a55-b0c0-35ac71ee4212",
+      "name": "🔍 Verificar como Página",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        420
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config').item.json.wp_site_url }}/wp-json/wp/v2/pages/{{ $('⚙️ Config').item.json.content_id }}",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi"
+      },
+      "credentials": {
+        "wordpressApi": {
+          "id": "zz9tevIHnfrOstlc",
+          "name": "WordPress account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "92bcaf44-313c-4c48-94d1-f779dd11c3d3",
+      "name": "🔀 ¿Es una Página?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        420
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "db261df8-d14d-4a1a-b639-8b91b6adab64",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "7ad514cb-4501-4ec4-9db0-3c0ea9de8253",
+      "name": "✅ Es Página",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1540,
+        340
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "357fa9ab-01c6-4479-a7b8-7b13b04acdb2",
+              "name": "tipo",
+              "value": "página",
+              "type": "string"
+            },
+            {
+              "id": "1ca29523-fe48-4ce7-8a01-2e56c5459c10",
+              "name": "id",
+              "value": "={{ $('🔍 Verificar como Página').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "3c62e7da-c84a-4e02-b0d8-c684a770185d",
+              "name": "titulo",
+              "value": "={{ $('🔍 Verificar como Página').item.json.title?.rendered }}",
+              "type": "string"
+            },
+            {
+              "id": "9b87f5fb-2e63-496b-a61b-d28755da18c2",
+              "name": "estado",
+              "value": "={{ $('🔍 Verificar como Página').item.json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "21cfef29-44cd-4285-a859-b34a95868891",
+              "name": "url",
+              "value": "={{ $('🔍 Verificar como Página').item.json.link }}",
+              "type": "string"
+            },
+            {
+              "id": "22a0f26b-5942-43bd-ac8a-30bc7c07b34d",
+              "name": "fecha",
+              "value": "={{ $('🔍 Verificar como Página').item.json.date }}",
+              "type": "string"
+            },
+            {
+              "id": "2776205f-0943-4b8a-b312-3405d5609a41",
+              "name": "pagina_padre",
+              "value": "={{ $('🔍 Verificar como Página').item.json.parent }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d7a7b6ed-f604-4486-affc-6a36157e091d",
+      "name": "❌ No Encontrado",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1540,
+        500
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5ec328d6-c09a-4b9f-8b3b-c716f9303568",
+              "name": "tipo",
+              "value": "desconocido",
+              "type": "string"
+            },
+            {
+              "id": "9967544c-f3c6-49de-8fed-a6c83897f682",
+              "name": "id_buscado",
+              "value": "={{ $('⚙️ Config').item.json.content_id }}",
+              "type": "string"
+            },
+            {
+              "id": "1ab80c94-5d1e-48b7-bd3e-d59d54486525",
+              "name": "mensaje",
+              "value": "No se encontró ningún post ni página con ese ID en el sitio indicado",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "▶️ Ejecutar Manualmente": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Config": {
+      "main": [
+        [
+          {
+            "node": "🔍 Verificar como Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Verificar como Post": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Es un Post?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Es un Post?": {
+      "main": [
+        [
+          {
+            "node": "✅ Es Post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔍 Verificar como Página",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Verificar como Página": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Es una Página?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Es una Página?": {
+      "main": [
+        [
+          {
+            "node": "✅ Es Página",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❌ No Encontrado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null
+}
