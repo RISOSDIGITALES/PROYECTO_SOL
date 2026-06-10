@@ -55,12 +55,75 @@ function initLayout() {
       background:var(--navy, #1e2a3a);border:1px solid var(--border);
       border-radius:8px;overflow:hidden;box-shadow:0 -4px 16px rgba(0,0,0,.35);z-index:200`;
     menu.innerHTML = `
-      <button id="menu-ajustes-perfil" style="width:100%;background:none;border:none;color:var(--text);padding:11px 16px;text-align:left;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px">
+      <button id="menu-ajustes-perfil" style="width:100%;background:none;border:none;color:var(--text);padding:11px 16px;text-align:left;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">
         👤 Mi perfil
-      </button>`;
-    // Hover effect vía JS (sin depender de CSS externo)
+      </button>
+      <div id="menu-ajustes-inatec-wrap" style="display:none">
+        <button id="menu-ajustes-inatec-btn" style="width:100%;background:none;border:none;color:var(--text);padding:11px 16px;text-align:left;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">
+          🏭 Aportes Patronales
+        </button>
+        <div id="menu-inatec-panel" style="display:none;padding:12px 16px;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text)">INATEC (2%)</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Aporte patronal sobre planilla total</div>
+            </div>
+            <label style="position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0">
+              <input type="checkbox" id="menu-inatec-activo" style="opacity:0;width:0;height:0">
+              <span id="menu-inatec-slider" style="position:absolute;inset:0;border-radius:24px;background:#555;cursor:pointer;transition:background .2s">
+                <span id="menu-inatec-knob" style="position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s;pointer-events:none"></span>
+              </span>
+            </label>
+          </div>
+          <button id="menu-inatec-guardar" style="margin-top:10px;width:100%;background:var(--green2,#2ecc71);border:none;color:#fff;border-radius:6px;padding:7px;font-size:13px;cursor:pointer;font-weight:600">Guardar</button>
+        </div>
+      </div>`;
     menu.querySelector('#menu-ajustes-perfil').addEventListener('mouseenter', function(){ this.style.background='var(--hover, rgba(255,255,255,.07))'; });
     menu.querySelector('#menu-ajustes-perfil').addEventListener('mouseleave', function(){ this.style.background='none'; });
+    menu.querySelector('#menu-ajustes-inatec-btn').addEventListener('mouseenter', function(){ this.style.background='var(--hover, rgba(255,255,255,.07))'; });
+    menu.querySelector('#menu-ajustes-inatec-btn').addEventListener('mouseleave', function(){ this.style.background='none'; });
+    menu.querySelector('#menu-ajustes-inatec-btn').addEventListener('click', async () => {
+      const panel = menu.querySelector('#menu-inatec-panel');
+      const isOpen = panel.style.display !== 'none';
+      if (isOpen) { panel.style.display = 'none'; return; }
+      // Cargar valor actual
+      const empresaId = localStorage.getItem('planilla_empresa_id');
+      if (empresaId) {
+        try {
+          const emp    = await apiFetch(`/api/empresas/${empresaId}`);
+          const activo = emp.inatec_activo !== 0;
+          const cb     = menu.querySelector('#menu-inatec-activo');
+          const slider = menu.querySelector('#menu-inatec-slider');
+          const knob   = menu.querySelector('#menu-inatec-knob');
+          cb.checked = activo;
+          slider.style.background    = activo ? 'var(--green2,#2ecc71)' : '#555';
+          knob.style.transform       = activo ? 'translateX(18px)' : 'translateX(0)';
+        } catch (_) {}
+      }
+      menu.querySelector('#menu-inatec-panel').style.display = '';
+    });
+    // Toggle del slider
+    menu.querySelector('#menu-inatec-slider').addEventListener('click', () => {
+      const cb     = menu.querySelector('#menu-inatec-activo');
+      const slider = menu.querySelector('#menu-inatec-slider');
+      const knob   = menu.querySelector('#menu-inatec-knob');
+      cb.checked = !cb.checked;
+      slider.style.background = cb.checked ? 'var(--green2,#2ecc71)' : '#555';
+      knob.style.transform    = cb.checked ? 'translateX(18px)' : 'translateX(0)';
+    });
+    // Guardar
+    menu.querySelector('#menu-inatec-guardar').addEventListener('click', async () => {
+      const empresaId = localStorage.getItem('planilla_empresa_id');
+      if (!empresaId) return;
+      const btn = menu.querySelector('#menu-inatec-guardar');
+      btn.textContent = 'Guardando...'; btn.disabled = true;
+      try {
+        await apiFetch(`/api/empresas/${empresaId}`, { method: 'PATCH', body: JSON.stringify({ inatec_activo: menu.querySelector('#menu-inatec-activo').checked ? 1 : 0 }) });
+        menu.querySelector('#menu-inatec-panel').style.display = 'none';
+        menu.style.display = 'none';
+      } catch (e) { alert('Error: ' + e.message); }
+      finally { btn.textContent = 'Guardar'; btn.disabled = false; }
+    });
 
     const btnAjustes = document.createElement('button');
     btnAjustes.id = 'btn-ajustes';
@@ -200,6 +263,9 @@ function initLayout() {
   getMyInfo().then(info => {
     const link = document.getElementById('link-usuarios');
     if (link && info.rol !== 'Master') link.style.display = 'none';
+    // Mostrar opción Aportes Patronales solo para Master
+    const inatecWrap = document.getElementById('menu-ajustes-inatec-wrap');
+    if (inatecWrap && info.rol === 'Master') inatecWrap.style.display = '';
     // Cargar selector de empresa en el sidebar
     _loadEmpresaSelector();
   });
@@ -357,10 +423,22 @@ async function _loadEmpresaSelector() {
         logoSpan.innerHTML = `<img src="${empDetail.logo}"
           style="width:20px;height:20px;object-fit:contain;border-radius:3px;flex-shrink:0" />`;
       }
-    } catch (_) {}
+    } catch (logoErr) { console.warn('[empresa-logo]', logoErr); }
 
-  } catch (_) {
-    // Si falla (sin empresas, error de red) no bloquear la UI
+  } catch (err) {
+    // Si falla, mostrar botón de fallback para que Master pueda gestionar
+    console.error('[empresa-selector] error:', err);
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar && !document.getElementById('empresa-selector-wrap')) {
+      const wrap = document.createElement('div');
+      wrap.id = 'empresa-selector-wrap';
+      wrap.style.cssText = 'padding:8px 16px 4px;border-bottom:1px solid var(--border);margin-bottom:4px';
+      wrap.innerHTML = `<button id="btn-gestionar-empresas" style="width:100%;background:none;border:1px dashed rgba(46,204,113,.5);color:#2ecc71;border-radius:6px;font-size:12px;cursor:pointer;padding:6px 8px">🏢 Gestionar empresa</button>`;
+      const logo = sidebar.querySelector('.sidebar-logo');
+      if (logo && logo.nextSibling) sidebar.insertBefore(wrap, logo.nextSibling);
+      else sidebar.insertBefore(wrap, sidebar.querySelector('nav') || sidebar.firstChild);
+      document.getElementById('btn-gestionar-empresas').addEventListener('click', () => _abrirModalEmpresas());
+    }
   }
 }
 
@@ -481,6 +559,7 @@ async function _abrirConfigEmpresa(empresaId) {
                  color:var(--text);padding:8px 12px;font-size:13px;resize:vertical;box-sizing:border-box"
           placeholder="De la Rotonda El Periodista, 3c al norte…"></textarea>
       </div>
+
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" id="cancel-config-empresa">Cancelar</button>
@@ -519,10 +598,10 @@ async function _abrirConfigEmpresa(empresaId) {
       const logoEl = document.getElementById('cfg-logo-preview');
       const body = {
         nombre,
-        ruc:       document.getElementById('cfg-ruc').value.trim()       || null,
-        correo:    document.getElementById('cfg-correo').value.trim()     || null,
-        telefono:  document.getElementById('cfg-telefono').value.trim()   || null,
-        direccion: document.getElementById('cfg-direccion').value.trim()  || null,
+        ruc:           document.getElementById('cfg-ruc').value.trim()       || null,
+        correo:        document.getElementById('cfg-correo').value.trim()     || null,
+        telefono:      document.getElementById('cfg-telefono').value.trim()   || null,
+        direccion:     document.getElementById('cfg-direccion').value.trim()  || null,
         ...(logoEl.dataset.logo ? { logo: logoEl.dataset.logo } : {}),
       };
 

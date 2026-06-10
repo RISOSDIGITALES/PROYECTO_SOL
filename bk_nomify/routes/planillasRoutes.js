@@ -75,8 +75,9 @@ router.post('/calcular', requireAuth, async (req, res) => {
   let { periodo, tipo, forzar } = req.body;
   if (!periodo) return res.status(400).json({ error: 'Se requiere periodo (YYYY-MM-DD)' });
 
-  // ── Aguinaldo: desviar a ruta especial ───────────────────────────────────────
+  // ── Desviar a rutas especiales ───────────────────────────────────────────────
   if (tipo === 'Aguinaldo') return calcularAguinaldo(req, res, periodo, forzar);
+  if (tipo === 'Mensual' || (tipo || '').endsWith('Mensual')) return calcularMensual(req, res, periodo, tipo, forzar);
 
   const conn = await db.getConnection();
   try {
@@ -101,6 +102,13 @@ router.post('/calcular', requireAuth, async (req, res) => {
           folio: dup.folio,
         });
       }
+    }
+
+    // Leer config de la empresa (inatec_activo)
+    let inatecActivo = true;
+    if (empresaId) {
+      const [[empCfg]] = await conn.query('SELECT inatec_activo FROM empresas WHERE id = ?', [empresaId]);
+      if (empCfg && empCfg.inatec_activo === 0) inatecActivo = false;
     }
 
     let empQuery = 'SELECT * FROM empleados WHERE activo = 1';
@@ -195,7 +203,7 @@ router.post('/calcular', requireAuth, async (req, res) => {
         const basePatronal = emp.inss_base === 'Salario Minimo' ? SALARIO_MINIMO : salarioMensual;
         inss_patronal = Math.round(basePatronal / 2 * INSS_PATRONAL_RATE * 100) / 100;
       }
-      inatec = Math.round(salarioQuincenal * INATEC_RATE * 100) / 100;
+      inatec = inatecActivo ? Math.round(salarioQuincenal * INATEC_RATE * 100) / 100 : 0;
       const costoEmpresa = Math.round((salarioQuincenal + inss_patronal + inatec) * 100) / 100;
 
       totalBruto += salarioQuincenal + totalExtras;
@@ -411,6 +419,253 @@ async function calcularAguinaldo(req, res, periodo, forzar) {
     res.json({
       ok: true, planillaId, anio, tipo: 'Aguinaldo',
       empleados: detalles.length, totalAguinaldo,
+    });
+  } catch (e) {
+    await conn.rollback(); conn.release();
+    res.status(500).json({ error: e.message });
+  }
+}
+
+// ── Planilla Mensual ──────────────────────────────────────────────────────────
+async function calcularMensual(req, res, periodo, tipo, forzar) {
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const empresaId = req.empresaId || null;
+    const [anioStr, mesStr] = (periodo || '').substring(0, 7).split('-');
+    const anio = parseInt(anioStr);
+    const mes  = parseInt(mesStr);
+    if (!anio || !mes) {
+      await conn.rollback(); conn.release();
+      return res.status(400).json({ error: 'Período inválido. Usa formato YYYY-MM o YYYY-MM-DD' });
+    }
+    const periodoNorm = `${anio}-${String(mes).padStart(2,'0')}-01`;
+
+    // Determinar tipo base (Con Seguro / Sin Seguro / null) y tipo a guardar
+    const tipoBase   = (tipo && tipo !== 'Mensual') ? tipo.replace(' Mensual', '') : null;
+    const tipoGuardar = tipoBase ? `${tipoBase} Mensual` : 'Mensual';
+
+    // ── Duplicado mensual: mismo año+mes+tipo ────────────────────────────────
+    if (!forzar) {
+      const [[dup]] = await conn.query(
+        `SELECT id, folio FROM planillas
+         WHERE YEAR(periodo) = ? AND MONTH(periodo) = ?
+         AND empresa_id <=> ? AND tipo = ?`,
+        [anio, mes, empresaId, tipoGuardar]
+      );
+      if (dup) {
+        await conn.rollback(); conn.release();
+        return res.status(409).json({
+          error: `Ya existe la planilla mensual #${dup.folio} para ${String(mes).padStart(2,'0')}/${anio}. Envía { forzar: true } para regenerar.`,
+          planilla_existente: dup.id, folio: dup.folio,
+        });
+      }
+    }
+
+    // ── Config empresa (INATEC) ───────────────────────────────────────────────
+    let inatecActivo = true;
+    if (empresaId) {
+      const [[empCfg]] = await conn.query('SELECT inatec_activo FROM empresas WHERE id = ?', [empresaId]);
+      if (empCfg && empCfg.inatec_activo === 0) inatecActivo = false;
+    }
+
+    // ── Empleados activos ─────────────────────────────────────────────────────
+    let empQuery = 'SELECT * FROM empleados WHERE activo = 1';
+    const empParams = [];
+    if (tipoBase)   { empQuery += ' AND tipo_planilla = ?'; empParams.push(tipoBase); }
+    if (empresaId)  { empQuery += ' AND empresa_id = ?';    empParams.push(empresaId); }
+    const [empleados] = await conn.query(empQuery, empParams);
+    if (!empleados.length) {
+      await conn.rollback(); conn.release();
+      return res.status(400).json({ error: 'No hay empleados activos para este tipo' });
+    }
+
+    // ── Cargar deducciones del mes completo ───────────────────────────────────
+    const [adelantos] = await conn.query(
+      `SELECT * FROM adelantos
+       WHERE YEAR(descontar_en) = ? AND MONTH(descontar_en) = ?
+       AND estado = 'Pendiente' AND pausado = 0`,
+      [anio, mes]
+    );
+    const [prestamos] = await conn.query(`SELECT * FROM prestamos WHERE estado = 'Activo'`);
+    const [extras] = await conn.query(
+      `SELECT * FROM extras WHERE YEAR(pagar_en) = ? AND MONTH(pagar_en) = ?`,
+      [anio, mes]
+    );
+    const [deducciones] = await conn.query(
+      `SELECT * FROM deducciones
+       WHERE YEAR(descontar_en) = ? AND MONTH(descontar_en) = ?
+       AND estado = 'Pendiente' AND pausado = 0`,
+      [anio, mes]
+    );
+
+    const byEmp = (arr) => arr.reduce((m, r) => {
+      if (!m[r.empleado_id]) m[r.empleado_id] = [];
+      m[r.empleado_id].push(r); return m;
+    }, {});
+
+    const adelantosPor = byEmp(adelantos);
+    const prestamosPor = byEmp(prestamos);
+    const extrasPor    = byEmp(extras);
+    const deduccPor    = byEmp(deducciones);
+
+    const detalles = [];
+    let totalBruto = 0, totalDesc = 0, totalNeto = 0;
+
+    for (const emp of empleados) {
+      const salarioMensual = parseFloat(emp.salario_bruto || 0);
+
+      // INSS mensual completo (no /2)
+      let inss = 0;
+      if (emp.tipo_planilla !== 'Sin Seguro') {
+        const base = emp.inss_base === 'Salario Minimo' ? SALARIO_MINIMO : salarioMensual;
+        inss = Math.round(base * INSS_RATE * 100) / 100;
+      }
+
+      // IR mensual (÷12, no ÷24)
+      let ir = 0;
+      const irTipo = emp.ir_tipo || 'Sin IR';
+      if (emp.tipo_planilla !== 'Sin Seguro') {
+        if (irTipo === 'Fijo') {
+          ir = Math.round(parseFloat(emp.ir_fijo || 0) * 100) / 100;
+        } else if (irTipo === 'Automático') {
+          const baseInss = emp.inss_base === 'Salario Minimo' ? SALARIO_MINIMO : salarioMensual;
+          const inssLaboral = baseInss * INSS_RATE;
+          const ingresoAnual = (salarioMensual - inssLaboral) * 12;
+          ir = Math.round(calcularIRAnual(ingresoAnual) / 12 * 100) / 100;
+        }
+      }
+
+      // Adelantos del mes
+      const empAdel      = adelantosPor[emp.id] || [];
+      const descAdelanto = Math.round(empAdel.reduce((s, a) => s + parseFloat(a.monto || 0), 0) * 100) / 100;
+
+      // Préstamos: quincenal → 2 cuotas/mes, mensual → 1 cuota/mes
+      const empPrest     = prestamosPor[emp.id] || [];
+      const descPrestamo = Math.round(empPrest.reduce((s, p) => {
+        const saldo      = parseFloat(p.saldo_pendiente ?? p.monto_total ?? 0);
+        const cuota      = parseFloat(p.cuota_quincenal || 0);
+        const cuotasMes  = (p.frecuencia || 'Quincenal') === 'Mensual' ? 1 : 2;
+        return s + Math.min(cuota * cuotasMes, saldo);
+      }, 0) * 100) / 100;
+
+      const empExtras    = extrasPor[emp.id] || [];
+      const totalExtras  = Math.round(empExtras.reduce((s, x) => s + parseFloat(x.monto || 0), 0) * 100) / 100;
+      const empDed       = deduccPor[emp.id] || [];
+      const descDed      = Math.round(empDed.reduce((s, d) => s + parseFloat(d.monto || 0), 0) * 100) / 100;
+
+      const totalDeducciones = Math.round((inss + ir + descAdelanto + descPrestamo + descDed) * 100) / 100;
+      const neto             = Math.round((salarioMensual + totalExtras - totalDeducciones) * 100) / 100;
+
+      // Patronal mensual completo
+      let inss_patronal = 0, inatec = 0;
+      if (emp.tipo_planilla !== 'Sin Seguro') {
+        const basePatronal = emp.inss_base === 'Salario Minimo' ? SALARIO_MINIMO : salarioMensual;
+        inss_patronal = Math.round(basePatronal * INSS_PATRONAL_RATE * 100) / 100;
+      }
+      inatec = inatecActivo ? Math.round(salarioMensual * INATEC_RATE * 100) / 100 : 0;
+      const costoEmpresa = Math.round((salarioMensual + inss_patronal + inatec) * 100) / 100;
+
+      totalBruto += salarioMensual + totalExtras;
+      totalDesc  += totalDeducciones;
+      totalNeto  += neto;
+
+      detalles.push({
+        empleado_id: emp.id,
+        tipo_planilla: emp.tipo_planilla || 'Con Seguro',
+        salario_quincenal: salarioMensual, // campo reutilizado para monto mensual
+        inss, ir,
+        desc_adelanto: descAdelanto, desc_prestamo: descPrestamo,
+        extras: totalExtras, desc_deducciones: descDed,
+        total_deducciones: totalDeducciones, neto,
+        inss_patronal, inatec, costo_empresa: costoEmpresa,
+        adelantosIds:  empAdel.map(a => a.id),
+        prestamosData: empPrest.map(p => ({
+          id: p.id,
+          cuota_quincenal:  parseFloat(p.cuota_quincenal  || 0),
+          saldo_pendiente:  parseFloat(p.saldo_pendiente ?? p.monto_total ?? 0),
+          frecuencia:       p.frecuencia || 'Quincenal',
+        })),
+        deduccionesIds: empDed.map(d => d.id),
+      });
+    }
+
+    totalBruto = Math.round(totalBruto * 100) / 100;
+    totalDesc  = Math.round(totalDesc  * 100) / 100;
+    totalNeto  = Math.round(totalNeto  * 100) / 100;
+    const totalInssPatronal = Math.round(detalles.reduce((s,d) => s + (d.inss_patronal||0), 0) * 100) / 100;
+    const totalInatec       = Math.round(detalles.reduce((s,d) => s + (d.inatec||0), 0) * 100) / 100;
+    const costoTotalEmpresa = Math.round((totalBruto + totalInssPatronal + totalInatec) * 100) / 100;
+
+    const [[folioRow]] = await conn.query(
+      'SELECT COALESCE(MAX(folio), 0) + 1 AS next_folio FROM planillas WHERE empresa_id <=> ?',
+      [empresaId]
+    );
+
+    const [planillaResult] = await conn.query(
+      `INSERT INTO planillas
+       (periodo, tipo, estado, total_bruto, total_deducciones, total_neto,
+        total_inss_patronal, total_inatec, costo_total_empresa, empresa_id, folio)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      [periodoNorm, tipoGuardar, 'Borrador', totalBruto, totalDesc, totalNeto,
+       totalInssPatronal, totalInatec, costoTotalEmpresa, empresaId, folioRow.next_folio || 1]
+    );
+    const planillaId = planillaResult.insertId;
+
+    for (const d of detalles) {
+      await conn.query(
+        `INSERT INTO detalle_planilla
+         (planilla_id, empleado_id, periodo, tipo_planilla, salario_quincenal, inss, ir,
+          desc_prestamo, desc_adelanto, extras, desc_deducciones, total_deducciones, neto,
+          inss_patronal, inatec)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [planillaId, d.empleado_id, periodoNorm, d.tipo_planilla, d.salario_quincenal,
+         d.inss, d.ir, d.desc_prestamo, d.desc_adelanto, d.extras,
+         d.desc_deducciones, d.total_deducciones, d.neto, d.inss_patronal, d.inatec]
+      );
+    }
+
+    // Marcar adelantos y deducciones como descontados
+    const allAdelIds = detalles.flatMap(d => d.adelantosIds);
+    if (allAdelIds.length)
+      await conn.query('UPDATE adelantos SET estado = ? WHERE id IN (?)', ['Descontado', allAdelIds]);
+
+    const allDedIds = detalles.flatMap(d => d.deduccionesIds);
+    if (allDedIds.length)
+      await conn.query('UPDATE deducciones SET estado = ? WHERE id IN (?)', ['Descontado', allDedIds]);
+
+    // Registrar pagos de préstamos (agrupados como 1 pago mensual)
+    for (const d of detalles) {
+      for (const p of d.prestamosData) {
+        const cuotasMes = p.frecuencia === 'Mensual' ? 1 : 2;
+        const pagoReal  = Math.min(p.cuota_quincenal * cuotasMes, p.saldo_pendiente);
+        if (pagoReal <= 0) continue;
+
+        await conn.query(
+          'INSERT INTO pagos_prestamos (prestamo_id, fecha, monto, tipo, concepto) VALUES (?,?,?,?,?)',
+          [p.id, periodoNorm, pagoReal, 'Mensual', `Planilla Mensual ${String(mes).padStart(2,'0')}/${anio}`]
+        );
+
+        const [[{ total_pagado, monto_total }]] = await conn.query(
+          `SELECT COALESCE(SUM(pp.monto), 0) AS total_pagado, pr.monto_total
+           FROM prestamos pr LEFT JOIN pagos_prestamos pp ON pp.prestamo_id = pr.id
+           WHERE pr.id = ? GROUP BY pr.id`, [p.id]
+        );
+        const saldoFinal   = Math.max(0, Math.round((parseFloat(monto_total) - parseFloat(total_pagado)) * 100) / 100);
+        const nuevasCuotas = saldoFinal > 0 ? Math.ceil(saldoFinal / p.cuota_quincenal) : 0;
+        await conn.query(
+          'UPDATE prestamos SET cuotas_restantes = ?, saldo_pendiente = ?, estado = ? WHERE id = ?',
+          [nuevasCuotas, saldoFinal, saldoFinal <= 0 ? 'Pagado' : 'Activo', p.id]
+        );
+      }
+    }
+
+    await conn.commit(); conn.release();
+    res.json({
+      ok: true, planillaId, periodo: periodoNorm, tipo: tipoGuardar,
+      empleados: detalles.length, totalBruto, totalDeducciones: totalDesc, totalNeto,
+      totalInssPatronal, totalInatec, costoTotalEmpresa,
     });
   } catch (e) {
     await conn.rollback(); conn.release();

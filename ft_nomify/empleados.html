@@ -192,6 +192,23 @@
   </div>
 </div>
 
+<!-- MODAL HISTORIAL COMPLETO DEL EMPLEADO -->
+<div class="overlay" id="modal-historial-emp">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <h3>📋 Historial — <span id="hist-emp-titulo"></span></h3>
+      <button class="modal-close" id="close-historial-emp">×</button>
+    </div>
+    <div class="modal-body" style="padding:0;max-height:70vh;overflow-y:auto" id="hist-emp-body">
+      <div style="padding:20px;text-align:center;color:var(--text-muted)">Cargando...</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="close-historial-emp2">Cerrar</button>
+      <button class="btn btn-ghost" id="btn-imprimir-historial">🖨 Imprimir</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL HISTORIAL DE SALARIOS -->
 <div class="overlay" id="modal-historial-sal">
   <div class="modal" style="max-width:500px">
@@ -290,6 +307,8 @@ function renderTabla(lista) {
       <td>${e['Fecha de ingreso'] || '—'}</td>
       <td><span class="badge ${activo ? 'badge-green' : 'badge-gray'}">${activo ? 'Activo' : 'Inactivo'}</span></td>
       <td style="display:flex;gap:4px">
+        <button class="btn btn-icon btn-sm" title="Ver historial completo"
+          onclick="verHistorialCompleto(${e.id}, '${(e.Nombre||'').replace(/'/g,"\\'")}')">🗂</button>
         <button class="btn btn-icon btn-sm" title="Ver historial de salarios"
           onclick="verHistorialSalario(${e.id}, '${(e.Nombre||'').replace(/'/g,"\\'")}')">📋</button>
         ${_esMaster ? `<button class="btn btn-icon btn-sm" onclick="editarEmpleado(${e.id})">✏️</button>` : ''}
@@ -329,6 +348,7 @@ document.getElementById('btn-nuevo').addEventListener('click', () => {
   document.getElementById('alert-form').className = 'alert';
   toggleInssBase();
   toggleIRFijo();
+  actualizarIRDisponible();
   document.getElementById('modal-emp').classList.add('open');
 });
 
@@ -366,6 +386,7 @@ function abrirFormEditar(id) {
   document.getElementById('alert-form').className = 'alert';
   toggleInssBase();
   toggleIRFijo();
+  actualizarIRDisponible();
   document.getElementById('modal-emp').classList.add('open');
 }
 
@@ -382,6 +403,9 @@ document.getElementById('ok-confirm-edit').addEventListener('click', () => {
   pendingEditId = null;
 });
 
+const SALARIO_MINIMO_IR = 10913.54;
+const UMBRAL_IR_ANUAL   = 100000;
+
 function toggleInssBase() {
   const tipo = document.getElementById('emp-tipo').value;
   const sinSeguro = tipo === 'Sin Seguro';
@@ -396,14 +420,47 @@ function toggleInssBase() {
     document.getElementById('emp-ir-tipo').value = 'Sin IR';
     toggleIRFijo();
   }
+  actualizarIRDisponible();
 }
 function toggleIRFijo() {
   const irTipo = document.getElementById('emp-ir-tipo').value;
   const group = document.getElementById('emp-ir-fijo-group');
   group.style.display = irTipo === 'Fijo' ? '' : 'none';
 }
+function actualizarIRDisponible() {
+  const tipo = document.getElementById('emp-tipo').value;
+  if (tipo === 'Sin Seguro') return;
+  const salario  = parseFloat(document.getElementById('emp-salario').value) || 0;
+  const inssBase = document.getElementById('emp-inss-base').value;
+  const base     = inssBase === 'Salario Mínimo' ? SALARIO_MINIMO_IR : salario;
+  const anual    = (salario - base * 0.07) * 12;
+  const aplicaIR = salario > 0 && anual > UMBRAL_IR_ANUAL;
+
+  const selIR = document.getElementById('emp-ir-tipo');
+  const rowIR = selIR.closest('.form-group');
+  const msgId = 'ir-no-aplica-msg';
+  const msgExistente = document.getElementById(msgId);
+
+  if (!aplicaIR) {
+    [...selIR.options].forEach(opt => { if (opt.value !== 'Sin IR') opt.disabled = true; });
+    selIR.value = 'Sin IR';
+    toggleIRFijo();
+    if (!msgExistente && salario > 0) {
+      const msg = document.createElement('small');
+      msg.id = msgId;
+      msg.style.cssText = 'color:var(--text-muted);font-size:11px;margin-top:4px;display:block';
+      msg.textContent = 'Salario por debajo del mínimo gravable (C$100,000 anuales netos de INSS)';
+      rowIR.appendChild(msg);
+    }
+  } else {
+    [...selIR.options].forEach(opt => { opt.disabled = false; });
+    if (msgExistente) msgExistente.remove();
+  }
+}
 document.getElementById('emp-tipo').addEventListener('change', toggleInssBase);
 document.getElementById('emp-ir-tipo').addEventListener('change', toggleIRFijo);
+document.getElementById('emp-salario').addEventListener('input', actualizarIRDisponible);
+document.getElementById('emp-inss-base').addEventListener('change', actualizarIRDisponible);
 
 // ── Mostrar campo motivo si el salario cambia respecto al original ────────────
 let _salarioOriginal = null;
@@ -412,6 +469,129 @@ document.getElementById('emp-salario').addEventListener('input', function () {
   const wrap  = document.getElementById('motivo-salario-wrap');
   wrap.style.display = (_salarioOriginal !== null && nuevo !== _salarioOriginal) ? '' : 'none';
 });
+
+// ── Historial completo del empleado ──────────────────────────────────────────
+document.getElementById('close-historial-emp').addEventListener('click', () =>
+  document.getElementById('modal-historial-emp').classList.remove('open'));
+document.getElementById('close-historial-emp2').addEventListener('click', () =>
+  document.getElementById('modal-historial-emp').classList.remove('open'));
+document.getElementById('btn-imprimir-historial').addEventListener('click', () => {
+  const titulo = document.getElementById('hist-emp-titulo').textContent;
+  const cuerpo = document.getElementById('hist-emp-body').innerHTML;
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Historial — ${titulo}</title>
+    <style>
+      body{font-family:sans-serif;padding:24px;font-size:12px;color:#111}
+      h2{margin:0 0 4px}p{margin:0 0 16px;color:#555}
+      .hist-item{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid #eee}
+      .hist-badge{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;
+        white-space:nowrap;flex-shrink:0;align-self:flex-start;margin-top:2px}
+      .hist-desc{flex:1;font-size:12px;line-height:1.5}
+      .hist-monto{font-weight:700;white-space:nowrap;text-align:right;min-width:90px}
+      .hist-fecha{font-size:11px;color:#888;white-space:nowrap}
+      @media print{body{padding:8px}}
+    </style></head><body>
+    <h2>Historial completo — ${titulo}</h2>
+    <p>Generado el ${new Date().toLocaleDateString('es-NI')}</p>
+    ${cuerpo}
+  </body></html>`);
+  win.document.close();
+  win.print();
+});
+
+const TIPO_COLORES = {
+  'Quincena':   { bg:'rgba(46,204,113,.15)',  color:'#2ecc71'  },
+  'Préstamo':   { bg:'rgba(52,152,219,.15)',  color:'#3498db'  },
+  'Adelanto':   { bg:'rgba(230,126,34,.15)',  color:'#e67e22'  },
+  'Extra':      { bg:'rgba(155,89,182,.15)',  color:'#9b59b6'  },
+  'Deducción':  { bg:'rgba(231,76,60,.15)',   color:'#e74c3c'  },
+  'Vacaciones': { bg:'rgba(26,188,156,.15)',  color:'#1abc9c'  },
+  'Liquidación':{ bg:'rgba(241,196,15,.15)',  color:'#f1c40f'  },
+};
+
+async function verHistorialCompleto(empId, nombre) {
+  document.getElementById('hist-emp-titulo').textContent = nombre;
+  document.getElementById('hist-emp-body').innerHTML =
+    '<div style="padding:20px;text-align:center;color:var(--text-muted)">Cargando...</div>';
+  document.getElementById('modal-historial-emp').classList.add('open');
+
+  try {
+    const rows = await apiFetch(`/api/empleados/${empId}/historial`);
+
+    if (!rows.length) {
+      document.getElementById('hist-emp-body').innerHTML =
+        '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px">Sin transacciones registradas</div>';
+      return;
+    }
+
+    // Agrupar por año-mes para separadores
+    let mesActual = '';
+    const items = rows.map(r => {
+      const fecha   = String(r.fecha || '').substring(0, 10);
+      const [y, m]  = fecha.split('-');
+      const mesKey  = `${y}-${m}`;
+      const meses   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                       'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      const mesLabel = (y && m) ? `${meses[parseInt(m)-1]} ${y}` : '';
+      const separador = mesKey !== mesActual
+        ? `<div style="padding:8px 16px 4px;font-size:10px;text-transform:uppercase;
+               letter-spacing:.07em;color:var(--text-muted);border-bottom:1px solid var(--border);
+               margin-top:4px">${mesLabel}</div>`
+        : '';
+      mesActual = mesKey;
+
+      // Corte visual especial para Liquidación por Renovación
+      const cortePeriodo = (r.tipo === 'Liquidación' && (r.descripcion || '').includes('Renovación'))
+        ? `<div style="margin:8px 0;padding:10px 16px;
+               background:linear-gradient(90deg,rgba(46,204,113,.12),rgba(46,204,113,.04));
+               border-left:3px solid #2ecc71;border-right:3px solid #2ecc71;
+               display:flex;align-items:center;gap:10px">
+             <span style="font-size:16px">🔄</span>
+             <div>
+               <div style="font-size:12px;font-weight:700;color:#2ecc71">— Corte por Renovación —</div>
+               <div style="font-size:11px;color:var(--text-muted);margin-top:1px">
+                 Las transacciones anteriores a esta línea corresponden al período anterior
+               </div>
+             </div>
+           </div>`
+        : '';
+
+      const col    = TIPO_COLORES[r.tipo] || { bg:'rgba(255,255,255,.05)', color:'var(--text-muted)' };
+      const esGasto = ['Deducción','Adelanto'].includes(r.tipo);
+      const esMonto = !['Vacaciones'].includes(r.tipo);
+      const montoStr = esMonto
+        ? `<span style="color:${esGasto ? 'var(--red)' : 'var(--green2)'};font-weight:700">
+             ${esGasto ? '-' : ''}${fmt(r.monto)}</span>`
+        : `<span style="color:var(--text-muted);font-size:12px">${r.monto} días</span>`;
+
+      return `${separador}${cortePeriodo}
+        <div class="hist-item" style="display:flex;gap:12px;padding:10px 16px;
+             border-bottom:1px solid rgba(255,255,255,.04);align-items:flex-start">
+          <span class="hist-badge" style="background:${col.bg};color:${col.color};
+            padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;
+            white-space:nowrap;flex-shrink:0;margin-top:2px">${r.tipo}</span>
+          <div style="flex:1;min-width:0">
+            <div class="hist-desc" style="font-size:12px;color:var(--text-muted);line-height:1.5;
+                 word-break:break-word">${r.descripcion || '—'}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            ${montoStr}
+            <div class="hist-fecha" style="font-size:11px;color:var(--text-muted);margin-top:2px">${fecha}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('hist-emp-body').innerHTML =
+      `<div style="padding:8px 16px 4px;display:flex;justify-content:space-between;
+            align-items:center;font-size:12px;color:var(--text-muted);border-bottom:1px solid var(--border)">
+         <span>${rows.length} transacción${rows.length !== 1 ? 'es' : ''}</span>
+       </div>${items}`;
+  } catch (e) {
+    document.getElementById('hist-emp-body').innerHTML =
+      `<div style="padding:20px;color:var(--red);font-size:13px">Error: ${e.message}</div>`;
+  }
+}
 
 // ── Historial de salarios ─────────────────────────────────────────────────────
 document.getElementById('close-historial-sal').addEventListener('click', () =>

@@ -54,6 +54,9 @@ const { requireAuth, requireAdmin } = require('./auth');
   // ── v1.7: campo notas en préstamos ────────────────────────────────────────
   await run("ALTER TABLE prestamos ADD COLUMN IF NOT EXISTS notas TEXT DEFAULT NULL");
 
+  // ── v1.8.1: INATEC configurable por empresa ──────────────────────────────
+  await run("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS inatec_activo TINYINT(1) NOT NULL DEFAULT 1");
+
   // ── v1.8: tablas de liquidación e historial de salarios ──────────────────
   await run(`CREATE TABLE IF NOT EXISTS liquidaciones (
     id                   INT AUTO_INCREMENT PRIMARY KEY,

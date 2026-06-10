@@ -3,13 +3,13 @@ const router  = express.Router();
 const db      = require('../db');
 const { requireAuth, requireMaster } = require('../auth');
 
-const CAMPOS = ['nombre', 'ruc', 'correo', 'telefono', 'direccion', 'logo'];
+const CAMPOS = ['nombre', 'ruc', 'correo', 'telefono', 'direccion', 'logo', 'inatec_activo'];
 
 // GET /api/empresas — lista todas (sin logo para no inflar la respuesta)
 router.get('/', requireAuth, async (req, res) => {
   try {
     const [rows] = await db.query(
-      'SELECT id, nombre, ruc, correo, telefono, direccion FROM empresas ORDER BY nombre ASC'
+      'SELECT id, nombre, ruc, correo, telefono, direccion, inatec_activo FROM empresas ORDER BY nombre ASC'
     );
     if (req.user.rol === 'Planillero' && req.user.empresas_acceso) {
       try {
@@ -25,7 +25,7 @@ router.get('/', requireAuth, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const [[row]] = await db.query(
-      'SELECT id, nombre, ruc, correo, telefono, direccion, logo FROM empresas WHERE id = ?',
+      'SELECT id, nombre, ruc, correo, telefono, direccion, logo, inatec_activo FROM empresas WHERE id = ?',
       [req.params.id]
     );
     if (!row) return res.status(404).json({ error: 'Empresa no encontrada' });
@@ -47,7 +47,7 @@ router.post('/', requireAuth, requireMaster, async (req, res) => {
       vals
     );
     const [[created]] = await db.query(
-      'SELECT id, nombre, ruc, correo, telefono, direccion FROM empresas WHERE id = ?',
+      'SELECT id, nombre, ruc, correo, telefono, direccion, inatec_activo FROM empresas WHERE id = ?',
       [result.insertId]
     );
     res.status(201).json(created);
@@ -69,7 +69,7 @@ router.patch('/:id', requireAuth, requireMaster, async (req, res) => {
     vals.push(req.params.id);
     await db.query(`UPDATE empresas SET ${sets.join(', ')} WHERE id = ?`, vals);
     const [[updated]] = await db.query(
-      'SELECT id, nombre, ruc, correo, telefono, direccion FROM empresas WHERE id = ?',
+      'SELECT id, nombre, ruc, correo, telefono, direccion, inatec_activo FROM empresas WHERE id = ?',
       [req.params.id]
     );
     res.json(updated);

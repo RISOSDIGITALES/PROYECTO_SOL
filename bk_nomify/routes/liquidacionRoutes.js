@@ -143,6 +143,9 @@ router.post('/', requireAuth, requireMaster, async (req, res) => {
       [empleado_id]
     );
 
+    const motivoFinal = motivo || 'Renuncia voluntaria';
+    const esRenovacion = motivoFinal === 'Renovación';
+
     const c = calcLiquidacion(emp, fecha_baja, !!indemnizar, !!preaviso, parseFloat(diasGozados));
     const empresaId = req.empresaId || emp.empresa_id || null;
 
@@ -153,20 +156,31 @@ router.post('/', requireAuth, requireMaster, async (req, res) => {
          meses_aguinaldo, monto_aguinaldo, aplica_indemnizacion, monto_indemnizacion,
          aplica_preaviso, dias_preaviso, monto_preaviso, total, notas, estado)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'Pendiente')`,
-      [empleado_id, empresaId, fecha_baja, motivo || 'Renuncia voluntaria',
+      [empleado_id, empresaId, fecha_baja, motivoFinal,
        c.salario_mensual, c.fecha_ingreso, c.anios_servicio, c.meses_servicio,
        c.dias_vacaciones, c.monto_vacaciones, c.meses_aguinaldo, c.monto_aguinaldo,
        c.aplica_indemnizacion, c.monto_indemnizacion,
        c.aplica_preaviso, c.dias_preaviso, c.monto_preaviso, c.total, notas || null]
     );
 
-    // Marcar empleado como inactivo
-    await conn.query(
-      'UPDATE empleados SET activo = 0 WHERE id = ?', [empleado_id]
-    );
+    if (esRenovacion) {
+      // Renovación: el empleado sigue activo, solo se reinicia su fecha de ingreso
+      await conn.query(
+        'UPDATE empleados SET fecha_ingreso = ? WHERE id = ?', [fecha_baja, empleado_id]
+      );
+    } else {
+      // Cualquier otro motivo: marcar inactivo
+      await conn.query(
+        'UPDATE empleados SET activo = 0 WHERE id = ?', [empleado_id]
+      );
+    }
 
     await conn.commit(); conn.release();
-    res.status(201).json({ ok: true, liquidacion_id: r.insertId, ...c });
+    res.status(201).json({
+      ok: true, liquidacion_id: r.insertId, renovacion: esRenovacion,
+      empleado_actual: { ...emp, fecha_ingreso: esRenovacion ? fecha_baja : emp.fecha_ingreso },
+      ...c,
+    });
   } catch (e) {
     await conn.rollback(); conn.release();
     res.status(500).json({ error: e.message });

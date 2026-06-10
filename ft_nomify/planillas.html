@@ -140,19 +140,46 @@
     <div class="modal-body">
       <div id="alert-gen" class="alert"></div>
       <p style="margin:0 0 16px;color:var(--text-muted);font-size:13px">Se calculará la quincena para todos los empleados activos del tipo seleccionado.</p>
-      <div class="form-group">
-        <label>Período *</label>
-        <input type="date" id="gen-periodo" />
-        <div style="display:flex;gap:8px;margin-top:6px">
-          <button type="button" id="btn-q15" class="btn btn-ghost btn-sm" style="font-size:12px">📅 Día 15</button>
-          <button type="button" id="btn-qfin" class="btn btn-ghost btn-sm" style="font-size:12px">📅 Fin de mes</button>
+      <!-- Modo: Quincenal / Mensual -->
+      <div class="form-group" style="margin-bottom:14px">
+        <label>Modo de planilla</label>
+        <div style="display:flex;gap:8px">
+          <button type="button" id="btn-modo-quincenal"
+            class="btn btn-primary btn-sm" style="flex:1;font-size:12px">📅 Quincenal</button>
+          <button type="button" id="btn-modo-mensual"
+            class="btn btn-ghost btn-sm" style="flex:1;font-size:12px">📆 Mensual</button>
         </div>
-        <!-- Descripción legible del rango de la quincena -->
-        <div id="periodo-label" style="margin-top:6px;font-size:12px;color:var(--text-muted);display:none">
-          <span id="periodo-label-text"></span>
-        </div>
-        <div id="aviso-fecha" style="display:none;margin-top:6px;font-size:11px;color:var(--orange)"></div>
       </div>
+
+      <!-- Período quincenal -->
+      <div id="wrap-periodo-quincenal">
+        <div class="form-group">
+          <label>Período *</label>
+          <input type="date" id="gen-periodo" />
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <button type="button" id="btn-q15" class="btn btn-ghost btn-sm" style="font-size:12px">📅 Día 15</button>
+            <button type="button" id="btn-qfin" class="btn btn-ghost btn-sm" style="font-size:12px">📅 Fin de mes</button>
+          </div>
+          <div id="periodo-label" style="margin-top:6px;font-size:12px;color:var(--text-muted);display:none">
+            <span id="periodo-label-text"></span>
+          </div>
+          <div id="aviso-fecha" style="display:none;margin-top:6px;font-size:11px;color:var(--orange)"></div>
+        </div>
+      </div>
+
+      <!-- Período mensual -->
+      <div id="wrap-periodo-mensual" style="display:none">
+        <div class="form-group">
+          <label>Mes *</label>
+          <input type="month" id="gen-mes"
+            style="background:var(--input);border:1px solid var(--border);border-radius:6px;
+                   color:var(--text);padding:8px 12px;font-size:14px;width:100%;box-sizing:border-box" />
+          <div id="aviso-mensual" style="display:none;margin-top:6px;padding:8px 10px;
+               background:rgba(46,204,113,.07);border:1px solid rgba(46,204,113,.3);
+               border-radius:6px;font-size:11px;color:#2ecc71"></div>
+        </div>
+      </div>
+
       <div class="form-group">
         <label>Tipo de planilla</label>
         <select id="gen-tipo">
@@ -259,7 +286,7 @@ async function loadPlanillas() {
 function renderTabla() {
   const lista = filtroActivo === 'todas'
     ? allPlanillas
-    : allPlanillas.filter(p => p.Tipo === filtroActivo);
+    : allPlanillas.filter(p => (p.Tipo || '').startsWith(filtroActivo));
 
   const tbody = document.getElementById('tabla-planillas');
   if (lista.length === 0) {
@@ -277,9 +304,10 @@ function renderTabla() {
 
   tbody.innerHTML = lista.map(p => {
     const tipo = p.Tipo || '';
-    const tipoBadge = tipo === 'Con Seguro' ? 'badge-blue'
-      : tipo === 'Sin Seguro' ? 'badge-orange'
-      : tipo === 'Aguinaldo'  ? 'badge-green'
+    const tipoBadge = tipo.includes('Mensual') ? 'badge-purple'
+      : tipo.startsWith('Con Seguro') ? 'badge-blue'
+      : tipo.startsWith('Sin Seguro') ? 'badge-orange'
+      : tipo === 'Aguinaldo'          ? 'badge-green'
       : 'badge-gray';
     const estado = p.Estado || 'Borrador';
     const estadoBadge = estado === 'Pagada' ? 'badge-green' : estado === 'Anulada' ? 'badge-red' : 'badge-gray';
@@ -298,7 +326,7 @@ function renderTabla() {
     return `<tr>
       <td style="text-align:center;color:var(--text-muted);font-size:12px;font-weight:600">#${folio}</td>
       <td><strong>${formatPeriodo(periodoVal)}</strong></td>
-      <td>${tipo ? `<span class="badge ${tipoBadge}">${tipo}</span>` : '—'}</td>
+      <td><span class="badge ${tipoBadge}">${tipo || 'Todos'}</span></td>
       <td>${fechaPago}</td>
       <td style="text-align:center">${p['Total empleados'] || '—'}</td>
       <td class="num">${fmt(p['Total bruto'])}</td>
@@ -322,12 +350,63 @@ document.querySelectorAll('.tab').forEach(btn => {
   });
 });
 
+let _modoMensual = false;
+
+function setModoGenerar(mensual) {
+  _modoMensual = mensual;
+  document.getElementById('wrap-periodo-quincenal').style.display = mensual ? 'none' : '';
+  document.getElementById('wrap-periodo-mensual').style.display   = mensual ? '' : 'none';
+  const btnQ = document.getElementById('btn-modo-quincenal');
+  const btnM = document.getElementById('btn-modo-mensual');
+  btnQ.className = mensual ? 'btn btn-ghost btn-sm'   : 'btn btn-primary btn-sm';
+  btnM.className = mensual ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+  btnQ.style.flex = '1'; btnQ.style.fontSize = '12px';
+  btnM.style.flex = '1'; btnM.style.fontSize = '12px';
+  document.getElementById('aviso-mensual').style.display = 'none';
+  if (mensual) {
+    // Preseleccionar mes actual
+    const hoy = new Date();
+    const mm  = String(hoy.getMonth() + 1).padStart(2, '0');
+    document.getElementById('gen-mes').value = `${hoy.getFullYear()}-${mm}`;
+    verificarQuincenalesMes();
+  }
+}
+
+async function verificarQuincenalesMes() {
+  const mes = document.getElementById('gen-mes').value;
+  if (!mes) return;
+  const avisoEl = document.getElementById('aviso-mensual');
+  try {
+    const planillas = await apiFetch('/api/planillas');
+    const [y, m] = mes.split('-');
+    const quincenales = planillas.filter(p => {
+      const pm = String(p['Período'] || '').substring(0, 7);
+      return pm === `${y}-${m}` && !(p.Tipo || '').includes('Mensual') && p.Tipo !== 'Aguinaldo';
+    });
+    if (quincenales.length > 0) {
+      avisoEl.style.display = '';
+      avisoEl.textContent = `ℹ️ Ya hay ${quincenales.length} planilla(s) quincenal(es) para este mes. La mensual se calculará independientemente — las deducciones ya procesadas en quincenales no se duplicarán.`;
+    } else {
+      avisoEl.style.display = '';
+      avisoEl.style.color = 'var(--text-muted)';
+      avisoEl.style.background = 'transparent';
+      avisoEl.style.border = 'none';
+      avisoEl.textContent = 'Sin quincenales para este mes — se calculará como planilla mensual completa.';
+    }
+  } catch (_) {}
+}
+
+document.getElementById('btn-modo-quincenal').addEventListener('click', () => setModoGenerar(false));
+document.getElementById('btn-modo-mensual').addEventListener('click',   () => setModoGenerar(true));
+document.getElementById('gen-mes').addEventListener('change', verificarQuincenalesMes);
+
 document.getElementById('btn-generar').addEventListener('click', () => {
-  // Verificar que hay empresa activa
   if (!localStorage.getItem('planilla_empresa_id')) {
     showAlert('alert-pl', '⚠️ Debes crear y seleccionar una empresa antes de generar planillas.', 'error');
     return;
   }
+  _modoMensual = false;
+  setModoGenerar(false);
   document.getElementById('gen-periodo').value = nextQuincena();
   document.getElementById('gen-tipo').value = '';
   document.getElementById('alert-gen').className = 'alert';
@@ -487,71 +566,68 @@ document.getElementById('save-aguinaldo').addEventListener('click', async () => 
   }
 });
 
-document.getElementById('save-gen').addEventListener('click', async () => {
-  const periodo = document.getElementById('gen-periodo').value;
-  const tipo    = document.getElementById('gen-tipo').value;
+async function ejecutarGenerar(forzar = false) {
+  const tipoBase = document.getElementById('gen-tipo').value;
+  const btn      = document.getElementById('save-gen');
 
-  if (!localStorage.getItem('planilla_empresa_id')) {
-    showAlert('alert-gen', '⚠️ Sin empresa seleccionada. Crea una empresa primero.', 'error');
-    return;
-  }
-  if (!periodo) {
-    showAlert('alert-gen', 'Selecciona el período', 'error');
-    return;
+  let periodo, tipoEnviar, labelTipo;
+
+  if (_modoMensual) {
+    const mes = document.getElementById('gen-mes').value;
+    if (!mes) { showAlert('alert-gen', 'Selecciona el mes', 'error'); return; }
+    periodo    = mes + '-01';
+    tipoEnviar = tipoBase ? `${tipoBase} Mensual` : 'Mensual';
+    labelTipo  = '📆 mensual';
+  } else {
+    periodo    = document.getElementById('gen-periodo').value;
+    if (!periodo) { showAlert('alert-gen', 'Selecciona el período', 'error'); return; }
+    tipoEnviar = tipoBase || undefined;
+    labelTipo  = '📅 quincenal';
   }
 
-  const btn = document.getElementById('save-gen');
-  btn.disabled = true;
-  btn.textContent = 'Calculando...';
+  btn.disabled = true; btn.textContent = 'Calculando...';
   document.getElementById('gen-preview').style.display = 'none';
   document.getElementById('alert-gen').className = 'alert';
 
   try {
     const result = await apiFetch('/api/planillas/calcular', {
       method: 'POST',
-      body: JSON.stringify({ periodo, tipo: tipo || undefined }),
+      body: JSON.stringify({ periodo, tipo: tipoEnviar, forzar: forzar || undefined }),
     });
-
     allPlanillas = await apiFetch('/api/planillas');
     renderTabla();
     document.getElementById('modal-gen').classList.remove('open');
-    showAlert('alert-pl', `✅ Planilla generada — ${result.empleados} empleado(s) · neto ${fmt(result.totalNeto)}`, 'success');
-    btn.textContent = 'Calcular y generar';
+    showAlert('alert-pl',
+      `✅ Planilla ${labelTipo} generada — ${result.empleados} empleado(s) · neto ${fmt(result.totalNeto)}`,
+      'success');
   } catch (e) {
-    // Error 409 = ya existe planilla para ese período → ofrecer forzar
     if (e.message && e.message.includes('Ya existe')) {
-      showAlert('alert-gen', '', 'error');
       const alertEl = document.getElementById('alert-gen');
       alertEl.className = 'alert alert-error show';
       alertEl.innerHTML = `⚠️ ${e.message.split('.')[0]}.<br><br>
-        <button id="btn-forzar-gen" class="btn btn-sm" style="background:rgba(231,76,60,.2);border:1px solid var(--red);color:var(--red);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">
-          Generar de todas formas (período duplicado)
+        <button id="btn-forzar-gen" class="btn btn-sm"
+          style="background:rgba(231,76,60,.2);border:1px solid var(--red);color:var(--red);
+                 padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">
+          Generar de todas formas
         </button>`;
       document.getElementById('btn-forzar-gen').addEventListener('click', async () => {
         alertEl.className = 'alert';
-        btn.disabled = true; btn.textContent = 'Calculando...';
-        try {
-          const r2 = await apiFetch('/api/planillas/calcular', {
-            method: 'POST',
-            body: JSON.stringify({ periodo, tipo: tipo || undefined, forzar: true }),
-          });
-          allPlanillas = await apiFetch('/api/planillas');
-          renderTabla();
-          document.getElementById('modal-gen').classList.remove('open');
-          showAlert('alert-pl', `✅ Planilla generada — ${r2.empleados} empleado(s) · neto ${fmt(r2.totalNeto)}`, 'success');
-        } catch (e2) {
-          showAlert('alert-gen', 'Error: ' + e2.message, 'error');
-        } finally {
-          btn.disabled = false; btn.textContent = 'Calcular y generar';
-        }
+        await ejecutarGenerar(true);
       });
     } else {
       showAlert('alert-gen', 'Error: ' + e.message, 'error');
     }
-    btn.textContent = 'Calcular y generar';
   } finally {
-    btn.disabled = false;
+    btn.disabled = false; btn.textContent = 'Calcular y generar';
   }
+}
+
+document.getElementById('save-gen').addEventListener('click', () => {
+  if (!localStorage.getItem('planilla_empresa_id')) {
+    showAlert('alert-gen', '⚠️ Sin empresa seleccionada. Crea una empresa primero.', 'error');
+    return;
+  }
+  ejecutarGenerar();
 });
 </script>
 </body>

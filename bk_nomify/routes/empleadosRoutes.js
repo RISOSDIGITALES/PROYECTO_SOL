@@ -187,4 +187,82 @@ router.get('/:id/historial-salarios', requireAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// GET /api/empleados/:id/historial — todas las transacciones del empleado
+router.get('/:id/historial', requireAuth, async (req, res) => {
+  const id = req.params.id;
+  try {
+    const [quincenas] = await db.query(`
+      SELECT 'Quincena' AS tipo, DATE_FORMAT(p.periodo,'%Y-%m-%d') AS fecha,
+             d.neto AS monto,
+             CONCAT('Planilla #', p.folio, ' (', p.tipo, ') — Bruto: C$',
+               FORMAT(d.salario_quincenal,2), ' | INSS: C$', FORMAT(d.inss,2),
+               IF(d.ir>0, CONCAT(' | IR: C$', FORMAT(d.ir,2)), ''),
+               IF(d.desc_prestamo>0, CONCAT(' | Préstamo: C$', FORMAT(d.desc_prestamo,2)), ''),
+               IF(d.desc_adelanto>0, CONCAT(' | Adelanto: C$', FORMAT(d.desc_adelanto,2)), ''),
+               IF(d.extras>0, CONCAT(' | Extras: C$', FORMAT(d.extras,2)), ''),
+               ' | Neto: C$', FORMAT(d.neto,2)) AS descripcion,
+             p.estado AS estado_ref
+      FROM detalle_planilla d
+      JOIN planillas p ON d.planilla_id = p.id
+      WHERE d.empleado_id = ?`, [id]);
+
+    const [prestamos] = await db.query(`
+      SELECT 'Préstamo' AS tipo, DATE_FORMAT(fecha_inicio,'%Y-%m-%d') AS fecha,
+             monto_total AS monto,
+             CONCAT('Préstamo de C$', FORMAT(monto_total,2),
+               ' — cuota C$', FORMAT(cuota_quincenal,2),
+               ' | Saldo: C$', FORMAT(saldo_pendiente,2),
+               ' | Estado: ', estado,
+               IF(notas IS NOT NULL AND notas != '', CONCAT(' | ', notas), '')) AS descripcion,
+             estado AS estado_ref
+      FROM prestamos WHERE empleado_id = ?`, [id]);
+
+    const [adelantos] = await db.query(`
+      SELECT 'Adelanto' AS tipo, DATE_FORMAT(descontar_en,'%Y-%m-%d') AS fecha,
+             monto, CONCAT('Adelanto de C$', FORMAT(monto,2),
+               ' — Estado: ', estado) AS descripcion,
+             estado AS estado_ref
+      FROM adelantos WHERE empleado_id = ?`, [id]);
+
+    const [extras] = await db.query(`
+      SELECT 'Extra' AS tipo, DATE_FORMAT(pagar_en,'%Y-%m-%d') AS fecha,
+             monto, CONCAT(COALESCE(descripcion,'Extra'), ': C$', FORMAT(monto,2)) AS descripcion,
+             'Aplicado' AS estado_ref
+      FROM extras WHERE empleado_id = ?`, [id]);
+
+    const [deducciones] = await db.query(`
+      SELECT 'Deducción' AS tipo, DATE_FORMAT(descontar_en,'%Y-%m-%d') AS fecha,
+             monto, CONCAT(COALESCE(descripcion,'Deducción'), ': C$', FORMAT(monto,2),
+               ' — Estado: ', estado) AS descripcion,
+             estado AS estado_ref
+      FROM deducciones WHERE empleado_id = ?`, [id]);
+
+    const [vacaciones] = await db.query(`
+      SELECT 'Vacaciones' AS tipo, DATE_FORMAT(fecha_inicio,'%Y-%m-%d') AS fecha,
+             dias AS monto,
+             CONCAT(tipo, ' — ', dias, ' días',
+               IF(fecha_fin IS NOT NULL, CONCAT(' (hasta ', DATE_FORMAT(fecha_fin,'%d/%m/%Y'), ')'), ''),
+               ' | Estado: ', estado) AS descripcion,
+             estado AS estado_ref
+      FROM vacaciones WHERE empleado_id = ?`, [id]);
+
+    const [liquidaciones] = await db.query(`
+      SELECT 'Liquidación' AS tipo, DATE_FORMAT(fecha_baja,'%Y-%m-%d') AS fecha,
+             total AS monto,
+             CONCAT(motivo, ' — Total: C$', FORMAT(total,2),
+               IF(monto_vacaciones>0, CONCAT(' | Vac: C$', FORMAT(monto_vacaciones,2)), ''),
+               IF(monto_aguinaldo>0, CONCAT(' | Agui: C$', FORMAT(monto_aguinaldo,2)), ''),
+               IF(monto_indemnizacion>0, CONCAT(' | Indem: C$', FORMAT(monto_indemnizacion,2)), '')) AS descripcion,
+             estado AS estado_ref
+      FROM liquidaciones WHERE empleado_id = ?`, [id]);
+
+    const todo = [
+      ...quincenas, ...prestamos, ...adelantos,
+      ...extras, ...deducciones, ...vacaciones, ...liquidaciones,
+    ].sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+
+    res.json(todo);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports = router;

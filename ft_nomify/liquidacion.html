@@ -120,7 +120,14 @@
             <option value="Mutuo acuerdo">Mutuo acuerdo</option>
             <option value="Fin de contrato">Fin de contrato</option>
             <option value="Fallecimiento">Fallecimiento</option>
+            <option value="Renovación">🔄 Renovación (empleado sigue activo)</option>
           </select>
+          <div id="aviso-renovacion" style="display:none;margin-top:6px;padding:8px 10px;
+               background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.3);
+               border-radius:6px;font-size:12px;color:#2ecc71">
+            ℹ️ El empleado <strong>NO</strong> será dado de baja. Su fecha de ingreso se reiniciará
+            a la fecha indicada y podrás actualizar su información antes de confirmar.
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -186,6 +193,65 @@
       <button class="btn btn-ghost" id="btn-recalcular" style="display:none">← Recalcular</button>
       <button class="btn btn-ghost" id="btn-imprimir-liq" style="display:none">🖨 Imprimir</button>
       <button class="btn btn-primary" id="btn-guardar-liq" style="display:none">✓ Guardar y dar de baja</button>
+      <button class="btn btn-primary" id="btn-guardar-renov" style="display:none;background:#2ecc71;border-color:#2ecc71">🔄 Guardar y renovar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RENOVACIÓN (obligatorio, sin X de cierre) -->
+<div class="overlay" id="modal-renovacion" style="z-index:1100">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-header" style="border-bottom-color:rgba(46,204,113,.4)">
+      <h3 style="color:#2ecc71">🔄 Confirmar datos del empleado renovado</h3>
+    </div>
+    <div class="modal-body">
+      <div style="padding:10px 12px;background:rgba(46,204,113,.07);border:1px solid rgba(46,204,113,.3);
+           border-radius:6px;font-size:12px;color:#2ecc71;margin-bottom:16px">
+        La liquidación fue guardada. Revisá y confirmá los datos del empleado para el nuevo período.
+        La fecha de ingreso ya fue actualizada automáticamente.
+      </div>
+      <div id="alert-renovacion" class="alert"></div>
+      <input type="hidden" id="renov-emp-id" />
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nombre completo *</label>
+          <input type="text" id="renov-nombre" />
+        </div>
+        <div class="form-group">
+          <label>Cargo</label>
+          <input type="text" id="renov-cargo" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fecha de ingreso (reiniciada) *</label>
+          <input type="date" id="renov-fecha-ingreso" style="border-color:rgba(46,204,113,.5)" />
+        </div>
+        <div class="form-group">
+          <label>Salario bruto mensual (C$)</label>
+          <input type="number" id="renov-salario" step="0.01" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tipo de planilla</label>
+          <select id="renov-tipo">
+            <option value="Con Seguro">Con Seguro</option>
+            <option value="Sin Seguro">Sin Seguro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Base cálculo INSS</label>
+          <select id="renov-inss-base">
+            <option value="Salario Completo">Salario Completo</option>
+            <option value="Salario Mínimo">Salario Mínimo</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <span style="font-size:11px;color:var(--text-muted)">Este paso es obligatorio para completar la renovación</span>
+      <button class="btn btn-primary" id="btn-confirmar-renovacion" style="background:#2ecc71;border-color:#2ecc71">✓ Confirmar datos</button>
     </div>
   </div>
 </div>
@@ -296,6 +362,7 @@ function resetModal() {
   document.getElementById('btn-recalcular').style.display = 'none';
   document.getElementById('btn-imprimir-liq').style.display = 'none';
   document.getElementById('btn-guardar-liq').style.display = 'none';
+  document.getElementById('btn-guardar-renov').style.display = 'none';
   _calculo = null;
 }
 
@@ -360,7 +427,9 @@ function mostrarResultado(c) {
   document.getElementById('liq-paso2').style.display = '';
   document.getElementById('btn-recalcular').style.display = '';
   document.getElementById('btn-imprimir-liq').style.display = '';
-  document.getElementById('btn-guardar-liq').style.display = '';
+  const esRenov = document.getElementById('liq-motivo').value === 'Renovación';
+  document.getElementById('btn-guardar-liq').style.display   = esRenov ? 'none' : '';
+  document.getElementById('btn-guardar-renov').style.display = esRenov ? '' : 'none';
 }
 
 // ── Imprimir ─────────────────────────────────────────────────────────────────
@@ -398,7 +467,7 @@ document.getElementById('btn-guardar-liq').addEventListener('click', async () =>
   }
 });
 
-// Auto-marcar indemnización según motivo
+// Auto-marcar indemnización según motivo y mostrar aviso renovación
 document.getElementById('liq-motivo').addEventListener('change', function() {
   const motivo = this.value;
   const indem  = document.getElementById('liq-indemnizar');
@@ -407,6 +476,78 @@ document.getElementById('liq-motivo').addEventListener('change', function() {
     indem.checked = true; prev.checked = true;
   } else if (motivo === 'Renuncia voluntaria' || motivo === 'Despido con causa justificada') {
     indem.checked = false; prev.checked = false;
+  } else if (motivo === 'Renovación') {
+    indem.checked = false; prev.checked = false;
+  }
+  document.getElementById('aviso-renovacion').style.display = motivo === 'Renovación' ? '' : 'none';
+});
+
+// ── Guardar renovación ───────────────────────────────────────────────────────
+document.getElementById('btn-guardar-renov').addEventListener('click', async () => {
+  if (!confirm('¿Confirmar liquidación por renovación? Se guardará la liquidación y podrás actualizar los datos del empleado.')) return;
+  const btn = document.getElementById('btn-guardar-renov');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    const result = await apiFetch('/api/liquidaciones', {
+      method: 'POST',
+      body: JSON.stringify({
+        empleado_id: document.getElementById('liq-empleado').value,
+        fecha_baja:  document.getElementById('liq-fecha-baja').value,
+        motivo:      'Renovación',
+        indemnizar:  document.getElementById('liq-indemnizar').checked,
+        preaviso:    document.getElementById('liq-preaviso').checked,
+        notas:       document.getElementById('liq-notas').value.trim() || null,
+      }),
+    });
+    document.getElementById('modal-liq').classList.remove('open');
+    cargarLiquidaciones();
+    // Abrir modal obligatorio de datos del empleado
+    const emp = result.empleado_actual;
+    document.getElementById('renov-emp-id').value        = emp.id;
+    document.getElementById('renov-nombre').value        = emp.nombre        || '';
+    document.getElementById('renov-cargo').value         = emp.cargo         || '';
+    document.getElementById('renov-fecha-ingreso').value = result.empleado_actual.fecha_ingreso || document.getElementById('liq-fecha-baja').value;
+    document.getElementById('renov-salario').value       = emp.salario_bruto || '';
+    document.getElementById('renov-tipo').value          = emp.tipo_planilla || 'Con Seguro';
+    document.getElementById('renov-inss-base').value     = emp.inss_base     || 'Salario Completo';
+    document.getElementById('alert-renovacion').className = 'alert';
+    document.getElementById('modal-renovacion').classList.add('open');
+  } catch (e) {
+    showAlert('alert-liq-form', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '🔄 Guardar y renovar';
+  }
+});
+
+// ── Confirmar datos del empleado renovado ────────────────────────────────────
+document.getElementById('btn-confirmar-renovacion').addEventListener('click', async () => {
+  const id     = document.getElementById('renov-emp-id').value;
+  const nombre = document.getElementById('renov-nombre').value.trim();
+  if (!nombre) {
+    showAlert('alert-renovacion', 'El nombre es obligatorio', 'error'); return;
+  }
+  const btn = document.getElementById('btn-confirmar-renovacion');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    await apiFetch('/api/empleados', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        id,
+        'Nombre':              nombre,
+        'Cargo':               document.getElementById('renov-cargo').value.trim(),
+        'Fecha de ingreso':    document.getElementById('renov-fecha-ingreso').value,
+        'Salario bruto mensual': parseFloat(document.getElementById('renov-salario').value) || undefined,
+        'Tipo_Planilla':       document.getElementById('renov-tipo').value,
+        'INSS_Base':           document.getElementById('renov-inss-base').value,
+      }),
+    });
+    document.getElementById('modal-renovacion').classList.remove('open');
+    allEmpleados = await apiFetch('/api/empleados');
+    showAlert('alert-liq', '✅ Renovación completada. Datos del empleado actualizados.', 'success');
+  } catch (e) {
+    showAlert('alert-renovacion', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '✓ Confirmar datos';
   }
 });
 </script>
