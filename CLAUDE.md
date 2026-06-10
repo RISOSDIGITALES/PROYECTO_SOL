@@ -752,6 +752,9 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 59. **Strategist AI v3.0** (2026-06-04): nuevo workflow `cT1SS300CjujIyHS`, webhook `strategist-g54-v3`. Agrega trend finder: nodo `📰 Google News RSS` con User-Agent para bypass de bloqueo de Google → `📋 Extraer Titulares RSS` (Code node extrae `<title>` tags con regex, salta título de canal) → `🧠 Gemini: Analizar Tendencias` → `🔍 Parsear Tema Tendencia` → `🗂️ Preparar Ideas Batch v3` (N-1 evergreen + 1 trend por semana). Bug fixes: multi-company (company_id desde webhook, sin hardcode), Groq reemplazado por Gemini para tendencias (evita rate limit doble). Archivo: `workflow-strategist-ai-g54-v3.json`.
 60. **Multi-tenancy G54 implementada** (2026-06-04): patrón `?company=N` query param implementado en Community AI y Sales AI Motor. Patrón: `⚙️ Config G54 → 🔍 Preparar Resolución → 🏢 Resolver Empresa (continueOnFail) → 🏢 Aplicar Config Empresa (merge: query param > API > fallback CE)`. Decisión: Meta Tech Provider necesario para escalar pero por ahora cada cliente crea su App y usa query param. Pendiente G54: endpoints `GET /api/n8n/pages/{id}` y `GET /api/n8n/wa-phones/{id}`.
 61. **Sales AI Motor reconstruido limpio** (2026-06-04): workflow `eCOX3ogMjToxZsh9` reconstruido desde cero sin lógica CE. Webhook WA: `wa-engine-g54`, FB/IG: `sales-ai-social`. Eliminado: cotizador, cajones, medidas, tipo_cajón, ISPM-15, modo contingencia rule-based. `datos_actualizados` es objeto libre. IA: Groq llama-3.3-70b + Gemini fallback. Estados: Nuevo → En calificación → Calificado → Vendedor notificado. Alex (`zAhV8gEsXD8dCrXq`, `whatsapp-ce`) intocable. Activo en n8n. Archivo: `workflow-sales-ai-motor-g54.json`.
+62. **Banner CE aplicado a workflows CE-específicos** (2026-06-10): banner/footer aprobado de CE (imagen `lh3.googleusercontent.com/d/14EmfG1bLlmxbvvRFyVFaHyehs-_9r5Lh`) agregado a nodos de email en CE Blog, RRSS Automation CE y RRSS Generador de Temas. Los workflows de plataforma G54 NO tienen el banner (viola la regla de no hardcodear datos de cliente).
+63. **Reportes por email eliminados de G54** (2026-06-10): removidos todos los nodos de email-reporte de workflows G54 — Analytics semanal/mensual (`📧 Enviar Reporte por Email`), Strategist v2/v3 (`📧 Notificación: Estrategia Lista`), RRSS Content AI v1.3 (toda la cadena: email aprobación + webhook aprobar/rechazar + estados + respuestas + reporte, 11 nodos). Todo se verá en la interfaz G54. Sales AI Motor conserva `📧 Notificar Vendedor` (alerta operacional, no reporte).
+64. **Census n8n + limpieza** (2026-06-10): 32 workflows totales, 11 activos, 21 inactivos. Alex renombrado (estaba como "doble"). Borrados 4 workflows obsoletos: Generador Temas v1.2, CE WA Engine v1.2, CE Blog v1.2, CE Email Outreach v1.2. RRSS Automation CE (`HqKUsOwwguIYQbsU`) reactivado como puente — el content generator de RRSS para CE no estaba corriendo (G54 inactivo + viejo inactivo). Nomify confirmado fuera de nuestro alcance, lo continúa otra persona.
 
 ## Nomify — Planilla Nicaragua (Express + MariaDB)
 
@@ -946,17 +949,25 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ### Pendientes Nomify
 
-- [ ] Ingresar los 8 empleados reales (eliminar: María García, Carlos López, Ana Martínez, Roberto Sánchez)
-- [ ] Crear usuario admin real: `node create-admin.js` y cambiar contraseña desde la app
-- [ ] Invitar usuarios reales con sus roles
-- [ ] Confirmar definición de "aportaciones" y marcador de huella con quien corresponda
-- [ ] Probar flujo completo: login → empleados → generar planilla → recibo
+> **FUERA DE NUESTRO ALCANCE (2026-06-10)** — lo continúa otra persona. No incluir en planificación.
 
 ---
 
 ## Reportes Diarios
 
 > Los últimos 14 días. Anteriores archivados en `PROYECTO-SOL/reportes/`.
+
+---
+
+### 2026-06-10 (Martes)
+
+El día estuvo enfocado en limpieza, correcciones y orden general de los workflows de n8n. Se retomó una tarea pendiente de la sesión anterior: aplicar el banner y footer aprobado de Crating Express a todos los agentes que mandan correos. Se identificaron 10 workflows con nodos de email, se generaron los archivos corregidos y se pushearon a n8n. Sin embargo al revisar lo que se había hecho se detectó que varios de esos workflows son de la plataforma G54 y por regla no pueden tener nada hardcodeado de un cliente específico — el banner de CE en esos agentes significaría que si mañana se usa el mismo agente con otro cliente, el correo saldría con la imagen de Crating Express. Se corrigió el error: el banner quedó solo en los workflows exclusivos de CE (CE Blog, RRSS viejo, Generador de Temas) y se removió de los 6 workflows de plataforma G54.
+
+Luego se trabajó en eliminar todos los reportes por correo de los workflows G54, ya que esa información se verá directamente en la interfaz de la plataforma. Se removieron nodos de email en Analytics semanal y mensual, Strategist v2 y v3, y en el RRSS Content AI v1.3 se eliminó toda la cadena de aprobación por email — el flujo ahora termina al guardar el post en G54 y la aprobación se gestiona desde el panel. El nodo de notificación al vendedor en Sales AI Motor se conservó porque es una alerta operacional, no un reporte.
+
+Se verificó que los 8 workflows de G54 estén desactivados, confirmando que ninguno está en producción. Se hizo un censo completo de los 32 workflows en n8n: 11 activos y 21 inactivos. Durante ese proceso se encontró que Alex estaba renombrado como "Sistema de Conversión doble" por un problema de una sesión anterior — se corrigió el nombre a "CE WhatsApp Engine - Sistema de Conversión". También se detectó que el RRSS content generator para CE no estaba corriendo (el viejo inactivo y el G54 apagado), así que se reactivó el RRSS Automation original como puente mientras G54 no entra en producción. Se borraron 4 workflows que eran versiones obsoletas reemplazadas: Generador de Temas v1.2, CE WhatsApp Engine v1.2, CE Blog v1.2 y CE Email Outreach v1.2.
+
+Al cierre hubo una conversación sobre el estado del marketing de CE en general. La conclusión fue que las herramientas están funcionando pero el canal orgánico de redes sociales tiene retorno muy bajo para un negocio industrial B2B en Miami, y que Google My Business es probablemente el canal con mayor potencial inmediato. Quedó pendiente conseguir las instrucciones de lo que se necesita hacer en GMB para ver qué parte se puede automatizar desde n8n. Nomify se confirmó fuera de nuestro alcance — lo continúa otra persona.
 
 ---
 
