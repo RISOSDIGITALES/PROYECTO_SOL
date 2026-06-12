@@ -321,6 +321,16 @@ Trigger Manual o Domingo 8am
 - **Gemini primario + Groq fallback**: patrón `continueOnFail: true` en Gemini → nodo IF verifica `candidates?.length > 0` → si falla, va a Groq
 - **Parseo robusto**: los nodos Code de parseo soportan respuesta de Gemini (`candidates[0].content.parts[0].text`) Y de Groq/OpenAI (`choices[0].message.content`)
 - **LinkedIn desactivado**: nodo `post-linkedin` tiene `"disabled": true` — se puede activar sin cambios de lógica añadiendo `LI_ACCESS_TOKEN` y `LI_COMPANY_ID` como variables
+
+### LinkedIn App — Crating Express
+- **App name:** Crating Express - La empresa de embalaje de Miami
+- **Client ID:** `787d1cbkqo9gbo`
+- **Client Secret:** guardado en LinkedIn Developer Portal (Autenticación → Secreto principal del cliente) — NO commitear
+- **Token anterior encontrado:** formato no estándar — puede ser token viejo o de prueba — NO commitear
+- **OAuth callback configurado:** `https://n8n.mdarthurdigital.com/rest/oauth2-credential/callback`
+- **Duración token:** 2 meses (5184000 segundos)
+- **Creada:** 30 de marzo de 2026
+- **Para obtener Access Token:** LinkedIn Developer Portal → app CE → pestaña Autenticación → generar token con OAuth 2.0, o usar la credencial OAuth2 en n8n (ya tiene el callback configurado)
 - **Aprobación por email**: usa `$execution.resumeUrl` de n8n + nodo Wait con webhook para flujo pausado
 
 ## n8n — Acceso
