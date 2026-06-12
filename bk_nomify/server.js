@@ -96,6 +96,15 @@ const { requireAuth, requireAdmin } = require('./auth');
     FOREIGN KEY (empleado_id) REFERENCES empleados(id) ON DELETE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 
+  // ── v1.9: tabla de monedas ────────────────────────────────────────────────
+  await run(`CREATE TABLE IF NOT EXISTS moneda (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    nombre     VARCHAR(100) NOT NULL,
+    codigo     VARCHAR(10)  NOT NULL,
+    simbolo    VARCHAR(10)  DEFAULT NULL,
+    created_at TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
   console.log('[migrations] OK');
 })();
 
