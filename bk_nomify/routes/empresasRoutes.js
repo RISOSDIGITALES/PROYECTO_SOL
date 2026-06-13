@@ -40,7 +40,9 @@ router.post('/', requireAuth, requireMaster, async (req, res) => {
     if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'Razón social requerida' });
     const vals = CAMPOS.map(c => {
       const v = req.body[c];
-      return (c === 'logo') ? (v ?? null) : (v?.trim?.() ?? v ?? null);
+      if (c === 'logo') return v ?? null;
+      if (c === 'inatec_activo') return v !== undefined ? Number(v) : 1;
+      return v?.trim?.() ?? v ?? null;
     });
     const [result] = await db.query(
       `INSERT INTO empresas (${CAMPOS.join(', ')}) VALUES (${CAMPOS.map(() => '?').join(', ')})`,

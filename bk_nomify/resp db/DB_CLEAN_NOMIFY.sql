@@ -127,7 +127,8 @@ CREATE TABLE `empresas` (
   `correo` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `telefono` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `direccion` text COLLATE utf8mb4_unicode_ci,
-  `logo` mediumtext COLLATE utf8mb4_unicode_ci
+  `logo` mediumtext COLLATE utf8mb4_unicode_ci,
+  `inatec_activo` tinyint(1) NOT NULL DEFAULT '1'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
