@@ -1,0 +1,2888 @@
+{
+  "updatedAt": "2026-06-11T19:22:47.722Z",
+  "createdAt": "2026-05-26T13:46:38.086Z",
+  "id": "zAhV8gEsXD8dCrXq",
+  "name": "CE WhatsApp Engine - Sistema de Conversión",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🟢 CE WhatsApp Engine\n\n**Pendiente conectar:**\n- Credencial WhatsApp (Meta API) en nodo Webhook y envío\n- Token de acceso permanente de Meta\n\n**Configuración:** Airtable → PERFIL DE EMPRESA → campos WA_*",
+        "height": 200,
+        "width": 400,
+        "color": 5
+      },
+      "id": "150a8aca-a265-4401-92dc-2f76f13eb6af",
+      "name": "📋 CONFIGURACIÓN",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1136,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-ce",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "d43a7851-c74b-4c33-93e5-d99c7266880c",
+      "name": "📲 Webhook WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -848,
+        224
+      ],
+      "webhookId": "200cbd06-8278-4dc0-a4dd-33a29c9493c5"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "175c7d55-9098-486a-89ce-f219ddbf1b23",
+      "name": "✅ Responder a Meta (200)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -1472,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-hub",
+              "leftValue": "={{ $json.query?.['hub.mode'] }}",
+              "rightValue": "subscribe",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5aae3c64-67dd-4535-ab6c-e07a1a21d98c",
+      "name": "🔀 ¿Verificación o Mensaje?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -624,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query?.['hub.challenge'] }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "5eefd5ce-2350-4e8b-8a03-f3a90fad84f3",
+      "name": "✅ Responder Verificación Meta",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -400,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst entry = body.entry?.[0];\nconst changes = entry?.changes?.[0];\nconst value = changes?.value;\nconst message = value?.messages?.[0];\n\nif (!message) {\n  return [{ json: { skip: true } }];\n}\n\nconst telefono = message.from;\nconst texto = message.text?.body || '';\nconst messageId = message.id;\nconst timestamp = message.timestamp;\nconst nombreContacto = value?.contacts?.[0]?.profile?.name || '';\n\n// FIX: Deduplicación — Meta envía el mismo webhook dos veces\n// Usamos static data para recordar messageIds procesados en los últimos 60s\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.seenMessageIds) staticData.seenMessageIds = {};\n\nconst now = Date.now();\n// Limpiar entradas viejas (> 60 segundos)\nObject.keys(staticData.seenMessageIds).forEach(id => {\n  if (now - staticData.seenMessageIds[id] > 60000) delete staticData.seenMessageIds[id];\n});\n\nif (staticData.seenMessageIds[messageId]) {\n  // Mensaje duplicado — ignorar\n  return [{ json: { skip: true, skipReason: 'duplicate_messageId' } }];\n}\nstaticData.seenMessageIds[messageId] = now;\n\nreturn [{\n  json: {\n    telefono,\n    texto,\n    messageId,\n    timestamp,\n    nombreContacto,\n    skip: false\n  }\n}];"
+      },
+      "id": "a64fe455-0cf0-4a86-8d8c-04671e2d6b01",
+      "name": "🔧 Extraer Mensaje y Teléfono",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-skip",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "false"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8930d963-d81a-4740-9cb6-54ca2e85b016",
+      "name": "🔀 ¿Hay mensaje?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -176,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/PERFIL%20DE%20EMPRESA",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "maxRecords",
+              "value": "1"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "***REDACTED***"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bb8b805c-58e4-4295-9508-419f6483b864",
+      "name": "📊 Obtener Config Empresa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        32,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filterByFormula",
+              "value": "***REDACTED***"
+            },
+            {
+              "name": "maxRecords",
+              "value": "1"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "***REDACTED***"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3c83489d-7aa2-476f-8e48-b939bff8517a",
+      "name": "📋 Buscar Lead Existente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -416,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const msgData = $('🔧 Extraer Mensaje y Teléfono').item.json;\nconst configData = $('📊 Obtener Config Empresa').item.json;\nconst waConfigData = $('⚙️ Obtener WA Config').item.json;\nconst leadData = $('📋 Buscar Lead Existente').item.json;\n\nconst config = configData.records?.[0]?.fields || {};\nconst waConfig = waConfigData.records?.[0]?.fields || {};\nconst emailVendedor = config.WA_Email_Vendedor || 'risosadmi@gmail.com';\nconst followup24 = waConfig.WA_FollowUp_24h || '';\nconst followup72 = waConfig.WA_FollowUp_72h || '';\n\nconst leadExistente = leadData.records?.[0];\nconst leadId = leadExistente?.id || null;\nconst leadFields = leadExistente?.fields || {};\n\n// ── Cargar estado desde Airtable ─────────────────────────────────────────────\nlet datosRecolectados = {\n  producto: leadFields.Articulo || null,\n  medidas: leadFields['Medidas y Peso'] || null,\n  fecha: null,\n  tipo_cajon: null,\n  proteccion_extra: null,\n  correo_contacto: null,\n  nombre_cliente: leadFields.Nombre_Contacto || null,\n  tipo_flujo: null  // 'cotizacion' | 'consulta' | null = sin identificar aún\n};\n\nlet notasOriginal = {};\ntry {\n  const notas = leadFields.Notas || '';\n  if (notas && notas.trim().startsWith('{')) {\n    const stored = JSON.parse(notas);\n    notasOriginal = stored;\n    if (stored.tipo_cajon)       datosRecolectados.tipo_cajon = stored.tipo_cajon;\n    if (stored.correo_contacto)  datosRecolectados.correo_contacto = stored.correo_contacto;\n    if (stored.nombre_cliente && !datosRecolectados.nombre_cliente) datosRecolectados.nombre_cliente = stored.nombre_cliente;\n    if (stored.proteccion_extra !== null && stored.proteccion_extra !== undefined) datosRecolectados.proteccion_extra = stored.proteccion_extra;\n    if (stored.fecha)            datosRecolectados.fecha = stored.fecha;\n    if (stored.tipo_flujo)       datosRecolectados.tipo_flujo = stored.tipo_flujo;\n  }\n} catch(e) {}\n\nconst r3 = leadFields['¿Protección adicional?'] || '';\nif (r3 === 'true')  datosRecolectados.proteccion_extra = true;\nelse if (r3 === 'false') datosRecolectados.proteccion_extra = false;\n\nconst estado = leadFields.Estado || 'Nuevo';\nconst cotizacionEnviada = notasOriginal.cotizacion_enviada === true || ['Vendedor notificado', 'Cotizacion_Enviada'].includes(estado);\nconst historial = leadFields.Historial_Mensajes || '';\nconst esNuevo = !leadId;\n\n// Catálogo\nconst productosData = $('📦 Obtener Productos').item.json;\nconst catalogoProductos = (productosData.records || []).map(r => {\n  const f = r.fields;\n  return Object.entries(f).find(([k]) => k.includes('Nombre de Servicio'))?.[1] || '';\n}).filter(l => l.length > 2).join(', ');\n\nlet catalogoFinal = catalogoProductos;\ntry {\n  const pm = $('🔍 Contexto CE (Pinecone)').item.json;\n  const chunks = (pm.matches || []).filter(m => (m.score||0) > 0.75).map(m => m.metadata?.text||'').filter(t=>t.length>20).slice(0,3).join('\\n');\n  if (chunks) catalogoFinal = chunks;\n} catch(e) {}\n\nconst horaMiami = (new Date().getUTCHours() - 4 + 24) % 24;\nconst saludoHora = horaMiami >= 6 && horaMiami < 12 ? 'buenos días'\n  : horaMiami >= 12 && horaMiami < 19 ? 'buenas tardes' : 'buenas noches';\nconst saludo = saludoHora.charAt(0).toUpperCase() + saludoHora.slice(1);\n\nconst texto      = (msgData.texto || '').trim();\nconst textoLower = texto.toLowerCase();\nconst hasDigits  = /\\d/.test(texto);\nconst isGreeting = /^(hola[sa]?\\b|hi\\b|buenas\\b|buenos\\b|hey\\b|good\\s|morning|afternoon|evening|hello\\b)/i.test(texto);\nconst isServiceMention = /\\b(cotiz|lavadora|refrigerador|mueble|nevera|estufa|máquina|machine|embalaje|caja|cajón|crate|pack|madera|necesito|quiero|quisiera|me gustaría|precio|medid|pulgad)\\b/i.test(texto);\n\n// ── Máquina de estado ─────────────────────────────────────────────────────────\nconst cleanCheck = v => {\n  if (typeof v === 'boolean') return v;\n  if (!v || ['desconocido','null','undefined'].includes(String(v).toLowerCase().trim())) return null;\n  return v;\n};\n\nconst calcProximoPaso = d => {\n  if (cotizacionEnviada)          return 'POST_COTIZACION';\n  if (esNuevo && !datosRecolectados.nombre_cliente) return 'PRIMER_CONTACTO';\n  if (!cleanCheck(d.nombre_cliente)) return 'PEDIR_NOMBRE';\n  if (!d.tipo_flujo)              return 'IDENTIFICAR_NECESIDAD';\n  if (d.tipo_flujo === 'consulta') return 'FLUJO_CONSULTA';\n  // cotizacion flow\n  if (!cleanCheck(d.producto))    return 'PEDIR_PRODUCTO';\n  if (!cleanCheck(d.medidas))     return 'PEDIR_MEDIDAS';\n  if (!cleanCheck(d.tipo_cajon))  return 'PEDIR_TIPO_CAJON';\n  if (d.proteccion_extra === null || d.proteccion_extra === undefined) return 'PEDIR_PROTECCION';\n  if (!cleanCheck(d.fecha))       return 'PEDIR_FECHA';\n  return 'LISTO_PARA_COTIZAR';\n};\n\nlet proximoPaso = calcProximoPaso(datosRecolectados);\nconst proximoPasoInicial = proximoPaso; // paso en que estaba Alex ANTES de este mensaje\nconst nombreAntesMensaje = datosRecolectados.nombre_cliente;\n\n// ── Extracción de datos del mensaje actual ────────────────────────────────────\nlet nombreRecienExtraido = false;\n// Saludo en lead existente = nueva sesión → resetear intención\nif (isGreeting && !esNuevo) {\n  datosRecolectados.tipo_flujo = null;\n}\nif (texto.length > 0) {\n\n  // NOMBRE — tres casos:\n  // 1. Prefijo explícito (\"Con X\", \"Soy X\", \"Me llamo X\") → cualquier estado\n  // 2. \"Hola soy X\" / \"Hi I'm X\" — saludo + prefijo\n  // 3. Mensaje corto solo en pasos PEDIR_NOMBRE/PRIMER_CONTACTO (mín 2 chars)\n  const tienePrefijoNombre = /^(con\\s+|soy\\s+|me\\s+llamo\\s+|mi\\s+nombre\\s+es\\s+|i'?m\\s+|my\\s+name\\s+is\\s+|it'?s\\s+)/i.test(texto);\n  const holaConNombre = texto.match(/^(?:hola[s]?|hi|hey|buenas)[,!\\s]+(?:soy|i'?m|me\\s+llamo|con)\\s+([\\w][\\w\\s]{1,30})/i);\n  if (tienePrefijoNombre && !isServiceMention) {\n    const nombreLimpio = texto\n      .replace(/^(con\\s+|soy\\s+|me\\s+llamo\\s+|mi\\s+nombre\\s+es\\s+|i'?m\\s+|my\\s+name\\s+is\\s+|it'?s\\s+)/i, '')\n      .trim();\n    if (nombreLimpio.split(/\\s+/).length <= 3 && !hasDigits && nombreLimpio.length >= 2) {\n      datosRecolectados.nombre_cliente = nombreLimpio;\n    }\n  } else if (holaConNombre) {\n    const nombreExtraido = holaConNombre[1].trim();\n    if (nombreExtraido.length >= 2 && nombreExtraido.split(/\\s+/).length <= 3) {\n      datosRecolectados.nombre_cliente = nombreExtraido;\n    }\n  } else if ((proximoPasoInicial === 'PRIMER_CONTACTO' || proximoPasoInicial === 'PEDIR_NOMBRE') && !isGreeting && !isServiceMention) {\n    const palabras = texto.split(/\\s+/);\n    if (palabras.length <= 4 && !hasDigits && texto.trim().length >= 2) {\n      datosRecolectados.nombre_cliente = texto.trim();\n    }\n  }\n\n  // IDENTIFICAR NECESIDAD: cotización vs consulta (detección exhaustiva)\n  const detectarIntento = (txt) => {\n    const n = txt.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\n    const hd = /\\d/.test(txt);\n    const tienePregunta = /[?¿]/.test(txt);\n\n    // — Señales de CONSULTA —\n    const cTiempo   = /(cuanto).{0,15}(demora|tarda|tiempo|dias?|semanas?|plazo)/.test(n) || /(how (long|fast|quick|soon)|demoran?|tardan?|plazo|days? (to|for))/.test(n);\n    const cCatalogo = /(que tipos?|what types?|what kind[s]?|what do you (make|offer|sell|have|do)|que (ofrecen|hacen|venden|tienen|manejan|trabajan)|tipos? de|clases? de|opciones?|disponibles?|que (fabrican|producen|construyen))/.test(n);\n    const cOper     = /(horario|schedule|hours?|abiertos?|abren|cierran|open|close|located|location|address|direcc|donde estan|donde esta|where are you|work.{0,5}(weekend|saturday|sunday|sabado|domingo|fin de semana)|trabajan.{0,10}(sabado|domingo|fin de semana|weekend)|payment|pago|aceptan|acepta|cobran con|metodo|forma de pag|tarjeta|efectivo|transferencia|deposito|banco|factura|invoice|recibo|estan en|son de|llegan a|near|cerca de)/.test(n);\n    const cProceso  = /(como (funciona|trabajan|hacen|es el proceso|se hace)|how (does|do) (it|you|the)|proceso|ispm|nimf|certificad|garantia|warranty|incluye|include|que incluye|included|material|madera|wood|tipo de (madera|material)|que.{0,10}(incluye|viene|trae|contiene))/.test(n);\n    const cPueden   = /^(pueden|can you|do you|are you|es posible|hacen|fabrican|manejan|trabajan con|atienden|van a|vienen a|tienen servicio|ofrecen servicio|make|build|deliver|come to|work with|handle)/.test(n);\n    const cPrecioG  = /(descuento|discount|precios? (en general|normal|promedio|aprox|standard|habitual)|cuanto salen en promedio|precio base|precio minimo|precio maximo|cuales? son (sus|los) precio|what are (your|the) price|how much (do you|does it) (charge|cost) (in general|usually|typically|on average|generally|normally)|rango de precio|cuanto.{0,10}(salen|valen).{0,10}(mas o menos|aprox|por lo general)|minimo de pedido|minimum order)/.test(n);\n    const cInfo     = /(que ofrecen|que hacen|que servicios|what (do|does).{0,10}(offer|make|sell|do)|tell me about|explica|explain|informac|info sobre|more about|servicios que|solo quier.{0,2} saber|just want to know|queria saber)/.test(n);\n\n    // — Señales de COTIZACIÓN —\n    const qDirecto   = /(cotiz[a-z]*|presupuest[a-z]*|quot[a-z]*|estimat[a-z]*)/.test(n);\n    const qNecesidad = /(necesito|quiero|i need|i want|i.?d like|looking for).{0,25}(caj[oa]|cajones|embal|crate|box|pack|palet|plataforma|jaula|cuna[s]?|packaging|wooden)/.test(n);\n    const qAccion    = /(embalar|empacar|enviar|exportar|mandar|ship|export|pack).{0,35}(una?|mis?|my|algo|something|equipo|maquina|motor|articulo|item|product|piezas?|partes?|generator|compressor)/.test(n);\n    const qTengo     = /(tengo|have|i.?ve got|got).{0,35}(que (embalar|empacar|enviar|exportar|ship|pack)|para (embal|crat|pack|ship|export)|necesita.{0,5}(ser )?embal|to (ship|export|send))/.test(n);\n    const qNecEmbal  = /(necesita.{0,10}(ser )?embalad|needs? (to be )?(crat|pack|ship)|que necesita (embal|pack|crat))/.test(n);\n    const qPrecEsp   = /(cuanto).{0,30}(cuesta|vale|cobran|costo).{0,40}(caj[oa]|cajones|embal|crate|box|palet|jaula|plataforma|packaging)/.test(n);\n    const qMedidas   = hd && /\\d+\\s*(x|×|\\*|por|by)\\s*\\d+/.test(n);\n    const qSerian    = hd && /\\d.{0,30}(cuanto (seria|saldria|costaria|valdria)|how much (would|will) (it|that|be))/.test(n);\n    const qDame      = /(dame|give me|send me|mandame|pasame).{0,20}(precio|price|cotiz|presupuest|quote|estimad|cost)/.test(n);\n    const qEN        = /(i need a (crate|wooden box|custom box|pallet|packaging)|crate (for|my|a)|custom (box|crate|packaging)|build me|make me a (crate|box|pallet)|need.{0,15}crat)/.test(n);\n    const qNeedToShip = /(need to (ship|send|export|pack)|necesito (enviar|mandar|exportar|empacar)|tengo que (enviar|mandar|exportar|empacar))/.test(n);\n    const qPackagingFor = /(packaging for|embalaje para|embalaje de|caja[s]? (para|de madera|de)|cajon para|cajón para|cajones para|crate for)/.test(n);\n    const qPrecioProd = /((precio|price).{0,30}(caj[oa]|cajones|embal|crate|box|palet|plataforma|jaula|cuna[s]?|packaging)|(caj[oa]|cajones|embal|crate|box|palet|plataforma|jaula|cuna[s]?|packaging).{0,30}(precio|price|quote|cost))/.test(n);\n    const qCuantoProd = /cuanto.{0,20}(un|una|el|la)?.{0,5}(caj[oa]|cajones|embal|crate|palet|plataforma|jaula|cuna[s]?)/.test(n);\n    const qISPM      = /(ispm|nimf).{0,30}(crate|cajon|cajas?|necesit|need|quiero|para|exporta)/.test(n);\n\n    const ambiguo = /^(cuanto|how much)[.!?\\s]*$/.test(n.trim()) || /^(cuanto|how much)[,\\s]+(cobran|cuesta|vale)[.!?]*$/.test(n.trim());\n\n    const esConsulta   = cTiempo || cCatalogo || cOper || cProceso || cPueden || cPrecioG || cInfo;\n    const esCotizacion = qDirecto || qNecesidad || qAccion || qPrecEsp || qTengo || qNecEmbal || qMedidas || qSerian || qDame || qEN || qNeedToShip || qPackagingFor || qPrecioProd || qCuantoProd || qISPM;\n\n    if (ambiguo) return 'consulta';\n    if (esCotizacion && esConsulta) {\n      return (qDirecto || qNecesidad || qPrecEsp || qEN || qDame || qNecEmbal || qNeedToShip || qPackagingFor || qPrecioProd || qCuantoProd || qISPM) ? 'cotizacion' : 'consulta';\n    }\n    if (esCotizacion) return 'cotizacion';\n    if (esConsulta)   return 'consulta';\n    if (tienePregunta) return 'consulta';\n    return null;\n  };\n\n  // NOMBRE RECIÉN EXTRAÍDO: resetear tipo_flujo para siempre pasar por IDENTIFICAR_NECESIDAD\n  nombreRecienExtraido = !!(datosRecolectados.nombre_cliente && !nombreAntesMensaje);\n  if (nombreRecienExtraido) {\n    datosRecolectados.tipo_flujo = null; // Fuerza IDENTIFICAR_NECESIDAD, ignora tipo_flujo viejo\n  }\n\n  if (proximoPasoInicial === 'IDENTIFICAR_NECESIDAD') {\n    // Si el mensaje es una presentación de nombre, no clasificar como intento todavía\n    const esPresentacionNombre = /^(con\\s|soy\\s|me\\s+llamo\\s|mi\\s+nombre\\s|i'?m\\s|my\\s+name\\s)/i.test(texto);\n    if (!esPresentacionNombre) {\n      const intento = detectarIntento(texto);\n      datosRecolectados.tipo_flujo = (intento === 'cotizacion') ? 'cotizacion' : 'consulta';\n    }\n    // Si es presentación: tipo_flujo queda null → estado se mantiene IDENTIFICAR_NECESIDAD → Parsear da \"¡Mucho gusto!\"\n  }\n\n  // En FLUJO_CONSULTA: detectar si ahora quiere cotizar → cambiar flujo\n  if (proximoPasoInicial === 'FLUJO_CONSULTA') {\n    const esAfirmacion = /^(s[ií]\\b|yes\\b|claro\\b|dale\\b|perfecto\\b|adelante\\b|por favor\\b|ok\\b|okay\\b|sure\\b|please\\b|quiero\\b|me interesa\\b|vamos\\b|hagamos\\b|genial\\b|excelente\\b|bueno\\b|listo\\b|obvio\\b|claro que s[ií]|ok perfecto|dale s[ií]|yes please|sure thing|sounds good|de acuerdo|me parece bien|^va$|yes go ahead|claro dale|s[ií] claro|ok s[ií]|si claro|s[ií] me interesa|yes i want|me gustar[ií]a|quisiera|i'?d like|i want|eso me interesa)[.!,\\s]*$/i.test(texto.trim().toLowerCase());\n    if (esAfirmacion || detectarIntento(texto) === 'cotizacion') {\n      datosRecolectados.tipo_flujo = 'cotizacion';\n    }\n  }\n\n    // PRODUCTO\n  if (proximoPasoInicial === 'PEDIR_PRODUCTO' && !isGreeting) {\n    datosRecolectados.producto = texto;\n  }\n\n  // MEDIDAS\n  if (proximoPasoInicial === 'PEDIR_MEDIDAS' && hasDigits) {\n    datosRecolectados.medidas = texto;\n  }\n\n  // TIPO CAJÓN\n  if (proximoPasoInicial === 'PEDIR_TIPO_CAJON') {\n    const confirma = /^(si\\b|sí\\b|yes\\b|dale|claro|ok\\b|bien\\b|perfecto|adelante|sure\\b|de acuerdo|sounds|me parece|sisi)/i.test(textoLower);\n    if (/jaula/i.test(texto))       datosRecolectados.tipo_cajon = 'jaulas';\n    else if (/palet|pallet/i.test(texto)) datosRecolectados.tipo_cajon = 'palets_medida';\n    else if (/cuna/i.test(texto))   datosRecolectados.tipo_cajon = 'cunas';\n    else if (/plataforma/i.test(texto)) datosRecolectados.tipo_cajon = 'plataformas_contenedor';\n    else if (/feria/i.test(texto))  datosRecolectados.tipo_cajon = 'embalaje_ferias';\n    else if (confirma || /cajon|cajón|cerrado|crate|box/i.test(texto)) datosRecolectados.tipo_cajon = 'cajones_cerrados';\n  }\n\n  // PROTECCIÓN\n  if (proximoPasoInicial === 'PEDIR_PROTECCION') {\n    if (/\\b(si\\b|sí\\b|yes\\b|dale|claro|ok\\b|quiero|foam|burbuja|esquinera|por favor|please|add|agrega|sisi)\\b/i.test(textoLower)) {\n      datosRecolectados.proteccion_extra = true;\n    } else if (/^(no\\b|nope\\b|sin |no gracias|no quiero|no thanks|don't|dont|skip|sin protec)/i.test(textoLower)) {\n      datosRecolectados.proteccion_extra = false;\n    }\n  }\n\n  // FECHA\n  if (proximoPasoInicial === 'PEDIR_FECHA') {\n    const hasFechaRef = hasDigits ||\n      /\\b(hoy|mañana|manana|tomorrow|today|lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|urgente|asap|as soon as possible|lo antes|inmediato|semana|semanas|mes|meses|month|months|next week|next month|end of|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|january|february|march|april|june|july|august|september|october|november|december|primero|próximo|proximo|siguiente|días|dias)\\b/i.test(texto);\n    if (hasFechaRef) datosRecolectados.fecha = texto;\n  }\n\n  // EMAIL (siempre)\n  if (!datosRecolectados.correo_contacto && texto.includes('@')) {\n    const emailMatch = texto.match(/[\\w.+-]+@[\\w-]+\\.[\\w.]+/);\n    if (emailMatch) datosRecolectados.correo_contacto = emailMatch[0];\n  }\n}\n\n// Recalcular tras extracción\nproximoPaso = calcProximoPaso(datosRecolectados);\nconst nombreRecienExtractado = !nombreAntesMensaje && datosRecolectados.nombre_cliente;\n\n// DESPEDIDA\nconst isCierreSena = /\\b(muchas gracias|thank you|thanks a lot|that'?s? all|eso es todo|ya está|nada más|nada mas|hasta luego|bye\\b|adiós|adios|hasta pronto|me queda claro|ya tengo lo|con eso basta|no necesito más|ya era todo)\\b/i.test(textoLower)\n  || /^gracias[.!\\s]*$/i.test(textoLower);\nif (isCierreSena && (cotizacionEnviada || ['LISTO_PARA_COTIZAR','POST_COTIZACION','FLUJO_CONSULTA'].includes(proximoPaso))) {\n  proximoPaso = 'DESPEDIDA';\n}\n\n// ── Dimensiones ───────────────────────────────────────────────────────────────\nlet dimensiones = { largo: null, ancho: null, alto: null };\nconst medidasStr = datosRecolectados.medidas || '';\nif (medidasStr) {\n  const dimMatch = medidasStr.match(/(\\d+(?:\\.\\d+)?)\\s*[x*×]\\s*(\\d+(?:\\.\\d+)?)\\s*[x*×]\\s*(\\d+(?:\\.\\d+)?)/i);\n  if (dimMatch) {\n    dimensiones = { largo: parseFloat(dimMatch[1]), ancho: parseFloat(dimMatch[2]), alto: parseFloat(dimMatch[3]) };\n  } else {\n    const nums = medidasStr.match(/\\d+(?:\\.\\d+)?/g);\n    if (nums && nums.length >= 3) dimensiones = { largo: parseFloat(nums[0]), ancho: parseFloat(nums[1]), alto: parseFloat(nums[2]) };\n  }\n}\n\nconst tipoCajaApiMap = { cajones_cerrados:'cajones_cerrados', jaulas:'jaulas', palets_medida:'palets_medida', cunas:'cunas', plataformas_contenedor:'plataformas_contenedor', embalaje_ferias:'embalaje_ferias', mayor:'mayor' };\nconst tipoCajaApi = tipoCajaApiMap[datosRecolectados.tipo_cajon] || null;\nconst todosRecolectados = proximoPaso === 'LISTO_PARA_COTIZAR';\n\n// ── Prompt para la IA ─────────────────────────────────────────────────────────\nconst nombre = datosRecolectados.nombre_cliente || '';\nconst producto = datosRecolectados.producto || '';\nconst medidas  = datosRecolectados.medidas || '';\n\nlet tareaIA;\n\nif (proximoPaso === 'PRIMER_CONTACTO') {\n  tareaIA = `PRIMER CONTACTO. Escribe EXACTAMENTE (sin comillas, sin cambiar nada):\\n${saludo}, soy Alex, el asistente de Crating Express. ¿Con quién tengo el gusto?`;\n\n} else if (proximoPaso === 'PEDIR_NOMBRE') {\n  tareaIA = `El cliente no ha dicho su nombre. Pregúntale amigablemente: \"¿Con quién tengo el gusto?\"`;\n\n} else if (proximoPaso === 'IDENTIFICAR_NECESIDAD') {\n  tareaIA = nombreRecienExtractado\n    ? `El cliente acaba de dar su nombre: \"${nombre}\". Salúdalo: \"¡Mucho gusto, ${nombre}!\" y pregunta en qué puedes ayudarle hoy.`\n    : `Saluda a ${nombre} por su nombre y pregunta en qué puedes ayudarle hoy.`;\n\n} else if (proximoPaso === 'FLUJO_CONSULTA') {\n  const catalogoCtx = catalogoFinal ? `\\n\\nCatálogo CE: ${catalogoFinal}` : '';\n  tareaIA = `El cliente tiene una consulta: \"${texto}\". Respóndela brevemente con lo que sabes de Crating Express (embalajes madera a medida, ISPM-15, servicio en Miami, cajones cerrados, jaulas, paletas, cunas, plataformas para contenedor, embalaje para ferias).${catalogoCtx}\\nSi la respuesta puede derivar en una cotización, al final ofrécela naturalmente con una frase como \"¿Te gustaría una cotización para algo específico?\"`;\n\n} else if (proximoPaso === 'PEDIR_PRODUCTO') {\n  tareaIA = `El cliente quiere cotizar. Pregunta qué artículo específico necesita embalar.`;\n\n} else if (proximoPaso === 'PEDIR_MEDIDAS') {\n  tareaIA = `Artículo: \"${producto}\". Pide las medidas en pulgadas (Largo × Ancho × Alto) y el peso aproximado en libras.`;\n\n} else if (proximoPaso === 'PEDIR_TIPO_CAJON') {\n  tareaIA = `Artículo: \"${producto}\", medidas: ${medidas}. Recomienda cajón cerrado para máxima protección con ISPM-15 y pregunta si está bien. Una sola oración.`;\n\n} else if (proximoPaso === 'PEDIR_PROTECCION') {\n  tareaIA = `Tipo de cajón confirmado. Pregunta si desea protección interior (foam, burbuja o esquineras) con costo adicional. Solo esa pregunta.`;\n\n} else if (proximoPaso === 'PEDIR_FECHA') {\n  tareaIA = `Ya tienes producto, medidas, cajón y protección. Pregunta SOLO: ¿para cuándo necesita el embalaje?`;\n\n} else if (proximoPaso === 'LISTO_PARA_COTIZAR') {\n  tareaIA = `Todos los datos listos. Mensaje breve: vas a calcular el estimado para \"${producto}\". NO menciones precios.`;\n\n} else if (proximoPaso === 'POST_COTIZACION') {\n  tareaIA = datosRecolectados.correo_contacto\n    ? `Ya tienes el correo \"${datosRecolectados.correo_contacto}\". Confirma que un especialista se pondrá en contacto y despídete.`\n    : `Cotización enviada. Pregunta el correo para que un especialista de Crating Express pueda contactarle.`;\n\n} else if (proximoPaso === 'DESPEDIDA') {\n  tareaIA = `El cliente termina la conversación. Despídete cordialmente y agradece su contacto.`;\n\n} else {\n  tareaIA = `Responde al mensaje del cliente de forma natural.`;\n}\n\nconst sistemaIA = `Eres Alex, asistente de Crating Express en Miami. Embalajes de madera a medida, ISPM-15 incluido. Responde en el idioma del cliente (español o inglés). Profesional, amigable, muy conciso — máximo 2 oraciones. Ejecuta ÚNICAMENTE la tarea indicada. NUNCA menciones precios (el sistema los calcula). NUNCA hagas preguntas extra.`;\nconst usuarioIA = `${tareaIA}\\n\\nMensaje del cliente: \"${texto}\"`;\n\nreturn [{ json: {\n  telefono: msgData.telefono,\n  texto, nombreContacto: msgData.nombreContacto || '',\n  emailVendedor, followup24, followup72,\n  leadId, estado, historial,\n  datosRecolectados, cotizacionEnviada, esNuevo,\n  saludoHora, catalogoProductos,\n  proximoPaso, dimensiones, tipoCajaApi, todosRecolectados,\n  nombreRecienExtraido, nombreAntesMensaje,\n  sistemaIA, usuarioIA\n} }];"
+      },
+      "id": "468adb6e-e025-4794-abe0-c87b7c828d94",
+      "name": "🔧 Preparar Contexto IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        256,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-hot",
+              "leftValue": "={{ $json.clasificacion }}",
+              "rightValue": "Caliente",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7cca60d3-4deb-4f12-b487-9572bcd6052f",
+      "name": "🔀 ¿Lead Caliente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1136,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.emailVendedor.split('\\n').join(',') }}",
+        "subject": "={{ \"🔥 Lead Caliente WhatsApp — \" + ($json.nombreContacto || $json.telefono) }}",
+        "message": "={{ (() => {const historial = $json.nuevoHistorial || $json.historial || \"\";const matchPrecio = historial.match(/Precio estimado: \\$([\\.\\d,]+) USD/);const precio = matchPrecio ? \"$\" + matchPrecio[1] + \" USD\" : \"No disponible\";return \"<h2>🔥 Nuevo Lead Caliente en WhatsApp</h2>\"+ \"<p><strong>Teléfono:</strong> \" + $json.telefono + \"</p>\"+ \"<p><strong>Nombre:</strong> \" + ($json.nombreContacto || $json.datosRecolectados?.nombre_contacto || \"No disponible\") + \"</p>\"\n+ \"<p><strong>Correo cliente:</strong> \" + ($json.datosRecolectados?.correo_contacto || \"No proporcionado\") + \"</p>\"+ \"<hr>\"+ \"<h3>Datos recolectados:</h3>\"+ \"<p><strong>Producto:</strong> \" + ($json.datosRecolectados?.producto || \"-\") + \"</p>\"+ \"<p><strong>Medidas:</strong> \" + ($json.datosRecolectados?.medidas || \"-\") + \"</p>\"+ \"<p><strong>Tipo de cajón:</strong> \" + ($json.datosRecolectados?.tipo_cajon || \"-\") + \"</p>\"+ \"<p><strong>Fecha requerida:</strong> \" + ($json.datosRecolectados?.fecha || \"-\") + \"</p>\"+ \"<p><strong>Protección interior:</strong> \" + ($json.datosRecolectados?.proteccion_extra || \"No solicitada\") + \"</p>\"+ \"<p><strong>💵 Estimado Alex:</strong> \" + precio + \"</p>\"+ \"<hr>\"+ \"<p><strong>Resumen:</strong> \" + ($json.resumenLead || \"-\") + \"</p>\";})() }}",
+        "options": {}
+      },
+      "id": "87a5d8c2-3a73-46c2-b0a6-24b7743e1e31",
+      "name": "📧 Notificar Vendedor",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1280,
+        224
+      ],
+      "webhookId": "62dcf57f-d27c-4c17-9d4e-a04331eb1403",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TESHSjzjMCpCxBBk",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "***REDACTED***"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.telefono, type: 'text', text: { body: $json.mensaje } }) }}",
+        "options": {}
+      },
+      "id": "ed986670-85f5-4e35-9bbd-c384129cd2f5",
+      "name": "📤 Enviar Mensaje WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1728,
+        384
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "***REDACTED***"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => {\n  const fields = {\n    Telefono: '+' + $json.telefono,\n    Nombre: $json.datosRecolectados.nombre_cliente || $json.nombreContacto || '',  // BUG6\n    Estado: $json.nuevoEstado,\n    Articulo: $json.datosRecolectados.producto || '',\n    'Medidas y Peso': $json.datosRecolectados.medidas || '',\n    '¿Protección adicional?': ($json.datosRecolectados.proteccion_extra === true) ? 'true' : ($json.datosRecolectados.proteccion_extra === false) ? 'false' : '',  // BUG5\n    Notas: JSON.stringify({ tipo_cajon: $json.datosRecolectados.tipo_cajon ?? null, fecha: $json.datosRecolectados.fecha ?? null, direccion: $json.datosRecolectados.direccion ?? null, correo_contacto: $json.datosRecolectados.correo_contacto ?? null, tipo_flujo: $json.datosRecolectados.tipo_flujo ?? null, cotizacion_enviada: $json.cotizador_enviado === true || $('🔧 Preparar Contexto IA').item.json.cotizacionEnviada === true }),  // BUG5: proteccion_extra moved to Respuesta_3\n    Origen: $json.origen || 'Desconocido',\n    Descripcion_Lead: $json.resumenLead || $json.resumen_lead || '',  // BUG8\n    Nombre_Contacto: $json.datosRecolectados.nombre_cliente || $json.nombreContacto || '',\n    Ultima_Actividad: new Date().toISOString(),\n    Historial_Mensajes: $json.nuevoHistorial,\n    Fecha_Inicio: new Date().toISOString(),\n    Ultima_Interaccion: new Date().toISOString()\n  };\n  if ($json.clasificacion) fields.Clasificacion = $json.clasificacion;\n  return JSON.stringify({ records: [{ fields }] });\n})() }}",
+        "options": {}
+      },
+      "id": "e6c977a1-d42f-480b-843c-ed29b83f9137",
+      "name": "💾 Crear Lead (POST)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1552,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "id": "9b51a564-7a9f-42af-8aca-db6dbbd2074c",
+      "name": "⏰ Trigger Follow-up Check",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -848,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filterByFormula",
+              "value": "***REDACTED***"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "***REDACTED***"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e556b0a3-d260-4f1d-a2c0-94ede1f52634",
+      "name": "📋 Obtener Leads Sin Respuesta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -624,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst records = data.records || [];\nconst now = new Date();\nconst results = [];\n\nfor (const record of records) {\n  const fields = record.fields;\n  const ultimaInteraccion = new Date(fields.Ultima_Actividad);\n  const horasDiff = (now - ultimaInteraccion) / (1000 * 60 * 60);\n  \n  let tipoFollowup = null;\n  if (horasDiff >= 72) tipoFollowup = '72h';\n  else if (horasDiff >= 24) tipoFollowup = '24h';\n  \n  if (tipoFollowup) {\n    results.push({\n      json: {\n        recordId: record.id,\n        telefono: fields.Telefono,\n        nombre: fields.Nombre,\n        tipoFollowup,\n        estado: fields.Estado\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "2f08aeac-7fa5-48b5-9ad2-8a177e0ca547",
+      "name": "🔧 Procesar Follow-ups",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/PERFIL%20DE%20EMPRESA",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "maxRecords",
+              "value": "1"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "***REDACTED***"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7ff2616f-22e5-4937-9055-9a28469c2bac",
+      "name": "📊 Config para Follow-up",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -176,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "***REDACTED***"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.telefono, type: 'text', text: { body: $json.tipoFollowup === '24h' ? $('📊 Config para Follow-up').item.json.records[0].fields.WA_FollowUp_24h : $('📊 Config para Follow-up').item.json.records[0].fields.WA_FollowUp_72h } }) }}",
+        "options": {}
+      },
+      "id": "134619df-061e-4d5e-a594-3654a3b82703",
+      "name": "📤 Enviar Follow-up WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        48,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads/{{ $json.recordId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "***REDACTED***"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: { Estado: 'Follow-up ' + $json.tipoFollowup, Ultima_Interaccion: new Date().toISOString() } }) }}",
+        "options": {}
+      },
+      "id": "f5a8fd8c-aac2-434a-bff0-6318dc1d7e9f",
+      "name": "🔄 Actualizar Estado Follow-up",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        256,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-leadid",
+              "leftValue": "={{ $json.leadId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3a357b0f-40e5-4c0b-bd5c-43a5b9b1a2d0",
+      "name": "🔀 ¿Crear o Actualizar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        656
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads/{{ $json.leadId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "***REDACTED***"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => {\n  const fields = {\n    Estado: $json.nuevoEstado,\n    Articulo: $json.datosRecolectados.producto || '',\n    'Medidas y Peso': $json.datosRecolectados.medidas || '',\n    '¿Protección adicional?': ($json.datosRecolectados.proteccion_extra === true) ? 'true' : ($json.datosRecolectados.proteccion_extra === false) ? 'false' : '',  // BUG5\n    Notas: JSON.stringify({ tipo_cajon: $json.datosRecolectados.tipo_cajon ?? null, fecha: $json.datosRecolectados.fecha ?? null, direccion: $json.datosRecolectados.direccion ?? null, correo_contacto: $json.datosRecolectados.correo_contacto ?? null, tipo_flujo: $json.datosRecolectados.tipo_flujo ?? null, cotizacion_enviada: $json.cotizador_enviado === true || $('🔧 Preparar Contexto IA').item.json.cotizacionEnviada === true }),  // BUG5: proteccion_extra moved to Respuesta_3\n    Descripcion_Lead: $json.resumenLead || $json.resumen_lead || '',  // BUG8\n    Nombre_Contacto: $json.datosRecolectados.nombre_cliente || $json.nombreContacto || '',\n    Ultima_Actividad: new Date().toISOString(),\n    Historial_Mensajes: $json.nuevoHistorial,\n    Ultima_Interaccion: new Date().toISOString()\n  };\n  if ($json.clasificacion) fields.Clasificacion = $json.clasificacion;\n  return JSON.stringify({ fields });\n})() }}",
+        "options": {}
+      },
+      "id": "f7f3d6ed-2378-4d3a-a6bd-9c387165b34f",
+      "name": "💾 Actualizar Lead (PATCH)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1552,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'llama-3.1-8b-instant',\n  messages: [\n    { role: 'system', content: $json.sistemaIA },\n    { role: 'user', content: $json.usuarioIA }\n  ],\n  temperature: 0.3,\n  max_tokens: 150\n}) }}",
+        "options": {}
+      },
+      "id": "5b842acf-11ba-4cd2-8d40-14a44bd61472",
+      "name": "🤖 Groq: Conversación IA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        304
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.item.json;\nconst ctx = $('🔧 Preparar Contexto IA').item.json;\n\n// Get message from AI (plain text) or Contingencia (direct object)\nlet mensaje;\nif (raw._contingencia) {\n  mensaje = raw.mensaje || '¿En qué más puedo ayudarte?';\n} else {\n  mensaje = (raw.choices?.[0]?.message?.content || raw.mensaje || '').trim();\n  if (!mensaje) mensaje = '¿En qué más puedo ayudarte?';\n}\n\n// TODOS los estados de recolección son deterministas — la IA no puede desviarse\nconst saludo = ctx.saludoHora.charAt(0).toUpperCase() + ctx.saludoHora.slice(1);\nconst n = ctx.datosRecolectados?.nombre_cliente || '';\nconst mensajesDeterministas = {\n  PRIMER_CONTACTO:       `${saludo}, soy Alex, el asistente de Crating Express. ¿Con quién tengo el gusto?`,\n  PEDIR_NOMBRE:          '¿Con quién tengo el gusto?',\n  IDENTIFICAR_NECESIDAD: n ? `¡Mucho gusto, ${n}! ¿En qué puedo ayudarte hoy?` : '¿En qué puedo ayudarte hoy?',\n  PEDIR_PRODUCTO:        '¿Qué artículo necesitas embalar?',\n  PEDIR_MEDIDAS:         '¿Cuáles son las medidas del artículo? (largo × ancho × alto, en pulgadas o centímetros)',\n  PEDIR_TIPO_CAJON:      '¿Qué tipo de embalaje prefieres? Cajón cerrado (máxima protección), jaula (más liviana) o paleta/plataforma.',\n  PEDIR_PROTECCION:      '¿Necesitas protección interior adicional como foam, burbuja o esquineras? Ten en cuenta que tiene costo adicional.',\n  PEDIR_FECHA:           '¿Para cuándo necesitas el embalaje?',\n  DESPEDIDA:             '¡Muchas gracias por contactarnos! Estamos disponibles cuando nos necesites. ¡Que tengas excelente día! 🙌',\n};\n\nif (mensajesDeterministas[ctx.proximoPaso]) {\n  mensaje = mensajesDeterministas[ctx.proximoPaso];\n}\n\n// NOMBRE RECIÉN EXTRAÍDO: siempre \"¡Mucho gusto!\" sin importar estado ni tipo_flujo\nif (ctx.nombreRecienExtraido && ctx.datosRecolectados?.nombre_cliente) {\n  mensaje = `¡Mucho gusto, ${ctx.datosRecolectados.nombre_cliente}! ¿En qué puedo ayudarte hoy?`;\n}\n\n// FLUJO_CONSULTA: IA responde libre — override en saludo puro o presentación de nombre\nif (ctx.proximoPaso === 'FLUJO_CONSULTA') {\n  const msgLow = (ctx.texto || '').toLowerCase().trim();\n  const esSoloSaludo = /^(hola|hi|hey|buenas|buenos|good\\s*(morning|afternoon|evening)|hello|holas?)[.!\\s]*$/.test(msgLow);\n  const esPresentacion = /^(con\\s|soy\\s|me\\s+llamo\\s|mi\\s+nombre\\s|i'?m\\s|my\\s+name\\s)/i.test(ctx.texto || '');\n  if (esSoloSaludo || esPresentacion) {\n    mensaje = n ? `¿En qué puedo ayudarte hoy, ${n}?` : '¿En qué puedo ayudarte hoy?';\n  }\n}\n\n// State entirely from code\nconst datosRecolectados = ctx.datosRecolectados;\nconst proximoPaso = ctx.proximoPaso;\nconst todosRecolectados = ctx.todosRecolectados;\nconst dimensiones = ctx.dimensiones;\nconst tipoCajaApi = ctx.tipoCajaApi;\n\n// Clasificacion\nlet clasificacion = null;\nif (datosRecolectados.correo_contacto && (proximoPaso === 'POST_COTIZACION' || ctx.cotizacionEnviada)) {\n  clasificacion = 'Caliente';\n}\n\n// Estado Airtable\nlet nuevoEstado = ctx.estado;\nif (clasificacion === 'Caliente') nuevoEstado = 'Vendedor notificado';\nelse if (todosRecolectados && !ctx.cotizacionEnviada) nuevoEstado = 'Calificado';\nelse if (!ctx.leadId || nuevoEstado === 'Nuevo') nuevoEstado = 'En calificación';\n\nconst ts = new Date().toISOString();\nconst nuevoHistorial = (ctx.historial ? ctx.historial + '\\n' : '') +\n  `[${ts}] Cliente: ${ctx.texto}\\n[${ts}] Bot: ${mensaje}`;\n\nreturn [{ json: {\n  ...ctx,\n  mensaje,\n  mensajeRespuesta: mensaje,\n  datosRecolectados,\n  todos_recolectados: todosRecolectados,\n  todosRecolectados,\n  dimensiones,\n  tipo_caja_api: tipoCajaApi,\n  cotizador_enviado: false,\n  cotizadorEnviado: false,\n  clasificacion,\n  resumenLead: todosRecolectados ? `${datosRecolectados.producto || ''} — ${datosRecolectados.medidas || ''}` : '',\n  nuevoEstado,\n  nuevoHistorial\n} }];"
+      },
+      "id": "b6d34d69-9d39-46b4-a621-b07b48abfc7e",
+      "name": "🔍 Parsear Respuesta IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/PRODUCTOS%20Y%20SERVICIO",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filterByFormula",
+              "value": "{activo}='SI'"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "***REDACTED***"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dfc5c27c-67ad-4ae7-92d0-19d24ebea223",
+      "name": "📦 Obtener Productos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -32,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-groq",
+              "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1121eb1c-d0f5-4817-886d-6d26ffe2713d",
+      "name": "🔀 ¿Groq OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        704,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "***REDACTED***"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'gemini-1.5-flash',\n  messages: [\n    { role: 'system', content: $json.sistemaIA },\n    { role: 'user', content: $json.usuarioIA }\n  ],\n  temperature: 0.3,\n  max_tokens: 150\n}) }}",
+        "options": {}
+      },
+      "id": "3e319035-dd39-47ca-a1a5-7939c88e65d9",
+      "name": "🤖 Gemini: Fallback IA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        480
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-deepseek",
+              "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a13385f1-8dcc-450a-a5b7-a422eca5dccc",
+      "name": "🔀 ¿Gemini OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('🔧 Preparar Contexto IA').item.json;\nconst paso = ctx.proximoPaso;\nconst d    = ctx.datosRecolectados;\nconst s    = ctx.saludoHora.charAt(0).toUpperCase() + ctx.saludoHora.slice(1);\nconst n    = d.nombre_cliente || '';\n\nconst msgs = {\n  PRIMER_CONTACTO:     `${s}, soy Alex, el asistente de Crating Express. ¿Con quién tengo el gusto?`,\n  PEDIR_NOMBRE:        '¿Con quién tengo el gusto?',\n  IDENTIFICAR_NECESIDAD: n ? `¡Mucho gusto, ${n}! ¿En qué puedo ayudarte hoy?` : '¿En qué puedo ayudarte hoy?',\n  FLUJO_CONSULTA:      'Con gusto te ayudo. ¿Tienes alguna pregunta específica sobre nuestros servicios de embalaje?',\n  PEDIR_PRODUCTO:      '¿Qué artículo necesitas embalar?',\n  PEDIR_MEDIDAS:       '¿Cuáles son las medidas en pulgadas? (Largo × Ancho × Alto) y el peso en libras.',\n  PEDIR_TIPO_CAJON:    `Para ${d.producto||'el artículo'}, recomiendo cajón cerrado para máxima protección. ¿Te parece bien?`,\n  PEDIR_PROTECCION:    '¿Deseas protección interior (foam, burbuja o esquineras)? Tiene costo adicional.',\n  PEDIR_FECHA:         '¿Para cuándo necesitas el embalaje listo?',\n  LISTO_PARA_COTIZAR:  `Perfecto, calculando tu estimado para ${d.producto||'el artículo'}...`,\n  POST_COTIZACION:     d.correo_contacto ? '¡Perfecto! Un especialista te contactará pronto.' : '¿Me das tu correo para que el especialista pueda contactarte?',\n  DESPEDIDA:           '¡Muchas gracias por contactarnos! Estamos disponibles cuando nos necesites. ¡Que tengas excelente día! 🙌',\n};\n\nreturn [{ json: { _contingencia: true, mensaje: msgs[paso] || '¿En qué más puedo ayudarte?' } }];"
+      },
+      "id": "45b4442d-7fe1-4b92-890d-ebb842d42308",
+      "name": "🆘 Modo Contingencia",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v17.0/1083260611538246/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "***REDACTED***"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"messaging_product\": \"whatsapp\", \"status\": \"read\", \"message_id\": \"{{ $('🔧 Extraer Mensaje y Teléfono').item.json.messageId }}\"}",
+        "options": {}
+      },
+      "id": "f325db75-0569-4718-8771-75dbe6ad57c4",
+      "name": "✅ Marcar como Leído",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        432,
+        -192
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "id": "9796e9d4-cc10-490c-bcb3-85f7f2da3d74",
+      "name": "⏳ Esperar (Typing)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1408,
+        416
+      ],
+      "webhookId": "64e129f7-36f1-49a1-9f0f-21e369b0392b"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-todos",
+              "leftValue": "={{ $json.todos_recolectados }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "check-medidas",
+              "leftValue": "={{ $json.dimensiones?.largo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "check-no-enviado",
+              "leftValue": "={{ $json.cotizador_enviado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "check-no-cotizacion-enviada",
+              "leftValue": "={{ $json.cotizacionEnviada }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7b77c0cc-6416-4018-86a0-14a031903adf",
+      "name": "🔀 ¿Cotizar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        944,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://cratingcotiza.mdarthurdigital.com/api/cotizar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  tipo_caja: $json.tipo_caja_api || 'cajones_cerrados',\n  cant: 1,\n  largo: $json.dimensiones?.largo || 48,\n  ancho: $json.dimensiones?.ancho || 40,\n  alto: $json.dimensiones?.alto || 30\n}) }}",
+        "options": {}
+      },
+      "id": "ae790ad5-7388-42fc-8cef-79aa67c37319",
+      "name": "💰 API Cotizador",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1136,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const parsear = $('🔍 Parsear Respuesta IA').item.json;\nconst cotizacion = $input.item.json;\n\nconst precio = cotizacion?.data?.precio_total;\n\nlet mensajeExtra = '';\nif (precio) {  // BUG4: API no devuelve campo success\n  mensajeExtra = `\\n\\n💵 *Precio estimado: $${precio} USD*\\n_Este es un estimado basado en las dimensiones indicadas. El precio final puede variar según detalles adicionales._\\n\\n¿Le gustaría que un especialista de Crating Express lo contacte para una cotización formal y precio definitivo?\\n\\nTambién puede cotizar en línea aquí: https://cratingcotiza.mdarthurdigital.com/cotizar-caja`;\n} else {\n  mensajeExtra = `\\n\\nPuede solicitar una cotización formal en: https://cratingcotiza.mdarthurdigital.com/cotizar-caja\\no escribirnos a cratingexpress01@gmail.com`;\n}\n\nreturn [{\n  json: {\n    ...parsear,\n    mensaje: (parsear.mensaje || '') + mensajeExtra,\n    cotizador_enviado: true,\n    guardar_cotizacion_flag: true,\n    nuevoEstado: precio ? 'Calificado' : parsear.nuevoEstado  // BUG4: API no tiene campo success\n  }\n}];"
+      },
+      "id": "f7e909d7-6c46-42bc-9041-be362670c565",
+      "name": "📝 Enriquecer con Precio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/tblj4radGXHN7HBJi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filterByFormula",
+              "value": "***REDACTED***"
+            },
+            {
+              "name": "maxRecords",
+              "value": "1"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "***REDACTED***"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9f71271d-ac38-425c-8311-39965e71963e",
+      "name": "⚙️ Obtener WA Config",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        960
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        624,
+        1248
+      ],
+      "typeVersion": 1,
+      "id": "26b1918c-5f16-48a2-bb60-5d330a37b87a",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'text-embedding-ada-002', input: $('🔧 Extraer Mensaje y Teléfono').item.json.texto }) }}",
+        "options": {}
+      },
+      "id": "embed-msg-ce",
+      "name": "🔍 Embed Mensaje (OpenAI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        128,
+        -96
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "lawpMAl8dns5Juf8",
+          "name": "W GPT API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://appcratingexpress-fdhri81.svc.aped-4627-b74a.pinecone.io/query",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Api-Key",
+              "value": "***REDACTED***"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ vector: $json.data[0].embedding, topK: 5, includeMetadata: true }) }}",
+        "options": {}
+      },
+      "id": "pinecone-ce",
+      "name": "🔍 Contexto CE (Pinecone)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        192,
+        -96
+      ],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "📲 Webhook WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Verificación o Mensaje?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Verificación o Mensaje?": {
+      "main": [
+        [
+          {
+            "node": "✅ Responder Verificación Meta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "✅ Responder a Meta (200)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔧 Extraer Mensaje y Teléfono",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Extraer Mensaje y Teléfono": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Hay mensaje?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Hay mensaje?": {
+      "main": [
+        [
+          {
+            "node": "📊 Obtener Config Empresa",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "✅ Marcar como Leído",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Obtener Config Empresa": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Obtener WA Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Buscar Lead Existente": {
+      "main": [
+        [
+          {
+            "node": "📦 Obtener Productos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Contexto IA": {
+      "main": [
+        [
+          {
+            "node": "🤖 Groq: Conversación IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Groq: Conversación IA": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Groq OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Parsear Respuesta IA": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Cotizar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Lead Caliente?": {
+      "main": [
+        [
+          {
+            "node": "📧 Notificar Vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⏳ Esperar (Typing)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Notificar Vendedor": {
+      "main": [
+        [
+          {
+            "node": "⏳ Esperar (Typing)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Crear o Actualizar?": {
+      "main": [
+        [
+          {
+            "node": "💾 Actualizar Lead (PATCH)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "💾 Crear Lead (POST)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏰ Trigger Follow-up Check": {
+      "main": [
+        [
+          {
+            "node": "📋 Obtener Leads Sin Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Obtener Leads Sin Respuesta": {
+      "main": [
+        [
+          {
+            "node": "🔧 Procesar Follow-ups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Procesar Follow-ups": {
+      "main": [
+        [
+          {
+            "node": "📊 Config para Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Config para Follow-up": {
+      "main": [
+        [
+          {
+            "node": "📤 Enviar Follow-up WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Enviar Follow-up WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "🔄 Actualizar Estado Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Obtener Productos": {
+      "main": [
+        [
+          {
+            "node": "🔍 Embed Mensaje (OpenAI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Groq OK?": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Respuesta IA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🤖 Gemini: Fallback IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🆘 Modo Contingencia": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Respuesta IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏳ Esperar (Typing)": {
+      "main": [
+        [
+          {
+            "node": "📤 Enviar Mensaje WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Cotizar?": {
+      "main": [
+        [
+          {
+            "node": "💰 API Cotizador",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔀 ¿Lead Caliente?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔀 ¿Crear o Actualizar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💰 API Cotizador": {
+      "main": [
+        [
+          {
+            "node": "📝 Enriquecer con Precio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Enriquecer con Precio": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Lead Caliente?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔀 ¿Crear o Actualizar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Obtener WA Config": {
+      "main": [
+        [
+          {
+            "node": "📋 Buscar Lead Existente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Embed Mensaje (OpenAI)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Contexto CE (Pinecone)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Contexto CE (Pinecone)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Contexto IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Gemini OK?": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Respuesta IA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🆘 Modo Contingencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Gemini: Fallback IA": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Gemini OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": {
+    "node:⏰ Trigger Follow-up Check": {
+      "recurrenceRules": []
+    },
+    "global": {
+      "seenMessageIds": {
+        "wamid.HBgLNTA1NzY1NjA3MzQVAgASGBYzRUIwNzM2NDY1OTM0ODU1MEY1M0YyAA==": 1781205624713
+      }
+    }
+  },
+  "meta": null,
+  "pinData": {},
+  "versionId": "64ab610b-4122-45f2-bfa1-21363bdb6480",
+  "activeVersionId": "64ab610b-4122-45f2-bfa1-21363bdb6480",
+  "versionCounter": 261,
+  "triggerCount": 2,
+  "shared": [
+    {
+      "updatedAt": "2026-05-26T13:46:38.099Z",
+      "createdAt": "2026-05-26T13:46:38.099Z",
+      "role": "workflow:owner",
+      "workflowId": "zAhV8gEsXD8dCrXq",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "updatedAt": "2026-03-16T19:58:01.773Z",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-05-04T16:04:54.762Z",
+      "createdAt": "2026-05-04T16:04:54.762Z",
+      "id": "2CrVJWitAB77MgTJ",
+      "name": "Alex"
+    },
+    {
+      "updatedAt": "2026-04-16T17:44:15.361Z",
+      "createdAt": "2026-04-16T17:44:15.361Z",
+      "id": "gmgwt5lqgiBDxZJ8",
+      "name": "whatsapp"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-06-11T19:22:47.727Z",
+    "createdAt": "2026-06-11T19:22:47.727Z",
+    "versionId": "64ab610b-4122-45f2-bfa1-21363bdb6480",
+    "workflowId": "zAhV8gEsXD8dCrXq",
+    "nodes": [
+      {
+        "parameters": {
+          "content": "## 🟢 CE WhatsApp Engine\n\n**Pendiente conectar:**\n- Credencial WhatsApp (Meta API) en nodo Webhook y envío\n- Token de acceso permanente de Meta\n\n**Configuración:** Airtable → PERFIL DE EMPRESA → campos WA_*",
+          "height": 200,
+          "width": 400,
+          "color": 5
+        },
+        "id": "150a8aca-a265-4401-92dc-2f76f13eb6af",
+        "name": "📋 CONFIGURACIÓN",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -1136,
+          -96
+        ]
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "whatsapp-ce",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "d43a7851-c74b-4c33-93e5-d99c7266880c",
+        "name": "📲 Webhook WhatsApp",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -848,
+          224
+        ],
+        "webhookId": "200cbd06-8278-4dc0-a4dd-33a29c9493c5"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "OK",
+          "options": {
+            "responseCode": 200
+          }
+        },
+        "id": "175c7d55-9098-486a-89ce-f219ddbf1b23",
+        "name": "✅ Responder a Meta (200)",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          -1472,
+          848
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": false,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "check-hub",
+                "leftValue": "={{ $json.query?.['hub.mode'] }}",
+                "rightValue": "subscribe",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "5aae3c64-67dd-4535-ab6c-e07a1a21d98c",
+        "name": "🔀 ¿Verificación o Mensaje?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          -624,
+          224
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ $json.query?.['hub.challenge'] }}",
+          "options": {
+            "responseCode": 200
+          }
+        },
+        "id": "5eefd5ce-2350-4e8b-8a03-f3a90fad84f3",
+        "name": "✅ Responder Verificación Meta",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          -400,
+          64
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst entry = body.entry?.[0];\nconst changes = entry?.changes?.[0];\nconst value = changes?.value;\nconst message = value?.messages?.[0];\n\nif (!message) {\n  return [{ json: { skip: true } }];\n}\n\nconst telefono = message.from;\nconst texto = message.text?.body || '';\nconst messageId = message.id;\nconst timestamp = message.timestamp;\nconst nombreContacto = value?.contacts?.[0]?.profile?.name || '';\n\n// FIX: Deduplicación — Meta envía el mismo webhook dos veces\n// Usamos static data para recordar messageIds procesados en los últimos 60s\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.seenMessageIds) staticData.seenMessageIds = {};\n\nconst now = Date.now();\n// Limpiar entradas viejas (> 60 segundos)\nObject.keys(staticData.seenMessageIds).forEach(id => {\n  if (now - staticData.seenMessageIds[id] > 60000) delete staticData.seenMessageIds[id];\n});\n\nif (staticData.seenMessageIds[messageId]) {\n  // Mensaje duplicado — ignorar\n  return [{ json: { skip: true, skipReason: 'duplicate_messageId' } }];\n}\nstaticData.seenMessageIds[messageId] = now;\n\nreturn [{\n  json: {\n    telefono,\n    texto,\n    messageId,\n    timestamp,\n    nombreContacto,\n    skip: false\n  }\n}];"
+        },
+        "id": "a64fe455-0cf0-4a86-8d8c-04671e2d6b01",
+        "name": "🔧 Extraer Mensaje y Teléfono",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -400,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": false,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "check-skip",
+                "leftValue": "={{ $json.skip }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "false"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "8930d963-d81a-4740-9cb6-54ca2e85b016",
+        "name": "🔀 ¿Hay mensaje?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          -176,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/PERFIL%20DE%20EMPRESA",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "maxRecords",
+                "value": "1"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "***REDACTED***"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "bb8b805c-58e4-4295-9508-419f6483b864",
+        "name": "📊 Obtener Config Empresa",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          32,
+          224
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "filterByFormula",
+                "value": "***REDACTED***"
+              },
+              {
+                "name": "maxRecords",
+                "value": "1"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "***REDACTED***"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "3c83489d-7aa2-476f-8e48-b939bff8517a",
+        "name": "📋 Buscar Lead Existente",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -416,
+          720
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const msgData = $('🔧 Extraer Mensaje y Teléfono').item.json;\nconst configData = $('📊 Obtener Config Empresa').item.json;\nconst waConfigData = $('⚙️ Obtener WA Config').item.json;\nconst leadData = $('📋 Buscar Lead Existente').item.json;\n\nconst config = configData.records?.[0]?.fields || {};\nconst waConfig = waConfigData.records?.[0]?.fields || {};\nconst emailVendedor = config.WA_Email_Vendedor || 'risosadmi@gmail.com';\nconst followup24 = waConfig.WA_FollowUp_24h || '';\nconst followup72 = waConfig.WA_FollowUp_72h || '';\n\nconst leadExistente = leadData.records?.[0];\nconst leadId = leadExistente?.id || null;\nconst leadFields = leadExistente?.fields || {};\n\n// ── Cargar estado desde Airtable ─────────────────────────────────────────────\nlet datosRecolectados = {\n  producto: leadFields.Articulo || null,\n  medidas: leadFields['Medidas y Peso'] || null,\n  fecha: null,\n  tipo_cajon: null,\n  proteccion_extra: null,\n  correo_contacto: null,\n  nombre_cliente: leadFields.Nombre_Contacto || null,\n  tipo_flujo: null  // 'cotizacion' | 'consulta' | null = sin identificar aún\n};\n\nlet notasOriginal = {};\ntry {\n  const notas = leadFields.Notas || '';\n  if (notas && notas.trim().startsWith('{')) {\n    const stored = JSON.parse(notas);\n    notasOriginal = stored;\n    if (stored.tipo_cajon)       datosRecolectados.tipo_cajon = stored.tipo_cajon;\n    if (stored.correo_contacto)  datosRecolectados.correo_contacto = stored.correo_contacto;\n    if (stored.nombre_cliente && !datosRecolectados.nombre_cliente) datosRecolectados.nombre_cliente = stored.nombre_cliente;\n    if (stored.proteccion_extra !== null && stored.proteccion_extra !== undefined) datosRecolectados.proteccion_extra = stored.proteccion_extra;\n    if (stored.fecha)            datosRecolectados.fecha = stored.fecha;\n    if (stored.tipo_flujo)       datosRecolectados.tipo_flujo = stored.tipo_flujo;\n  }\n} catch(e) {}\n\nconst r3 = leadFields['¿Protección adicional?'] || '';\nif (r3 === 'true')  datosRecolectados.proteccion_extra = true;\nelse if (r3 === 'false') datosRecolectados.proteccion_extra = false;\n\nconst estado = leadFields.Estado || 'Nuevo';\nconst cotizacionEnviada = notasOriginal.cotizacion_enviada === true || ['Vendedor notificado', 'Cotizacion_Enviada'].includes(estado);\nconst historial = leadFields.Historial_Mensajes || '';\nconst esNuevo = !leadId;\n\n// Catálogo\nconst productosData = $('📦 Obtener Productos').item.json;\nconst catalogoProductos = (productosData.records || []).map(r => {\n  const f = r.fields;\n  return Object.entries(f).find(([k]) => k.includes('Nombre de Servicio'))?.[1] || '';\n}).filter(l => l.length > 2).join(', ');\n\nlet catalogoFinal = catalogoProductos;\ntry {\n  const pm = $('🔍 Contexto CE (Pinecone)').item.json;\n  const chunks = (pm.matches || []).filter(m => (m.score||0) > 0.75).map(m => m.metadata?.text||'').filter(t=>t.length>20).slice(0,3).join('\\n');\n  if (chunks) catalogoFinal = chunks;\n} catch(e) {}\n\nconst horaMiami = (new Date().getUTCHours() - 4 + 24) % 24;\nconst saludoHora = horaMiami >= 6 && horaMiami < 12 ? 'buenos días'\n  : horaMiami >= 12 && horaMiami < 19 ? 'buenas tardes' : 'buenas noches';\nconst saludo = saludoHora.charAt(0).toUpperCase() + saludoHora.slice(1);\n\nconst texto      = (msgData.texto || '').trim();\nconst textoLower = texto.toLowerCase();\nconst hasDigits  = /\\d/.test(texto);\nconst isGreeting = /^(hola\\b|hi\\b|buenas\\b|buenos\\b|hey\\b|good\\s|morning|afternoon|evening|hello\\b)/i.test(texto);\nconst isServiceMention = /\\b(cotiz|lavadora|refrigerador|mueble|nevera|estufa|máquina|machine|embalaje|caja|cajón|crate|pack|madera|necesito|quiero|quisiera|me gustaría|precio|medid|pulgad)\\b/i.test(texto);\n\n// ── Máquina de estado ─────────────────────────────────────────────────────────\nconst cleanCheck = v => {\n  if (typeof v === 'boolean') return v;\n  if (!v || ['desconocido','null','undefined'].includes(String(v).toLowerCase().trim())) return null;\n  return v;\n};\n\nconst calcProximoPaso = d => {\n  if (cotizacionEnviada)          return 'POST_COTIZACION';\n  if (esNuevo)                    return 'PRIMER_CONTACTO';\n  if (!cleanCheck(d.nombre_cliente)) return 'PEDIR_NOMBRE';\n  if (!d.tipo_flujo)              return 'IDENTIFICAR_NECESIDAD';\n  if (d.tipo_flujo === 'consulta') return 'FLUJO_CONSULTA';\n  // cotizacion flow\n  if (!cleanCheck(d.producto))    return 'PEDIR_PRODUCTO';\n  if (!cleanCheck(d.medidas))     return 'PEDIR_MEDIDAS';\n  if (!cleanCheck(d.tipo_cajon))  return 'PEDIR_TIPO_CAJON';\n  if (d.proteccion_extra === null || d.proteccion_extra === undefined) return 'PEDIR_PROTECCION';\n  if (!cleanCheck(d.fecha))       return 'PEDIR_FECHA';\n  return 'LISTO_PARA_COTIZAR';\n};\n\nlet proximoPaso = calcProximoPaso(datosRecolectados);\nconst proximoPasoInicial = proximoPaso; // paso en que estaba Alex ANTES de este mensaje\nconst nombreAntesMensaje = datosRecolectados.nombre_cliente;\n\n// ── Extracción de datos del mensaje actual ────────────────────────────────────\nlet nombreRecienExtraido = false;\n// Saludo en lead existente = nueva sesión → resetear intención\nif (isGreeting && !esNuevo) {\n  datosRecolectados.tipo_flujo = null;\n}\nif (texto.length > 0) {\n\n  // NOMBRE — dos casos:\n  // 1. Prefijo explícito (\"Con X\", \"Soy X\", \"Me llamo X\") → cualquier estado\n  // 2. Mensaje corto solo en pasos PEDIR_NOMBRE/PRIMER_CONTACTO\n  const tienePrefijoNombre = /^(con\\s+|soy\\s+|me\\s+llamo\\s+|mi\\s+nombre\\s+es\\s+|i'?m\\s+|my\\s+name\\s+is\\s+|it'?s\\s+)/i.test(texto);\n  if (tienePrefijoNombre && !isServiceMention) {\n    const nombreLimpio = texto\n      .replace(/^(con\\s+|soy\\s+|me\\s+llamo\\s+|mi\\s+nombre\\s+es\\s+|i'?m\\s+|my\\s+name\\s+is\\s+|it'?s\\s+)/i, '')\n      .trim();\n    if (nombreLimpio.split(/\\s+/).length <= 3 && !hasDigits && nombreLimpio.length > 0) {\n      datosRecolectados.nombre_cliente = nombreLimpio;\n    }\n  } else if ((proximoPasoInicial === 'PRIMER_CONTACTO' || proximoPasoInicial === 'PEDIR_NOMBRE') && !isGreeting && !isServiceMention) {\n    const palabras = texto.split(/\\s+/);\n    if (palabras.length <= 4 && !hasDigits) {\n      datosRecolectados.nombre_cliente = texto.trim();\n    }\n  }\n\n  // IDENTIFICAR NECESIDAD: cotización vs consulta (detección exhaustiva)\n  const detectarIntento = (txt) => {\n    const n = txt.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\n    const hd = /\\d/.test(txt);\n    const tienePregunta = /[?¿]/.test(txt);\n\n    // — Señales de CONSULTA —\n    const cTiempo   = /(cuanto).{0,15}(demora|tarda|tiempo|dias?|semanas?|plazo)/.test(n) || /(how (long|fast|quick|soon)|demoran?|tardan?|plazo|days? (to|for))/.test(n);\n    const cCatalogo = /(que tipos?|what types?|what kind[s]?|what do you (make|offer|sell|have|do)|que (ofrecen|hacen|venden|tienen|manejan|trabajan)|tipos? de|clases? de|opciones?|disponibles?|que (fabrican|producen|construyen))/.test(n);\n    const cOper     = /(horario|schedule|hours?|abiertos?|abren|cierran|open|close|located|location|address|direcc|donde estan|donde esta|where are you|work.{0,5}(weekend|saturday|sunday|sabado|domingo|fin de semana)|trabajan.{0,10}(sabado|domingo|fin de semana|weekend)|payment|pago|aceptan|acepta|cobran con|metodo|forma de pag|tarjeta|efectivo|transferencia|deposito|banco|factura|invoice|recibo|estan en|son de|llegan a|near|cerca de)/.test(n);\n    const cProceso  = /(como (funciona|trabajan|hacen|es el proceso|se hace)|how (does|do) (it|you|the)|proceso|ispm|nimf|certificad|garantia|warranty|incluye|include|que incluye|included|material|madera|wood|tipo de (madera|material)|que.{0,10}(incluye|viene|trae|contiene))/.test(n);\n    const cPueden   = /^(pueden|can you|do you|are you|es posible|hacen|fabrican|manejan|trabajan con|atienden|van a|vienen a|tienen servicio|ofrecen servicio|make|build|deliver|come to|work with|handle)/.test(n);\n    const cPrecioG  = /(descuento|discount|precios? (en general|normal|promedio|aprox|standard|habitual)|cuanto salen en promedio|precio base|precio minimo|precio maximo|cuales? son (sus|los) precio|what are (your|the) price|how much (do you|does it) (charge|cost) (in general|usually|typically|on average|generally|normally)|rango de precio|cuanto.{0,10}(salen|valen).{0,10}(mas o menos|aprox|por lo general)|minimo de pedido|minimum order)/.test(n);\n    const cInfo     = /(que ofrecen|que hacen|que servicios|what (do|does).{0,10}(offer|make|sell|do)|tell me about|explica|explain|informac|info sobre|more about|servicios que|solo quier.{0,2} saber|just want to know|queria saber)/.test(n);\n\n    // — Señales de COTIZACIÓN —\n    const qDirecto   = /(cotiz[a-z]*|presupuest[a-z]*|quot[a-z]*|estimat[a-z]*)/.test(n);\n    const qNecesidad = /(necesito|quiero|i need|i want|i.?d like|looking for).{0,25}(caj[oa]|cajones|embal|crate|box|pack|palet|plataforma|jaula|packaging|wooden)/.test(n);\n    const qAccion    = /(embalar|empacar|enviar|exportar|mandar|ship|export|pack).{0,25}(una?|mis?|my|algo|something|equipo|maquina|articulo|item|product|piezas?|partes?)/.test(n);\n    const qTengo     = /(tengo|have|i.?ve got|got).{0,35}(que (embalar|empacar|enviar|exportar|ship|pack)|para (embal|crat|pack|ship|export)|necesita.{0,5}(ser )?embal|to (ship|export|send))/.test(n);\n    const qNecEmbal  = /(necesita.{0,10}(ser )?embalad|needs? (to be )?(crat|pack|ship)|que necesita (embal|pack|crat))/.test(n);\n    const qPrecEsp   = /(cuanto).{0,30}(cuesta|vale|cobran|costo).{0,40}(caj[oa]|cajones|embal|crate|box|palet|jaula|plataforma|packaging)/.test(n);\n    const qMedidas   = hd && /\\d+\\s*(x|×|\\*|por|by)\\s*\\d+/.test(n);\n    const qSerian    = hd && /\\d.{0,30}(cuanto (seria|saldria|costaria|valdria)|how much (would|will) (it|that|be))/.test(n);\n    const qDame      = /(dame|give me|send me|mandame|pasame).{0,20}(precio|cotiz|presupuest|quote|estimad|cost)/.test(n);\n    const qEN        = /(i need a (crate|wooden box|custom box|pallet|packaging)|crate (for|my|a)|custom (box|crate|packaging)|build me|make me a (crate|box|pallet)|need.{0,15}crat)/.test(n);\n\n    const ambiguo = /^(cuanto|how much)[.!?\\s]*$/.test(n.trim()) || /^(cuanto|how much)[,\\s]+(cobran|cuesta|vale)[.!?]*$/.test(n.trim());\n\n    const esConsulta   = cTiempo || cCatalogo || cOper || cProceso || cPueden || cPrecioG || cInfo;\n    const esCotizacion = qDirecto || qNecesidad || qAccion || qPrecEsp || qTengo || qNecEmbal || qMedidas || qSerian || qDame || qEN;\n\n    if (ambiguo) return 'consulta';\n    if (esCotizacion && esConsulta) {\n      return (qDirecto || qNecesidad || qPrecEsp || qEN || qDame || qNecEmbal) ? 'cotizacion' : 'consulta';\n    }\n    if (esCotizacion) return 'cotizacion';\n    if (esConsulta)   return 'consulta';\n    if (tienePregunta) return 'consulta';\n    return null;\n  };\n\n  // NOMBRE RECIÉN EXTRAÍDO: resetear tipo_flujo para siempre pasar por IDENTIFICAR_NECESIDAD\n  nombreRecienExtraido = !!(datosRecolectados.nombre_cliente && !nombreAntesMensaje);\n  if (nombreRecienExtraido) {\n    datosRecolectados.tipo_flujo = null; // Fuerza IDENTIFICAR_NECESIDAD, ignora tipo_flujo viejo\n  }\n\n  if (proximoPasoInicial === 'IDENTIFICAR_NECESIDAD') {\n    // Si el mensaje es una presentación de nombre, no clasificar como intento todavía\n    const esPresentacionNombre = /^(con\\s|soy\\s|me\\s+llamo\\s|mi\\s+nombre\\s|i'?m\\s|my\\s+name\\s)/i.test(texto);\n    if (!esPresentacionNombre) {\n      const intento = detectarIntento(texto);\n      datosRecolectados.tipo_flujo = (intento === 'cotizacion') ? 'cotizacion' : 'consulta';\n    }\n    // Si es presentación: tipo_flujo queda null → estado se mantiene IDENTIFICAR_NECESIDAD → Parsear da \"¡Mucho gusto!\"\n  }\n\n  // En FLUJO_CONSULTA: detectar si ahora quiere cotizar → cambiar flujo\n  if (proximoPasoInicial === 'FLUJO_CONSULTA') {\n    const esAfirmacion = /^(s[ií]|yes|claro|dale|perfecto|adelante|por favor|ok|okay|sure|please|quiero|me interesa|vamos|hagamos|genial|excelente|bueno|listo|obvio|claro que s[ií])[.!,\\s]*$/i.test(texto.trim());\n    if (esAfirmacion || detectarIntento(texto) === 'cotizacion') {\n      datosRecolectados.tipo_flujo = 'cotizacion';\n    }\n  }\n\n    // PRODUCTO\n  if (proximoPasoInicial === 'PEDIR_PRODUCTO' && !isGreeting) {\n    datosRecolectados.producto = texto;\n  }\n\n  // MEDIDAS\n  if (proximoPasoInicial === 'PEDIR_MEDIDAS' && hasDigits) {\n    datosRecolectados.medidas = texto;\n  }\n\n  // TIPO CAJÓN\n  if (proximoPasoInicial === 'PEDIR_TIPO_CAJON') {\n    const confirma = /^(si\\b|sí\\b|yes\\b|dale|claro|ok\\b|bien\\b|perfecto|adelante|sure\\b|de acuerdo|sounds|me parece|sisi)/i.test(textoLower);\n    if (/jaula/i.test(texto))       datosRecolectados.tipo_cajon = 'jaulas';\n    else if (/palet|pallet/i.test(texto)) datosRecolectados.tipo_cajon = 'palets_medida';\n    else if (/cuna/i.test(texto))   datosRecolectados.tipo_cajon = 'cunas';\n    else if (/plataforma/i.test(texto)) datosRecolectados.tipo_cajon = 'plataformas_contenedor';\n    else if (/feria/i.test(texto))  datosRecolectados.tipo_cajon = 'embalaje_ferias';\n    else if (confirma || /cajon|cajón|cerrado|crate|box/i.test(texto)) datosRecolectados.tipo_cajon = 'cajones_cerrados';\n  }\n\n  // PROTECCIÓN\n  if (proximoPasoInicial === 'PEDIR_PROTECCION') {\n    if (/\\b(si\\b|sí\\b|yes\\b|dale|claro|ok\\b|quiero|foam|burbuja|esquinera|por favor|please|add|agrega|sisi)\\b/i.test(textoLower)) {\n      datosRecolectados.proteccion_extra = true;\n    } else if (/^(no\\b|nope\\b|sin |no gracias|no quiero|no thanks|don't|dont|skip|sin protec)/i.test(textoLower)) {\n      datosRecolectados.proteccion_extra = false;\n    }\n  }\n\n  // FECHA\n  if (proximoPasoInicial === 'PEDIR_FECHA') {\n    const hasFechaRef = hasDigits ||\n      /\\b(hoy|mañana|lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|urgente|asap|lo antes|inmediato|semana|semanas|mes|meses|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|january|february|march|april|june|july|august|september|october|november|december|primero|próximo|proximo|siguiente|días|dias)\\b/i.test(texto);\n    if (hasFechaRef) datosRecolectados.fecha = texto;\n  }\n\n  // EMAIL (siempre)\n  if (!datosRecolectados.correo_contacto && texto.includes('@')) {\n    const emailMatch = texto.match(/[\\w.+-]+@[\\w-]+\\.[\\w.]+/);\n    if (emailMatch) datosRecolectados.correo_contacto = emailMatch[0];\n  }\n}\n\n// Recalcular tras extracción\nproximoPaso = calcProximoPaso(datosRecolectados);\nconst nombreRecienExtractado = !nombreAntesMensaje && datosRecolectados.nombre_cliente;\n\n// DESPEDIDA\nconst isCierreSena = /\\b(muchas gracias|thank you|thanks a lot|that'?s? all|eso es todo|ya está|nada más|nada mas|hasta luego|bye\\b|adiós|adios|hasta pronto|me queda claro|solo quería saber|ya tengo lo|con eso basta|no necesito más|ya era todo)\\b/i.test(textoLower);\nif (isCierreSena && (cotizacionEnviada || ['LISTO_PARA_COTIZAR','POST_COTIZACION','FLUJO_CONSULTA'].includes(proximoPaso))) {\n  proximoPaso = 'DESPEDIDA';\n}\n\n// ── Dimensiones ───────────────────────────────────────────────────────────────\nlet dimensiones = { largo: null, ancho: null, alto: null };\nconst medidasStr = datosRecolectados.medidas || '';\nif (medidasStr) {\n  const dimMatch = medidasStr.match(/(\\d+(?:\\.\\d+)?)\\s*[x*×]\\s*(\\d+(?:\\.\\d+)?)\\s*[x*×]\\s*(\\d+(?:\\.\\d+)?)/i);\n  if (dimMatch) {\n    dimensiones = { largo: parseFloat(dimMatch[1]), ancho: parseFloat(dimMatch[2]), alto: parseFloat(dimMatch[3]) };\n  } else {\n    const nums = medidasStr.match(/\\d+(?:\\.\\d+)?/g);\n    if (nums && nums.length >= 3) dimensiones = { largo: parseFloat(nums[0]), ancho: parseFloat(nums[1]), alto: parseFloat(nums[2]) };\n  }\n}\n\nconst tipoCajaApiMap = { cajones_cerrados:'cajones_cerrados', jaulas:'jaulas', palets_medida:'palets_medida', cunas:'cunas', plataformas_contenedor:'plataformas_contenedor', embalaje_ferias:'embalaje_ferias', mayor:'mayor' };\nconst tipoCajaApi = tipoCajaApiMap[datosRecolectados.tipo_cajon] || null;\nconst todosRecolectados = proximoPaso === 'LISTO_PARA_COTIZAR';\n\n// ── Prompt para la IA ─────────────────────────────────────────────────────────\nconst nombre = datosRecolectados.nombre_cliente || '';\nconst producto = datosRecolectados.producto || '';\nconst medidas  = datosRecolectados.medidas || '';\n\nlet tareaIA;\n\nif (proximoPaso === 'PRIMER_CONTACTO') {\n  tareaIA = `PRIMER CONTACTO. Escribe EXACTAMENTE (sin comillas, sin cambiar nada):\\n${saludo}, soy Alex, el asistente de Crating Express. ¿Con quién tengo el gusto?`;\n\n} else if (proximoPaso === 'PEDIR_NOMBRE') {\n  tareaIA = `El cliente no ha dicho su nombre. Pregúntale amigablemente: \"¿Con quién tengo el gusto?\"`;\n\n} else if (proximoPaso === 'IDENTIFICAR_NECESIDAD') {\n  tareaIA = nombreRecienExtractado\n    ? `El cliente acaba de dar su nombre: \"${nombre}\". Salúdalo: \"¡Mucho gusto, ${nombre}!\" y pregunta en qué puedes ayudarle hoy.`\n    : `Saluda a ${nombre} por su nombre y pregunta en qué puedes ayudarle hoy.`;\n\n} else if (proximoPaso === 'FLUJO_CONSULTA') {\n  const catalogoCtx = catalogoFinal ? `\\n\\nCatálogo CE: ${catalogoFinal}` : '';\n  tareaIA = `El cliente tiene una consulta: \"${texto}\". Respóndela brevemente con lo que sabes de Crating Express (embalajes madera a medida, ISPM-15, servicio en Miami, cajones cerrados, jaulas, paletas, cunas, plataformas para contenedor, embalaje para ferias).${catalogoCtx}\\nSi la respuesta puede derivar en una cotización, al final ofrécela naturalmente con una frase como \"¿Te gustaría una cotización para algo específico?\"`;\n\n} else if (proximoPaso === 'PEDIR_PRODUCTO') {\n  tareaIA = `El cliente quiere cotizar. Pregunta qué artículo específico necesita embalar.`;\n\n} else if (proximoPaso === 'PEDIR_MEDIDAS') {\n  tareaIA = `Artículo: \"${producto}\". Pide las medidas en pulgadas (Largo × Ancho × Alto) y el peso aproximado en libras.`;\n\n} else if (proximoPaso === 'PEDIR_TIPO_CAJON') {\n  tareaIA = `Artículo: \"${producto}\", medidas: ${medidas}. Recomienda cajón cerrado para máxima protección con ISPM-15 y pregunta si está bien. Una sola oración.`;\n\n} else if (proximoPaso === 'PEDIR_PROTECCION') {\n  tareaIA = `Tipo de cajón confirmado. Pregunta si desea protección interior (foam, burbuja o esquineras) con costo adicional. Solo esa pregunta.`;\n\n} else if (proximoPaso === 'PEDIR_FECHA') {\n  tareaIA = `Ya tienes producto, medidas, cajón y protección. Pregunta SOLO: ¿para cuándo necesita el embalaje?`;\n\n} else if (proximoPaso === 'LISTO_PARA_COTIZAR') {\n  tareaIA = `Todos los datos listos. Mensaje breve: vas a calcular el estimado para \"${producto}\". NO menciones precios.`;\n\n} else if (proximoPaso === 'POST_COTIZACION') {\n  tareaIA = datosRecolectados.correo_contacto\n    ? `Ya tienes el correo \"${datosRecolectados.correo_contacto}\". Confirma que un especialista se pondrá en contacto y despídete.`\n    : `Cotización enviada. Pregunta el correo para que un especialista de Crating Express pueda contactarle.`;\n\n} else if (proximoPaso === 'DESPEDIDA') {\n  tareaIA = `El cliente termina la conversación. Despídete cordialmente y agradece su contacto.`;\n\n} else {\n  tareaIA = `Responde al mensaje del cliente de forma natural.`;\n}\n\nconst sistemaIA = `Eres Alex, asistente de Crating Express en Miami. Embalajes de madera a medida, ISPM-15 incluido. Responde en el idioma del cliente (español o inglés). Profesional, amigable, muy conciso — máximo 2 oraciones. Ejecuta ÚNICAMENTE la tarea indicada. NUNCA menciones precios (el sistema los calcula). NUNCA hagas preguntas extra.`;\nconst usuarioIA = `${tareaIA}\\n\\nMensaje del cliente: \"${texto}\"`;\n\nreturn [{ json: {\n  telefono: msgData.telefono,\n  texto, nombreContacto: msgData.nombreContacto || '',\n  emailVendedor, followup24, followup72,\n  leadId, estado, historial,\n  datosRecolectados, cotizacionEnviada, esNuevo,\n  saludoHora, catalogoProductos,\n  proximoPaso, dimensiones, tipoCajaApi, todosRecolectados,\n  nombreRecienExtraido, nombreAntesMensaje,\n  sistemaIA, usuarioIA\n} }];"
+        },
+        "id": "468adb6e-e025-4794-abe0-c87b7c828d94",
+        "name": "🔧 Preparar Contexto IA",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          256,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": false,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "check-hot",
+                "leftValue": "={{ $json.clasificacion }}",
+                "rightValue": "Caliente",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "7cca60d3-4deb-4f12-b487-9572bcd6052f",
+        "name": "🔀 ¿Lead Caliente?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1136,
+          480
+        ]
+      },
+      {
+        "parameters": {
+          "sendTo": "={{ $json.emailVendedor.split('\\n').join(',') }}",
+          "subject": "={{ \"🔥 Lead Caliente WhatsApp — \" + ($json.nombreContacto || $json.telefono) }}",
+          "message": "={{ (() => {const historial = $json.nuevoHistorial || $json.historial || \"\";const matchPrecio = historial.match(/Precio estimado: \\$([\\.\\d,]+) USD/);const precio = matchPrecio ? \"$\" + matchPrecio[1] + \" USD\" : \"No disponible\";return \"<h2>🔥 Nuevo Lead Caliente en WhatsApp</h2>\"+ \"<p><strong>Teléfono:</strong> \" + $json.telefono + \"</p>\"+ \"<p><strong>Nombre:</strong> \" + ($json.nombreContacto || $json.datosRecolectados?.nombre_contacto || \"No disponible\") + \"</p>\"\n+ \"<p><strong>Correo cliente:</strong> \" + ($json.datosRecolectados?.correo_contacto || \"No proporcionado\") + \"</p>\"+ \"<hr>\"+ \"<h3>Datos recolectados:</h3>\"+ \"<p><strong>Producto:</strong> \" + ($json.datosRecolectados?.producto || \"-\") + \"</p>\"+ \"<p><strong>Medidas:</strong> \" + ($json.datosRecolectados?.medidas || \"-\") + \"</p>\"+ \"<p><strong>Tipo de cajón:</strong> \" + ($json.datosRecolectados?.tipo_cajon || \"-\") + \"</p>\"+ \"<p><strong>Fecha requerida:</strong> \" + ($json.datosRecolectados?.fecha || \"-\") + \"</p>\"+ \"<p><strong>Protección interior:</strong> \" + ($json.datosRecolectados?.proteccion_extra || \"No solicitada\") + \"</p>\"+ \"<p><strong>💵 Estimado Alex:</strong> \" + precio + \"</p>\"+ \"<hr>\"+ \"<p><strong>Resumen:</strong> \" + ($json.resumenLead || \"-\") + \"</p>\";})() }}",
+          "options": {}
+        },
+        "id": "87a5d8c2-3a73-46c2-b0a6-24b7743e1e31",
+        "name": "📧 Notificar Vendedor",
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          1280,
+          224
+        ],
+        "webhookId": "62dcf57f-d27c-4c17-9d4e-a04331eb1403",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "TESHSjzjMCpCxBBk",
+            "name": "Gmail account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "***REDACTED***"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.telefono, type: 'text', text: { body: $json.mensaje } }) }}",
+          "options": {}
+        },
+        "id": "ed986670-85f5-4e35-9bbd-c384129cd2f5",
+        "name": "📤 Enviar Mensaje WhatsApp",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1728,
+          384
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "***REDACTED***"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ (() => {\n  const fields = {\n    Telefono: '+' + $json.telefono,\n    Nombre: $json.datosRecolectados.nombre_cliente || $json.nombreContacto || '',  // BUG6\n    Estado: $json.nuevoEstado,\n    Articulo: $json.datosRecolectados.producto || '',\n    'Medidas y Peso': $json.datosRecolectados.medidas || '',\n    '¿Protección adicional?': ($json.datosRecolectados.proteccion_extra === true) ? 'true' : ($json.datosRecolectados.proteccion_extra === false) ? 'false' : '',  // BUG5\n    Notas: JSON.stringify({ tipo_cajon: $json.datosRecolectados.tipo_cajon ?? null, fecha: $json.datosRecolectados.fecha ?? null, direccion: $json.datosRecolectados.direccion ?? null, correo_contacto: $json.datosRecolectados.correo_contacto ?? null, tipo_flujo: $json.datosRecolectados.tipo_flujo ?? null, cotizacion_enviada: $json.cotizador_enviado === true || $('🔧 Preparar Contexto IA').item.json.cotizacionEnviada === true }),  // BUG5: proteccion_extra moved to Respuesta_3\n    Origen: $json.origen || 'Desconocido',\n    Descripcion_Lead: $json.resumenLead || $json.resumen_lead || '',  // BUG8\n    Nombre_Contacto: $json.datosRecolectados.nombre_cliente || $json.nombreContacto || '',\n    Ultima_Actividad: new Date().toISOString(),\n    Historial_Mensajes: $json.nuevoHistorial,\n    Fecha_Inicio: new Date().toISOString(),\n    Ultima_Interaccion: new Date().toISOString()\n  };\n  if ($json.clasificacion) fields.Clasificacion = $json.clasificacion;\n  return JSON.stringify({ records: [{ fields }] });\n})() }}",
+          "options": {}
+        },
+        "id": "e6c977a1-d42f-480b-843c-ed29b83f9137",
+        "name": "💾 Crear Lead (POST)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1552,
+          560
+        ]
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "hours"
+              }
+            ]
+          }
+        },
+        "id": "9b51a564-7a9f-42af-8aca-db6dbbd2074c",
+        "name": "⏰ Trigger Follow-up Check",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          -848,
+          672
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "filterByFormula",
+                "value": "***REDACTED***"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "***REDACTED***"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "e556b0a3-d260-4f1d-a2c0-94ede1f52634",
+        "name": "📋 Obtener Leads Sin Respuesta",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -624,
+          672
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const data = $input.item.json;\nconst records = data.records || [];\nconst now = new Date();\nconst results = [];\n\nfor (const record of records) {\n  const fields = record.fields;\n  const ultimaInteraccion = new Date(fields.Ultima_Actividad);\n  const horasDiff = (now - ultimaInteraccion) / (1000 * 60 * 60);\n  \n  let tipoFollowup = null;\n  if (horasDiff >= 72) tipoFollowup = '72h';\n  else if (horasDiff >= 24) tipoFollowup = '24h';\n  \n  if (tipoFollowup) {\n    results.push({\n      json: {\n        recordId: record.id,\n        telefono: fields.Telefono,\n        nombre: fields.Nombre,\n        tipoFollowup,\n        estado: fields.Estado\n      }\n    });\n  }\n}\n\nreturn results;"
+        },
+        "id": "2f08aeac-7fa5-48b5-9ad2-8a177e0ca547",
+        "name": "🔧 Procesar Follow-ups",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -400,
+          672
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/PERFIL%20DE%20EMPRESA",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "maxRecords",
+                "value": "1"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "***REDACTED***"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "7ff2616f-22e5-4937-9055-9a28469c2bac",
+        "name": "📊 Config para Follow-up",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -176,
+          672
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "***REDACTED***"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.telefono, type: 'text', text: { body: $json.tipoFollowup === '24h' ? $('📊 Config para Follow-up').item.json.records[0].fields.WA_FollowUp_24h : $('📊 Config para Follow-up').item.json.records[0].fields.WA_FollowUp_72h } }) }}",
+          "options": {}
+        },
+        "id": "134619df-061e-4d5e-a594-3654a3b82703",
+        "name": "📤 Enviar Follow-up WhatsApp",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          48,
+          672
+        ]
+      },
+      {
+        "parameters": {
+          "method": "PATCH",
+          "url": "=https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads/{{ $json.recordId }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "***REDACTED***"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ fields: { Estado: 'Follow-up ' + $json.tipoFollowup, Ultima_Interaccion: new Date().toISOString() } }) }}",
+          "options": {}
+        },
+        "id": "f5a8fd8c-aac2-434a-bff0-6318dc1d7e9f",
+        "name": "🔄 Actualizar Estado Follow-up",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          256,
+          672
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": false,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "check-leadid",
+                "leftValue": "={{ $json.leadId }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "3a357b0f-40e5-4c0b-bd5c-43a5b9b1a2d0",
+        "name": "🔀 ¿Crear o Actualizar?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1344,
+          656
+        ]
+      },
+      {
+        "parameters": {
+          "method": "PATCH",
+          "url": "=https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads/{{ $json.leadId }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "***REDACTED***"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ (() => {\n  const fields = {\n    Estado: $json.nuevoEstado,\n    Articulo: $json.datosRecolectados.producto || '',\n    'Medidas y Peso': $json.datosRecolectados.medidas || '',\n    '¿Protección adicional?': ($json.datosRecolectados.proteccion_extra === true) ? 'true' : ($json.datosRecolectados.proteccion_extra === false) ? 'false' : '',  // BUG5\n    Notas: JSON.stringify({ tipo_cajon: $json.datosRecolectados.tipo_cajon ?? null, fecha: $json.datosRecolectados.fecha ?? null, direccion: $json.datosRecolectados.direccion ?? null, correo_contacto: $json.datosRecolectados.correo_contacto ?? null, tipo_flujo: $json.datosRecolectados.tipo_flujo ?? null, cotizacion_enviada: $json.cotizador_enviado === true || $('🔧 Preparar Contexto IA').item.json.cotizacionEnviada === true }),  // BUG5: proteccion_extra moved to Respuesta_3\n    Descripcion_Lead: $json.resumenLead || $json.resumen_lead || '',  // BUG8\n    Nombre_Contacto: $json.datosRecolectados.nombre_cliente || $json.nombreContacto || '',\n    Ultima_Actividad: new Date().toISOString(),\n    Historial_Mensajes: $json.nuevoHistorial,\n    Ultima_Interaccion: new Date().toISOString()\n  };\n  if ($json.clasificacion) fields.Clasificacion = $json.clasificacion;\n  return JSON.stringify({ fields });\n})() }}",
+          "options": {}
+        },
+        "id": "f7f3d6ed-2378-4d3a-a6bd-9c387165b34f",
+        "name": "💾 Actualizar Lead (PATCH)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1552,
+          768
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.groq.com/openai/v1/chat/completions",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "groqApi",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({\n  model: 'llama-3.1-8b-instant',\n  messages: [\n    { role: 'system', content: $json.sistemaIA },\n    { role: 'user', content: $json.usuarioIA }\n  ],\n  temperature: 0.3,\n  max_tokens: 150\n}) }}",
+          "options": {}
+        },
+        "id": "5b842acf-11ba-4cd2-8d40-14a44bd61472",
+        "name": "🤖 Groq: Conversación IA",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          480,
+          304
+        ],
+        "credentials": {
+          "groqApi": {
+            "id": "jORffbRhRNohHT1B",
+            "name": "Groq account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const raw = $input.item.json;\nconst ctx = $('🔧 Preparar Contexto IA').item.json;\n\n// Get message from AI (plain text) or Contingencia (direct object)\nlet mensaje;\nif (raw._contingencia) {\n  mensaje = raw.mensaje || '¿En qué más puedo ayudarte?';\n} else {\n  mensaje = (raw.choices?.[0]?.message?.content || raw.mensaje || '').trim();\n  if (!mensaje) mensaje = '¿En qué más puedo ayudarte?';\n}\n\n// TODOS los estados de recolección son deterministas — la IA no puede desviarse\nconst saludo = ctx.saludoHora.charAt(0).toUpperCase() + ctx.saludoHora.slice(1);\nconst n = ctx.datosRecolectados?.nombre_cliente || '';\nconst mensajesDeterministas = {\n  PRIMER_CONTACTO:       `${saludo}, soy Alex, el asistente de Crating Express. ¿Con quién tengo el gusto?`,\n  PEDIR_NOMBRE:          '¿Con quién tengo el gusto?',\n  IDENTIFICAR_NECESIDAD: n ? `¡Mucho gusto, ${n}! ¿En qué puedo ayudarte hoy?` : '¿En qué puedo ayudarte hoy?',\n  PEDIR_PRODUCTO:        '¿Qué artículo necesitas embalar?',\n  PEDIR_MEDIDAS:         '¿Cuáles son las medidas del artículo? (largo × ancho × alto, en pulgadas o centímetros)',\n  PEDIR_TIPO_CAJON:      '¿Qué tipo de embalaje prefieres? Cajón cerrado (máxima protección), jaula (más liviana) o paleta/plataforma.',\n  PEDIR_PROTECCION:      '¿Necesitas protección interior adicional como foam, burbuja o esquineras? Ten en cuenta que tiene costo adicional.',\n  PEDIR_FECHA:           '¿Para cuándo necesitas el embalaje?',\n  DESPEDIDA:             '¡Muchas gracias por contactarnos! Estamos disponibles cuando nos necesites. ¡Que tengas excelente día! 🙌',\n};\n\nif (mensajesDeterministas[ctx.proximoPaso]) {\n  mensaje = mensajesDeterministas[ctx.proximoPaso];\n}\n\n// NOMBRE RECIÉN EXTRAÍDO: siempre \"¡Mucho gusto!\" sin importar estado ni tipo_flujo\nif (ctx.nombreRecienExtraido && ctx.datosRecolectados?.nombre_cliente) {\n  mensaje = `¡Mucho gusto, ${ctx.datosRecolectados.nombre_cliente}! ¿En qué puedo ayudarte hoy?`;\n}\n\n// FLUJO_CONSULTA: IA responde libre — override en saludo puro o presentación de nombre\nif (ctx.proximoPaso === 'FLUJO_CONSULTA') {\n  const msgLow = (ctx.texto || '').toLowerCase().trim();\n  const esSoloSaludo = /^(hola|hi|hey|buenas|buenos|good\\s*(morning|afternoon|evening)|hello|holas?)[.!\\s]*$/.test(msgLow);\n  const esPresentacion = /^(con\\s|soy\\s|me\\s+llamo\\s|mi\\s+nombre\\s|i'?m\\s|my\\s+name\\s)/i.test(ctx.texto || '');\n  if (esSoloSaludo || esPresentacion) {\n    mensaje = n ? `¿En qué puedo ayudarte hoy, ${n}?` : '¿En qué puedo ayudarte hoy?';\n  }\n}\n\n// State entirely from code\nconst datosRecolectados = ctx.datosRecolectados;\nconst proximoPaso = ctx.proximoPaso;\nconst todosRecolectados = ctx.todosRecolectados;\nconst dimensiones = ctx.dimensiones;\nconst tipoCajaApi = ctx.tipoCajaApi;\n\n// Clasificacion\nlet clasificacion = null;\nif (datosRecolectados.correo_contacto && (proximoPaso === 'POST_COTIZACION' || ctx.cotizacionEnviada)) {\n  clasificacion = 'Caliente';\n}\n\n// Estado Airtable\nlet nuevoEstado = ctx.estado;\nif (clasificacion === 'Caliente') nuevoEstado = 'Vendedor notificado';\nelse if (todosRecolectados && !ctx.cotizacionEnviada) nuevoEstado = 'Calificado';\nelse if (!ctx.leadId || nuevoEstado === 'Nuevo') nuevoEstado = 'En calificación';\n\nconst ts = new Date().toISOString();\nconst nuevoHistorial = (ctx.historial ? ctx.historial + '\\n' : '') +\n  `[${ts}] Cliente: ${ctx.texto}\\n[${ts}] Bot: ${mensaje}`;\n\nreturn [{ json: {\n  ...ctx,\n  mensaje,\n  mensajeRespuesta: mensaje,\n  datosRecolectados,\n  todos_recolectados: todosRecolectados,\n  todosRecolectados,\n  dimensiones,\n  tipo_caja_api: tipoCajaApi,\n  cotizador_enviado: false,\n  cotizadorEnviado: false,\n  clasificacion,\n  resumenLead: todosRecolectados ? `${datosRecolectados.producto || ''} — ${datosRecolectados.medidas || ''}` : '',\n  nuevoEstado,\n  nuevoHistorial\n} }];"
+        },
+        "id": "b6d34d69-9d39-46b4-a621-b07b48abfc7e",
+        "name": "🔍 Parsear Respuesta IA",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          704,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/PRODUCTOS%20Y%20SERVICIO",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "filterByFormula",
+                "value": "{activo}='SI'"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "***REDACTED***"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "dfc5c27c-67ad-4ae7-92d0-19d24ebea223",
+        "name": "📦 Obtener Productos",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -32,
+          -96
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": false,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "check-groq",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "1121eb1c-d0f5-4817-886d-6d26ffe2713d",
+        "name": "🔀 ¿Groq OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          704,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Authorization",
+                "value": "***REDACTED***"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({\n  model: 'gemini-1.5-flash',\n  messages: [\n    { role: 'system', content: $json.sistemaIA },\n    { role: 'user', content: $json.usuarioIA }\n  ],\n  temperature: 0.3,\n  max_tokens: 150\n}) }}",
+          "options": {}
+        },
+        "id": "3e319035-dd39-47ca-a1a5-7939c88e65d9",
+        "name": "🤖 Gemini: Fallback IA",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          800,
+          480
+        ],
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": false,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "check-deepseek",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "a13385f1-8dcc-450a-a5b7-a422eca5dccc",
+        "name": "🔀 ¿Gemini OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1024,
+          432
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const ctx = $('🔧 Preparar Contexto IA').item.json;\nconst paso = ctx.proximoPaso;\nconst d    = ctx.datosRecolectados;\nconst s    = ctx.saludoHora.charAt(0).toUpperCase() + ctx.saludoHora.slice(1);\nconst n    = d.nombre_cliente || '';\n\nconst msgs = {\n  PRIMER_CONTACTO:     `${s}, soy Alex, el asistente de Crating Express. ¿Con quién tengo el gusto?`,\n  PEDIR_NOMBRE:        '¿Con quién tengo el gusto?',\n  IDENTIFICAR_NECESIDAD: n ? `¡Mucho gusto, ${n}! ¿En qué puedo ayudarte hoy?` : '¿En qué puedo ayudarte hoy?',\n  FLUJO_CONSULTA:      'Con gusto te ayudo. ¿Tienes alguna pregunta específica sobre nuestros servicios de embalaje?',\n  PEDIR_PRODUCTO:      '¿Qué artículo necesitas embalar?',\n  PEDIR_MEDIDAS:       '¿Cuáles son las medidas en pulgadas? (Largo × Ancho × Alto) y el peso en libras.',\n  PEDIR_TIPO_CAJON:    `Para ${d.producto||'el artículo'}, recomiendo cajón cerrado para máxima protección. ¿Te parece bien?`,\n  PEDIR_PROTECCION:    '¿Deseas protección interior (foam, burbuja o esquineras)? Tiene costo adicional.',\n  PEDIR_FECHA:         '¿Para cuándo necesitas el embalaje listo?',\n  LISTO_PARA_COTIZAR:  `Perfecto, calculando tu estimado para ${d.producto||'el artículo'}...`,\n  POST_COTIZACION:     d.correo_contacto ? '¡Perfecto! Un especialista te contactará pronto.' : '¿Me das tu correo para que el especialista pueda contactarte?',\n  DESPEDIDA:           '¡Muchas gracias por contactarnos! Estamos disponibles cuando nos necesites. ¡Que tengas excelente día! 🙌',\n};\n\nreturn [{ json: { _contingencia: true, mensaje: msgs[paso] || '¿En qué más puedo ayudarte?' } }];"
+        },
+        "id": "45b4442d-7fe1-4b92-890d-ebb842d42308",
+        "name": "🆘 Modo Contingencia",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1216,
+          528
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://graph.facebook.com/v17.0/1083260611538246/messages",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "***REDACTED***"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\"messaging_product\": \"whatsapp\", \"status\": \"read\", \"message_id\": \"{{ $('🔧 Extraer Mensaje y Teléfono').item.json.messageId }}\"}",
+          "options": {}
+        },
+        "id": "f325db75-0569-4718-8771-75dbe6ad57c4",
+        "name": "✅ Marcar como Leído",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          432,
+          -192
+        ],
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "amount": 3
+        },
+        "id": "9796e9d4-cc10-490c-bcb3-85f7f2da3d74",
+        "name": "⏳ Esperar (Typing)",
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          1408,
+          416
+        ],
+        "webhookId": "64e129f7-36f1-49a1-9f0f-21e369b0392b"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": false,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "check-todos",
+                "leftValue": "={{ $json.todos_recolectados }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              },
+              {
+                "id": "check-medidas",
+                "leftValue": "={{ $json.dimensiones?.largo }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "number",
+                  "operation": "notEmpty",
+                  "singleValue": true
+                }
+              },
+              {
+                "id": "check-no-enviado",
+                "leftValue": "={{ $json.cotizador_enviado }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "false",
+                  "singleValue": true
+                }
+              },
+              {
+                "id": "check-no-cotizacion-enviada",
+                "leftValue": "={{ $json.cotizacionEnviada }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "false",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "7b77c0cc-6416-4018-86a0-14a031903adf",
+        "name": "🔀 ¿Cotizar?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          944,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://cratingcotiza.mdarthurdigital.com/api/cotizar",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({\n  tipo_caja: $json.tipo_caja_api || 'cajones_cerrados',\n  cant: 1,\n  largo: $json.dimensiones?.largo || 48,\n  ancho: $json.dimensiones?.ancho || 40,\n  alto: $json.dimensiones?.alto || 30\n}) }}",
+          "options": {}
+        },
+        "id": "ae790ad5-7388-42fc-8cef-79aa67c37319",
+        "name": "💰 API Cotizador",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1136,
+          192
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const parsear = $('🔍 Parsear Respuesta IA').item.json;\nconst cotizacion = $input.item.json;\n\nconst precio = cotizacion?.data?.precio_total;\n\nlet mensajeExtra = '';\nif (precio) {  // BUG4: API no devuelve campo success\n  mensajeExtra = `\\n\\n💵 *Precio estimado: $${precio} USD*\\n_Este es un estimado basado en las dimensiones indicadas. El precio final puede variar según detalles adicionales._\\n\\n¿Le gustaría que un especialista de Crating Express lo contacte para una cotización formal y precio definitivo?\\n\\nTambién puede cotizar en línea aquí: https://cratingcotiza.mdarthurdigital.com/cotizar-caja`;\n} else {\n  mensajeExtra = `\\n\\nPuede solicitar una cotización formal en: https://cratingcotiza.mdarthurdigital.com/cotizar-caja\\no escribirnos a cratingexpress01@gmail.com`;\n}\n\nreturn [{\n  json: {\n    ...parsear,\n    mensaje: (parsear.mensaje || '') + mensajeExtra,\n    cotizador_enviado: true,\n    guardar_cotizacion_flag: true,\n    nuevoEstado: precio ? 'Calificado' : parsear.nuevoEstado  // BUG4: API no tiene campo success\n  }\n}];"
+        },
+        "id": "f7e909d7-6c46-42bc-9041-be362670c565",
+        "name": "📝 Enriquecer con Precio",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1568,
+          112
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/tblj4radGXHN7HBJi",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "filterByFormula",
+                "value": "***REDACTED***"
+              },
+              {
+                "name": "maxRecords",
+                "value": "1"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "***REDACTED***"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "9f71271d-ac38-425c-8311-39965e71963e",
+        "name": "⚙️ Obtener WA Config",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          240,
+          960
+        ]
+      },
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          624,
+          1248
+        ],
+        "typeVersion": 1,
+        "id": "26b1918c-5f16-48a2-bb60-5d330a37b87a",
+        "name": "Sticky Note"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/embeddings",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "openAiApi",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ model: 'text-embedding-ada-002', input: $('🔧 Extraer Mensaje y Teléfono').item.json.texto }) }}",
+          "options": {}
+        },
+        "id": "embed-msg-ce",
+        "name": "🔍 Embed Mensaje (OpenAI)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          128,
+          -96
+        ],
+        "credentials": {
+          "openAiApi": {
+            "id": "lawpMAl8dns5Juf8",
+            "name": "W GPT API"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://appcratingexpress-fdhri81.svc.aped-4627-b74a.pinecone.io/query",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Api-Key",
+                "value": "***REDACTED***"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ vector: $json.data[0].embedding, topK: 5, includeMetadata: true }) }}",
+          "options": {}
+        },
+        "id": "pinecone-ce",
+        "name": "🔍 Contexto CE (Pinecone)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          192,
+          -96
+        ],
+        "continueOnFail": true
+      }
+    ],
+    "connections": {
+      "📲 Webhook WhatsApp": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Verificación o Mensaje?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Verificación o Mensaje?": {
+        "main": [
+          [
+            {
+              "node": "✅ Responder Verificación Meta",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "✅ Responder a Meta (200)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "🔧 Extraer Mensaje y Teléfono",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Extraer Mensaje y Teléfono": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Hay mensaje?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Hay mensaje?": {
+        "main": [
+          [
+            {
+              "node": "📊 Obtener Config Empresa",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "✅ Marcar como Leído",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📊 Obtener Config Empresa": {
+        "main": [
+          [
+            {
+              "node": "⚙️ Obtener WA Config",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📋 Buscar Lead Existente": {
+        "main": [
+          [
+            {
+              "node": "📦 Obtener Productos",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Preparar Contexto IA": {
+        "main": [
+          [
+            {
+              "node": "🤖 Groq: Conversación IA",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 Groq: Conversación IA": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Groq OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔍 Parsear Respuesta IA": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Cotizar?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Lead Caliente?": {
+        "main": [
+          [
+            {
+              "node": "📧 Notificar Vendedor",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "⏳ Esperar (Typing)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📧 Notificar Vendedor": {
+        "main": [
+          [
+            {
+              "node": "⏳ Esperar (Typing)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Crear o Actualizar?": {
+        "main": [
+          [
+            {
+              "node": "💾 Actualizar Lead (PATCH)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "💾 Crear Lead (POST)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "⏰ Trigger Follow-up Check": {
+        "main": [
+          [
+            {
+              "node": "📋 Obtener Leads Sin Respuesta",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📋 Obtener Leads Sin Respuesta": {
+        "main": [
+          [
+            {
+              "node": "🔧 Procesar Follow-ups",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Procesar Follow-ups": {
+        "main": [
+          [
+            {
+              "node": "📊 Config para Follow-up",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📊 Config para Follow-up": {
+        "main": [
+          [
+            {
+              "node": "📤 Enviar Follow-up WhatsApp",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📤 Enviar Follow-up WhatsApp": {
+        "main": [
+          [
+            {
+              "node": "🔄 Actualizar Estado Follow-up",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📦 Obtener Productos": {
+        "main": [
+          [
+            {
+              "node": "🔍 Embed Mensaje (OpenAI)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Groq OK?": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Respuesta IA",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🤖 Gemini: Fallback IA",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🆘 Modo Contingencia": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Respuesta IA",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "⏳ Esperar (Typing)": {
+        "main": [
+          [
+            {
+              "node": "📤 Enviar Mensaje WhatsApp",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Cotizar?": {
+        "main": [
+          [
+            {
+              "node": "💰 API Cotizador",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🔀 ¿Lead Caliente?",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "🔀 ¿Crear o Actualizar?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "💰 API Cotizador": {
+        "main": [
+          [
+            {
+              "node": "📝 Enriquecer con Precio",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📝 Enriquecer con Precio": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Lead Caliente?",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "🔀 ¿Crear o Actualizar?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "⚙️ Obtener WA Config": {
+        "main": [
+          [
+            {
+              "node": "📋 Buscar Lead Existente",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔍 Embed Mensaje (OpenAI)": {
+        "main": [
+          [
+            {
+              "node": "🔍 Contexto CE (Pinecone)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔍 Contexto CE (Pinecone)": {
+        "main": [
+          [
+            {
+              "node": "🔧 Preparar Contexto IA",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Gemini OK?": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Respuesta IA",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🆘 Modo Contingencia",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 Gemini: Fallback IA": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Gemini OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-06-11T19:22:47.864Z",
+        "id": 1069,
+        "workflowId": "zAhV8gEsXD8dCrXq",
+        "versionId": "64ab610b-4122-45f2-bfa1-21363bdb6480",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      },
+      {
+        "createdAt": "2026-06-11T19:22:47.831Z",
+        "id": 1068,
+        "workflowId": "zAhV8gEsXD8dCrXq",
+        "versionId": "64ab610b-4122-45f2-bfa1-21363bdb6480",
+        "event": "deactivated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    ]
+  }
+}
