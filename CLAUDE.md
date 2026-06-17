@@ -969,6 +969,28 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ---
 
+### 2026-06-17 (Martes)
+
+El día estuvo completamente enfocado en estabilizar y completar Alex WhatsApp CE. Se retomó la sesión con varios bugs pendientes de sesiones anteriores y se resolvieron uno por uno.
+
+El primer problema fue que el VAPI voice agent guardaba las llamadas en Google Sheets mientras que Alex WhatsApp usaba Airtable — se migró el nodo de guardado en el workflow `FYKfTJBfgwsMpJV7` para que guarde en `WhatsApp_Leads` con los mismos campos (Nombre_Contacto, Estado, Descripcion_Lead, Origen="IA de ventas", Historial_Mensajes, Ultima_Actividad). De paso se reemplazó la Groq API key hardcodeada que tenía ese workflow por `$vars.GROQ_API_KEY`.
+
+Luego se trabajó en Airtable — se identificaron columnas sin uso en WhatsApp_Leads: `Nombre` (vacía, sin uso), `Fecha_Inicio` y `Ultima_Interaccion` (redundantes con `Ultima_Actividad`). Se confirmó que ningún workflow las referencia y se indicó borrarlas manualmente. Los campos `Clasificacion` (Frío/Tibio/Caliente) y `Tipo_Interaccion` (Consulta/Cotización/Mixta) sí debían usarse — se actualizó el workflow `05-guardar-lead` para poblarlos: Clasificacion viene de `ctx.clasificacion`, Tipo_Interaccion de `d.tipo_flujo` con mapeo de valores.
+
+El bug más importante del día fue el token de Airtable: el workflow `05-guardar-lead` tenía `Bearer AIRTABLE_TOKEN_PLACEHOLDER` literal en los nodos HTTP Request de crear y actualizar lead. Eso causaba que todos los POSTs fallaran silenciosamente, nunca se creaba el leadId, `esNuevo` siempre era `true` y Alex repetía el saludo en cada mensaje. Se descubrió que n8n Community no soporta `$vars` (requiere licencia de pago), así que se seteó el token directamente en n8n vía API igual que el resto de los workflows.
+
+Junto a eso se corrigió el idioma: Alex respondía en español a clientes en inglés porque la instrucción de `PRIMER_CONTACTO` tenía "¿Con quién tengo el gusto?" hardcodeado y el `saludo` siempre era "Buenos días/tardes/noches". Se agregó `saludoEN` y se hizo el bloque `PRIMER_CONTACTO` condicional según `idiomaConversacion`. Hubo un bug de syntax (backslash sobrante antes del backtick de cierre de template literal) que se resolvió con manipulación de bytes directamente.
+
+También se corrigió el mensaje de cotización: "Precio estimado: $414 USD" y el disclaimer salían en español aunque el cliente fuera en inglés. Se hizo bilingüe usando `ctx.idiomaConversacion` en el nodo `📝 Enriquecer con Precio` del workflow `04-cotizador`.
+
+El email de notificación al vendedor llegaba con todos los datos en una sola línea. Se migró el nodo Gmail de texto plano a HTML con tabla estructurada: header rojo, filas por dato, separador de sección "Solicitud". Se usó `contentType: html` en las options del nodo.
+
+Al cierre se limpió el perfil de WhatsApp de Alex (foto de ejecutivo, nombre CE ALEX, descripción, dirección, correo y web). Se investigó por qué no respondía llamadas — resultado: quien llamó usó WhatsApp call, no llamada telefónica real. VAPI solo maneja llamadas telefónicas al +1 786-788-0417. Se explicó que las llamadas de WhatsApp son peer-to-peer cifradas y Meta no expone API para interceptarlas — no es técnicamente posible conectar VAPI ahí. Se optimizó y subió el prompt de VAPI alineándolo con la personalidad de Alex WhatsApp: mismas políticas, catálogo completo, medidas en pulgadas, manejo de reclamos, cierre cálido bilingüe. Al equipo no le gustó la personalidad de Alex — quedaron en pasar instrucciones de corrección más adelante.
+
+**Estado de Alex al cierre:** arquitectura blindada, lógica estable, guardado en Airtable funcionando, clasificación y tipo de interacción poblados, email HTML al vendedor, cotización bilingüe, saludo bilingüe. Pendiente: ajustes de personalidad según instrucciones del equipo.
+
+---
+
 ### 2026-06-10 (Martes)
 
 El día estuvo enfocado en limpieza, correcciones y orden general de los workflows de n8n. Se retomó una tarea pendiente de la sesión anterior: aplicar el banner y footer aprobado de Crating Express a todos los agentes que mandan correos. Se identificaron 10 workflows con nodos de email, se generaron los archivos corregidos y se pushearon a n8n. Sin embargo al revisar lo que se había hecho se detectó que varios de esos workflows son de la plataforma G54 y por regla no pueden tener nada hardcodeado de un cliente específico — el banner de CE en esos agentes significaría que si mañana se usa el mismo agente con otro cliente, el correo saldría con la imagen de Crating Express. Se corrigió el error: el banner quedó solo en los workflows exclusivos de CE (CE Blog, RRSS viejo, Generador de Temas) y se removió de los 6 workflows de plataforma G54.
