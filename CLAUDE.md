@@ -342,161 +342,170 @@ Para listar workflows: `GET /api/v1/workflows` con header `X-N8N-API-KEY: <token
 
 **Nota importante:** Usar siempre `X-N8N-API-KEY` como header (NO `Authorization: Bearer`). Si el PUT retorna 401 con GET funcionando, es porque el token anterior fue invalidado — generar uno nuevo en Settings → API.
 
-## WhatsApp — Crating Express
+## WhatsApp — Crating Express (Marco)
 
-- **Número:** +1 786-788-0417 (comprado en Twilio, registrado en Meta WhatsApp Cloud API)
+> **Nombre del bot:** Marco (renombrado de Alex en 2026-06-19). VAPI también usa MARCO.
+
+- **Número:** +1 786-788-0417 (Twilio, registrado en Meta WhatsApp Cloud API)
 - **Phone Number ID:** `1083260611538246`
 - **WABA ID:** `1449711680212677`
-- **OTP de Twilio:** completado
 - **Display Name:** Crating Express (aprobado)
-- **Workflow n8n:** `CE WhatsApp Engine - Sistema de Conversión` (ID: `eCOX3ogMjToxZsh9`)
+- **Workflow principal:** `CE WhatsApp Engine — Marco` (ID: `zAhV8gEsXD8dCrXq`)
 - **Webhook path:** `/whatsapp-ce`
 - **Cotizador app:** https://cratingcotiza.mdarthurdigital.com/cotizar-caja
 - **Cotizador API:** `POST https://cratingcotiza.mdarthurdigital.com/api/cotizar` — integrada ✅
 - **Airtable tabla leads:** `WhatsApp_Leads` en base `appUOYi54iBfaDcLn`
 
-### Flujo actual del bot (v IA híbrida + fallback triple + cotizador)
+### Arquitectura de sub-workflows (versión estable 2026-06-19)
+
+| ID | Nombre | Función |
+|---|---|---|
+| `zAhV8gEsXD8dCrXq` | CE WhatsApp Engine — Marco | Orquestador principal |
+| `1PXcg3dOQBt8hrrT` | Alex CE — 01 Clasificador | State machine: calcProximoPaso, sistemaIA, usuarioIA |
+| (02) | Alex CE — 02 Contexto y Lead | Carga perfil empresa, WA config, productos, lead existente |
+| `J8qbKOF7t4GnhRDT` | Alex CE — 03 Generador IA | Llama a Groq, parsea JSON, merge datosRecolectados, clasificación |
+| (04 reemplazado) | ~~04 Cotizador~~ | **ELIMINADO** — reemplazado por nodos nativos en workflow principal |
+| `PqbfMghL0E7xKflC` | Alex CE — 05 Guardar Lead | POST/PATCH Airtable con todos los campos |
+
+**Nodos que reemplazaron a 04 Cotizador (en workflow principal):**
+- `💰 API Cotizador` — HTTP Request nativo, `onError: continueErrorOutput`
+- `📝 Armar Mensaje Final` — Code node: construye el mensaje con precio o pasa el mensaje de IA si no es momento de cotizar
+
+**IMPORTANTE:** Los nodos `🔀 ¿Lead Caliente?` y `📧 Notificar Vendedor` leen de `$('📝 Armar Mensaje Final')`, NO de `$('▶️ 04 Cotizador')` (que ya no existe).
+
+### Flujo actual del bot
 ```
-Webhook WhatsApp → Extraer Mensaje → Obtener Config Empresa (PERFIL DE EMPRESA)
-  → Obtener WA Config (WhatsApp_Config) → Buscar Lead Existente
-  → Obtener Productos (Airtable PRODUCTOS Y SERVICIO)
-  → Preparar Contexto IA (promptSistema desde Airtable, hora Miami, historial)
-  → Groq llama-3.1-8b-instant (continueOnFail) → ¿Groq OK?
-      ✅ Sí → Parsear Respuesta IA
-      ❌ No → DeepSeek deepseek-chat (continueOnFail) → ¿DeepSeek OK?
-                  ✅ Sí → Parsear Respuesta IA
-                  ❌ No → 🆘 Modo Contingencia (rule-based) → Parsear Respuesta IA
-  → ¿Cotizar? (todos_recolectados=true AND dimensiones completas)
-      ✅ Sí → API Cotizador → Enriquecer mensaje con precio + disclaimer
-      ❌ No → continuar sin precio
-  → ¿Lead Caliente? → Notificar Vendedor (emails desde WA_Email_Vendedor en PERFIL DE EMPRESA)
-  → Enviar Mensaje WhatsApp
-  → ¿Crear o Actualizar? → POST / PATCH Airtable (con Origen, Descripcion_Lead, Nombre_Contacto, Ultima_Actividad)
+Webhook → Extraer Mensaje → ⏱️ Esperar anti-race
+  → ▶️ 02 Contexto y Lead → ▶️ 01 Clasificador → ▶️ 03 Generador IA
+  → 💰 API Cotizador (si todosRecolectados=true)
+  → 📝 Armar Mensaje Final (agrega precio al mensaje o lo pasa tal cual)
+  → 📤 Enviar Mensaje WhatsApp
+  → ▶️ 05 Guardar Lead
+  → 🔀 ¿Lead Caliente? (lee clasificacion de 📝 Armar Mensaje Final)
+      ✅ Sí → 📧 Notificar Vendedor
 ```
 
-**Modo Contingencia** (si ambas IAs fallan): pregunta producto → medidas → fecha usando reglas simples, luego manda email al vendedor y le dice al cliente que será contactado.
+### State machine — calcProximoPaso (01 Clasificador) ⚠️ SAGRADO — NO CAMBIAR EL ORDEN
+```
+POST_COTIZACION       → si cotizacion_enviada=true en Notas
+PRIMER_CONTACTO       → lead nuevo sin nombre
+PEDIR_NOMBRE          → lead existente sin nombre
+IDENTIFICAR_NECESIDAD → sin tipo_flujo
+FLUJO_CONSULTA        → tipo_flujo='consulta'
+PEDIR_PRODUCTO        → sin producto
+PEDIR_MEDIDAS         → sin medidas
+PEDIR_CORREO          → sin correo_contacto   ← correo SIEMPRE después de medidas
+PEDIR_TIPO_CAJON      → sin tipo_cajon
+PEDIR_PROTECCION      → proteccion_extra=null
+PEDIR_FECHA           → sin fecha
+LISTO_PARA_COTIZAR    → todos los datos presentes
+```
 
-Datos recolectados: producto, medidas, fecha, tipo_cajon, proteccion_extra, direccion
-Campos Airtable: Respuesta_1 (producto), Respuesta_2 (medidas), Respuesta_3 (fecha), Notas (JSON: tipo_cajon, proteccion_extra, direccion)
+### Datos recolectados (en Notas JSON de Airtable)
+```json
+{
+  "tipo_cajon": "cajones_cerrados",
+  "proteccion_extra": false,
+  "correo_contacto": "cliente@email.com",
+  "nombre_cliente": "Nombre",
+  "fecha": "el viernes",
+  "tipo_flujo": "cotizacion",
+  "cotizacion_enviada": true
+}
+```
+`cotizacion_enviada: true` se setea en 05 Guardar Lead cuando el cotizador corrió exitosamente. Es la bandera que activa POST_COTIZACION en la siguiente vuelta.
 
-### WhatsApp_Config — Tabla de configuración externa (tblj4radGXHN7HBJi)
-Permite editar el comportamiento de Alex desde fuera de n8n sin tocar el workflow.
+### Clasificación de leads (03 Parsear)
+- `clasificacion = 'Caliente'` **SOLO** cuando cliente acepta cotización formal en POST_COTIZACION (regex sobre texto del cliente)
+- `nuevoEstado = 'Vendedor notificado'` → dispara email
+- `nuevoEstado = 'Calificado'` → cuando todosRecolectados pero aún no aceptó
+- `nuevoEstado = 'En calificación'` → en proceso
 
-| Campo | Descripción |
-|---|---|
-| `Nombre_Config` | Identificador del registro (ej: "Crating Express — WhatsApp Bot Alex") |
-| `Prompt_Sistema` | System prompt completo con placeholders `{{CATALOGO}}` e `{{INSTRUCCIONES}}` |
-| `Instrucciones_IA` | Instrucciones adicionales que se insertan en `{{INSTRUCCIONES}}` |
-| `WA_Mensaje_Bienvenida` | Mensaje de bienvenida para nuevos leads |
-| `Emails_Notificacion` | Emails extra para alertas (no usado actualmente) |
-| `WA_Palabras_Lead_Caliente` | Keywords para detectar lead listo para cerrar |
-| `WA_FollowUp_24h` | Mensaje de seguimiento a 24h |
-| `WA_FollowUp_72h` | Mensaje de seguimiento a 72h |
-| `WA_FAQs` | Preguntas frecuentes para enriquecer respuestas |
+### Correo al vendedor
+- Lee emails de `WA_Email_Vendedor` en PERFIL DE EMPRESA (`tblkmBqXrpmGcTNUM`), separados por `\n`
+- Fallback: `risosadmi@gmail.com`
+- Formato HTML con tabla estructurada (header rojo, datos del lead)
+- Se envía cuando `clasificacion = 'Caliente'` vía nodo `📧 Notificar Vendedor` en workflow principal
 
-**Record activo:** `recLR54SP26jEroCG` — "Crating Express — WhatsApp Bot Alex"
+### Comportamiento de Marco (IA)
+- **Nombre:** Marco (NO Alex — todo en n8n, VAPI y Airtable dice Marco)
+- **Idioma:** detecta ES/EN del historial + mensaje actual, responde en el mismo
+- **Tono:** directo, coloquial, Miami — NUNCA "Genial", "Excelente elección", "Un placer"
+- **Confirmaciones:** varía entre "Listo.", "Anotado.", "Ok.", "Entendido.", "Perfecto." — nunca repite la misma dos veces seguidas
+- **Saludo con hora Miami (UTC-4):** buenos días 6-11, buenas tardes 12-18, buenas noches 19-5
+- **Primer mensaje:** SIEMPRE se presenta — "Buenos días, soy Marco de Crating Express."
+- **Preguntas off-script:** responde en 1 oración y continúa con el dato pendiente
+- **NUNCA pregunta:** recogida, entrega, dirección, método de envío, logística
+- **Fecha:** si el cliente la menciona en el primer mensaje, el fallback regex en 03 Parsear la extrae aunque el AI no la ponga en el JSON
+- **Cotizador:** llama a `POST /api/cotizar` cuando todos los datos están listos; el precio aparece DENTRO del chat de WA con disclaimer de estimado
+- **Post-cotización:** pregunta si quiere cotización formal por correo → si acepta → confirma y cierra; si se despide → "¡Hasta luego! 👋"
+- Medidas SIEMPRE en pulgadas — NUNCA centímetros
 
-El nodo `⚙️ Obtener WA Config` lee esta tabla antes de Preparar Contexto IA.
-El `Prompt_Sistema` se usa como base; `{{CATALOGO}}` se reemplaza en el nodo Code con el catálogo real de Airtable.
-
-### Cotizador API — Integración
+### Cotizador API
 - **Endpoint:** `POST https://cratingcotiza.mdarthurdigital.com/api/cotizar`
-- **Body:** `{ "tipo_caja": "cajones_cerrados", "cant": 1, "largo": 100, "ancho": 50, "alto": 60 }`
-- **Response:** `{ "precio_total": 285.00, "dimensiones_calc": { ... } }`
-- **Valores válidos para tipo_caja:** `cajones_cerrados`, `jaulas`, `palets_medida`, `cunas`, `plataformas_contenedor`, `embalaje_ferias`, `mayor`
-- Alex extrae `tipo_caja_api` y `dimensiones` (largo/ancho/alto en cm) durante la conversación
-- La cotización solo se solicita cuando `todos_recolectados === true` y las dimensiones están completas
-- El precio se adjunta al mensaje con un disclaimer: *"Este es un estimado... precio final puede variar..."*
+- **Body:** `{ "tipo_caja": "cajones_cerrados", "cant": 1, "largo": 30, "ancho": 20, "alto": 25 }`
+- **Response:** `{ "success": true, "data": { "precio_total": 142 } }`
+- **Valores válidos tipo_caja:** `cajones_cerrados`, `jaulas`, `palets_medida`, `cunas`, `plataformas_contenedor`, `embalaje_ferias`, `mayor`
+- Medidas en pulgadas tal como el cliente las da
 
 ### WhatsApp_Leads — Campos actuales
 | Campo | Tipo | Descripción |
 |---|---|---|
-| `Respuesta_1` | Text | Producto de interés |
-| `Respuesta_2` | Text | Medidas |
-| `Respuesta_3` | Text | Fecha requerida |
-| `Notas` | Text | JSON: tipo_cajon, proteccion_extra, direccion |
+| `Nombre_Contacto` | Text | Nombre del cliente |
+| `Articulo` | Text | Producto de interés |
+| `Medidas y Peso` | Text | Medidas en pulgadas |
+| `Notas` | Text | JSON con todos los datos recolectados + cotizacion_enviada |
 | `Historial_Mensajes` | Text | Conversación completa |
-| `Estado` | Select | Nuevo / Activo / Lead Caliente / Completado / Inactivo |
-| `Origen` | Select | RRSS / Sitio web / QR / IA de ventas / Referido / Desconocido |
-| `Descripcion_Lead` | Multiline | Resumen del lead para el vendedor |
-| `Nombre_Contacto` | Text | Nombre del cliente (si se identifica) |
+| `Estado` | Select | Nuevo / En calificación / Calificado / Vendedor notificado / Cerrado |
+| `Origen` | Select | IA de ventas |
+| `Descripcion_Lead` | Multiline | Resumen para el vendedor |
+| `Clasificacion` | Select | Frío / Tibio / Caliente |
+| `Tipo_Interaccion` | Select | Cotización / Consulta / Mixta |
 | `Ultima_Actividad` | DateTime | Timestamp último mensaje |
 
-### Emails de notificación al vendedor
-- Vienen del campo `WA_Email_Vendedor` en PERFIL DE EMPRESA (`tblkmBqXrpmGcTNUM`)
-- Soporta múltiples emails separados por salto de línea (`\n`)
-- El nodo `📧 Notificar Vendedor` hace `sendTo = emailVendedor.split('\n').join(',')`
-- Fallback: `risosadmi@gmail.com` si el campo está vacío
-
-### Comportamiento de Alex (IA)
-- **Prompt vive en:** Airtable `WhatsApp_Config` → campo `Prompt_Sistema` (editable sin tocar n8n)
-- **Idioma**: detecta el idioma del cliente y responde en el mismo (ES o EN)
-- Saludo con hora Miami (UTC-4): buenos días 6-11, buenas tardes 12-18, buenas noches 19-5
-- Orden de recopilación: producto → medidas (si no sabe → pregunta modelo → busca specs) → fecha → tipo_cajón (pregunta preferencia primero) → protección extra (aclarar que es costo adicional) → dirección (solo si acepta visita)
-- NUNCA repite datos ya confirmados en mensajes posteriores
-- NUNCA pregunta método de envío (aéreo/marítimo/terrestre) — no es relevante
-- Lee el mensaje del cliente antes de avanzar al siguiente dato
-- Al dar el link del cotizador: mencionar que pueden enviar foto por WhatsApp al +1 786 558-6007
-- Catálogo real de Airtable: Cajones cerrados, Jaulas, Palets a medida, Cunas, Plataformas en contenedor, Embalaje para ferias, Al por mayor
-- Groq credential ID en n8n: `jORffbRhRNohHT1B` — key actualizada 2026-05-05 (ver en n8n Settings → Credentials)
-- DeepSeek API key: `sk-035f6eddd6fd4602b7d91c6e9ff03dfe` (credential n8n ID: `YSdODZVNFGSB3Ih9`) — **⚠️ sin saldo**
-
-### Info de empresa que Alex conoce
-- Servicio mismo día disponible — sin costo adicional por urgencia
-- Descuentos por volumen para pedidos de 2+ unidades
-- Servicio on-site en Miami-Dade y alrededores
-- Protección interior (foam, burbuja, esquineras) = servicio adicional con costo extra
-- ISPM-15 / NIMF-15 incluido en todos los cajones para exportación
-
 ### Límites de APIs
-- Groq llama-3.1-8b-instant: 500,000 tokens/día (plan gratuito) — se resetea a medianoche Miami
-- DeepSeek deepseek-chat: ⚠️ **sin saldo** — si Groq falla → Contingencia activa directamente
-- Si Groq se agota → Modo Contingencia activa automáticamente (recopila datos básicos + email al vendedor)
+- Groq llama-3.3-70b-versatile: límite diario — se resetea a medianoche Miami
+- DeepSeek: ⚠️ sin saldo — fallback no disponible
 
-## VAPI — Alex Voz
+## VAPI — Marco Voz
 
-- **API Key:** `9ff54869-33de-4f84-a8b7-2801afc3d355`
+- **API Key:** `bb9c6bf5-a4ca-4707-8476-310ad6cab539` (token actualizado 2026-06-19)
 - **Assistant ID:** `69fedf52-005f-4cde-a87d-5b421e7911b9`
-- **Nombre:** ALEX
+- **Nombre:** MARCO
 - **Modelo:** llama-3.3-70b-versatile (en Groq)
 - **Voz ID:** `onwK4e9ZLuTAKqWW03F9` (ElevenLabs)
-- **Workflow n8n:** `📞 CE Voice Agent — Vapi Webhook` (ID: `FYKfTJBfgwsMpJV7`)
+- **Primer mensaje:** "Gracias por llamar a Crating Express, soy Marco. ¿Con quién tengo el gusto?"
+- **Comportamiento:** empieza en español, cambia a inglés si el cliente habla inglés; NO recopila datos por voz — redirige a WhatsApp para cotizaciones
+- **Workflow n8n:** `📞 CE Voice Agent — Vapi Webhook` (ID: `FYKfTJBfgwsMpJV7`) — guarda en WhatsApp_Leads
 - **Resumen diario:** `📞 CE Voice Agent — Resumen Diario de Llamadas` (ID: `FTa48iKiRIMW5BNB`)
-- **Número de llamadas:** +1 786-788-0417 (mismo Twilio)
+- **Número:** +1 786-788-0417 (Twilio) — solo llamadas telefónicas reales, NO llamadas de WhatsApp (peer-to-peer cifradas, sin API)
 
-## Otros workflows activos (descubiertos 2026-05-08)
+## Otros workflows activos
 
 | Workflow | ID | Trigger | Estado |
 |---|---|---|---|
-| CE Mantenimiento Web - Calendario Automático | `T9J845yE4sd8Dde5` | Diario 13:00 | ✅ Corre todos los días — publica/comparte contenido web. Destinatarios incluyen emails externos; `webmaster@omegacb.com` rebota (eliminar) |
-| 📬 CE Gmail Monitor — Detectar Respuestas de Leads | `cJZV7jcwlbFoW5qJ` | Cada hora | ✅ Monitorea Gmail en busca de respuestas de leads |
+| CE Mantenimiento Web - Calendario Automático | `T9J845yE4sd8Dde5` | Diario 13:00 | ✅ |
+| 📬 CE Gmail Monitor — Detectar Respuestas de Leads | `cJZV7jcwlbFoW5qJ` | Cada hora | ✅ |
 
-## n8n Tags — Alex
+## n8n Tags — Marco
 
-Tag `Alex` (ID: `2CrVJWitAB77MgTJ`) aplicado a los 4 workflows del agente:
+Tag `Alex` (ID: `2CrVJWitAB77MgTJ`) — nombre del tag sin cambiar en n8n, pero el bot se llama Marco.
 
-| Workflow | ID | Tags |
-|---|---|---|
-| CE WhatsApp Engine - Sistema de Conversión | `eCOX3ogMjToxZsh9` | Alex, whatsapp |
-| 📞 CE Voice Agent — Vapi Webhook | `FYKfTJBfgwsMpJV7` | Alex |
-| 📞 CE Voice Agent — Resumen Diario de Llamadas | `FTa48iKiRIMW5BNB` | Alex |
-| 📞→💬 VAPI → WhatsApp Handoff | `jfoJDSidx1sJlOrr` | Alex |
-
-### Diferencias voz vs WhatsApp
-| Voz | WhatsApp |
+| Workflow | ID |
 |---|---|
-| Recopila: medidas + peso + descripción (3 datos) | Recopila: producto + medidas + fecha + tipo_cajón + protección + dirección (6 datos) |
-| Bilingual ES/EN automático | Bilingual ES/EN automático |
-| Manejo de silencio + fin de llamada | No aplica |
-| Sin recomendación de tipo de cajón | Recomienda tipo específico del catálogo |
+| CE WhatsApp Engine — Marco | `zAhV8gEsXD8dCrXq` |
+| 📞 CE Voice Agent — Vapi Webhook | `FYKfTJBfgwsMpJV7` |
+| 📞 CE Voice Agent — Resumen Diario de Llamadas | `FTa48iKiRIMW5BNB` |
+| 📞→💬 VAPI → WhatsApp Handoff | `jfoJDSidx1sJlOrr` |
 
 ### Pendiente / próximas mejoras
-- [x] ~~Integrar API del cotizador~~ ✅ Integrada — `POST /api/cotizar`
+- [x] ~~Integrar API del cotizador~~ ✅
+- [x] ~~Precio estimado en WhatsApp~~ ✅
+- [x] ~~Correo al vendedor cuando cliente acepta~~ ✅
+- [x] ~~Cierre de conversación (¡Hasta luego!)~~ ✅
 - [ ] Activar LinkedIn en workflow RRSS cuando se tenga token
-- [ ] Probar VAPI → WhatsApp Handoff con llamada real (bloqueado por reinicio n8n)
-- [ ] Probar planilla Nicaragua completa (bloqueado por reinicio n8n)
-- [ ] Recargar saldo DeepSeek o reemplazar con otro fallback
-- [ ] Confirmar aportaciones + marcador de huella en Planilla Nicaragua
+- [ ] Recargar saldo DeepSeek o reemplazar fallback
+- [ ] Probar VAPI → WhatsApp Handoff con llamada real
 - [ ] **Sugerencia futura — Módulo de audio:** Evaluar Text-to-Speech para convertir posts/artículos en audio (estilo podcast) similar a OpenClaw Voice AI. Complementaría el Módulo 1 RRSS sin reemplazar nada del stack actual. Integración posible: ElevenLabs (ya tenemos cuenta por VAPI) → generar MP3 desde el post aprobado → subir a Drive → opcional: publicar como Reel/Story con audio.
 
 ## Planilla Nicaragua
@@ -966,6 +975,30 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 ## Reportes Diarios
 
 > Los últimos 14 días. Anteriores archivados en `PROYECTO-SOL/reportes/`.
+
+---
+
+### 2026-06-19 (Jueves)
+
+El día estuvo dedicado a estabilizar y completar el flujo de Marco (bot WhatsApp CE), retomando una sesión anterior donde el precio estimado ya aparecía en el chat pero quedaban bugs pendientes.
+
+Se resolvió primero que Marco no se presentaba en el primer mensaje — solo preguntaba "¿Con quién tengo el gusto?" sin decir su nombre. Se hizo la instrucción de PRIMER_CONTACTO más prescriptiva: la respuesta debe comenzar con "Buenos días, soy Marco de Crating Express." y en el mismo mensaje confirmar los datos ya dados y preguntar lo que falta.
+
+Luego se encontró que la fecha se perdía entre turnos. El cliente podía decir "para el viernes" en el primer mensaje, Marco lo mencionaba en su respuesta pero no lo ponía en el campo fecha del JSON — así el sistema nunca lo guardaba en Airtable y lo volvía a preguntar después. Se agregó un fallback en 03 Parsear: si fecha sigue nula después del merge del JSON de la IA, el código extrae la fecha del historial+mensaje usando regex (mañana, hoy, días de la semana, formatos de fecha numéricos, etc.).
+
+Se corrigió PEDIR_CORREO para que después de confirmar el correo el AI pregunte inmediatamente el siguiente dato pendiente en el mismo mensaje, en lugar de detenerse en "Anotado." y esperar al cliente.
+
+PEDIR_PROTECCION recibió una lista explícita de negativos: "que no", "no gracias", "sin protección", "solo el cajón", "nada extra", "así está bien" — cualquiera de esos extrae proteccion_extra=false y avanza. También se agregó al sistemaIA la regla de que preguntas fuera del flujo se responden en 1 oración y luego se continúa con el dato pendiente.
+
+LISTO_PARA_COTIZAR fue hecho más prescriptivo: "Di EXACTAMENTE este texto y nada más: 'Dame un momento para calcular el precio... 🔄'." Esto evitó que el AI preguntara "¿quieres proceder con la cotización?" antes de mostrar el precio.
+
+POST_COTIZACION recibió tres ramas: cliente acepta → confirma y cierra; cliente se despide → "¡Hasta luego! 👋"; cliente no ha respondido → pregunta si quiere cotización formal. También se actualizó el regex de clienteAcepta en 03 Parsear para capturar "sisi" y variantes sin word boundary.
+
+El correo al vendedor no llegaba porque los nodos `¿Lead Caliente?` y `📧 Notificar Vendedor` leían de `$('▶️ 04 Cotizador')` que fue eliminado en una sesión anterior. Se actualizaron para leer de `$('📝 Armar Mensaje Final')` que es el nodo correcto en la arquitectura actual.
+
+Se varió el vocabulario de confirmaciones: antes siempre decía "Anotado", ahora alterna entre "Listo.", "Anotado.", "Ok.", "Entendido.", "Perfecto."
+
+Al cierre el flujo completo funciona: presentación ✅, extracción de datos del primer mensaje ✅, orden correcto (medidas→correo→tipo→protección→fecha) ✅, estimado en WhatsApp ✅, cierre limpio ✅, correo al vendedor ✅. Esta es la versión estable de referencia.
 
 ---
 
