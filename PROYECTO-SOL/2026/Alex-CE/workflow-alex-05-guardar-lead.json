@@ -118,6 +118,38 @@
         "jsonBody": "={{ { fields: $json._airtableFields } }}",
         "options": {}
       }
+    },
+    {
+      "id": "g54-inbound",
+      "name": "☁️ G54: Sync Conversación",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1060,
+        300
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/agent/whatsapp/inbound",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer g54_agent_produccion_2026"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  empresa_id: 1,\n  phone: '+' + .first().json.telefono,\n  contact_name: .first().json.fields?.Nombre_Contacto || '',\n  estado: .first().json.fields?.Estado || 'Nuevo',\n  clasificacion: .first().json.clasificacion || 'frio',\n  messages: (.first().json.nuevoHistorial || '').split('\\n').filter(l => l.trim() && l.includes('] ')).map(l => {\n    const content = l.replace(/^\\[.*?\\]\\s*/, '');\n    const isBot = content.startsWith('Bot:') || content.startsWith('Marco:') || content.startsWith('Agente:');\n    return { rol: isBot ? 'bot' : 'user', contenido: content.replace(/^(Bot|Marco|Agente|Cliente):\\s*/, '') };\n  }).filter(m => m.contenido)\n}) }}",
+        "options": {}
+      }
     }
   ],
   "connections": {
@@ -155,6 +187,28 @@
         [
           {
             "node": "💾 Actualizar Lead (PATCH)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Crear Lead (POST)": {
+      "main": [
+        [
+          {
+            "node": "☁️ G54: Sync Conversación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Actualizar Lead (PATCH)": {
+      "main": [
+        [
+          {
+            "node": "☁️ G54: Sync Conversación",
             "type": "main",
             "index": 0
           }
