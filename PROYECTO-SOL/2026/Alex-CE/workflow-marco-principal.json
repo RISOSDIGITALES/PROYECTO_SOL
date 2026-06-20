@@ -594,6 +594,211 @@
       "parameters": {
         "jsCode": "const ctx = $('▶️ 03 Generador IA').first().json;\nconst d = ctx.datosRecolectados || {};\n\n// Only show price if all data collected and not already sent\n// Use proximoPaso from 01 Clasificador as source of truth — includes all checks (correo, proteccion, etc.)\nif (ctx.proximoPaso !== 'LISTO_PARA_COTIZAR' || ctx.cotizacionEnviada) {\n  return [{ json: { ...ctx } }];\n}\n\n// Read precio from HTTP node result\nconst apiResp = $input.first().json;\nconst precio = apiResp?.data?.precio_total || apiResp?.precio_total || null;\n\nconst idioma = ctx.idiomaConversacion || 'español';\nconst nombre = d.nombre_cliente ? `, ${d.nombre_cliente.split(' ')[0]}` : '';\nconst tieneProteccion = d.proteccion_extra === true || d.proteccion_extra === 'true';\n\nlet mensajeFinal;\nif (precio) {\n  if (idioma === 'inglés') {\n    mensajeFinal = `Here is your estimate${nombre}! 🎉\\n\\n📦 *${d.producto || 'Crate'}*\\n📐 Dimensions: ${d.medidas || '—'}\"\\n🗓 Needed by: ${d.fecha || '—'}\\n🛡 Extra protection: ${tieneProteccion ? 'Yes' : 'No'}\\n\\n💵 *Estimated price: $${precio} USD*\\n_This is an estimate. The final price may vary after inspection._\\n\\nWould you like a formal quote sent to your email?`;\n  } else {\n    mensajeFinal = `¡Aquí está tu estimado${nombre}! 🎉\\n\\n📦 *${d.producto || 'Cajón'}*\\n📐 Medidas: ${d.medidas || '—'}\"\\n🗓 Para: ${d.fecha || '—'}\\n🛡 Protección extra: ${tieneProteccion ? 'Sí' : 'No'}\\n\\n💵 *Precio estimado: $${precio} USD*\\n_Este es un estimado. El precio final puede variar luego de la inspección._\\n\\n¿Le gustaría que le enviemos la cotización formal a su correo?`;\n  }\n} else {\n  mensajeFinal = ctx.mensaje;\n}\n\nreturn [{ json: {\n  ...ctx,\n  mensaje: mensajeFinal,\n  mensajeRespuesta: mensajeFinal,\n  cotizadorEnviado: !!precio\n} }];"
       }
+    },
+    {
+      "id": "tl-detectar",
+      "name": "🌐 Detectar Idioma Entrada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ],
+      "parameters": {
+        "jsCode": "\nconst ctx = $input.first().json;\nconst t = (ctx.texto || '').toLowerCase();\nconst enWords = (t.match(/\\b(i|the|you|need|have|want|please|thanks|yes|for|and|my|is|are|can|would|like|to|of|in|with|it|this|that|hi|hello|good|morning|afternoon|evening|crate|inches|inch|by|next|about|looking|want|send|ship|pack|protection|foam|email|quote|price|we|our|us|them|they|what|when|where|how|who|why|get|make|do|go|come|take|give|use|find|know|see|look|think|work|call|ask|tell|help|keep|let|put|seem|feel|try|leave|still|start|might|could|should|would|same|well|just|over|back|after|before|also|been|here|there|then|than|these|those|more|most|some|such|only|both|too|very|much|many|your|their|her|his|him|her|she|he|it|we|them|will|was|were|had|has|have|did|does|do|am|be|been|being|an|a|at|from|by|with|out|up|down|off|on|into|through|during|before|after|above|below|between|each|few|more|most|other|some|such|than|too|very|just|because|as|until|while|although|whether|either|neither|however|therefore|meanwhile|furthermore|accordingly|consequently|subsequently)\\b/g) || []).length;\nconst esWords = (t.match(/\\b(quiero|necesito|tengo|hola|gracias|por|sí|si|no|para|con|una|un|que|me|mi|el|la|los|las|de|en|es|son|buenas|buenos|embalar|cajón|cerrado|abierto|medidas|correo|cotización|precio|protección|espuma|soy|como|pero|cuando|donde|quien|este|esta|esto|también|muy|más|porque|ser|estar|hacer|poder|tener|deber|querer|hay|fue|era|han|del|al|le|se|lo|ya|cada|todo|toda|todos|todas|algo|alguien|nadie|nunca|siempre|antes|después|aquí|allí|ahora|luego|hoy|mañana|ayer|semana|mes|año|tiempo|momento|forma|lugar|parte|caso|tipo|manera|favor|empresa|trabajo|equipo|cliente|servicio)\\b/g) || []).length;\nconst esIngles = enWords > esWords && enWords >= 2;\nreturn [{ json: { ...ctx, idiomaOriginal: esIngles ? 'inglés' : 'español', textoOriginal: ctx.texto } }];\n"
+      }
+    },
+    {
+      "id": "tl-if-en",
+      "name": "🔀 ¿Mensaje EN?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.idiomaOriginal }}",
+              "rightValue": "inglés",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "tl-groq-entrada",
+      "name": "🔄 Traducir Entrada EN→ES",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        200
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $vars.GROQ_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: 'Eres un traductor. Traduce el siguiente mensaje al español de forma natural, conservando el tono y la intención. Devuelve ÚNICAMENTE el texto traducido, sin explicaciones ni notas.' }, { role: 'user', content: $json.textoOriginal }], temperature: 0.1, max_tokens: 500 }) }}"
+      }
+    },
+    {
+      "id": "tl-aplicar",
+      "name": "📝 Aplicar Traducción Entrada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        200
+      ],
+      "parameters": {
+        "jsCode": "\nconst prev = $('🌐 Detectar Idioma Entrada').first().json;\nconst raw = $input.first().json;\nconst traducido = raw.choices?.[0]?.message?.content?.trim() || prev.textoOriginal;\nreturn [{ json: { ...prev, texto: traducido } }];\n"
+      }
+    },
+    {
+      "id": "tl-merge-entrada",
+      "name": "🔀 Merge Idioma Entrada",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1480,
+        300
+      ],
+      "parameters": {
+        "mode": "chooseBranch",
+        "chooseBranch": {
+          "mergeByFields": {
+            "values": []
+          },
+          "options": {}
+        }
+      }
+    },
+    {
+      "id": "tl-if-resp",
+      "name": "🔀 ¿Responder EN?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2100,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $('🌐 Detectar Idioma Entrada').first().json.idiomaOriginal }}",
+              "rightValue": "inglés",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "tl-groq-salida",
+      "name": "🔄 Traducir Respuesta ES→EN",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2300,
+        100
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $vars.GROQ_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: 'You are a translator. Translate the following message to English naturally, preserving the tone and intent. Return ONLY the translated text, no explanations.' }, { role: 'user', content: $('📝 Armar Mensaje Final').first().json.mensajeRespuesta || $('📝 Armar Mensaje Final').first().json.mensaje || '' }], temperature: 0.1, max_tokens: 500 }) }}"
+      }
+    },
+    {
+      "id": "tl-msg-final",
+      "name": "📨 Mensaje Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2300,
+        300
+      ],
+      "parameters": {
+        "jsCode": "\nconst armar = .first().json;\nconst tradResp = .first().json;\n// If this came from Groq translation, extract translated text\nconst traducido = tradResp.choices?.[0]?.message?.content?.trim();\nconst mensajeFinal = traducido || armar.mensajeRespuesta || armar.mensaje || '';\nreturn [{ json: { ...armar, mensaje: mensajeFinal, mensajeRespuesta: mensajeFinal } }];\n"
+      }
+    },
+    {
+      "id": "tl-merge-salida",
+      "name": "🔀 Merge Respuesta Final",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        2500,
+        200
+      ],
+      "parameters": {
+        "mode": "chooseBranch",
+        "chooseBranch": {
+          "mergeByFields": {
+            "values": []
+          },
+          "options": {}
+        }
+      }
     }
   ],
   "connections": {
@@ -795,7 +1000,7 @@
       "main": [
         [
           {
-            "node": "▶️ 02 Contexto y Lead",
+            "node": "🌐 Detectar Idioma Entrada",
             "type": "main",
             "index": 0
           }
@@ -824,12 +1029,125 @@
       "main": [
         [
           {
-            "node": "📤 Enviar Mensaje WhatsApp",
+            "node": "🔀 ¿Responder EN?",
             "type": "main",
             "index": 0
           },
           {
             "node": "▶️ 05 Guardar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 Detectar Idioma Entrada": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Mensaje EN?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Mensaje EN?": {
+      "main": [
+        [
+          {
+            "node": "🔄 Traducir Entrada EN→ES",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔀 Merge Idioma Entrada",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "🔄 Traducir Entrada EN→ES": {
+      "main": [
+        [
+          {
+            "node": "📝 Aplicar Traducción Entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Aplicar Traducción Entrada": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Idioma Entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Merge Idioma Entrada": {
+      "main": [
+        [
+          {
+            "node": "▶️ 02 Contexto y Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Responder EN?": {
+      "main": [
+        [
+          {
+            "node": "🔄 Traducir Respuesta ES→EN",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔀 Merge Respuesta Final",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "🔄 Traducir Respuesta ES→EN": {
+      "main": [
+        [
+          {
+            "node": "📨 Mensaje Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📨 Mensaje Final": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Respuesta Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Merge Respuesta Final": {
+      "main": [
+        [
+          {
+            "node": "📤 Enviar Mensaje WhatsApp",
             "type": "main",
             "index": 0
           }
