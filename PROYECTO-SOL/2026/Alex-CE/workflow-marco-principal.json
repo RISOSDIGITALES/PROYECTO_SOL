@@ -1,0 +1,846 @@
+{
+  "id": "zAhV8gEsXD8dCrXq",
+  "name": "CE WhatsApp Engine — Marco",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🟢 CE WhatsApp Engine\n\n**Pendiente conectar:**\n- Credencial WhatsApp (Meta API) en nodo Webhook y envío\n- Token de acceso permanente de Meta\n\n**Configuración:** Airtable → PERFIL DE EMPRESA → campos WA_*",
+        "height": 200,
+        "width": 400,
+        "color": 5
+      },
+      "id": "150a8aca-a265-4401-92dc-2f76f13eb6af",
+      "name": "📋 CONFIGURACIÓN",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1136,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-ce",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "d43a7851-c74b-4c33-93e5-d99c7266880c",
+      "name": "📲 Webhook WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -848,
+        224
+      ],
+      "webhookId": "200cbd06-8278-4dc0-a4dd-33a29c9493c5"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "175c7d55-9098-486a-89ce-f219ddbf1b23",
+      "name": "✅ Responder a Meta (200)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -1472,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-hub",
+              "leftValue": "={{ $json.query?.['hub.mode'] }}",
+              "rightValue": "subscribe",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5aae3c64-67dd-4535-ab6c-e07a1a21d98c",
+      "name": "🔀 ¿Verificación o Mensaje?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -624,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query?.['hub.challenge'] }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "5eefd5ce-2350-4e8b-8a03-f3a90fad84f3",
+      "name": "✅ Responder Verificación Meta",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -400,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst entry = body.entry?.[0];\nconst changes = entry?.changes?.[0];\nconst value = changes?.value;\nconst message = value?.messages?.[0];\n\nif (!message) {\n  return [{ json: { skip: true } }];\n}\n\nconst telefono = message.from;\nconst texto = message.text?.body || '';\nconst messageId = message.id;\nconst timestamp = message.timestamp;\nconst nombreContacto = value?.contacts?.[0]?.profile?.name || '';\n\n// FIX: Deduplicación — Meta envía el mismo webhook dos veces\n// Usamos static data para recordar messageIds procesados en los últimos 60s\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.seenMessageIds) staticData.seenMessageIds = {};\n\nconst now = Date.now();\n// Limpiar entradas viejas (> 60 segundos)\nObject.keys(staticData.seenMessageIds).forEach(id => {\n  if (now - staticData.seenMessageIds[id] > 60000) delete staticData.seenMessageIds[id];\n});\n\nif (staticData.seenMessageIds[messageId]) {\n  // Mensaje duplicado — ignorar\n  return [{ json: { skip: true, skipReason: 'duplicate_messageId' } }];\n}\nstaticData.seenMessageIds[messageId] = now;\n\nreturn [{\n  json: {\n    telefono,\n    texto,\n    messageId,\n    timestamp,\n    nombreContacto,\n    skip: false\n  }\n}];"
+      },
+      "id": "a64fe455-0cf0-4a86-8d8c-04671e2d6b01",
+      "name": "🔧 Extraer Mensaje y Teléfono",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-skip",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "false"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8930d963-d81a-4740-9cb6-54ca2e85b016",
+      "name": "🔀 ¿Hay mensaje?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -176,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "id": "9b51a564-7a9f-42af-8aca-db6dbbd2074c",
+      "name": "⏰ Trigger Follow-up Check",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -848,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filterByFormula",
+              "value": "AND(OR({Estado}='Calificado',{Estado}='Nuevo',{Estado}='En calificación'),IS_BEFORE({Ultima_Interaccion}, DATEADD(NOW(),-23,'hours')))"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer AIRTABLE_TOKEN_REDACTED"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e556b0a3-d260-4f1d-a2c0-94ede1f52634",
+      "name": "📋 Obtener Leads Sin Respuesta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -624,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst records = data.records || [];\nconst now = new Date();\nconst results = [];\n\nfor (const record of records) {\n  const fields = record.fields;\n  const ultimaInteraccion = new Date(fields.Ultima_Actividad);\n  const horasDiff = (now - ultimaInteraccion) / (1000 * 60 * 60);\n  \n  let tipoFollowup = null;\n  if (horasDiff >= 72) tipoFollowup = '72h';\n  else if (horasDiff >= 24) tipoFollowup = '24h';\n  \n  if (tipoFollowup) {\n    results.push({\n      json: {\n        recordId: record.id,\n        telefono: fields.Telefono,\n        nombre: fields.Nombre,\n        tipoFollowup,\n        estado: fields.Estado\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "2f08aeac-7fa5-48b5-9ad2-8a177e0ca547",
+      "name": "🔧 Procesar Follow-ups",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/PERFIL%20DE%20EMPRESA",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "maxRecords",
+              "value": "1"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer AIRTABLE_TOKEN_REDACTED"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7ff2616f-22e5-4937-9055-9a28469c2bac",
+      "name": "📊 Config para Follow-up",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -176,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer EAALcI7uQ5DkBRQZCmn8bV2laZBaYe929AtdjIw4NZCKnuOZB0i2ZApaUXvEYiwcXUZCM4ZBRCQZAYq36ioDOZANd1F2pZCncwvhGuUMmAafdP3GBwXWXbA56TvBAyv7xH8hVvfpcUbhWzYhHlGvOVnhve0ZAxYJCZApm9fn5ampBTR6ZBZCTJRseZCAR4K2xNmyTPSVcAZDZD"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.telefono, type: 'text', text: { body: $json.tipoFollowup === '24h' ? $('📊 Config para Follow-up').item.json.records[0].fields.WA_FollowUp_24h : $('📊 Config para Follow-up').item.json.records[0].fields.WA_FollowUp_72h } }) }}",
+        "options": {}
+      },
+      "id": "134619df-061e-4d5e-a594-3654a3b82703",
+      "name": "📤 Enviar Follow-up WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        48,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads/{{ $json.recordId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer AIRTABLE_TOKEN_REDACTED"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: { Estado: 'Follow-up ' + $json.tipoFollowup, Ultima_Interaccion: new Date().toISOString() } }) }}",
+        "options": {}
+      },
+      "id": "f5a8fd8c-aac2-434a-bff0-6318dc1d7e9f",
+      "name": "🔄 Actualizar Estado Follow-up",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        256,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v17.0/1083260611538246/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.IG_ACCESS_TOKEN}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"messaging_product\": \"whatsapp\", \"status\": \"read\", \"message_id\": \"{{ $('🔧 Extraer Mensaje y Teléfono').item.json.messageId }}\"}",
+        "options": {}
+      },
+      "id": "f325db75-0569-4718-8771-75dbe6ad57c4",
+      "name": "✅ Marcar como Leído",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        432,
+        -192
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        624,
+        1248
+      ],
+      "typeVersion": 1,
+      "id": "26b1918c-5f16-48a2-bb60-5d330a37b87a",
+      "name": "Sticky Note"
+    },
+    {
+      "id": "wait-race-condition",
+      "name": "⏱️ Esperar (anti-race)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1060,
+        300
+      ],
+      "webhookId": "wait-race-condition",
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 4,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "n-merge",
+      "name": "🔀 Fusionar Datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const extract = $('🔧 Extraer Mensaje y Teléfono').item.json;\nconst ctx02 = $('▶️ 02 Contexto y Lead').item.json;\nreturn [{ json: { ...extract, ...ctx02 } }];"
+      }
+    },
+    {
+      "id": "n-exec02",
+      "name": "▶️ 02 Contexto y Lead",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        860,
+        300
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": "s1Z7jKoFzy5x7XvC",
+        "mode": "once",
+        "inputData": "={{ [{ json: $json }] }}"
+      }
+    },
+    {
+      "id": "n-exec01",
+      "name": "▶️ 01 Clasificador",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        300
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": "1PXcg3dOQBt8hrrT",
+        "mode": "once",
+        "inputData": "={{ [{ json: $json }] }}"
+      }
+    },
+    {
+      "id": "n-exec03",
+      "name": "▶️ 03 Generador IA",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        1580,
+        300
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": "J8qbKOF7t4GnhRDT",
+        "mode": "once",
+        "inputData": "={{ [{ json: $json }] }}"
+      }
+    },
+    {
+      "id": "n-sendwa",
+      "name": "📤 Enviar Mensaje WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2060,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer EAALcI7uQ5DkBRQZCmn8bV2laZBaYe929AtdjIw4NZCKnuOZB0i2ZApaUXvEYiwcXUZCM4ZBRCQZAYq36ioDOZANd1F2pZCncwvhGuUMmAafdP3GBwXWXbA56TvBAyv7xH8hVvfpcUbhWzYhHlGvOVnhve0ZAxYJCZApm9fn5ampBTR6ZBZCTJRseZCAR4K2xNmyTPSVcAZDZD"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: \"whatsapp\", to: $json.telefono, type: \"text\", text: { body: $json.mensaje || $json.mensajeRespuesta } }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n-exec05",
+      "name": "▶️ 05 Guardar Lead",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        2300,
+        300
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": "PqbfMghL0E7xKflC",
+        "mode": "once",
+        "inputData": "={{ [{ json: $json }] }}"
+      }
+    },
+    {
+      "id": "n-ifhot",
+      "name": "🔀 ¿Lead Caliente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2540,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "combinator": "or",
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $('📝 Armar Mensaje Final').item.json.clasificacion }}",
+              "rightValue": "Caliente",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "2",
+              "leftValue": "={{ $('📝 Armar Mensaje Final').item.json.clasificacion }}",
+              "rightValue": "Consulta",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n-gmail",
+      "name": "📧 Notificar Vendedor",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2780,
+        200
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TESHSjzjMCpCxBBk",
+          "name": "Gmail account"
+        }
+      },
+      "parameters": {
+        "sendTo": "={{ $('📝 Armar Mensaje Final').item.json.emailVendedor?.split('\\n').join(',') || 'risosadmi@gmail.com' }}",
+        "subject": "={{ $('📝 Armar Mensaje Final').item.json.clasificacion === 'Consulta' ? '💬 Consulta sin respuesta — ' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.nombre_cliente || $('📝 Armar Mensaje Final').item.json.telefono) : '🔥 Lead Caliente WhatsApp — ' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.nombre_cliente || $('📝 Armar Mensaje Final').item.json.telefono) }}",
+        "message": "={{ $('📝 Armar Mensaje Final').item.json.clasificacion === 'Consulta'\n  ? '<table style=\"font-family:Arial,sans-serif;font-size:14px;border-collapse:collapse;width:100%\"><tr><td colspan=2 style=\"background:#2196F3;color:white;padding:12px 16px;font-size:16px;font-weight:bold\">💬 Consulta sin respuesta — necesita agente</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Cliente</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.nombre_cliente || '(sin nombre)') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Teléfono</td><td style=\"padding:8px 16px\">+' + $('📝 Armar Mensaje Final').item.json.telefono + '</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Correo</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.correo_contacto || '(no proporcionado — contactar por WhatsApp)') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Consulta</td><td style=\"padding:8px 16px\">' + ($('📝 Armar Mensaje Final').item.json.temaConsulta || $('📝 Armar Mensaje Final').item.json.texto || '(ver historial)') + '</td></tr><tr><td colspan=2 style=\"padding:8px 16px;color:#888;font-size:12px\">Marco no pudo responder esta consulta. El cliente espera ser contactado por un agente.</td></tr></table>'\n  : '<table style=\"font-family:Arial,sans-serif;font-size:14px;border-collapse:collapse;width:100%\"><tr><td colspan=2 style=\"background:#ff4444;color:white;padding:12px 16px;font-size:16px;font-weight:bold\">🔥 Lead Caliente — cotización aceptada</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Cliente</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.nombre_cliente || '(sin nombre)') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Teléfono</td><td style=\"padding:8px 16px\">+' + $('📝 Armar Mensaje Final').item.json.telefono + '</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Correo</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.correo_contacto || '—') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Producto</td><td style=\"padding:8px 16px\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.producto || '—') + '</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Medidas</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.medidas || '—') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Fecha</td><td style=\"padding:8px 16px\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.fecha || '—') + '</td></tr></table>'\n}}",
+        "options": {
+          "contentType": "html"
+        }
+      },
+      "webhookId": "9df59eff-5fba-4263-83ac-5cdb62a63eec"
+    },
+    {
+      "id": "n-bridge",
+      "name": "🔗 Preparar Contexto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const ext = $('🔧 Extraer Mensaje y Teléfono').first().json;\nreturn [{ json: { telefono: ext.telefono, texto: ext.texto, nombreContacto: ext.nombreContacto || '' } }];"
+      }
+    },
+    {
+      "id": "n-cotizador-http",
+      "name": "💰 API Cotizador",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1820,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://cratingcotiza.mdarthurdigital.com/api/cotizar",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "tipo_caja",
+              "value": "={{ $json.datosRecolectados?.tipo_cajon || $json.tipoCajaApi || 'cajones_cerrados' }}"
+            },
+            {
+              "name": "cant",
+              "value": "=1"
+            },
+            {
+              "name": "largo",
+              "value": "={{ $json.dimensiones?.largo || 100 }}"
+            },
+            {
+              "name": "ancho",
+              "value": "={{ $json.dimensiones?.ancho || 50 }}"
+            },
+            {
+              "name": "alto",
+              "value": "={{ $json.dimensiones?.alto || 50 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n-armar-mensaje",
+      "name": "📝 Armar Mensaje Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2060,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const ctx = $('▶️ 03 Generador IA').first().json;\nconst d = ctx.datosRecolectados || {};\n\n// Only show price if all data collected and not already sent\n// Use proximoPaso from 01 Clasificador as source of truth — includes all checks (correo, proteccion, etc.)\nif (ctx.proximoPaso !== 'LISTO_PARA_COTIZAR' || ctx.cotizacionEnviada) {\n  return [{ json: { ...ctx } }];\n}\n\n// Read precio from HTTP node result\nconst apiResp = $input.first().json;\nconst precio = apiResp?.data?.precio_total || apiResp?.precio_total || null;\n\nconst idioma = ctx.idiomaConversacion || 'español';\nconst nombre = d.nombre_cliente ? `, ${d.nombre_cliente.split(' ')[0]}` : '';\nconst tieneProteccion = d.proteccion_extra === true || d.proteccion_extra === 'true';\n\nlet mensajeFinal;\nif (precio) {\n  if (idioma === 'inglés') {\n    mensajeFinal = `Here is your estimate${nombre}! 🎉\\n\\n📦 *${d.producto || 'Crate'}*\\n📐 Dimensions: ${d.medidas || '—'}\"\\n🗓 Needed by: ${d.fecha || '—'}\\n🛡 Extra protection: ${tieneProteccion ? 'Yes' : 'No'}\\n\\n💵 *Estimated price: $${precio} USD*\\n_This is an estimate. The final price may vary after inspection._\\n\\nWould you like a formal quote sent to your email?`;\n  } else {\n    mensajeFinal = `¡Aquí está tu estimado${nombre}! 🎉\\n\\n📦 *${d.producto || 'Cajón'}*\\n📐 Medidas: ${d.medidas || '—'}\"\\n🗓 Para: ${d.fecha || '—'}\\n🛡 Protección extra: ${tieneProteccion ? 'Sí' : 'No'}\\n\\n💵 *Precio estimado: $${precio} USD*\\n_Este es un estimado. El precio final puede variar luego de la inspección._\\n\\n¿Le gustaría que le enviemos la cotización formal a su correo?`;\n  }\n} else {\n  mensajeFinal = ctx.mensaje;\n}\n\nreturn [{ json: {\n  ...ctx,\n  mensaje: mensajeFinal,\n  mensajeRespuesta: mensajeFinal,\n  cotizadorEnviado: !!precio\n} }];"
+      }
+    }
+  ],
+  "connections": {
+    "📲 Webhook WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Verificación o Mensaje?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Verificación o Mensaje?": {
+      "main": [
+        [
+          {
+            "node": "✅ Responder Verificación Meta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "✅ Responder a Meta (200)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔧 Extraer Mensaje y Teléfono",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Extraer Mensaje y Teléfono": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Hay mensaje?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Hay mensaje?": {
+      "main": [
+        [
+          {
+            "node": "⏱️ Esperar (anti-race)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "✅ Marcar como Leído",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏰ Trigger Follow-up Check": {
+      "main": [
+        [
+          {
+            "node": "📋 Obtener Leads Sin Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Obtener Leads Sin Respuesta": {
+      "main": [
+        [
+          {
+            "node": "🔧 Procesar Follow-ups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Procesar Follow-ups": {
+      "main": [
+        [
+          {
+            "node": "📊 Config para Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Config para Follow-up": {
+      "main": [
+        [
+          {
+            "node": "📤 Enviar Follow-up WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Enviar Follow-up WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "🔄 Actualizar Estado Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ 02 Contexto y Lead": {
+      "main": [
+        [
+          {
+            "node": "🔀 Fusionar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Fusionar Datos": {
+      "main": [
+        [
+          {
+            "node": "▶️ 01 Clasificador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ 01 Clasificador": {
+      "main": [
+        [
+          {
+            "node": "▶️ 03 Generador IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ 03 Generador IA": {
+      "main": [
+        [
+          {
+            "node": "💰 API Cotizador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ 05 Guardar Lead": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Lead Caliente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Lead Caliente?": {
+      "main": [
+        [
+          {
+            "node": "📧 Notificar Vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "✅ Marcar como Leído": {
+      "main": [
+        [
+          {
+            "node": "🔗 Preparar Contexto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 Preparar Contexto": {
+      "main": [
+        [
+          {
+            "node": "▶️ 02 Contexto y Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💰 API Cotizador": {
+      "main": [
+        [
+          {
+            "node": "📝 Armar Mensaje Final",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📝 Armar Mensaje Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Armar Mensaje Final": {
+      "main": [
+        [
+          {
+            "node": "📤 Enviar Mensaje WhatsApp",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "▶️ 05 Guardar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
