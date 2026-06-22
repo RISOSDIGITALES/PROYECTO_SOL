@@ -411,7 +411,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "// Determine which extractor has the message (WA or Social)\nlet msgData;\ntry { msgData = $('🔧 Extraer Mensaje WA').item.json; } catch(e) {}\nif (!msgData || msgData.skip) {\n  try { msgData = $('🔧 Extraer Mensaje FB/IG DM').item.json; } catch(e) {}\n}\n\nconst texto = msgData?.texto || '';\nconst telefono = msgData?.telefono || '';\nconst canal = msgData?.canal || 'whatsapp';\nconst nombreContacto = msgData?.nombreContacto || '';\nconst usuarioId = msgData?.usuarioId || '';\nconst messageId = msgData?.messageId || '';\n\n// Empresa\nconst empresaRaw = $('🏢 Obtener Empresa G54').item.json;\nconst empresa = empresaRaw?.data || empresaRaw || {};\nconst empresa_nombre = empresa.name || 'Empresa';\nconst empresa_descripcion = empresa.description || '';\nconst empresa_ciudad = empresa.base_city || '';\nconst empresa_web = empresa.website || '';\nconst emailsVendedor = (empresa.emails || []).join(',') || '';\n\n// WA Config (todo desde G54)\nconst waConfigRaw = $('⚙️ Obtener WA Config G54').item.json;\nconst waConfig = waConfigRaw?.data || {};\n\nconst nombre_agente = waConfig.agent_name || waFallbacks[company_id_ctx]?.agent_name || 'Agente';\nconst company_id_ctx = $('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID || '1';\n// TEMPORAL: fallback WA config por empresa hasta que G54 implemente el endpoint\nconst waFallbacks = {\n  '4': { wa_access_token: 'EAALcI7uQ5DkBR3tiFT6ZARPPifawlapbpk8K4HqXh6UwLEA5mzipfwnievBsIPkMWO0p9KqiHem9p9qoFGij3AjpPZArfNfaHlsMOY5ZA8qrfZC37Kda78RnSNsBPWInLJCk9vHqR1KKCc2mSB8rtknkWxm7owyCAm2ba9a3gvZBbXZBbLck19jR3R9nXmPTXq86b2XW5itiCJhVWcTcWZCwBSE8QwH3BUcxQIePGHDLU2pmEpQbGNJN4lo53qtgmmUj6A2kr33PhkiMfpuqoZACAAZDZD', phone_number_id: '115205587860416', agent_name: 'Asistente Orison' }\n};\nconst wa_access_token = waConfig.wa_access_token || waFallbacks[company_id_ctx]?.wa_access_token || '';\nconst phone_number_id = waConfig.phone_number_id || waFallbacks[company_id_ctx]?.phone_number_id || '';\nconst bienvenida = waConfig.welcome_message || `Hola 👋 Soy ${nombre_agente}, el asistente de ${empresa_nombre}. ¿En qué te puedo ayudar?`;\nconst instruccionesIA = waConfig.ia_instructions || '';\nconst promptTemplate = waConfig.system_prompt || `Eres {{AGENTE}}, asistente virtual de {{EMPRESA}}. Ayuda al cliente a conocer los productos y servicios disponibles. Catálogo:\\n{{CATALOGO}}\\n{{INSTRUCCIONES}}`;\nconst followup24 = waConfig.followup_24h || '';\nconst followup72 = waConfig.followup_72h || '';\n\n// Productos\nconst productosRaw = $('📦 Obtener Productos G54').item.json;\nconst productos = productosRaw?.data || [];\nconst catalogoProductos = productos.map(p => {\n  const nombre = p.name || '';\n  const desc = p.description || '';\n  const kw = (p.keywords || []).join(', ');\n  return `• ${nombre}: ${desc}${kw ? ' [' + kw + ']' : ''}`;\n}).filter(l => l.length > 3).join('\\n');\n\n// Lead existente\nconst leadRaw = $('📋 Buscar Lead Existente').item.json;\nconst leads = leadRaw?.data || [];\nconst leadExistente = leads[0] || null;\nconst leadId = leadExistente?.id || null;\nconst leadDatos = leadExistente?.datos || {};\nconst estado = leadExistente?.estado || 'Nuevo';\nconst historial = leadExistente?.historial || '';\nconst esNuevo = !leadId;\n\n// datos_actualizados is a free object — the prompt defines what to collect\n// We carry over whatever was stored previously and let AI merge\nconst datosRecolectados = typeof leadDatos === 'object' ? leadDatos : {};\n\n// Build prompt — replace placeholders\nconst promptSistema = promptTemplate\n  .replace(/\\{\\{AGENTE\\}\\}/g, nombre_agente)\n  .replace(/\\{\\{EMPRESA\\}\\}/g, empresa_nombre)\n  .replace(/\\{\\{CATALOGO\\}\\}/g, catalogoProductos || '(sin catálogo disponible)')\n  .replace(/\\{\\{INSTRUCCIONES\\}\\}/g, instruccionesIA ? 'Instrucciones adicionales:\\n' + instruccionesIA : '')\n  .trim();\n\n// Hora local (Miami UTC-4)\nconst h = (new Date().getUTCHours() - 4 + 24) % 24;\nconst saludoHora = h >= 6 && h < 12 ? 'buenos días' : h >= 12 && h < 19 ? 'buenas tardes' : 'buenas noches';\n\nreturn [{ json: {\n  // Message\n  texto,\n  telefono,\n  canal,\n  nombreContacto,\n  usuarioId,\n  messageId,\n  // Context\n  promptSistema,\n  nombre_agente,\n  empresa_nombre,\n  empresa_descripcion,\n  empresa_ciudad,\n  empresa_web,\n  emailsVendedor,\n  bienvenida,\n  followup24,\n  followup72,\n  catalogoProductos,\n  // WA credentials (from G54 config)\n  wa_access_token,\n  phone_number_id,\n  // Lead\n  leadId,\n  estado,\n  historial,\n  datosRecolectados,\n  esNuevo,\n  saludoHora\n} }];"
+        "jsCode": "// Determine which extractor has the message (WA or Social)\nlet msgData;\ntry { msgData = $('🔧 Extraer Mensaje WA').item.json; } catch(e) {}\nif (!msgData || msgData.skip) {\n  try { msgData = $('🔧 Extraer Mensaje FB/IG DM').item.json; } catch(e) {}\n}\n\nconst texto = msgData?.texto || '';\nconst telefono = msgData?.telefono || '';\nconst canal = msgData?.canal || 'whatsapp';\nconst nombreContacto = msgData?.nombreContacto || '';\nconst usuarioId = msgData?.usuarioId || '';\nconst messageId = msgData?.messageId || '';\n\n// Empresa\nconst empresaRaw = $('🏢 Obtener Empresa G54').item.json;\nconst empresa = empresaRaw?.data || empresaRaw || {};\nconst empresa_nombre = empresa.name || 'Empresa';\nconst empresa_descripcion = empresa.description || '';\nconst empresa_ciudad = empresa.base_city || '';\nconst empresa_web = empresa.website || '';\nconst emailsVendedor = (empresa.emails || []).join(',') || '';\n\n// WA Config (todo desde G54)\nconst waConfigRaw = $('⚙️ Obtener WA Config G54').item.json;\nconst waConfig = waConfigRaw?.data || {};\n\nconst nombre_agente = waConfig.agent_name || waFallbacks[company_id_ctx]?.agent_name || 'Agente';\nconst company_id_ctx = $('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID || '1';\n// TEMPORAL: fallback WA config por empresa hasta que G54 implemente el endpoint\nconst waFallbacks = {\n  '4': { wa_access_token: 'EAALcI7uQ5DkBR3tiFT6ZARPPifawlapbpk8K4HqXh6UwLEA5mzipfwnievBsIPkMWO0p9KqiHem9p9qoFGij3AjpPZArfNfaHlsMOY5ZA8qrfZC37Kda78RnSNsBPWInLJCk9vHqR1KKCc2mSB8rtknkWxm7owyCAm2ba9a3gvZBbXZBbLck19jR3R9nXmPTXq86b2XW5itiCJhVWcTcWZCwBSE8QwH3BUcxQIePGHDLU2pmEpQbGNJN4lo53qtgmmUj6A2kr33PhkiMfpuqoZACAAZDZD', phone_number_id: '115205587860416', agent_name: 'Asistente Orison', auto_reply: false }\n};\nconst wa_access_token = waConfig.wa_access_token || waFallbacks[company_id_ctx]?.wa_access_token || '';\nconst phone_number_id = waConfig.phone_number_id || waFallbacks[company_id_ctx]?.phone_number_id || '';\nconst auto_reply = waConfig.auto_reply !== undefined ? waConfig.auto_reply : (waFallbacks[company_id_ctx]?.auto_reply !== undefined ? waFallbacks[company_id_ctx].auto_reply : true);\nconst bienvenida = waConfig.welcome_message || `Hola 👋 Soy ${nombre_agente}, el asistente de ${empresa_nombre}. ¿En qué te puedo ayudar?`;\nconst instruccionesIA = waConfig.ia_instructions || '';\nconst promptTemplate = waConfig.system_prompt || `Eres {{AGENTE}}, asistente virtual de {{EMPRESA}}. Ayuda al cliente a conocer los productos y servicios disponibles. Catálogo:\\n{{CATALOGO}}\\n{{INSTRUCCIONES}}`;\nconst followup24 = waConfig.followup_24h || '';\nconst followup72 = waConfig.followup_72h || '';\n\n// Productos\nconst productosRaw = $('📦 Obtener Productos G54').item.json;\nconst productos = productosRaw?.data || [];\nconst catalogoProductos = productos.map(p => {\n  const nombre = p.name || '';\n  const desc = p.description || '';\n  const kw = (p.keywords || []).join(', ');\n  return `• ${nombre}: ${desc}${kw ? ' [' + kw + ']' : ''}`;\n}).filter(l => l.length > 3).join('\\n');\n\n// Lead existente\nconst leadRaw = $('📋 Buscar Lead Existente').item.json;\nconst leads = leadRaw?.data || [];\nconst leadExistente = leads[0] || null;\nconst leadId = leadExistente?.id || null;\nconst leadDatos = leadExistente?.datos || {};\nconst estado = leadExistente?.estado || 'Nuevo';\nconst historial = leadExistente?.historial || '';\nconst esNuevo = !leadId;\n\n// datos_actualizados is a free object — the prompt defines what to collect\n// We carry over whatever was stored previously and let AI merge\nconst datosRecolectados = typeof leadDatos === 'object' ? leadDatos : {};\n\n// Build prompt — replace placeholders\nconst promptSistema = promptTemplate\n  .replace(/\\{\\{AGENTE\\}\\}/g, nombre_agente)\n  .replace(/\\{\\{EMPRESA\\}\\}/g, empresa_nombre)\n  .replace(/\\{\\{CATALOGO\\}\\}/g, catalogoProductos || '(sin catálogo disponible)')\n  .replace(/\\{\\{INSTRUCCIONES\\}\\}/g, instruccionesIA ? 'Instrucciones adicionales:\\n' + instruccionesIA : '')\n  .trim();\n\n// Hora local (Miami UTC-4)\nconst h = (new Date().getUTCHours() - 4 + 24) % 24;\nconst saludoHora = h >= 6 && h < 12 ? 'buenos días' : h >= 12 && h < 19 ? 'buenas tardes' : 'buenas noches';\n\nreturn [{ json: {\n  // Message\n  texto,\n  telefono,\n  canal,\n  nombreContacto,\n  usuarioId,\n  messageId,\n  // Context\n  promptSistema,\n  nombre_agente,\n  empresa_nombre,\n  empresa_descripcion,\n  empresa_ciudad,\n  empresa_web,\n  emailsVendedor,\n  bienvenida,\n  followup24,\n  followup72,\n  catalogoProductos,\n  // WA credentials (from G54 config)\n  wa_access_token,\n  phone_number_id,\n  auto_reply,\n  // Lead\n  leadId,\n  estado,\n  historial,\n  datosRecolectados,\n  esNuevo,\n  saludoHora\n} }];"
       }
     },
     {
@@ -671,6 +671,37 @@
       "webhookId": "typing-delay-sales-ai",
       "parameters": {
         "amount": 3
+      }
+    },
+    {
+      "id": "if-auto-reply",
+      "name": "🔀 ¿Auto Reply?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3980,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "ar1",
+              "leftValue": "={{ $('🔧 Preparar Contexto IA').item.json.auto_reply }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
       }
     },
     {
@@ -1393,7 +1424,25 @@
       "main": [
         [
           {
+            "node": "🔀 ¿Auto Reply?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Auto Reply?": {
+      "main": [
+        [
+          {
             "node": "🔀 ¿Canal Social?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔀 ¿Crear o Actualizar Lead?",
             "type": "main",
             "index": 0
           }
