@@ -80,19 +80,15 @@
       <div class="card red">
         <h3>❌ Endpoints G54 que retornan 404</h3>
         <ul>
-          <li><span class="badge fail">404</span> GET /api/n8n/companies/{id}/wa/leads</li>
-          <li><span class="badge fail">404</span> GET /api/n8n/companies/{id}/whatsapp/config</li>
-          <li><span class="badge fail">404</span> GET /api/n8n/wa-phones/{phone_number_id}</li>
-          <li><span class="badge fail">404</span> POST /api/agent/wa/leads</li>
-          <li><span class="badge fail">404</span> PATCH /api/agent/wa/leads/{id}</li>
-          <li><span class="badge fail">404</span> DELETE /api/agent/rrss/ideas/{id}</li>
+          <li><span class="badge fail">404</span> GET /api/n8n/companies/{id}/wa/leads?phone={numero} — historial de conversación por teléfono</li>
+          <li><span class="badge fail">404</span> DELETE /api/agent/rrss/ideas/{id} — eliminar idea desde panel</li>
         </ul>
       </div>
       <div class="card yellow">
         <h3>⚠️ Funcionalidades parciales</h3>
         <ul>
-          <li><span class="badge partial">PARCIAL</span> Multi-tenant: query param ✅, resolución por phone_id ❌</li>
-          <li><span class="badge partial">PARCIAL</span> Community AI: recibe ✅, guarda lead ❌ (404)</li>
+          <li><span class="badge partial">PARCIAL</span> Multi-tenant: query param ✅, resolución automática por phone_id pendiente</li>
+          <li><span class="badge partial">PARCIAL</span> Community AI: recibe ✅, guarda lead via /api/agent/whatsapp/inbound ✅ (corregido)</li>
           <li><span class="badge partial">PARCIAL</span> Sales AI: recibe/clasifica ✅, respuesta manual ❌</li>
           <li><span class="badge partial">PARCIAL</span> WA Reply: webhook n8n ✅, botón panel ❌</li>
           <li><span class="badge partial">PARCIAL</span> Distribution: publica ✅, token por empresa ❌</li>
@@ -126,7 +122,7 @@
             <td><span class="priority p1">P1</span></td>
             <td><strong>Configuración WA por empresa desde panel</strong></td>
             <td>Actualmente los tokens de WhatsApp (wa_access_token, phone_number_id) están hardcodeados en el código de n8n. Cada vez que cambia un token hay que pedirle al desarrollador que lo cambie.</td>
-            <td>Panel admin → Empresa → sección WhatsApp → campos: <code>phone_number_id</code>, <code>wa_access_token</code>.<br>Endpoint lectura: <code>GET /api/n8n/companies/{id}/whatsapp/config</code><br>Retorna: <code>{ wa_access_token, phone_number_id, agent_name, system_prompt, welcome_message, followup_24h, followup_72h }</code></td>
+            <td>Panel admin → Empresa → sección WhatsApp → campos: <code>phone_number_id</code>, <code>wa_access_token</code>.<br>Sales AI Motor ya lee estos datos via <code>GET /api/agent/wa/empresa-by-phone/{phone_number_id}</code>. Solo se necesita que el panel permita cargarlos — el endpoint de lectura ya existe.</td>
           </tr>
           <tr>
             <td><span class="priority p1">P1</span></td>
@@ -149,20 +145,20 @@
           <tr>
             <td><span class="priority p2">P2</span></td>
             <td><strong>Guardar leads de Community AI (FB/IG)</strong></td>
-            <td>Community AI recibe comentarios y DMs de FB/IG y los clasifica, pero no puede guardar el lead en G54 porque el endpoint retorna 404.</td>
-            <td>Falta: <code>POST /api/agent/wa/leads</code><br>Body: <code>{ empresa_id, phone, contact_name, clasificacion, messages[] }</code></td>
+            <td>Community AI recibe comentarios y DMs de FB/IG y los clasifica. Ya fue corregido para guardar via <code>POST /api/agent/whatsapp/inbound</code> igual que Sales AI Motor.</td>
+            <td>✅ Corregido — usa <code>POST /api/agent/whatsapp/inbound</code>. Sin pendiente de backend.</td>
           </tr>
           <tr>
             <td><span class="priority p2">P2</span></td>
             <td><strong>Actualizar estado de lead</strong></td>
-            <td>El Sales AI Motor no puede actualizar el estado de un lead existente (de "Nuevo" a "En calificación", etc.).</td>
-            <td>Falta: <code>PATCH /api/agent/wa/leads/{id}</code><br>Body: <code>{ estado, clasificacion, datos_actualizados, historial }</code></td>
+            <td>Cada mensaje del Sales AI Motor se guarda como una entrada nueva en <code>/api/agent/whatsapp/inbound</code>. Actualmente no hay forma de actualizar el estado de un lead existente (Nuevo → En calificación → Calificado).</td>
+            <td>¿Existe un endpoint para actualizar estado de conversación existente? Si no, se necesita uno o que <code>/api/agent/whatsapp/inbound</code> acepte un campo <code>lead_id</code> para hacer update en lugar de insert.</td>
           </tr>
           <tr>
             <td><span class="priority p2">P2</span></td>
             <td><strong>Resolución de empresa por phone_number_id</strong></td>
             <td>Para multi-tenant completo, cuando llega un mensaje WA necesitamos saber a qué empresa pertenece ese número automáticamente, sin depender del query param ?company=N.</td>
-            <td>Falta: <code>GET /api/n8n/wa-phones/{phone_number_id}</code><br>Retorna: <code>{ company_id, wa_access_token, phone_number_id }</code></td>
+            <td>Sales AI Motor ya usa <code>GET /api/agent/wa/empresa-by-phone/{phone_number_id}</code>. Solo se necesita que ese endpoint devuelva <code>company_id</code> para que el query param sea opcional.</td>
           </tr>
           <tr>
             <td><span class="priority p3">P3</span></td>
@@ -266,8 +262,8 @@ Body: { "company_id": "N" }
           <h4>💬 Community AI v1.0</h4>
           <span><span class="dot yellow"></span></span>
         </div>
-        <p><strong>Funciona:</strong> Recibe comentarios/DMs de FB/IG, responde con Groq, detecta leads.</p>
-        <p style="margin-top:6px;"><strong>Falla:</strong> <code>POST /api/agent/wa/leads</code> retorna 404 — los leads de Community AI no se guardan en G54.</p>
+        <p><strong>Funciona:</strong> Recibe comentarios/DMs de FB/IG, responde con Groq, detecta leads, guarda en G54 via <code>POST /api/agent/whatsapp/inbound</code>.</p>
+        <p style="margin-top:6px;"><strong>Falla:</strong> Tokens FB/IG hardcodeados — no es multi-tenant todavía.</p>
         <p style="margin-top:6px;"><strong>ID n8n:</strong> <code>62tIvF0snsrMj0sM</code> · Activo</p>
       </div>
 
