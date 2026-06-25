@@ -71,10 +71,10 @@ SOCIAL MEDIA → TRAFFIC → WEBSITE → LEADS → SALES → RETARGETING (SEM)
 
 ### Config node n8n (⚙️ Config Growth54):
 ```
-G54_BASE_URL   = https://apigrowth.mdarthurdigital.com
-G54_N8N_TOKEN  = ""  (vacío = dev mode, acepta sin auth)
-G64_AGENT_TOKEN = "" (vacío = dev mode, acepta sin auth)
-G54_COMPANY_ID = 1   (Crating Express)
+G54_BASE_URL    = https://apigrowth.mdarthurdigital.com
+G54_N8N_TOKEN   = ""  (vacío = dev mode, acepta sin auth)
+G54_AGENT_TOKEN = g54_agent_produccion_2026
+G54_COMPANY_ID  = 1   (Crating Express)
 ```
 
 ### Datos en G54 para Crating Express (company_id=1):
@@ -108,7 +108,9 @@ G54_COMPANY_ID = 1   (Crating Express)
 6. ✅ **Analytics AI Semanal** — reporte lunes 8am. ID: `ocQAzbiftXXOfjct`. Archivo: `workflow-analytics-ai-g54.json`
 7. ✅ **Analytics AI Mensual** — reporte día 1 de cada mes. ID: `BrH8GNURlqynJK1H`. Archivo: `workflow-analytics-ai-mensual-g54.json`
 
-**Todos activos en n8n** (2026-06-04). Alex CE (`zAhV8gEsXD8dCrXq`, path `whatsapp-ce`) es independiente e intocable.
+**Todos activos en n8n** (2026-06-25). Alex CE (`zAhV8gEsXD8dCrXq`, path `whatsapp-ce`) es independiente e intocable.
+
+> **Nota equipo:** G54 y este proyecto son desarrollados por dos personas: el usuario (risosadmi@gmail.com) y Walter (ingeniero). NO hay un equipo externo. El frontend del panel admin de G54 (`growth.mdarthurdigital.com/admin`) no está en ningún repositorio conocido — pendiente confirmar con Walter dónde vive ese código.
 
 ### Framework 8 pasos (Content AI v1.3):
 1. Intención de búsqueda (informacional/comercial/transaccional/local)
@@ -130,15 +132,18 @@ G54_COMPANY_ID = 1   (Crating Express)
 - ✅ 0 tokens hardcodeados
 
 ### Community AI v1.0 — Detalles
+- **ID n8n:** `62tIvF0snsrMj0sM` — activo ✅
 - Webhook: `community-ai-g54` — recibe comentarios FB/IG y DMs
-- Nodo `🔀 ¿Verificación o Evento?` responde hub.challenge para registro en Meta
+- **Nodo GET de verificación:** `🔔 Webhook GET: Verificación Meta` en mismo path — responde `hub.challenge` para registro en Meta ✅
 - Extrae: plataforma, tipo (comentario/dm), mensaje, usuarioId, pageId
 - Multi-tenant: lee `?company=N` del query param
+- **Lookup dinámico de página:** llama `GET /api/n8n/pages/{page_id}` → obtiene `fb_access_token` e `ig_user_id` desde G54 en lugar de valores hardcodeados
+- Nodo `🏢 Aplicar Config Empresa` hace merge: query param > respuesta G54 > fallback CE
 - Groq llama-3.3-70b-versatile → respuesta pública máx 3 oraciones
 - Output estructurado: INTENCIÓN / RESPUESTA / LEAD / PREGUNTA / SIGUIENTE PASO
 - Si lead != frío → guarda en G54 via `POST /api/agent/wa/leads`
 - Rutas de respuesta: FB comentario → `/{id}/comments`, IG → `/{id}/replies`, DM → `/me/messages`
-- **PENDIENTE:** registrar webhook en Meta for Developers de CE (ver sección Multi-tenant abajo)
+- **✅ Webhook registrado en Meta** (2026-06-25): app "CRATING EXPRESS RRSS" → Page webhooks → URL `https://n8n.mdarthurdigital.com/webhook/community-ai-g54?company=1` — campos suscritos: `feed`, `messages`
 
 ### Sales AI / WA Engine Motor — Detalles
 - **ID:** `eCOX3ogMjToxZsh9` — activo en n8n ✅ (2026-06-04)
@@ -154,7 +159,8 @@ G54_COMPANY_ID = 1   (Crating Express)
 - Si clasificacion=caliente → email al vendedor via Gmail (emails desde perfil G54)
 - Follow-up horario: lee leads sin respuesta → envía mensajes 24h/72h desde WA Config G54
 - Token WA y FB/IG vienen de G54 API — 0 hardcodeados
-- **PENDIENTE:** registrar webhooks en Meta for Developers (CE: `?company=1`) cuando el equipo esté listo
+- **✅ Community AI webhook registrado** en Meta (2026-06-25) con `?company=1`
+- **PENDIENTE:** registrar webhook WA (`wa-engine-g54`) en Meta cuando sea necesario
 
 **Alex vs Sales AI Motor — diferencia clave:**
 | | Alex (`zAhV8gEsXD8dCrXq`) | Sales AI Motor (`eCOX3ogMjToxZsh9`) |
@@ -190,10 +196,11 @@ Webhook (con ?company=N)
 
 **Fallback actual:** mientras G54 no implementa los endpoints de resolución, todos usan company_id=1 (CE). El query param ya funciona hoy.
 
-### Pendientes G54 para multi-tenant completo
-- `GET /api/n8n/pages/{page_id}` → `{ company_id, fb_access_token, ig_user_id }`
-- `GET /api/n8n/wa-phones/{phone_number_id}` → `{ company_id, wa_access_token, phone_number_id }`
-- Panel admin: cada cliente sube sus tokens de Meta desde su dashboard
+### Endpoints confirmados G54 (2026-06-25)
+- ✅ `GET /api/n8n/pages/{page_id}` → `{ company_id, fb_access_token, ig_user_id }` — **EXISTE y responde**. Para CE: `GET /api/n8n/pages/1713965015486703`. Nota: `ig_user_id` devuelve `null` actualmente — pendiente que Walter lo pobla en el panel admin. El IG publishing de CE funciona igual porque el Content AI usa el token directamente.
+- **PENDIENTE Walter:** `GET /api/n8n/wa-phones/{phone_number_id}` → para resolver empresa por número WA
+- **PENDIENTE Walter:** poblar `ig_user_id` en el registro de la página CE en panel admin G54
+- **AGENT_TOKEN confirmado:** `g54_agent_produccion_2026` — usar en `G54_AGENT_TOKEN` del Config node
 
 ### Meta Tech Provider — Proceso necesario para escalar
 Para que G54 maneje FB/IG de múltiples empresas con UNA sola App (en lugar de una App por cliente), se necesita verificación como Tech Provider en Meta:
@@ -773,6 +780,13 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 61. **Sales AI Motor reconstruido limpio** (2026-06-04): workflow `eCOX3ogMjToxZsh9` reconstruido desde cero sin lógica CE. Webhook WA: `wa-engine-g54`, FB/IG: `sales-ai-social`. Eliminado: cotizador, cajones, medidas, tipo_cajón, ISPM-15, modo contingencia rule-based. `datos_actualizados` es objeto libre. IA: Groq llama-3.3-70b + Gemini fallback. Estados: Nuevo → En calificación → Calificado → Vendedor notificado. Alex (`zAhV8gEsXD8dCrXq`, `whatsapp-ce`) intocable. Activo en n8n. Archivo: `workflow-sales-ai-motor-g54.json`.
 62. **Banner CE aplicado a workflows CE-específicos** (2026-06-10): banner/footer aprobado de CE (imagen `lh3.googleusercontent.com/d/14EmfG1bLlmxbvvRFyVFaHyehs-_9r5Lh`) agregado a nodos de email en CE Blog, RRSS Automation CE y RRSS Generador de Temas. Los workflows de plataforma G54 NO tienen el banner (viola la regla de no hardcodear datos de cliente).
 63. **Reportes por email eliminados de G54** (2026-06-10): removidos todos los nodos de email-reporte de workflows G54 — Analytics semanal/mensual (`📧 Enviar Reporte por Email`), Strategist v2/v3 (`📧 Notificación: Estrategia Lista`), RRSS Content AI v1.3 (toda la cadena: email aprobación + webhook aprobar/rechazar + estados + respuestas + reporte, 11 nodos). Todo se verá en la interfaz G54. Sales AI Motor conserva `📧 Notificar Vendedor` (alerta operacional, no reporte).
+65. **Credenciales G54 limpiadas** (2026-06-25): eliminadas todas las credenciales CE hardcodeadas de workflows de plataforma G54. `GEMINI_API_KEY` y `GROQ_API_KEY` reemplazadas con `={{ $vars.GEMINI_API_KEY }}` y `={{ $vars.GROQ_API_KEY }}` en Content AI y Strategist AI. `FB_PAGE_ID` e `IG_USER_ID` de CE reemplazados con placeholders en archivos JSON del repo; valores reales permanecen directamente en n8n.
+66. **Lookup dinámico de página en Community AI y Distribution AI** (2026-06-25): ambos workflows ahora llaman `GET /api/n8n/pages/{page_id}` de G54 para obtener `fb_access_token` e `ig_user_id` dinámicamente. Nodo `🏢 Aplicar Config Empresa` hace merge con prioridad: respuesta G54 > query param > fallback CE. Endpoint confirmado existente y funcionando.
+67. **Community AI webhook registrado en Meta** (2026-06-25): agregado nodo `🔔 Webhook GET: Verificación Meta` al Community AI para responder el `hub.challenge` de Meta. Registrado en developers.facebook.com → app "CRATING EXPRESS RRSS" → Webhooks → URL con `?company=1`. Campos suscritos: `feed` y `messages`. Verificación pasó exitosamente. ID n8n Community AI corregido: era `WYGmQcPSOzpvn6yv`, correcto es `62tIvF0snsrMj0sM`.
+68. **Duplicado Analytics Semanal desactivado** (2026-06-25): workflow `EX9K1AZwKeouSJ9G` (📊 Analytics AI Semanal — G54) desactivado. El correcto y activo es `ocQAzbiftXXOfjct` (Analytics AI — RRSS G54).
+69. **AGENT_TOKEN confirmado** (2026-06-25): `g54_agent_produccion_2026` — documentado en Config node de todos los workflows G54.
+70. **G54 frontend sin repo conocido** (2026-06-25): el panel admin de G54 (`growth.mdarthurdigital.com/admin`) no está en `risosdigitales/PROYECTO_SOL` ni en ninguna otra rama conocida. Pendiente confirmar con Walter dónde vive ese código para poder agregar campos de credenciales de WhatsApp y otros.
+
 64. **Census n8n + limpieza** (2026-06-10): 32 workflows totales, 11 activos, 21 inactivos. Alex renombrado (estaba como "doble"). Borrados 4 workflows obsoletos: Generador Temas v1.2, CE WA Engine v1.2, CE Blog v1.2, CE Email Outreach v1.2. RRSS Automation CE (`HqKUsOwwguIYQbsU`) reactivado como puente — el content generator de RRSS para CE no estaba corriendo (G54 inactivo + viejo inactivo). Nomify confirmado fuera de nuestro alcance, lo continúa otra persona.
 
 ## Nomify — Planilla Nicaragua (Express + MariaDB)
@@ -975,6 +989,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 ## Reportes Diarios
 
 > Los últimos 14 días. Anteriores archivados en `PROYECTO-SOL/reportes/`.
+
+---
+
+### 2026-06-25 (Miércoles)
+
+El día arrancó porque Walter avisó que ya tenía lista su parte del archivo génesis y que algunas cosas que habíamos implementado no eran necesarias porque él ya las había resuelto por su lado. Con eso, lo primero fue verificar esa información para entender qué seguía en pie y qué había cambiado, y a partir de ahí revisar, corregir y probar cada agente uno por uno.
+
+Lo que se hizo principalmente fue limpiar los agentes de la plataforma G54 que tenían información específica de Crating Express metida directamente en el código cuando no debería estar ahí. Las API keys de Gemini y Groq se reemplazaron con variables de entorno, y los IDs de página de CE quedaron como placeholders en el repo con los valores reales en n8n. También se implementó en Community AI y Distribution AI un sistema para que consulten automáticamente los datos de cada empresa desde G54 en lugar de tenerlos fijos, lo que es necesario para que la plataforma funcione con múltiples clientes. Además se registró el webhook del Community AI en Meta — se agregó un nodo que responde la verificación de Facebook, se configuró en developers.facebook.com apuntando a la URL con `?company=1`, y quedó verificado y funcionando con los campos `feed` y `messages` suscritos.
+
+Al final se investigó si `ig_user_id` llegaba correctamente desde G54 API (devuelve null, pendiente que Walter lo rellene en el panel admin), pero resultó que no es un problema real porque el Content AI lleva semanas publicando en Instagram sin inconvenientes. Se desactivó un workflow duplicado de Analytics que estaba corriendo dos veces la misma tarea. También se confirmó que el frontend del panel admin de G54 no está en ningún repositorio conocido — pendiente confirmar con Walter dónde está ese código, porque se mencionó la posibilidad de agregar campos de credenciales de WhatsApp desde ahí. Todos los cambios quedaron commiteados y pusheados en la rama `claude/determined-curie-8emmm8`.
 
 ---
 
