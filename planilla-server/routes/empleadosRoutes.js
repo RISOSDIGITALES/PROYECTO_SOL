@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
+<<<<<<< HEAD
 const { requireAuth, requireMaster } = require('../auth');
 
 const GET_SQL = `
@@ -37,10 +38,19 @@ router.get('/', requireAuth, async (req, res) => {
     }
     sql += ' ORDER BY nombre ASC';
     const [rows] = await db.query(sql, params);
+=======
+const { requireAuth } = require('../auth');
+
+// GET /api/empleados
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM empleados WHERE activo = 1 ORDER BY nombre ASC');
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+<<<<<<< HEAD
 router.post('/', requireAuth, requireMaster, async (req, res) => {
   const m = mapBody(req.body);
   if (!m.nombre) return res.status(400).json({ error: 'Nombre requerido' });
@@ -52,10 +62,22 @@ router.post('/', requireAuth, requireMaster, async (req, res) => {
        m.fecha_ingreso || null, m.activo !== undefined ? (m.activo ? 1 : 0) : 1]
     );
     const [rows] = await db.query(GET_SQL.replace('ORDER BY nombre ASC', 'WHERE id = ?'), [r.insertId]);
+=======
+// POST /api/empleados
+router.post('/', requireAuth, async (req, res) => {
+  const { nombre, cargo, tipo_planilla, salario_bruto, inss_base, ir_fijo, email, rol } = req.body;
+  try {
+    const [r] = await db.query(
+      'INSERT INTO empleados (nombre, cargo, tipo_planilla, salario_bruto, inss_base, ir_fijo, email, rol) VALUES (?,?,?,?,?,?,?,?)',
+      [nombre, cargo, tipo_planilla || 'Con Seguro', salario_bruto || 0, inss_base || 'Salario Completo', ir_fijo || 0, email, rol || 'Empleado']
+    );
+    const [rows] = await db.query('SELECT * FROM empleados WHERE id = ?', [r.insertId]);
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     res.status(201).json(rows[0]);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+<<<<<<< HEAD
 async function patchHandler(req, res) {
   const id = req.params.id || req.body.id;
   if (!id) return res.status(400).json({ error: 'Se requiere id' });
@@ -79,5 +101,22 @@ async function patchHandler(req, res) {
 
 router.patch('/', requireAuth, patchHandler);
 router.patch('/:id', requireAuth, patchHandler);
+=======
+// PATCH /api/empleados/:id
+router.patch('/:id', requireAuth, async (req, res) => {
+  const campos = ['nombre','cargo','tipo_planilla','salario_bruto','inss_base','ir_fijo','email','rol','planillas_acceso','activo'];
+  const sets = [], vals = [];
+  for (const c of campos) {
+    if (req.body[c] !== undefined) { sets.push(`${c} = ?`); vals.push(req.body[c]); }
+  }
+  if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
+  vals.push(req.params.id);
+  try {
+    await db.query(`UPDATE empleados SET ${sets.join(', ')} WHERE id = ?`, vals);
+    const [rows] = await db.query('SELECT * FROM empleados WHERE id = ?', [req.params.id]);
+    res.json(rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
 
 module.exports = router;

@@ -1,4 +1,5 @@
 const router = require('express').Router();
+<<<<<<< HEAD
 const bcrypt = require('bcryptjs');
 const db = require('../db');
 const { requireAuth, requireMaster } = require('../auth');
@@ -33,10 +34,24 @@ router.post('/', requireAuth, requireMaster, async (req, res) => {
     res.status(201).json(rows[0]);
   } catch (e) {
     if (e.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Ese email ya existe' });
+=======
+const db = require('../db');
+const { requireAuth, requireAdmin } = require('../auth');
+
+// GET /api/usuarios — lista empleados con sus datos de acceso
+router.get('/', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT id, nombre, cargo, email, rol, planillas_acceso FROM empleados WHERE activo = 1 ORDER BY nombre ASC'
+    );
+    res.json(rows);
+  } catch (e) {
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     res.status(500).json({ error: e.message });
   }
 });
 
+<<<<<<< HEAD
 // PATCH /api/usuarios/:id — editar usuario
 router.patch('/:id', requireAuth, requireMaster, async (req, res) => {
   const { nombre, email, password, rol, planillas_acceso } = req.body;
@@ -48,10 +63,19 @@ router.patch('/:id', requireAuth, requireMaster, async (req, res) => {
   if (password) {
     const hash = await bcrypt.hash(password, 10);
     sets.push('password_hash = ?'); vals.push(hash);
+=======
+// PATCH /api/usuarios/:id — actualiza email, rol, planillas_acceso
+router.patch('/:id', requireAuth, requireAdmin, async (req, res) => {
+  const campos = ['email', 'rol', 'planillas_acceso'];
+  const sets = [], vals = [];
+  for (const c of campos) {
+    if (req.body[c] !== undefined) { sets.push(`${c} = ?`); vals.push(req.body[c]); }
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
   }
   if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
   vals.push(req.params.id);
   try {
+<<<<<<< HEAD
     await db.query(`UPDATE usuarios SET ${sets.join(', ')} WHERE id = ?`, vals);
     const [rows] = await db.query(
       'SELECT id, nombre, email, rol, planillas_acceso, created_at FROM usuarios WHERE id = ?', [req.params.id]
@@ -67,6 +91,14 @@ router.delete('/:id', requireAuth, requireMaster, async (req, res) => {
     await db.query('DELETE FROM usuarios WHERE id = ?', [req.params.id]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
+=======
+    await db.query(`UPDATE empleados SET ${sets.join(', ')} WHERE id = ?`, vals);
+    const [rows] = await db.query('SELECT id, nombre, cargo, email, rol, planillas_acceso FROM empleados WHERE id = ?', [req.params.id]);
+    res.json(rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
 });
 
 module.exports = router;

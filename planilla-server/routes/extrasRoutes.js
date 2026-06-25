@@ -2,6 +2,7 @@ const router = require('express').Router();
 const db = require('../db');
 const { requireAuth } = require('../auth');
 
+<<<<<<< HEAD
 const GET_SQL = `
   SELECT x.id, e.nombre AS Empleado,
     x.tipo AS Tipo,
@@ -12,17 +13,27 @@ const GET_SQL = `
   FROM extras x
   JOIN empleados e ON x.empleado_id = e.id`;
 
+=======
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
 router.get('/', requireAuth, async (req, res) => {
   try {
     const conds = [], params = [];
     if (req.query.empleado_id) { conds.push('x.empleado_id = ?'); params.push(req.query.empleado_id); }
     if (req.query.tipo) { conds.push('x.tipo = ?'); params.push(req.query.tipo); }
     const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+<<<<<<< HEAD
     const [rows] = await db.query(`${GET_SQL} ${where} ORDER BY x.id DESC`, params);
+=======
+    const [rows] = await db.query(
+      `SELECT x.*, e.nombre as empleado_nombre FROM extras x
+       JOIN empleados e ON x.empleado_id = e.id ${where} ORDER BY x.id DESC`, params
+    );
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+<<<<<<< HEAD
 async function resolveEmpleadoId(db, body) {
   if (body.empleado_id) return body.empleado_id;
   if (body['Empleado']) {
@@ -46,10 +57,21 @@ router.post('/', requireAuth, async (req, res) => {
       [empleado_id, tipo, descripcion, monto, pagar_en]
     );
     const [rows] = await db.query(`${GET_SQL} WHERE x.id = ?`, [r.insertId]);
+=======
+router.post('/', requireAuth, async (req, res) => {
+  const { empleado_id, tipo, descripcion, monto, pagar_en, fecha_registro } = req.body;
+  try {
+    const [r] = await db.query(
+      'INSERT INTO extras (empleado_id, tipo, descripcion, monto, pagar_en, fecha_registro) VALUES (?,?,?,?,?,?)',
+      [empleado_id, tipo, descripcion, monto, pagar_en, fecha_registro]
+    );
+    const [rows] = await db.query('SELECT * FROM extras WHERE id = ?', [r.insertId]);
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     res.status(201).json(rows[0]);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+<<<<<<< HEAD
 async function patchHandler(req, res) {
   const id = req.params.id || req.body.id;
   if (!id) return res.status(400).json({ error: 'Se requiere id' });
@@ -86,5 +108,28 @@ router.patch('/', requireAuth, patchHandler);
 router.patch('/:id', requireAuth, patchHandler);
 router.delete('/', requireAuth, deleteHandler);
 router.delete('/:id', requireAuth, deleteHandler);
+=======
+router.patch('/:id', requireAuth, async (req, res) => {
+  const campos = ['tipo','descripcion','monto','pagar_en'];
+  const sets = [], vals = [];
+  for (const c of campos) {
+    if (req.body[c] !== undefined) { sets.push(`${c} = ?`); vals.push(req.body[c]); }
+  }
+  if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
+  vals.push(req.params.id);
+  try {
+    await db.query(`UPDATE extras SET ${sets.join(', ')} WHERE id = ?`, vals);
+    const [rows] = await db.query('SELECT * FROM extras WHERE id = ?', [req.params.id]);
+    res.json(rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    await db.query('DELETE FROM extras WHERE id = ?', [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
 
 module.exports = router;

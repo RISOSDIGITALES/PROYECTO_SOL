@@ -1,10 +1,15 @@
 const router = require('express').Router();
 const db = require('../db');
+<<<<<<< HEAD
 const { requireAuth, requireMaster } = require('../auth');
+=======
+const { requireAuth } = require('../auth');
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
 
 const SALARIO_MINIMO = 10913.54;
 const INSS_RATE = 0.07;
 
+<<<<<<< HEAD
 // GET /api/planillas
 router.get('/', requireAuth, async (req, res) => {
   try {
@@ -31,11 +36,23 @@ router.get('/', requireAuth, async (req, res) => {
        GROUP BY p.id
        ORDER BY p.periodo DESC`,
       params
+=======
+// GET /api/planillas — lista con conteo de empleados
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT p.*, COUNT(d.id) as total_empleados
+       FROM planillas p
+       LEFT JOIN detalle_planilla d ON p.id = d.planilla_id
+       GROUP BY p.id
+       ORDER BY p.periodo DESC`
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     );
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+<<<<<<< HEAD
 // POST /api/planillas/calcular — solo Master puede generar planilla global; Colaborador solo su tipo
 router.post('/calcular', requireAuth, async (req, res) => {
   let { periodo, tipo } = req.body;
@@ -44,20 +61,39 @@ router.post('/calcular', requireAuth, async (req, res) => {
   if (req.user.rol === 'Colaborador' && req.user.planillas_acceso) {
     tipo = req.user.planillas_acceso;
   }
+=======
+// POST /api/planillas/calcular — motor de cálculo completo
+router.post('/calcular', requireAuth, async (req, res) => {
+  const { periodo, tipo } = req.body;
+  if (!periodo) return res.status(400).json({ error: 'Se requiere periodo (YYYY-MM-DD)' });
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
 
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
 
+<<<<<<< HEAD
+=======
+    // 1. Empleados activos
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     let empQuery = 'SELECT * FROM empleados WHERE activo = 1';
     const empParams = [];
     if (tipo) { empQuery += ' AND tipo_planilla = ?'; empParams.push(tipo); }
     const [empleados] = await conn.query(empQuery, empParams);
     if (!empleados.length) {
+<<<<<<< HEAD
       await conn.rollback(); conn.release();
       return res.status(400).json({ error: 'No hay empleados activos para este tipo' });
     }
 
+=======
+      await conn.rollback();
+      conn.release();
+      return res.status(400).json({ error: 'No hay empleados activos para este tipo' });
+    }
+
+    // 2. Datos del período
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     const [adelantos] = await conn.query(
       `SELECT * FROM adelantos WHERE descontar_en = ? AND estado = 'Pendiente' AND pausado = 0`, [periodo]
     );
@@ -67,6 +103,10 @@ router.post('/calcular', requireAuth, async (req, res) => {
       `SELECT * FROM deducciones WHERE descontar_en = ? AND estado = 'Pendiente' AND pausado = 0`, [periodo]
     );
 
+<<<<<<< HEAD
+=======
+    // Indexar por empleado_id
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     const byEmp = (arr) => arr.reduce((m, r) => {
       if (!m[r.empleado_id]) m[r.empleado_id] = [];
       m[r.empleado_id].push(r);
@@ -78,6 +118,10 @@ router.post('/calcular', requireAuth, async (req, res) => {
     const extrasPor    = byEmp(extras);
     const deduccPor    = byEmp(deducciones);
 
+<<<<<<< HEAD
+=======
+    // 3. Calcular por empleado
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     const detalles = [];
     let totalBruto = 0, totalDesc = 0, totalNeto = 0;
 
@@ -87,7 +131,11 @@ router.post('/calcular', requireAuth, async (req, res) => {
 
       let inss = 0;
       if (emp.tipo_planilla !== 'Sin Seguro') {
+<<<<<<< HEAD
         const base = emp.inss_base === 'Salario Minimo' ? SALARIO_MINIMO : salarioMensual;
+=======
+        const base = emp.inss_base === 'Salario Mínimo' ? SALARIO_MINIMO : salarioMensual;
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
         inss = Math.round(base / 2 * INSS_RATE * 100) / 100;
       }
 
@@ -111,10 +159,21 @@ router.post('/calcular', requireAuth, async (req, res) => {
       detalles.push({
         empleado_id: emp.id,
         tipo_planilla: emp.tipo_planilla || 'Con Seguro',
+<<<<<<< HEAD
         salario_quincenal: salarioQuincenal, inss, ir,
         desc_adelanto: descAdelanto, desc_prestamo: descPrestamo,
         extras: totalExtras, desc_deducciones: descDed,
         total_deducciones: totalDeducciones, neto,
+=======
+        salario_quincenal: salarioQuincenal,
+        inss, ir,
+        desc_adelanto: descAdelanto,
+        desc_prestamo: descPrestamo,
+        extras: totalExtras,
+        desc_deducciones: descDed,
+        total_deducciones: totalDeducciones,
+        neto,
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
         adelantosIds:  empAdel.map(a => a.id),
         prestamosData: empPrest.map(p => ({
           id: p.id,
@@ -130,12 +189,20 @@ router.post('/calcular', requireAuth, async (req, res) => {
     totalDesc  = Math.round(totalDesc  * 100) / 100;
     totalNeto  = Math.round(totalNeto  * 100) / 100;
 
+<<<<<<< HEAD
+=======
+    // 4. Crear planilla
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     const [planillaResult] = await conn.query(
       'INSERT INTO planillas (periodo, tipo, estado, total_bruto, total_deducciones, total_neto) VALUES (?,?,?,?,?,?)',
       [periodo, tipo || '', 'Borrador', totalBruto, totalDesc, totalNeto]
     );
     const planillaId = planillaResult.insertId;
 
+<<<<<<< HEAD
+=======
+    // 5. Crear detalle por empleado
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     for (const d of detalles) {
       await conn.query(
         `INSERT INTO detalle_planilla
@@ -148,21 +215,38 @@ router.post('/calcular', requireAuth, async (req, res) => {
       );
     }
 
+<<<<<<< HEAD
+=======
+    // 6. Marcar adelantos como Descontado
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     const allAdelIds = detalles.flatMap(d => d.adelantosIds);
     if (allAdelIds.length) {
       await conn.query('UPDATE adelantos SET estado = ? WHERE id IN (?)', ['Descontado', allAdelIds]);
     }
 
+<<<<<<< HEAD
+=======
+    // 7. Marcar deducciones como Descontado
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     const allDedIds = detalles.flatMap(d => d.deduccionesIds);
     if (allDedIds.length) {
       await conn.query('UPDATE deducciones SET estado = ? WHERE id IN (?)', ['Descontado', allDedIds]);
     }
 
+<<<<<<< HEAD
     for (const d of detalles) {
       for (const p of d.prestamosData) {
         const nuevasCuotas = Math.max(0, p.cuotas_restantes - 1);
         const entry        = `${periodo} | C$${parseFloat(p.cuota_quincenal).toFixed(2)} | Descuento quincena`;
         const nuevoHist    = p.historial_pagos ? `${p.historial_pagos}\n${entry}` : entry;
+=======
+    // 8. Actualizar préstamos (cuotas, historial, estado)
+    for (const d of detalles) {
+      for (const p of d.prestamosData) {
+        const nuevasCuotas  = Math.max(0, p.cuotas_restantes - 1);
+        const entry         = `${periodo} | C$${parseFloat(p.cuota_quincenal).toFixed(2)} | Descuento quincena`;
+        const nuevoHist     = p.historial_pagos ? `${p.historial_pagos}\n${entry}` : entry;
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
         await conn.query(
           'UPDATE prestamos SET cuotas_restantes = ?, estado = ?, historial_pagos = ? WHERE id = ?',
           [nuevasCuotas, nuevasCuotas <= 0 ? 'Pagado' : 'Activo', nuevoHist, p.id]
@@ -170,6 +254,7 @@ router.post('/calcular', requireAuth, async (req, res) => {
       }
     }
 
+<<<<<<< HEAD
     await conn.commit(); conn.release();
 
     res.json({ ok: true, planillaId, periodo, tipo: tipo || 'Todos',
@@ -177,6 +262,23 @@ router.post('/calcular', requireAuth, async (req, res) => {
 
   } catch (e) {
     await conn.rollback(); conn.release();
+=======
+    await conn.commit();
+    conn.release();
+
+    res.json({
+      ok: true, planillaId, periodo,
+      tipo: tipo || 'Todos',
+      empleados: detalles.length,
+      totalBruto,
+      totalDeducciones: totalDesc,
+      totalNeto,
+    });
+
+  } catch (e) {
+    await conn.rollback();
+    conn.release();
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     res.status(500).json({ error: e.message });
   }
 });

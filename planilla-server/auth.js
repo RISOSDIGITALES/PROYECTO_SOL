@@ -18,9 +18,18 @@ function requireAuth(req, res, next) {
   }
 }
 
+<<<<<<< HEAD
 function requireMaster(req, res, next) {
   if (req.user?.rol !== 'Master') return res.status(403).json({ error: 'Solo Master' });
   next();
 }
 
 module.exports = { signToken, requireAuth, requireMaster };
+=======
+function requireAdmin(req, res, next) {
+  if (req.user?.rol !== 'Admin') return res.status(403).json({ error: 'Solo Admin' });
+  next();
+}
+
+module.exports = { signToken, requireAuth, requireAdmin };
+>>>>>>> origin/claude/check-claude-md-file-EC9xe

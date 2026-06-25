@@ -24,12 +24,18 @@ router.get('/', requireAuth, async (req, res) => {
 
     const conds = ['d.periodo = ?'];
     const params = [periodo];
+<<<<<<< HEAD
     const tipoFiltro = (req.user.rol === 'Colaborador' && req.user.planillas_acceso)
       ? req.user.planillas_acceso
       : (tipo && tipo !== '—' && tipo !== '') ? tipo : null;
     if (tipoFiltro) {
       conds.push('d.tipo_planilla = ?');
       params.push(tipoFiltro);
+=======
+    if (tipo && tipo !== '—' && tipo !== '') {
+      conds.push('d.tipo_planilla = ?');
+      params.push(tipo);
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     }
 
     const [rows] = await db.query(

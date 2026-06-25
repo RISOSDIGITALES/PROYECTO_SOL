@@ -10,7 +10,11 @@ app.use(cors());
 app.use(express.json());
 
 // Servir el frontend estático
+<<<<<<< HEAD
 app.use(express.static(path.join(__dirname, '../ft_nomify')));
+=======
+app.use(express.static(path.join(__dirname, '../planilla-web')));
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
 
 // Rutas API
 app.use('/api/auth',       require('./routes/authRoutes'));
@@ -27,7 +31,11 @@ app.use('/api/usuarios',  require('./routes/usuariosRoutes'));
 
 // Todas las demás rutas devuelven el HTML correspondiente
 app.get('*', (req, res) => {
+<<<<<<< HEAD
   res.sendFile(path.join(__dirname, '../ft_nomify/index.html'));
+=======
+  res.sendFile(path.join(__dirname, '../planilla-web/index.html'));
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
 });
 
 const PORT = process.env.PORT || 3000;

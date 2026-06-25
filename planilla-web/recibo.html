@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Recibo de Pago — Nicaragua</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
+<<<<<<< HEAD
+=======
+  
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
   <style>
     .recibo-wrap {
       max-width: 680px;
@@ -133,20 +137,28 @@ onReady(['Master', 'Colaborador'], () => {
   initLayout();
   const p = new URLSearchParams(window.location.search);
   const empleadoId = p.get('empleado_id') || '';
+<<<<<<< HEAD
   const periodo    = p.get('periodo')      || '';
   document.getElementById('sub-recibo').textContent = `Período ${periodo}`;
   const volverUrl = `/planilla-detalle.html?periodo=${encodeURIComponent(periodo)}`;
   document.getElementById('btn-volver').href = volverUrl;
   loadRecibo(empleadoId, periodo);
 });
+=======
+  const periodo    = p.get('periodo')     || '';
+  document.getElementById('sub-recibo').textContent = `Cargando... — ${periodo}`;
+  document.getElementById('btn-volver').href = `/planilla-detalle.html?periodo=${encodeURIComponent(periodo)}`;
+  loadRecibo(empleadoId, periodo);
+}
+
+const _cu = netlifyIdentity.currentUser();
+if (_cu) { _initPage(); }
+else { netlifyIdentity.on('init', u => { if (u) _initPage(); }); }
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
 
 function cs(n) {
   if (!n && n !== 0) return '—';
   return 'C$ ' + parseFloat(n).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-function fd(s) {
-  if (!s) return '—';
-  return s.split('T')[0];
 }
 
 async function loadRecibo(empleadoId, periodo) {
@@ -168,6 +180,7 @@ function renderRecibo(data, periodo) {
   const ded  = data.deducciones || [];
   const vac  = data.vacaciones  || [];
 
+<<<<<<< HEAD
   const salarioMensual   = parseFloat(emp.salario_bruto || 0);
   const subTotalQuincena = parseFloat(det.salario_quincenal || salarioMensual / 2);
 
@@ -189,17 +202,41 @@ function renderRecibo(data, periodo) {
   const netoAPagar   = parseFloat(det.neto || (granTotal - totalDesc));
 
   const extrasSection = (bono || feriados || turnoExt || vacPago) ? `
+=======
+  document.getElementById('sub-recibo').textContent = `${emp.nombre || ''} — ${periodo}`;
+
+  const salarioMensual   = parseFloat(emp.salario_bruto || 0);
+  const salarioQuincenal = parseFloat(det.salario_quincenal || salarioMensual / 2);
+
+  const bonos    = ext.filter(e => e.tipo === 'Bono').reduce((s, e) => s + parseFloat(e.monto || 0), 0);
+  const feriados = ext.filter(e => e.tipo === 'Feriado trabajado').reduce((s, e) => s + parseFloat(e.monto || 0), 0);
+  const turnos   = ext.filter(e => e.tipo === 'Otro').reduce((s, e) => s + parseFloat(e.monto || 0), 0);
+  const vacPago  = vac.reduce((s, v) => s + parseFloat(v.monto || 0), 0);
+
+  const inss         = parseFloat(det.inss || 0);
+  const ir           = parseFloat(det.ir || 0);
+  const descPrestamo = parseFloat(det.desc_prestamo || 0);
+  const descAdelanto = parseFloat(det.desc_adelanto || 0);
+  const netoAPagar   = parseFloat(det.neto || 0);
+
+  const extrasSection = (bonos || feriados || turnos || vacPago) ? `
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     <div class="recibo-section">
       <div class="recibo-section-title">Extras</div>
-      ${bono ? `<div class="recibo-row"><span class="label">Bono</span><span class="value">${cs(bono)}</span></div>` : ''}
+      ${bonos    ? `<div class="recibo-row"><span class="label">Bono</span><span class="value">${cs(bonos)}</span></div>` : ''}
       ${feriados ? `<div class="recibo-row"><span class="label">Feriados trabajados</span><span class="value">${cs(feriados)}</span></div>` : ''}
+<<<<<<< HEAD
       ${turnoExt ? `<div class="recibo-row"><span class="label">Turno / Extra</span><span class="value">${cs(turnoExt)}</span></div>` : ''}
+=======
+      ${turnos   ? `<div class="recibo-row"><span class="label">Turno / Extra</span><span class="value">${cs(turnos)}</span></div>` : ''}
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
       ${vac.map(v => `<div class="recibo-row"><span class="label">Vacaciones pagadas (${v.dias} días)</span><span class="value">${cs(parseFloat(v.monto || 0))}</span></div>`).join('')}
     </div>` : '';
 
   let filasDesc = '';
   if (inss > 0) filasDesc += `<div class="recibo-row descuento"><span class="label">INSS Laboral (7%)</span><span class="value">- ${cs(inss)}</span></div>`;
   if (ir > 0)   filasDesc += `<div class="recibo-row descuento"><span class="label">IR</span><span class="value">- ${cs(ir)}</span></div>`;
+<<<<<<< HEAD
   if (adel.length > 0) {
     adel.forEach(a => {
       filasDesc += `<div class="recibo-row descuento"><span class="label">Adelanto</span><span class="value">- ${cs(parseFloat(a.monto || 0))}</span></div>`;
@@ -209,6 +246,13 @@ function renderRecibo(data, periodo) {
   }
   ded.forEach(d => {
     filasDesc += `<div class="recibo-row descuento"><span class="label">${d.concepto || 'Deducción'}</span><span class="value">- ${cs(parseFloat(d.monto || 0))}</span></div>`;
+=======
+  adel.forEach(a => {
+    filasDesc += `<div class="recibo-row descuento"><span class="label">Adelanto</span><span class="value">- ${cs(parseFloat(a.monto || 0))}</span></div>`;
+  });
+  ded.forEach(d => {
+    filasDesc += `<div class="recibo-row descuento"><span class="label">${d.descripcion || 'Deducción'}</span><span class="value">- ${cs(parseFloat(d.monto || 0))}</span></div>`;
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
   });
   if (descPrestamo > 0) filasDesc += `<div class="recibo-row descuento"><span class="label">Abono préstamo</span><span class="value">- ${cs(descPrestamo)}</span></div>`;
 
@@ -224,9 +268,9 @@ function renderRecibo(data, periodo) {
         MD Arthur — Planilla Nicaragua
         <span>Quincena del período ${periodo}</span>
       </div>
-
       <div class="recibo-section">
         <div class="recibo-section-title">Empleado</div>
+<<<<<<< HEAD
         <div class="recibo-row">
           <span class="label">Nombre</span>
           <span class="value">${emp.nombre || '—'}</span>
@@ -235,37 +279,29 @@ function renderRecibo(data, periodo) {
           <span class="label">Tipo de planilla</span>
           <span class="value">${emp.tipo_planilla || 'Con Seguro'}</span>
         </div>
+=======
+        <div class="recibo-row"><span class="label">Nombre</span><span class="value">${emp.nombre || '—'}</span></div>
+        <div class="recibo-row"><span class="label">Tipo de planilla</span><span class="value">${emp.tipo_planilla || 'Con Seguro'}</span></div>
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
       </div>
-
       <div class="recibo-section">
         <div class="recibo-section-title">Ingresos</div>
-        <div class="recibo-row">
-          <span class="label">Salario mensual</span>
-          <span class="value">${cs(salarioMensual)}</span>
-        </div>
-        <div class="recibo-row subtotal">
-          <span class="label">Salario quincenal</span>
-          <span class="value">${cs(subTotalQuincena)}</span>
-        </div>
+        <div class="recibo-row"><span class="label">Salario mensual</span><span class="value">${cs(salarioMensual)}</span></div>
+        <div class="recibo-row subtotal"><span class="label">Salario quincenal</span><span class="value">${cs(salarioQuincenal)}</span></div>
       </div>
-
       ${extrasSection}
       ${descSection}
-
       <div class="recibo-row neto">
         <span class="label">Neto a recibir</span>
         <span class="value">${cs(netoAPagar)}</span>
       </div>
-
       <div class="firma-area" style="display:flex;justify-content:space-between;align-items:flex-end">
         <div>
           He recibido de MD Arthur SA la suma de <strong>${cs(netoAPagar)}</strong> Córdobas Netos
           correspondiente a la quincena del período <strong>${periodo}</strong>.
           <div class="linea">Firma del empleado</div>
         </div>
-        <div>
-          <div class="linea">Quien entrega</div>
-        </div>
+        <div><div class="linea">Quien entrega</div></div>
       </div>
     </div>
   `;

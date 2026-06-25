@@ -3,13 +3,63 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<<<<<<< HEAD
   <title>Usuarios — Nomify</title>
   <link rel="stylesheet" href="/assets/css/app.css" />
+=======
+  <title>Usuarios — Planilla Nicaragua</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  
+  <style>
+    .user-table th:nth-child(4), .user-table td:nth-child(4) { width: 130px; }
+    .user-table th:nth-child(5), .user-table td:nth-child(5) { width: 150px; }
+    .badge-rol {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .badge-Admin     { background: rgba(99,190,123,.15); color: #63be7b; }
+    .badge-Planillero{ background: rgba(90,160,255,.15);  color: #5aa0ff; }
+    .badge-Empleado  { background: rgba(160,160,160,.12); color: #aaa; }
+    .badge-sin       { background: rgba(255,180,0,.12);   color: #ffb400; }
+    select.inline {
+      background: var(--navy2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    select.inline:focus { outline: none; border-color: var(--green2); }
+    .no-email { color: var(--muted); font-style: italic; font-size: 12px; }
+    .hint-box {
+      background: rgba(90,160,255,.08);
+      border: 1px solid rgba(90,160,255,.2);
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 13px;
+      color: #5aa0ff;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+    .hint-box a { color: #5aa0ff; }
+    .saving { opacity: .5; pointer-events: none; }
+  </style>
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar">
+<<<<<<< HEAD
     <div class="sidebar-logo"><h2>🧮 Nomify</h2><p>Planilla Nicaragua</p></div>
+=======
+    <div class="sidebar-logo"><h2>🧮 Planilla</h2><p>Nicaragua</p></div>
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     <nav>
       <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
       <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
@@ -20,9 +70,15 @@
       <a href="/deducciones.html"><span class="icon">➖</span> Otras Deducciones</a>
       <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
       <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
+<<<<<<< HEAD
       <a href="/usuarios.html" class="active" id="link-usuarios"><span class="icon">👤</span> Usuarios</a>
     </nav>
     <div class="sidebar-footer">
+=======
+    </nav>
+    <div class="sidebar-footer">
+      <a href="/usuarios.html" class="sidebar-config active">⚙️ Configuraciones</a>
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
       <span id="user-email"></span>
       <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
     </div>
@@ -30,6 +86,7 @@
 
   <div class="main">
     <div class="topbar">
+<<<<<<< HEAD
       <div><h1>Usuarios</h1><span class="sub">Acceso al sistema — solo Master</span></div>
       <button class="btn btn-primary" id="btn-nuevo">+ Nuevo usuario</button>
     </div>
@@ -118,12 +175,41 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" id="cancel-confirm">Cancelar</button>
       <button class="btn" id="ok-confirm" style="background:var(--red);color:#fff">Eliminar</button>
+=======
+      <div><h1>Configuraciones — Usuarios</h1><span class="sub">Gestión de accesos</span></div>
+    </div>
+    <div class="content">
+
+      <div class="hint-box">
+        💡 Asigna el <strong>email de login</strong> al empleado directamente aquí. Ese email debe coincidir con la invitación de Netlify Identity para que pueda iniciar sesión.
+      </div>
+
+      <div id="alert-box" class="alert"></div>
+
+      <div class="card" style="padding:0">
+        <table class="table user-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Cargo</th>
+              <th>Email (login)</th>
+              <th>Rol</th>
+              <th>Planillas visibles</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
     </div>
   </div>
 </div>
 
 <script src="/assets/js/auth.js"></script>
 <script>
+<<<<<<< HEAD
 let allUsuarios = [];
 let pendingDeleteId = null;
 
@@ -258,6 +344,71 @@ document.getElementById('ok-confirm').addEventListener('click', async () => {
     pendingDeleteId = null;
   }
 });
+=======
+AppAuth.requireAuthRole(['Admin']);
+AppAuth.initLayout();
+
+const ROLES   = ['Admin', 'Planillero', 'Empleado'];
+const ACCESOS = ['Todas', 'Últimas 6', 'Últimas 3', 'Solo propias'];
+
+async function load() {
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Cargando...</td></tr>';
+  try {
+    const users = await AppAuth.apiFetch('/api/usuarios');
+    tbody.innerHTML = '';
+    users.forEach(u => {
+      const tr = document.createElement('tr');
+      tr.dataset.id = u.id;
+      tr.innerHTML = `
+        <td>${u.nombre || '<span class="no-email">Sin nombre</span>'}</td>
+        <td style="color:var(--muted);font-size:13px">${u.cargo || '—'}</td>
+        <td><input class="inline inp-email" type="email" value="${u.email || ''}" placeholder="email@ejemplo.com" style="width:100%;min-width:180px"></td>
+        <td>
+          <select class="inline sel-rol" data-field="rol">
+            ${ROLES.map(r => `<option value="${r}" ${u.rol === r ? 'selected' : ''}>${r}</option>`).join('')}
+            ${!u.rol ? '<option value="" selected disabled>— asignar —</option>' : ''}
+          </select>
+        </td>
+        <td>
+          <select class="inline sel-acc" data-field="planillas_acceso">
+            ${ACCESOS.map(a => `<option value="${a}" ${(u.planillas_acceso || 'Todas') === a ? 'selected' : ''}>${a}</option>`).join('')}
+          </select>
+        </td>
+        <td><button class="btn btn-sm btn-save" data-id="${u.id}">Guardar</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // Guardar al hacer clic
+    document.querySelectorAll('.btn-save').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const tr = btn.closest('tr');
+        const id = btn.dataset.id;
+        const email = tr.querySelector('.inp-email').value.trim();
+        const rol = tr.querySelector('.sel-rol').value;
+        const planillas_acceso = tr.querySelector('.sel-acc').value;
+        tr.classList.add('saving');
+        try {
+          await AppAuth.apiFetch(`/api/usuarios/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ email, rol, planillas_acceso }),
+          });
+          AppAuth.showAlert('alert-box', 'Cambios guardados correctamente');
+        } catch (e) {
+          AppAuth.showAlert('alert-box', 'Error: ' + e.message, 'error');
+        }
+        tr.classList.remove('saving');
+      });
+    });
+
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="6" style="color:var(--red);padding:16px">${e.message}</td></tr>`;
+  }
+}
+
+load();
+>>>>>>> origin/claude/check-claude-md-file-EC9xe
 </script>
 </body>
 </html>
