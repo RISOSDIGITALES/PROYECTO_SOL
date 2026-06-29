@@ -130,6 +130,29 @@
   </div>
 </div>
 
+<!-- MODAL CONFIRMAR GENERAR -->
+<div class="overlay" id="modal-confirm-gen">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3>⚠️ Confirmar generación</h3>
+      <button class="modal-close" id="close-confirm-gen">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0 0 12px;font-size:14px;color:var(--text)">La planilla se generará en estado <strong>Borrador</strong>.</p>
+      <div style="background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--text-muted);line-height:1.6">
+        🔒 <strong style="color:var(--text)">Los descuentos NO se aplicarán aún.</strong><br>
+        Préstamos, adelantos y deducciones se ejecutarán únicamente cuando marques la planilla como <strong>Pagada</strong>.<br><br>
+        Podés revisar y editar los montos mientras esté en Borrador.
+      </div>
+      <p style="margin:12px 0 0;font-size:13px;color:var(--text-muted)">¿Los datos del período y tipo de planilla son correctos?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-confirm-gen">Cancelar</button>
+      <button class="btn btn-primary" id="ok-confirm-gen">Generar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL GENERAR PLANILLA -->
 <div class="overlay" id="modal-gen">
   <div class="modal" style="max-width:420px">
@@ -260,7 +283,10 @@ onReady(['Master', 'Planillero'], async () => {
 });
 
 async function cambiarEstado(planillaId, nuevoEstado) {
-  if (!confirm(`¿Marcar esta planilla como "${nuevoEstado}"?`)) return;
+  const msg = nuevoEstado === 'Pagada'
+    ? '¿Marcar como Pagada? Esto aplicará todos los descuentos (préstamos, adelantos, deducciones). Esta acción no se puede deshacer.'
+    : `¿Marcar esta planilla como "${nuevoEstado}"?`;
+  if (!confirm(msg)) return;
   try {
     await apiFetch(`/api/planillas/${planillaId}/estado`, {
       method: 'PATCH',
@@ -269,6 +295,18 @@ async function cambiarEstado(planillaId, nuevoEstado) {
     allPlanillas = await apiFetch('/api/planillas');
     renderTabla();
     showAlert('alert-pl', `✅ Estado actualizado a "${nuevoEstado}"`, 'success');
+  } catch (e) {
+    showAlert('alert-pl', 'Error: ' + e.message, 'error');
+  }
+}
+
+async function borrarPlanilla(id, folio) {
+  if (!confirm(`¿Enviar la planilla #${folio} a la papelera? Podrás verla en Ajustes > Papelera.`)) return;
+  try {
+    await apiFetch(`/api/planillas/${id}`, { method: 'DELETE' });
+    allPlanillas = await apiFetch('/api/planillas');
+    renderTabla();
+    showAlert('alert-pl', `🗑️ Planilla #${folio} enviada a la papelera`, 'success');
   } catch (e) {
     showAlert('alert-pl', 'Error: ' + e.message, 'error');
   }
@@ -319,10 +357,11 @@ function renderTabla() {
     const btnEstado = _esMaster ? (() => {
       if (estado === 'Borrador')
         return `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:rgba(46,204,113,.15);border:1px solid rgba(46,204,113,.4);color:#2ecc71;border-radius:4px;cursor:pointer" onclick="cambiarEstado(${p.id},'Pagada')">✓ Marcar pagada</button>`;
-      if (estado === 'Pagada')
-        return `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);border-radius:4px;cursor:pointer" onclick="cambiarEstado(${p.id},'Borrador')">↩ Revertir</button>`;
       return '';
     })() : '';
+    const btnBorrar = (_esMaster && estado === 'Borrador')
+      ? `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:rgba(231,76,60,.12);border:1px solid rgba(231,76,60,.4);color:var(--red);border-radius:4px;cursor:pointer;margin-left:4px" onclick="borrarPlanilla(${p.id},${folio})">🗑 Borrar</button>`
+      : '';
     return `<tr>
       <td style="text-align:center;color:var(--text-muted);font-size:12px;font-weight:600">#${folio}</td>
       <td><strong>${formatPeriodo(periodoVal)}</strong></td>
@@ -334,7 +373,7 @@ function renderTabla() {
       <td class="num"><strong>${fmt(p['Total neto'])}</strong></td>
       <td style="white-space:nowrap">
         <span class="badge ${estadoBadge}">${estado}</span>
-        ${btnEstado}
+        ${btnEstado}${btnBorrar}
       </td>
       <td><a href="/planilla-detalle.html?id=${p.id}&periodo=${periodo}&folio=${folio}" class="btn btn-ghost btn-sm">Ver detalle</a></td>
     </tr>`;
@@ -627,6 +666,25 @@ document.getElementById('save-gen').addEventListener('click', () => {
     showAlert('alert-gen', '⚠️ Sin empresa seleccionada. Crea una empresa primero.', 'error');
     return;
   }
+  // Validar que hay período seleccionado antes de mostrar confirmación
+  if (_modoMensual) {
+    if (!document.getElementById('gen-mes').value) { showAlert('alert-gen', 'Selecciona el mes', 'error'); return; }
+  } else {
+    if (!document.getElementById('gen-periodo').value) { showAlert('alert-gen', 'Selecciona el período', 'error'); return; }
+  }
+  document.getElementById('modal-gen').classList.remove('open');
+  document.getElementById('modal-confirm-gen').classList.add('open');
+});
+
+['close-confirm-gen','cancel-confirm-gen'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-confirm-gen').classList.remove('open');
+    document.getElementById('modal-gen').classList.add('open');
+  })
+);
+
+document.getElementById('ok-confirm-gen').addEventListener('click', () => {
+  document.getElementById('modal-confirm-gen').classList.remove('open');
   ejecutarGenerar();
 });
 </script>
