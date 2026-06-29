@@ -130,6 +130,28 @@
   </div>
 </div>
 
+<!-- MODAL CONFIRMAR PAGADA -->
+<div class="overlay" id="modal-confirm-pagada">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3>⚠️ Marcar como Pagada</h3>
+      <button class="modal-close" id="close-confirm-pagada">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0 0 12px;font-size:14px;color:var(--text)">Estás a punto de marcar esta planilla como <strong>Pagada</strong>.</p>
+      <div style="background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--text-muted);line-height:1.6">
+        🔒 <strong style="color:var(--text)">Esta acción no se puede deshacer.</strong><br>
+        Se aplicarán todos los descuentos: préstamos, adelantos y deducciones.<br><br>
+        Una vez pagada, la planilla <strong>no podrá editarse ni eliminarse</strong>. Asegurate de que los datos sean correctos antes de continuar.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-confirm-pagada">Cancelar</button>
+      <button class="btn btn-primary" id="ok-confirm-pagada" style="background:var(--red);border-color:var(--red)">Sí, marcar como Pagada</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL CONFIRMAR GENERAR -->
 <div class="overlay" id="modal-confirm-gen">
   <div class="modal" style="max-width:400px">
@@ -282,11 +304,29 @@ onReady(['Master', 'Planillero'], async () => {
   loadPlanillas();
 });
 
+let _pendingPagadaId = null;
+
+async function _ejecutarPagada() {
+  try {
+    await apiFetch(`/api/planillas/${_pendingPagadaId}/estado`, {
+      method: 'PATCH',
+      body: JSON.stringify({ estado: 'Pagada' }),
+    });
+    allPlanillas = await apiFetch('/api/planillas');
+    renderTabla();
+    showAlert('alert-pl', '✅ Planilla marcada como Pagada y descuentos aplicados', 'success');
+  } catch (e) {
+    showAlert('alert-pl', 'Error: ' + e.message, 'error');
+  }
+}
+
 async function cambiarEstado(planillaId, nuevoEstado) {
-  const msg = nuevoEstado === 'Pagada'
-    ? '¿Marcar como Pagada? Esto aplicará todos los descuentos (préstamos, adelantos, deducciones). Esta acción no se puede deshacer.'
-    : `¿Marcar esta planilla como "${nuevoEstado}"?`;
-  if (!confirm(msg)) return;
+  if (nuevoEstado === 'Pagada') {
+    _pendingPagadaId = planillaId;
+    document.getElementById('modal-confirm-pagada').classList.add('open');
+    return;
+  }
+  if (!confirm(`¿Marcar esta planilla como "${nuevoEstado}"?`)) return;
   try {
     await apiFetch(`/api/planillas/${planillaId}/estado`, {
       method: 'PATCH',
@@ -299,6 +339,17 @@ async function cambiarEstado(planillaId, nuevoEstado) {
     showAlert('alert-pl', 'Error: ' + e.message, 'error');
   }
 }
+
+['close-confirm-pagada','cancel-confirm-pagada'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-confirm-pagada').classList.remove('open');
+    _pendingPagadaId = null;
+  })
+);
+document.getElementById('ok-confirm-pagada').addEventListener('click', async () => {
+  document.getElementById('modal-confirm-pagada').classList.remove('open');
+  await _ejecutarPagada();
+});
 
 async function borrarPlanilla(id, folio) {
   if (!confirm(`¿Enviar la planilla #${folio} a la papelera? Podrás verla en Ajustes > Papelera.`)) return;
