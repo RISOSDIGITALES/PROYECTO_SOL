@@ -12,7 +12,12 @@ try {
 } catch (_) {}
 
 let enviarReportePlanilla = async () => { throw new Error('Mailer no disponible'); };
-try { enviarReportePlanilla = require('../mailer').enviarReportePlanilla; } catch (_) {}
+let enviarNotifPlanillaPagada = async () => {};
+try {
+  const mailer = require('../mailer');
+  enviarReportePlanilla    = mailer.enviarReportePlanilla;
+  enviarNotifPlanillaPagada = mailer.enviarNotifPlanillaPagada;
+} catch (_) {}
 
 const SALARIO_MINIMO      = 10913.54;
 const INSS_RATE           = 0.07;   // laboral (empleado)
@@ -680,7 +685,25 @@ router.patch('/:id/estado', requireAuth, requireMaster, async (req, res) => {
 
     await conn.query('UPDATE planillas SET estado = ? WHERE id = ?', [estado, id]);
     await conn.commit(); conn.release();
-    const [[row]] = await db.query('SELECT estado, folio FROM planillas WHERE id = ?', [id]);
+    const [[row]] = await db.query('SELECT estado, folio, periodo, tipo, empresa_id FROM planillas WHERE id = ?', [id]);
+
+    // Notificar usuarios configurados cuando se marca Pagada
+    if (estado === 'Pagada' && row?.empresa_id) {
+      try {
+        const [[emp]] = await db.query('SELECT notif_usuarios FROM empresas WHERE id = ?', [row.empresa_id]);
+        const notifIds = emp?.notif_usuarios ? JSON.parse(emp.notif_usuarios) : [];
+        if (notifIds.length) {
+          const [usuarios] = await db.query(`SELECT nombre, email FROM usuarios WHERE id IN (?) AND email IS NOT NULL`, [notifIds]);
+          const periodoStr = String(row.periodo).substring(0, 10);
+          for (const u of usuarios) {
+            try {
+              await enviarNotifPlanillaPagada(u.email, u.nombre, { folio: row.folio, tipo: row.tipo, periodo: periodoStr });
+            } catch(_) {}
+          }
+        }
+      } catch(_) {}
+    }
+
     res.json({ ok: true, estado: row?.estado, folio: row?.folio });
   } catch (e) {
     await conn.rollback(); conn.release();

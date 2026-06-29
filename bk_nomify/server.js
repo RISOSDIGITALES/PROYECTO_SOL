@@ -96,6 +96,9 @@ const { requireAuth, requireAdmin } = require('./auth');
     FOREIGN KEY (empleado_id) REFERENCES empleados(id) ON DELETE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 
+  // ── v1.9.2: destinatarios de notificaciones por empresa ──────────────────
+  await run("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS notif_usuarios TEXT DEFAULT NULL");
+
   // ── v1.9.1: snapshot de descuentos en detalle_planilla ───────────────────
   await run("ALTER TABLE detalle_planilla ADD COLUMN IF NOT EXISTS adelantos_ids  TEXT DEFAULT NULL");
   await run("ALTER TABLE detalle_planilla ADD COLUMN IF NOT EXISTS deducciones_ids TEXT DEFAULT NULL");

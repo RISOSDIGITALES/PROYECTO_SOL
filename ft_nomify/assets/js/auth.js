@@ -58,6 +58,11 @@ function initLayout() {
       <button id="menu-ajustes-perfil" style="width:100%;background:none;border:none;color:var(--text);padding:11px 16px;text-align:left;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">
         👤 Mi perfil
       </button>
+      <div id="menu-ajustes-notif-wrap" style="display:none">
+        <button id="menu-ajustes-notif-btn" style="width:100%;background:none;border:none;color:var(--text);padding:11px 16px;text-align:left;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">
+          🔔 Notificaciones
+        </button>
+      </div>
       <div id="menu-ajustes-papelera-wrap" style="display:none">
         <button id="menu-ajustes-papelera-btn" style="width:100%;background:none;border:none;color:var(--text);padding:11px 16px;text-align:left;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">
           🗑️ Papelera
@@ -130,6 +135,14 @@ function initLayout() {
       finally { btn.textContent = 'Guardar'; btn.disabled = false; }
     });
 
+    // Notificaciones
+    menu.querySelector('#menu-ajustes-notif-btn').addEventListener('mouseenter', function(){ this.style.background='var(--hover, rgba(255,255,255,.07))'; });
+    menu.querySelector('#menu-ajustes-notif-btn').addEventListener('mouseleave', function(){ this.style.background='none'; });
+    menu.querySelector('#menu-ajustes-notif-btn').addEventListener('click', () => {
+      menu.style.display = 'none';
+      abrirNotificaciones();
+    });
+
     // Papelera — mostrar según rol
     menu.querySelector('#menu-ajustes-papelera-btn').addEventListener('mouseenter', function(){ this.style.background='var(--hover, rgba(255,255,255,.07))'; });
     menu.querySelector('#menu-ajustes-papelera-btn').addEventListener('mouseleave', function(){ this.style.background='none'; });
@@ -163,6 +176,37 @@ function initLayout() {
     // Cerrar menú al hacer clic fuera
     document.addEventListener('click', () => { menu.style.display = 'none'; });
     menu.addEventListener('click', (e) => e.stopPropagation());
+  }
+
+  // Inyectar modal de Notificaciones (una sola vez en el body)
+  if (!document.getElementById('modal-notif')) {
+    document.body.insertAdjacentHTML('beforeend', `
+<div class="overlay" id="modal-notif">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h3>🔔 Notificaciones</h3>
+      <button class="modal-close" id="close-notif">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-notif" class="alert"></div>
+      <div style="background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--text-muted);margin-bottom:14px">
+        🔒 <strong style="color:var(--text)">Notificar planilla pagada</strong> — siempre activo.<br>
+        Elegí qué usuarios recibirán un correo cuando una planilla sea marcada como Pagada.
+      </div>
+      <p style="font-size:13px;color:var(--text-muted);margin:0 0 10px">Seleccioná los destinatarios:</p>
+      <div id="notif-lista-usuarios" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto">
+        <div style="color:var(--text-muted);font-size:13px">Cargando usuarios...</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-notif">Cancelar</button>
+      <button class="btn btn-primary" id="save-notif">Guardar</button>
+    </div>
+  </div>
+</div>`);
+    document.getElementById('close-notif').addEventListener('click', () => document.getElementById('modal-notif').classList.remove('open'));
+    document.getElementById('cancel-notif').addEventListener('click', () => document.getElementById('modal-notif').classList.remove('open'));
+    document.getElementById('save-notif').addEventListener('click', guardarNotificaciones);
   }
 
   // Inyectar modal de Papelera (una sola vez en el body)
@@ -319,6 +363,8 @@ function initLayout() {
     if (inatecWrap && info.rol === 'Master') inatecWrap.style.display = '';
     const papeleraWrap = document.getElementById('menu-ajustes-papelera-wrap');
     if (papeleraWrap && info.rol === 'Master') papeleraWrap.style.display = '';
+    const notifWrap = document.getElementById('menu-ajustes-notif-wrap');
+    if (notifWrap && info.rol === 'Master') notifWrap.style.display = '';
     // Cargar selector de empresa en el sidebar
     _loadEmpresaSelector();
   });
@@ -874,6 +920,59 @@ async function restaurarPlanilla(id, folio) {
   }
 }
 
+async function abrirNotificaciones() {
+  const modal   = document.getElementById('modal-notif');
+  const lista   = document.getElementById('notif-lista-usuarios');
+  const alertEl = document.getElementById('alert-notif');
+  alertEl.className = 'alert';
+  modal.classList.add('open');
+  lista.innerHTML = '<div style="color:var(--text-muted);font-size:13px">Cargando...</div>';
+  try {
+    const empresaId = localStorage.getItem('planilla_empresa_id');
+    const [usuarios, notifData] = await Promise.all([
+      apiFetch('/api/usuarios'),
+      empresaId ? apiFetch(`/api/empresas/${empresaId}/notif`) : Promise.resolve({ notif_usuarios: [] }),
+    ]);
+    const seleccionados = new Set(notifData.notif_usuarios || []);
+    lista.innerHTML = usuarios.map(u => `
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;
+                    background:var(--surface);border:1px solid var(--border);font-size:13px">
+        <input type="checkbox" data-uid="${u.id}" ${seleccionados.has(u.id) ? 'checked' : ''}
+          style="width:16px;height:16px;cursor:pointer;accent-color:var(--green2,#2ecc71)" />
+        <span style="flex:1">
+          <strong style="color:var(--text)">${u.nombre || u.email}</strong>
+          <span style="color:var(--text-muted);font-size:12px;margin-left:6px">${u.email}</span>
+        </span>
+        <span style="font-size:11px;color:var(--text-muted)">${u.rol}</span>
+      </label>`).join('');
+  } catch(e) {
+    alertEl.className = 'alert alert-error show';
+    alertEl.textContent = 'Error: ' + e.message;
+    lista.innerHTML = '';
+  }
+}
+
+async function guardarNotificaciones() {
+  const empresaId = localStorage.getItem('planilla_empresa_id');
+  if (!empresaId) return;
+  const alertEl = document.getElementById('alert-notif');
+  const btn = document.getElementById('save-notif');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    const checks = document.querySelectorAll('#notif-lista-usuarios input[type=checkbox]');
+    const ids = Array.from(checks).filter(c => c.checked).map(c => parseInt(c.dataset.uid));
+    await apiFetch(`/api/empresas/${empresaId}/notif`, { method: 'PATCH', body: JSON.stringify({ notif_usuarios: ids }) });
+    alertEl.className = 'alert alert-success show';
+    alertEl.textContent = `✅ Guardado — ${ids.length} destinatario(s) configurado(s)`;
+    setTimeout(() => { document.getElementById('modal-notif').classList.remove('open'); }, 1200);
+  } catch(e) {
+    alertEl.className = 'alert alert-error show';
+    alertEl.textContent = 'Error: ' + e.message;
+  } finally { btn.disabled = false; btn.textContent = 'Guardar'; }
+}
+
+window.abrirNotificaciones = abrirNotificaciones;
+window.guardarNotificaciones = guardarNotificaciones;
 window.abrirPapelera = abrirPapelera;
 window.restaurarPlanilla = restaurarPlanilla;
 
