@@ -719,6 +719,66 @@ router.get('/papelera', requireAuth, requireMaster, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// GET /api/planillas/:id — datos de una planilla específica
+router.get('/:id', requireAuth, async (req, res) => {
+  try {
+    const [[row]] = await db.query(
+      `SELECT p.*, emp.nombre AS empresa_nombre
+       FROM planillas p LEFT JOIN empresas emp ON p.empresa_id = emp.id
+       WHERE p.id = ?`, [req.params.id]
+    );
+    if (!row) return res.status(404).json({ error: 'Planilla no encontrada' });
+    res.json(row);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// PATCH /api/planillas/:id/detalle/:detalleId — editar fila de detalle (solo Borrador)
+router.patch('/:id/detalle/:detalleId', requireAuth, requireMaster, async (req, res) => {
+  const { id, detalleId } = req.params;
+  const { desc_prestamo, desc_adelanto, extras, desc_deducciones } = req.body;
+  try {
+    const [[planilla]] = await db.query('SELECT estado FROM planillas WHERE id = ?', [id]);
+    if (!planilla) return res.status(404).json({ error: 'Planilla no encontrada' });
+    if (planilla.estado !== 'Borrador')
+      return res.status(400).json({ error: 'Solo se puede editar una planilla en estado Borrador' });
+
+    const [[det]] = await db.query('SELECT * FROM detalle_planilla WHERE id = ? AND planilla_id = ?', [detalleId, id]);
+    if (!det) return res.status(404).json({ error: 'Fila de detalle no encontrada' });
+
+    const p  = (v, fallback) => v !== undefined ? Math.round(parseFloat(v) * 100) / 100 : parseFloat(fallback || 0);
+    const dPrest = p(desc_prestamo,  det.desc_prestamo);
+    const dAdel  = p(desc_adelanto,  det.desc_adelanto);
+    const dExtra = p(extras,         det.extras);
+    const dDed   = p(desc_deducciones, det.desc_deducciones);
+    const totalDesc = Math.round((parseFloat(det.inss||0) + parseFloat(det.ir||0) + dPrest + dAdel + dDed) * 100) / 100;
+    const neto      = Math.round((parseFloat(det.salario_quincenal||0) + dExtra - totalDesc) * 100) / 100;
+
+    await db.query(
+      `UPDATE detalle_planilla SET desc_prestamo=?, desc_adelanto=?, extras=?, desc_deducciones=?, total_deducciones=?, neto=?
+       WHERE id = ?`,
+      [dPrest, dAdel, dExtra, dDed, totalDesc, neto, detalleId]
+    );
+
+    // Recalcular totales de la planilla cabecera
+    const [[totales]] = await db.query(
+      `SELECT SUM(salario_quincenal+extras) AS bruto, SUM(total_deducciones) AS desc, SUM(neto) AS neto,
+              SUM(inss_patronal) AS patronal, SUM(inatec) AS inatec
+       FROM detalle_planilla WHERE planilla_id = ?`, [id]
+    );
+    const tBruto  = Math.round((parseFloat(totales.bruto  ||0)) * 100) / 100;
+    const tDesc   = Math.round((parseFloat(totales.desc   ||0)) * 100) / 100;
+    const tNeto   = Math.round((parseFloat(totales.neto   ||0)) * 100) / 100;
+    const tPatr   = Math.round((parseFloat(totales.patronal||0)) * 100) / 100;
+    const tInatec = Math.round((parseFloat(totales.inatec ||0)) * 100) / 100;
+    await db.query(
+      `UPDATE planillas SET total_bruto=?, total_deducciones=?, total_neto=?, total_inss_patronal=?, total_inatec=?, costo_total_empresa=? WHERE id=?`,
+      [tBruto, tDesc, tNeto, tPatr, tInatec, Math.round((tBruto+tPatr+tInatec)*100)/100, id]
+    );
+
+    res.json({ ok: true, desc_prestamo: dPrest, desc_adelanto: dAdel, extras: dExtra, desc_deducciones: dDed, total_deducciones: totalDesc, neto });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // POST /api/planillas/:id/enviar-reporte — genera PDF y lo envía por correo
 router.post('/:id/enviar-reporte', requireAuth, async (req, res) => {
   const { id } = req.params;

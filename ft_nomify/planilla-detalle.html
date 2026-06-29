@@ -133,10 +133,24 @@ const periodo    = _p.get('periodo') || '';
 const tipo       = _p.get('tipo')    || '';
 const folio      = _p.get('folio')   || planillaId;
 
-onReady(['Master', 'Planillero'], () => {
+let _esBorrador = false;
+
+onReady(['Master', 'Planillero'], async () => {
   initLayout();
   document.getElementById('titulo-planilla').textContent = periodo ? fmtPeriodo(periodo) : 'Detalle';
   document.getElementById('sub-planilla').textContent = (tipo ? `Planilla ${tipo}` : 'Planilla') + (folio ? ` · #${folio}` : '');
+  // Obtener estado de la planilla
+  if (planillaId) {
+    try {
+      const pl = await apiFetch(`/api/planillas/${planillaId}`);
+      _esBorrador = pl.estado === 'Borrador';
+      if (_esBorrador) {
+        showAlert('alert-det',
+          '✏️ Esta planilla está en Borrador — podés editar los montos haciendo clic en las celdas. Los cambios se guardan automáticamente.',
+          'success');
+      }
+    } catch(_) {}
+  }
   loadDetalle(planillaId, periodo, tipo);
 });
 
@@ -235,17 +249,28 @@ async function loadDetalle(planillaId, periodo, tipo) {
       </div>
     `;
 
-    // ── Tabla principal de empleados (lo que reciben) ─────────────────────────
+    // ── Tabla principal de empleados ──────────────────────────────────────────
+    const celdaEditable = (detalleId, campo, valor, color) => {
+      if (!_esBorrador) return `<span style="color:${color}">${fmt(valor)}</span>`;
+      return `<input type="number" step="0.01" min="0"
+        data-detalle="${detalleId}" data-campo="${campo}"
+        value="${pf(valor)}"
+        style="width:90px;background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:4px;
+               color:${color};padding:3px 6px;font-size:13px;text-align:right"
+        onchange="guardarCelda(this)"
+        onfocus="this.select()" />`;
+    };
+
     document.getElementById('tabla-detalle').innerHTML = detalles.map(d => `<tr>
       <td><strong>${d.nombre || '—'}</strong></td>
       <td class="num">${fmt(d.salario_quincenal)}</td>
       <td class="num" style="color:var(--red)">${fmt(d.inss)}</td>
       <td class="num" style="color:var(--red)">${pf(d.ir) > 0 ? fmt(d.ir) : '<span style="color:var(--text-muted)">—</span>'}</td>
-      <td class="num" style="color:var(--red)">${fmt(d.desc_prestamo)}</td>
-      <td class="num" style="color:var(--red)">${fmt(d.desc_adelanto)}</td>
-      <td class="num" style="color:var(--green2)">${fmt(d.extras)}</td>
-      <td class="num" style="color:var(--red)"><strong>${fmt(d.total_deducciones)}</strong></td>
-      <td class="num"><strong style="color:var(--green2)">${fmt(d.neto)}</strong></td>
+      <td class="num" style="color:var(--red)">${celdaEditable(d.id,'desc_prestamo',d.desc_prestamo,'var(--red)')}</td>
+      <td class="num" style="color:var(--red)">${celdaEditable(d.id,'desc_adelanto',d.desc_adelanto,'var(--red)')}</td>
+      <td class="num" style="color:var(--green2)">${celdaEditable(d.id,'extras',d.extras,'var(--green2)')}</td>
+      <td class="num" style="color:var(--red)" id="td-desc-${d.id}"><strong>${fmt(d.total_deducciones)}</strong></td>
+      <td class="num" id="td-neto-${d.id}"><strong style="color:var(--green2)">${fmt(d.neto)}</strong></td>
       <td><a href="/recibo.html?empleado_id=${d.empleado_id}&periodo=${encodeURIComponent(periodo)}"
              class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 8px">🧾 Recibo</a></td>
     </tr>`).join('');
@@ -309,6 +334,29 @@ async function loadDetalle(planillaId, periodo, tipo) {
 
   } catch (e) {
     showAlert('alert-det', 'Error: ' + e.message, 'error');
+  }
+}
+
+async function guardarCelda(input) {
+  const detalleId = input.dataset.detalle;
+  const campo     = input.dataset.campo;
+  const valor     = parseFloat(input.value) || 0;
+  input.style.borderColor = 'var(--border)';
+  try {
+    const res = await apiFetch(`/api/planillas/${planillaId}/detalle/${detalleId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ [campo]: valor }),
+    });
+    // Actualizar total_deducciones y neto en la fila sin recargar
+    const tdDesc = document.getElementById(`td-desc-${detalleId}`);
+    const tdNeto = document.getElementById(`td-neto-${detalleId}`);
+    if (tdDesc) tdDesc.innerHTML = `<strong>${fmt(res.total_deducciones)}</strong>`;
+    if (tdNeto) tdNeto.innerHTML = `<strong style="color:var(--green2)">${fmt(res.neto)}</strong>`;
+    input.style.borderColor = '#2ecc71';
+    setTimeout(() => { input.style.borderColor = 'var(--border)'; }, 1000);
+  } catch(e) {
+    input.style.borderColor = 'var(--red)';
+    showAlert('alert-det', 'Error al guardar: ' + e.message, 'error');
   }
 }
 
