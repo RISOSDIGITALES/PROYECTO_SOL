@@ -695,9 +695,26 @@ router.patch('/:id/estado', requireAuth, requireMaster, async (req, res) => {
         if (notifIds.length) {
           const [usuarios] = await db.query(`SELECT nombre, email FROM usuarios WHERE id IN (?) AND email IS NOT NULL`, [notifIds]);
           const periodoStr = String(row.periodo).substring(0, 10);
+          // Generar PDF del reporte para adjuntar
+          let pdfBuffer = null;
+          try {
+            if (generarReportePlanilla) {
+              const [detalles] = await db.query(
+                `SELECT dp.*, e.nombre FROM detalle_planilla dp
+                 JOIN empleados e ON e.id = dp.empleado_id
+                 WHERE dp.planilla_id = ?`, [id]
+              );
+              const [[planillaData]] = await db.query('SELECT * FROM planillas WHERE id = ?', [id]);
+              pdfBuffer = await generarReportePlanilla(planillaData, detalles);
+            }
+          } catch(_) {}
           for (const u of usuarios) {
             try {
-              await enviarNotifPlanillaPagada(u.email, u.nombre, { folio: row.folio, tipo: row.tipo, periodo: periodoStr });
+              if (pdfBuffer) {
+                await enviarReportePlanilla(u.email, u.nombre, pdfBuffer, periodoStr);
+              } else {
+                await enviarNotifPlanillaPagada(u.email, u.nombre, { folio: row.folio, tipo: row.tipo, periodo: periodoStr });
+              }
             } catch(_) {}
           }
         }
