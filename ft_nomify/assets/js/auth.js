@@ -112,14 +112,10 @@ function initLayout() {
       }
       menu.querySelector('#menu-inatec-panel').style.display = '';
     });
-    // Toggle del slider
-    menu.querySelector('#menu-inatec-slider').addEventListener('click', () => {
-      const cb     = menu.querySelector('#menu-inatec-activo');
-      const slider = menu.querySelector('#menu-inatec-slider');
-      const knob   = menu.querySelector('#menu-inatec-knob');
-      cb.checked = !cb.checked;
-      slider.style.background = cb.checked ? 'var(--green2,#2ecc71)' : '#555';
-      knob.style.transform    = cb.checked ? 'translateX(18px)' : 'translateX(0)';
+    // Toggle visual al cambiar el checkbox (el label ya lo togglea solo)
+    menu.querySelector('#menu-inatec-activo').addEventListener('change', function() {
+      menu.querySelector('#menu-inatec-slider').style.background = this.checked ? 'var(--green2,#2ecc71)' : '#555';
+      menu.querySelector('#menu-inatec-knob').style.transform    = this.checked ? 'translateX(18px)' : 'translateX(0)';
     });
     // Guardar
     menu.querySelector('#menu-inatec-guardar').addEventListener('click', async () => {
