@@ -96,6 +96,10 @@ const { requireAuth, requireAdmin } = require('./auth');
     FOREIGN KEY (empleado_id) REFERENCES empleados(id) ON DELETE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 
+  // ── v1.9.3: pago de vacaciones en planilla ───────────────────────────────
+  await run("ALTER TABLE vacaciones ADD COLUMN pago_tipo VARCHAR(20) DEFAULT 'Independiente'");
+  await run("ALTER TABLE vacaciones ADD COLUMN planilla_id INT DEFAULT NULL");
+
   // ── v1.9.2: destinatarios de notificaciones por empresa ──────────────────
   await run("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS notif_usuarios TEXT DEFAULT NULL");
 

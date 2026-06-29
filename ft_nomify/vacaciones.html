@@ -81,6 +81,7 @@
               <th>Hasta</th>
               <th>Días</th>
               <th>Tipo</th>
+              <th>Forma pago</th>
               <th>Estado</th>
               <th>Notas</th>
               <th></th>
@@ -147,6 +148,13 @@
         <div style="display:flex;justify-content:space-between"><span>Monto bruto</span><span id="prev-bruto">—</span></div>
         <div style="display:flex;justify-content:space-between;color:var(--muted)"><span>INSS (7%)</span><span id="prev-inss">—</span></div>
         <div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px solid var(--border);margin-top:6px;padding-top:6px"><span>Neto a pagar</span><span id="prev-neto" style="color:var(--green2)">—</span></div>
+      </div>
+      <div class="form-group">
+        <label>Forma de pago</label>
+        <select id="vac-pago-tipo">
+          <option value="Independiente">Pago independiente</option>
+          <option value="En planilla">Incluir en planilla</option>
+        </select>
       </div>
       <div class="form-group">
         <label>Notas</label>
@@ -351,6 +359,7 @@ function renderHistorial() {
     <td>${fd(v.Fecha_Fin)}</td>
     <td style="font-weight:600">${v.Dias || '—'}</td>
     <td><span class="badge ${tipoBadge(v.Tipo)}">${v.Tipo || '—'}</span></td>
+    <td style="font-size:12px">${v.Tipo === 'Pagadas' ? (v.Pago_Tipo === 'En planilla' ? '<span style="color:var(--green2)">📋 En planilla</span>' : '💵 Independiente') : '<span style="color:var(--text-muted)">—</span>'}</td>
     <td><span class="badge ${estBadge(v.Estado)}">${v.Estado || '—'}</span></td>
     <td style="font-size:12px;color:var(--muted)">${v.Notas || ''}</td>
     <td>
@@ -389,7 +398,11 @@ function actualizarPreviewPago() {
   preview.style.display = 'block';
 }
 
-document.getElementById('vac-tipo').addEventListener('change', actualizarPreviewPago);
+document.getElementById('vac-tipo').addEventListener('change', function() {
+  actualizarPreviewPago();
+  const esPagada = this.value === 'Pagadas';
+  document.getElementById('vac-pago-tipo').closest('.form-group').style.display = esPagada ? '' : 'none';
+});
 document.getElementById('vac-empleado').addEventListener('change', actualizarPreviewPago);
 
 ['vac-inicio', 'vac-fin'].forEach(id => {
@@ -412,6 +425,8 @@ function abrirModal(tipo = 'Descanso') {
   document.getElementById('vac-fin').value = '';
   document.getElementById('vac-dias').value = '';
   document.getElementById('vac-notas').value = '';
+  document.getElementById('vac-pago-tipo').value = 'Independiente';
+  document.getElementById('vac-pago-tipo').closest('.form-group').style.display = tipo === 'Pagadas' ? '' : 'none';
   document.getElementById('alert-form').className = 'alert';
   document.getElementById('preview-pago').style.display = 'none';
   document.getElementById('modal-titulo').textContent = tipo === 'Pagadas' ? '💵 Pagar Vacaciones' : 'Registrar Vacaciones';
@@ -451,6 +466,7 @@ document.getElementById('save-vac').addEventListener('click', async () => {
     }
   }
 
+  const pagoTipo = document.getElementById('vac-pago-tipo').value;
   const fields = {
     Empleado: empleado,
     Tipo: tipo,
@@ -458,6 +474,7 @@ document.getElementById('save-vac').addEventListener('click', async () => {
     Fecha_Inicio: inicio,
     Fecha_Fin: fin,
     Dias: diasFinal,
+    pago_tipo: pagoTipo,
     ...(montoNeto !== null ? { Monto: montoNeto } : {}),
     ...(notas ? { Notas: notas } : {}),
   };

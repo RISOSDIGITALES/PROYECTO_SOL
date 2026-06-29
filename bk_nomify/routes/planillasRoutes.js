@@ -138,6 +138,11 @@ router.post('/calcular', requireAuth, async (req, res) => {
     const [deducciones] = await conn.query(
       `SELECT * FROM deducciones WHERE descontar_en = ? AND estado = 'Pendiente' AND pausado = 0`, [periodo]
     );
+    const empIds = empleados.map(e => e.id);
+    const [vacaciones] = empIds.length ? await conn.query(
+      `SELECT * FROM vacaciones WHERE empleado_id IN (?) AND pago_tipo = 'En planilla' AND estado = 'Aprobada' AND planilla_id IS NULL`,
+      [empIds]
+    ) : [[]];
 
     const byEmp = (arr) => arr.reduce((m, r) => {
       if (!m[r.empleado_id]) m[r.empleado_id] = [];
@@ -149,6 +154,7 @@ router.post('/calcular', requireAuth, async (req, res) => {
     const prestamosPor = byEmp(prestamos);
     const extrasPor    = byEmp(extras);
     const deduccPor    = byEmp(deducciones);
+    const vacacionesPor = byEmp(vacaciones);
 
     const detalles = [];
     let totalBruto = 0, totalDesc = 0, totalNeto = 0;
@@ -198,9 +204,11 @@ router.post('/calcular', requireAuth, async (req, res) => {
       const totalExtras  = Math.round(empExtras.reduce((s, x) => s + parseFloat(x.monto || 0), 0) * 100) / 100;
       const empDed       = deduccPor[emp.id] || [];
       const descDed      = Math.round(empDed.reduce((s, d) => s + parseFloat(d.monto || 0), 0) * 100) / 100;
+      const empVac       = vacacionesPor[emp.id] || [];
+      const montoVac     = Math.round(empVac.reduce((s, v) => s + parseFloat(v.monto || 0), 0) * 100) / 100;
 
       const totalDeducciones = Math.round((inss + ir + descAdelanto + descPrestamo + descDed) * 100) / 100;
-      const neto             = Math.round((salarioQuincenal + totalExtras - totalDeducciones) * 100) / 100;
+      const neto             = Math.round((salarioQuincenal + totalExtras + montoVac - totalDeducciones) * 100) / 100;
 
       // ── Costo patronal (no afecta el neto del empleado) ──────────────────
       let inss_patronal = 0, inatec = 0;
@@ -211,7 +219,7 @@ router.post('/calcular', requireAuth, async (req, res) => {
       inatec = inatecActivo ? Math.round(salarioQuincenal * INATEC_RATE * 100) / 100 : 0;
       const costoEmpresa = Math.round((salarioQuincenal + inss_patronal + inatec) * 100) / 100;
 
-      totalBruto += salarioQuincenal + totalExtras;
+      totalBruto += salarioQuincenal + totalExtras + montoVac;
       totalDesc  += totalDeducciones;
       totalNeto  += neto;
 
@@ -221,8 +229,10 @@ router.post('/calcular', requireAuth, async (req, res) => {
         salario_quincenal: salarioQuincenal, inss, ir,
         desc_adelanto: descAdelanto, desc_prestamo: descPrestamo,
         extras: totalExtras, desc_deducciones: descDed,
+        vacaciones_pagadas: montoVac,
         total_deducciones: totalDeducciones, neto,
         inss_patronal, inatec, costo_empresa: costoEmpresa,
+        vacacionesIds: empVac.map(v => v.id),
         adelantosIds:  empAdel.map(a => a.id),
         prestamosData: prestActivos.map(p => ({
           id: p.id,
@@ -265,16 +275,23 @@ router.post('/calcular', requireAuth, async (req, res) => {
       await conn.query(
         `INSERT INTO detalle_planilla
          (planilla_id, empleado_id, periodo, tipo_planilla, salario_quincenal, inss, ir,
-          desc_prestamo, desc_adelanto, extras, desc_deducciones, total_deducciones, neto,
+          desc_prestamo, desc_adelanto, extras, desc_deducciones, vacaciones_pagadas, total_deducciones, neto,
           inss_patronal, inatec, adelantos_ids, deducciones_ids, prestamos_data)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [planillaId, d.empleado_id, periodo, d.tipo_planilla, d.salario_quincenal,
          d.inss, d.ir, d.desc_prestamo, d.desc_adelanto, d.extras,
-         d.desc_deducciones, d.total_deducciones, d.neto, d.inss_patronal, d.inatec,
+         d.desc_deducciones, d.vacaciones_pagadas || 0, d.total_deducciones, d.neto, d.inss_patronal, d.inatec,
          JSON.stringify(d.adelantosIds),
          JSON.stringify(d.deduccionesIds),
          JSON.stringify(d.prestamosData)]
       );
+      // Vincular vacaciones a esta planilla
+      if (d.vacacionesIds?.length) {
+        await conn.query(
+          `UPDATE vacaciones SET planilla_id = ? WHERE id IN (?)`,
+          [planillaId, d.vacacionesIds]
+        );
+      }
     }
 
     await conn.commit(); conn.release();
@@ -681,6 +698,8 @@ router.patch('/:id/estado', requireAuth, requireMaster, async (req, res) => {
         await conn.query('UPDATE adelantos SET estado = ? WHERE id IN (?)', ['Descontado', allAdelIds]);
       if (allDedIds.length)
         await conn.query('UPDATE deducciones SET estado = ? WHERE id IN (?)', ['Descontado', allDedIds]);
+      // Marcar vacaciones vinculadas como Pagadas
+      await conn.query("UPDATE vacaciones SET estado = 'Pagada' WHERE planilla_id = ?", [id]);
     }
 
     await conn.query('UPDATE planillas SET estado = ? WHERE id = ?', [estado, id]);
