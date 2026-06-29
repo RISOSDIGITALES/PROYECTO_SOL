@@ -31,9 +31,9 @@ function calcularIRAnual(ingresoAnual) {
 // GET /api/planillas
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const conds = [], params = [];
+    const conds = ["p.estado != 'Papelera'"], params = [];
     if (req.empresaId) { conds.push('p.empresa_id = ?'); params.push(req.empresaId); }
-    const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+    const where = 'WHERE ' + conds.join(' AND ');
     const [rows] = await db.query(
       `SELECT p.id,
         p.folio AS folio,
@@ -91,13 +91,13 @@ router.post('/calcular', requireAuth, async (req, res) => {
       const [[dup]] = await conn.query(
         `SELECT id, folio FROM planillas
          WHERE DATE(periodo) = ? AND empresa_id <=> ?
-           AND (? IS NULL OR tipo = ?)`,
+           AND (? IS NULL OR tipo = ?) AND estado = 'Pagada'`,
         [periodo.substring(0, 10), empresaId, tipoFiltro, tipoFiltro]
       );
       if (dup) {
         await conn.rollback(); conn.release();
         return res.status(409).json({
-          error: `Ya existe la planilla #${dup.folio} para este período. Envía { forzar: true } para generar de todas formas.`,
+          error: `Ya existe la planilla pagada #${dup.folio} para este período. No se puede regenerar.`,
           planilla_existente: dup.id,
           folio: dup.folio,
         });
@@ -261,52 +261,15 @@ router.post('/calcular', requireAuth, async (req, res) => {
         `INSERT INTO detalle_planilla
          (planilla_id, empleado_id, periodo, tipo_planilla, salario_quincenal, inss, ir,
           desc_prestamo, desc_adelanto, extras, desc_deducciones, total_deducciones, neto,
-          inss_patronal, inatec)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          inss_patronal, inatec, adelantos_ids, deducciones_ids, prestamos_data)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [planillaId, d.empleado_id, periodo, d.tipo_planilla, d.salario_quincenal,
          d.inss, d.ir, d.desc_prestamo, d.desc_adelanto, d.extras,
-         d.desc_deducciones, d.total_deducciones, d.neto,
-         d.inss_patronal, d.inatec]
+         d.desc_deducciones, d.total_deducciones, d.neto, d.inss_patronal, d.inatec,
+         JSON.stringify(d.adelantosIds),
+         JSON.stringify(d.deduccionesIds),
+         JSON.stringify(d.prestamosData)]
       );
-    }
-
-    const allAdelIds = detalles.flatMap(d => d.adelantosIds);
-    if (allAdelIds.length) {
-      await conn.query('UPDATE adelantos SET estado = ? WHERE id IN (?)', ['Descontado', allAdelIds]);
-    }
-
-    const allDedIds = detalles.flatMap(d => d.deduccionesIds);
-    if (allDedIds.length) {
-      await conn.query('UPDATE deducciones SET estado = ? WHERE id IN (?)', ['Descontado', allDedIds]);
-    }
-
-    for (const d of detalles) {
-      for (const p of d.prestamosData) {
-        const pagoReal = Math.min(p.cuota_quincenal, p.saldo_pendiente);
-
-        // Registrar el pago en pagos_prestamos (fuente de verdad)
-        await conn.query(
-          'INSERT INTO pagos_prestamos (prestamo_id, fecha, monto, tipo, concepto) VALUES (?,?,?,?,?)',
-          [p.id, periodo, pagoReal, 'Quincena', `Planilla ${periodo}`]
-        );
-
-        // Recalcular saldo desde monto_total - suma real de pagos
-        const [[{ total_pagado, monto_total }]] = await conn.query(
-          `SELECT COALESCE(SUM(pp.monto), 0) AS total_pagado, pr.monto_total
-           FROM prestamos pr
-           LEFT JOIN pagos_prestamos pp ON pp.prestamo_id = pr.id
-           WHERE pr.id = ?
-           GROUP BY pr.id`,
-          [p.id]
-        );
-        const saldoFinal   = Math.max(0, Math.round((parseFloat(monto_total) - parseFloat(total_pagado)) * 100) / 100);
-        const nuevasCuotas = saldoFinal > 0 ? Math.ceil(saldoFinal / p.cuota_quincenal) : 0;
-
-        await conn.query(
-          'UPDATE prestamos SET cuotas_restantes = ?, saldo_pendiente = ?, estado = ? WHERE id = ?',
-          [nuevasCuotas, saldoFinal, saldoFinal <= 0 ? 'Pagado' : 'Activo', p.id]
-        );
-      }
     }
 
     await conn.commit(); conn.release();
@@ -334,13 +297,13 @@ async function calcularAguinaldo(req, res, periodo, forzar) {
     if (!forzar) {
       const [[dup]] = await conn.query(
         `SELECT id, folio FROM planillas
-         WHERE YEAR(periodo) = ? AND tipo = 'Aguinaldo' AND empresa_id <=> ?`,
+         WHERE YEAR(periodo) = ? AND tipo = 'Aguinaldo' AND empresa_id <=> ? AND estado = 'Pagada'`,
         [anio, empresaId]
       );
       if (dup) {
         await conn.rollback(); conn.release();
         return res.status(409).json({
-          error: `Ya existe el aguinaldo #${dup.folio} para ${anio}. Envía { forzar: true } para regenerar.`,
+          error: `Ya existe el aguinaldo pagado #${dup.folio} para ${anio}. No se puede regenerar.`,
           planilla_existente: dup.id, folio: dup.folio,
         });
       }
@@ -451,13 +414,13 @@ async function calcularMensual(req, res, periodo, tipo, forzar) {
       const [[dup]] = await conn.query(
         `SELECT id, folio FROM planillas
          WHERE YEAR(periodo) = ? AND MONTH(periodo) = ?
-         AND empresa_id <=> ? AND tipo = ?`,
+         AND empresa_id <=> ? AND tipo = ? AND estado = 'Pagada'`,
         [anio, mes, empresaId, tipoGuardar]
       );
       if (dup) {
         await conn.rollback(); conn.release();
         return res.status(409).json({
-          error: `Ya existe la planilla mensual #${dup.folio} para ${String(mes).padStart(2,'0')}/${anio}. Envía { forzar: true } para regenerar.`,
+          error: `Ya existe la planilla mensual pagada #${dup.folio} para ${String(mes).padStart(2,'0')}/${anio}. No se puede regenerar.`,
           planilla_existente: dup.id, folio: dup.folio,
         });
       }
@@ -618,47 +581,15 @@ async function calcularMensual(req, res, periodo, tipo, forzar) {
         `INSERT INTO detalle_planilla
          (planilla_id, empleado_id, periodo, tipo_planilla, salario_quincenal, inss, ir,
           desc_prestamo, desc_adelanto, extras, desc_deducciones, total_deducciones, neto,
-          inss_patronal, inatec)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          inss_patronal, inatec, adelantos_ids, deducciones_ids, prestamos_data)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [planillaId, d.empleado_id, periodoNorm, d.tipo_planilla, d.salario_quincenal,
          d.inss, d.ir, d.desc_prestamo, d.desc_adelanto, d.extras,
-         d.desc_deducciones, d.total_deducciones, d.neto, d.inss_patronal, d.inatec]
+         d.desc_deducciones, d.total_deducciones, d.neto, d.inss_patronal, d.inatec,
+         JSON.stringify(d.adelantosIds),
+         JSON.stringify(d.deduccionesIds),
+         JSON.stringify(d.prestamosData)]
       );
-    }
-
-    // Marcar adelantos y deducciones como descontados
-    const allAdelIds = detalles.flatMap(d => d.adelantosIds);
-    if (allAdelIds.length)
-      await conn.query('UPDATE adelantos SET estado = ? WHERE id IN (?)', ['Descontado', allAdelIds]);
-
-    const allDedIds = detalles.flatMap(d => d.deduccionesIds);
-    if (allDedIds.length)
-      await conn.query('UPDATE deducciones SET estado = ? WHERE id IN (?)', ['Descontado', allDedIds]);
-
-    // Registrar pagos de préstamos (agrupados como 1 pago mensual)
-    for (const d of detalles) {
-      for (const p of d.prestamosData) {
-        const cuotasMes = p.frecuencia === 'Mensual' ? 1 : 2;
-        const pagoReal  = Math.min(p.cuota_quincenal * cuotasMes, p.saldo_pendiente);
-        if (pagoReal <= 0) continue;
-
-        await conn.query(
-          'INSERT INTO pagos_prestamos (prestamo_id, fecha, monto, tipo, concepto) VALUES (?,?,?,?,?)',
-          [p.id, periodoNorm, pagoReal, 'Mensual', `Planilla Mensual ${String(mes).padStart(2,'0')}/${anio}`]
-        );
-
-        const [[{ total_pagado, monto_total }]] = await conn.query(
-          `SELECT COALESCE(SUM(pp.monto), 0) AS total_pagado, pr.monto_total
-           FROM prestamos pr LEFT JOIN pagos_prestamos pp ON pp.prestamo_id = pr.id
-           WHERE pr.id = ? GROUP BY pr.id`, [p.id]
-        );
-        const saldoFinal   = Math.max(0, Math.round((parseFloat(monto_total) - parseFloat(total_pagado)) * 100) / 100);
-        const nuevasCuotas = saldoFinal > 0 ? Math.ceil(saldoFinal / p.cuota_quincenal) : 0;
-        await conn.query(
-          'UPDATE prestamos SET cuotas_restantes = ?, saldo_pendiente = ?, estado = ? WHERE id = ?',
-          [nuevasCuotas, saldoFinal, saldoFinal <= 0 ? 'Pagado' : 'Activo', p.id]
-        );
-      }
     }
 
     await conn.commit(); conn.release();
@@ -680,10 +611,111 @@ router.patch('/:id/estado', requireAuth, requireMaster, async (req, res) => {
   const ESTADOS = ['Borrador', 'Pagada', 'Anulada'];
   if (!estado || !ESTADOS.includes(estado))
     return res.status(400).json({ error: `Estado inválido. Usa: ${ESTADOS.join(', ')}` });
+
+  const conn = await db.getConnection();
   try {
-    await db.query('UPDATE planillas SET estado = ? WHERE id = ?', [estado, id]);
+    await conn.beginTransaction();
+
+    const [[planilla]] = await conn.query('SELECT estado, periodo, tipo FROM planillas WHERE id = ?', [id]);
+    if (!planilla) { await conn.rollback(); conn.release(); return res.status(404).json({ error: 'Planilla no encontrada' }); }
+    if (planilla.estado === 'Pagada') { await conn.rollback(); conn.release(); return res.status(400).json({ error: 'La planilla ya está pagada y no puede modificarse' }); }
+
+    // Al marcar Pagada: aplicar todos los descuentos guardados en el snapshot
+    if (estado === 'Pagada') {
+      const [detalles] = await conn.query(
+        'SELECT * FROM detalle_planilla WHERE planilla_id = ?', [id]
+      );
+      const periodo = planilla.periodo instanceof Date
+        ? planilla.periodo.toISOString().substring(0, 10)
+        : String(planilla.periodo).substring(0, 10);
+      const esMensual = (planilla.tipo || '').includes('Mensual');
+      const concepto  = esMensual
+        ? `Planilla Mensual ${periodo.substring(0, 7)}`
+        : `Planilla ${periodo}`;
+
+      const allAdelIds = [], allDedIds = [];
+      for (const d of detalles) {
+        const adelIds = d.adelantos_ids  ? JSON.parse(d.adelantos_ids)  : [];
+        const dedIds  = d.deducciones_ids ? JSON.parse(d.deducciones_ids) : [];
+        allAdelIds.push(...adelIds);
+        allDedIds.push(...dedIds);
+
+        const presData = d.prestamos_data ? JSON.parse(d.prestamos_data) : [];
+        const descTotal = parseFloat(d.desc_prestamo || 0);
+
+        // Distribuir desc_prestamo (puede haber sido editado) proporcionalmente
+        const sumaCuotas = presData.reduce((s, p) => s + Math.min(parseFloat(p.cuota_quincenal || 0), parseFloat(p.saldo_pendiente || 0)), 0);
+        for (const p of presData) {
+          const cuota     = parseFloat(p.cuota_quincenal || 0);
+          const saldo     = parseFloat(p.saldo_pendiente || 0);
+          const cuotaBase = Math.min(cuota, saldo);
+          const pagoReal  = sumaCuotas > 0
+            ? Math.round(descTotal * (cuotaBase / sumaCuotas) * 100) / 100
+            : 0;
+          if (pagoReal <= 0) continue;
+
+          await conn.query(
+            'INSERT INTO pagos_prestamos (prestamo_id, fecha, monto, tipo, concepto) VALUES (?,?,?,?,?)',
+            [p.id, periodo, pagoReal, esMensual ? 'Mensual' : 'Quincena', concepto]
+          );
+          const [[{ total_pagado, monto_total }]] = await conn.query(
+            `SELECT COALESCE(SUM(pp.monto),0) AS total_pagado, pr.monto_total
+             FROM prestamos pr LEFT JOIN pagos_prestamos pp ON pp.prestamo_id = pr.id
+             WHERE pr.id = ? GROUP BY pr.id`, [p.id]
+          );
+          const saldoFinal   = Math.max(0, Math.round((parseFloat(monto_total) - parseFloat(total_pagado)) * 100) / 100);
+          const nuevasCuotas = saldoFinal > 0 ? Math.ceil(saldoFinal / cuota) : 0;
+          await conn.query(
+            'UPDATE prestamos SET cuotas_restantes = ?, saldo_pendiente = ?, estado = ? WHERE id = ?',
+            [nuevasCuotas, saldoFinal, saldoFinal <= 0 ? 'Pagado' : 'Activo', p.id]
+          );
+        }
+      }
+
+      if (allAdelIds.length)
+        await conn.query('UPDATE adelantos SET estado = ? WHERE id IN (?)', ['Descontado', allAdelIds]);
+      if (allDedIds.length)
+        await conn.query('UPDATE deducciones SET estado = ? WHERE id IN (?)', ['Descontado', allDedIds]);
+    }
+
+    await conn.query('UPDATE planillas SET estado = ? WHERE id = ?', [estado, id]);
+    await conn.commit(); conn.release();
     const [[row]] = await db.query('SELECT estado, folio FROM planillas WHERE id = ?', [id]);
     res.json({ ok: true, estado: row?.estado, folio: row?.folio });
+  } catch (e) {
+    await conn.rollback(); conn.release();
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// DELETE /api/planillas/:id — mover a Papelera (solo si está en Borrador)
+router.delete('/:id', requireAuth, requireMaster, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [[planilla]] = await db.query('SELECT estado, folio FROM planillas WHERE id = ?', [id]);
+    if (!planilla) return res.status(404).json({ error: 'Planilla no encontrada' });
+    if (planilla.estado !== 'Borrador')
+      return res.status(400).json({ error: 'Solo se pueden eliminar planillas en estado Borrador' });
+    await db.query("UPDATE planillas SET estado = 'Papelera' WHERE id = ?", [id]);
+    res.json({ ok: true, mensaje: `Planilla #${planilla.folio} enviada a la papelera` });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/planillas/papelera — planillas en la papelera
+router.get('/papelera', requireAuth, requireMaster, async (req, res) => {
+  try {
+    const params = [];
+    const conds = ["p.estado = 'Papelera'"];
+    if (req.empresaId) { conds.push('p.empresa_id = ?'); params.push(req.empresaId); }
+    const [rows] = await db.query(
+      `SELECT p.id, p.folio, DATE_FORMAT(p.periodo,'%Y-%m-%d') AS periodo,
+              p.tipo, p.total_bruto, p.total_neto, p.created_at
+       FROM planillas p
+       WHERE ${conds.join(' AND ')}
+       ORDER BY p.id DESC`,
+      params
+    );
+    res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

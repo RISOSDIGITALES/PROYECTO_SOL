@@ -96,6 +96,11 @@ const { requireAuth, requireAdmin } = require('./auth');
     FOREIGN KEY (empleado_id) REFERENCES empleados(id) ON DELETE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 
+  // ── v1.9.1: snapshot de descuentos en detalle_planilla ───────────────────
+  await run("ALTER TABLE detalle_planilla ADD COLUMN IF NOT EXISTS adelantos_ids  TEXT DEFAULT NULL");
+  await run("ALTER TABLE detalle_planilla ADD COLUMN IF NOT EXISTS deducciones_ids TEXT DEFAULT NULL");
+  await run("ALTER TABLE detalle_planilla ADD COLUMN IF NOT EXISTS prestamos_data  TEXT DEFAULT NULL");
+
   // ── v1.9: tabla de monedas ────────────────────────────────────────────────
   await run(`CREATE TABLE IF NOT EXISTS moneda (
     id         INT AUTO_INCREMENT PRIMARY KEY,
