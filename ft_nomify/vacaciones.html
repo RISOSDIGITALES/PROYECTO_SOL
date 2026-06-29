@@ -156,6 +156,11 @@
           <option value="En planilla">Incluir en planilla</option>
         </select>
       </div>
+      <div class="form-group" id="grupo-periodo-planilla" style="display:none">
+        <label>Período de planilla <span style="color:var(--red)">*</span></label>
+        <input type="date" id="vac-periodo-planilla" />
+        <small style="color:var(--text-muted);font-size:11px">Fecha de inicio del período (ej: 01 o 16 del mes)</small>
+      </div>
       <div class="form-group">
         <label>Notas</label>
         <input type="text" id="vac-notas" placeholder="Observaciones..." />
@@ -359,7 +364,7 @@ function renderHistorial() {
     <td>${fd(v.Fecha_Fin)}</td>
     <td style="font-weight:600">${v.Dias || '—'}</td>
     <td><span class="badge ${tipoBadge(v.Tipo)}">${v.Tipo || '—'}</span></td>
-    <td style="font-size:12px">${v.Tipo === 'Pagadas' ? (v.Pago_Tipo === 'En planilla' ? '<span style="color:var(--green2)">📋 En planilla</span>' : '💵 Independiente') : '<span style="color:var(--text-muted)">—</span>'}</td>
+    <td style="font-size:12px">${v.Tipo === 'Pagadas' ? (v.Pago_Tipo === 'En planilla' ? `<span style="color:var(--green2)">📋 ${v.Periodo_Planilla ? fd(v.Periodo_Planilla) : 'En planilla'}</span>` : '💵 Independiente') : '<span style="color:var(--text-muted)">—</span>'}</td>
     <td><span class="badge ${estBadge(v.Estado)}">${v.Estado || '—'}</span></td>
     <td style="font-size:12px;color:var(--muted)">${v.Notas || ''}</td>
     <td>
@@ -402,6 +407,11 @@ document.getElementById('vac-tipo').addEventListener('change', function() {
   actualizarPreviewPago();
   const esPagada = this.value === 'Pagadas';
   document.getElementById('vac-pago-tipo').closest('.form-group').style.display = esPagada ? '' : 'none';
+  if (!esPagada) document.getElementById('grupo-periodo-planilla').style.display = 'none';
+});
+
+document.getElementById('vac-pago-tipo').addEventListener('change', function() {
+  document.getElementById('grupo-periodo-planilla').style.display = this.value === 'En planilla' ? '' : 'none';
 });
 document.getElementById('vac-empleado').addEventListener('change', actualizarPreviewPago);
 
@@ -427,6 +437,8 @@ function abrirModal(tipo = 'Descanso') {
   document.getElementById('vac-notas').value = '';
   document.getElementById('vac-pago-tipo').value = 'Independiente';
   document.getElementById('vac-pago-tipo').closest('.form-group').style.display = tipo === 'Pagadas' ? '' : 'none';
+  document.getElementById('grupo-periodo-planilla').style.display = 'none';
+  document.getElementById('vac-periodo-planilla').value = '';
   document.getElementById('alert-form').className = 'alert';
   document.getElementById('preview-pago').style.display = 'none';
   document.getElementById('modal-titulo').textContent = tipo === 'Pagadas' ? '💵 Pagar Vacaciones' : 'Registrar Vacaciones';
@@ -467,6 +479,10 @@ document.getElementById('save-vac').addEventListener('click', async () => {
   }
 
   const pagoTipo = document.getElementById('vac-pago-tipo').value;
+  const periodoPlanilla = document.getElementById('vac-periodo-planilla').value;
+  if (pagoTipo === 'En planilla' && !periodoPlanilla) {
+    showAlert('alert-form', 'Seleccioná el período de planilla', 'error'); return;
+  }
   const fields = {
     Empleado: empleado,
     Tipo: tipo,
@@ -475,6 +491,7 @@ document.getElementById('save-vac').addEventListener('click', async () => {
     Fecha_Fin: fin,
     Dias: diasFinal,
     pago_tipo: pagoTipo,
+    ...(pagoTipo === 'En planilla' ? { periodo_planilla: periodoPlanilla } : {}),
     ...(montoNeto !== null ? { Monto: montoNeto } : {}),
     ...(notas ? { Notas: notas } : {}),
   };

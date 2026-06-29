@@ -13,7 +13,8 @@ const GET_SQL = `
     v.notas AS Notas,
     v.empleado_id,
     v.pago_tipo AS Pago_Tipo,
-    v.planilla_id
+    v.planilla_id,
+    v.periodo_planilla AS Periodo_Planilla
   FROM vacaciones v
   JOIN empleados e ON v.empleado_id = e.id`;
 
@@ -49,11 +50,12 @@ router.post('/', requireAuth, requireMaster, async (req, res) => {
   const estado = b.estado ?? b['Estado'] ?? 'Aprobada';
   const notas = b.notas ?? b['Notas'];
   const fecha_registro = b.fecha_registro ?? new Date().toISOString().split('T')[0];
-  const pago_tipo = b.pago_tipo ?? 'Independiente';
+  const pago_tipo       = b.pago_tipo ?? 'Independiente';
+  const periodo_planilla = b.periodo_planilla ?? null;
   try {
     const [r] = await db.query(
-      'INSERT INTO vacaciones (empleado_id, tipo, dias, monto, fecha_inicio, fecha_fin, estado, notas, fecha_registro, pago_tipo) VALUES (?,?,?,?,?,?,?,?,?,?)',
-      [empleado_id, tipo, dias, monto, fecha_inicio, fecha_fin, estado, notas, fecha_registro, pago_tipo]
+      'INSERT INTO vacaciones (empleado_id, tipo, dias, monto, fecha_inicio, fecha_fin, estado, notas, fecha_registro, pago_tipo, periodo_planilla) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+      [empleado_id, tipo, dias, monto, fecha_inicio, fecha_fin, estado, notas, fecha_registro, pago_tipo, periodo_planilla]
     );
     const [rows] = await db.query(`${GET_SQL} WHERE v.id = ?`, [r.insertId]);
     res.status(201).json(rows[0]);
@@ -72,7 +74,8 @@ async function patchHandler(req, res) {
     fecha_fin:   b.fecha_fin   ?? b['Fecha_Fin'],
     estado:      b.estado      ?? b['Estado'],
     notas:       b.notas       ?? b['Notas'],
-    pago_tipo:   b.pago_tipo   ?? b['Pago_Tipo'],
+    pago_tipo:        b.pago_tipo        ?? b['Pago_Tipo'],
+    periodo_planilla: b.periodo_planilla ?? b['Periodo_Planilla'] ?? undefined,
   };
   const sets = [], vals = [];
   for (const [col, val] of Object.entries(mapping)) {

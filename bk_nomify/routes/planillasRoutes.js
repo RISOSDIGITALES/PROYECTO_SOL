@@ -140,8 +140,8 @@ router.post('/calcular', requireAuth, async (req, res) => {
     );
     const empIds = empleados.map(e => e.id);
     const [vacaciones] = empIds.length ? await conn.query(
-      `SELECT * FROM vacaciones WHERE empleado_id IN (?) AND pago_tipo = 'En planilla' AND estado = 'Aprobada' AND planilla_id IS NULL`,
-      [empIds]
+      `SELECT * FROM vacaciones WHERE empleado_id IN (?) AND pago_tipo = 'En planilla' AND estado = 'Aprobada' AND planilla_id IS NULL AND periodo_planilla = ?`,
+      [empIds, periodo]
     ) : [[]];
 
     const byEmp = (arr) => arr.reduce((m, r) => {
