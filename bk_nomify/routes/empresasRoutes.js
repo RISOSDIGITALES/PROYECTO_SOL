@@ -11,6 +11,7 @@ router.get('/', requireAuth, async (req, res) => {
     const [rows] = await db.query(
       'SELECT id, nombre, ruc, correo, telefono, direccion, inatec_activo FROM empresas ORDER BY nombre ASC'
     );
+    rows.forEach(r => { r.inatec_activo = parseInt(r.inatec_activo) || 0; });
     if (req.user.rol === 'Planillero' && req.user.empresas_acceso) {
       try {
         const allowed = JSON.parse(req.user.empresas_acceso);
@@ -29,6 +30,7 @@ router.get('/:id', requireAuth, async (req, res) => {
       [req.params.id]
     );
     if (!row) return res.status(404).json({ error: 'Empresa no encontrada' });
+    row.inatec_activo = parseInt(row.inatec_activo) || 0;
     res.json(row);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

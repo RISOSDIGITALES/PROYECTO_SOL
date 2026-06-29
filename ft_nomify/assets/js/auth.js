@@ -101,7 +101,7 @@ function initLayout() {
       if (empresaId) {
         try {
           const emp    = await apiFetch(`/api/empresas/${empresaId}`);
-          const activo = emp.inatec_activo !== 0;
+          const activo = parseInt(emp.inatec_activo) !== 0;
           const cb     = menu.querySelector('#menu-inatec-activo');
           const slider = menu.querySelector('#menu-inatec-slider');
           const knob   = menu.querySelector('#menu-inatec-knob');
