@@ -823,25 +823,35 @@ async function abrirPapelera() {
   modal.classList.add('open');
   tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted)">Cargando...</td></tr>';
   try {
-    const rows = await apiFetch('/api/planillas/papelera');
+    const [rows, activas] = await Promise.all([
+      apiFetch('/api/planillas/papelera'),
+      apiFetch('/api/planillas'),
+    ]);
     if (!rows.length) {
       tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted)">La papelera está vacía</td></tr>';
       return;
     }
+    // Períodos con planilla Pagada (por periodo+tipo)
+    const pagadas = new Set(activas
+      .filter(a => a.Estado === 'Pagada')
+      .map(a => String(a['Período'] || '').substring(0,10) + '|' + (a.Tipo || ''))
+    );
     tbody.innerHTML = rows.map(p => {
       const periodo = String(p.periodo || '').substring(0, 10);
       const neto = p.total_neto != null ? 'C$ ' + parseFloat(p.total_neto).toLocaleString('es-NI', {minimumFractionDigits:2}) : '—';
+      const bloqueada = pagadas.has(periodo + '|' + (p.tipo || ''));
+      const btnRestaurar = bloqueada
+        ? `<span style="font-size:12px;color:var(--text-muted);cursor:default" title="Ya existe una planilla pagada para este período">🔒 No restaurable</span>`
+        : `<button onclick="restaurarPlanilla(${p.id},${p.folio})"
+            style="font-size:12px;padding:4px 10px;background:rgba(46,204,113,.15);border:1px solid rgba(46,204,113,.4);color:#2ecc71;border-radius:4px;cursor:pointer">
+            ↩ Restaurar
+          </button>`;
       return `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:10px 16px;color:var(--text-muted)">#${p.folio}</td>
         <td style="padding:10px 16px">${fmtPeriodo(periodo)}</td>
         <td style="padding:10px 16px;color:var(--text-muted)">${p.tipo || 'Todos'}</td>
         <td style="padding:10px 16px;text-align:right">${neto}</td>
-        <td style="padding:10px 16px;text-align:right">
-          <button onclick="restaurarPlanilla(${p.id},${p.folio})"
-            style="font-size:12px;padding:4px 10px;background:rgba(46,204,113,.15);border:1px solid rgba(46,204,113,.4);color:#2ecc71;border-radius:4px;cursor:pointer">
-            ↩ Restaurar
-          </button>
-        </td>
+        <td style="padding:10px 16px;text-align:right">${btnRestaurar}</td>
       </tr>`;
     }).join('');
   } catch(e) {
