@@ -263,7 +263,11 @@ async function loadDetalle(planillaId, periodo, tipo) {
         onfocus="this.select()" />`;
     };
 
-    document.getElementById('tabla-detalle').innerHTML = detalles.map(d => `<tr>
+    document.getElementById('tabla-detalle').innerHTML = detalles.map(d => `<tr
+      data-detalle-id="${d.id}"
+      data-salario="${pf(d.salario_quincenal)}"
+      data-inss="${pf(d.inss)}"
+      data-ir="${pf(d.ir)}">
       <td><strong>${d.nombre || '—'}</strong></td>
       <td class="num">${fmt(d.salario_quincenal)}</td>
       <td class="num" style="color:var(--red)">${fmt(d.inss)}</td>
@@ -347,15 +351,32 @@ function marcarCambio(input) {
   const campo     = input.dataset.campo;
   if (!_cambiosPendientes[detalleId]) _cambiosPendientes[detalleId] = {};
   _cambiosPendientes[detalleId][campo] = parseFloat(input.value) || 0;
-  input.style.borderColor = 'var(--yellow, #f39c12)';
+  input.style.borderColor = '#f39c12';
+
+  // Recalcular totales de la fila en tiempo real
+  const fila = document.querySelector(`tr[data-detalle-id="${detalleId}"]`);
+  if (fila) {
+    const salario  = parseFloat(fila.dataset.salario) || 0;
+    const inss     = parseFloat(fila.dataset.inss)    || 0;
+    const ir       = parseFloat(fila.dataset.ir)      || 0;
+    const getVal   = (c) => {
+      const el = fila.querySelector(`input[data-campo="${c}"]`);
+      return el ? (parseFloat(el.value) || 0) : (_cambiosPendientes[detalleId]?.[c] || 0);
+    };
+    const dPrest  = getVal('desc_prestamo');
+    const dAdel   = getVal('desc_adelanto');
+    const extras  = getVal('extras');
+    const dDed    = getVal('desc_deducciones');
+    const totalDesc = Math.round((inss + ir + dPrest + dAdel + dDed) * 100) / 100;
+    const neto      = Math.round((salario + extras - totalDesc) * 100) / 100;
+    const tdDesc = document.getElementById(`td-desc-${detalleId}`);
+    const tdNeto = document.getElementById(`td-neto-${detalleId}`);
+    if (tdDesc) tdDesc.innerHTML = `<strong style="color:var(--red)">${fmt(totalDesc)}</strong>`;
+    if (tdNeto) tdNeto.innerHTML = `<strong style="color:var(--green2)">${fmt(neto)}</strong>`;
+  }
 
   const btn = document.getElementById('btn-guardar-cambios');
-  if (btn) {
-    btn.style.display  = '';
-    btn.style.opacity  = '1';
-    btn.style.cursor   = 'pointer';
-    btn.disabled       = false;
-  }
+  if (btn) { btn.style.opacity='1'; btn.style.cursor='pointer'; btn.disabled=false; }
 }
 
 async function guardarCelda(input) {
