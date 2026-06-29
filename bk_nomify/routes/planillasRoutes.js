@@ -784,12 +784,12 @@ router.patch('/:id/detalle/:detalleId', requireAuth, requireMaster, async (req, 
 
     // Recalcular totales de la planilla cabecera
     const [[totales]] = await db.query(
-      `SELECT SUM(salario_quincenal+extras) AS bruto, SUM(total_deducciones) AS desc, SUM(neto) AS neto,
+      `SELECT SUM(salario_quincenal+extras) AS bruto, SUM(total_deducciones) AS total_desc, SUM(neto) AS neto,
               SUM(inss_patronal) AS patronal, SUM(inatec) AS inatec
        FROM detalle_planilla WHERE planilla_id = ?`, [id]
     );
-    const tBruto  = Math.round((parseFloat(totales.bruto  ||0)) * 100) / 100;
-    const tDesc   = Math.round((parseFloat(totales.desc   ||0)) * 100) / 100;
+    const tBruto  = Math.round((parseFloat(totales.bruto      ||0)) * 100) / 100;
+    const tDesc   = Math.round((parseFloat(totales.total_desc ||0)) * 100) / 100;
     const tNeto   = Math.round((parseFloat(totales.neto   ||0)) * 100) / 100;
     const tPatr   = Math.round((parseFloat(totales.patronal||0)) * 100) / 100;
     const tInatec = Math.round((parseFloat(totales.inatec ||0)) * 100) / 100;

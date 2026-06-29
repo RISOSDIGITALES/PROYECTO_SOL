@@ -64,6 +64,7 @@
         <button class="btn btn-ghost btn-sm" id="btn-email-reporte">📧 Enviar por correo</button>
         <button class="btn btn-ghost btn-sm" id="btn-export-det">📥 Excel</button>
         <button class="btn btn-ghost btn-sm" id="btn-print">🖨 Imprimir</button>
+        <button class="btn btn-primary btn-sm" id="btn-guardar-cambios" style="display:none;opacity:.4;cursor:not-allowed" disabled>💾 Guardar cambios</button>
       </div>
     </div>
     <div class="content">
@@ -145,8 +146,9 @@ onReady(['Master', 'Planillero'], async () => {
       const pl = await apiFetch(`/api/planillas/${planillaId}`);
       _esBorrador = pl.estado === 'Borrador';
       if (_esBorrador) {
+        document.getElementById('btn-guardar-cambios').style.display = '';
         showAlert('alert-det',
-          '✏️ Esta planilla está en Borrador — podés editar los montos haciendo clic en las celdas. Los cambios se guardan automáticamente.',
+          '✏️ Esta planilla está en Borrador — editá los montos y presioná "Guardar cambios" para confirmar.',
           'success');
       }
     } catch(_) {}
@@ -337,30 +339,70 @@ async function loadDetalle(planillaId, periodo, tipo) {
   }
 }
 
-async function guardarCelda(input) {
+// Mapa de cambios pendientes: { detalleId: { campo: valor } }
+const _cambiosPendientes = {};
+
+function marcarCambio(input) {
   const detalleId = input.dataset.detalle;
   const campo     = input.dataset.campo;
-  const valor     = parseFloat(input.value) || 0;
-  input.style.borderColor = 'var(--border)';
-  try {
-    const res = await apiFetch(`/api/planillas/${planillaId}/detalle/${detalleId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ [campo]: valor }),
-    });
-    // Actualizar total_deducciones y neto en la fila sin recargar
-    const tdDesc = document.getElementById(`td-desc-${detalleId}`);
-    const tdNeto = document.getElementById(`td-neto-${detalleId}`);
-    if (tdDesc) tdDesc.innerHTML = `<strong>${fmt(res.total_deducciones)}</strong>`;
-    if (tdNeto) tdNeto.innerHTML = `<strong style="color:var(--green2)">${fmt(res.neto)}</strong>`;
-    input.style.borderColor = '#2ecc71';
-    setTimeout(() => { input.style.borderColor = 'var(--border)'; }, 1000);
-  } catch(e) {
-    input.style.borderColor = 'var(--red)';
-    showAlert('alert-det', 'Error al guardar: ' + e.message, 'error');
+  if (!_cambiosPendientes[detalleId]) _cambiosPendientes[detalleId] = {};
+  _cambiosPendientes[detalleId][campo] = parseFloat(input.value) || 0;
+  input.style.borderColor = 'var(--yellow, #f39c12)';
+
+  const btn = document.getElementById('btn-guardar-cambios');
+  if (btn) {
+    btn.style.display  = '';
+    btn.style.opacity  = '1';
+    btn.style.cursor   = 'pointer';
+    btn.disabled       = false;
+  }
+}
+
+async function guardarCelda(input) {
+  marcarCambio(input);
+}
+
+async function guardarTodosCambios() {
+  const btn = document.getElementById('btn-guardar-cambios');
+  btn.disabled = true; btn.textContent = '⏳ Guardando...';
+  const ids = Object.keys(_cambiosPendientes);
+  let errores = 0;
+  for (const detalleId of ids) {
+    try {
+      const res = await apiFetch(`/api/planillas/${planillaId}/detalle/${detalleId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(_cambiosPendientes[detalleId]),
+      });
+      // Actualizar totales en la fila
+      const tdDesc = document.getElementById(`td-desc-${detalleId}`);
+      const tdNeto = document.getElementById(`td-neto-${detalleId}`);
+      if (tdDesc) tdDesc.innerHTML = `<strong>${fmt(res.total_deducciones)}</strong>`;
+      if (tdNeto) tdNeto.innerHTML = `<strong style="color:var(--green2)">${fmt(res.neto)}</strong>`;
+      // Limpiar borde de los inputs de esta fila
+      document.querySelectorAll(`input[data-detalle="${detalleId}"]`).forEach(i => {
+        i.style.borderColor = 'var(--border)';
+      });
+      delete _cambiosPendientes[detalleId];
+    } catch(e) {
+      errores++;
+    }
+  }
+  if (errores) {
+    showAlert('alert-det', `⚠️ ${errores} fila(s) no se pudieron guardar.`, 'error');
+    btn.disabled = false; btn.textContent = '💾 Guardar cambios';
+  } else {
+    showAlert('alert-det', '✅ Cambios guardados correctamente.', 'success');
+    btn.style.opacity  = '.4';
+    btn.style.cursor   = 'not-allowed';
+    btn.disabled       = true;
+    btn.textContent    = '💾 Guardar cambios';
+    // Recargar cards de resumen
+    loadDetalle(planillaId, periodo, tipo);
   }
 }
 
 document.getElementById('btn-print').addEventListener('click', () => window.print());
+document.getElementById('btn-guardar-cambios').addEventListener('click', guardarTodosCambios);
 document.getElementById('btn-export-det').addEventListener('click', function() {
   if (!planillaId) { alert('No se puede exportar: planilla no identificada'); return; }
   exportXlsx(`/api/export/planilla/${planillaId}`, `Planilla-${folio||planillaId}`);
