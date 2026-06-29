@@ -58,6 +58,11 @@ function initLayout() {
       <button id="menu-ajustes-perfil" style="width:100%;background:none;border:none;color:var(--text);padding:11px 16px;text-align:left;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">
         👤 Mi perfil
       </button>
+      <div id="menu-ajustes-papelera-wrap" style="display:none">
+        <button id="menu-ajustes-papelera-btn" style="width:100%;background:none;border:none;color:var(--text);padding:11px 16px;text-align:left;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">
+          🗑️ Papelera
+        </button>
+      </div>
       <div id="menu-ajustes-inatec-wrap" style="display:none">
         <button id="menu-ajustes-inatec-btn" style="width:100%;background:none;border:none;color:var(--text);padding:11px 16px;text-align:left;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">
           🏭 Aportes Patronales
@@ -125,6 +130,14 @@ function initLayout() {
       finally { btn.textContent = 'Guardar'; btn.disabled = false; }
     });
 
+    // Papelera — mostrar según rol
+    menu.querySelector('#menu-ajustes-papelera-btn').addEventListener('mouseenter', function(){ this.style.background='var(--hover, rgba(255,255,255,.07))'; });
+    menu.querySelector('#menu-ajustes-papelera-btn').addEventListener('mouseleave', function(){ this.style.background='none'; });
+    menu.querySelector('#menu-ajustes-papelera-btn').addEventListener('click', () => {
+      menu.style.display = 'none';
+      abrirPapelera();
+    });
+
     const btnAjustes = document.createElement('button');
     btnAjustes.id = 'btn-ajustes';
     btnAjustes.className = 'btn-ajustes';
@@ -150,6 +163,44 @@ function initLayout() {
     // Cerrar menú al hacer clic fuera
     document.addEventListener('click', () => { menu.style.display = 'none'; });
     menu.addEventListener('click', (e) => e.stopPropagation());
+  }
+
+  // Inyectar modal de Papelera (una sola vez en el body)
+  if (!document.getElementById('modal-papelera')) {
+    document.body.insertAdjacentHTML('beforeend', `
+<div class="overlay" id="modal-papelera">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <h3>🗑️ Papelera</h3>
+      <button class="modal-close" id="close-papelera">×</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div id="alert-papelera" class="alert" style="margin:16px 16px 0"></div>
+      <p style="margin:12px 16px;font-size:13px;color:var(--text-muted)">Planillas eliminadas. Podés restaurarlas si aún están en Borrador.</p>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th style="padding:8px 16px;text-align:left;color:var(--text-muted);font-weight:500">#</th>
+              <th style="padding:8px 16px;text-align:left;color:var(--text-muted);font-weight:500">Período</th>
+              <th style="padding:8px 16px;text-align:left;color:var(--text-muted);font-weight:500">Tipo</th>
+              <th style="padding:8px 16px;text-align:right;color:var(--text-muted);font-weight:500">Total neto</th>
+              <th style="padding:8px 16px"></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-papelera">
+            <tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted)">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-papelera">Cerrar</button>
+    </div>
+  </div>
+</div>`);
+    document.getElementById('close-papelera').addEventListener('click', () => document.getElementById('modal-papelera').classList.remove('open'));
+    document.getElementById('cancel-papelera').addEventListener('click', () => document.getElementById('modal-papelera').classList.remove('open'));
   }
 
   // Inyectar modal de Ajustes (una sola vez en el body)
@@ -263,9 +314,11 @@ function initLayout() {
   getMyInfo().then(info => {
     const link = document.getElementById('link-usuarios');
     if (link && info.rol !== 'Master') link.style.display = 'none';
-    // Mostrar opción Aportes Patronales solo para Master
+    // Mostrar opciones Master en el menú Ajustes
     const inatecWrap = document.getElementById('menu-ajustes-inatec-wrap');
     if (inatecWrap && info.rol === 'Master') inatecWrap.style.display = '';
+    const papeleraWrap = document.getElementById('menu-ajustes-papelera-wrap');
+    if (papeleraWrap && info.rol === 'Master') papeleraWrap.style.display = '';
     // Cargar selector de empresa en el sidebar
     _loadEmpresaSelector();
   });
@@ -761,5 +814,57 @@ function showAlert(id, msg, type = 'success') {
   el.textContent = msg;
   if (type === 'success') setTimeout(() => el.classList.remove('show'), 3500);
 }
+
+async function abrirPapelera() {
+  const modal = document.getElementById('modal-papelera');
+  const tbody = document.getElementById('tabla-papelera');
+  const alertEl = document.getElementById('alert-papelera');
+  alertEl.className = 'alert';
+  modal.classList.add('open');
+  tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted)">Cargando...</td></tr>';
+  try {
+    const rows = await apiFetch('/api/planillas/papelera');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted)">La papelera está vacía</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(p => {
+      const periodo = String(p.periodo || '').substring(0, 10);
+      const neto = p.total_neto != null ? 'C$ ' + parseFloat(p.total_neto).toLocaleString('es-NI', {minimumFractionDigits:2}) : '—';
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:10px 16px;color:var(--text-muted)">#${p.folio}</td>
+        <td style="padding:10px 16px">${fmtPeriodo(periodo)}</td>
+        <td style="padding:10px 16px;color:var(--text-muted)">${p.tipo || 'Todos'}</td>
+        <td style="padding:10px 16px;text-align:right">${neto}</td>
+        <td style="padding:10px 16px;text-align:right">
+          <button onclick="restaurarPlanilla(${p.id},${p.folio})"
+            style="font-size:12px;padding:4px 10px;background:rgba(46,204,113,.15);border:1px solid rgba(46,204,113,.4);color:#2ecc71;border-radius:4px;cursor:pointer">
+            ↩ Restaurar
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    alertEl.className = 'alert alert-error show';
+    alertEl.textContent = 'Error: ' + e.message;
+    tbody.innerHTML = '';
+  }
+}
+
+async function restaurarPlanilla(id, folio) {
+  if (!confirm(`¿Restaurar la planilla #${folio}? Volverá a estado Borrador.`)) return;
+  try {
+    await apiFetch(`/api/planillas/${id}/estado`, { method: 'PATCH', body: JSON.stringify({ estado: 'Borrador' }) });
+    document.getElementById('alert-papelera').className = 'alert alert-success show';
+    document.getElementById('alert-papelera').textContent = `✅ Planilla #${folio} restaurada`;
+    await abrirPapelera();
+  } catch(e) {
+    document.getElementById('alert-papelera').className = 'alert alert-error show';
+    document.getElementById('alert-papelera').textContent = 'Error: ' + e.message;
+  }
+}
+
+window.abrirPapelera = abrirPapelera;
+window.restaurarPlanilla = restaurarPlanilla;
 
 window.AppAuth = { onReady, requireAuth, requireAuthRole, initLayout, getToken, apiFetch, getMyInfo, isMaster, isAdmin, canEdit, fmt, fmtPeriodo, showAlert };
