@@ -1,0 +1,610 @@
+{
+  "name": "🖼️ Content AI — Generador de Imágenes (Pollinations)",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "config-img",
+      "name": "⚙️ Config Pollinations",
+      "type": "n8n-nodes-base.set",
+      "position": [200, 240],
+      "typeVersion": 3.4,
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            { "id": "a1", "name": "POLLINATIONS_API_KEY", "value": "sk_jTxv2QAVHvffA9AFoPtSCuXARvaHg8pP", "type": "string" },
+            { "id": "a2", "name": "POLLINATIONS_BASE_URL", "value": "https://image.pollinations.ai/prompt", "type": "string" },
+            { "id": "a3", "name": "POLLINATIONS_DEFAULT_MODEL", "value": "flux", "type": "string" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "webhook-img",
+      "name": "🔔 Webhook: Generar Imagen",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        200,
+        400
+      ],
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generar-imagen",
+        "responseMode": "responseNode"
+      },
+      "webhookId": "51ff27f3-e011-456b-aac2-f67bb89fcbf4"
+    },
+    {
+      "id": "get-post-g54",
+      "name": "📋 Obtener Post G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        420,
+        400
+      ],
+      "typeVersion": 4,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/n8n/companies/' + ($('🔔 Webhook: Generar Imagen').item.json.body.company_id || '1') + '/rrss/posts' }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "build-prompt",
+      "name": "🎨 Construir Prompt",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        640,
+        400
+      ],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const wb = $('🔔 Webhook: Generar Imagen').item.json;\nconst body = wb.body || wb;\n\nconst post_id    = String(body.post_id || '');\nconst company_id = String(body.company_id || '1');\nconst platform   = (body.platform || 'instagram').toLowerCase();\nconst style      = (body.style || 'fotografía').toLowerCase();\n\nconst postsRaw = $('📋 Obtener Post G54').item.json;\nconst postsArr = Array.isArray(postsRaw) ? postsRaw\n  : (postsRaw.data || postsRaw.posts || [postsRaw]);\n\nconst post = postsArr.find(p => String(p.id) === post_id || String(p.post_id) === post_id);\nif (!post) throw new Error(`Post ${post_id} not found (total: ${postsArr.length})`);\n\n// --- Extract post fields ---\nconst clientIdea = post.idea_cliente || post.client_idea || post.descripcion_imagen || '';\nconst hook       = post.hook || '';\nconst tema       = post.tema || '';\nconst copy       = platform === 'facebook' ? (post.copy_facebook || post.copy_instagram || '')\n                 : platform === 'linkedin' ? (post.copy_linkedin || post.copy_instagram || '')\n                 : (post.copy_instagram || '');\n\n// Extract hashtags → readable keywords\nconst hashtagMatches = copy.match(/#[\\w]+/g) || [];\nconst hashtagKeywords = hashtagMatches\n  .map(h => h.replace('#', '')\n    .replace(/([a-z])([A-Z])/g, '$1 $2')\n    .toLowerCase()\n  )\n  .join(', ');\n\nconst copyNarrative = copy.replace(/#[\\w]+/g, '').replace(/\\n+/g, ' ').trim().slice(0, 200);\n\n// --- Content reference (topic context) ---\nlet contentRef;\nif (clientIdea.trim()) {\n  contentRef = clientIdea.trim();\n  if (hashtagKeywords) contentRef += `, ${hashtagKeywords}`;\n} else {\n  const parts = [];\n  if (hook)            parts.push(hook);\n  if (tema)            parts.push(tema);\n  if (copyNarrative)   parts.push(copyNarrative);\n  if (hashtagKeywords) parts.push(hashtagKeywords);\n  contentRef = parts.filter(Boolean).join('. ');\n}\n\n// --- Business anchor — ALWAYS FIRST, dominates the scene ---\n// Pollinations weights the beginning of the prompt most heavily.\n// This forces the model to stay in the industrial crating/packaging world.\n// --- Config ---\nconst cfg = $('⚙️ Config Pollinations').item.json;\nconst apiKey   = cfg.POLLINATIONS_API_KEY;\nconst baseUrl  = cfg.POLLINATIONS_BASE_URL;\n// model: from webhook param > config default. Free models: flux, zimage, klein, nova-canvas\nconst model = (body.model || cfg.POLLINATIONS_DEFAULT_MODEL || 'flux').toLowerCase();\n\nconst businessAnchor = 'industrial wooden crates and packaging boxes in a Miami warehouse, wood crating company, stacked timber crates, export packaging, lumber and plywood construction';\n\n// --- Style instructions ---\nconst styleMap = {\n  'fotografía': 'sharp professional photograph, real-world industrial setting, natural warehouse lighting, high resolution DSLR, photorealistic, 4K, no CGI',\n  'fotografia': 'sharp professional photograph, real-world industrial setting, natural warehouse lighting, high resolution DSLR, photorealistic, 4K, no CGI',\n  'ilustración': 'clean flat digital illustration, vector art style, bold outlines, vibrant flat colors, professional graphic design',\n  'ilustracion': 'clean flat digital illustration, vector art style, bold outlines, vibrant flat colors, professional graphic design',\n  'minimalista': 'minimalist composition, clean background, single centered wooden crate or box, generous negative space, simple elegant layout',\n  'corporativo': 'professional industrial photography, warehouse environment, workers in hard hats and safety vests, organized loading dock, bright clean facility',\n  'vibrante':   'vivid saturated colors, dynamic diagonal composition, bold contrast, energetic visual impact, eye-catching social media style',\n  'oscuro':     'dramatic dark moody lighting, deep shadows, premium dark warehouse background, metallic and wood accents, sophisticated industrial aesthetic',\n};\nconst styleInstructions = styleMap[style] || styleMap['fotografía'];\n\n// --- Platform composition specs (format + layout, NOT subject matter) ---\nconst platformAesthetic = {\n  instagram: 'square 1:1 composition, centered subject, strong focal point filling 60% of frame, bold visual hierarchy, vivid balanced colors, mobile feed optimized',\n  facebook:  'wide 1.91:1 landscape composition, rule of thirds layout, subject on left or right third, breathing room on edges, clear horizon line, desktop and mobile feed optimized',\n  linkedin:  'wide landscape composition, clean organized layout, neutral-to-warm color palette, professional industrial tone, clear separation of foreground and background',\n};\nconst platformSpec = platformAesthetic[platform] || platformAesthetic.instagram;\n\n// --- Platform dimensions ---\nconst dims = {\n  instagram: {width: 1080, height: 1080},\n  facebook:  {width: 1200, height: 630},\n  linkedin:  {width: 1200, height: 627},\n};\nconst {width, height} = dims[platform] || dims.instagram;\n\n// --- Quality & negatives ---\nconst textQuality = 'any text or labels must be clean, sharp, legible and properly rendered';\n\nconst negatives = [\n  'no business portraits, no headshots, no stock photo people posing, no office environment',\n  'no distorted text, no garbled letters, no corrupted fonts, no illegible writing',\n  'no extra limbs, no deformed hands, no fused fingers, no broken anatomy',\n  'no impossible angles, no floating objects without shadow, no distorted perspective',\n  'no muddy textures, no inconsistent lighting direction',\n  'no cropped heads, no half-cut subjects, no unintended duplicates',\n  'no watermarks, no low resolution, no JPEG artifacts, no noise',\n].join(', ');\n\n// --- Final prompt ---\n// Order: business scene (dominant) → content topic → platform layout → style → text quality → negatives\nconst prompt = [\n  businessAnchor,\n  contentRef.slice(0, 300),\n  platformSpec,\n  styleInstructions,\n  textQuality,\n  negatives,\n].join(', ');\n\nconst promptEncoded = encodeURIComponent(prompt.slice(0, 1800));\n// image.pollinations.ai is free (no auth needed). gen.pollinations.ai requires pollen balance.\nconst imageUrl = `${baseUrl}/${promptEncoded}?model=${model}&width=${width}&height=${height}&nologo=true&seed=${Date.now()}`;\n\nreturn [{ json: {\n  post_id,\n  company_id,\n  platform,\n  style,\n  model,\n  client_idea_used: clientIdea ? clientIdea.slice(0, 100) : null,\n  hashtags_used: hashtagKeywords.slice(0, 150),\n  content_ref: contentRef.slice(0, 200),\n  image_url_template: imageUrl,\n  agent_token: 'g54_agent_produccion_2026'\n}}];"
+      }
+    },
+    {
+      "id": "pollinations-fetch",
+      "name": "🌐 Pollinations: Generar Imagen",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        860,
+        400
+      ],
+      "typeVersion": 4,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.image_url_template }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          },
+          "timeout": 90000
+        }
+      }
+    },
+    {
+      "id": "check-success",
+      "name": "✅ ¿Imagen generada?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1080,
+        400
+      ],
+      "typeVersion": 2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "prepare-url",
+      "name": "🔗 Preparar URL Final",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1300,
+        320
+      ],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const inp = $('🎨 Construir Prompt').item.json;\nreturn [{ json: {\n  post_id:     inp.post_id,\n  company_id:  inp.company_id,\n  image_url:   inp.image_url_template,\n  agent_token: inp.agent_token\n}}];"
+      }
+    },
+    {
+      "id": "save-to-g54",
+      "name": "💾 Guardar imagen_url en G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1520,
+        320
+      ],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://apigrowth.mdarthurdigital.com/api/rrss/posts/{{ $json.post_id }}/status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $json.agent_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "imagen_url",
+              "value": "={{ $json.image_url }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "respond-ok",
+      "name": "✅ Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1740,
+        320
+      ],
+      "typeVersion": 1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, image_url: $('🔗 Preparar URL Final').item.json.image_url, post_id: $('🔗 Preparar URL Final').item.json.post_id }) }}"
+      }
+    },
+    {
+      "id": "respond-error",
+      "name": "❌ Responder Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1300,
+        500
+      ],
+      "typeVersion": 1,
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 500,
+        "responseBody": "={{ JSON.stringify({ ok: false, error: 'No se pudo generar imagen con Pollinations', post_id: $('🎨 Construir Prompt').item.json.post_id }) }}"
+      }
+    }
+  ],
+  "connections": {
+    "⚙️ Config Pollinations": {
+      "main": [[{ "node": "📋 Obtener Post G54", "type": "main", "index": 0 }]]
+    },
+    "🔔 Webhook: Generar Imagen": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config Pollinations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Obtener Post G54": {
+      "main": [
+        [
+          {
+            "node": "🎨 Construir Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎨 Construir Prompt": {
+      "main": [
+        [
+          {
+            "node": "🌐 Pollinations: Generar Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 Pollinations: Generar Imagen": {
+      "main": [
+        [
+          {
+            "node": "✅ ¿Imagen generada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ ¿Imagen generada?": {
+      "main": [
+        [
+          {
+            "node": "🔗 Preparar URL Final",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❌ Responder Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 Preparar URL Final": {
+      "main": [
+        [
+          {
+            "node": "💾 Guardar imagen_url en G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Guardar imagen_url en G54": {
+      "main": [
+        [
+          {
+            "node": "✅ Responder OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "nodeGroups": [],
+  "pinData": null,
+  "activeVersionId": "de8d64bf-ff1c-43b6-a987-5014d938dda4",
+  "versionCounter": 15,
+  "triggerCount": 1,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-07-06T16:04:22.668Z",
+      "createdAt": "2026-07-06T16:04:22.668Z",
+      "role": "workflow:owner",
+      "workflowId": "1rsqmFabW5PjnlHy",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "updatedAt": "2026-03-16T19:58:01.773Z",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-07T17:44:08.056Z",
+    "createdAt": "2026-07-07T17:44:08.056Z",
+    "versionId": "de8d64bf-ff1c-43b6-a987-5014d938dda4",
+    "workflowId": "1rsqmFabW5PjnlHy",
+    "nodes": [
+      {
+        "id": "webhook-img",
+        "name": "🔔 Webhook: Generar Imagen",
+        "type": "n8n-nodes-base.webhook",
+        "position": [
+          200,
+          400
+        ],
+        "typeVersion": 2,
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "generar-imagen",
+          "responseMode": "responseNode"
+        },
+        "webhookId": "51ff27f3-e011-456b-aac2-f67bb89fcbf4"
+      },
+      {
+        "id": "get-post-g54",
+        "name": "📋 Obtener Post G54",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          420,
+          400
+        ],
+        "typeVersion": 4,
+        "parameters": {
+          "method": "GET",
+          "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/n8n/companies/' + ($('🔔 Webhook: Generar Imagen').item.json.body.company_id || '1') + '/rrss/posts' }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "build-prompt",
+        "name": "🎨 Construir Prompt",
+        "type": "n8n-nodes-base.code",
+        "position": [
+          640,
+          400
+        ],
+        "typeVersion": 2,
+        "parameters": {
+          "jsCode": "const wb = $('🔔 Webhook: Generar Imagen').item.json;\nconst body = wb.body || wb;\n\nconst post_id    = String(body.post_id || '');\nconst company_id = String(body.company_id || '1');\nconst platform   = (body.platform || 'instagram').toLowerCase();\nconst style      = (body.style || 'fotografía').toLowerCase();\n\nconst postsRaw = $('📋 Obtener Post G54').item.json;\nconst postsArr = Array.isArray(postsRaw) ? postsRaw\n  : (postsRaw.data || postsRaw.posts || [postsRaw]);\n\nconst post = postsArr.find(p => String(p.id) === post_id || String(p.post_id) === post_id);\nif (!post) throw new Error(`Post ${post_id} not found (total: ${postsArr.length})`);\n\n// --- Extract post fields ---\nconst clientIdea = post.idea_cliente || post.client_idea || post.descripcion_imagen || '';\nconst hook       = post.hook || '';\nconst tema       = post.tema || '';\nconst copy       = platform === 'facebook' ? (post.copy_facebook || post.copy_instagram || '')\n                 : platform === 'linkedin' ? (post.copy_linkedin || post.copy_instagram || '')\n                 : (post.copy_instagram || '');\n\n// Extract hashtags → readable keywords\nconst hashtagMatches = copy.match(/#[\\w]+/g) || [];\nconst hashtagKeywords = hashtagMatches\n  .map(h => h.replace('#', '')\n    .replace(/([a-z])([A-Z])/g, '$1 $2')\n    .toLowerCase()\n  )\n  .join(', ');\n\nconst copyNarrative = copy.replace(/#[\\w]+/g, '').replace(/\\n+/g, ' ').trim().slice(0, 200);\n\n// --- Content reference (topic context) ---\nlet contentRef;\nif (clientIdea.trim()) {\n  contentRef = clientIdea.trim();\n  if (hashtagKeywords) contentRef += `, ${hashtagKeywords}`;\n} else {\n  const parts = [];\n  if (hook)            parts.push(hook);\n  if (tema)            parts.push(tema);\n  if (copyNarrative)   parts.push(copyNarrative);\n  if (hashtagKeywords) parts.push(hashtagKeywords);\n  contentRef = parts.filter(Boolean).join('. ');\n}\n\n// --- Business anchor — ALWAYS FIRST, dominates the scene ---\n// Pollinations weights the beginning of the prompt most heavily.\n// This forces the model to stay in the industrial crating/packaging world.\n// --- Config ---\nconst cfg = $('⚙️ Config Pollinations').item.json;\nconst apiKey   = cfg.POLLINATIONS_API_KEY;\nconst baseUrl  = cfg.POLLINATIONS_BASE_URL;\n// model: from webhook param > config default. Free models: flux, zimage, klein, nova-canvas\nconst model = (body.model || cfg.POLLINATIONS_DEFAULT_MODEL || 'flux').toLowerCase();\n\nconst businessAnchor = 'industrial wooden crates and packaging boxes in a Miami warehouse, wood crating company, stacked timber crates, export packaging, lumber and plywood construction';\n\n// --- Style instructions ---\nconst styleMap = {\n  'fotografía': 'sharp professional photograph, real-world industrial setting, natural warehouse lighting, high resolution DSLR, photorealistic, 4K, no CGI',\n  'fotografia': 'sharp professional photograph, real-world industrial setting, natural warehouse lighting, high resolution DSLR, photorealistic, 4K, no CGI',\n  'ilustración': 'clean flat digital illustration, vector art style, bold outlines, vibrant flat colors, professional graphic design',\n  'ilustracion': 'clean flat digital illustration, vector art style, bold outlines, vibrant flat colors, professional graphic design',\n  'minimalista': 'minimalist composition, clean background, single centered wooden crate or box, generous negative space, simple elegant layout',\n  'corporativo': 'professional industrial photography, warehouse environment, workers in hard hats and safety vests, organized loading dock, bright clean facility',\n  'vibrante':   'vivid saturated colors, dynamic diagonal composition, bold contrast, energetic visual impact, eye-catching social media style',\n  'oscuro':     'dramatic dark moody lighting, deep shadows, premium dark warehouse background, metallic and wood accents, sophisticated industrial aesthetic',\n};\nconst styleInstructions = styleMap[style] || styleMap['fotografía'];\n\n// --- Platform composition specs (format + layout, NOT subject matter) ---\nconst platformAesthetic = {\n  instagram: 'square 1:1 composition, centered subject, strong focal point filling 60% of frame, bold visual hierarchy, vivid balanced colors, mobile feed optimized',\n  facebook:  'wide 1.91:1 landscape composition, rule of thirds layout, subject on left or right third, breathing room on edges, clear horizon line, desktop and mobile feed optimized',\n  linkedin:  'wide landscape composition, clean organized layout, neutral-to-warm color palette, professional industrial tone, clear separation of foreground and background',\n};\nconst platformSpec = platformAesthetic[platform] || platformAesthetic.instagram;\n\n// --- Platform dimensions ---\nconst dims = {\n  instagram: {width: 1080, height: 1080},\n  facebook:  {width: 1200, height: 630},\n  linkedin:  {width: 1200, height: 627},\n};\nconst {width, height} = dims[platform] || dims.instagram;\n\n// --- Quality & negatives ---\nconst textQuality = 'any text or labels must be clean, sharp, legible and properly rendered';\n\nconst negatives = [\n  'no business portraits, no headshots, no stock photo people posing, no office environment',\n  'no distorted text, no garbled letters, no corrupted fonts, no illegible writing',\n  'no extra limbs, no deformed hands, no fused fingers, no broken anatomy',\n  'no impossible angles, no floating objects without shadow, no distorted perspective',\n  'no muddy textures, no inconsistent lighting direction',\n  'no cropped heads, no half-cut subjects, no unintended duplicates',\n  'no watermarks, no low resolution, no JPEG artifacts, no noise',\n].join(', ');\n\n// --- Final prompt ---\n// Order: business scene (dominant) → content topic → platform layout → style → text quality → negatives\nconst prompt = [\n  businessAnchor,\n  contentRef.slice(0, 300),\n  platformSpec,\n  styleInstructions,\n  textQuality,\n  negatives,\n].join(', ');\n\nconst promptEncoded = encodeURIComponent(prompt.slice(0, 1800));\n// image.pollinations.ai is free (no auth needed). gen.pollinations.ai requires pollen balance.\nconst imageUrl = `${baseUrl}/${promptEncoded}?model=${model}&width=${width}&height=${height}&nologo=true&seed=${Date.now()}`;\n\nreturn [{ json: {\n  post_id,\n  company_id,\n  platform,\n  style,\n  model,\n  client_idea_used: clientIdea ? clientIdea.slice(0, 100) : null,\n  hashtags_used: hashtagKeywords.slice(0, 150),\n  content_ref: contentRef.slice(0, 200),\n  image_url_template: imageUrl,\n  agent_token: 'g54_agent_produccion_2026'\n}}];"
+        }
+      },
+      {
+        "id": "pollinations-fetch",
+        "name": "🌐 Pollinations: Generar Imagen",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          860,
+          400
+        ],
+        "typeVersion": 4,
+        "parameters": {
+          "method": "GET",
+          "url": "={{ $json.image_url_template }}",
+          "options": {
+            "response": {
+              "response": {
+                "responseFormat": "file"
+              }
+            },
+            "timeout": 90000
+          }
+        }
+      },
+      {
+        "id": "check-success",
+        "name": "✅ ¿Imagen generada?",
+        "type": "n8n-nodes-base.if",
+        "position": [
+          1080,
+          400
+        ],
+        "typeVersion": 2,
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.error }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "empty",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        }
+      },
+      {
+        "id": "prepare-url",
+        "name": "🔗 Preparar URL Final",
+        "type": "n8n-nodes-base.code",
+        "position": [
+          1300,
+          320
+        ],
+        "typeVersion": 2,
+        "parameters": {
+          "jsCode": "const inp = $('🎨 Construir Prompt').item.json;\nreturn [{ json: {\n  post_id:     inp.post_id,\n  company_id:  inp.company_id,\n  image_url:   inp.image_url_template,\n  agent_token: inp.agent_token\n}}];"
+        }
+      },
+      {
+        "id": "save-to-g54",
+        "name": "💾 Guardar imagen_url en G54",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          1520,
+          320
+        ],
+        "typeVersion": 4.2,
+        "parameters": {
+          "method": "PUT",
+          "url": "=https://apigrowth.mdarthurdigital.com/api/rrss/posts/{{ $json.post_id }}/status",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $json.agent_token }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "imagen_url",
+                "value": "={{ $json.image_url }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "respond-ok",
+        "name": "✅ Responder OK",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "position": [
+          1740,
+          320
+        ],
+        "typeVersion": 1,
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ ok: true, image_url: $('🔗 Preparar URL Final').item.json.image_url, post_id: $('🔗 Preparar URL Final').item.json.post_id }) }}"
+        }
+      },
+      {
+        "id": "respond-error",
+        "name": "❌ Responder Error",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "position": [
+          1300,
+          500
+        ],
+        "typeVersion": 1,
+        "parameters": {
+          "respondWith": "json",
+          "responseCode": 500,
+          "responseBody": "={{ JSON.stringify({ ok: false, error: 'No se pudo generar imagen con Pollinations', post_id: $('🎨 Construir Prompt').item.json.post_id }) }}"
+        }
+      }
+    ],
+    "connections": {
+      "🔔 Webhook: Generar Imagen": {
+        "main": [
+          [
+            {
+              "node": "📋 Obtener Post G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📋 Obtener Post G54": {
+        "main": [
+          [
+            {
+              "node": "🎨 Construir Prompt",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🎨 Construir Prompt": {
+        "main": [
+          [
+            {
+              "node": "🌐 Pollinations: Generar Imagen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🌐 Pollinations: Generar Imagen": {
+        "main": [
+          [
+            {
+              "node": "✅ ¿Imagen generada?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "✅ ¿Imagen generada?": {
+        "main": [
+          [
+            {
+              "node": "🔗 Preparar URL Final",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "❌ Responder Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔗 Preparar URL Final": {
+        "main": [
+          [
+            {
+              "node": "💾 Guardar imagen_url en G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "💾 Guardar imagen_url en G54": {
+        "main": [
+          [
+            {
+              "node": "✅ Responder OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-07-07T17:44:08.204Z",
+        "id": 1920,
+        "workflowId": "1rsqmFabW5PjnlHy",
+        "versionId": "de8d64bf-ff1c-43b6-a987-5014d938dda4",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      },
+      {
+        "createdAt": "2026-07-07T17:44:08.170Z",
+        "id": 1919,
+        "workflowId": "1rsqmFabW5PjnlHy",
+        "versionId": "de8d64bf-ff1c-43b6-a987-5014d938dda4",
+        "event": "deactivated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    ]
+  }
+}

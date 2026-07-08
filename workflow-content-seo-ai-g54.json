@@ -1,0 +1,546 @@
+{
+  "name": "Content SEO AI — G54 (Módulo 2)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual",
+      "name": "🖱️ Ejecutar Manualmente",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtDay": [
+                2
+              ],
+              "triggerAtHour": 10,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "schedule",
+      "name": "⏰ Trigger Semanal (Martes 10am)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "G54_BASE_URL",
+              "value": "https://apigrowth.mdarthurdigital.com",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "G54_N8N_TOKEN",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "G54_AGENT_TOKEN",
+              "value": "g54_agent_produccion_2026",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "G54_COMPANY_ID",
+              "value": "1",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "GEMINI_API_KEY",
+              "value": "={{ $vars.GEMINI_API_KEY }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "config",
+      "name": "⚙️ Config G54",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54').item.json.G54_COMPANY_ID }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_N8N_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-empresa",
+      "name": "🏢 Obtener Empresa G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54').item.json.G54_COMPANY_ID + '/keywords/pending-articulos' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_N8N_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-keywords",
+      "name": "🔑 Obtener Keywords Pendientes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-kw",
+              "leftValue": "={{ ($('🔑 Obtener Keywords Pendientes').item.json.data || []).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-keywords",
+      "name": "❓ ¿Hay keywords pendientes?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "risosadmi@gmail.com",
+        "subject": "Content SEO AI — Sin keywords pendientes",
+        "emailType": "text",
+        "message": "No hay keywords pendientes de artículo en G54. Agrega nuevas keywords desde el panel para continuar.",
+        "options": {}
+      },
+      "id": "email-no-kw",
+      "name": "📧 Sin Keywords — Notificar",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1100,
+        500
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TESHSjzjMCpCxBBk",
+          "name": "cuenta de Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const empresa = $('🏢 Obtener Empresa G54').item.json.data;\nconst keywords = $('🔑 Obtener Keywords Pendientes').item.json.data || [];\n\n// Tomar primera keyword pendiente\nconst kw = keywords[0];\nconst keyword = kw.keyword;\nconst intencion = kw.intencion || 'informacional';\nconst keyword_id = kw.id;\n\n// Detectar idioma\nconst spanishMarkers = ['como', 'donde', 'mejor', 'precio', 'que', 'cuanto', 'del', 'de', 'en', 'para', 'cajas', 'madera', 'embalaje', 'servicio', 'comprar', 'encontrar'];\nconst kwLower = keyword.toLowerCase();\nconst esEspanol = /[áéíóúüñ]/i.test(keyword) || spanishMarkers.some(w => kwLower.split(' ').includes(w));\nconst idioma = esEspanol ? 'Español' : 'Inglés';\n\nconst website = empresa.website || 'https://cratingexpress.com';\nconst ciudad = empresa.base_city || 'Doral / Miami, Florida';\nconst propuesta = empresa.value_proposition || '';\nconst descripcion = empresa.description || '';\nconst certificacion = empresa.certification || 'ISPM-15';\nconst telefono = (empresa.phones || [])[0] || '+1 (786) 558-6007';\nconst targetKws = (empresa.target_keywords || []).slice(0, 6).join(', ');\n\nconst intentMap = {\n  'informacional': 'Artículo educativo que responde la pregunta principal de forma directa en el segundo párrafo (bloque AEO). Incluye datos técnicos, ejemplos prácticos y al menos 2 subpreguntas en la sección FAQ.',\n  'transaccional': 'Artículo orientado a conversión. Explica el servicio, proceso de pedido, ventajas clave y por qué elegir Crating Express. CTA con URL al menos dos veces: en la mitad y al final.',\n  'local': 'Artículo SEO local. Menciona explícitamente Miami, Doral, South Florida y Miami-Dade. Incluye área de cobertura, dirección y tiempo de entrega local.',\n  'comercial': 'Artículo de evaluación. Destaca ventajas competitivas, ISPM-15, entrega mismo día y personalización a medida. Responde por qué Crating Express es la mejor opción en Miami.'\n};\nconst instruccionIntent = intentMap[intencion] || intentMap['informacional'];\n\nconst instrES = `Genera un artículo SEO completo en HTML para la keyword: \"${keyword}\" (intención: ${intencion}).\n\nEMPRESA:\n- Nombre: ${empresa.name}\n- Descripción: ${descripcion}\n- Propuesta de valor: ${propuesta}\n- Ubicación: ${ciudad}\n- Certificación: ${certificacion}\n- Teléfono: ${telefono}\n- Web: ${website}\n- Keywords secundarias: ${targetKws}\n\nINSTRUCCIONES: ${instruccionIntent}\n\nESTRUCTURA OBLIGATORIA:\n1. H1 con keyword principal exacta\n2. Párrafo de introducción (keyword en primeras 100 palabras)\n3. BLOQUE AEO — respuesta directa en 2-3 oraciones a lo que busca el usuario\n4. H2 — Sección 1 (subtema relacionado con keyword secundaria)\n5. H2 — Sección 2 (datos, proceso o casos de uso)\n6. H2 — Sección 3 (señal GEO: Miami, Doral, South Florida)\n7. H2 — FAQ (3 preguntas en formato h3 + p)\n8. CTA final con enlace a ${website} y mención de ${telefono}\n\nREGLAS:\n- 800-1200 palabras — HTML limpio: h1, h2, h3, p, ul, li, strong\n- NO incluyas html, head, body ni CSS\n- Menciona ISPM-15 y entrega mismo día cuando sea relevante\n\nRESPONDE SOLO CON JSON VÁLIDO:\n{\"titulo\":\"H1 de 50-65 chars\",\"meta_descripcion\":\"meta de 145-155 chars con keyword\",\"contenido_html\":\"HTML completo\"}`;\n\nconst instrEN = `Generate a complete SEO article in HTML for the keyword: \"${keyword}\" (intent: ${intencion}).\n\nCOMPANY:\n- Name: ${empresa.name}\n- Description: ${descripcion}\n- Value proposition: ${propuesta}\n- Location: ${ciudad}\n- Certification: ${certificacion}\n- Phone: ${telefono}\n- Website: ${website}\n- Secondary keywords: ${targetKws}\n\nINSTRUCTIONS: ${instruccionIntent}\n\nMANDATORY STRUCTURE:\n1. H1 with exact main keyword\n2. Introduction paragraph (keyword in first 100 words)\n3. AEO BLOCK — direct 2-3 sentence answer to the user query\n4. H2 — Section 1 (secondary keyword topic)\n5. H2 — Section 2 (data, process or use cases)\n6. H2 — Section 3 (GEO signal: Miami, Doral, South Florida)\n7. H2 — FAQ (3 questions in h3 + p format)\n8. Final CTA with link to ${website} and mention of ${telefono}\n\nRULES:\n- 800-1200 words — clean HTML: h1, h2, h3, p, ul, li, strong\n- Do NOT include html, head, body or CSS\n- Mention ISPM-15 certified wood and same-day delivery when relevant\n\nRESPOND ONLY WITH VALID JSON:\n{\"titulo\":\"H1 title 50-65 chars\",\"meta_descripcion\":\"meta description 145-155 chars\",\"contenido_html\":\"full article HTML\"}`;\n\nconst promptSistema = idioma === 'Español'\n  ? 'Eres un redactor experto en SEO, AEO y GEO para empresas de servicios industriales en Miami, Florida.'\n  : 'You are an expert SEO, AEO and GEO content writer for industrial service businesses in Miami, Florida.';\n\nconst promptUsuario = idioma === 'Español' ? instrES : instrEN;\n\nreturn [{ json: { keyword_id, keyword, intencion, idioma, promptSistema, promptUsuario } }];"
+      },
+      "id": "prep-ctx",
+      "name": "🔧 Preparar Contexto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={{ $('⚙️ Config G54').item.json.GEMINI_API_KEY }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.promptSistema + '\\n\\n' + $json.promptUsuario }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 4096 } }) }}",
+        "options": {}
+      },
+      "id": "gemini",
+      "name": "🤖 Gemini: Generar Artículo SEO",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "gemini-ok",
+              "leftValue": "={{ ($json.candidates || []).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-gemini",
+      "name": "✅ ¿Gemini OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: $('🔧 Preparar Contexto').item.json.promptSistema }, { role: 'user', content: $('🔧 Preparar Contexto').item.json.promptUsuario }], temperature: 0.7, max_tokens: 4096 }) }}",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi"
+      },
+      "id": "groq",
+      "name": "🤖 Groq: Generar Artículo SEO (Fallback)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        420
+      ],
+      "continueOnFail": true,
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "passThrough",
+        "output": "input1"
+      },
+      "id": "merge-ia",
+      "name": "🔀 Merge Resultado IA",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1980,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Soporta respuesta de Gemini Y Groq/OpenAI\nlet rawText = '';\n\nif ($json.candidates && $json.candidates.length > 0) {\n  rawText = $json.candidates[0].content.parts[0].text;\n} else if ($json.choices && $json.choices.length > 0) {\n  rawText = $json.choices[0].message.content;\n} else {\n  throw new Error('No se obtuvo respuesta válida de ninguna IA');\n}\n\nrawText = rawText.trim();\nif (rawText.startsWith('```json')) rawText = rawText.slice(7);\nif (rawText.startsWith('```')) rawText = rawText.slice(3);\nif (rawText.endsWith('```')) rawText = rawText.slice(0, -3);\nrawText = rawText.trim();\n\nlet articulo;\ntry {\n  articulo = JSON.parse(rawText);\n} catch (e) {\n  const match = rawText.match(/\\{[\\s\\S]+\\}/);\n  if (match) articulo = JSON.parse(match[0]);\n  else throw new Error('No se pudo parsear JSON: ' + rawText.slice(0, 200));\n}\n\nconst ctx = $('🔧 Preparar Contexto').item.json;\n\nreturn [{ json: {\n  keyword_id: ctx.keyword_id,\n  keyword: ctx.keyword,\n  intencion: ctx.intencion,\n  idioma: ctx.idioma,\n  titulo: articulo.titulo || '',\n  meta_descripcion: articulo.meta_descripcion || articulo.meta_description || '',\n  contenido_html: articulo.contenido_html || articulo.html || ''\n} }];"
+      },
+      "id": "parse",
+      "name": "📝 Parsear Artículo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/agent/articulos' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ empresa_id: parseInt($('⚙️ Config G54').item.json.G54_COMPANY_ID), articulos: [{ keyword_id: $json.keyword_id, titulo: $json.titulo, meta_descripcion: $json.meta_descripcion, contenido_html: $json.contenido_html, estado: 'borrador' }] }) }}",
+        "options": {}
+      },
+      "id": "save-g54",
+      "name": "💾 Guardar Artículo en G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "risosadmi@gmail.com",
+        "subject": "=📝 Artículo SEO listo para revisión — {{ $('📝 Parsear Artículo').item.json.titulo }}",
+        "emailType": "html",
+        "message": "=<h2>Artículo SEO generado ✅</h2><table style=\"font-family:sans-serif;font-size:14px\"><tr><td><b>Keyword:</b></td><td>{{ $('📝 Parsear Artículo').item.json.keyword }}</td></tr><tr><td><b>Intención:</b></td><td>{{ $('📝 Parsear Artículo').item.json.intencion }}</td></tr><tr><td><b>Idioma:</b></td><td>{{ $('📝 Parsear Artículo').item.json.idioma }}</td></tr><tr><td><b>Título H1:</b></td><td>{{ $('📝 Parsear Artículo').item.json.titulo }}</td></tr><tr><td><b>Meta description:</b></td><td>{{ $('📝 Parsear Artículo').item.json.meta_descripcion }}</td></tr></table><br><p>Guardado como <b>borrador</b> en G54. Revísalo y márcalo como revisado para publicar en WordPress.</p><p><a href=\"https://growth.mdarthurdigital.com/admin\">Ir al panel G54 →</a></p>",
+        "options": {}
+      },
+      "id": "email-ok",
+      "name": "📧 Notificar Revisión",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2640,
+        300
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TESHSjzjMCpCxBBk",
+          "name": "cuenta de Gmail"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "🖱️ Ejecutar Manualmente": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏰ Trigger Semanal (Martes 10am)": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Config G54": {
+      "main": [
+        [
+          {
+            "node": "🏢 Obtener Empresa G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 Obtener Empresa G54": {
+      "main": [
+        [
+          {
+            "node": "🔑 Obtener Keywords Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔑 Obtener Keywords Pendientes": {
+      "main": [
+        [
+          {
+            "node": "❓ ¿Hay keywords pendientes?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ ¿Hay keywords pendientes?": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Contexto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📧 Sin Keywords — Notificar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Contexto": {
+      "main": [
+        [
+          {
+            "node": "🤖 Gemini: Generar Artículo SEO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Gemini: Generar Artículo SEO": {
+      "main": [
+        [
+          {
+            "node": "✅ ¿Gemini OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ ¿Gemini OK?": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Resultado IA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🤖 Groq: Generar Artículo SEO (Fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Groq: Generar Artículo SEO (Fallback)": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Resultado IA",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "🔀 Merge Resultado IA": {
+      "main": [
+        [
+          {
+            "node": "📝 Parsear Artículo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Parsear Artículo": {
+      "main": [
+        [
+          {
+            "node": "💾 Guardar Artículo en G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Guardar Artículo en G54": {
+      "main": [
+        [
+          {
+            "node": "📧 Notificar Revisión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null
+}

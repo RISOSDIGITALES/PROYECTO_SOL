@@ -763,7 +763,6 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 44. **Bug fix Alex "Hola de nuevo"** (2026-05-11): `Instrucciones_IA` en Airtable `WhatsApp_Config` reemplazado — contenido RRSS removido, sustituido por reglas de comportamiento del bot WA: manejo de cliente nuevo vs conocido, prioridad del MENSAJE ACTUAL, prohibición de repetir/parafrasear el mensaje del cliente
 45. **Reestructuración completa prompts Alex** (2026-05-11): `Prompt_Sistema` e `Instrucciones_IA` reescritos desde cero — eliminada regla contradictoria de "Hola de nuevo" en Prompt_Sistema que conflictuaba con Instrucciones_IA; corregido MAPEO TIPO_CAJA_API (valores incorrectos: `cajon_cerrado`, `jaula_abierta`, `plataforma`, etc. → correctos: `cajones_cerrados`, `jaulas`, `plataformas_contenedor`, etc.); estructura limpia sin instrucciones duplicadas ni fragmentadas
 46. **Migración Nomify completada** (2026-05-21): todo el stack de Planilla Nicaragua migrado de Netlify/Airtable a Express+MariaDB+JWT; todos los HTML actualizados con `onReady(roles,fn)` JWT, `netlify/functions/` eliminado, `usuarios.html` creado, backend completo en `planilla-server/`; pendiente push a `WX-MDA/Nomify` rama `sol/feature-inicial`
-<<<<<<< HEAD
 47. **Carpetas renombradas Nomify** (2026-05-22): frontend `planilla-web/` → `ft_nomify/`, backend ya era `bk_nomify/`; `server.js` debe usar `'../ft_nomify'` en `express.static()`; CLAUDE.md actualizado para reflejar nueva estructura
 48. **Bugs detectados en sesión perdida** (2026-05-22): `index.html` limpiado de referencias Netlify; columnas/tablas faltantes añadidas en MariaDB; bug: botón de Usuarios/Configuración no visible en la UI; bug: `usuarios.html` selector de rol solo muestra "Master", no permite asignar "Colaborador"
 49. **G54 RRSS v1.3 deployada** (2026-05-27): workflow `wyO1f93A66imn9qw` migrado completamente a G54 API — framework 8 pasos SEO/AEO/GEO, 0 tokens Airtable hardcodeados, lee empresa/servicios/ideas desde G54, guarda posts en G54, estados vía G54 API. Conexión verificada en vivo sin tokens (dev mode). Arquitectura G54 documentada: 4 módulos (RRSS ✅, SEO 🔜, SEM ⏳, Web ⏳).
@@ -787,40 +786,37 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 68. **Duplicado Analytics Semanal desactivado** (2026-06-25): workflow `EX9K1AZwKeouSJ9G` (📊 Analytics AI Semanal — G54) desactivado. El correcto y activo es `ocQAzbiftXXOfjct` (Analytics AI — RRSS G54).
 69. **AGENT_TOKEN confirmado** (2026-06-25): `g54_agent_produccion_2026` — documentado en Config node de todos los workflows G54.
 70. **G54 frontend sin repo conocido** (2026-06-25): el panel admin de G54 (`growth.mdarthurdigital.com/admin`) no está en `risosdigitales/PROYECTO_SOL` ni en ninguna otra rama conocida. Pendiente confirmar con Walter dónde vive ese código para poder agregar campos de credenciales de WhatsApp y otros.
+71. **Ideas Instagram bloqueadas** (2026-07-01): 2 ideas con `status=idea` en Instagram no se aprueban intencionalmente — sin campo `image_url` en el editor del panel, los posts de IG no pueden publicarse (Graph API rechaza sin imagen). Se esperará hasta que Walter implemente el campo.
+72. **Error Reporter fix permanente** (2026-07-01): workflow `CKOju9JVnSMymfKv` migrado de Gmail OAuth2 a SMTP con App Password — credencial `Gmail SMTP — risosadmi` (ID: `iWBBSSe5AWsCMo89`), nodo cambiado de `n8n-nodes-base.gmail` → `n8n-nodes-base.emailSend`. Gmail OAuth expiraba cada 7 días igual que el bug de Blog Publisher. SMTP con App Password no expira nunca. Testeado y confirmado 2026-07-01.
+73. **Migración masiva Gmail OAuth2 → SMTP** (2026-07-01): todos los nodos de envío de correo en todos los workflows migrados a credencial SMTP `iWBBSSe5AWsCMo89`. Workflows actualizados: `1RHpMk3iKHjLXGgb` (Generador Temas), `38fO1D5uJpVUDMqm` (Blog Todas las Redes), `FTa48iKiRIMW5BNB` (Voice Agent Resumen), `HqKUsOwwguIYQbsU` (RRSS Automation CE), `T9J845yE4sd8Dde5` (CE Mantenimiento Web), `bFjarbrGigp90UCL` (Email Outreach), `otycsrxrMEMuxuwD` (Sales AI), `rtyrpJJsXD2xHINU` (Lead Generation), `vQUztiEMB8dXfNwo` (Alex Orquestador), `zAhV8gEsXD8dCrXq` (CE WhatsApp Engine Marco), `cJZV7jcwlbFoW5qJ` (Gmail Monitor — solo nodo de envío; nodo de lectura permanece en OAuth2 porque SMTP no puede leer bandeja). Archivados y workflows de Módulo 2/3/4 no tocados.
+74. **Distribution AI — routing por plataforma corregido** (2026-07-01): el workflow `IRCoya91PKPjpT1T` publicaba posts de Instagram en Facebook porque el nodo `¿Tiene imagen?` solo verificaba si había imagen pero nunca leía el campo `platform`. Fix: nodo IF reemplazado por Switch con 4 ramas (IG con imagen → container/publish IG, IG sin imagen → revertir a aprobado, FB con imagen → photo post, FB sin imagen → text post). También se agregó `platform` al output de `Preparar Datos Post`. Archivo: `workflow-distribution-ai-g54.json`.
+75. **Bug detectado — imagen_url no persiste en panel G54** (2026-07-01): el campo URL de imagen en el editor de posts del panel acepta input y muestra preview, pero al dar Guardar Cambios el valor no se guarda en el backend. La API devuelve siempre `imagen_url: null`. Pendiente corrección por Walter — bloquea publicación en Instagram.
+76. **Bug detectado — ig_user_id null en API de páginas** (2026-07-01): `GET /api/n8n/pages/{pageId}` devuelve `ig_user_id: null` para company_id=1. El valor correcto para Crating Express es `17841402206774619` (corregido después a `17841446392201293`, ver ítem 84). Pendiente que Walter lo configure en el panel o directamente en la DB.
+77. **Posts 42 y 46 eliminados** (2026-07-01): ambos eliminados via `DELETE /api/agent/rrss/posts/{id}` para limpiar estados atascados. Post 42 estaba en "programado" desde Jun 26; post 46 quedó con `fecha_programada` después de una prueba fallida de Instagram. El campo `fecha_programada` no se puede limpiar con AGENT_TOKEN (solo soporta DELETE en posts individuales).
+78. **Genesis G54 Jul 01 creado** (2026-07-01): `genesis-g54-jul01.html` — estado actualizado de los 6 ítems del Genesis anterior + 3 nuevos: imagen_url no persiste (bloqueante), ig_user_id null (bloqueante), wa/leads sin implementar (P0).
+79. **Content AI v1.4 — multi-empresa** (2026-07-02): `wyO1f93A66imn9qw` — Config node `G54_COMPANY_ID` cambiado de hardcoded `"1"` a `={{ $('🔔 Webhook G54').item.json.body.company_id || '1' }}`. Ahora cualquier empresa puede llamar al webhook y el Content AI genera posts para esa empresa, no siempre para Crating Express. Confirmado con ejecución de empresa 6 (Orison).
+80. **Subworkflow 02 — wa/leads con phone param** (2026-07-02): `s1Z7jKoFzy5x7XvC` — nodo `📋 Buscar Lead` URL actualizada de `/wa/leads` a `/wa/leads?phone={{ encodeURIComponent($('Recibir Datos').first().json.telefono) }}`. Endpoint requiere parámetro phone.
+81. **Subworkflow 01 — historial desde G54** (2026-07-02): `1PXcg3dOQBt8hrrT` — Clasificador corregido para leer historial desde `inp.historial` (G54) y datos estructurados desde `inp.datosRecolectados`. Antes leía campos Airtable vacíos, causando que Marco saludara a clientes recurrentes como nuevos. Formato G54: `"Cliente: texto\nAgente: texto"`. `datos = {}` en G54 — la API no persiste datos estructurados de la conversación (superado luego, ver ítem 89).
+82. **Analytics AI V3 — Meta Reporte creado** (2026-07-03): nuevo workflow `YI9EfJYcWJN4bbM9` ("ANALYTICS MENSUAL V3-META REPORTE") — copia del Analytics AI mensual (`ocQAzbiftXXOfjct`) con tres cambios: (1) `FB_ACCESS_TOKEN` e `IG_USER_ID` removidos del Config node — ahora vienen dinámicamente de G54 via nuevo nodo `🔑 Obtener Tokens Sociales G54` (`GET /api/n8n/pages/{FB_PAGE_ID}`); (2) nodos FB e IG reemplazados de post-level a account-level insights; (3) Groq migrado a credencial nativa `jORffbRhRNohHT1B` (fix del bug de `$vars`). `ig_user_id` tiene fallback hardcodeado por bug conocido de Walter (null en G54 pages API). Archivo: `workflow-analytics-v3-meta-reporte.json`.
+83. **Image Generator AI activado** (2026-07-07): workflow `1rsqmFabW5PjnlHy` — diagnosticado y corregido. Bugs: token hardcodeado en JS, nombres de campos incorrectos (`idea_descripcion` → `tema`/`hook`/`copy_instagram`), paralelismo mal configurado en cadena de nodos, nodo HTTP save con `authentication: genericCredentialType` sin credencial. Fix: arquitectura lineal de 9 nodos, modelo Pollinations `flux` (mejor que `sana`), `continueOnFail: true` en save (endpoint PUT devuelve 401 — mismo comportamiento en Distribution AI). Webhook `POST /webhook/generar-imagen` con `{post_id, company_id, platform, style}` retorna `{"ok": true, "image_url": "..."}`. Archivado en `workflow-image-generator-g54.json`.
+84. **Analytics V3 mensual activado** (2026-07-07): workflow `YI9EfJYcWJN4bbM9` — schedule trigger estaba `disabled: true`, habilitado y cambiado a mensual día 1 a las 8am. `Preparar Datos Analytics` reescrito para leer métricas account-level correctamente con `sumMetric()`. `Guardar Métricas en G54` corregido al formato real: `{company_id, metricas: [{platform, period_start, period_end, alcance_total, ...}]}`. Confirmado: ejecución 14655 → `{"ok": true, "created": 2}`.
+85. **Analytics Semanal G54 refactorizado** (2026-07-07): workflow `EX9K1AZwKeouSJ9G` — (1) endpoint cambiado de `/posts` a `/published_posts` con métricas válidas; (2) nodo `🔑 Obtener Tokens Sociales G54` agrega dinámicamente el user token desde G54 pages API; (3) nuevo nodo `🔑 Obtener Page Token FB` intercambia user token → page token via `/{page_id}?fields=access_token` — necesario para post insights; (4) modo dual por webhook: sin `post_id` = métricas semanales agregadas, con `post_id` = métricas de ese post individual; (5) email y HTML nodes eliminados (solo mensual manda email); (6) G54_AGENT_TOKEN corregido en Config node. Archivo: `workflow-analytics-semanal-g54.json`.
+86. **FB token renovado** (2026-07-07): token de larga duración (~60 días) generado con App ID `804995982222393`. Actualizado en G54. IG User ID correcto confirmado: `17841446392201293`. El endpoint `GET /api/n8n/pages/{pageId}` aún devuelve `ig_user_id: null` — pendiente que se corrija en G54 backend para que el Analytics IG funcione automáticamente.
+87. **Post insights con permiso `instagram_manage_insights`** (2026-07-07): permiso confirmado activo en la app de Meta. IG insights funcionan con page token cuando `ig_user_id` esté disponible desde G54.
+88. **Marco memoria — diagnóstico incorrecto corregido** (2026-07-08): el POST `/api/agent/whatsapp/inbound` SÍ funciona y persiste datos/mensajes (confirmado con documentación G54 y ejemplo de Carlos Medina). El diagnóstico anterior era erróneo. La causa raíz real era un phone format mismatch (ver ítem 90).
+89. **SW02 filter revertido** (2026-07-08): `s1Z7jKoFzy5x7XvC` — revertido de `'Bot: [D:'` a `'Agente: [D:'` (3 ocurrencias). El cambio del día anterior era incorrecto: G54 reconstruye historial con prefijo `Agente:` para mensajes de bot.
+90. **Marco memoria — causa raíz y fix definitivo** (2026-07-08): SW05 (`☁️ G54: Sync Conversación`) guardaba el lead con `phone: '+' + $json.telefono` (ej: `+50576560734`) pero SW02 (`📋 Buscar Lead`) buscaba con `$json.telefono` sin `+` (ej: `50576560734`). G54 no encontraba el lead → retornaba vacío → Marco siempre arrancaba de cero. **Fix 1:** URL y queryParam de SW02 ahora usan `'+' + telefono` para coincidir con formato E.164. **Fix 2:** el snapshot `[D:{...}]` ya no sobreescribe los `datos` reales de G54 — hace merge y solo rellena campos vacíos. Aplicado en n8n a las 17:22 UTC.
+91. **Marco — loop de venta post-cotización corregido** (2026-07-08): con la memoria ya funcionando, apareció un bug distinto: Marco quedaba atascado repitiendo "recomienda cajones cerrados" sin importar lo que el cliente respondiera, porque el SW01 Clasificador veía `tipo_cajon=null` en los `datos` recuperados de G54 y forzaba el paso `PEDIR_TIPO_CAJON` sin detectar intenciones post-venta. Fix (commit `f58dc61`): nueva detección de intent ANTES de la máquina de estados — si el mensaje es una consulta de seguimiento ("estado del pedido", "ya hice el pedido", etc.), Marco responde con datos de contacto de ventas en vez de continuar el flujo de cotización. Aplicado en n8n a las 17:31 UTC.
+92. **Marco — regex de intent post-venta ampliada** (2026-07-08): la primera versión de la detección (ítem 91) no capturaba typos ("hcie" por "hice") ni variantes cortas ("su estado" vs "estado del pedido"). Commit `d30ff83` amplía la regex a múltiples cláusulas (estado/seguimiento/cómo va, typos de hice/pedí, rechazo explícito de recomendaciones) y refuerza la instrucción `CONSULTA_ESTADO_PEDIDO` con una prohibición explícita de mencionar cajones/productos. Aplicado en n8n a las 17:37 UTC. **Limitación conocida:** no existe endpoint DELETE para leads de prueba en G54 — para probar con historial limpio hay que usar un número de teléfono distinto; lead de prueba ID 3 quedó con historial contaminado de las pruebas anteriores.
 
 64. **Census n8n + limpieza** (2026-06-10): 32 workflows totales, 11 activos, 21 inactivos. Alex renombrado (estaba como "doble"). Borrados 4 workflows obsoletos: Generador Temas v1.2, CE WA Engine v1.2, CE Blog v1.2, CE Email Outreach v1.2. RRSS Automation CE (`HqKUsOwwguIYQbsU`) reactivado como puente — el content generator de RRSS para CE no estaba corriendo (G54 inactivo + viejo inactivo). Nomify confirmado fuera de nuestro alcance, lo continúa otra persona.
-=======
->>>>>>> origin/claude/check-claude-md-file-EC9xe
-
-## Nomify — Planilla Nicaragua (Express + MariaDB)
-
-### CRÍTICO: Repositorio correcto
-
-> **SIEMPRE** usar `WX-MDA/Nomify`, rama `sol/feature-inicial`.
-> El repo `risosdigitales/rrss-automatizaci-n` (también llamado `PROYECTO_SOL`) es el repo de RRSS/Crating Express — la planilla NO va ahí.
-> En sesiones donde el MCP de GitHub está conectado solo a `risosdigitales`, no se puede pushear a `WX-MDA/Nomify` directamente — abrir nueva sesión con acceso al repo correcto.
-
-### Estructura local en Windows
-
-```
-C:\Users\Orison3\Documents\PROYECTO SOL\2026\Nomify\
-  bk_nomify\         ← Express backend (git repo → WX-MDA/Nomify, rama sol/feature-inicial)
-<<<<<<< HEAD
-  ft_nomify\         ← HTML/CSS/JS frontend (carpeta hermana, NO repo git separado)
-=======
-  planilla-web\      ← HTML/CSS/JS frontend (carpeta hermana, NO repo git separado)
->>>>>>> origin/claude/check-claude-md-file-EC9xe
   .gitignore
   README.md
 ```
 
 El servidor Express sirve el frontend con:
 ```js
-<<<<<<< HEAD
 app.use(express.static(path.join(__dirname, '../ft_nomify')));
-=======
-app.use(express.static(path.join(__dirname, '../planilla-web')));
->>>>>>> origin/claude/check-claude-md-file-EC9xe
 ```
 **La app SOLO funciona en `http://localhost:3000`** — NO abrir desde Netlify ni desde el sistema de archivos directamente.
 
@@ -926,11 +922,7 @@ usuarios       — id, nombre, email, password_hash, rol, planillas_acceso, empl
 - `tipo_planilla = 'Sin Seguro'` → INSS = 0
 - Motor de cálculo está en `planillasRoutes.js → POST /api/planillas/calcular`
 
-<<<<<<< HEAD
 ### Archivos del frontend (en ft_nomify/)
-=======
-### Archivos del frontend (en planilla-web/)
->>>>>>> origin/claude/check-claude-md-file-EC9xe
 
 | Archivo | `onReady` | Descripción |
 |---|---|---|
@@ -985,7 +977,6 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
    - `bk_nomify/server.js`, `auth.js`, `db.js`, `create-admin.js`, `schema.sql`, `package.json`
    - `bk_nomify/.env.example` (con placeholders, NO el .env real)
    - `bk_nomify/routes/` (11 archivos: auth, empleados, prestamos, adelantos, extras, deducciones, vacaciones, planillas, detalle, recibo, usuarios)
-<<<<<<< HEAD
 3. Pushear el frontend a `ft_nomify/` en misma rama:
    - `ft_nomify/assets/js/auth.js` y `feriados.js`
    - Todos los HTML: login, index, empleados, planillas, planilla-detalle, prestamos, adelantos, extras, deducciones, calendario, vacaciones, recibo, mi-recibo, usuarios
@@ -999,21 +990,6 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 ### Pendientes Nomify
 
 > **FUERA DE NUESTRO ALCANCE (2026-06-10)** — lo continúa otra persona. No incluir en planificación.
-=======
-3. Pushear el frontend a `planilla-web/` en misma rama:
-   - `planilla-web/assets/js/auth.js` y `feriados.js`
-   - Todos los HTML: login, index, empleados, planillas, planilla-detalle, prestamos, adelantos, extras, deducciones, calendario, vacaciones, recibo, mi-recibo, usuarios
-4. Asegurarse de que NO existe `planilla-web/netlify/` ni `netlify.toml` que apunte a Netlify functions
-5. En la máquina local: `git pull origin sol/feature-inicial` para bajar los cambios
-
-### Pendientes Nomify
-
-- [ ] Ingresar los 8 empleados reales (eliminar: María García, Carlos López, Ana Martínez, Roberto Sánchez)
-- [ ] Crear usuario admin real: `node create-admin.js` y cambiar contraseña desde la app
-- [ ] Invitar usuarios reales con sus roles
-- [ ] Confirmar definición de "aportaciones" y marcador de huella con quien corresponda
-- [ ] Probar flujo completo: login → empleados → generar planilla → recibo
->>>>>>> origin/claude/check-claude-md-file-EC9xe
 
 ---
 
@@ -1023,7 +999,80 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ---
 
-<<<<<<< HEAD
+### 2026-07-07 (Lunes)
+
+El día estuvo centrado en hacer que los dos workflows de Analytics funcionen de punta a punta con datos reales en G54, luego en activar y estabilizar el Image Generator AI que hasta hoy no había sido probado nunca en vivo, y al cierre se identificó y resolvió el bug de memoria de Marco que llevaba días sin solución.
+
+Arrancamos con el Analytics V3 mensual, que era el más simple de los dos porque ya tenía la lógica correcta pero tenía el schedule trigger con `disabled: true`, así que nunca había corrido de forma automática. Se habilitó y se cambió a mensual el día 1. Lo que tomó más tiempo fue reescribir el nodo de preparación de datos, porque estaba intentando leer métricas account-level con la misma lógica que se usaría para posts individuales, siempre devolviendo cero. Se corrigió con una función `sumMetric()` que lee el array de valores de la Graph API correctamente. El formato del cuerpo de guardado en G54 también estaba mal estructurado. Con esas tres correcciones el V3 corrió limpio y respondió `{"ok": true, "created": 2}`, confirmando que los datos llegaron a G54.
+
+El Analytics Semanal requirió más trabajo. El endpoint `/posts` que usaba está deprecado en versiones modernas de Meta y devuelve métricas obsoletas, así que se migró a `/published_posts` con las métricas de post actuales. El token en el Config node estaba redactado por un push anterior a GitHub, así que en lugar de volverlo a poner ahí se aprovechó para agregar un nodo que lo lee dinámicamente desde G54 cada vez, igual que hacen los otros workflows. Pero ahí apareció algo que no habíamos contemplado: para leer insights de posts individuales Meta requiere un Page Access Token específicamente, no el User Token que devuelve G54. Eso causaba un error `Invalid OAuth 2.0 Access Token` con subcódigo 2069032. La solución fue agregar un segundo nodo que llama a `GET /{page_id}?fields=access_token` para hacer el intercambio automáticamente antes de consultar cualquier insight de post. También se aprovechó para hacer el workflow dual: si el webhook recibe un `post_id`, corre en modo individual para ese post; si no recibe ninguno, corre el flujo semanal completo. Ambos modos terminan guardando en G54. Junto a todo esto se renovó el FB token de larga duración porque el anterior ya tenía meses, y se confirmó que el IG User ID correcto de Crating Express es `17841446392201293`, distinto al que teníamos antes. El permiso `instagram_manage_insights` ya estaba activo en la app de Meta, así que una vez que Walter conecte el `ig_user_id` en el endpoint de páginas de G54, los datos de Instagram llegarán solos.
+
+Ya en la tarde se pasó al Image Generator AI, el workflow `1rsqmFabW5PjnlHy` que meses atrás se había construido en código pero nunca se había probado realmente en vivo. Al ejecutarlo por primera vez salieron cinco bugs en cadena. El primero era que el AGENT TOKEN de G54 estaba hardcodeado directamente dentro del código JavaScript del nodo en lugar de leerlo del Config node, lo cual viola la regla de no credenciales en código. El segundo era que el código intentaba leer campos del post que no existen en la API de G54, usaba nombres como `idea_descripcion` y `contenido` cuando los campos reales son `tema`, `hook` y `copy_instagram`. El tercero era un problema de paralelismo en la cadena de nodos: el nodo de construcción del prompt recibía input desde el webhook Y desde el nodo de consulta a G54 simultáneamente, creando una condición de carrera. El cuarto era que el nodo de guardado tenía configurado `authentication: genericCredentialType` sin ninguna credencial asignada, tirando "Credentials not found" siempre. El quinto era el modelo de Pollinations: estaba usando `sana` que no funciona bien para este tipo de imágenes industriales y de producto. Se simplificó toda la arquitectura a nueve nodos lineales, se pasó al modelo `flux` que tiene mucho mejor resultado, se agregó `continueOnFail: true` en el guardado porque el endpoint `PUT` de G54 devuelve 401 para el agent token (mismo comportamiento ya conocido del Distribution AI), y se implementaron parámetros de calidad específicos por plataforma: Instagram usa proporciones cuadradas y estética más limpia, Facebook permite más texto visual, y se restringen descripciones demasiado genéricas para evitar imágenes sin relevancia. El workflow ahora recibe `{post_id, company_id, platform, style}` vía webhook y devuelve `{"ok": true, "image_url": "..."}` con la URL de Pollinations. Se probó exitosamente con el post 49 de Crating Express. Lo que queda pendiente y es el desafío real es que actualmente la imagen se genera desde los campos generales del post (tema, hook, copy), y eso da resultados aceptables pero no perfectos porque la descripción visual viene de un contenido pensado para texto. La forma ideal sería que el Strategist AI o el Content AI generen también un campo `prompt_imagen` específico para la generación visual, pero eso implica cambios en el panel de G54 y en múltiples workflows que por ahora no podemos hardcodear porque el sistema es multiempresa.
+
+Al cierre del día, ya casi de noche, se identificó y resolvió el bug de memoria de Marco que llevaba días manifestándose. El diagnóstico había señalado que el problema estaba en el SW03, pero al revisar el código con calma resultó que SW03 ya tenía la lógica de merge correcta. El bug real estaba una capa antes: el SW02 (Contexto y Lead) lee el historial de G54 y busca los snapshots de datos que SW03 embebe al final de cada turno con el formato `Bot: [D:{...}]`, pero el filtro en SW02 buscaba `'Agente: [D:'` — una cadena que nunca aparece en el historial porque SW03 siempre escribe "Bot:", no "Agente:". El resultado era que cada turno arrancaba con `datosGuardados` vacío, sin importar lo que el cliente había dicho antes. Se corrigieron las tres ocurrencias en el SW02 (el filtro de lectura, el regex de extracción del JSON, y el filtro de limpieza antes de pasar el historial a la IA), se actualizó en n8n y se reactivó el workflow. Con esto Marco debería recordar todos los datos acumulados de la conversación a partir de la próxima prueba.
+
+---
+
+### 2026-07-02 (Jueves)
+
+El día comenzó con una reunión a primera hora con el Ing. Walter donde revisamos el flujo completo de RRSS de punta a punta — desde que el Strategist AI genera la estrategia hasta que el Distribution AI publica en redes — para detectar cualquier detalle que pudiera estar fallando o que no fuera claro para el usuario. Fue una revisión bastante minuciosa porque no solo se trató de que las piezas funcionen técnicamente, sino de que el flujo completo sea entendible y cómodo para quien lo usa desde el panel. Walter hizo varias observaciones sobre la interfaz: cosas que visualmente no son intuitivas, pasos donde el usuario podría perderse, y oportunidades de hacer la experiencia más fluida y agradable. Esa conversación marcó la dirección del resto del día.
+
+A raíz de eso se trabajó en varias cosas. Lo primero fue el Analytics AI V3 — una copia del analytics mensual existente pero que en lugar de recoger métricas post por post, llama directamente a la API de Meta para obtener datos a nivel de cuenta: impresiones, alcance, usuarios activos, seguidores ganados, visitas al perfil y clics al sitio, tanto para Facebook como para Instagram. Los tokens ya no van hardcodeados en el workflow, vienen dinámicamente de G64 usando el ID real de la página de Facebook (`GET /api/n8n/pages/{FB_PAGE_ID}`). Luego ese workflow se conectó con un nodo de correo que manda el reporte como HTML al cliente. El diseño del email pasó por varias iteraciones: primero salió en azul oscuro tipo navy que no era el estilo de G54, se hizo una versión alternativa en blanco y se aprobó esa — fondo claro `#eef0f4`, logos de Growth54, Facebook e Instagram embebidos como SVG sin depender de URLs externas, una gráfica lineal que muestra el alcance diario de los últimos 30 días con datos reales de la Graph API (fallback generativo si no hay datos suficientes), y cada tarjeta de métricas muestra el nombre exacto del campo de la API para que sea educativo para el cliente. Aparte de eso se preparó un archivo de design system completo para Walter con todos los tokens de diseño, colores, tipografías, tamaños y estructura del email para que los módulos 2, 3 y 4 tengan la misma estética cuando los implemente.
+
+Al final del día apareció algo que había que corregir: en el panel se notó que las ideas generadas por el Strategist AI no tenían coherencia con sus keywords — una idea sobre piscina emparejada con una keyword de hospital militar, y el negocio no tiene piscina. La causa era que el AI primero inventaba una idea libre y luego le "asignaba" una keyword de la lista, que es exactamente al revés de como debería funcionar. Se corrigió el prompt del Strategist AI v2.1 para que el proceso sea keyword → idea: primero toma una keyword real de G54, identifica qué intención tiene esa búsqueda, y solo entonces crea un título que responda esa intención. Se agregó también un campo de verificación (`angulo`) que obliga al AI a justificar que el contenido de la idea corresponde a algo que la empresa realmente ofrece — si no puede justificarlo, descarta esa keyword y toma otra. Queda pendiente ejecutar el Strategist para un cliente real y verificar que las ideas salgan coherentes de principio a fin.
+
+Estructura de subworkflows Alex CE (G54) — documentado hoy:
+- `vQUztiEMB8dXfNwo` — 00 Orquestador: webhook, extraer mensaje, llamar 02→01→03→04→05
+- `s1Z7jKoFzy5x7XvC` — 02 Contexto y Lead: lee empresa/config/productos/KB de G54, busca lead por phone en G54
+- `1PXcg3dOQBt8hrrT` — 01 Clasificador: construye `sistemaIA`, `usuarioIA`, `proximoPaso`
+- `J8qbKOF7t4GnhRDT` — 03 Generador IA: llama Groq/Gemini con sistemaIA+usuarioIA, parsea respuesta JSON
+- `jDEYno22WuE0QVwJ` — 04 Cotizador
+- `PqbfMghL0E7xKflC` — 05 Guardar Lead: llama `POST /api/agent/whatsapp/inbound` con mensajes
+
+---
+
+### 2026-07-01 (Miércoles)
+
+El día comenzó retomando el problema de Marco: el bot saludaba a clientes recurrentes como si fueran nuevos ("Hola, ¿en qué puedo ayudarte?") a pesar de que ayer se había corregido el endpoint de búsqueda de leads en el subworkflow 02 para incluir el parámetro `?phone=...`. Al rastrear el flujo completo de los subworkflows de Alex CE se identificó la causa raíz: el subworkflow 01 Clasificador (`1PXcg3dOQBt8hrrT`) estaba construyendo el historial desde `leadFields.Historial_Mensajes` (campo de Airtable, siempre vacío) en lugar de `inp.historial` que sí viene de G54. El Clasificador también inicializaba `datosRecolectados` desde campos Airtable-style (`leadFields.Articulo`, `leadFields.Nombre_Contacto`, etc.) ignorando `inp.datosRecolectados` de G54.
+
+Se aplicaron 4 correcciones al Clasificador: (1) agregar `const g54Data = inp.datosRecolectados || {}` para leer datos G54; (2) cambiar `historialRaw = leadFields.Historial_Mensajes || ''` por `historialRaw = inp.historial || leadFields.Historial_Mensajes || ''`; (3) usar g54Data como fallback en todos los campos de datosRecolectados (producto, medidas, fecha, tipo_cajon, proteccion_extra, correo_contacto, nombre_cliente, tipo_flujo); (4) leer estado desde `inp.estado` primero. Se pusheó via API: actualizado a las 19:25:09 UTC.
+
+Se confirmó el formato del historial en G54: `"Cliente: Hola\nAgente: Buenos días\n..."` — texto plano por líneas, compatible con el template `usuarioIA`. También se confirmó que `datos = {}` en la respuesta de G54 (el endpoint `POST /api/agent/whatsapp/inbound` solo recibe mensajes, no persiste los datos estructurados). Esto significa que la lógica `calcProximoPaso` no puede reconstruir el estado exacto de la conversación entre sesiones, pero sí tiene el historial para que el AI derive contexto. Pendiente: evaluar si Walter puede agregar soporte para `datos` en el endpoint de leads.
+
+---
+
+### 2026-07-01 (Martes)
+
+El día comenzó retomando la sesión del día anterior con la tarea de revisar el Analytics AI y confirmar si lo nuevo encontrado en la API de G54 tenía algo aplicable. Para Analytics AI, el fix del Groq credential se había aplicado el 30 de junio pero la última ejecución programada fue el 29 (antes del fix), así que la próxima ejecución para confirmar es el 6 de julio. El Blog Publisher sí se pudo confirmar de inmediato: corrió hoy a las 13:00 en success, igual que el 29 y 30 de junio, con lo cual el fix del OAuth de "Testing" a "Production" quedó verificado.
+
+En cuanto a los nuevos endpoints de G54 para nuestro scope, no había nada nuevo aplicable. `wa/leads` sigue sin implementarse por parte del Ing. Walter. Los únicos endpoints nuevos encontrados en sesiones anteriores eran los de artículos SEO, que son responsabilidad de Walter y no nos toca.
+
+Lo que sí apareció fue un hallazgo importante: al listar los workflows encontré el Strategist AI v3.0 ("Tendencias", ID: `S62o0wcXq8Wfj67S`) que no estaba documentado en el CLAUDE.md. Es una versión más avanzada que v2.0 con integración de NewsAPI para detectar tendencias del sector, análisis con Groq, y disparo por webhook desde G54. Tenía tres errores críticos: la URL de G54 apuntaba a producción (`api.growth54.com`) en lugar del entorno dev, y dos nodos Groq tenían la API key `gsk_*` hardcodeada directamente en los headers, violando la regla de no datos hardcodeados. El nodo de Gemini también tenía la key hardcodeada en la URL. Se corrigieron los tres problemas: URL a dev, Groq a credencial nativa `jORffbRhRNohHT1B`, Gemini a referencia desde el Config node. Al intentar pushear al repo, GitHub rechazó el commit porque detectó la `gsk_*` en el historial de commits anteriores. Se tuvo que hacer `git reset --soft` para reescribir los dos commits problemáticos en uno solo sin la key antes de poder pushear limpio.
+
+También se revisó el Community AI: tenía el mismo bug de `$vars.GROQ_API_KEY` que los demás, y además se confirmó que el endpoint `/api/n8n/pages/{pageId}` de G54 sí existe y responde con los tokens de FB/IG. Los errores alternados en ese workflow son comportamiento normal (webhooks vacíos de Facebook que se saltean correctamente). El Sales AI estaba perfecto desde el inicio con credencial nativa y todas las ejecuciones en success. Al cierre, los seis agentes de Módulo 1 están activos y con sus credenciales correctas. Queda pendiente confirmar Analytics AI el 6 de julio.
+
+La segunda parte del día estuvo enfocada en el Distribution AI y el Strategist AI v3.0. En el Distribution AI se presentó el caso del post 42 que estaba atascado en estado "programado" desde el 26 de junio — no había lógica de recuperación. Se discutió la solución correcta: que si el Distribution AI falla al publicar, el post debe volver a "aprobado" para que el usuario lo reprograme desde el panel cuando quiera, en lugar de quedar en un estado sin salida. Se implementó eso renombrando el nodo de error a `♻️ G54: Revertir → Aprobado` con `status: aprobado`. El post 42 se eliminó directamente via `DELETE /api/agent/rrss/posts/42`, con lo que se confirmó que ese endpoint está activo.
+
+En el Strategist AI v3.0 se encontró que la NewsAPI key había sido redactada por el secret scanning de GitHub al pushear — tanto en el repo como en n8n aparecía como `NEWSAPI_KEY_REDACTED`. Se restauró la key `de29024eefed4c2d813c639e92f73dd6` en n8n y se ejecutó el workflow via webhook. Completó exitosamente en 10 segundos y actualizó la estrategia en G54, aunque `trend_topic` quedó null porque no había suficiente cobertura de noticias recientes sobre embalaje industrial (comportamiento correcto). También se revisó el Genesis de G54 del 26 de junio verificando el estado real de los 6 requerimientos para Walter: 3 ya están listos por el lado del backend (DELETE posts, campos image_url/hook/cta existen en la API), 1 endpoint sigue sin implementar (GET wa/leads), y 2 son cambios de panel UI que Walter está revisando. Las 2 ideas de Instagram se dejaron en estado "idea" intencionalmente porque sin campo imagen en el panel no se pueden publicar en IG.
+
+Hacia el final del día se trabajó en dos frentes más. Primero se hizo una migración masiva de todas las credenciales de Gmail OAuth2 a SMTP con App Password en los 11 workflows activos — mismo fix que se hizo al Error Reporter, para evitar que el token expire cada 7 días. Se migró cada nodo de envío de correo (gmail → emailSend) con la credencial SMTP `iWBBSSe5AWsCMo89`. El único nodo que se dejó en OAuth2 fue el de lectura de bandeja del Gmail Monitor, porque SMTP no puede leer correos, solo enviarlos.
+
+Después se intentó publicar por primera vez un post real de Instagram (post 46, tema ISPM-15) usando el Distribution AI ya corregido. Ahí se descubrieron dos problemas nuevos: el primero es que el campo `imagen_url` en el editor del panel de G54 aparece visualmente y muestra preview, pero al dar Guardar Cambios el valor no se persiste en el backend — la API siempre devuelve `imagen_url: null`. El segundo es que `ig_user_id` también llega null desde el endpoint de páginas de G54. Ambos son bugs del backend de Walter. Como no había imagen válida, el Distribution AI revirtió el post correctamente a "aprobado", pero el panel lo seguía mostrando como "programado" porque la fecha programada quedó guardada. Se eliminó el post 46 via DELETE para limpiar el panel, igual que se hizo antes con el 42. Se preparó un Genesis actualizado (`genesis-g54-jul01.html`) con el estado de los 6 ítems anteriores más los 3 nuevos: bug de imagen_url, ig_user_id null, y el endpoint de wa/leads que sigue sin implementarse.
+
+---
+
+### 2026-06-30 (Lunes)
+
+El día comenzó revisando el estado general de los workflows y encontré que el Analytics AI llevaba dos semanas fallando. Al comparar una ejecución exitosa del 20 de junio contra las fallidas del 22 y 29 se identificó la causa raíz: en la ejecución exitosa la credencial de Groq mostraba la key real, en las fallidas mostraba `None`. Esto confirmó que `$vars.GROQ_API_KEY` dejó de funcionar en n8n alrededor del 20-22 de junio porque la licencia del servidor dejó de soportar el feature de variables. Se corrigió el nodo Groq del Analytics AI para usar la credencial nativa en lugar del header manual con `$vars`.
+
+Luego se investigó el Community AI que estaba marcado como pendiente. Al revisar las ejecuciones se encontró que los errores alternados no eran el problema reportado de "mensaje vacío" que me habían dicho, sino que son el comportamiento correcto: Facebook manda webhooks para eventos que no tienen texto (ediciones, likes) y el workflow los detecta y los salta limpiamente. No era un bug, era defensive code funcionando bien. Lo que sí necesitaba fix era que el nodo Groq de ese workflow tenía el mismo problema de `$vars` que el Analytics AI, pero eso se dejó para el 1 de julio.
+
+Durante la revisión también se construyó un Content SEO AI para el Módulo 2, pensando que era responsabilidad nuestra. El usuario aclaró que el Módulo 2 y todo lo de SEO es responsabilidad exclusiva del Ing. Walter. El workflow quedó en n8n como referencia para Walter pero no entra en nuestro trabajo.
+
+El avance más importante del día fue identificar y resolver la raíz del problema con el Blog Publisher, que venía fallando periódicamente cada siete días desde hace semanas. Se descubrió que el OAuth consent screen del proyecto `crating-express-seo` en Google Cloud Console estaba en modo "Testing", que es un modo de desarrollo donde todos los tokens OAuth se revocan automáticamente cada siete días. El usuario publicó la app al estado "Production" desde Google Cloud Console y desde las 18:00 del día el Blog Publisher corrió sin error. Lo confirmamos el 1 de julio cuando volvió a correr en success a las 13:00.
+
+---
+
 ### 2026-06-25 (Miércoles)
 
 El día arrancó porque Walter avisó que ya tenía lista su parte del archivo génesis y que algunas cosas que habíamos implementado no eran necesarias porque él ya las había resuelto por su lado. Con eso, lo primero fue verificar esa información para entender qué seguía en pie y qué había cambiado, y a partir de ahí revisar, corregir y probar cada agente uno por uno.
@@ -1158,21 +1207,6 @@ Si Dios quiere, esta semana Nomify estará terminado y listo para uso real.
 
 ---
 
-=======
->>>>>>> origin/claude/check-claude-md-file-EC9xe
-### 2026-05-21 (Miércoles)
-
-El día estuvo dedicado a migrar la Planilla Nicaragua del stack Netlify/Airtable al nuevo stack Express + MariaDB, que vive en el repositorio `WX-MDA/Nomify` (rama `sol/feature-inicial`). Se descubrió durante la sesión un problema crítico de repositorio: el MCP de GitHub estaba conectado únicamente a `risosdigitales/rrss-automatizaci-n` (PROYECTO_SOL), que es el repo de Crating Express, y todos los pushes de código de planilla iban a ese repo equivocado. El código correcto de Nomify debe vivir en `WX-MDA/Nomify`, que tiene la estructura `bk_nomify/` (Express backend) + `planilla-web/` (frontend HTML/CSS/JS) como carpetas hermanas.
-
-Se realizó la migración completa de auth: se eliminó toda dependencia de Netlify Identity (`netlifyIdentity`) de los 13 archivos HTML, se reemplazó con el sistema JWT propio, y se unificó el patrón `onReady(roles, fn)` como punto de entrada de todas las páginas. Se eliminaron los 12 archivos de `netlify/functions/` que apuntaban a Airtable. Se creó `usuarios.html` con CRUD completo de usuarios del sistema (solo Master). Se agregó `id="link-usuarios"` al nav de todas las páginas que lo faltaban.
-
-El motor de cálculo de planilla quedó completamente en código Express (`planillasRoutes.js → POST /api/planillas/calcular`), con soporte de INSS_Base, pausado de adelantos/deducciones, descuento de cuotas de préstamos y registro de historial.
-
-<<<<<<< HEAD
-Al cierre se documentó todo en CLAUDE.md (esta sección) para que en una nueva sesión conectada a `WX-MDA/Nomify` se puedan pushear todos los archivos correctamente. El código listo para pushear está en `/home/user/RRSS-AUTOMATIZACI-N/planilla-server/` (backend) y `/home/user/RRSS-AUTOMATIZACI-N/planilla-web/` (frontend, carpeta local renombrada a `ft_nomify/` — ver estructura). Queda pendiente hacer ese push y luego ingresar los 8 empleados reales.
-=======
-Al cierre se documentó todo en CLAUDE.md (esta sección) para que en una nueva sesión conectada a `WX-MDA/Nomify` se puedan pushear todos los archivos correctamente. El código listo para pushear está en `/home/user/RRSS-AUTOMATIZACI-N/planilla-server/` (backend) y `/home/user/RRSS-AUTOMATIZACI-N/planilla-web/` (frontend). Queda pendiente hacer ese push y luego ingresar los 8 empleados reales.
->>>>>>> origin/claude/check-claude-md-file-EC9xe
 
 ---
 

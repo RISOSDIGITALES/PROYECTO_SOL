@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Genesis G54 — Pendientes Backend · 26 Jun 2026</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0d16;
+      --surface: #111520;
+      --border: #1a2035;
+      --border-hover: #2a3550;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --subtle: #8b98b8;
+
+      --green: #4ade80;
+      --green-bg: #052e16;
+      --green-border: #166534;
+
+      --yellow: #fbbf24;
+      --yellow-bg: #1c1200;
+      --yellow-border: #78350f;
+
+      --red: #f87171;
+      --red-bg: #2d0a0a;
+      --red-border: #7f1d1d;
+
+      --blue: #60a5fa;
+      --blue-bg: #0c1a3a;
+      --blue-border: #1e3a6e;
+
+      --purple: #c084fc;
+      --purple-bg: #1e0840;
+      --purple-border: #4c1d95;
+
+      --accent: #7c3aed;
+      --accent-light: #a78bfa;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #0f1628 0%, #1a0a2e 50%, #0a1220 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 40px 36px;
+    }
+    .header-inner { max-width: 1000px; margin: 0 auto; }
+    .header-label {
+      display: inline-block;
+      background: var(--purple-bg);
+      border: 1px solid var(--purple-border);
+      color: var(--purple);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+    }
+    .header h1 { font-size: 26px; font-weight: 700; color: #f1f5f9; margin-bottom: 8px; }
+    .header h1 span { color: var(--accent-light); }
+    .header p { color: var(--subtle); font-size: 14px; max-width: 640px; margin-bottom: 20px; }
+    .header-meta { display: flex; gap: 24px; flex-wrap: wrap; }
+    .meta-item { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+    .meta-item .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-light); }
+
+    .container { max-width: 1000px; margin: 0 auto; padding: 40px; }
+    section { margin-bottom: 48px; }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--accent-light);
+      margin-bottom: 20px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title .num {
+      background: var(--purple-bg);
+      border: 1px solid var(--purple-border);
+      color: var(--purple);
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    /* RESUMEN TABLE */
+    .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; background: var(--surface); }
+    thead th {
+      background: #0d1120;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 11px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #141825; }
+    td { padding: 11px 16px; vertical-align: middle; font-size: 13px; }
+    td.item-name { font-weight: 600; color: #f1f5f9; }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; font-weight: 600; padding: 2px 9px;
+      border-radius: 4px; white-space: nowrap;
+    }
+    .badge.p0 { background: var(--red-bg); border: 1px solid var(--red-border); color: var(--red); }
+    .badge.p1 { background: var(--yellow-bg); border: 1px solid var(--yellow-border); color: var(--yellow); }
+    .badge.sug { background: var(--blue-bg); border: 1px solid var(--blue-border); color: var(--blue); }
+    .badge.panel { background: var(--purple-bg); border: 1px solid var(--purple-border); color: var(--purple); }
+    .badge.api { background: var(--green-bg); border: 1px solid var(--green-border); color: var(--green); }
+
+    /* ITEM CARDS */
+    .items { display: grid; gap: 20px; }
+
+    .item-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .item-card.priority-p0 { border-left: 3px solid var(--red); }
+    .item-card.priority-p1 { border-left: 3px solid var(--yellow); }
+    .item-card.priority-sug { border-left: 3px solid var(--blue); }
+
+    .item-header {
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .item-title { font-size: 15px; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+    .item-where { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .item-tags { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+
+    .item-body { padding: 18px 22px; display: grid; gap: 14px; }
+
+    .item-why { color: var(--subtle); font-size: 13px; line-height: 1.7; }
+
+    .spec-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.2px; color: var(--muted); margin-bottom: 8px;
+    }
+
+    .code-block {
+      background: #070a12;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .code-bar {
+      background: #0d1120;
+      border-bottom: 1px solid var(--border);
+      padding: 7px 14px;
+      font-size: 10px; color: var(--muted);
+      font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+    }
+    pre {
+      padding: 14px 18px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #a5b4fc;
+      line-height: 1.8;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 640px) { .fields-grid { grid-template-columns: 1fr; } }
+
+    .field-block {
+      background: #0d1120;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+    }
+    .field-name { font-family: 'Courier New', monospace; font-size: 12px; color: var(--blue); font-weight: 700; margin-bottom: 4px; }
+    .field-desc { font-size: 12px; color: var(--muted); }
+
+    .note-box {
+      background: var(--blue-bg);
+      border: 1px solid var(--blue-border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 12px;
+      color: var(--subtle);
+    }
+    .note-box strong { color: var(--blue); }
+
+    .warn-box {
+      background: var(--yellow-bg);
+      border: 1px solid var(--yellow-border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 12px;
+      color: var(--subtle);
+    }
+    .warn-box strong { color: var(--yellow); }
+
+    .ui-steps { display: grid; gap: 8px; }
+    .ui-step {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: #0d1120; border: 1px solid var(--border);
+      border-radius: 6px; padding: 10px 14px;
+    }
+    .ui-step-num {
+      background: var(--purple-bg); border: 1px solid var(--purple-border);
+      color: var(--purple); font-size: 10px; font-weight: 700;
+      padding: 1px 7px; border-radius: 3px; flex-shrink: 0; margin-top: 1px;
+    }
+    .ui-step-text { font-size: 12px; color: var(--text); line-height: 1.5; }
+    .ui-step-text code {
+      font-family: 'Courier New', monospace; background: #141825;
+      border: 1px solid var(--border); color: var(--blue);
+      padding: 1px 5px; border-radius: 3px; font-size: 11px;
+    }
+
+    footer {
+      background: #070a12;
+      border-top: 1px solid var(--border);
+      padding: 22px 40px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-label">G54 Platform — Genesis Backend</div>
+    <h1>Pendientes para <span>Walter</span> — 26 Jun 2026</h1>
+    <p>Requerimientos específicos del equipo de agentes n8n — panel, endpoints y mejoras de UX para desbloquear funcionalidades en producción.</p>
+    <div class="header-meta">
+      <div class="meta-item"><div class="dot"></div> 26 de junio 2026</div>
+      <div class="meta-item"><div class="dot"></div> 5 requerimientos · 1 sugerencia</div>
+      <div class="meta-item"><div class="dot"></div> 3 panel · 2 endpoints · 1 UX</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- RESUMEN -->
+  <section>
+    <div class="section-title"><span class="num">01</span> Resumen</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Qué</th>
+            <th>Dónde</th>
+            <th>Tipo</th>
+            <th>Prioridad</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td class="item-name">Botón borrar post en editor</td>
+            <td>Panel › Editor de Posts</td>
+            <td><span class="badge panel">Panel UI</span></td>
+            <td><span class="badge p0">🔴 P0</span></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td class="item-name">Campo imagen en editor de post</td>
+            <td>Panel › Editor de Posts</td>
+            <td><span class="badge panel">Panel UI</span></td>
+            <td><span class="badge p0">🔴 P0</span></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td class="item-name">Campos Hook y CTA editables</td>
+            <td>Panel › Editor de Posts</td>
+            <td><span class="badge panel">Panel UI</span></td>
+            <td><span class="badge p0">🔴 P0</span></td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td class="item-name">Endpoint lectura leads WhatsApp</td>
+            <td>API Backend</td>
+            <td><span class="badge api">Endpoint</span></td>
+            <td><span class="badge p0">🔴 P0</span></td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td class="item-name">Registro Distribution AI en panel de agentes</td>
+            <td>Panel › Configuración › Agentes</td>
+            <td><span class="badge panel">Panel UI</span></td>
+            <td><span class="badge p1">🟡 P1</span></td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td class="item-name">Editar plataforma asignada a cada idea</td>
+            <td>Panel › Banco de Ideas</td>
+            <td><span class="badge sug">💡 Sugerencia</span></td>
+            <td><span class="badge sug">Mejora UX</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- DETALLE -->
+  <section>
+    <div class="section-title"><span class="num">02</span> Detalle</div>
+    <div class="items">
+
+      <!-- 1. BORRAR POST -->
+      <div class="item-card priority-p0">
+        <div class="item-header">
+          <div>
+            <div class="item-title">1. Botón borrar post en editor</div>
+            <div class="item-where">Panel › Editor de Posts</div>
+          </div>
+          <div class="item-tags">
+            <span class="badge panel">Panel UI</span>
+            <span class="badge api">+ Endpoint</span>
+            <span class="badge p0">🔴 P0</span>
+          </div>
+        </div>
+        <div class="item-body">
+          <p class="item-why">
+            Durante pruebas del Content AI se generaron posts duplicados porque el agente se ejecutó varias veces antes de que la idea se marcara como "en proceso". Esos posts quedan en estado <code style="font-family:monospace;background:#0d1120;border:1px solid var(--border);color:var(--blue);padding:1px 5px;border-radius:3px">borrador</code> y no hay forma de eliminarlos desde el panel. Se necesita un botón de borrar en la vista de edición del post.
+          </p>
+
+          <div>
+            <div class="spec-label">Comportamiento esperado en el panel</div>
+            <div class="ui-steps">
+              <div class="ui-step">
+                <span class="ui-step-num">1</span>
+                <div class="ui-step-text">En la vista de edición de un post, agregar botón <strong>"Eliminar post"</strong> (rojo, al pie del formulario o en el header)</div>
+              </div>
+              <div class="ui-step">
+                <span class="ui-step-num">2</span>
+                <div class="ui-step-text">Al hacer clic → modal de confirmación: <em>"¿Eliminar este post? Esta acción no se puede deshacer."</em></div>
+              </div>
+              <div class="ui-step">
+                <span class="ui-step-num">3</span>
+                <div class="ui-step-text">Al confirmar → llama al endpoint DELETE → redirige al listado de posts</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="spec-label">Endpoint necesario</div>
+            <div class="code-block">
+              <div class="code-bar">DELETE /api/agent/rrss/posts/{id}</div>
+              <pre>// Auth: Bearer AGENT_TOKEN
+// Response:
+{ "ok": true }
+
+// Si no existe:
+{ "ok": false, "error": "Post not found" }  // HTTP 404</pre>
+            </div>
+          </div>
+
+          <div class="note-box">
+            <strong>Nota:</strong> Solo eliminar posts en estado <code style="font-family:monospace;background:#0a1830;padding:1px 4px;border-radius:3px">borrador</code>. Si el post está en <code style="font-family:monospace;background:#0a1830;padding:1px 4px;border-radius:3px">aprobado</code> o <code style="font-family:monospace;background:#0a1830;padding:1px 4px;border-radius:3px">publicado</code> se puede bloquear el borrado o mostrar advertencia adicional.
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. IMAGEN EN EDITOR -->
+      <div class="item-card priority-p0">
+        <div class="item-header">
+          <div>
+            <div class="item-title">2. Campo imagen en editor de post</div>
+            <div class="item-where">Panel › Editor de Posts</div>
+          </div>
+          <div class="item-tags">
+            <span class="badge panel">Panel UI</span>
+            <span class="badge p0">🔴 P0</span>
+          </div>
+        </div>
+        <div class="item-body">
+          <p class="item-why">
+            El Content AI genera posts de texto. Para publicar en Instagram es obligatorio tener imagen — sin imagen el post no puede publicarse en IG (la Graph API devuelve error). El editor de posts actualmente no tiene campo para adjuntar o linkear imagen. Se necesita poder agregar la URL de la imagen desde el panel antes de aprobar el post.
+          </p>
+
+          <div>
+            <div class="spec-label">Campo a agregar en el editor</div>
+            <div class="fields-grid">
+              <div class="field-block">
+                <div class="field-name">image_url</div>
+                <div class="field-desc">Input de texto (URL) o uploader de imagen. La URL puede ser externa (Canva, Drive, Cloudinary) o subida directamente al storage de G54.</div>
+              </div>
+              <div class="field-block">
+                <div class="field-name">Comportamiento</div>
+                <div class="field-desc">Si el campo tiene valor, el Distribution AI lo usa para publicar en IG. Si está vacío, el post solo se publica en FB como texto.</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="spec-label">Cómo lo lee el Distribution AI (ya implementado)</div>
+            <div class="code-block">
+              <div class="code-bar">GET /api/n8n/companies/{id}/rrss/posts/to-publish — response actual</div>
+              <pre>[
+  {
+    "id": 45,
+    "content": "Texto del post...",
+    "image_url": null,       // ← este campo ya existe en el response?
+    "platform": "instagram"  //    si no existe, agregarlo
+  }
+]</pre>
+            </div>
+          </div>
+
+          <div class="warn-box">
+            <strong>Verificar:</strong> ¿El campo <code style="font-family:monospace;background:#1c1200;padding:1px 4px;border-radius:3px">image_url</code> ya existe en la tabla <code style="font-family:monospace;background:#1c1200;padding:1px 4px;border-radius:3px">social_posts</code> o equivalente? Si no, agregar columna <code style="font-family:monospace;background:#1c1200;padding:1px 4px;border-radius:3px">VARCHAR(500) NULL</code>.
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. HOOK Y CTA -->
+      <div class="item-card priority-p0">
+        <div class="item-header">
+          <div>
+            <div class="item-title">3. Campos Hook y CTA editables en editor de post</div>
+            <div class="item-where">Panel › Editor de Posts</div>
+          </div>
+          <div class="item-tags">
+            <span class="badge panel">Panel UI</span>
+            <span class="badge p0">🔴 P0</span>
+          </div>
+        </div>
+        <div class="item-body">
+          <p class="item-why">
+            El Content AI genera el post con un framework de 8 pasos que incluye campos específicos: <strong>hook</strong> (primera línea que capta atención) y <strong>CTA</strong> (llamada a la acción al final). Cuando el cliente revisa el borrador y quiere ajustar solo esas partes, necesita poder editarlas sin reescribir todo el contenido. Actualmente el editor solo muestra el contenido completo como un bloque de texto.
+          </p>
+
+          <div>
+            <div class="spec-label">Campos a exponer en el editor</div>
+            <div class="fields-grid">
+              <div class="field-block">
+                <div class="field-name">hook</div>
+                <div class="field-desc">Primera línea / frase de apertura del post. Textarea corto (1-2 líneas). El Content AI lo genera siempre en el campo <code style="font-family:monospace;color:var(--blue)">hook</code> del JSON guardado.</div>
+              </div>
+              <div class="field-block">
+                <div class="field-name">cta</div>
+                <div class="field-desc">Llamada a la acción al final del post, incluye URL y hashtags. Textarea corto. El Content AI lo genera en el campo <code style="font-family:monospace;color:var(--blue)">cta</code> del JSON guardado.</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="spec-label">Cómo los guarda el Content AI (referencia)</div>
+            <div class="code-block">
+              <div class="code-bar">POST /api/agent/rrss/posts — body enviado por Content AI</div>
+              <pre>{
+  "company_id": 1,
+  "idea_id": 12,
+  "platform": "instagram",
+  "content": "texto completo del post...",
+  "hook": "¿Sabías que el 80% del daño en envíos...",   // ← campo separado
+  "cta": "Cotiza tu embalaje hoy → cratingexpress.com", // ← campo separado
+  "hashtags": "#embalaje #miami #crating",
+  "keyword_principal": "embalaje industrial miami",
+  "status": "borrador"
+}</pre>
+            </div>
+          </div>
+
+          <div class="note-box">
+            <strong>Verificar:</strong> Los campos <code style="font-family:monospace;background:#0a1830;padding:1px 4px;border-radius:3px">hook</code> y <code style="font-family:monospace;background:#0a1830;padding:1px 4px;border-radius:3px">cta</code> ya se guardan en la BD (el agente los envía). Solo se necesita exponerlos en el formulario de edición del panel para que el cliente pueda modificarlos.
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. ENDPOINT WA LEADS -->
+      <div class="item-card priority-p0">
+        <div class="item-header">
+          <div>
+            <div class="item-title">4. Endpoint de lectura de leads WhatsApp</div>
+            <div class="item-where">API Backend — nuevo endpoint</div>
+          </div>
+          <div class="item-tags">
+            <span class="badge api">Endpoint</span>
+            <span class="badge p0">🔴 P0</span>
+          </div>
+        </div>
+        <div class="item-body">
+          <p class="item-why">
+            El agente Marco (WhatsApp de Crating Express) guarda correctamente cada conversación vía <code style="font-family:monospace;background:#0d1120;border:1px solid var(--border);color:var(--blue);padding:1px 5px;border-radius:3px">POST /api/agent/whatsapp/inbound</code>. El problema es que cuando el cliente escribe un segundo mensaje, el agente no puede recuperar el historial anterior porque el endpoint de lectura no existe. Resultado: Marco trata a cada mensaje como si fuera un cliente nuevo, pierde todo el contexto de la conversación y repite preguntas que ya hizo.
+          </p>
+
+          <div>
+            <div class="spec-label">Endpoint requerido</div>
+            <div class="code-block">
+              <div class="code-bar">GET /api/n8n/companies/{id}/wa/leads?phone={phone}</div>
+              <pre>// Auth: Bearer N8N_TOKEN (lectura)
+// Ejemplo: GET /api/n8n/companies/1/wa/leads?phone=%2B17867880417
+
+// Response:
+{
+  "data": [
+    {
+      "id": 7,
+      "contact_name": "Solange Torrez",
+      "phone": "+17867880417",
+      "estado": "En calificación",
+      "historial": "Cliente: Hola, necesito una caja\nMarco: Buenos días Solange...",
+      "datos": {
+        "producto": "cajones cerrados",
+        "medidas": "40x30x20 pulgadas",
+        "fecha": "15 de julio",
+        "tipo_cajon": "cajones_cerrados",
+        "proteccion_extra": false,
+        "correo_contacto": null
+      },
+      "created_at": "2026-06-20T14:08:00Z",
+      "updated_at": "2026-06-26T14:08:00Z"
+    }
+  ]
+}
+
+// Si no hay lead para ese teléfono:
+{ "data": [] }</pre>
+            </div>
+          </div>
+
+          <div>
+            <div class="spec-label">Cómo lo usa el agente (flujo completo)</div>
+            <div class="ui-steps">
+              <div class="ui-step">
+                <span class="ui-step-num">1</span>
+                <div class="ui-step-text">Llega mensaje de WhatsApp → agente llama <code>GET /wa/leads?phone=+1786...</code></div>
+              </div>
+              <div class="ui-step">
+                <span class="ui-step-num">2</span>
+                <div class="ui-step-text">Si <code>data[0]</code> existe → carga <code>historial</code> y <code>datos</code> → Marco recuerda la conversación anterior</div>
+              </div>
+              <div class="ui-step">
+                <span class="ui-step-num">3</span>
+                <div class="ui-step-text">Si <code>data[]</code> vacío → cliente nuevo → Marco saluda e inicia recolección desde cero</div>
+              </div>
+              <div class="ui-step">
+                <span class="ui-step-num">4</span>
+                <div class="ui-step-text">Al responder → <code>POST /api/agent/whatsapp/inbound</code> actualiza el historial y los datos recolectados</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="note-box">
+            <strong>Campo clave:</strong> <code style="font-family:monospace;background:#0a1830;padding:1px 4px;border-radius:3px">historial</code> debe ser el texto completo de la conversación (turnos anteriores). <code style="font-family:monospace;background:#0a1830;padding:1px 4px;border-radius:3px">datos</code> es el JSON de información recolectada durante la conversación. Ambos los guarda el agente vía el POST y los necesita leer vía este GET.
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. DISTRIBUTION AI EN PANEL -->
+      <div class="item-card priority-p1">
+        <div class="item-header">
+          <div>
+            <div class="item-title">5. Registro del Distribution AI en panel de agentes</div>
+            <div class="item-where">Panel › Configuración › Agentes</div>
+          </div>
+          <div class="item-tags">
+            <span class="badge panel">Panel UI</span>
+            <span class="badge p1">🟡 P1</span>
+          </div>
+        </div>
+        <div class="item-body">
+          <p class="item-why">
+            El Distribution AI es el agente que publica los posts aprobados en Facebook e Instagram. Tiene trigger horario propio en n8n — no necesita que G54 lo llame. Sin embargo, para que G54 pueda notificarlo o activarlo desde el panel (por ejemplo, publicar inmediatamente cuando un post es aprobado en vez de esperar la siguiente hora), necesita estar registrado en la tabla de agentes.
+            <br><br>
+            Actualmente el panel de Configuración › Agentes no tiene una entrada para <code style="font-family:monospace;background:#0d1120;border:1px solid var(--border);color:var(--blue);padding:1px 5px;border-radius:3px">rrss_distribution_ai</code> y no hay forma de registrarlo desde ahí.
+          </p>
+
+          <div>
+            <div class="spec-label">Entrada a registrar</div>
+            <div class="code-block">
+              <div class="code-bar">Registro en agent_endpoints (o tabla equivalente)</div>
+              <pre>{
+  "key": "rrss_distribution_ai",
+  "name": "Distribution AI",
+  "description": "Publica posts aprobados en Facebook e Instagram vía Graph API",
+  "webhook_url": "https://n8n.mdarthurdigital.com/webhook/distribution-publish-g54",
+  "trigger_type": "webhook",   // o "schedule" — el agente tiene ambos
+  "module": "rrss",
+  "active": true
+}</pre>
+            </div>
+          </div>
+
+          <div class="note-box">
+            <strong>Por qué ahora no publica automáticamente:</strong> Cuando un cliente aprueba un post por email, el estado cambia a <code style="font-family:monospace;background:#0a1830;padding:1px 4px;border-radius:3px">aprobado</code> en G54. El Distribution AI lo recoge en su próxima ejecución horaria. Si G54 pudiera hacer un POST al webhook al cambiar el estado, la publicación sería inmediata. Eso requiere que el agente esté registrado.
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. SUGERENCIA: EDITAR PLATAFORMA DE IDEA -->
+      <div class="item-card priority-sug">
+        <div class="item-header">
+          <div>
+            <div class="item-title">6. Editar plataforma asignada a cada idea</div>
+            <div class="item-where">Panel › Banco de Ideas</div>
+          </div>
+          <div class="item-tags">
+            <span class="badge sug">💡 Sugerencia</span>
+          </div>
+        </div>
+        <div class="item-body">
+          <p class="item-why">
+            El Strategist AI genera el banco de ideas y asigna automáticamente una plataforma a cada una (Facebook, Instagram, ambas). En ocasiones la sugerencia del agente no es la ideal — por ejemplo, asigna una idea de texto largo a Instagram cuando sería mejor para Facebook, o vice versa. No hay forma de cambiarlo desde el panel sin borrar la idea y volver a crearla.
+          </p>
+
+          <div>
+            <div class="spec-label">Lo que se necesita</div>
+            <div class="ui-steps">
+              <div class="ui-step">
+                <span class="ui-step-num">1</span>
+                <div class="ui-step-text">En la vista de edición o listado de ideas, agregar un selector de plataforma: <code>Facebook</code> / <code>Instagram</code> / <code>Ambas</code></div>
+              </div>
+              <div class="ui-step">
+                <span class="ui-step-num">2</span>
+                <div class="ui-step-text">Al cambiar y guardar → actualiza el campo <code>platform</code> de la idea en la BD</div>
+              </div>
+              <div class="ui-step">
+                <span class="ui-step-num">3</span>
+                <div class="ui-step-text">El Content AI respeta ese valor al generar el post — ya toma la plataforma de la idea al ejecutarse</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="note-box">
+            <strong>Impacto:</strong> Cambio simple de UX en el panel. No requiere nuevo endpoint — es una edición del campo <code style="font-family:monospace;background:#0a1830;padding:1px 4px;border-radius:3px">platform</code> que ya existe en la tabla de ideas, solo hay que exponerlo como editable.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  G54 Platform · Genesis de pendientes backend · 26 de junio 2026
+  <br>
+  <span style="margin-top:4px;display:block;">Preparado por el equipo de agentes n8n para revisión del equipo de backend (Walter)</span>
+</footer>
+
+</body>
+</html>

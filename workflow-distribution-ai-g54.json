@@ -1,0 +1,752 @@
+{
+  "name": "📢 Distribution AI — Crating Express v1.0 (G54)",
+  "nodes": [
+    {
+      "id": "cfg",
+      "name": "⚙️ Config Distribution",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "G54_BASE_URL",
+              "value": "https://apigrowth.mdarthurdigital.com",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "G54_N8N_TOKEN",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "G54_AGENT_TOKEN",
+              "value": "g54_agent_produccion_2026",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "G54_COMPANY_ID",
+              "value": "1",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "FB_PAGE_ID",
+              "value": "1713965015486703",
+              "type": "string"
+            },
+            {
+              "id": "a6",
+              "name": "FB_ACCESS_TOKEN",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "a7",
+              "name": "IG_USER_ID",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "trigger-webhook-dist",
+      "name": "🌐 Webhook: Publicar Post",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "distribution-publish-g54",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "f44331fc-e938-4bc1-81c2-19d9dbdd3866"
+    },
+    {
+      "id": "get-posts",
+      "name": "📥 Obtener Posts a Publicar (G54)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        300
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.G54_BASE_URL }}/api/n8n/companies/{{ $json.G54_COMPANY_ID }}/rrss/posts/to-publish",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Distribution').item.json.G54_N8N_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "norm-posts",
+      "name": "🔧 Normalizar Posts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// At this point $input.item.json is already a single post (from Filtrar)\nconst p = $input.item.json;\n// If it's a single post object with id, pass it through\nif (p.id) return [{ json: p }];\n// Fallback: if somehow array came through\nconst posts = Array.isArray(p) ? p : (p.data || []);\nreturn posts.map(post => ({ json: post }));"
+      }
+    },
+    {
+      "id": "if-img",
+      "name": "🖼️ ¿Tiene imagen?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.imagen_url || $json.fields?.imagen_url || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "prep-post",
+      "name": "🔧 Preparar Datos Post",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        140
+      ],
+      "parameters": {
+        "jsCode": "const p = $input.item.json;\nconst f = p.fields || p;\nconst config = $('⚙️ Config Distribution').item.json;\n\nconst post_id        = p.id || p.record_id || '';\nconst copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || '';\nconst copy_instagram = f.copy_instagram || f.Post_Instagram_EN || '';\nconst imagen_url     = f.imagen_url     || f.imagen || '';\n\n// Token from post, fallback to pages API\nconst FB_ACCESS_TOKEN = p.access_token || $('🏢 Aplicar Tokens Empresa').item.json.FB_ACCESS_TOKEN || '';\n// FB_PAGE_ID: always use the one from Config (G54 currently sends IG account ID in page_id field)\nconst FB_PAGE_ID = config.FB_PAGE_ID || '1713965015486703';\n// IG_USER_ID from post or pages API\nconst IG_USER_ID = p.instagram_account_id || $('🏢 Aplicar Tokens Empresa').item.json.IG_USER_ID || '';\n\nreturn [{json: {\n  post_id, copy_facebook, copy_instagram, imagen_url,\n  has_image: !!imagen_url,\n  FB_ACCESS_TOKEN, FB_PAGE_ID, IG_USER_ID\n}}];"
+      }
+    },
+    {
+      "id": "fb-photo",
+      "name": "📘 FB: Publicar con Foto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        140
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $json.FB_PAGE_ID }}/photos",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $json.imagen_url }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $json.copy_facebook }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.FB_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "fb-text",
+      "name": "📘 FB: Publicar Solo Texto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        460
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $json.FB_PAGE_ID }}/feed",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "={{ $json.copy_facebook }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.FB_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "ig-container",
+      "name": "📸 IG: Crear Container",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        140
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $json.IG_USER_ID }}/media",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "image_url",
+              "value": "={{ $('🔧 Preparar Datos Post').item.json.imagen_url }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $('🔧 Preparar Datos Post').item.json.copy_instagram }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.FB_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "if-ig-ok",
+      "name": "🔀 ¿IG Container OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1540,
+        140
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.id || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ig-publish",
+      "name": "📸 IG: Publicar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        100
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $json.IG_USER_ID }}/media_publish",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.FB_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "ig-skip",
+      "name": "⚠️ IG: Skip (container falló)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        200
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "merge-pub",
+      "name": "🔀 Merge Publicaciones",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1980,
+        300
+      ],
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      }
+    },
+    {
+      "id": "g54-pub",
+      "name": "✅ G54: Estado → Publicado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        300
+      ],
+      "continueOnFail": false,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Distribution').item.json.G54_BASE_URL }}/api/agent/rrss/posts/{{ $('🔧 Preparar Datos Post').item.json.post_id }}/mark-published",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Distribution').item.json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {}
+      }
+    },
+    {
+      "id": "reporte",
+      "name": "📊 Reporte Publicación",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        300
+      ],
+      "parameters": {
+        "jsCode": "\nconst postId = $('🔧 Preparar Datos Post').item?.json?.post_id || 'desconocido';\nconst g54Status = $('✅ G54: Estado → Publicado').item?.json?.status || 'sin respuesta';\nconst ts = new Date().toLocaleString('es-CR', {timeZone:'America/New_York'});\n\nreturn [{\n  json: {\n    mensaje: `Post ${postId} publicado en FB/IG y marcado en G54 como publicado.`,\n    timestamp_miami: ts,\n    g54_response: g54Status,\n  }\n}];\n"
+      }
+    },
+    {
+      "id": "dist-page-tokens",
+      "name": "🔑 Obtener Tokens Página (G54)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1840,
+        80
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config Distribution').item.json.G54_BASE_URL + '/api/n8n/pages/' + $('⚙️ Config Distribution').item.json.FB_PAGE_ID }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "dist-apply-tokens",
+      "name": "🏢 Aplicar Tokens Empresa",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1640,
+        80
+      ],
+      "parameters": {
+        "jsCode": "const config = $('⚙️ Config Distribution').item.json;\nconst pageData = $('🔑 Obtener Tokens Página (G54)').item.json;\nreturn [{json: {\n  ...config,\n  FB_ACCESS_TOKEN: pageData.fb_access_token || config.FB_ACCESS_TOKEN || '',\n  IG_USER_ID: pageData.ig_user_id || config.IG_USER_ID || ''\n}}];"
+      }
+    },
+    {
+      "id": "dist-filter-post",
+      "name": "🔍 Filtrar Post por ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1400,
+        80
+      ],
+      "parameters": {
+        "jsCode": "const webhook = $('🌐 Webhook: Publicar Post').item?.json?.body || {};\nconst postId = webhook.post_id;\nconst posts = $('📥 Obtener Posts a Publicar (G54)').item.json.data || [];\nconst filtered = postId ? posts.filter(p => String(p.id) === String(postId)) : posts;\nif (!filtered.length) return [];\nreturn filtered.map(p => ({ json: p }));"
+      }
+    },
+    {
+      "id": "error-g54-node-001",
+      "name": "♻️ G54: Revertir → Aprobado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        500
+      ],
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('⚙️ Config Distribution').item.json.G54_BASE_URL }}/api/rrss/posts/{{ $('🔧 Preparar Datos Post').item.json.post_id }}/status",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('⚙️ Config Distribution').item.json.G54_AGENT_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "aprobado"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "⚙️ Config Distribution": {
+      "main": [
+        [
+          {
+            "node": "🔑 Obtener Tokens Página (G54)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Datos Post": {
+      "main": [
+        [
+          {
+            "node": "🖼️ ¿Tiene imagen?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🖼️ ¿Tiene imagen?": {
+      "main": [
+        [
+          {
+            "node": "📘 FB: Publicar con Foto",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📸 IG: Crear Container",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📘 FB: Publicar Solo Texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📘 FB: Publicar con Foto": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Publicaciones",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "♻️ G54: Revertir → Aprobado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📸 IG: Crear Container": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿IG Container OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿IG Container OK?": {
+      "main": [
+        [
+          {
+            "node": "📸 IG: Publicar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⚠️ IG: Skip (container falló)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📸 IG: Publicar": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Publicaciones",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "♻️ G54: Revertir → Aprobado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚠️ IG: Skip (container falló)": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Publicaciones",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "📘 FB: Publicar Solo Texto": {
+      "main": [
+        [
+          {
+            "node": "✅ G54: Estado → Publicado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "♻️ G54: Revertir → Aprobado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Merge Publicaciones": {
+      "main": [
+        [
+          {
+            "node": "✅ G54: Estado → Publicado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ G54: Estado → Publicado": {
+      "main": [
+        [
+          {
+            "node": "📊 Reporte Publicación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Normalizar Posts": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Datos Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Obtener Posts a Publicar (G54)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Filtrar Post por ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔑 Obtener Tokens Página (G54)": {
+      "main": [
+        [
+          {
+            "node": "🏢 Aplicar Tokens Empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 Aplicar Tokens Empresa": {
+      "main": [
+        [
+          {
+            "node": "📥 Obtener Posts a Publicar (G54)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Filtrar Post por ID": {
+      "main": [
+        [
+          {
+            "node": "🔧 Normalizar Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 Webhook: Publicar Post": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config Distribution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:⏰ Trigger: Cada hora": {
+      "recurrenceRules": []
+    },
+    "node:⏰ Trigger: Cada 15 Min": {
+      "recurrenceRules": []
+    },
+    "node:⏰ Trigger: Cada Hora": {
+      "recurrenceRules": []
+    }
+  }
+}

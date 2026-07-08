@@ -1,0 +1,431 @@
+{
+  "updatedAt": "2026-07-03T16:32:18.750Z",
+  "createdAt": "2026-06-15T15:49:48.824Z",
+  "id": "J8qbKOF7t4GnhRDT",
+  "name": "Marco CE — 03 Generador IA",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Recibir Datos",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "groq",
+      "name": "🤖 Groq: Conversación IA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        300,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: $json.sistemaIA }, { role: 'user', content: $json.usuarioIA }], temperature: 0.3, max_tokens: 500, response_format: { type: \"json_object\" } }) }}",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi"
+      },
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "if-groq",
+      "name": "🔀 ¿Groq OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        560,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "gemini",
+      "name": "🤖 Gemini: Fallback IA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        820,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{\"Bearer \" + $vars.GEMINI_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gemini-1.5-flash', messages: [{ role: 'system', content: $('Recibir Datos').item.json.sistemaIA }, { role: 'user', content: $('Recibir Datos').item.json.usuarioIA }], temperature: 0.3, max_tokens: 500 }) }}",
+        "options": {}
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "parsear",
+      "name": "🔍 Parsear Respuesta IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const raw = $input.item.json;\nconst ctx = $('Recibir Datos').item.json;\n\n// Parse AI JSON response\nlet aiData = {};\nlet mensaje = '';\n\ntry {\n  const rawText = (raw.choices?.[0]?.message?.content || raw.mensaje || '').trim();\n  // Remove markdown code fences if present\n  const jsonText = rawText.replace(/^```json\\s*/i, '').replace(/^```\\s*/i, '').replace(/\\s*```$/,'').trim();\n  aiData = JSON.parse(jsonText);\n  // Soporta formato viejo (respuesta/nombre/producto) y nuevo (mensaje/datos_actualizados)\n  mensaje = (aiData.respuesta || aiData.mensaje || '').trim();\n} catch(e) {\n  // Try to extract mensaje/respuesta field with regex as last resort\n  const rawText = (raw.choices?.[0]?.message?.content || raw.mensaje || '').trim();\n  const match = rawText.match(/\"(?:respuesta|mensaje)\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"/);\n  mensaje = match ? match[1].replace(/\\\\n/g,'\\n').replace(/\\\\\"/g,'\"') : '';\n}\n\n// Fallback messages if AI failed completely\nif (!mensaje) {\n  const n = ctx.datosRecolectados?.nombre_cliente || '';\n  const h = (new Date().getUTCHours() - 4 + 24) % 24;\n  const idioma = ctx.idiomaConversacion || 'español';\n  const isEN = idioma === 'inglés';\n  const gr = isEN\n    ? (h < 12 ? 'Good morning' : h < 19 ? 'Good afternoon' : 'Good evening')\n    : (h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches');\n  const fallbacks = isEN ? {\n    PRIMER_CONTACTO:       `${gr}, I'm Marco from Crating Express. Who am I speaking with?`,\n    PEDIR_NOMBRE:          'Who am I speaking with?',\n    IDENTIFICAR_NECESIDAD: n ? `How can I help you today, ${n}?` : 'How can I help you today?',\n    FLUJO_CONSULTA:        'What else can I help you with?',\n    PEDIR_PRODUCTO:        'What item do you need to crate?',\n    PEDIR_MEDIDAS:         'What are the measurements in inches? (Length × Width × Height)',\n    PEDIR_TIPO_CAJON:      'What type of crate do you prefer? Closed crate (max protection + ISPM-15), open cage, or pallet.',\n    PEDIR_PROTECCION:      'Do you need interior protection like foam, bubble wrap, or corner guards? It has an additional cost.',\n    PEDIR_CORREO:          'What is your email for follow-up?',\n    PEDIR_FECHA:           'When do you need the crating done?',\n    LISTO_PARA_COTIZAR:    'Give me a moment to calculate the price... 🔄',\n    POST_COTIZACION:       'What else can I help you with?'\n  } : {\n    PRIMER_CONTACTO:       `${gr}, soy Marco de Crating Express. ¿Con quién tengo el gusto?`,\n    PEDIR_NOMBRE:          '¿Con quién tengo el gusto?',\n    IDENTIFICAR_NECESIDAD: n ? `¿En qué puedo ayudarte hoy, ${n}?` : '¿En qué puedo ayudarte hoy?',\n    FLUJO_CONSULTA:        '¿En qué más puedo ayudarte?',\n    PEDIR_PRODUCTO:        '¿Qué artículo necesitas embalar?',\n    PEDIR_MEDIDAS:         '¿Cuáles son las medidas en pulgadas? (Largo × Ancho × Alto)',\n    PEDIR_TIPO_CAJON:      '¿Qué tipo de embalaje prefieres? Cajón cerrado (máxima protección + ISPM-15), jaula (más liviana) o paleta.',\n    PEDIR_PROTECCION:      '¿Necesitas protección interior como foam, burbuja o esquineras? Tiene costo adicional.',\n    PEDIR_CORREO:          '¿Cuál es tu correo para darte seguimiento?',\n    PEDIR_FECHA:           '¿Para cuándo necesitas el embalaje?',\n    LISTO_PARA_COTIZAR:    'Dame un momento para calcular el precio... 🔄',\n    POST_COTIZACION:       '¿En qué más puedo ayudarte?'\n  };\n  mensaje = fallbacks[ctx.proximoPaso] || (isEN ? 'What else can I help you with?' : '¿En qué más puedo ayudarte?');\n}\n\n// Merge AI-extracted data into datosRecolectados\nconst datosRecolectados = { ...(ctx.datosRecolectados || {}) };\n\n// Soporta formato viejo (raíz: nombre/producto/...) y nuevo (datos_actualizados.nombre_cliente/...)\nconst da = aiData.datos_actualizados || {};\nif ((da.nombre_cliente || aiData.nombre) && !datosRecolectados.nombre_cliente) datosRecolectados.nombre_cliente = da.nombre_cliente || aiData.nombre;\nif ((da.producto || aiData.producto) && !datosRecolectados.producto) datosRecolectados.producto = da.producto || aiData.producto;\nif ((da.medidas || aiData.medidas) && !datosRecolectados.medidas) datosRecolectados.medidas = da.medidas || aiData.medidas;\nif ((da.tipo_cajon || aiData.tipo_cajon) && !datosRecolectados.tipo_cajon) datosRecolectados.tipo_cajon = da.tipo_cajon || aiData.tipo_cajon;\nif ((da.fecha || aiData.fecha) && !datosRecolectados.fecha) datosRecolectados.fecha = da.fecha || aiData.fecha;\n// Fallback: extract fecha from historial/text if AI missed it in JSON\nif (!datosRecolectados.fecha) {\n  const textoBuscar = ((ctx.historial || '') + ' ' + (ctx.texto || '')).toLowerCase();\n  const fechaMatch = textoBuscar.match(/\\b(ma[ñn]ana|hoy|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|este (lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)|pr[oó]xim[ao] \\w+|next \\w+|tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\\d{1,2}[\\/-]\\d{1,2}|\\d{1,2} de [a-záéíóú]+|en \\d+ d[ií]as?|esta semana|next week)\\b/i);\n  if (fechaMatch) datosRecolectados.fecha = fechaMatch[0];\n}\nif ((da.correo_contacto || da.correo || aiData.correo) && !datosRecolectados.correo_contacto) datosRecolectados.correo_contacto = da.correo_contacto || da.correo || aiData.correo;\nif ((da.cantidad || aiData.cantidad) && !datosRecolectados.cantidad) datosRecolectados.cantidad = da.cantidad || aiData.cantidad;\nconst peVal = da.proteccion_extra !== undefined ? da.proteccion_extra : aiData.proteccion_extra;\nif (peVal !== null && peVal !== undefined\n    && (datosRecolectados.proteccion_extra === null || datosRecolectados.proteccion_extra === undefined)) {\n  datosRecolectados.proteccion_extra = peVal;\n}\n\n// Update tipo_flujo based on AI intent (only set, never override existing)\nconst intento = da.intento || aiData.intento;\nif (!datosRecolectados.tipo_flujo) {\n  if (intento === 'cotizacion') datosRecolectados.tipo_flujo = 'cotizacion';\n  else if (intento === 'consulta') datosRecolectados.tipo_flujo = 'consulta';\n}\nif (intento === 'cotizacion' && datosRecolectados.tipo_flujo === 'consulta') {\n  datosRecolectados.tipo_flujo = 'cotizacion';\n}\n\n// Recalculate todosRecolectados with updated data\nconst cleanCheck = v => {\n  if (typeof v === 'boolean') return v;\n  if (!v || ['desconocido','null','undefined'].includes(String(v).toLowerCase().trim())) return null;\n  return v;\n};\n\nconst todosRecolectados = !ctx.cotizacionEnviada  // no re-trigger if already sent\n  && datosRecolectados.tipo_flujo === 'cotizacion'\n  && !!cleanCheck(datosRecolectados.producto)\n  && !!cleanCheck(datosRecolectados.medidas)\n  && !!cleanCheck(datosRecolectados.correo_contacto)\n  && !!cleanCheck(datosRecolectados.tipo_cajon)\n  && datosRecolectados.proteccion_extra !== null && datosRecolectados.proteccion_extra !== undefined\n  && !!cleanCheck(datosRecolectados.fecha);\n\n// Recalculate dimensions from updated medidas\nlet dimensiones = ctx.dimensiones || null;\nif (datosRecolectados.medidas && !dimensiones) {\n  const nums = datosRecolectados.medidas.match(/(\\d+(?:\\.\\d+)?)/g);\n  if (nums && nums.length >= 3) {\n    dimensiones = { largo: parseFloat(nums[0]), ancho: parseFloat(nums[1]), alto: parseFloat(nums[2]) };\n  }\n}\n\nconst tipoCajaApi = datosRecolectados.tipo_cajon || ctx.tipoCajaApi || null;\nconst proximoPaso = ctx.proximoPaso;\n\n// Lead classification — solo cuando el cliente acepta cotización formal en POST_COTIZACION\nlet clasificacion = null;\nconst isPostCotizacion = ctx.proximoPaso === 'POST_COTIZACION';\nconst clienteAcepta = isPostCotizacion && /\\b(si+|yes|yep|yeah|yup|sure|ok|claro|por favor|dale|env[íi]ame|quiero|manda|m[áa]ndame|send|please|confirm|adelante|go ahead|sounds good|let's do it|let me have it|absolutely|definitely|of course|por supuesto|s[íi] por favor|s[íi] gracias)\\b/i.test(ctx.texto || '');\nif (clienteAcepta) {\n  clasificacion = 'Caliente';\n}\n\n// Escalada — cuando Marco no puede responder (consulta O sin medidas disponibles)\nconst consultaEscalada = aiData.escalada === true && !ctx.escaladaEnviada;\nif (consultaEscalada && !clasificacion) {\n  clasificacion = 'Consulta';\n}\n\nlet nuevoEstado = ctx.estado;\nif (clasificacion === 'Caliente') nuevoEstado = 'Vendedor notificado';\nelse if (clasificacion === 'Consulta') nuevoEstado = 'En calificación';\nelse if (todosRecolectados && !ctx.cotizacionEnviada) nuevoEstado = 'Calificado';\nelse if (!ctx.leadId || nuevoEstado === 'Nuevo') nuevoEstado = 'En calificación';\n\nif (mensaje.length > 3800) mensaje = mensaje.slice(0, 3750) + '…';\n\nconst ts = new Date().toISOString();\nconst nuevoHistorial = (ctx.historial ? ctx.historial + '\\n' : '')\n  + `[${ts}] Cliente: ${ctx.texto}\\n[${ts}] Bot: ${mensaje}\\n[${ts}] Bot: [D:${JSON.stringify(datosRecolectados)}]`;\n\n// temaConsulta: save first consulta message, preserve when switching to cotización\nlet temaConsulta = ctx.temaConsulta || datosRecolectados.temaConsulta || null;\nif (!temaConsulta && ctx.proximoPaso === 'FLUJO_CONSULTA') {\n  temaConsulta = ctx.texto || null;\n}\n// When escalating from any paso, capture context from historial (last 3 client messages)\nif (consultaEscalada && !temaConsulta) {\n  const clientLines = (ctx.historial || '').split('\\n')\n    .filter(l => l.includes('Cliente:'))\n    .map(l => l.replace(/^.*?Cliente:\\s*/, '').trim())\n    .slice(-3)\n    .join(' / ');\n  temaConsulta = clientLines || ctx.texto || null;\n}\n\n// Persist temaConsulta in datosRecolectados so it survives across turns\nif (temaConsulta) datosRecolectados.temaConsulta = temaConsulta;\n\nreturn [{ json: {\n  ...ctx,\n  mensaje,\n  mensajeRespuesta: mensaje,\n  datosRecolectados,\n  todos_recolectados: todosRecolectados,\n  todosRecolectados,\n  dimensiones,\n  tipo_caja_api: tipoCajaApi,\n  cotizador_enviado: false,\n  temaConsulta,\n  clasificacion,\n  escaladaEnviada: ctx.escaladaEnviada || (clasificacion === 'Consulta'),\n  nuevoEstado,\n  nuevoHistorial\n} }];\n"
+      }
+    }
+  ],
+  "connections": {
+    "Recibir Datos": {
+      "main": [
+        [
+          {
+            "node": "🤖 Groq: Conversación IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Groq: Conversación IA": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Groq OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Groq OK?": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Respuesta IA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🤖 Gemini: Fallback IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Gemini: Fallback IA": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Respuesta IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": null,
+  "versionId": "94a33522-7e44-4205-8b67-311f541e0e39",
+  "activeVersionId": "94a33522-7e44-4205-8b67-311f541e0e39",
+  "versionCounter": 50,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-06-15T15:49:48.828Z",
+      "createdAt": "2026-06-15T15:49:48.828Z",
+      "role": "workflow:owner",
+      "workflowId": "J8qbKOF7t4GnhRDT",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "updatedAt": "2026-03-16T19:58:01.773Z",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-03T16:32:18.752Z",
+    "createdAt": "2026-07-03T16:32:18.752Z",
+    "versionId": "94a33522-7e44-4205-8b67-311f541e0e39",
+    "workflowId": "J8qbKOF7t4GnhRDT",
+    "nodes": [
+      {
+        "id": "trigger",
+        "name": "Recibir Datos",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "parameters": {}
+      },
+      {
+        "id": "groq",
+        "name": "🤖 Groq: Conversación IA",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          300,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.groq.com/openai/v1/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: $json.sistemaIA }, { role: 'user', content: $json.usuarioIA }], temperature: 0.3, max_tokens: 500, response_format: { type: \"json_object\" } }) }}",
+          "options": {},
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "groqApi"
+        },
+        "credentials": {
+          "groqApi": {
+            "id": "jORffbRhRNohHT1B",
+            "name": "Groq account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "if-groq",
+        "name": "🔀 ¿Groq OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          560,
+          300
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "1",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty"
+                }
+              }
+            ]
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "gemini",
+        "name": "🤖 Gemini: Fallback IA",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          820,
+          460
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $vars.GEMINI_API_KEY}}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ model: 'gemini-1.5-flash', messages: [{ role: 'system', content: $('Recibir Datos').item.json.sistemaIA }, { role: 'user', content: $('Recibir Datos').item.json.usuarioIA }], temperature: 0.3, max_tokens: 500 }) }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "parsear",
+        "name": "🔍 Parsear Respuesta IA",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1080,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const raw = $input.item.json;\nconst ctx = $('Recibir Datos').item.json;\n\n// Parse AI JSON response\nlet aiData = {};\nlet mensaje = '';\n\ntry {\n  const rawText = (raw.choices?.[0]?.message?.content || raw.mensaje || '').trim();\n  // Remove markdown code fences if present\n  const jsonText = rawText.replace(/^```json\\s*/i, '').replace(/^```\\s*/i, '').replace(/\\s*```$/,'').trim();\n  aiData = JSON.parse(jsonText);\n  // Soporta formato viejo (respuesta/nombre/producto) y nuevo (mensaje/datos_actualizados)\n  mensaje = (aiData.respuesta || aiData.mensaje || '').trim();\n} catch(e) {\n  // Try to extract mensaje/respuesta field with regex as last resort\n  const rawText = (raw.choices?.[0]?.message?.content || raw.mensaje || '').trim();\n  const match = rawText.match(/\"(?:respuesta|mensaje)\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"/);\n  mensaje = match ? match[1].replace(/\\\\n/g,'\\n').replace(/\\\\\"/g,'\"') : '';\n}\n\n// Fallback messages if AI failed completely\nif (!mensaje) {\n  const n = ctx.datosRecolectados?.nombre_cliente || '';\n  const h = (new Date().getUTCHours() - 4 + 24) % 24;\n  const idioma = ctx.idiomaConversacion || 'español';\n  const isEN = idioma === 'inglés';\n  const gr = isEN\n    ? (h < 12 ? 'Good morning' : h < 19 ? 'Good afternoon' : 'Good evening')\n    : (h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches');\n  const fallbacks = isEN ? {\n    PRIMER_CONTACTO:       `${gr}, I'm Marco from Crating Express. Who am I speaking with?`,\n    PEDIR_NOMBRE:          'Who am I speaking with?',\n    IDENTIFICAR_NECESIDAD: n ? `How can I help you today, ${n}?` : 'How can I help you today?',\n    FLUJO_CONSULTA:        'What else can I help you with?',\n    PEDIR_PRODUCTO:        'What item do you need to crate?',\n    PEDIR_MEDIDAS:         'What are the measurements in inches? (Length × Width × Height)',\n    PEDIR_TIPO_CAJON:      'What type of crate do you prefer? Closed crate (max protection + ISPM-15), open cage, or pallet.',\n    PEDIR_PROTECCION:      'Do you need interior protection like foam, bubble wrap, or corner guards? It has an additional cost.',\n    PEDIR_CORREO:          'What is your email for follow-up?',\n    PEDIR_FECHA:           'When do you need the crating done?',\n    LISTO_PARA_COTIZAR:    'Give me a moment to calculate the price... 🔄',\n    POST_COTIZACION:       'What else can I help you with?'\n  } : {\n    PRIMER_CONTACTO:       `${gr}, soy Marco de Crating Express. ¿Con quién tengo el gusto?`,\n    PEDIR_NOMBRE:          '¿Con quién tengo el gusto?',\n    IDENTIFICAR_NECESIDAD: n ? `¿En qué puedo ayudarte hoy, ${n}?` : '¿En qué puedo ayudarte hoy?',\n    FLUJO_CONSULTA:        '¿En qué más puedo ayudarte?',\n    PEDIR_PRODUCTO:        '¿Qué artículo necesitas embalar?',\n    PEDIR_MEDIDAS:         '¿Cuáles son las medidas en pulgadas? (Largo × Ancho × Alto)',\n    PEDIR_TIPO_CAJON:      '¿Qué tipo de embalaje prefieres? Cajón cerrado (máxima protección + ISPM-15), jaula (más liviana) o paleta.',\n    PEDIR_PROTECCION:      '¿Necesitas protección interior como foam, burbuja o esquineras? Tiene costo adicional.',\n    PEDIR_CORREO:          '¿Cuál es tu correo para darte seguimiento?',\n    PEDIR_FECHA:           '¿Para cuándo necesitas el embalaje?',\n    LISTO_PARA_COTIZAR:    'Dame un momento para calcular el precio... 🔄',\n    POST_COTIZACION:       '¿En qué más puedo ayudarte?'\n  };\n  mensaje = fallbacks[ctx.proximoPaso] || (isEN ? 'What else can I help you with?' : '¿En qué más puedo ayudarte?');\n}\n\n// Merge AI-extracted data into datosRecolectados\nconst datosRecolectados = { ...(ctx.datosRecolectados || {}) };\n\n// Soporta formato viejo (raíz: nombre/producto/...) y nuevo (datos_actualizados.nombre_cliente/...)\nconst da = aiData.datos_actualizados || {};\nif ((da.nombre_cliente || aiData.nombre) && !datosRecolectados.nombre_cliente) datosRecolectados.nombre_cliente = da.nombre_cliente || aiData.nombre;\nif ((da.producto || aiData.producto) && !datosRecolectados.producto) datosRecolectados.producto = da.producto || aiData.producto;\nif ((da.medidas || aiData.medidas) && !datosRecolectados.medidas) datosRecolectados.medidas = da.medidas || aiData.medidas;\nif ((da.tipo_cajon || aiData.tipo_cajon) && !datosRecolectados.tipo_cajon) datosRecolectados.tipo_cajon = da.tipo_cajon || aiData.tipo_cajon;\nif ((da.fecha || aiData.fecha) && !datosRecolectados.fecha) datosRecolectados.fecha = da.fecha || aiData.fecha;\n// Fallback: extract fecha from historial/text if AI missed it in JSON\nif (!datosRecolectados.fecha) {\n  const textoBuscar = ((ctx.historial || '') + ' ' + (ctx.texto || '')).toLowerCase();\n  const fechaMatch = textoBuscar.match(/\\b(ma[ñn]ana|hoy|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|este (lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)|pr[oó]xim[ao] \\w+|next \\w+|tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\\d{1,2}[\\/-]\\d{1,2}|\\d{1,2} de [a-záéíóú]+|en \\d+ d[ií]as?|esta semana|next week)\\b/i);\n  if (fechaMatch) datosRecolectados.fecha = fechaMatch[0];\n}\nif ((da.correo_contacto || da.correo || aiData.correo) && !datosRecolectados.correo_contacto) datosRecolectados.correo_contacto = da.correo_contacto || da.correo || aiData.correo;\nif ((da.cantidad || aiData.cantidad) && !datosRecolectados.cantidad) datosRecolectados.cantidad = da.cantidad || aiData.cantidad;\nconst peVal = da.proteccion_extra !== undefined ? da.proteccion_extra : aiData.proteccion_extra;\nif (peVal !== null && peVal !== undefined\n    && (datosRecolectados.proteccion_extra === null || datosRecolectados.proteccion_extra === undefined)) {\n  datosRecolectados.proteccion_extra = peVal;\n}\n\n// Update tipo_flujo based on AI intent (only set, never override existing)\nconst intento = da.intento || aiData.intento;\nif (!datosRecolectados.tipo_flujo) {\n  if (intento === 'cotizacion') datosRecolectados.tipo_flujo = 'cotizacion';\n  else if (intento === 'consulta') datosRecolectados.tipo_flujo = 'consulta';\n}\nif (intento === 'cotizacion' && datosRecolectados.tipo_flujo === 'consulta') {\n  datosRecolectados.tipo_flujo = 'cotizacion';\n}\n\n// Recalculate todosRecolectados with updated data\nconst cleanCheck = v => {\n  if (typeof v === 'boolean') return v;\n  if (!v || ['desconocido','null','undefined'].includes(String(v).toLowerCase().trim())) return null;\n  return v;\n};\n\nconst todosRecolectados = !ctx.cotizacionEnviada  // no re-trigger if already sent\n  && datosRecolectados.tipo_flujo === 'cotizacion'\n  && !!cleanCheck(datosRecolectados.producto)\n  && !!cleanCheck(datosRecolectados.medidas)\n  && !!cleanCheck(datosRecolectados.correo_contacto)\n  && !!cleanCheck(datosRecolectados.tipo_cajon)\n  && datosRecolectados.proteccion_extra !== null && datosRecolectados.proteccion_extra !== undefined\n  && !!cleanCheck(datosRecolectados.fecha);\n\n// Recalculate dimensions from updated medidas\nlet dimensiones = ctx.dimensiones || null;\nif (datosRecolectados.medidas && !dimensiones) {\n  const nums = datosRecolectados.medidas.match(/(\\d+(?:\\.\\d+)?)/g);\n  if (nums && nums.length >= 3) {\n    dimensiones = { largo: parseFloat(nums[0]), ancho: parseFloat(nums[1]), alto: parseFloat(nums[2]) };\n  }\n}\n\nconst tipoCajaApi = datosRecolectados.tipo_cajon || ctx.tipoCajaApi || null;\nconst proximoPaso = ctx.proximoPaso;\n\n// Lead classification — solo cuando el cliente acepta cotización formal en POST_COTIZACION\nlet clasificacion = null;\nconst isPostCotizacion = ctx.proximoPaso === 'POST_COTIZACION';\nconst clienteAcepta = isPostCotizacion && /\\b(si+|yes|yep|yeah|yup|sure|ok|claro|por favor|dale|env[íi]ame|quiero|manda|m[áa]ndame|send|please|confirm|adelante|go ahead|sounds good|let's do it|let me have it|absolutely|definitely|of course|por supuesto|s[íi] por favor|s[íi] gracias)\\b/i.test(ctx.texto || '');\nif (clienteAcepta) {\n  clasificacion = 'Caliente';\n}\n\n// Escalada — cuando Marco no puede responder (consulta O sin medidas disponibles)\nconst consultaEscalada = aiData.escalada === true && !ctx.escaladaEnviada;\nif (consultaEscalada && !clasificacion) {\n  clasificacion = 'Consulta';\n}\n\nlet nuevoEstado = ctx.estado;\nif (clasificacion === 'Caliente') nuevoEstado = 'Vendedor notificado';\nelse if (clasificacion === 'Consulta') nuevoEstado = 'En calificación';\nelse if (todosRecolectados && !ctx.cotizacionEnviada) nuevoEstado = 'Calificado';\nelse if (!ctx.leadId || nuevoEstado === 'Nuevo') nuevoEstado = 'En calificación';\n\nif (mensaje.length > 3800) mensaje = mensaje.slice(0, 3750) + '…';\n\nconst ts = new Date().toISOString();\nconst nuevoHistorial = (ctx.historial ? ctx.historial + '\\n' : '')\n  + `[${ts}] Cliente: ${ctx.texto}\\n[${ts}] Bot: ${mensaje}\\n[${ts}] Bot: [D:${JSON.stringify(datosRecolectados)}]`;\n\n// temaConsulta: save first consulta message, preserve when switching to cotización\nlet temaConsulta = ctx.temaConsulta || datosRecolectados.temaConsulta || null;\nif (!temaConsulta && ctx.proximoPaso === 'FLUJO_CONSULTA') {\n  temaConsulta = ctx.texto || null;\n}\n// When escalating from any paso, capture context from historial (last 3 client messages)\nif (consultaEscalada && !temaConsulta) {\n  const clientLines = (ctx.historial || '').split('\\n')\n    .filter(l => l.includes('Cliente:'))\n    .map(l => l.replace(/^.*?Cliente:\\s*/, '').trim())\n    .slice(-3)\n    .join(' / ');\n  temaConsulta = clientLines || ctx.texto || null;\n}\n\n// Persist temaConsulta in datosRecolectados so it survives across turns\nif (temaConsulta) datosRecolectados.temaConsulta = temaConsulta;\n\nreturn [{ json: {\n  ...ctx,\n  mensaje,\n  mensajeRespuesta: mensaje,\n  datosRecolectados,\n  todos_recolectados: todosRecolectados,\n  todosRecolectados,\n  dimensiones,\n  tipo_caja_api: tipoCajaApi,\n  cotizador_enviado: false,\n  temaConsulta,\n  clasificacion,\n  escaladaEnviada: ctx.escaladaEnviada || (clasificacion === 'Consulta'),\n  nuevoEstado,\n  nuevoHistorial\n} }];\n"
+        }
+      }
+    ],
+    "connections": {
+      "Recibir Datos": {
+        "main": [
+          [
+            {
+              "node": "🤖 Groq: Conversación IA",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 Groq: Conversación IA": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Groq OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Groq OK?": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Respuesta IA",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🤖 Gemini: Fallback IA",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 Gemini: Fallback IA": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Respuesta IA",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-07-03T16:32:18.844Z",
+        "id": 1780,
+        "workflowId": "J8qbKOF7t4GnhRDT",
+        "versionId": "94a33522-7e44-4205-8b67-311f541e0e39",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      },
+      {
+        "createdAt": "2026-07-03T16:32:18.825Z",
+        "id": 1779,
+        "workflowId": "J8qbKOF7t4GnhRDT",
+        "versionId": "94a33522-7e44-4205-8b67-311f541e0e39",
+        "event": "deactivated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    ]
+  }
+}

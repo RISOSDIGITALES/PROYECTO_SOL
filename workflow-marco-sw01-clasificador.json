@@ -1,0 +1,151 @@
+{
+  "updatedAt": "2026-07-03T17:38:47.901Z",
+  "createdAt": "2026-06-15T15:49:48.556Z",
+  "id": "1PXcg3dOQBt8hrrT",
+  "name": "Marco CE — 01 Clasificador",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Recibir Datos",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "code01",
+      "name": "🧠 Clasificar y Preparar Contexto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\n\n// Todo viene de G54 - cero Airtable\nconst g54Data = inp.datosRecolectados || {};\nconst leadId  = inp.leadId  || null;\nconst estado  = inp.estado  || 'Nuevo';\n\nconst msgData        = { telefono: inp.telefono, texto: inp.texto || '', nombreContacto: inp.nombreContacto || '' };\nconst kbContexto     = inp.kbContexto || '';\nconst waConfig       = inp.waConfig || {};\nconst productosRaw   = inp.productos || [];\n\n// emailVendedor ya viene calculado desde SW02\nconst emailVendedor = inp.emailVendedor || 'risosadmi@gmail.com';\nconst followup24    = inp.followup24 || waConfig.WA_FollowUp_24h || '';\nconst followup72    = inp.followup72 || waConfig.WA_FollowUp_72h || '';\n\n// Datos recolectados: 100% desde G54 (ya enriquecidos por workaround en SW02)\nlet datosRecolectados = {\n  producto:          g54Data.producto          || null,\n  medidas:           g54Data.medidas           || null,\n  fecha:             g54Data.fecha             || null,\n  tipo_cajon:        g54Data.tipo_cajon        || null,\n  proteccion_extra:  g54Data.proteccion_extra  ?? null,\n  correo_contacto:   g54Data.correo_contacto   || null,\n  nombre_cliente:    g54Data.nombre_cliente    || null,\n  tipo_flujo:        g54Data.tipo_flujo        || null,\n  cantidad:          g54Data.cantidad          || null,\n  temaConsulta:      g54Data.temaConsulta      || null,\n};\n\nconst cotizacionEnviada  = g54Data.cotizacion_enviada  || false;\nconst escaladaEnviada    = g54Data.escalada_enviada    || false;\nconst escaladaPendiente  = g54Data.escalada_pendiente  || false;\nconst idiomaGuardado     = g54Data.idioma              || null;\n\nconst historialRaw = inp.historial || '';\nconst historial    = historialRaw ? historialRaw.split('\\n').slice(-20).join('\\n') : '';\nconst esNuevo      = !leadId;\nconst texto        = msgData.texto;\n\n// Catálogo ya viene calculado desde SW02\nconst catalogoProductos = inp.catalogoProductos || productosRaw.map(p => {\n  const nombre = p.name || '';\n  const desc = p.description || '';\n  return nombre ? `${nombre}: ${desc}` : '';\n}).filter(l => l.length > 2).join('\\n');\n\n// Detección de idioma\nconst isEN = (s) => /\\b(hello|hi|good|morning|afternoon|evening|i|need|want|crate|box|ship|send|quote|price|size|wood|close|open)\\b/i.test(s);\nlet idiomaConversacion = idiomaGuardado;\nif (!idiomaConversacion) {\n  idiomaConversacion = isEN(texto) ? 'inglés' : 'español';\n}\nconst isEnglish = idiomaConversacion === 'inglés';\n\n// Saludo según hora Miami\nconst h = (new Date().getUTCHours() - 4 + 24) % 24;\nconst saludoHora = isEnglish\n  ? (h < 12 ? 'Good morning' : h < 19 ? 'Good afternoon' : 'Good evening')\n  : (h < 12 ? 'Buenos días'  : h < 19 ? 'Buenas tardes'  : 'Buenas noches');\n\n// Siguiente paso\nconst cleanVal = v => {\n  if (typeof v === 'boolean') return v !== null ? v : null;\n  if (!v || ['null','undefined','desconocido'].includes(String(v).trim().toLowerCase())) return null;\n  return v;\n};\n\nconst tieneProducto      = !!cleanVal(datosRecolectados.producto);\nconst tieneMedidas       = !!cleanVal(datosRecolectados.medidas);\nconst tieneFecha         = !!cleanVal(datosRecolectados.fecha);\nconst tieneTipoCajon     = !!cleanVal(datosRecolectados.tipo_cajon);\nconst tieneProteccion    = datosRecolectados.proteccion_extra !== null && datosRecolectados.proteccion_extra !== undefined;\nconst tieneCorreo        = !!cleanVal(datosRecolectados.correo_contacto);\nconst tieneNombre        = !!cleanVal(datosRecolectados.nombre_cliente);\nconst esCotizacion       = datosRecolectados.tipo_flujo === 'cotizacion';\nconst esConsulta         = datosRecolectados.tipo_flujo === 'consulta';\n\nlet proximoPaso;\nlet instruccionPaso;\n\n// Override: detectar intent post-venta ANTES de la máquina de estados\nconst esConsultaEstado = (\n  // Cualquier pregunta por estado/seguimiento del pedido\n  /estado|seguimiento|c[oó]mo va|c[oó]mo est[aá]|avance|proceso|en qu[eé] (va|est[aá]|quedo)/i.test(texto) ||\n  // Ya hizo el pedido (con typos comunes)\n  /ya (hice?|realic[eé]?|mand[eé]|envi[eé]|ped[ií]|coloqué|puse|lo ped[ií]|hiz)/i.test(texto) ||\n  /hice? el pedido|realic[eé]? el pedido|ya ped[ií]|lo ped[ií]|ped[ií] por correo/i.test(texto) ||\n  // Rechazo explícito del flujo comercial\n  /no (quiero|necesito|me interesa) (otro|el|un|ning[uú]n)? ?(caj[oó]n|cajones|embalaje|caja|producto|recomend)/i.test(texto) ||\n  // Ya tiene pedido\n  /ya (tengo|realic[eé]?|hice?) (el |un |mi )?(pedido|orden|compra)/i.test(texto)\n);\n\nif (!tieneNombre) {\n  proximoPaso = 'PRIMER_CONTACTO';\n  if (historial.trim().length > 0) {\n    // Historial existe: ya nos presentamos. El mensaje actual puede contener el nombre.\n    instruccionPaso = isEnglish\n      ? 'Extract the name from the current message (ignore prepositions: \"with\", \"from\", \"and\"). Greet them by name in datos_actualizados.nombre_cliente. If the historial already shows what they need (quote, product), confirm it and proceed — do NOT ask again.'\n      : 'Extrae el nombre del mensaje actual (IGNORA preposiciones: \"con\"=\"with\", \"de\", \"y\" — el nombre es el SUSTANTIVO PROPIO. \"con Sol\" → nombre es \"Sol\"). Salúdalo por nombre en datos_actualizados.nombre_cliente. Si en el historial ya expresaron qué necesitan (cotización, producto), confírmalo y avanza — NO vuelvas a preguntar.';\n  } else {\n    // Primer mensaje: presentarse obligatoriamente\n    instruccionPaso = isEnglish\n      ? 'MANDATORY: Start with \"Hi! I\\'m Marco, from Crating Express.\" Then acknowledge what the client said and ask for their name.'\n      : 'OBLIGATORIO: Empieza con \"Hola, soy Marco, asesor de Crating Express.\" Luego reconoce brevemente lo que dijeron y pide su nombre.';\n  }\n} else if (esConsultaEstado) {\n  proximoPaso    = 'CONSULTA_ESTADO_PEDIDO';\n  instruccionPaso = isEnglish\n    ? 'IMPORTANT: The client already placed an order and is asking for a STATUS UPDATE — NOT a new quote. ABSOLUTELY DO NOT recommend any product or crate type. Acknowledge their follow-up, tell them that to check the order status they need to contact the team directly via email or phone. Be empathetic and apologize for any confusion in previous messages.'\n    : 'IMPORTANTE: El cliente YA realizó un pedido y quiere saber el ESTADO — NO es una cotización nueva. PROHIBIDO recomendar cajones cerrados ni ningún producto. Reconoce su seguimiento, dile que para consultar el estado de su pedido debe contactar al equipo directamente por correo o teléfono. Sé empático y discúlpate si hubo confusión en mensajes anteriores.';\n} else if (!datosRecolectados.tipo_flujo) {\n  proximoPaso    = 'IDENTIFICAR_NECESIDAD';\n  instruccionPaso = isEnglish\n    ? 'Check HISTORIAL. If the client already said they want a quote or have a question, proceed accordingly without asking again. If still unclear, ask.'\n    : 'Revisa el HISTORIAL. Si el cliente ya indicó que quiere cotización o tiene una consulta, procede sin preguntar de nuevo. Si aún no está claro, pregunta.';\n} else if (esConsulta || escaladaPendiente) {\n  proximoPaso    = 'FLUJO_CONSULTA';\n  instruccionPaso = isEnglish\n    ? 'Answer the consultation. If you cannot answer, ask for their email to escalate.'\n    : 'Responde la consulta. Si no puedes responder, pide el correo para escalar.';\n} else if (!tieneProducto) {\n  proximoPaso    = 'PEDIR_PRODUCTO';\n  instruccionPaso = isEnglish\n    ? 'Check HISTORIAL. If the client already mentioned what they need to crate, extract it into datos_actualizados.producto and confirm it. Do NOT ask if already mentioned.'\n    : 'Revisa el HISTORIAL. Si el cliente ya mencionó qué artículo necesita embalar, extráelo en datos_actualizados.producto y confírmalo. NO preguntes si ya lo dijeron.';\n} else if (!tieneMedidas) {\n  proximoPaso    = 'PEDIR_MEDIDAS';\n  instruccionPaso = isEnglish\n    ? 'Ask for measurements (Length × Width × Height in inches).'\n    : 'Pide las medidas (Largo × Ancho × Alto en pulgadas).';\n} else if (!tieneTipoCajon) {\n  proximoPaso    = 'PEDIR_TIPO_CAJON';\n  instruccionPaso = isEnglish\n    ? 'Recommend a crate type based on the product and confirm with the client.'\n    : 'Recomienda un tipo de embalaje según el producto y confirma con el cliente.';\n} else if (!tieneProteccion) {\n  proximoPaso    = 'PEDIR_PROTECCION';\n  instruccionPaso = isEnglish\n    ? 'Ask if they need interior protection (foam, bubble wrap). It has additional cost.'\n    : 'Pregunta si necesita protección interior (foam, burbuja). Tiene costo adicional.';\n} else if (!tieneCorreo) {\n  proximoPaso    = 'PEDIR_CORREO';\n  instruccionPaso = isEnglish ? 'Ask for their email for the quote.' : 'Pide su correo para enviar la cotización.';\n} else if (!tieneFecha) {\n  proximoPaso    = 'PEDIR_FECHA';\n  instruccionPaso = isEnglish ? 'Ask when they need the crating done.' : 'Pregunta para cuándo necesita el embalaje.';\n} else if (!cotizacionEnviada) {\n  proximoPaso    = 'LISTO_PARA_COTIZAR';\n  instruccionPaso = isEnglish ? 'Tell the client you are calculating the price.' : 'Indica al cliente que vas a calcular el precio.';\n} else {\n  proximoPaso    = 'POST_COTIZACION';\n  instruccionPaso = isEnglish ? 'Follow up after quote. Offer formal quote via email.' : 'Da seguimiento post-cotización. Ofrece cotización formal por correo.';\n}\n\nconst todosRecolectados = !cotizacionEnviada\n  && esCotizacion\n  && tieneProducto && tieneMedidas && tieneCorreo\n  && tieneTipoCajon && tieneProteccion && tieneFecha;\n\n// Dimensiones\nlet dimensiones = null;\nif (datosRecolectados.medidas) {\n  const nums = datosRecolectados.medidas.match(/(\\d+(?:\\.\\d+)?)/g);\n  if (nums && nums.length >= 3) {\n    dimensiones = { largo: parseFloat(nums[0]), ancho: parseFloat(nums[1]), alto: parseFloat(nums[2]) };\n  }\n}\n\n// Sistema IA\nconst sistemaIA = (waConfig.Prompt_Sistema || `Eres Marco, asistente de ventas de Crating Express. Responde SIEMPRE en JSON con: {\"respuesta\":\"...\",\"nombre\":null,\"producto\":null,\"medidas\":null,\"tipo_cajon\":null,\"proteccion_extra\":null,\"correo\":null,\"fecha\":null,\"cantidad\":null,\"intento\":null,\"escalada\":false}`)\n  .replace('{{CATALOGO}}', catalogoProductos ? `- ${catalogoProductos}` : '')\n  .replace('{{INSTRUCCIONES}}', waConfig.Instrucciones_IA || '');\n\nconst usuarioIA = `CLIENTE: ${datosRecolectados.nombre_cliente || '(desconocido)'}\nDATOS YA RECOLECTADOS (no pedir de nuevo):\n- Producto: ${datosRecolectados.producto || '—'}\n- Medidas: ${datosRecolectados.medidas || '—'}\n- Correo: ${datosRecolectados.correo_contacto || '—'}\n- Tipo cajón: ${datosRecolectados.tipo_cajon || '—'}\n- Protección extra: ${datosRecolectados.proteccion_extra ?? '—'}\n- Fecha: ${datosRecolectados.fecha || '—'}\n${historial ? '\\nHISTORIAL RECIENTE:\\n' + historial : ''}\n${kbContexto ? '\\nKB RELEVANTE:\\n' + kbContexto : ''}\n\nMENSAJE ACTUAL DEL CLIENTE: \"${texto}\"\n\nPASO: ${proximoPaso}\nINSTRUCCIÓN: ${instruccionPaso}`;\n\nreturn [{json: {\n  telefono: msgData.telefono,\n  texto,\n  nombreContacto: msgData.nombreContacto,\n  leadId,\n  leadFields: {},\n  estado,\n  historial,\n  esNuevo,\n  emailVendedor,\n  followup24,\n  followup72,\n  datosRecolectados,\n  cotizacionEnviada,\n  escaladaEnviada,\n  idiomaConversacion,\n  escaladaPendiente,\n  proximoPaso,\n  todosRecolectados,\n  dimensiones,\n  tipoCajaApi: datosRecolectados.tipo_cajon || null,\n  saludoHora,\n  sistemaIA,\n  usuarioIA,\n  catalogoFinal: catalogoProductos,\n  productosRaw: inp.productos || []\n}}];"
+      }
+    }
+  ],
+  "connections": {
+    "Recibir Datos": {
+      "main": [
+        [
+          {
+            "node": "🧠 Clasificar y Preparar Contexto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": null,
+  "versionId": "0886e24e-4b6a-4c4e-a182-555326ff6365",
+  "activeVersionId": "0886e24e-4b6a-4c4e-a182-555326ff6365",
+  "versionCounter": 155,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-06-15T15:49:48.568Z",
+      "createdAt": "2026-06-15T15:49:48.568Z",
+      "role": "workflow:owner",
+      "workflowId": "1PXcg3dOQBt8hrrT",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "updatedAt": "2026-03-16T19:58:01.773Z",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-03T17:38:47.904Z",
+    "createdAt": "2026-07-03T17:38:47.904Z",
+    "versionId": "0886e24e-4b6a-4c4e-a182-555326ff6365",
+    "workflowId": "1PXcg3dOQBt8hrrT",
+    "nodes": [
+      {
+        "id": "trigger",
+        "name": "Recibir Datos",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "parameters": {}
+      },
+      {
+        "id": "code01",
+        "name": "🧠 Clasificar y Preparar Contexto",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          300,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const inp = $input.first().json;\n\n// Todo viene de G54 - cero Airtable\nconst g54Data = inp.datosRecolectados || {};\nconst leadId  = inp.leadId  || null;\nconst estado  = inp.estado  || 'Nuevo';\n\nconst msgData        = { telefono: inp.telefono, texto: inp.texto || '', nombreContacto: inp.nombreContacto || '' };\nconst kbContexto     = inp.kbContexto || '';\nconst waConfig       = inp.waConfig || {};\nconst productosRaw   = inp.productos || [];\n\n// emailVendedor ya viene calculado desde SW02\nconst emailVendedor = inp.emailVendedor || 'risosadmi@gmail.com';\nconst followup24    = inp.followup24 || waConfig.WA_FollowUp_24h || '';\nconst followup72    = inp.followup72 || waConfig.WA_FollowUp_72h || '';\n\n// Datos recolectados: 100% desde G54 (ya enriquecidos por workaround en SW02)\nlet datosRecolectados = {\n  producto:          g54Data.producto          || null,\n  medidas:           g54Data.medidas           || null,\n  fecha:             g54Data.fecha             || null,\n  tipo_cajon:        g54Data.tipo_cajon        || null,\n  proteccion_extra:  g54Data.proteccion_extra  ?? null,\n  correo_contacto:   g54Data.correo_contacto   || null,\n  nombre_cliente:    g54Data.nombre_cliente    || null,\n  tipo_flujo:        g54Data.tipo_flujo        || null,\n  cantidad:          g54Data.cantidad          || null,\n  temaConsulta:      g54Data.temaConsulta      || null,\n};\n\nconst cotizacionEnviada  = g54Data.cotizacion_enviada  || false;\nconst escaladaEnviada    = g54Data.escalada_enviada    || false;\nconst escaladaPendiente  = g54Data.escalada_pendiente  || false;\nconst idiomaGuardado     = g54Data.idioma              || null;\n\nconst historialRaw = inp.historial || '';\nconst historial    = historialRaw ? historialRaw.split('\\n').slice(-20).join('\\n') : '';\nconst esNuevo      = !leadId;\nconst texto        = msgData.texto;\n\n// Catálogo ya viene calculado desde SW02\nconst catalogoProductos = inp.catalogoProductos || productosRaw.map(p => {\n  const nombre = p.name || '';\n  const desc = p.description || '';\n  return nombre ? `${nombre}: ${desc}` : '';\n}).filter(l => l.length > 2).join('\\n');\n\n// Detección de idioma\nconst isEN = (s) => /\\b(hello|hi|good|morning|afternoon|evening|i|need|want|crate|box|ship|send|quote|price|size|wood|close|open)\\b/i.test(s);\nlet idiomaConversacion = idiomaGuardado;\nif (!idiomaConversacion) {\n  idiomaConversacion = isEN(texto) ? 'inglés' : 'español';\n}\nconst isEnglish = idiomaConversacion === 'inglés';\n\n// Saludo según hora Miami\nconst h = (new Date().getUTCHours() - 4 + 24) % 24;\nconst saludoHora = isEnglish\n  ? (h < 12 ? 'Good morning' : h < 19 ? 'Good afternoon' : 'Good evening')\n  : (h < 12 ? 'Buenos días'  : h < 19 ? 'Buenas tardes'  : 'Buenas noches');\n\n// Siguiente paso\nconst cleanVal = v => {\n  if (typeof v === 'boolean') return v !== null ? v : null;\n  if (!v || ['null','undefined','desconocido'].includes(String(v).trim().toLowerCase())) return null;\n  return v;\n};\n\nconst tieneProducto      = !!cleanVal(datosRecolectados.producto);\nconst tieneMedidas       = !!cleanVal(datosRecolectados.medidas);\nconst tieneFecha         = !!cleanVal(datosRecolectados.fecha);\nconst tieneTipoCajon     = !!cleanVal(datosRecolectados.tipo_cajon);\nconst tieneProteccion    = datosRecolectados.proteccion_extra !== null && datosRecolectados.proteccion_extra !== undefined;\nconst tieneCorreo        = !!cleanVal(datosRecolectados.correo_contacto);\nconst tieneNombre        = !!cleanVal(datosRecolectados.nombre_cliente);\nconst esCotizacion       = datosRecolectados.tipo_flujo === 'cotizacion';\nconst esConsulta         = datosRecolectados.tipo_flujo === 'consulta';\n\nlet proximoPaso;\nlet instruccionPaso;\n\n// Override: detectar intent post-venta ANTES de la máquina de estados\nconst esConsultaEstado = (\n  // Cualquier pregunta por estado/seguimiento del pedido\n  /estado|seguimiento|c[oó]mo va|c[oó]mo est[aá]|avance|proceso|en qu[eé] (va|est[aá]|quedo)/i.test(texto) ||\n  // Ya hizo el pedido (con typos comunes)\n  /ya (hice?|realic[eé]?|mand[eé]|envi[eé]|ped[ií]|coloqué|puse|lo ped[ií]|hiz)/i.test(texto) ||\n  /hice? el pedido|realic[eé]? el pedido|ya ped[ií]|lo ped[ií]|ped[ií] por correo/i.test(texto) ||\n  // Rechazo explícito del flujo comercial\n  /no (quiero|necesito|me interesa) (otro|el|un|ning[uú]n)? ?(caj[oó]n|cajones|embalaje|caja|producto|recomend)/i.test(texto) ||\n  // Ya tiene pedido\n  /ya (tengo|realic[eé]?|hice?) (el |un |mi )?(pedido|orden|compra)/i.test(texto)\n);\n\nif (!tieneNombre) {\n  proximoPaso = 'PRIMER_CONTACTO';\n  if (historial.trim().length > 0) {\n    // Historial existe: ya nos presentamos. El mensaje actual puede contener el nombre.\n    instruccionPaso = isEnglish\n      ? 'Extract the name from the current message (ignore prepositions: \"with\", \"from\", \"and\"). Greet them by name in datos_actualizados.nombre_cliente. If the historial already shows what they need (quote, product), confirm it and proceed — do NOT ask again.'\n      : 'Extrae el nombre del mensaje actual (IGNORA preposiciones: \"con\"=\"with\", \"de\", \"y\" — el nombre es el SUSTANTIVO PROPIO. \"con Sol\" → nombre es \"Sol\"). Salúdalo por nombre en datos_actualizados.nombre_cliente. Si en el historial ya expresaron qué necesitan (cotización, producto), confírmalo y avanza — NO vuelvas a preguntar.';\n  } else {\n    // Primer mensaje: presentarse obligatoriamente\n    instruccionPaso = isEnglish\n      ? 'MANDATORY: Start with \"Hi! I\\'m Marco, from Crating Express.\" Then acknowledge what the client said and ask for their name.'\n      : 'OBLIGATORIO: Empieza con \"Hola, soy Marco, asesor de Crating Express.\" Luego reconoce brevemente lo que dijeron y pide su nombre.';\n  }\n} else if (esConsultaEstado) {\n  proximoPaso    = 'CONSULTA_ESTADO_PEDIDO';\n  instruccionPaso = isEnglish\n    ? 'IMPORTANT: The client already placed an order and is asking for a STATUS UPDATE — NOT a new quote. ABSOLUTELY DO NOT recommend any product or crate type. Acknowledge their follow-up, tell them that to check the order status they need to contact the team directly via email or phone. Be empathetic and apologize for any confusion in previous messages.'\n    : 'IMPORTANTE: El cliente YA realizó un pedido y quiere saber el ESTADO — NO es una cotización nueva. PROHIBIDO recomendar cajones cerrados ni ningún producto. Reconoce su seguimiento, dile que para consultar el estado de su pedido debe contactar al equipo directamente por correo o teléfono. Sé empático y discúlpate si hubo confusión en mensajes anteriores.';\n} else if (!datosRecolectados.tipo_flujo) {\n  proximoPaso    = 'IDENTIFICAR_NECESIDAD';\n  instruccionPaso = isEnglish\n    ? 'Check HISTORIAL. If the client already said they want a quote or have a question, proceed accordingly without asking again. If still unclear, ask.'\n    : 'Revisa el HISTORIAL. Si el cliente ya indicó que quiere cotización o tiene una consulta, procede sin preguntar de nuevo. Si aún no está claro, pregunta.';\n} else if (esConsulta || escaladaPendiente) {\n  proximoPaso    = 'FLUJO_CONSULTA';\n  instruccionPaso = isEnglish\n    ? 'Answer the consultation. If you cannot answer, ask for their email to escalate.'\n    : 'Responde la consulta. Si no puedes responder, pide el correo para escalar.';\n} else if (!tieneProducto) {\n  proximoPaso    = 'PEDIR_PRODUCTO';\n  instruccionPaso = isEnglish\n    ? 'Check HISTORIAL. If the client already mentioned what they need to crate, extract it into datos_actualizados.producto and confirm it. Do NOT ask if already mentioned.'\n    : 'Revisa el HISTORIAL. Si el cliente ya mencionó qué artículo necesita embalar, extráelo en datos_actualizados.producto y confírmalo. NO preguntes si ya lo dijeron.';\n} else if (!tieneMedidas) {\n  proximoPaso    = 'PEDIR_MEDIDAS';\n  instruccionPaso = isEnglish\n    ? 'Ask for measurements (Length × Width × Height in inches).'\n    : 'Pide las medidas (Largo × Ancho × Alto en pulgadas).';\n} else if (!tieneTipoCajon) {\n  proximoPaso    = 'PEDIR_TIPO_CAJON';\n  instruccionPaso = isEnglish\n    ? 'Recommend a crate type based on the product and confirm with the client.'\n    : 'Recomienda un tipo de embalaje según el producto y confirma con el cliente.';\n} else if (!tieneProteccion) {\n  proximoPaso    = 'PEDIR_PROTECCION';\n  instruccionPaso = isEnglish\n    ? 'Ask if they need interior protection (foam, bubble wrap). It has additional cost.'\n    : 'Pregunta si necesita protección interior (foam, burbuja). Tiene costo adicional.';\n} else if (!tieneCorreo) {\n  proximoPaso    = 'PEDIR_CORREO';\n  instruccionPaso = isEnglish ? 'Ask for their email for the quote.' : 'Pide su correo para enviar la cotización.';\n} else if (!tieneFecha) {\n  proximoPaso    = 'PEDIR_FECHA';\n  instruccionPaso = isEnglish ? 'Ask when they need the crating done.' : 'Pregunta para cuándo necesita el embalaje.';\n} else if (!cotizacionEnviada) {\n  proximoPaso    = 'LISTO_PARA_COTIZAR';\n  instruccionPaso = isEnglish ? 'Tell the client you are calculating the price.' : 'Indica al cliente que vas a calcular el precio.';\n} else {\n  proximoPaso    = 'POST_COTIZACION';\n  instruccionPaso = isEnglish ? 'Follow up after quote. Offer formal quote via email.' : 'Da seguimiento post-cotización. Ofrece cotización formal por correo.';\n}\n\nconst todosRecolectados = !cotizacionEnviada\n  && esCotizacion\n  && tieneProducto && tieneMedidas && tieneCorreo\n  && tieneTipoCajon && tieneProteccion && tieneFecha;\n\n// Dimensiones\nlet dimensiones = null;\nif (datosRecolectados.medidas) {\n  const nums = datosRecolectados.medidas.match(/(\\d+(?:\\.\\d+)?)/g);\n  if (nums && nums.length >= 3) {\n    dimensiones = { largo: parseFloat(nums[0]), ancho: parseFloat(nums[1]), alto: parseFloat(nums[2]) };\n  }\n}\n\n// Sistema IA\nconst sistemaIA = (waConfig.Prompt_Sistema || `Eres Marco, asistente de ventas de Crating Express. Responde SIEMPRE en JSON con: {\"respuesta\":\"...\",\"nombre\":null,\"producto\":null,\"medidas\":null,\"tipo_cajon\":null,\"proteccion_extra\":null,\"correo\":null,\"fecha\":null,\"cantidad\":null,\"intento\":null,\"escalada\":false}`)\n  .replace('{{CATALOGO}}', catalogoProductos ? `- ${catalogoProductos}` : '')\n  .replace('{{INSTRUCCIONES}}', waConfig.Instrucciones_IA || '');\n\nconst usuarioIA = `CLIENTE: ${datosRecolectados.nombre_cliente || '(desconocido)'}\nDATOS YA RECOLECTADOS (no pedir de nuevo):\n- Producto: ${datosRecolectados.producto || '—'}\n- Medidas: ${datosRecolectados.medidas || '—'}\n- Correo: ${datosRecolectados.correo_contacto || '—'}\n- Tipo cajón: ${datosRecolectados.tipo_cajon || '—'}\n- Protección extra: ${datosRecolectados.proteccion_extra ?? '—'}\n- Fecha: ${datosRecolectados.fecha || '—'}\n${historial ? '\\nHISTORIAL RECIENTE:\\n' + historial : ''}\n${kbContexto ? '\\nKB RELEVANTE:\\n' + kbContexto : ''}\n\nMENSAJE ACTUAL DEL CLIENTE: \"${texto}\"\n\nPASO: ${proximoPaso}\nINSTRUCCIÓN: ${instruccionPaso}`;\n\nreturn [{json: {\n  telefono: msgData.telefono,\n  texto,\n  nombreContacto: msgData.nombreContacto,\n  leadId,\n  leadFields: {},\n  estado,\n  historial,\n  esNuevo,\n  emailVendedor,\n  followup24,\n  followup72,\n  datosRecolectados,\n  cotizacionEnviada,\n  escaladaEnviada,\n  idiomaConversacion,\n  escaladaPendiente,\n  proximoPaso,\n  todosRecolectados,\n  dimensiones,\n  tipoCajaApi: datosRecolectados.tipo_cajon || null,\n  saludoHora,\n  sistemaIA,\n  usuarioIA,\n  catalogoFinal: catalogoProductos,\n  productosRaw: inp.productos || []\n}}];"
+        }
+      }
+    ],
+    "connections": {
+      "Recibir Datos": {
+        "main": [
+          [
+            {
+              "node": "🧠 Clasificar y Preparar Contexto",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-07-03T17:38:47.990Z",
+        "id": 1790,
+        "workflowId": "1PXcg3dOQBt8hrrT",
+        "versionId": "0886e24e-4b6a-4c4e-a182-555326ff6365",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      },
+      {
+        "createdAt": "2026-07-03T17:38:47.963Z",
+        "id": 1789,
+        "workflowId": "1PXcg3dOQBt8hrrT",
+        "versionId": "0886e24e-4b6a-4c4e-a182-555326ff6365",
+        "event": "deactivated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    ]
+  }
+}
