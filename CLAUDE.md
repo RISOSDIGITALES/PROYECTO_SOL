@@ -1013,6 +1013,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ---
 
+### 2026-07-08 (Miércoles)
+
+El día arrancó revisando un video que Don Marc mandó en la mañana sobre salesads.ai, para ver si había algo aprovechable para lo que ya tenemos armado. De ahí pasamos a retomar las pruebas de WhatsApp con Marco, donde logramos corregir el bug de memoria que hacía que no recordara datos de conversaciones anteriores. El problema fue que, una vez arreglado, no pudimos seguir probando a fondo porque el lead de prueba que veníamos usando ya estaba muy contaminado con datos de pruebas viejas, y no existe forma de borrarlo ni resetearlo desde ningún lado. Quedó anotado en el archivo de puntos pendientes para el ingeniero, porque es algo que vamos a seguir necesitando mientras probemos cambios.
+
+Después de eso nos movimos al generador de imágenes de contenido. Se agregó una regla nueva para que nunca invente o dibuje un logo de la marca, algo que podía pasar sin que lo pidiéramos. También confirmamos que las imágenes ya se están generando en formato JPEG desde el origen, así que no hace falta ninguna conversión extra de nuestro lado cuando se implemente la subida al servidor. Y quedó definido cómo priorizar entre las dos formas que va a tener el panel para conectar las redes sociales de un cliente — cuál se usa primero si llegan a estar las dos configuradas.
+
+Para cerrar el día armamos el documento de pendientes para el ingeniero con todo lo que se fue detectando estos últimos días — bugs, campos que faltan y mejoras de interfaz — para tener todo en un solo lugar y poder revisarlo con él cuando tenga espacio.
+
+---
+
 ### 2026-07-07 (Lunes)
 
 El día estuvo centrado en hacer que los dos workflows de Analytics funcionen de punta a punta con datos reales en G54, luego en activar y estabilizar el Image Generator AI que hasta hoy no había sido probado nunca en vivo, y al cierre se identificó y resolvió el bug de memoria de Marco que llevaba días sin solución.
