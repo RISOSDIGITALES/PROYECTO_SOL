@@ -104,7 +104,7 @@ G54_COMPANY_ID  = 1   (Crating Express)
 2. ✅ **Strategist AI v3.0** — define estrategia + trend finder (NewsAPI). ID: `cT1SS300CjujIyHS`. Archivo: `workflow-strategist-ai-g54-v3.json`
 3. ✅ **Distribution AI v1.0** — publica FB/IG via Graph API directo. ID: `nmOjyvdfTkEo5FVJ`. Archivo: `workflow-distribution-ai-g54.json`
 4. ✅ **Community AI v1.0** — responde comentarios y DMs de FB/IG. ID: `WYGmQcPSOzpvn6yv`. Archivo: `workflow-community-ai-g54.json`
-5. ✅ **Sales AI / WA Engine Motor (G54)** — agente de chat genérico WA + FB/IG DM. ID: `eCOX3ogMjToxZsh9`. Archivo: `workflow-sales-ai-motor-g54.json`
+5. ✅ **Sales AI / WA Engine Motor (G54)** — agente de chat genérico WA + FB/IG DM. ID: `otycsrxrMEMuxuwD`. Archivo: `workflow-sales-ai-motor-g54.json`
 6. ✅ **Analytics AI Semanal** — reporte lunes 8am. ID: `ocQAzbiftXXOfjct`. Archivo: `workflow-analytics-ai-g54.json`
 7. ✅ **Analytics AI Mensual** — reporte día 1 de cada mes. ID: `BrH8GNURlqynJK1H`. Archivo: `workflow-analytics-ai-mensual-g54.json`
 
@@ -146,7 +146,7 @@ G54_COMPANY_ID  = 1   (Crating Express)
 - **✅ Webhook registrado en Meta** (2026-06-25): app "CRATING EXPRESS RRSS" → Page webhooks → URL `https://n8n.mdarthurdigital.com/webhook/community-ai-g54?company=1` — campos suscritos: `feed`, `messages`
 
 ### Sales AI / WA Engine Motor — Detalles
-- **ID:** `eCOX3ogMjToxZsh9` — activo en n8n ✅ (2026-06-04)
+- **ID:** `otycsrxrMEMuxuwD` — activo en n8n ✅ (ID original `eCOX3ogMjToxZsh9` de la creación 2026-06-04 quedó desactualizado — el workflow se recreó en algún momento, ID corregido 2026-07-09)
 - **Archivo:** `workflow-sales-ai-motor-g54.json`
 - Webhook WA: `wa-engine-g54` (genérico — NO es el de Alex que usa `whatsapp-ce`)
 - Webhook FB/IG DM: `sales-ai-social`
@@ -163,7 +163,7 @@ G54_COMPANY_ID  = 1   (Crating Express)
 - **PENDIENTE:** registrar webhook WA (`wa-engine-g54`) en Meta cuando sea necesario
 
 **Alex vs Sales AI Motor — diferencia clave:**
-| | Alex (`zAhV8gEsXD8dCrXq`) | Sales AI Motor (`eCOX3ogMjToxZsh9`) |
+| | Alex (`zAhV8gEsXD8dCrXq`) | Sales AI Motor (`otycsrxrMEMuxuwD`) |
 |---|---|---|
 | Path WA | `whatsapp-ce` | `wa-engine-g54` |
 | Para quién | Solo Crating Express | Cualquier cliente G54 |
@@ -390,6 +390,10 @@ Para listar workflows: `GET /api/v1/workflows` con header `X-N8N-API-KEY: <token
 
 **IMPORTANTE:** Los nodos `🔀 ¿Lead Caliente?` y `📧 Notificar Vendedor` leen de `$('📝 Armar Mensaje Final')`, NO de `$('▶️ 04 Cotizador')` (que ya no existe).
 
+**Nota (confirmado 2026-07-09):** en n8n siguen existiendo dos workflows viejos que NO forman parte de la arquitectura actual y no hay que confundir con lo de arriba:
+- `vQUztiEMB8dXfNwo` "Marco CE — 00 Orquestador" — **INACTIVO**. Es el predecesor directo de `zAhV8gEsXD8dCrXq` (mismo webhook `whatsapp-ce`, mismos nodos base) pero sin el layer de traducción EN↔ES, la respuesta manual (`marco-manual-ce`) ni el cotizador nativo — todo eso se agregó después en la versión actual. Quedó desactivado y sin usar, seguro de borrar si se confirma que no hace falta como referencia.
+- `jDEYno22WuE0QVwJ` "Marco CE — 04 Cotizador" — sigue **activo en n8n pero sin ninguna ejecución nunca**, confirma que efectivamente nadie lo llama (el `▶️ 04 Cotizador` mencionado arriba es de este ID). Candidato a desactivar/borrar junto con el de arriba.
+
 ### Flujo actual del bot
 ```
 Webhook → Extraer Mensaje → ⏱️ Esperar anti-race
@@ -503,6 +507,14 @@ LISTO_PARA_COTIZAR    → todos los datos presentes
 |---|---|---|---|
 | CE Mantenimiento Web - Calendario Automático | `T9J845yE4sd8Dde5` | Diario 13:00 | ✅ |
 | 📬 CE Gmail Monitor — Detectar Respuestas de Leads | `cJZV7jcwlbFoW5qJ` | Cada hora | ✅ |
+| 🎙️ Marco CE — 06 Procesador de Medios | `5GU89AeWsBZ86FWa` | Sub-workflow (executeWorkflowTrigger) | ✅ existe, sin ejecuciones — **no está conectado todavía desde el engine principal** |
+| 🌐 Analytics Semanal — Webhook Trigger | `ALchVw1UdgFHuDbm` | Webhook `analytics-semanal-g54` | ✅ existe, sin ejecuciones — wrapper que llama a `📊 Analytics AI Semanal — G54` |
+| 📤 WA Reply — Envío Manual desde G54 | `IzsQTrOI2SMUJ4xx` | Webhook `wa-reply-g54` | ✅ existe, sin ejecuciones — permite mandar una respuesta manual de WhatsApp desde el panel (bypass del bot) |
+
+**Encontrados en diagnóstico del 2026-07-09** (no documentados hasta ahora, backup agregado a `PROYECTO-SOL/2026/`):
+- **06 Procesador de Medios** — recibe audio/imagen/PDF/Office, transcribe con Groq Whisper, analiza imágenes con Gemini Vision, lee PDFs y convierte Office a texto vía ConvertAPI. Diseñado para que Marco pueda procesar archivos adjuntos por WhatsApp, pero el engine principal (`zAhV8gEsXD8dCrXq`) todavía no tiene el nodo que lo llame — construido pero no conectado.
+- **Analytics Semanal — Webhook Trigger** — solo reenvía la llamada al workflow real de Analytics Semanal. Puede ser el punto de entrada pensado para que G54 dispare el reporte semanal por botón, aunque hasta ahora el semanal se ha estado ejecutando directo, no a través de este wrapper.
+- **WA Reply — Envío Manual** — pieza de soporte para cuando un humano necesita responder manualmente desde el panel en lugar del bot; conecta con la lógica `¿Bot puede responder?` del engine principal.
 
 ## n8n Tags — Marco
 
