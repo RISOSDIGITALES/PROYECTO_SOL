@@ -1,4 +1,7 @@
 {
+  "updatedAt": "2026-07-13T17:30:19.339Z",
+  "createdAt": "2026-07-06T16:04:22.662Z",
+  "id": "1rsqmFabW5PjnlHy",
   "name": "🖼️ Content AI — Generador de Imágenes (Pollinations)",
   "description": null,
   "active": true,
@@ -8,15 +11,51 @@
       "id": "config-img",
       "name": "⚙️ Config Pollinations",
       "type": "n8n-nodes-base.set",
-      "position": [200, 240],
+      "position": [
+        200,
+        240
+      ],
       "typeVersion": 3.4,
       "parameters": {
         "mode": "manual",
         "assignments": {
           "assignments": [
-            { "id": "a1", "name": "POLLINATIONS_API_KEY", "value": "PLACEHOLDER_POLLINATIONS_API_KEY", "type": "string" },
-            { "id": "a2", "name": "POLLINATIONS_BASE_URL", "value": "https://image.pollinations.ai/prompt", "type": "string" },
-            { "id": "a3", "name": "POLLINATIONS_DEFAULT_MODEL", "value": "flux", "type": "string" }
+            {
+              "id": "a1",
+              "name": "POLLINATIONS_API_KEY",
+              "value": "REDACTED_POLLINATIONS_API_KEY",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "POLLINATIONS_BASE_URL",
+              "value": "https://image.pollinations.ai/prompt",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "POLLINATIONS_DEFAULT_MODEL",
+              "value": "flux",
+              "type": "string"
+            },
+            {
+              "id": "g1",
+              "name": "G54_API_BASE",
+              "value": "https://apigrowth.mdarthurdigital.com",
+              "type": "string"
+            },
+            {
+              "id": "g2",
+              "name": "G54_MASTER_EMAIL",
+              "value": "REDACTED_G54_MASTER_EMAIL",
+              "type": "string"
+            },
+            {
+              "id": "g3",
+              "name": "G54_MASTER_PASSWORD",
+              "value": "REDACTED_G54_MASTER_PASSWORD",
+              "type": "string"
+            }
           ]
         },
         "options": {}
@@ -58,12 +97,12 @@
       "name": "🎨 Construir Prompt",
       "type": "n8n-nodes-base.code",
       "position": [
-        640,
-        400
+        1080,
+        240
       ],
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const wb = $('🔔 Webhook: Generar Imagen').item.json;\nconst body = wb.body || wb;\n\nconst post_id    = String(body.post_id || '');\nconst company_id = String(body.company_id || '1');\nconst platform   = (body.platform || 'instagram').toLowerCase();\nconst style      = (body.style || 'fotografía').toLowerCase();\n\nconst postsRaw = $('📋 Obtener Post G54').item.json;\nconst postsArr = Array.isArray(postsRaw) ? postsRaw\n  : (postsRaw.data || postsRaw.posts || [postsRaw]);\n\nconst post = postsArr.find(p => String(p.id) === post_id || String(p.post_id) === post_id);\nif (!post) throw new Error(`Post ${post_id} not found (total: ${postsArr.length})`);\n\n// --- Extract post fields ---\nconst clientIdea = post.idea_cliente || post.client_idea || post.descripcion_imagen || '';\nconst hook       = post.hook || '';\nconst tema       = post.tema || '';\nconst copy       = platform === 'facebook' ? (post.copy_facebook || post.copy_instagram || '')\n                 : platform === 'linkedin' ? (post.copy_linkedin || post.copy_instagram || '')\n                 : (post.copy_instagram || '');\n\n// Extract hashtags → readable keywords\nconst hashtagMatches = copy.match(/#[\\w]+/g) || [];\nconst hashtagKeywords = hashtagMatches\n  .map(h => h.replace('#', '')\n    .replace(/([a-z])([A-Z])/g, '$1 $2')\n    .toLowerCase()\n  )\n  .join(', ');\n\nconst copyNarrative = copy.replace(/#[\\w]+/g, '').replace(/\\n+/g, ' ').trim().slice(0, 200);\n\n// --- Content reference (topic context) ---\nlet contentRef;\nif (clientIdea.trim()) {\n  contentRef = clientIdea.trim();\n  if (hashtagKeywords) contentRef += `, ${hashtagKeywords}`;\n} else {\n  const parts = [];\n  if (hook)            parts.push(hook);\n  if (tema)            parts.push(tema);\n  if (copyNarrative)   parts.push(copyNarrative);\n  if (hashtagKeywords) parts.push(hashtagKeywords);\n  contentRef = parts.filter(Boolean).join('. ');\n}\n\n// --- Business anchor — ALWAYS FIRST, dominates the scene ---\n// Pollinations weights the beginning of the prompt most heavily.\n// This forces the model to stay in the industrial crating/packaging world.\n// --- Config ---\nconst cfg = $('⚙️ Config Pollinations').item.json;\nconst apiKey   = cfg.POLLINATIONS_API_KEY;\nconst baseUrl  = cfg.POLLINATIONS_BASE_URL;\n// model: from webhook param > config default. Free models: flux, zimage, klein, nova-canvas\nconst model = (body.model || cfg.POLLINATIONS_DEFAULT_MODEL || 'flux').toLowerCase();\n\nconst businessAnchor = 'industrial wooden crates and packaging boxes in a Miami warehouse, wood crating company, stacked timber crates, export packaging, lumber and plywood construction';\n\n// --- Style instructions ---\nconst styleMap = {\n  'fotografía': 'sharp professional photograph, real-world industrial setting, natural warehouse lighting, high resolution DSLR, photorealistic, 4K, no CGI',\n  'fotografia': 'sharp professional photograph, real-world industrial setting, natural warehouse lighting, high resolution DSLR, photorealistic, 4K, no CGI',\n  'ilustración': 'clean flat digital illustration, vector art style, bold outlines, vibrant flat colors, professional graphic design',\n  'ilustracion': 'clean flat digital illustration, vector art style, bold outlines, vibrant flat colors, professional graphic design',\n  'minimalista': 'minimalist composition, clean background, single centered wooden crate or box, generous negative space, simple elegant layout',\n  'corporativo': 'professional industrial photography, warehouse environment, workers in hard hats and safety vests, organized loading dock, bright clean facility',\n  'vibrante':   'vivid saturated colors, dynamic diagonal composition, bold contrast, energetic visual impact, eye-catching social media style',\n  'oscuro':     'dramatic dark moody lighting, deep shadows, premium dark warehouse background, metallic and wood accents, sophisticated industrial aesthetic',\n};\nconst styleInstructions = styleMap[style] || styleMap['fotografía'];\n\n// --- Platform composition specs (format + layout, NOT subject matter) ---\nconst platformAesthetic = {\n  instagram: 'square 1:1 composition, centered subject, strong focal point filling 60% of frame, bold visual hierarchy, vivid balanced colors, mobile feed optimized',\n  facebook:  'wide 1.91:1 landscape composition, rule of thirds layout, subject on left or right third, breathing room on edges, clear horizon line, desktop and mobile feed optimized',\n  linkedin:  'wide landscape composition, clean organized layout, neutral-to-warm color palette, professional industrial tone, clear separation of foreground and background',\n};\nconst platformSpec = platformAesthetic[platform] || platformAesthetic.instagram;\n\n// --- Platform dimensions ---\nconst dims = {\n  instagram: {width: 1080, height: 1080},\n  facebook:  {width: 1200, height: 630},\n  linkedin:  {width: 1200, height: 627},\n};\nconst {width, height} = dims[platform] || dims.instagram;\n\n// --- Quality & negatives ---\nconst textQuality = 'any text or labels must be clean, sharp, legible and properly rendered';\n\nconst negatives = [\n  'no business portraits, no headshots, no stock photo people posing, no office environment',\n  'no distorted text, no garbled letters, no corrupted fonts, no illegible writing',\n  'no extra limbs, no deformed hands, no fused fingers, no broken anatomy',\n  'no impossible angles, no floating objects without shadow, no distorted perspective',\n  'no muddy textures, no inconsistent lighting direction',\n  'no cropped heads, no half-cut subjects, no unintended duplicates',\n  'no watermarks, no low resolution, no JPEG artifacts, no noise',\n  'never invent, create, fabricate or hallucinate a brand logo or emblem of any kind, no fictional or fake company logos, no made-up brand marks or insignias, absolutely no logo generation under any circumstance',\n].join(', ');\n\n// --- Final prompt ---\n// Order: business scene (dominant) → content topic → platform layout → style → text quality → negatives\nconst prompt = [\n  businessAnchor,\n  contentRef.slice(0, 300),\n  platformSpec,\n  styleInstructions,\n  textQuality,\n  negatives,\n].join(', ');\n\nconst promptEncoded = encodeURIComponent(prompt.slice(0, 1800));\n// image.pollinations.ai is free (no auth needed). gen.pollinations.ai requires pollen balance.\nconst imageUrl = `${baseUrl}/${promptEncoded}?model=${model}&width=${width}&height=${height}&nologo=true&seed=${Date.now()}`;\n\nreturn [{ json: {\n  post_id,\n  company_id,\n  platform,\n  style,\n  model,\n  client_idea_used: clientIdea ? clientIdea.slice(0, 100) : null,\n  hashtags_used: hashtagKeywords.slice(0, 150),\n  content_ref: contentRef.slice(0, 200),\n  image_url_template: imageUrl,\n  agent_token: 'g54_agent_produccion_2026'\n}}];"
+        "jsCode": "const wb = $('🔔 Webhook: Generar Imagen').item.json;\nconst body = wb.body || wb;\n\nconst post_id    = String(body.post_id || '');\nconst company_id = String(body.company_id || '1');\nconst platform   = (body.platform || 'instagram').toLowerCase();\n\nconst postsRaw = $('📋 Obtener Post G54').item.json;\nconst postsArr = Array.isArray(postsRaw) ? postsRaw\n  : (postsRaw.data || postsRaw.posts || [postsRaw]);\n\nconst post = postsArr.find(p => String(p.id) === post_id || String(p.post_id) === post_id);\nif (!post) throw new Error(`Post ${post_id} not found (total: ${postsArr.length})`);\n\n// --- Config de canal desde G54 (image_config por plataforma, si ya está configurado) ---\nlet channelConfig = null;\ntry {\n  const channelsResp = $('🎨 G54: Obtener Config Canal').item.json;\n  const channels = channelsResp.data || [];\n  const platformMap = { instagram: 'Instagram', facebook: 'Facebook', linkedin: 'LinkedIn' };\n  const wanted = platformMap[platform] || 'Instagram';\n  const match = channels.find(c => c.platform === wanted && c.image_config);\n  if (match) channelConfig = match.image_config;\n} catch (e) {\n  // Login o lectura de canal falló — seguimos con los defaults de siempre\n}\n\nconst style     = (channelConfig?.img_estilo || body.style || 'realista').toLowerCase();\nconst formato   = (channelConfig?.img_formato || '').toLowerCase();\nconst textoModo = (channelConfig?.img_texto_modo || 'sin_texto').toLowerCase();\n\n// --- Extract post fields ---\nconst clientIdea = post.idea_cliente || post.client_idea || post.descripcion_imagen || '';\nconst hook       = post.hook || '';\nconst tema       = post.tema || '';\nconst copy       = platform === 'facebook' ? (post.copy_facebook || post.copy_instagram || '')\n                 : platform === 'linkedin' ? (post.copy_linkedin || post.copy_instagram || '')\n                 : (post.copy_instagram || '');\n\nconst hashtagMatches = copy.match(/#[\\w]+/g) || [];\nconst hashtagKeywords = hashtagMatches\n  .map(h => h.replace('#', '')\n    .replace(/([a-z])([A-Z])/g, '$1 $2')\n    .toLowerCase()\n  )\n  .join(', ');\n\nconst copyNarrative = copy.replace(/#[\\w]+/g, '').replace(/\\n+/g, ' ').trim().slice(0, 200);\n\nlet contentRef;\nif (clientIdea.trim()) {\n  contentRef = clientIdea.trim();\n  if (hashtagKeywords) contentRef += `, ${hashtagKeywords}`;\n} else {\n  const parts = [];\n  if (hook)            parts.push(hook);\n  if (tema)            parts.push(tema);\n  if (copyNarrative)   parts.push(copyNarrative);\n  if (hashtagKeywords) parts.push(hashtagKeywords);\n  contentRef = parts.filter(Boolean).join('. ');\n}\n\nconst cfg = $('⚙️ Config Pollinations').item.json;\nconst baseUrl  = cfg.POLLINATIONS_BASE_URL;\nconst model = (body.model || cfg.POLLINATIONS_DEFAULT_MODEL || 'flux').toLowerCase();\n\nconst businessAnchor = 'industrial wooden crates and packaging boxes in a Miami warehouse, wood crating company, stacked timber crates, export packaging, lumber and plywood construction';\n\n// --- Style instructions: valores nuevos de G54 (img_estilo) + valores viejos por compatibilidad ---\nconst styleMap = {\n  'realista': 'sharp professional photograph, real-world industrial setting, natural warehouse lighting, high resolution DSLR, photorealistic, 4K, no CGI',\n  'humanos': 'professional industrial photography, warehouse environment, workers in hard hats and safety vests, organized loading dock, bright clean facility, people actively working',\n  '3d': '3D rendered scene, CGI render, three-dimensional modeled objects, studio lighting, clean render aesthetic, product visualization style',\n  'animado': 'clean flat digital illustration, vector art style, bold outlines, vibrant flat colors, professional graphic design, animated look',\n  'minimalista': 'minimalist composition, clean background, single centered wooden crate or box, generous negative space, simple elegant layout',\n  'artistico': 'artistic creative interpretation, painterly style, expressive brushwork feel, premium editorial look, sophisticated color grading',\n  'fotografía': 'sharp professional photograph, real-world industrial setting, natural warehouse lighting, high resolution DSLR, photorealistic, 4K, no CGI',\n  'fotografia': 'sharp professional photograph, real-world industrial setting, natural warehouse lighting, high resolution DSLR, photorealistic, 4K, no CGI',\n  'ilustración': 'clean flat digital illustration, vector art style, bold outlines, vibrant flat colors, professional graphic design',\n  'ilustracion': 'clean flat digital illustration, vector art style, bold outlines, vibrant flat colors, professional graphic design',\n  'corporativo': 'professional industrial photography, warehouse environment, workers in hard hats and safety vests, organized loading dock, bright clean facility',\n  'vibrante':   'vivid saturated colors, dynamic diagonal composition, bold contrast, energetic visual impact, eye-catching social media style',\n  'oscuro':     'dramatic dark moody lighting, deep shadows, premium dark warehouse background, metallic and wood accents, sophisticated industrial aesthetic',\n};\nconst styleInstructions = styleMap[style] || styleMap['realista'];\n\nconst platformAesthetic = {\n  instagram: 'centered subject, strong focal point filling 60% of frame, bold visual hierarchy, vivid balanced colors, mobile feed optimized',\n  facebook:  'rule of thirds layout, subject on left or right third, breathing room on edges, clear horizon line, desktop and mobile feed optimized',\n  linkedin:  'clean organized layout, neutral-to-warm color palette, professional industrial tone, clear separation of foreground and background',\n};\nconst platformSpec = platformAesthetic[platform] || platformAesthetic.instagram;\n\n// --- Dimensiones: img_formato de G54 tiene prioridad sobre el default por plataforma ---\nconst formatoDims = {\n  'cuadrada':   { width: 1080, height: 1080, label: 'square 1:1 composition' },\n  'vertical':   { width: 1080, height: 1350, label: 'vertical 4:5 composition' },\n  'horizontal': { width: 1920, height: 1080, label: 'wide horizontal 16:9 composition' },\n};\nconst platformDefaultDims = {\n  instagram: { width: 1080, height: 1080, label: 'square 1:1 composition' },\n  facebook:  { width: 1200, height: 630,  label: 'wide 1.91:1 landscape composition' },\n  linkedin:  { width: 1200, height: 627,  label: 'wide landscape composition' },\n};\nconst { width, height, label: formatLabel } = formatoDims[formato] || platformDefaultDims[platform] || platformDefaultDims.instagram;\n\n// --- Modo de texto (img_texto_modo de G54) ---\nconst textoInstructions = {\n  'sin_texto': 'absolutely no text, no words, no letters, no typography, no captions rendered in the image',\n  'solo_titulo': `include the title \"${hook || tema}\" as clean bold legible text in the image`,\n  'titulo_subtitulo': `include the title \"${hook || tema}\" as clean bold legible text with a smaller subtitle in the image`,\n  'titulo_sub_detalles': `include the title \"${hook || tema}\" as clean bold legible text with supporting detail text in the image`,\n  'libre': 'any text or labels must be clean, sharp, legible and properly rendered',\n};\nconst textQuality = textoInstructions[textoModo] || textoInstructions['sin_texto'];\n\nconst negatives = [\n  'no business portraits, no headshots, no stock photo people posing, no office environment',\n  'no distorted text, no garbled letters, no corrupted fonts, no illegible writing',\n  'no extra limbs, no deformed hands, no fused fingers, no broken anatomy',\n  'no impossible angles, no floating objects without shadow, no distorted perspective',\n  'no muddy textures, no inconsistent lighting direction',\n  'no cropped heads, no half-cut subjects, no unintended duplicates',\n  'no watermarks, no low resolution, no JPEG artifacts, no noise',\n  'never invent, create, fabricate or hallucinate a brand logo or emblem of any kind, no fictional or fake company logos, no made-up brand marks or insignias, absolutely no logo generation under any circumstance',\n].join(', ');\n\nconst prompt = [\n  businessAnchor,\n  contentRef.slice(0, 300),\n  formatLabel,\n  platformSpec,\n  styleInstructions,\n  textQuality,\n  negatives,\n].join(', ');\n\nconst promptEncoded = encodeURIComponent(prompt.slice(0, 1800));\nconst imageUrl = `${baseUrl}/${promptEncoded}?model=${model}&width=${width}&height=${height}&nologo=true&seed=${Date.now()}`;\n\n// Token de sesión G54 (login) — necesario para subir la imagen y guardar el post; el AGENT_TOKEN no sirve en estas rutas\nlet g54AccessToken = '';\ntry {\n  g54AccessToken = $('🔐 G54: Login Sesión').item.json.access_token || '';\n} catch (e) {}\n\nreturn [{ json: {\n  post_id,\n  company_id,\n  platform,\n  style,\n  formato,\n  textoModo,\n  model,\n  current_status: post.status || 'aprobado',\n  client_idea_used: clientIdea ? clientIdea.slice(0, 100) : null,\n  hashtags_used: hashtagKeywords.slice(0, 150),\n  content_ref: contentRef.slice(0, 200),\n  image_url_template: imageUrl,\n  g54_access_token: g54AccessToken,\n}}];\n"
       }
     },
     {
@@ -71,8 +110,8 @@
       "name": "🌐 Pollinations: Generar Imagen",
       "type": "n8n-nodes-base.httpRequest",
       "position": [
-        860,
-        400
+        1300,
+        240
       ],
       "typeVersion": 4,
       "parameters": {
@@ -93,8 +132,8 @@
       "name": "✅ ¿Imagen generada?",
       "type": "n8n-nodes-base.if",
       "position": [
-        1080,
-        400
+        1520,
+        240
       ],
       "typeVersion": 2,
       "parameters": {
@@ -125,12 +164,12 @@
       "name": "🔗 Preparar URL Final",
       "type": "n8n-nodes-base.code",
       "position": [
-        1300,
-        320
+        1740,
+        160
       ],
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const inp = $('🎨 Construir Prompt').item.json;\nreturn [{ json: {\n  post_id:     inp.post_id,\n  company_id:  inp.company_id,\n  image_url:   inp.image_url_template,\n  agent_token: inp.agent_token\n}}];"
+        "jsCode": "const inp = $('🎨 Construir Prompt').item.json;\nlet finalUrl = inp.image_url_template; // fallback: URL externa de Pollinations\n\ntry {\n  const uploadResult = $('📤 G54: Subir Imagen').item.json;\n  if (uploadResult && uploadResult.ok && uploadResult.url) {\n    finalUrl = uploadResult.url; // preferido: imagen ya subida al storage de G54\n  }\n} catch (e) {\n  // El nodo de subida no corrió o falló — usar la URL de Pollinations tal cual\n}\n\nreturn [{ json: {\n  post_id:          inp.post_id,\n  company_id:       inp.company_id,\n  image_url:        finalUrl,\n  status:           inp.current_status || 'aprobado',\n  g54_access_token: inp.g54_access_token,\n}}];\n"
       }
     },
     {
@@ -138,19 +177,19 @@
       "name": "💾 Guardar imagen_url en G54",
       "type": "n8n-nodes-base.httpRequest",
       "position": [
-        1520,
-        320
+        1960,
+        160
       ],
       "typeVersion": 4.2,
       "parameters": {
         "method": "PUT",
-        "url": "=https://apigrowth.mdarthurdigital.com/api/rrss/posts/{{ $json.post_id }}/status",
+        "url": "={{ $('⚙️ Config Pollinations').item.json.G54_API_BASE }}/api/rrss/posts/{{ $json.post_id }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $json.agent_token }}"
+              "value": "={{ 'Bearer ' + $json.g54_access_token }}"
             }
           ]
         },
@@ -172,8 +211,8 @@
       "name": "✅ Responder OK",
       "type": "n8n-nodes-base.respondToWebhook",
       "position": [
-        1740,
-        320
+        2180,
+        160
       ],
       "typeVersion": 1,
       "parameters": {
@@ -186,8 +225,8 @@
       "name": "❌ Responder Error",
       "type": "n8n-nodes-base.respondToWebhook",
       "position": [
-        1300,
-        500
+        1740,
+        320
       ],
       "typeVersion": 1,
       "parameters": {
@@ -195,12 +234,126 @@
         "responseCode": 500,
         "responseBody": "={{ JSON.stringify({ ok: false, error: 'No se pudo generar imagen con Pollinations', post_id: $('🎨 Construir Prompt').item.json.post_id }) }}"
       }
+    },
+    {
+      "id": "g54-login",
+      "name": "🔐 G54: Login Sesión",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        420,
+        240
+      ],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Pollinations').item.json.G54_API_BASE }}/api/auth/login",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config Pollinations').item.json.G54_MASTER_EMAIL, password: $('⚙️ Config Pollinations').item.json.G54_MASTER_PASSWORD }) }}",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "g54-switch-company",
+      "name": "🏢 G54: Cambiar Empresa Activa",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        640,
+        240
+      ],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Pollinations').item.json.G54_API_BASE }}/api/auth/switch-company",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: Number($('🔔 Webhook: Generar Imagen').item.json.body.company_id || 1) }) }}",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "g54-channel-config",
+      "name": "🎨 G54: Obtener Config Canal",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        860,
+        240
+      ],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config Pollinations').item.json.G54_API_BASE }}/api/social-channels",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "g54-upload-image",
+      "name": "📤 G54: Subir Imagen",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1080,
+        400
+      ],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Pollinations').item.json.G54_API_BASE }}/api/images/upload",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🎨 Construir Prompt').item.json.g54_access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
-    "⚙️ Config Pollinations": {
-      "main": [[{ "node": "📋 Obtener Post G54", "type": "main", "index": 0 }]]
-    },
     "🔔 Webhook: Generar Imagen": {
       "main": [
         [
@@ -212,7 +365,51 @@
         ]
       ]
     },
+    "⚙️ Config Pollinations": {
+      "main": [
+        [
+          {
+            "node": "📋 Obtener Post G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "📋 Obtener Post G54": {
+      "main": [
+        [
+          {
+            "node": "🔐 G54: Login Sesión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔐 G54: Login Sesión": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa Activa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 G54: Cambiar Empresa Activa": {
+      "main": [
+        [
+          {
+            "node": "🎨 G54: Obtener Config Canal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎨 G54: Obtener Config Canal": {
       "main": [
         [
           {
@@ -249,7 +446,7 @@
       "main": [
         [
           {
-            "node": "🔗 Preparar URL Final",
+            "node": "📤 G54: Subir Imagen",
             "type": "main",
             "index": 0
           }
@@ -257,6 +454,17 @@
         [
           {
             "node": "❌ Responder Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 G54: Subir Imagen": {
+      "main": [
+        [
+          {
+            "node": "🔗 Preparar URL Final",
             "type": "main",
             "index": 0
           }
@@ -290,10 +498,12 @@
     "executionOrder": "v1"
   },
   "staticData": null,
+  "meta": null,
   "nodeGroups": [],
   "pinData": null,
-  "activeVersionId": "de8d64bf-ff1c-43b6-a987-5014d938dda4",
-  "versionCounter": 15,
+  "versionId": "a2d70e7a-ebb7-4613-b403-d7c1d49afdff",
+  "activeVersionId": "a2d70e7a-ebb7-4613-b403-d7c1d49afdff",
+  "versionCounter": 23,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "shared": [
@@ -316,12 +526,67 @@
       }
     }
   ],
+  "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-07-07T17:44:08.056Z",
-    "createdAt": "2026-07-07T17:44:08.056Z",
-    "versionId": "de8d64bf-ff1c-43b6-a987-5014d938dda4",
+    "updatedAt": "2026-07-13T17:30:19.341Z",
+    "createdAt": "2026-07-13T17:30:19.341Z",
+    "versionId": "a2d70e7a-ebb7-4613-b403-d7c1d49afdff",
     "workflowId": "1rsqmFabW5PjnlHy",
     "nodes": [
+      {
+        "id": "config-img",
+        "name": "⚙️ Config Pollinations",
+        "type": "n8n-nodes-base.set",
+        "position": [
+          200,
+          240
+        ],
+        "typeVersion": 3.4,
+        "parameters": {
+          "mode": "manual",
+          "assignments": {
+            "assignments": [
+              {
+                "id": "a1",
+                "name": "POLLINATIONS_API_KEY",
+                "value": "sk_jTxv2QAVHvffA9AFoPtSCuXARvaHg8pP",
+                "type": "string"
+              },
+              {
+                "id": "a2",
+                "name": "POLLINATIONS_BASE_URL",
+                "value": "https://image.pollinations.ai/prompt",
+                "type": "string"
+              },
+              {
+                "id": "a3",
+                "name": "POLLINATIONS_DEFAULT_MODEL",
+                "value": "flux",
+                "type": "string"
+              },
+              {
+                "id": "g1",
+                "name": "G54_API_BASE",
+                "value": "https://apigrowth.mdarthurdigital.com",
+                "type": "string"
+              },
+              {
+                "id": "g2",
+                "name": "G54_MASTER_EMAIL",
+                "value": "master@growth54.local",
+                "type": "string"
+              },
+              {
+                "id": "g3",
+                "name": "G54_MASTER_PASSWORD",
+                "value": "wx2026_master",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
       {
         "id": "webhook-img",
         "name": "🔔 Webhook: Generar Imagen",
@@ -358,12 +623,12 @@
         "name": "🎨 Construir Prompt",
         "type": "n8n-nodes-base.code",
         "position": [
-          640,
-          400
+          1080,
+          240
         ],
         "typeVersion": 2,
         "parameters": {
-          "jsCode": "const wb = $('🔔 Webhook: Generar Imagen').item.json;\nconst body = wb.body || wb;\n\nconst post_id    = String(body.post_id || '');\nconst company_id = String(body.company_id || '1');\nconst platform   = (body.platform || 'instagram').toLowerCase();\nconst style      = (body.style || 'fotografía').toLowerCase();\n\nconst postsRaw = $('📋 Obtener Post G54').item.json;\nconst postsArr = Array.isArray(postsRaw) ? postsRaw\n  : (postsRaw.data || postsRaw.posts || [postsRaw]);\n\nconst post = postsArr.find(p => String(p.id) === post_id || String(p.post_id) === post_id);\nif (!post) throw new Error(`Post ${post_id} not found (total: ${postsArr.length})`);\n\n// --- Extract post fields ---\nconst clientIdea = post.idea_cliente || post.client_idea || post.descripcion_imagen || '';\nconst hook       = post.hook || '';\nconst tema       = post.tema || '';\nconst copy       = platform === 'facebook' ? (post.copy_facebook || post.copy_instagram || '')\n                 : platform === 'linkedin' ? (post.copy_linkedin || post.copy_instagram || '')\n                 : (post.copy_instagram || '');\n\n// Extract hashtags → readable keywords\nconst hashtagMatches = copy.match(/#[\\w]+/g) || [];\nconst hashtagKeywords = hashtagMatches\n  .map(h => h.replace('#', '')\n    .replace(/([a-z])([A-Z])/g, '$1 $2')\n    .toLowerCase()\n  )\n  .join(', ');\n\nconst copyNarrative = copy.replace(/#[\\w]+/g, '').replace(/\\n+/g, ' ').trim().slice(0, 200);\n\n// --- Content reference (topic context) ---\nlet contentRef;\nif (clientIdea.trim()) {\n  contentRef = clientIdea.trim();\n  if (hashtagKeywords) contentRef += `, ${hashtagKeywords}`;\n} else {\n  const parts = [];\n  if (hook)            parts.push(hook);\n  if (tema)            parts.push(tema);\n  if (copyNarrative)   parts.push(copyNarrative);\n  if (hashtagKeywords) parts.push(hashtagKeywords);\n  contentRef = parts.filter(Boolean).join('. ');\n}\n\n// --- Business anchor — ALWAYS FIRST, dominates the scene ---\n// Pollinations weights the beginning of the prompt most heavily.\n// This forces the model to stay in the industrial crating/packaging world.\n// --- Config ---\nconst cfg = $('⚙️ Config Pollinations').item.json;\nconst apiKey   = cfg.POLLINATIONS_API_KEY;\nconst baseUrl  = cfg.POLLINATIONS_BASE_URL;\n// model: from webhook param > config default. Free models: flux, zimage, klein, nova-canvas\nconst model = (body.model || cfg.POLLINATIONS_DEFAULT_MODEL || 'flux').toLowerCase();\n\nconst businessAnchor = 'industrial wooden crates and packaging boxes in a Miami warehouse, wood crating company, stacked timber crates, export packaging, lumber and plywood construction';\n\n// --- Style instructions ---\nconst styleMap = {\n  'fotografía': 'sharp professional photograph, real-world industrial setting, natural warehouse lighting, high resolution DSLR, photorealistic, 4K, no CGI',\n  'fotografia': 'sharp professional photograph, real-world industrial setting, natural warehouse lighting, high resolution DSLR, photorealistic, 4K, no CGI',\n  'ilustración': 'clean flat digital illustration, vector art style, bold outlines, vibrant flat colors, professional graphic design',\n  'ilustracion': 'clean flat digital illustration, vector art style, bold outlines, vibrant flat colors, professional graphic design',\n  'minimalista': 'minimalist composition, clean background, single centered wooden crate or box, generous negative space, simple elegant layout',\n  'corporativo': 'professional industrial photography, warehouse environment, workers in hard hats and safety vests, organized loading dock, bright clean facility',\n  'vibrante':   'vivid saturated colors, dynamic diagonal composition, bold contrast, energetic visual impact, eye-catching social media style',\n  'oscuro':     'dramatic dark moody lighting, deep shadows, premium dark warehouse background, metallic and wood accents, sophisticated industrial aesthetic',\n};\nconst styleInstructions = styleMap[style] || styleMap['fotografía'];\n\n// --- Platform composition specs (format + layout, NOT subject matter) ---\nconst platformAesthetic = {\n  instagram: 'square 1:1 composition, centered subject, strong focal point filling 60% of frame, bold visual hierarchy, vivid balanced colors, mobile feed optimized',\n  facebook:  'wide 1.91:1 landscape composition, rule of thirds layout, subject on left or right third, breathing room on edges, clear horizon line, desktop and mobile feed optimized',\n  linkedin:  'wide landscape composition, clean organized layout, neutral-to-warm color palette, professional industrial tone, clear separation of foreground and background',\n};\nconst platformSpec = platformAesthetic[platform] || platformAesthetic.instagram;\n\n// --- Platform dimensions ---\nconst dims = {\n  instagram: {width: 1080, height: 1080},\n  facebook:  {width: 1200, height: 630},\n  linkedin:  {width: 1200, height: 627},\n};\nconst {width, height} = dims[platform] || dims.instagram;\n\n// --- Quality & negatives ---\nconst textQuality = 'any text or labels must be clean, sharp, legible and properly rendered';\n\nconst negatives = [\n  'no business portraits, no headshots, no stock photo people posing, no office environment',\n  'no distorted text, no garbled letters, no corrupted fonts, no illegible writing',\n  'no extra limbs, no deformed hands, no fused fingers, no broken anatomy',\n  'no impossible angles, no floating objects without shadow, no distorted perspective',\n  'no muddy textures, no inconsistent lighting direction',\n  'no cropped heads, no half-cut subjects, no unintended duplicates',\n  'no watermarks, no low resolution, no JPEG artifacts, no noise',\n  'never invent, create, fabricate or hallucinate a brand logo or emblem of any kind, no fictional or fake company logos, no made-up brand marks or insignias, absolutely no logo generation under any circumstance',\n].join(', ');\n\n// --- Final prompt ---\n// Order: business scene (dominant) → content topic → platform layout → style → text quality → negatives\nconst prompt = [\n  businessAnchor,\n  contentRef.slice(0, 300),\n  platformSpec,\n  styleInstructions,\n  textQuality,\n  negatives,\n].join(', ');\n\nconst promptEncoded = encodeURIComponent(prompt.slice(0, 1800));\n// image.pollinations.ai is free (no auth needed). gen.pollinations.ai requires pollen balance.\nconst imageUrl = `${baseUrl}/${promptEncoded}?model=${model}&width=${width}&height=${height}&nologo=true&seed=${Date.now()}`;\n\nreturn [{ json: {\n  post_id,\n  company_id,\n  platform,\n  style,\n  model,\n  client_idea_used: clientIdea ? clientIdea.slice(0, 100) : null,\n  hashtags_used: hashtagKeywords.slice(0, 150),\n  content_ref: contentRef.slice(0, 200),\n  image_url_template: imageUrl,\n  agent_token: 'g54_agent_produccion_2026'\n}}];"
+          "jsCode": "const wb = $('🔔 Webhook: Generar Imagen').item.json;\nconst body = wb.body || wb;\n\nconst post_id    = String(body.post_id || '');\nconst company_id = String(body.company_id || '1');\nconst platform   = (body.platform || 'instagram').toLowerCase();\n\nconst postsRaw = $('📋 Obtener Post G54').item.json;\nconst postsArr = Array.isArray(postsRaw) ? postsRaw\n  : (postsRaw.data || postsRaw.posts || [postsRaw]);\n\nconst post = postsArr.find(p => String(p.id) === post_id || String(p.post_id) === post_id);\nif (!post) throw new Error(`Post ${post_id} not found (total: ${postsArr.length})`);\n\n// --- Config de canal desde G54 (image_config por plataforma, si ya está configurado) ---\nlet channelConfig = null;\ntry {\n  const channelsResp = $('🎨 G54: Obtener Config Canal').item.json;\n  const channels = channelsResp.data || [];\n  const platformMap = { instagram: 'Instagram', facebook: 'Facebook', linkedin: 'LinkedIn' };\n  const wanted = platformMap[platform] || 'Instagram';\n  const match = channels.find(c => c.platform === wanted && c.image_config);\n  if (match) channelConfig = match.image_config;\n} catch (e) {\n  // Login o lectura de canal falló — seguimos con los defaults de siempre\n}\n\nconst style     = (channelConfig?.img_estilo || body.style || 'realista').toLowerCase();\nconst formato   = (channelConfig?.img_formato || '').toLowerCase();\nconst textoModo = (channelConfig?.img_texto_modo || 'sin_texto').toLowerCase();\n\n// --- Extract post fields ---\nconst clientIdea = post.idea_cliente || post.client_idea || post.descripcion_imagen || '';\nconst hook       = post.hook || '';\nconst tema       = post.tema || '';\nconst copy       = platform === 'facebook' ? (post.copy_facebook || post.copy_instagram || '')\n                 : platform === 'linkedin' ? (post.copy_linkedin || post.copy_instagram || '')\n                 : (post.copy_instagram || '');\n\nconst hashtagMatches = copy.match(/#[\\w]+/g) || [];\nconst hashtagKeywords = hashtagMatches\n  .map(h => h.replace('#', '')\n    .replace(/([a-z])([A-Z])/g, '$1 $2')\n    .toLowerCase()\n  )\n  .join(', ');\n\nconst copyNarrative = copy.replace(/#[\\w]+/g, '').replace(/\\n+/g, ' ').trim().slice(0, 200);\n\nlet contentRef;\nif (clientIdea.trim()) {\n  contentRef = clientIdea.trim();\n  if (hashtagKeywords) contentRef += `, ${hashtagKeywords}`;\n} else {\n  const parts = [];\n  if (hook)            parts.push(hook);\n  if (tema)            parts.push(tema);\n  if (copyNarrative)   parts.push(copyNarrative);\n  if (hashtagKeywords) parts.push(hashtagKeywords);\n  contentRef = parts.filter(Boolean).join('. ');\n}\n\nconst cfg = $('⚙️ Config Pollinations').item.json;\nconst baseUrl  = cfg.POLLINATIONS_BASE_URL;\nconst model = (body.model || cfg.POLLINATIONS_DEFAULT_MODEL || 'flux').toLowerCase();\n\nconst businessAnchor = 'industrial wooden crates and packaging boxes in a Miami warehouse, wood crating company, stacked timber crates, export packaging, lumber and plywood construction';\n\n// --- Style instructions: valores nuevos de G54 (img_estilo) + valores viejos por compatibilidad ---\nconst styleMap = {\n  'realista': 'sharp professional photograph, real-world industrial setting, natural warehouse lighting, high resolution DSLR, photorealistic, 4K, no CGI',\n  'humanos': 'professional industrial photography, warehouse environment, workers in hard hats and safety vests, organized loading dock, bright clean facility, people actively working',\n  '3d': '3D rendered scene, CGI render, three-dimensional modeled objects, studio lighting, clean render aesthetic, product visualization style',\n  'animado': 'clean flat digital illustration, vector art style, bold outlines, vibrant flat colors, professional graphic design, animated look',\n  'minimalista': 'minimalist composition, clean background, single centered wooden crate or box, generous negative space, simple elegant layout',\n  'artistico': 'artistic creative interpretation, painterly style, expressive brushwork feel, premium editorial look, sophisticated color grading',\n  'fotografía': 'sharp professional photograph, real-world industrial setting, natural warehouse lighting, high resolution DSLR, photorealistic, 4K, no CGI',\n  'fotografia': 'sharp professional photograph, real-world industrial setting, natural warehouse lighting, high resolution DSLR, photorealistic, 4K, no CGI',\n  'ilustración': 'clean flat digital illustration, vector art style, bold outlines, vibrant flat colors, professional graphic design',\n  'ilustracion': 'clean flat digital illustration, vector art style, bold outlines, vibrant flat colors, professional graphic design',\n  'corporativo': 'professional industrial photography, warehouse environment, workers in hard hats and safety vests, organized loading dock, bright clean facility',\n  'vibrante':   'vivid saturated colors, dynamic diagonal composition, bold contrast, energetic visual impact, eye-catching social media style',\n  'oscuro':     'dramatic dark moody lighting, deep shadows, premium dark warehouse background, metallic and wood accents, sophisticated industrial aesthetic',\n};\nconst styleInstructions = styleMap[style] || styleMap['realista'];\n\nconst platformAesthetic = {\n  instagram: 'centered subject, strong focal point filling 60% of frame, bold visual hierarchy, vivid balanced colors, mobile feed optimized',\n  facebook:  'rule of thirds layout, subject on left or right third, breathing room on edges, clear horizon line, desktop and mobile feed optimized',\n  linkedin:  'clean organized layout, neutral-to-warm color palette, professional industrial tone, clear separation of foreground and background',\n};\nconst platformSpec = platformAesthetic[platform] || platformAesthetic.instagram;\n\n// --- Dimensiones: img_formato de G54 tiene prioridad sobre el default por plataforma ---\nconst formatoDims = {\n  'cuadrada':   { width: 1080, height: 1080, label: 'square 1:1 composition' },\n  'vertical':   { width: 1080, height: 1350, label: 'vertical 4:5 composition' },\n  'horizontal': { width: 1920, height: 1080, label: 'wide horizontal 16:9 composition' },\n};\nconst platformDefaultDims = {\n  instagram: { width: 1080, height: 1080, label: 'square 1:1 composition' },\n  facebook:  { width: 1200, height: 630,  label: 'wide 1.91:1 landscape composition' },\n  linkedin:  { width: 1200, height: 627,  label: 'wide landscape composition' },\n};\nconst { width, height, label: formatLabel } = formatoDims[formato] || platformDefaultDims[platform] || platformDefaultDims.instagram;\n\n// --- Modo de texto (img_texto_modo de G54) ---\nconst textoInstructions = {\n  'sin_texto': 'absolutely no text, no words, no letters, no typography, no captions rendered in the image',\n  'solo_titulo': `include the title \"${hook || tema}\" as clean bold legible text in the image`,\n  'titulo_subtitulo': `include the title \"${hook || tema}\" as clean bold legible text with a smaller subtitle in the image`,\n  'titulo_sub_detalles': `include the title \"${hook || tema}\" as clean bold legible text with supporting detail text in the image`,\n  'libre': 'any text or labels must be clean, sharp, legible and properly rendered',\n};\nconst textQuality = textoInstructions[textoModo] || textoInstructions['sin_texto'];\n\nconst negatives = [\n  'no business portraits, no headshots, no stock photo people posing, no office environment',\n  'no distorted text, no garbled letters, no corrupted fonts, no illegible writing',\n  'no extra limbs, no deformed hands, no fused fingers, no broken anatomy',\n  'no impossible angles, no floating objects without shadow, no distorted perspective',\n  'no muddy textures, no inconsistent lighting direction',\n  'no cropped heads, no half-cut subjects, no unintended duplicates',\n  'no watermarks, no low resolution, no JPEG artifacts, no noise',\n  'never invent, create, fabricate or hallucinate a brand logo or emblem of any kind, no fictional or fake company logos, no made-up brand marks or insignias, absolutely no logo generation under any circumstance',\n].join(', ');\n\nconst prompt = [\n  businessAnchor,\n  contentRef.slice(0, 300),\n  formatLabel,\n  platformSpec,\n  styleInstructions,\n  textQuality,\n  negatives,\n].join(', ');\n\nconst promptEncoded = encodeURIComponent(prompt.slice(0, 1800));\nconst imageUrl = `${baseUrl}/${promptEncoded}?model=${model}&width=${width}&height=${height}&nologo=true&seed=${Date.now()}`;\n\n// Token de sesión G54 (login) — necesario para subir la imagen y guardar el post; el AGENT_TOKEN no sirve en estas rutas\nlet g54AccessToken = '';\ntry {\n  g54AccessToken = $('🔐 G54: Login Sesión').item.json.access_token || '';\n} catch (e) {}\n\nreturn [{ json: {\n  post_id,\n  company_id,\n  platform,\n  style,\n  formato,\n  textoModo,\n  model,\n  current_status: post.status || 'aprobado',\n  client_idea_used: clientIdea ? clientIdea.slice(0, 100) : null,\n  hashtags_used: hashtagKeywords.slice(0, 150),\n  content_ref: contentRef.slice(0, 200),\n  image_url_template: imageUrl,\n  g54_access_token: g54AccessToken,\n}}];\n"
         }
       },
       {
@@ -371,8 +636,8 @@
         "name": "🌐 Pollinations: Generar Imagen",
         "type": "n8n-nodes-base.httpRequest",
         "position": [
-          860,
-          400
+          1300,
+          240
         ],
         "typeVersion": 4,
         "parameters": {
@@ -393,8 +658,8 @@
         "name": "✅ ¿Imagen generada?",
         "type": "n8n-nodes-base.if",
         "position": [
-          1080,
-          400
+          1520,
+          240
         ],
         "typeVersion": 2,
         "parameters": {
@@ -425,12 +690,12 @@
         "name": "🔗 Preparar URL Final",
         "type": "n8n-nodes-base.code",
         "position": [
-          1300,
-          320
+          1740,
+          160
         ],
         "typeVersion": 2,
         "parameters": {
-          "jsCode": "const inp = $('🎨 Construir Prompt').item.json;\nreturn [{ json: {\n  post_id:     inp.post_id,\n  company_id:  inp.company_id,\n  image_url:   inp.image_url_template,\n  agent_token: inp.agent_token\n}}];"
+          "jsCode": "const inp = $('🎨 Construir Prompt').item.json;\nlet finalUrl = inp.image_url_template; // fallback: URL externa de Pollinations\n\ntry {\n  const uploadResult = $('📤 G54: Subir Imagen').item.json;\n  if (uploadResult && uploadResult.ok && uploadResult.url) {\n    finalUrl = uploadResult.url; // preferido: imagen ya subida al storage de G54\n  }\n} catch (e) {\n  // El nodo de subida no corrió o falló — usar la URL de Pollinations tal cual\n}\n\nreturn [{ json: {\n  post_id:          inp.post_id,\n  company_id:       inp.company_id,\n  image_url:        finalUrl,\n  status:           inp.current_status || 'aprobado',\n  g54_access_token: inp.g54_access_token,\n}}];\n"
         }
       },
       {
@@ -438,19 +703,19 @@
         "name": "💾 Guardar imagen_url en G54",
         "type": "n8n-nodes-base.httpRequest",
         "position": [
-          1520,
-          320
+          1960,
+          160
         ],
         "typeVersion": 4.2,
         "parameters": {
           "method": "PUT",
-          "url": "=https://apigrowth.mdarthurdigital.com/api/rrss/posts/{{ $json.post_id }}/status",
+          "url": "={{ $('⚙️ Config Pollinations').item.json.G54_API_BASE }}/api/rrss/posts/{{ $json.post_id }}",
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "={{ 'Bearer ' + $json.agent_token }}"
+                "value": "={{ 'Bearer ' + $json.g54_access_token }}"
               }
             ]
           },
@@ -472,8 +737,8 @@
         "name": "✅ Responder OK",
         "type": "n8n-nodes-base.respondToWebhook",
         "position": [
-          1740,
-          320
+          2180,
+          160
         ],
         "typeVersion": 1,
         "parameters": {
@@ -486,8 +751,8 @@
         "name": "❌ Responder Error",
         "type": "n8n-nodes-base.respondToWebhook",
         "position": [
-          1300,
-          500
+          1740,
+          320
         ],
         "typeVersion": 1,
         "parameters": {
@@ -495,10 +760,138 @@
           "responseCode": 500,
           "responseBody": "={{ JSON.stringify({ ok: false, error: 'No se pudo generar imagen con Pollinations', post_id: $('🎨 Construir Prompt').item.json.post_id }) }}"
         }
+      },
+      {
+        "id": "g54-login",
+        "name": "🔐 G54: Login Sesión",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          420,
+          240
+        ],
+        "typeVersion": 4.2,
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config Pollinations').item.json.G54_API_BASE }}/api/auth/login",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config Pollinations').item.json.G54_MASTER_EMAIL, password: $('⚙️ Config Pollinations').item.json.G54_MASTER_PASSWORD }) }}",
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "g54-switch-company",
+        "name": "🏢 G54: Cambiar Empresa Activa",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          640,
+          240
+        ],
+        "typeVersion": 4.2,
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config Pollinations').item.json.G54_API_BASE }}/api/auth/switch-company",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ company_id: Number($('🔔 Webhook: Generar Imagen').item.json.body.company_id || 1) }) }}",
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "g54-channel-config",
+        "name": "🎨 G54: Obtener Config Canal",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          860,
+          240
+        ],
+        "typeVersion": 4.2,
+        "parameters": {
+          "method": "GET",
+          "url": "={{ $('⚙️ Config Pollinations').item.json.G54_API_BASE }}/api/social-channels",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "g54-upload-image",
+        "name": "📤 G54: Subir Imagen",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          1080,
+          400
+        ],
+        "typeVersion": 4.2,
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config Pollinations').item.json.G54_API_BASE }}/api/images/upload",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🎨 Construir Prompt').item.json.g54_access_token }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "multipart-form-data",
+          "bodyParameters": {
+            "parameters": [
+              {
+                "parameterType": "formBinaryData",
+                "name": "file",
+                "inputDataFieldName": "data"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
       }
     ],
     "connections": {
       "🔔 Webhook: Generar Imagen": {
+        "main": [
+          [
+            {
+              "node": "⚙️ Config Pollinations",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "⚙️ Config Pollinations": {
         "main": [
           [
             {
@@ -510,6 +903,39 @@
         ]
       },
       "📋 Obtener Post G54": {
+        "main": [
+          [
+            {
+              "node": "🔐 G54: Login Sesión",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔐 G54: Login Sesión": {
+        "main": [
+          [
+            {
+              "node": "🏢 G54: Cambiar Empresa Activa",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🏢 G54: Cambiar Empresa Activa": {
+        "main": [
+          [
+            {
+              "node": "🎨 G54: Obtener Config Canal",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🎨 G54: Obtener Config Canal": {
         "main": [
           [
             {
@@ -546,7 +972,7 @@
         "main": [
           [
             {
-              "node": "🔗 Preparar URL Final",
+              "node": "📤 G54: Subir Imagen",
               "type": "main",
               "index": 0
             }
@@ -554,6 +980,17 @@
           [
             {
               "node": "❌ Responder Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📤 G54: Subir Imagen": {
+        "main": [
+          [
+            {
+              "node": "🔗 Preparar URL Final",
               "type": "main",
               "index": 0
             }
@@ -590,18 +1027,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-07-07T17:44:08.204Z",
-        "id": 1920,
+        "createdAt": "2026-07-13T17:30:19.548Z",
+        "id": 2011,
         "workflowId": "1rsqmFabW5PjnlHy",
-        "versionId": "de8d64bf-ff1c-43b6-a987-5014d938dda4",
+        "versionId": "a2d70e7a-ebb7-4613-b403-d7c1d49afdff",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-07-07T17:44:08.170Z",
-        "id": 1919,
+        "createdAt": "2026-07-13T17:30:19.510Z",
+        "id": 2010,
         "workflowId": "1rsqmFabW5PjnlHy",
-        "versionId": "de8d64bf-ff1c-43b6-a987-5014d938dda4",
+        "versionId": "a2d70e7a-ebb7-4613-b403-d7c1d49afdff",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
