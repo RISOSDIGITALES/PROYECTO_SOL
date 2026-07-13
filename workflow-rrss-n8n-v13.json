@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-26T16:57:24.889Z",
+  "updatedAt": "2026-07-13T17:55:11.142Z",
   "createdAt": "2026-05-15T15:53:30.951Z",
   "id": "wyO1f93A66imn9qw",
   "name": "RRSS Automation — Crating Express v1.3 (G54)",
@@ -122,7 +122,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ====================================================\n// Preparar Contexto para IA — G54 Field Mapping\n// G54 API fields:\n//   company: name, description, value_proposition, base_city, website, emails[], phones[]\n//   products: name, description, keywords[]\n//   ideas: id, topic, keyword, platform, description\n//   estrategia: objetivo, audiencia, tono, cta_principal, embudo, pilares[]\n// ====================================================\n\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\n// G54 wraps in .data, Airtable uses .fields\nconst empresa = empresaRaw.data || empresaRaw.fields || empresaRaw || {};\n\nconst productosRaw = $('📦 Obtener Servicios Activos').item.json;\n// G54: { company_id, data: [{id, name, description, keywords[]}] }\nconst productosData = productosRaw.data || productosRaw.items || productosRaw.records || (Array.isArray(productosRaw) ? productosRaw : []);\n\n// G54 ideas response: { data: [{id, topic, keyword, platform, description}] }\nconst temaRaw = $('📅 Obtener Próximo Tema Semanal').item.json;\nconst temaList = temaRaw.data || temaRaw.items || temaRaw.records || (Array.isArray(temaRaw) ? temaRaw : [temaRaw]);\n// Use idea_id from webhook if provided (G54 sends it in mode:post)\nconst webhookBody = $('🔔 Webhook G54').item?.json?.body || $('🔔 Webhook G54').item?.json || {};\nconst webhookIdeaId = webhookBody.idea_id;\nconst temaItem = webhookIdeaId\n  ? (temaList.find(t => String(t.id) === String(webhookIdeaId)) || temaList[0])\n  : (Array.isArray(temaList) ? temaList[0] : temaList) || {};\nconst tema = temaItem.fields || temaItem || {};\nconst temaId = temaItem.id || temaItem.social_idea_id || temaItem.tema_id || null;\n\n// Estrategia (continueOnFail — null if not configured yet)\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\n// Build product/service summary — handles G54 (name/description) and Airtable fallback\nconst servicios = productosData\n  .filter(p => (p.fields || p).is_active !== false)\n  .map(p => {\n    const f = p.fields || p;\n    const nombre = f.name || f.nombre || f['Nombre de Servicio'] || '';\n    const desc   = f.description || f.descripcion || f['Descripción comercial'] || '';\n    const kws    = Array.isArray(f.keywords) ? f.keywords.slice(0,3).join(', ') : '';\n    return `- ${nombre}: ${desc}${kws ? ' [' + kws + ']' : ''}`.slice(0, 220);\n  })\n  .join('\\n');\n\nreturn [{\n  json: {\n    // ---- Empresa (G54 field names first, Airtable fallback) ----\n    empresa_nombre:          empresa.name || empresa.nombre_empresa || empresa['\\ufeffnombre_empresa'] || '',\n    empresa_descripcion:     empresa.description || empresa.descripcion_corta || '',\n    empresa_propuesta_valor: empresa.value_proposition || empresa.propuesta_valor || '',\n    empresa_ciudad:          empresa.base_city || empresa.ciudad_base || empresa['ciudad base'] || 'Miami, FL',\n    empresa_web:             empresa.website || empresa.sitio_web || 'cratingexpress.com',\n    empresa_telefono:        (empresa.phones || [])[0] || empresa.telefono || '',\n    empresa_email:           (empresa.emails || [])[0] || 'cratingexpress01@gmail.com',\n    empresa_geografia:       empresa.geography || empresa.coverage || 'Miami / South Florida',\n    empresa_competidores:    (empresa.competitors_known || []).slice(0,3).map(c => c.name).join(', '),\n    servicios_resumen:       servicios,\n    // ---- Tema / Idea G54 ----\n    tema_id:                 temaId,\n    tema_texto:              tema.topic || tema.tema || tema['Tema'] || '',\n    tema_descripcion:        tema.fecha_propuesta || '',\n    tema_palabras_clave:     tema.keyword || tema.palabras_clave || '',\n    keyword_principal:       tema.keyword || tema.keyword_principal || '',\n    tema_semana:             tema.week || tema.semana || tema['Semana'] || 0,\n    tema_plataforma:         tema.platform || tema.plataforma || 'Instagram',\n    fecha_post:              new Date().toLocaleDateString('es-US', {timeZone: 'America/New_York'}),\n    // ---- Estrategia G54 ----\n    estrategia_objetivo:     estrategia.objetivo || estrategia.primary_goal || empresa.primary_goal || '',\n    estrategia_audiencia:    estrategia.audiencia || estrategia.target_market || empresa.target_market || '',\n    estrategia_tono:         estrategia.tono || 'profesional, directo y humano',\n    estrategia_cta:          estrategia.cta_principal || 'Solicitar cotización: cratingexpress.com/request-a-quote/',\n    estrategia_embudo:       estrategia.embudo || 'TOFU-MOFU',\n    estrategia_pilares:      Array.isArray(estrategia.pilares) ? estrategia.pilares.join(', ') : (estrategia.pilares || 'embalaje industrial, exportación, logística Miami'),\n    // ---- Imagen (G54 provee la URL — subida por usuario o generada por Image AI) ----\n    imagen_url:              tema.imagen_url || tema.image_url || null,\n    imagen_specs:            tema.imagen_specs || tema.image_specs || '',\n  }\n}];\n"
+        "jsCode": "// ====================================================\n// Preparar Contexto para IA — G54 Field Mapping\n// G54 API fields:\n//   company: name, description, value_proposition, base_city, website, emails[], phones[]\n//   products: name, description, keywords[]\n//   ideas: id, topic, keyword, platform, description\n//   estrategia: objetivo, audiencia, tono, cta_principal, embudo, pilares[]\n// ====================================================\n\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\n// G54 wraps in .data, Airtable uses .fields\nconst empresa = empresaRaw.data || empresaRaw.fields || empresaRaw || {};\n\nconst productosRaw = $('📦 Obtener Servicios Activos').item.json;\n// G54: { company_id, data: [{id, name, description, keywords[]}] }\nconst productosData = productosRaw.data || productosRaw.items || productosRaw.records || (Array.isArray(productosRaw) ? productosRaw : []);\n\n// G54 ideas response: { data: [{id, topic, keyword, platform, description}] }\nconst temaRaw = $('📅 Obtener Próximo Tema Semanal').item.json;\nconst temaList = temaRaw.data || temaRaw.items || temaRaw.records || (Array.isArray(temaRaw) ? temaRaw : [temaRaw]);\n\n// Ideas que ya tienen un post generado (cualquier estado: borrador/aprobado/publicado) — para no volver a generar el mismo tema\nlet usedIdeaIds = new Set();\ntry {\n  const postsRaw = $('📋 Obtener Posts Existentes (G54)').item.json;\n  const postsList = postsRaw.data || (Array.isArray(postsRaw) ? postsRaw : []);\n  usedIdeaIds = new Set(postsList.map(p => p.social_idea_id).filter(id => id !== null && id !== undefined));\n} catch (e) {\n  // Si la lectura de posts falla (login caído, etc.), seguimos sin filtrar — mismo comportamiento de antes\n}\n\n// Use idea_id from webhook if provided (G54 sends it in mode:post)\nconst webhookBody = $('🔔 Webhook G54').item?.json?.body || $('🔔 Webhook G54').item?.json || {};\nconst webhookIdeaId = webhookBody.idea_id;\nconst temaList2 = Array.isArray(temaList) ? temaList : [temaList];\nconst temaItem = webhookIdeaId\n  ? (temaList2.find(t => String(t.id) === String(webhookIdeaId)) || temaList2[0])\n  : (temaList2.find(t => !usedIdeaIds.has(t.id)) || temaList2[0]) || {};\nconst tema = temaItem.fields || temaItem || {};\nconst temaId = temaItem.id || temaItem.social_idea_id || temaItem.tema_id || null;\n\n// Estrategia (continueOnFail — null if not configured yet)\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\n// Build product/service summary — handles G54 (name/description) and Airtable fallback\nconst servicios = productosData\n  .filter(p => (p.fields || p).is_active !== false)\n  .map(p => {\n    const f = p.fields || p;\n    const nombre = f.name || f.nombre || f['Nombre de Servicio'] || '';\n    const desc   = f.description || f.descripcion || f['Descripción comercial'] || '';\n    const kws    = Array.isArray(f.keywords) ? f.keywords.slice(0,3).join(', ') : '';\n    return `- ${nombre}: ${desc}${kws ? ' [' + kws + ']' : ''}`.slice(0, 220);\n  })\n  .join('\\n');\n\nreturn [{\n  json: {\n    // ---- Empresa (G54 field names first, Airtable fallback) ----\n    empresa_nombre:          empresa.name || empresa.nombre_empresa || empresa['\\ufeffnombre_empresa'] || '',\n    empresa_descripcion:     empresa.description || empresa.descripcion_corta || '',\n    empresa_propuesta_valor: empresa.value_proposition || empresa.propuesta_valor || '',\n    empresa_ciudad:          empresa.base_city || empresa.ciudad_base || empresa['ciudad base'] || 'Miami, FL',\n    empresa_web:             empresa.website || empresa.sitio_web || 'cratingexpress.com',\n    empresa_telefono:        (empresa.phones || [])[0] || empresa.telefono || '',\n    empresa_email:           (empresa.emails || [])[0] || 'cratingexpress01@gmail.com',\n    empresa_geografia:       empresa.geography || empresa.coverage || 'Miami / South Florida',\n    empresa_competidores:    (empresa.competitors_known || []).slice(0,3).map(c => c.name).join(', '),\n    servicios_resumen:       servicios,\n    // ---- Tema / Idea G54 ----\n    tema_id:                 temaId,\n    tema_texto:              tema.topic || tema.tema || tema['Tema'] || '',\n    tema_descripcion:        tema.fecha_propuesta || '',\n    tema_palabras_clave:     tema.keyword || tema.palabras_clave || '',\n    keyword_principal:       tema.keyword || tema.keyword_principal || '',\n    tema_semana:             tema.week || tema.semana || tema['Semana'] || 0,\n    tema_plataforma:         tema.platform || tema.plataforma || 'Instagram',\n    fecha_post:              new Date().toLocaleDateString('es-US', {timeZone: 'America/New_York'}),\n    // ---- Estrategia G54 ----\n    estrategia_objetivo:     estrategia.objetivo || estrategia.primary_goal || empresa.primary_goal || '',\n    estrategia_audiencia:    estrategia.audiencia || estrategia.target_market || empresa.target_market || '',\n    estrategia_tono:         estrategia.tono || 'profesional, directo y humano',\n    estrategia_cta:          estrategia.cta_principal || 'Solicitar cotización: cratingexpress.com/request-a-quote/',\n    estrategia_embudo:       estrategia.embudo || 'TOFU-MOFU',\n    estrategia_pilares:      Array.isArray(estrategia.pilares) ? estrategia.pilares.join(', ') : (estrategia.pilares || 'embalaje industrial, exportación, logística Miami'),\n    // ---- Imagen (G54 provee la URL — subida por usuario o generada por Image AI) ----\n    imagen_url:              tema.imagen_url || tema.image_url || null,\n    imagen_specs:            tema.imagen_specs || tema.image_specs || '',\n  }\n}];\n"
       },
       "id": "preparar-contexto",
       "name": "🔧 Preparar Contexto para IA",
@@ -290,7 +290,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_AGENT_TOKEN }}"
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
             },
             {
               "name": "Accept",
@@ -321,67 +321,6 @@
     {
       "parameters": {
         "assignments": {
-          "assignments": []
-        },
-        "options": {}
-      },
-      "id": "actualizar-urls-airtable",
-      "name": "🔗 [Skip] Actualizar URLs",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        5904,
-        304
-      ]
-    },
-    {
-      "parameters": {
-        "url": "={{ $json.contentUrl }}",
-        "options": {}
-      },
-      "id": "descargar-imagen-png",
-      "name": "⬇️ Descargar Imagen PNG",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        5472,
-        304
-      ]
-    },
-    {
-      "parameters": {
-        "name": "={{ 'post_semana_' + $('🔍 Parsear Versiones Inglés').item.json.tema_semana + '.png' }}",
-        "driveId": {
-          "__rl": true,
-          "value": "MyDrive",
-          "mode": "list",
-          "cachedResultName": "My Drive"
-        },
-        "folderId": {
-          "__rl": true,
-          "value": "10A-FlyJeHtO6Fi50o3uzabr9LseqIH1f",
-          "mode": "id"
-        },
-        "options": {}
-      },
-      "id": "subir-google-drive",
-      "name": "📁 Subir a Google Drive",
-      "type": "n8n-nodes-base.googleDrive",
-      "typeVersion": 3,
-      "position": [
-        5680,
-        304
-      ],
-      "credentials": {
-        "googleDriveOAuth2Api": {
-          "id": "5UKwJtdnQeutQ6mg",
-          "name": "Google Drive account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "assignments": {
           "assignments": [
             {
               "id": "imagen-url",
@@ -401,264 +340,6 @@
         3696,
         304
       ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://www.googleapis.com/drive/v3/files/134-ojOjBOKq0tNSqJL7paOdslEcwHeURYbvfVoQSTYk/copy",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "oAuth2Api",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\"name\": {{ JSON.stringify('Post ' + $('🔍 Parsear Versiones Inglés').item.json.tema_semana + ' - ' + $('🔍 Parsear Versiones Inglés').item.json.tema_texto) }}}",
-        "options": {}
-      },
-      "id": "slides-copiar-template",
-      "name": "📋 Slides: Copiar Template",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        4064,
-        304
-      ],
-      "credentials": {
-        "oAuth2Api": {
-          "id": "7t2xPBRoZ9Zn8Xys",
-          "name": "SEARCH KEYWORDS"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "url": "={{ 'https://slides.googleapis.com/v1/presentations/' + $('📋 Slides: Copiar Template').item.json.id }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "oAuth2Api",
-        "options": {}
-      },
-      "id": "slides-obtener-estructura",
-      "name": "📄 Slides: Obtener Estructura",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        4464,
-        304
-      ],
-      "credentials": {
-        "oAuth2Api": {
-          "id": "7t2xPBRoZ9Zn8Xys",
-          "name": "SEARCH KEYWORDS"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const estructura = $input.first().json;\nconst parsear = $('🔍 Parsear Versiones Inglés').item.json;\nconst wpItem = $('🖼️ Obtener URL de Imagen').first().json;\nconst presentacionId = $('📋 Slides: Copiar Template').item.json.id;\n\nconst slideId = estructura.slides?.[0]?.objectId || 'p1';\nconst pageElements = estructura.slides?.[0]?.pageElements || [];\n\nconst wpImageUrl = wpItem?.imagen_url || null;\nconst titulo = parsear.texto_canva_titulo_en || parsear.texto_canva_titulo || 'Post Title';\n\n// TEXT requests\nconst textRequests = [\n  { replaceAllText: { containsText: { text: '[titulo_post]', matchCase: true }, replaceText: titulo } },\n  { replaceAllText: { containsText: { text: '[descripcion_post]', matchCase: true }, replaceText: parsear.texto_canva_subtitulo_en || parsear.texto_canva_subtitulo || 'Post description' } }\n];\n\nconst titleShape = pageElements.find(el =>\n  (el.shape?.text?.textElements || []).some(te => (te.textRun?.content || '').includes('[titulo_post]'))\n);\nif (titleShape) {\n  let fontSize = 52;\n  if (titulo.length > 15) fontSize = 40;\n  if (titulo.length > 22) fontSize = 32;\n  if (titulo.length > 30) fontSize = 26;\n  textRequests.push({\n    updateTextStyle: {\n      objectId: titleShape.objectId,\n      textRange: { type: 'ALL' },\n      style: { fontSize: { magnitude: fontSize, unit: 'PT' } },\n      fields: 'fontSize'\n    }\n  });\n}\n\n// IMAGE: use replaceImage on the existing image element in the template\nlet imageRequest = null;\nif (wpImageUrl) {\n  const imageElement = pageElements.find(el => el.image !== undefined);\n  if (imageElement) {\n    imageRequest = {\n      requests: [{\n        replaceImage: {\n          imageObjectId: imageElement.objectId,\n          url: wpImageUrl,\n          imageReplaceMethod: 'CENTER_CROP'\n        }\n      }]\n    };\n  }\n}\n\nreturn [{ json: { presentacionId, textRequests, imageRequest, wpImageUrl, titulo, subtitulo: parsear.texto_canva_subtitulo } }];\n"
-      },
-      "id": "slides-preparar-reemplazo",
-      "name": "🔧 Slides: Preparar Reemplazo",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        4704,
-        304
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ 'https://slides.googleapis.com/v1/presentations/' + $('📋 Slides: Copiar Template').item.json.id + ':batchUpdate' }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "oAuth2Api",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ requests: $json.textRequests }) }}",
-        "options": {}
-      },
-      "id": "slides-reemplazar-todo",
-      "name": "✏️ Slides: Reemplazar Todo",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        4864,
-        304
-      ],
-      "credentials": {
-        "oAuth2Api": {
-          "id": "7t2xPBRoZ9Zn8Xys",
-          "name": "SEARCH KEYWORDS"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "url": "={{ 'https://slides.googleapis.com/v1/presentations/' + $('📋 Slides: Copiar Template').item.json.id + '/pages/p1/thumbnail?thumbnailProperties.thumbnailSize=LARGE' }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "oAuth2Api",
-        "options": {}
-      },
-      "id": "slides-obtener-thumbnail",
-      "name": "🖼️ Slides: Obtener Thumbnail",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        5264,
-        304
-      ],
-      "credentials": {
-        "oAuth2Api": {
-          "id": "7t2xPBRoZ9Zn8Xys",
-          "name": "SEARCH KEYWORDS"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": []
-        },
-        "options": {}
-      },
-      "id": "guardar-resultados-airtable",
-      "name": "📊 [Skip] Guardar Resultados",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        6352,
-        320
-      ]
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": []
-        },
-        "options": {}
-      },
-      "id": "preparar-airtable-json",
-      "name": "🛠️ [Skip] Preparar JSON",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        6128,
-        320
-      ]
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": []
-        },
-        "options": {}
-      },
-      "id": "patch-preview-url",
-      "name": "📎 [Skip] Guardar URL Preview",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        6544,
-        320
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ 'https://slides.googleapis.com/v1/presentations/' + $('🔧 Slides: Preparar Reemplazo').item.json.presentacionId + ':batchUpdate' }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "oAuth2Api",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {}
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($('🔧 Slides: Preparar Reemplazo').item.json.imageRequest) }}",
-        "options": {}
-      },
-      "id": "slides-reemplazar-imagen",
-      "name": "🖼️ Slides: Reemplazar Imagen",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        5056,
-        304
-      ],
-      "credentials": {
-        "oAuth2Api": {
-          "id": "7t2xPBRoZ9Zn8Xys",
-          "name": "SEARCH KEYWORDS"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": []
-        },
-        "options": {}
-      },
-      "id": "wp-seleccionar-imagen",
-      "name": "🖼️ [Skip] WP Seleccionar",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        3888,
-        304
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ 'https://www.googleapis.com/drive/v3/files/' + $('📋 Slides: Copiar Template').item.json.id + '/permissions' }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "oAuth2Api",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {}
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "{\"role\": \"reader\", \"type\": \"anyone\"}",
-        "options": {}
-      },
-      "id": "share-slides-451479c1",
-      "name": "📢 Slides: Compartir Público",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        4288,
-        304
-      ],
-      "credentials": {
-        "oAuth2Api": {
-          "id": "7t2xPBRoZ9Zn8Xys",
-          "name": "SEARCH KEYWORDS"
-        }
-      },
-      "continueOnFail": true
     },
     {
       "parameters": {
@@ -685,7 +366,7 @@
             {
               "id": "g54-company-id",
               "name": "G54_COMPANY_ID",
-              "value": "1",
+              "value": "={{ $('🔔 Webhook G54').item.json.body.company_id || '1' }}",
               "type": "string"
             },
             {
@@ -698,6 +379,18 @@
               "id": "groq-key",
               "name": "GROQ_API_KEY",
               "value": "={{ $vars.GROQ_API_KEY }}",
+              "type": "string"
+            },
+            {
+              "id": "g54-master-email",
+              "name": "G54_MASTER_EMAIL",
+              "value": "master@growth54.local",
+              "type": "string"
+            },
+            {
+              "id": "g54-master-pass",
+              "name": "G54_MASTER_PASSWORD",
+              "value": "REDACTED_G54_MASTER_PASSWORD",
               "type": "string"
             }
           ]
@@ -731,21 +424,6 @@
       "webhookId": "72f3bfda-c352-455b-8e4a-cccbcab00981"
     },
     {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{\"ok\": true, \"workflow\": \"rrss_automation\", \"company_id\": \"={{ $json.company_id }}\", \"status\": \"iniciado\"}",
-        "options": {}
-      },
-      "id": "respond-g54-rrss",
-      "name": "📤 Responder Webhook G54",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [
-        288,
-        144
-      ]
-    },
-    {
       "id": "obtener-estrategia-g54",
       "name": "🎯 Obtener Estrategia RRSS",
       "type": "n8n-nodes-base.httpRequest",
@@ -772,6 +450,87 @@
         },
         "options": {}
       }
+    },
+    {
+      "id": "g54-login-content-ai",
+      "name": "🔐 G54: Login Sesión",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        3280,
+        220
+      ],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/auth/login",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config Growth54').item.json.G54_MASTER_EMAIL, password: $('⚙️ Config Growth54').item.json.G54_MASTER_PASSWORD }) }}",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "g54-switch-company-content-ai",
+      "name": "🏢 G54: Cambiar Empresa Activa",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        3384,
+        220
+      ],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/auth/switch-company",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: Number($('⚙️ Config Growth54').item.json.G54_COMPANY_ID || 1) }) }}",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "g54-check-existing-posts",
+      "name": "📋 Obtener Posts Existentes (G54)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        3488,
+        220
+      ],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/rrss/posts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -824,7 +583,7 @@
       "main": [
         [
           {
-            "node": "🔄 Tema → En Proceso",
+            "node": "🤖 Generar Post en Español",
             "type": "main",
             "index": 0
           }
@@ -882,17 +641,6 @@
         ]
       ]
     },
-    "🔄 Tema → En Proceso": {
-      "main": [
-        [
-          {
-            "node": "🤖 Generar Post en Español",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "💾 Crear Registro en G54": {
       "main": [
         []
@@ -913,7 +661,7 @@
       "main": [
         [
           {
-            "node": "🎯 Obtener Estrategia RRSS",
+            "node": "🔐 G54: Login Sesión",
             "type": "main",
             "index": 0
           }
@@ -941,6 +689,39 @@
           }
         ]
       ]
+    },
+    "🔐 G54: Login Sesión": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa Activa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 G54: Cambiar Empresa Activa": {
+      "main": [
+        [
+          {
+            "node": "📋 Obtener Posts Existentes (G54)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Obtener Posts Existentes (G54)": {
+      "main": [
+        [
+          {
+            "node": "🎯 Obtener Estrategia RRSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -961,9 +742,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "d5479c95-b6fe-4437-a33b-d120e4399735",
-  "activeVersionId": "d5479c95-b6fe-4437-a33b-d120e4399735",
-  "versionCounter": 135,
+  "versionId": "88e8cbe1-12cd-4ef2-8716-44c2a9f584f1",
+  "activeVersionId": "88e8cbe1-12cd-4ef2-8716-44c2a9f584f1",
+  "versionCounter": 140,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "shared": [
@@ -988,9 +769,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-06-26T16:57:24.894Z",
-    "createdAt": "2026-06-26T16:57:24.894Z",
-    "versionId": "d5479c95-b6fe-4437-a33b-d120e4399735",
+    "updatedAt": "2026-07-13T17:55:11.146Z",
+    "createdAt": "2026-07-13T17:55:11.146Z",
+    "versionId": "88e8cbe1-12cd-4ef2-8716-44c2a9f584f1",
     "workflowId": "wyO1f93A66imn9qw",
     "nodes": [
       {
@@ -1108,7 +889,7 @@
       },
       {
         "parameters": {
-          "jsCode": "// ====================================================\n// Preparar Contexto para IA — G54 Field Mapping\n// G54 API fields:\n//   company: name, description, value_proposition, base_city, website, emails[], phones[]\n//   products: name, description, keywords[]\n//   ideas: id, topic, keyword, platform, description\n//   estrategia: objetivo, audiencia, tono, cta_principal, embudo, pilares[]\n// ====================================================\n\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\n// G54 wraps in .data, Airtable uses .fields\nconst empresa = empresaRaw.data || empresaRaw.fields || empresaRaw || {};\n\nconst productosRaw = $('📦 Obtener Servicios Activos').item.json;\n// G54: { company_id, data: [{id, name, description, keywords[]}] }\nconst productosData = productosRaw.data || productosRaw.items || productosRaw.records || (Array.isArray(productosRaw) ? productosRaw : []);\n\n// G54 ideas response: { data: [{id, topic, keyword, platform, description}] }\nconst temaRaw = $('📅 Obtener Próximo Tema Semanal').item.json;\nconst temaList = temaRaw.data || temaRaw.items || temaRaw.records || (Array.isArray(temaRaw) ? temaRaw : [temaRaw]);\nconst temaItem = (Array.isArray(temaList) ? temaList[0] : temaList) || {};\nconst tema = temaItem.fields || temaItem || {};\nconst temaId = temaItem.id || temaItem.social_idea_id || temaItem.tema_id || null;\n\n// Estrategia (continueOnFail — null if not configured yet)\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\n// Build product/service summary — handles G54 (name/description) and Airtable fallback\nconst servicios = productosData\n  .filter(p => (p.fields || p).is_active !== false)\n  .map(p => {\n    const f = p.fields || p;\n    const nombre = f.name || f.nombre || f['Nombre de Servicio'] || '';\n    const desc   = f.description || f.descripcion || f['Descripción comercial'] || '';\n    const kws    = Array.isArray(f.keywords) ? f.keywords.slice(0,3).join(', ') : '';\n    return `- ${nombre}: ${desc}${kws ? ' [' + kws + ']' : ''}`.slice(0, 220);\n  })\n  .join('\\n');\n\nreturn [{\n  json: {\n    // ---- Empresa (G54 field names first, Airtable fallback) ----\n    empresa_nombre:          empresa.name || empresa.nombre_empresa || empresa['\\ufeffnombre_empresa'] || '',\n    empresa_descripcion:     empresa.description || empresa.descripcion_corta || '',\n    empresa_propuesta_valor: empresa.value_proposition || empresa.propuesta_valor || '',\n    empresa_ciudad:          empresa.base_city || empresa.ciudad_base || empresa['ciudad base'] || 'Miami, FL',\n    empresa_web:             empresa.website || empresa.sitio_web || 'cratingexpress.com',\n    empresa_telefono:        (empresa.phones || [])[0] || empresa.telefono || '',\n    empresa_email:           (empresa.emails || [])[0] || 'cratingexpress01@gmail.com',\n    empresa_geografia:       empresa.geography || empresa.coverage || 'Miami / South Florida',\n    empresa_competidores:    (empresa.competitors_known || []).slice(0,3).map(c => c.name).join(', '),\n    servicios_resumen:       servicios,\n    // ---- Tema / Idea G54 ----\n    tema_id:                 temaId,\n    tema_texto:              tema.topic || tema.tema || tema['Tema'] || '',\n    tema_descripcion:        tema.fecha_propuesta || '',\n    tema_palabras_clave:     tema.keyword || tema.palabras_clave || '',\n    keyword_principal:       tema.keyword || tema.keyword_principal || '',\n    tema_semana:             tema.week || tema.semana || tema['Semana'] || 0,\n    tema_plataforma:         tema.platform || tema.plataforma || 'Instagram',\n    fecha_post:              new Date().toLocaleDateString('es-US', {timeZone: 'America/New_York'}),\n    // ---- Estrategia G54 ----\n    estrategia_objetivo:     estrategia.objetivo || estrategia.primary_goal || empresa.primary_goal || '',\n    estrategia_audiencia:    estrategia.audiencia || estrategia.target_market || empresa.target_market || '',\n    estrategia_tono:         estrategia.tono || 'profesional, directo y humano',\n    estrategia_cta:          estrategia.cta_principal || 'Solicitar cotización: cratingexpress.com/request-a-quote/',\n    estrategia_embudo:       estrategia.embudo || 'TOFU-MOFU',\n    estrategia_pilares:      Array.isArray(estrategia.pilares) ? estrategia.pilares.join(', ') : (estrategia.pilares || 'embalaje industrial, exportación, logística Miami'),\n    // ---- Imagen (G54 provee la URL — subida por usuario o generada por Image AI) ----\n    imagen_url:              tema.imagen_url || tema.image_url || null,\n    imagen_specs:            tema.imagen_specs || tema.image_specs || '',\n  }\n}];\n"
+          "jsCode": "// ====================================================\n// Preparar Contexto para IA — G54 Field Mapping\n// G54 API fields:\n//   company: name, description, value_proposition, base_city, website, emails[], phones[]\n//   products: name, description, keywords[]\n//   ideas: id, topic, keyword, platform, description\n//   estrategia: objetivo, audiencia, tono, cta_principal, embudo, pilares[]\n// ====================================================\n\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\n// G54 wraps in .data, Airtable uses .fields\nconst empresa = empresaRaw.data || empresaRaw.fields || empresaRaw || {};\n\nconst productosRaw = $('📦 Obtener Servicios Activos').item.json;\n// G54: { company_id, data: [{id, name, description, keywords[]}] }\nconst productosData = productosRaw.data || productosRaw.items || productosRaw.records || (Array.isArray(productosRaw) ? productosRaw : []);\n\n// G54 ideas response: { data: [{id, topic, keyword, platform, description}] }\nconst temaRaw = $('📅 Obtener Próximo Tema Semanal').item.json;\nconst temaList = temaRaw.data || temaRaw.items || temaRaw.records || (Array.isArray(temaRaw) ? temaRaw : [temaRaw]);\n\n// Ideas que ya tienen un post generado (cualquier estado: borrador/aprobado/publicado) — para no volver a generar el mismo tema\nlet usedIdeaIds = new Set();\ntry {\n  const postsRaw = $('📋 Obtener Posts Existentes (G54)').item.json;\n  const postsList = postsRaw.data || (Array.isArray(postsRaw) ? postsRaw : []);\n  usedIdeaIds = new Set(postsList.map(p => p.social_idea_id).filter(id => id !== null && id !== undefined));\n} catch (e) {\n  // Si la lectura de posts falla (login caído, etc.), seguimos sin filtrar — mismo comportamiento de antes\n}\n\n// Use idea_id from webhook if provided (G54 sends it in mode:post)\nconst webhookBody = $('🔔 Webhook G54').item?.json?.body || $('🔔 Webhook G54').item?.json || {};\nconst webhookIdeaId = webhookBody.idea_id;\nconst temaList2 = Array.isArray(temaList) ? temaList : [temaList];\nconst temaItem = webhookIdeaId\n  ? (temaList2.find(t => String(t.id) === String(webhookIdeaId)) || temaList2[0])\n  : (temaList2.find(t => !usedIdeaIds.has(t.id)) || temaList2[0]) || {};\nconst tema = temaItem.fields || temaItem || {};\nconst temaId = temaItem.id || temaItem.social_idea_id || temaItem.tema_id || null;\n\n// Estrategia (continueOnFail — null if not configured yet)\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\n// Build product/service summary — handles G54 (name/description) and Airtable fallback\nconst servicios = productosData\n  .filter(p => (p.fields || p).is_active !== false)\n  .map(p => {\n    const f = p.fields || p;\n    const nombre = f.name || f.nombre || f['Nombre de Servicio'] || '';\n    const desc   = f.description || f.descripcion || f['Descripción comercial'] || '';\n    const kws    = Array.isArray(f.keywords) ? f.keywords.slice(0,3).join(', ') : '';\n    return `- ${nombre}: ${desc}${kws ? ' [' + kws + ']' : ''}`.slice(0, 220);\n  })\n  .join('\\n');\n\nreturn [{\n  json: {\n    // ---- Empresa (G54 field names first, Airtable fallback) ----\n    empresa_nombre:          empresa.name || empresa.nombre_empresa || empresa['\\ufeffnombre_empresa'] || '',\n    empresa_descripcion:     empresa.description || empresa.descripcion_corta || '',\n    empresa_propuesta_valor: empresa.value_proposition || empresa.propuesta_valor || '',\n    empresa_ciudad:          empresa.base_city || empresa.ciudad_base || empresa['ciudad base'] || 'Miami, FL',\n    empresa_web:             empresa.website || empresa.sitio_web || 'cratingexpress.com',\n    empresa_telefono:        (empresa.phones || [])[0] || empresa.telefono || '',\n    empresa_email:           (empresa.emails || [])[0] || 'cratingexpress01@gmail.com',\n    empresa_geografia:       empresa.geography || empresa.coverage || 'Miami / South Florida',\n    empresa_competidores:    (empresa.competitors_known || []).slice(0,3).map(c => c.name).join(', '),\n    servicios_resumen:       servicios,\n    // ---- Tema / Idea G54 ----\n    tema_id:                 temaId,\n    tema_texto:              tema.topic || tema.tema || tema['Tema'] || '',\n    tema_descripcion:        tema.fecha_propuesta || '',\n    tema_palabras_clave:     tema.keyword || tema.palabras_clave || '',\n    keyword_principal:       tema.keyword || tema.keyword_principal || '',\n    tema_semana:             tema.week || tema.semana || tema['Semana'] || 0,\n    tema_plataforma:         tema.platform || tema.plataforma || 'Instagram',\n    fecha_post:              new Date().toLocaleDateString('es-US', {timeZone: 'America/New_York'}),\n    // ---- Estrategia G54 ----\n    estrategia_objetivo:     estrategia.objetivo || estrategia.primary_goal || empresa.primary_goal || '',\n    estrategia_audiencia:    estrategia.audiencia || estrategia.target_market || empresa.target_market || '',\n    estrategia_tono:         estrategia.tono || 'profesional, directo y humano',\n    estrategia_cta:          estrategia.cta_principal || 'Solicitar cotización: cratingexpress.com/request-a-quote/',\n    estrategia_embudo:       estrategia.embudo || 'TOFU-MOFU',\n    estrategia_pilares:      Array.isArray(estrategia.pilares) ? estrategia.pilares.join(', ') : (estrategia.pilares || 'embalaje industrial, exportación, logística Miami'),\n    // ---- Imagen (G54 provee la URL — subida por usuario o generada por Image AI) ----\n    imagen_url:              tema.imagen_url || tema.image_url || null,\n    imagen_specs:            tema.imagen_specs || tema.image_specs || '',\n  }\n}];\n"
         },
         "id": "preparar-contexto",
         "name": "🔧 Preparar Contexto para IA",
@@ -1276,7 +1057,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_AGENT_TOKEN }}"
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
               },
               {
                 "name": "Accept",
@@ -1307,67 +1088,6 @@
       {
         "parameters": {
           "assignments": {
-            "assignments": []
-          },
-          "options": {}
-        },
-        "id": "actualizar-urls-airtable",
-        "name": "🔗 [Skip] Actualizar URLs",
-        "type": "n8n-nodes-base.set",
-        "typeVersion": 3.4,
-        "position": [
-          5904,
-          304
-        ]
-      },
-      {
-        "parameters": {
-          "url": "={{ $json.contentUrl }}",
-          "options": {}
-        },
-        "id": "descargar-imagen-png",
-        "name": "⬇️ Descargar Imagen PNG",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          5472,
-          304
-        ]
-      },
-      {
-        "parameters": {
-          "name": "={{ 'post_semana_' + $('🔍 Parsear Versiones Inglés').item.json.tema_semana + '.png' }}",
-          "driveId": {
-            "__rl": true,
-            "value": "MyDrive",
-            "mode": "list",
-            "cachedResultName": "My Drive"
-          },
-          "folderId": {
-            "__rl": true,
-            "value": "10A-FlyJeHtO6Fi50o3uzabr9LseqIH1f",
-            "mode": "id"
-          },
-          "options": {}
-        },
-        "id": "subir-google-drive",
-        "name": "📁 Subir a Google Drive",
-        "type": "n8n-nodes-base.googleDrive",
-        "typeVersion": 3,
-        "position": [
-          5680,
-          304
-        ],
-        "credentials": {
-          "googleDriveOAuth2Api": {
-            "id": "5UKwJtdnQeutQ6mg",
-            "name": "Google Drive account"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "assignments": {
             "assignments": [
               {
                 "id": "imagen-url",
@@ -1387,264 +1107,6 @@
           3696,
           304
         ]
-      },
-      {
-        "parameters": {
-          "method": "POST",
-          "url": "https://www.googleapis.com/drive/v3/files/134-ojOjBOKq0tNSqJL7paOdslEcwHeURYbvfVoQSTYk/copy",
-          "authentication": "genericCredentialType",
-          "genericAuthType": "oAuth2Api",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={\"name\": {{ JSON.stringify('Post ' + $('🔍 Parsear Versiones Inglés').item.json.tema_semana + ' - ' + $('🔍 Parsear Versiones Inglés').item.json.tema_texto) }}}",
-          "options": {}
-        },
-        "id": "slides-copiar-template",
-        "name": "📋 Slides: Copiar Template",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          4064,
-          304
-        ],
-        "credentials": {
-          "oAuth2Api": {
-            "id": "7t2xPBRoZ9Zn8Xys",
-            "name": "SEARCH KEYWORDS"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "url": "={{ 'https://slides.googleapis.com/v1/presentations/' + $('📋 Slides: Copiar Template').item.json.id }}",
-          "authentication": "genericCredentialType",
-          "genericAuthType": "oAuth2Api",
-          "options": {}
-        },
-        "id": "slides-obtener-estructura",
-        "name": "📄 Slides: Obtener Estructura",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          4464,
-          304
-        ],
-        "credentials": {
-          "oAuth2Api": {
-            "id": "7t2xPBRoZ9Zn8Xys",
-            "name": "SEARCH KEYWORDS"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "jsCode": "const estructura = $input.first().json;\nconst parsear = $('🔍 Parsear Versiones Inglés').item.json;\nconst wpItem = $('🖼️ Obtener URL de Imagen').first().json;\nconst presentacionId = $('📋 Slides: Copiar Template').item.json.id;\n\nconst slideId = estructura.slides?.[0]?.objectId || 'p1';\nconst pageElements = estructura.slides?.[0]?.pageElements || [];\n\nconst wpImageUrl = wpItem?.imagen_url || null;\nconst titulo = parsear.texto_canva_titulo_en || parsear.texto_canva_titulo || 'Post Title';\n\n// TEXT requests\nconst textRequests = [\n  { replaceAllText: { containsText: { text: '[titulo_post]', matchCase: true }, replaceText: titulo } },\n  { replaceAllText: { containsText: { text: '[descripcion_post]', matchCase: true }, replaceText: parsear.texto_canva_subtitulo_en || parsear.texto_canva_subtitulo || 'Post description' } }\n];\n\nconst titleShape = pageElements.find(el =>\n  (el.shape?.text?.textElements || []).some(te => (te.textRun?.content || '').includes('[titulo_post]'))\n);\nif (titleShape) {\n  let fontSize = 52;\n  if (titulo.length > 15) fontSize = 40;\n  if (titulo.length > 22) fontSize = 32;\n  if (titulo.length > 30) fontSize = 26;\n  textRequests.push({\n    updateTextStyle: {\n      objectId: titleShape.objectId,\n      textRange: { type: 'ALL' },\n      style: { fontSize: { magnitude: fontSize, unit: 'PT' } },\n      fields: 'fontSize'\n    }\n  });\n}\n\n// IMAGE: use replaceImage on the existing image element in the template\nlet imageRequest = null;\nif (wpImageUrl) {\n  const imageElement = pageElements.find(el => el.image !== undefined);\n  if (imageElement) {\n    imageRequest = {\n      requests: [{\n        replaceImage: {\n          imageObjectId: imageElement.objectId,\n          url: wpImageUrl,\n          imageReplaceMethod: 'CENTER_CROP'\n        }\n      }]\n    };\n  }\n}\n\nreturn [{ json: { presentacionId, textRequests, imageRequest, wpImageUrl, titulo, subtitulo: parsear.texto_canva_subtitulo } }];\n"
-        },
-        "id": "slides-preparar-reemplazo",
-        "name": "🔧 Slides: Preparar Reemplazo",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          4704,
-          304
-        ]
-      },
-      {
-        "parameters": {
-          "method": "POST",
-          "url": "={{ 'https://slides.googleapis.com/v1/presentations/' + $('📋 Slides: Copiar Template').item.json.id + ':batchUpdate' }}",
-          "authentication": "genericCredentialType",
-          "genericAuthType": "oAuth2Api",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ requests: $json.textRequests }) }}",
-          "options": {}
-        },
-        "id": "slides-reemplazar-todo",
-        "name": "✏️ Slides: Reemplazar Todo",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          4864,
-          304
-        ],
-        "credentials": {
-          "oAuth2Api": {
-            "id": "7t2xPBRoZ9Zn8Xys",
-            "name": "SEARCH KEYWORDS"
-          }
-        },
-        "onError": "continueRegularOutput"
-      },
-      {
-        "parameters": {
-          "url": "={{ 'https://slides.googleapis.com/v1/presentations/' + $('📋 Slides: Copiar Template').item.json.id + '/pages/p1/thumbnail?thumbnailProperties.thumbnailSize=LARGE' }}",
-          "authentication": "genericCredentialType",
-          "genericAuthType": "oAuth2Api",
-          "options": {}
-        },
-        "id": "slides-obtener-thumbnail",
-        "name": "🖼️ Slides: Obtener Thumbnail",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          5264,
-          304
-        ],
-        "credentials": {
-          "oAuth2Api": {
-            "id": "7t2xPBRoZ9Zn8Xys",
-            "name": "SEARCH KEYWORDS"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "assignments": {
-            "assignments": []
-          },
-          "options": {}
-        },
-        "id": "guardar-resultados-airtable",
-        "name": "📊 [Skip] Guardar Resultados",
-        "type": "n8n-nodes-base.set",
-        "typeVersion": 3.4,
-        "position": [
-          6352,
-          320
-        ]
-      },
-      {
-        "parameters": {
-          "assignments": {
-            "assignments": []
-          },
-          "options": {}
-        },
-        "id": "preparar-airtable-json",
-        "name": "🛠️ [Skip] Preparar JSON",
-        "type": "n8n-nodes-base.set",
-        "typeVersion": 3.4,
-        "position": [
-          6128,
-          320
-        ]
-      },
-      {
-        "parameters": {
-          "assignments": {
-            "assignments": []
-          },
-          "options": {}
-        },
-        "id": "patch-preview-url",
-        "name": "📎 [Skip] Guardar URL Preview",
-        "type": "n8n-nodes-base.set",
-        "typeVersion": 3.4,
-        "position": [
-          6544,
-          320
-        ]
-      },
-      {
-        "parameters": {
-          "method": "POST",
-          "url": "={{ 'https://slides.googleapis.com/v1/presentations/' + $('🔧 Slides: Preparar Reemplazo').item.json.presentacionId + ':batchUpdate' }}",
-          "authentication": "genericCredentialType",
-          "genericAuthType": "oAuth2Api",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {}
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify($('🔧 Slides: Preparar Reemplazo').item.json.imageRequest) }}",
-          "options": {}
-        },
-        "id": "slides-reemplazar-imagen",
-        "name": "🖼️ Slides: Reemplazar Imagen",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4,
-        "position": [
-          5056,
-          304
-        ],
-        "credentials": {
-          "oAuth2Api": {
-            "id": "7t2xPBRoZ9Zn8Xys",
-            "name": "SEARCH KEYWORDS"
-          }
-        },
-        "onError": "continueRegularOutput"
-      },
-      {
-        "parameters": {
-          "assignments": {
-            "assignments": []
-          },
-          "options": {}
-        },
-        "id": "wp-seleccionar-imagen",
-        "name": "🖼️ [Skip] WP Seleccionar",
-        "type": "n8n-nodes-base.set",
-        "typeVersion": 3.4,
-        "position": [
-          3888,
-          304
-        ]
-      },
-      {
-        "parameters": {
-          "method": "POST",
-          "url": "={{ 'https://www.googleapis.com/drive/v3/files/' + $('📋 Slides: Copiar Template').item.json.id + '/permissions' }}",
-          "authentication": "genericCredentialType",
-          "genericAuthType": "oAuth2Api",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {}
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "{\"role\": \"reader\", \"type\": \"anyone\"}",
-          "options": {}
-        },
-        "id": "share-slides-451479c1",
-        "name": "📢 Slides: Compartir Público",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          4288,
-          304
-        ],
-        "credentials": {
-          "oAuth2Api": {
-            "id": "7t2xPBRoZ9Zn8Xys",
-            "name": "SEARCH KEYWORDS"
-          }
-        },
-        "continueOnFail": true
       },
       {
         "parameters": {
@@ -1671,7 +1133,7 @@
               {
                 "id": "g54-company-id",
                 "name": "G54_COMPANY_ID",
-                "value": "1",
+                "value": "={{ $('🔔 Webhook G54').item.json.body.company_id || '1' }}",
                 "type": "string"
               },
               {
@@ -1684,6 +1146,18 @@
                 "id": "groq-key",
                 "name": "GROQ_API_KEY",
                 "value": "={{ $vars.GROQ_API_KEY }}",
+                "type": "string"
+              },
+              {
+                "id": "g54-master-email",
+                "name": "G54_MASTER_EMAIL",
+                "value": "master@growth54.local",
+                "type": "string"
+              },
+              {
+                "id": "g54-master-pass",
+                "name": "G54_MASTER_PASSWORD",
+                "value": "wx2026_master",
                 "type": "string"
               }
             ]
@@ -1717,21 +1191,6 @@
         "webhookId": "72f3bfda-c352-455b-8e4a-cccbcab00981"
       },
       {
-        "parameters": {
-          "respondWith": "json",
-          "responseBody": "{\"ok\": true, \"workflow\": \"rrss_automation\", \"company_id\": \"={{ $json.company_id }}\", \"status\": \"iniciado\"}",
-          "options": {}
-        },
-        "id": "respond-g54-rrss",
-        "name": "📤 Responder Webhook G54",
-        "type": "n8n-nodes-base.respondToWebhook",
-        "typeVersion": 1,
-        "position": [
-          288,
-          144
-        ]
-      },
-      {
         "id": "obtener-estrategia-g54",
         "name": "🎯 Obtener Estrategia RRSS",
         "type": "n8n-nodes-base.httpRequest",
@@ -1758,6 +1217,87 @@
           },
           "options": {}
         }
+      },
+      {
+        "id": "g54-login-content-ai",
+        "name": "🔐 G54: Login Sesión",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          3280,
+          220
+        ],
+        "typeVersion": 4.2,
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/auth/login",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config Growth54').item.json.G54_MASTER_EMAIL, password: $('⚙️ Config Growth54').item.json.G54_MASTER_PASSWORD }) }}",
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "g54-switch-company-content-ai",
+        "name": "🏢 G54: Cambiar Empresa Activa",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          3384,
+          220
+        ],
+        "typeVersion": 4.2,
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/auth/switch-company",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ company_id: Number($('⚙️ Config Growth54').item.json.G54_COMPANY_ID || 1) }) }}",
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "g54-check-existing-posts",
+        "name": "📋 Obtener Posts Existentes (G54)",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          3488,
+          220
+        ],
+        "typeVersion": 4.2,
+        "parameters": {
+          "method": "GET",
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/rrss/posts",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
       }
     ],
     "connections": {
@@ -1810,7 +1350,7 @@
         "main": [
           [
             {
-              "node": "🔄 Tema → En Proceso",
+              "node": "🤖 Generar Post en Español",
               "type": "main",
               "index": 0
             }
@@ -1868,17 +1408,6 @@
           ]
         ]
       },
-      "🔄 Tema → En Proceso": {
-        "main": [
-          [
-            {
-              "node": "🤖 Generar Post en Español",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
       "💾 Crear Registro en G54": {
         "main": [
           []
@@ -1899,7 +1428,7 @@
         "main": [
           [
             {
-              "node": "🎯 Obtener Estrategia RRSS",
+              "node": "🔐 G54: Login Sesión",
               "type": "main",
               "index": 0
             }
@@ -1927,6 +1456,39 @@
             }
           ]
         ]
+      },
+      "🔐 G54: Login Sesión": {
+        "main": [
+          [
+            {
+              "node": "🏢 G54: Cambiar Empresa Activa",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🏢 G54: Cambiar Empresa Activa": {
+        "main": [
+          [
+            {
+              "node": "📋 Obtener Posts Existentes (G54)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📋 Obtener Posts Existentes (G54)": {
+        "main": [
+          [
+            {
+              "node": "🎯 Obtener Estrategia RRSS",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -1936,18 +1498,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-06-26T16:57:25.116Z",
-        "id": 1666,
+        "createdAt": "2026-07-13T17:55:11.306Z",
+        "id": 2015,
         "workflowId": "wyO1f93A66imn9qw",
-        "versionId": "d5479c95-b6fe-4437-a33b-d120e4399735",
+        "versionId": "88e8cbe1-12cd-4ef2-8716-44c2a9f584f1",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-06-26T16:57:25.059Z",
-        "id": 1665,
+        "createdAt": "2026-07-13T17:55:11.267Z",
+        "id": 2014,
         "workflowId": "wyO1f93A66imn9qw",
-        "versionId": "d5479c95-b6fe-4437-a33b-d120e4399735",
+        "versionId": "88e8cbe1-12cd-4ef2-8716-44c2a9f584f1",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
