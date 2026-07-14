@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-30T16:59:37.016Z",
+  "updatedAt": "2026-07-14T17:40:05.140Z",
   "createdAt": "2026-06-20T20:02:45.377Z",
   "id": "62tIvF0snsrMj0sM",
   "name": "Community AI — G54",
@@ -129,7 +129,7 @@
             {
               "id": "a6",
               "name": "FB_ACCESS_TOKEN",
-              "value": "PLACEHOLDER_FB_ACCESS_TOKEN",
+              "value": "REDACTED_FB_ACCESS_TOKEN",
               "type": "string"
             },
             {
@@ -142,6 +142,18 @@
               "id": "a9",
               "name": "WA_LINK",
               "value": "",
+              "type": "string"
+            },
+            {
+              "id": "crm-email",
+              "name": "G54_MASTER_EMAIL",
+              "value": "master@growth54.local",
+              "type": "string"
+            },
+            {
+              "id": "crm-pass",
+              "name": "G54_MASTER_PASSWORD",
+              "value": "REDACTED_G54_MASTER_PASSWORD",
               "type": "string"
             }
           ]
@@ -698,6 +710,207 @@
           "responseCode": 200
         }
       }
+    },
+    {
+      "id": "crm-login",
+      "name": "🔐 G54: Login CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        3520,
+        680
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/auth/login",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config Growth54').item.json.G54_MASTER_EMAIL, password: $('⚙️ Config Growth54').item.json.G54_MASTER_PASSWORD }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "crm-switch-company",
+      "name": "🏢 G54: Cambiar Empresa (CRM)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        3720,
+        680
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/auth/switch-company",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: Number($('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID || 1) }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "crm-buscar-board",
+      "name": "📋 G54: Buscar Deal Existente (CRM)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        3920,
+        680
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/crm/board",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM').item.json.access_token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "crm-encontrar-deal",
+      "name": "🔍 Encontrar Deal por Teléfono",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        4120,
+        680
+      ],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const board = $('📋 G54: Buscar Deal Existente (CRM)').item.json;\nconst telefono = $('🔍 Extraer Evento FB/IG').item.json.usuarioId || ('fb_' + $('🔍 Extraer Evento FB/IG').item.json.comentarioId);\n\nlet match = null;\ntry {\n  for (const etapa of Object.keys(board)) {\n    const deals = board[etapa] || [];\n    const found = deals.find(d => d.telefono === telefono);\n    if (found) { match = found; break; }\n  }\n} catch (e) { /* si el board no cargó, seguimos como si no existiera */ }\n\nreturn [{ json: {\n  existe: !!match,\n  deal_id: match ? match.id : null,\n  telefono,\n}}];\n"
+      }
+    },
+    {
+      "id": "crm-existe-if",
+      "name": "🔀 ¿Deal ya existe? (CRM)",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        4320,
+        680
+      ],
+      "typeVersion": 2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "deal-existe",
+              "leftValue": "={{ String($json.existe) }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "crm-actualizar-deal",
+      "name": "💾 G54: Actualizar Deal CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        4520,
+        600
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/crm/deals/' + $('🔍 Encontrar Deal por Teléfono').item.json.deal_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', notas: 'Última interacción vía Community AI (RRSS): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "crm-crear-deal",
+      "name": "💾 G54: Crear Deal CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        4520,
+        760
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/crm/deals",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ nombre: $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre || $('🔍 Encontrar Deal por Teléfono').item.json.telefono, telefono: $('🔍 Encontrar Deal por Teléfono').item.json.telefono, origen: 'whatsapp', temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', notas: 'Lead generado por Community AI (RRSS): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
+        "options": {}
+      }
     }
   ],
   "connections": {
@@ -957,6 +1170,11 @@
             "node": "💬 Enviar DM: Seguimiento Lead",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "🔐 G54: Login CRM",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -993,6 +1211,68 @@
           }
         ]
       ]
+    },
+    "🔐 G54: Login CRM": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa (CRM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 G54: Cambiar Empresa (CRM)": {
+      "main": [
+        [
+          {
+            "node": "📋 G54: Buscar Deal Existente (CRM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 G54: Buscar Deal Existente (CRM)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Encontrar Deal por Teléfono",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Encontrar Deal por Teléfono": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Deal ya existe? (CRM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Deal ya existe? (CRM)": {
+      "main": [
+        [
+          {
+            "node": "💾 G54: Actualizar Deal CRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "💾 G54: Crear Deal CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -1004,9 +1284,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": null,
-  "versionId": "22f0ee6e-659e-4893-8393-c4d008be2356",
-  "activeVersionId": "22f0ee6e-659e-4893-8393-c4d008be2356",
-  "versionCounter": 7,
+  "versionId": "0f11bb18-812c-45a3-875e-cf4d7ad3fd8e",
+  "activeVersionId": "0f11bb18-812c-45a3-875e-cf4d7ad3fd8e",
+  "versionCounter": 9,
   "triggerCount": 2,
   "sourceWorkflowId": null,
   "shared": [
@@ -1031,9 +1311,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-06-24T19:34:50.392Z",
-    "createdAt": "2026-06-24T19:34:50.392Z",
-    "versionId": "22f0ee6e-659e-4893-8393-c4d008be2356",
+    "updatedAt": "2026-07-14T17:40:05.146Z",
+    "createdAt": "2026-07-14T17:40:05.146Z",
+    "versionId": "0f11bb18-812c-45a3-875e-cf4d7ad3fd8e",
     "workflowId": "62tIvF0snsrMj0sM",
     "nodes": [
       {
@@ -1158,7 +1438,7 @@
               {
                 "id": "a6",
                 "name": "FB_ACCESS_TOKEN",
-                "value": "PLACEHOLDER_FB_ACCESS_TOKEN",
+                "value": "REDACTED_FB_ACCESS_TOKEN",
                 "type": "string"
               },
               {
@@ -1168,15 +1448,21 @@
                 "type": "string"
               },
               {
-                "id": "a8",
-                "name": "GROQ_API_KEY",
-                "value": "={{ $vars.GROQ_API_KEY }}",
-                "type": "string"
-              },
-              {
                 "id": "a9",
                 "name": "WA_LINK",
                 "value": "",
+                "type": "string"
+              },
+              {
+                "id": "crm-email",
+                "name": "G54_MASTER_EMAIL",
+                "value": "master@growth54.local",
+                "type": "string"
+              },
+              {
+                "id": "crm-pass",
+                "name": "G54_MASTER_PASSWORD",
+                "value": "REDACTED_G54_MASTER_PASSWORD",
                 "type": "string"
               }
             ]
@@ -1308,10 +1594,6 @@
           "headerParameters": {
             "parameters": [
               {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('🏢 Aplicar Config Empresa').item.json.GROQ_API_KEY }}"
-              },
-              {
                 "name": "Content-Type",
                 "value": "application/json"
               }
@@ -1320,7 +1602,9 @@
           "sendBody": true,
           "specifyBody": "json",
           "jsonBody": "={{ JSON.stringify({\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    { \"role\": \"system\", \"content\": $('🔧 Preparar Contexto Community AI').item.json.promptSistema },\n    { \"role\": \"user\", \"content\": $('🔧 Preparar Contexto Community AI').item.json.mensajeUsuario }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 600\n}) }}",
-          "options": {}
+          "options": {},
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "groqApi"
         },
         "id": "groq-community",
         "name": "🤖 Groq: Community AI",
@@ -1330,7 +1614,13 @@
           2160,
           560
         ],
-        "onError": "continueRegularOutput"
+        "onError": "continueRegularOutput",
+        "credentials": {
+          "groqApi": {
+            "id": "jORffbRhRNohHT1B",
+            "name": "Groq account"
+          }
+        }
       },
       {
         "parameters": {
@@ -1729,6 +2019,207 @@
             "responseCode": 200
           }
         }
+      },
+      {
+        "id": "crm-login",
+        "name": "🔐 G54: Login CRM",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          3520,
+          680
+        ],
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/auth/login",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config Growth54').item.json.G54_MASTER_EMAIL, password: $('⚙️ Config Growth54').item.json.G54_MASTER_PASSWORD }) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "crm-switch-company",
+        "name": "🏢 G54: Cambiar Empresa (CRM)",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          3720,
+          680
+        ],
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/auth/switch-company",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM').item.json.access_token }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ company_id: Number($('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID || 1) }) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "crm-buscar-board",
+        "name": "📋 G54: Buscar Deal Existente (CRM)",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          3920,
+          680
+        ],
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "GET",
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/crm/board",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM').item.json.access_token }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "crm-encontrar-deal",
+        "name": "🔍 Encontrar Deal por Teléfono",
+        "type": "n8n-nodes-base.code",
+        "position": [
+          4120,
+          680
+        ],
+        "typeVersion": 2,
+        "parameters": {
+          "jsCode": "const board = $('📋 G54: Buscar Deal Existente (CRM)').item.json;\nconst telefono = $('🔍 Extraer Evento FB/IG').item.json.usuarioId || ('fb_' + $('🔍 Extraer Evento FB/IG').item.json.comentarioId);\n\nlet match = null;\ntry {\n  for (const etapa of Object.keys(board)) {\n    const deals = board[etapa] || [];\n    const found = deals.find(d => d.telefono === telefono);\n    if (found) { match = found; break; }\n  }\n} catch (e) { /* si el board no cargó, seguimos como si no existiera */ }\n\nreturn [{ json: {\n  existe: !!match,\n  deal_id: match ? match.id : null,\n  telefono,\n}}];\n"
+        }
+      },
+      {
+        "id": "crm-existe-if",
+        "name": "🔀 ¿Deal ya existe? (CRM)",
+        "type": "n8n-nodes-base.if",
+        "position": [
+          4320,
+          680
+        ],
+        "typeVersion": 2,
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "deal-existe",
+                "leftValue": "={{ String($json.existe) }}",
+                "rightValue": "true",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        }
+      },
+      {
+        "id": "crm-actualizar-deal",
+        "name": "💾 G54: Actualizar Deal CRM",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          4520,
+          600
+        ],
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "PUT",
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/crm/deals/' + $('🔍 Encontrar Deal por Teléfono').item.json.deal_id }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM').item.json.access_token }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', notas: 'Última interacción vía Community AI (RRSS): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "crm-crear-deal",
+        "name": "💾 G54: Crear Deal CRM",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          4520,
+          760
+        ],
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/crm/deals",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM').item.json.access_token }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ nombre: $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre || $('🔍 Encontrar Deal por Teléfono').item.json.telefono, telefono: $('🔍 Encontrar Deal por Teléfono').item.json.telefono, origen: 'whatsapp', temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', notas: 'Lead generado por Community AI (RRSS): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
+          "options": {}
+        }
       }
     ],
     "connections": {
@@ -1988,6 +2479,11 @@
               "node": "💬 Enviar DM: Seguimiento Lead",
               "type": "main",
               "index": 0
+            },
+            {
+              "node": "🔐 G54: Login CRM",
+              "type": "main",
+              "index": 0
             }
           ]
         ]
@@ -2024,6 +2520,68 @@
             }
           ]
         ]
+      },
+      "🔐 G54: Login CRM": {
+        "main": [
+          [
+            {
+              "node": "🏢 G54: Cambiar Empresa (CRM)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🏢 G54: Cambiar Empresa (CRM)": {
+        "main": [
+          [
+            {
+              "node": "📋 G54: Buscar Deal Existente (CRM)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📋 G54: Buscar Deal Existente (CRM)": {
+        "main": [
+          [
+            {
+              "node": "🔍 Encontrar Deal por Teléfono",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔍 Encontrar Deal por Teléfono": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Deal ya existe? (CRM)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Deal ya existe? (CRM)": {
+        "main": [
+          [
+            {
+              "node": "💾 G54: Actualizar Deal CRM",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "💾 G54: Crear Deal CRM",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -2033,18 +2591,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-06-24T19:34:50.684Z",
-        "id": 1572,
+        "createdAt": "2026-07-14T17:40:05.372Z",
+        "id": 2044,
         "workflowId": "62tIvF0snsrMj0sM",
-        "versionId": "22f0ee6e-659e-4893-8393-c4d008be2356",
+        "versionId": "0f11bb18-812c-45a3-875e-cf4d7ad3fd8e",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-06-24T19:34:50.587Z",
-        "id": 1571,
+        "createdAt": "2026-07-14T17:40:05.315Z",
+        "id": 2043,
         "workflowId": "62tIvF0snsrMj0sM",
-        "versionId": "22f0ee6e-659e-4893-8393-c4d008be2356",
+        "versionId": "0f11bb18-812c-45a3-875e-cf4d7ad3fd8e",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
