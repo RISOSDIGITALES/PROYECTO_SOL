@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Éxodo G54 — Pendientes ordenados · 14 Jul 2026</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0d16;
+      --surface: #111520;
+      --border: #1a2035;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --subtle: #8b98b8;
+
+      --green: #4ade80; --green-bg: #052e16; --green-border: #166534;
+      --yellow: #fbbf24; --yellow-bg: #1c1200; --yellow-border: #78350f;
+      --red: #f87171; --red-bg: #2d0a0a; --red-border: #7f1d1d;
+      --blue: #60a5fa; --blue-bg: #0c1a3a; --blue-border: #1e3a6e;
+      --purple: #c084fc; --purple-bg: #1e0840; --purple-border: #4c1d95;
+      --orange: #fb923c; --orange-bg: #1a0a00; --orange-border: #7c2d12;
+      --gray: #9ca3af; --gray-bg: #17191f; --gray-border: #374151;
+      --teal: #2dd4bf; --teal-bg: #042f2c; --teal-border: #115e59;
+      --accent: #7c3aed; --accent-light: #a78bfa;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #0d1020 0%, #140a2e 50%, #0a1030 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 40px;
+    }
+    .header-inner { max-width: 900px; margin: 0 auto; }
+    .header-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-light); margin-bottom: 12px; }
+    h1 { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+    h1 span { color: var(--accent-light); }
+    .header p { font-size: 14px; color: var(--subtle); max-width: 640px; margin-bottom: 20px; }
+    .header-meta { display: flex; gap: 24px; flex-wrap: wrap; }
+    .meta-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-light); }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 40px; display: grid; gap: 20px; }
+
+    .cat-header {
+      display: flex; align-items: center; gap: 12px;
+      margin: 28px 0 -2px 0; padding-bottom: 10px; border-bottom: 2px solid var(--border);
+    }
+    .cat-header:first-child { margin-top: 0; }
+    .cat-icon { font-size: 20px; }
+    .cat-title { font-size: 18px; font-weight: 800; color: #fff; }
+    .cat-sub { font-size: 12px; color: var(--muted); margin-left: auto; }
+    .cat-interfaz .cat-title { color: var(--blue); }
+    .cat-backend .cat-title { color: var(--purple); }
+    .cat-consultas .cat-title { color: var(--teal); }
+
+    .section-label {
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--accent-light); margin: 10px 0 -4px 2px;
+    }
+
+    .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+    .badge.panel { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
+    .badge.api { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border); }
+    .badge.p0 { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+    .badge.p1 { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-border); }
+    .badge.p2 { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-border); }
+    .badge.blocker { background: var(--orange-bg); color: var(--orange); border: 1px solid var(--orange-border); }
+    .badge.nuevo { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+    .badge.carry { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-border); }
+    .badge.opcional { background: var(--teal-bg); color: var(--teal); border: 1px solid var(--teal-border); }
+
+    .item-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+    .item-card.b-red { border-left: 3px solid var(--red); }
+    .item-card.b-orange { border-left: 3px solid var(--orange); }
+    .item-card.b-yellow { border-left: 3px solid var(--yellow); }
+    .item-card.b-gray { border-left: 3px solid var(--gray); }
+    .item-card.b-teal { border-left: 3px solid var(--teal); }
+
+    .item-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 16px; padding: 16px 20px;
+      background: #0d1120; border-bottom: 1px solid var(--border); flex-wrap: wrap;
+    }
+    .item-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .item-where { font-size: 12px; color: var(--muted); }
+    .item-tags { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+    .item-body { padding: 20px; display: grid; gap: 14px; }
+    .item-why { color: var(--subtle); font-size: 13px; line-height: 1.65; }
+    .item-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 4px; }
+    code {
+      font-family: 'Courier New', monospace; background: #141825;
+      border: 1px solid var(--border); color: var(--blue);
+      padding: 1px 5px; border-radius: 3px; font-size: 11px;
+    }
+
+    .warn-box { background: var(--orange-bg); border: 1px solid var(--orange-border); border-radius: 6px; padding: 12px 16px; font-size: 12px; color: var(--subtle); }
+    .warn-box strong { color: var(--orange); }
+    .note-box { background: var(--teal-bg); border: 1px solid var(--teal-border); border-radius: 6px; padding: 12px 16px; font-size: 12px; color: var(--subtle); }
+    .note-box strong { color: var(--teal); }
+    .dep-box { background: #141825; border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-size: 12px; color: var(--muted); }
+    .dep-box strong { color: var(--subtle); }
+
+    footer { background: #070a12; border-top: 1px solid var(--border); padding: 22px 40px; text-align: center; color: var(--muted); font-size: 12px; margin-top: 40px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-label">G54 Platform — Documento maestro para Walter</div>
+    <h1>Éxodo — Pendientes ordenados por área · <span>14 Jul 2026</span></h1>
+    <p>Consolidado de todo lo encontrado y pedido hoy, reorganizado en 3 categorías: qué necesita el panel (Interfaz), qué necesita el backend/API, y qué son consultas o mejoras opcionales — no bloqueantes.</p>
+    <div class="header-meta">
+      <div class="meta-item"><div class="dot"></div> 14 de julio 2026</div>
+      <div class="meta-item"><div class="dot"></div> Este documento puede ser leído e implementado por otro agente de IA — cada ítem incluye el contexto técnico necesario sin depender de conversación previa</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ============ INTERFAZ ============ -->
+  <div class="cat-header cat-interfaz">
+    <span class="cat-icon">🖥️</span>
+    <span class="cat-title">Interfaz (Panel)</span>
+    <span class="cat-sub">Cambios visibles al usuario final — pantallas, formularios, botones</span>
+  </div>
+
+  <!-- I-1. Formulario horizonte + dirección deseada -->
+  <div class="item-card b-yellow">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-1. Formulario al crear una estrategia: horizonte de tiempo + dirección deseada</div>
+        <div class="item-where">Panel › Estrategia RRSS (pantalla de generar estrategia)</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo</span>
+        <span class="badge panel">Panel UI</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Al momento de crear una estrategia, el cliente debe poder abrir un formulario pequeño con dos campos: (1) un desplegable "Período de esta estrategia" con las opciones <code>1 mes</code> / <code>3 meses</code> / <code>6 meses</code> / <code>8 meses</code>; (2) un campo de texto libre donde el cliente escriba cómo le gustaría que fuera la estrategia, o una dirección/idea general que quiere que se siga.
+      </p>
+      <div class="dep-box">
+        <strong>Estado de nuestro lado (n8n):</strong> el Strategist AI ya tiene la lógica lista para ambos campos. El horizonte ya calcula semanas totales e ideas por semana para las 4 opciones (hoy usa un valor fijo por default porque el panel no expone el selector). La dirección deseada ya se lee como instrucción obligatoria en el prompt (campo <code>direccion_deseada</code>, tratado como "no es una sugerencia, es un requisito del cliente, no opcional") — hoy ese campo no existe en ningún lado de G54, así que siempre llega vacío.
+      </div>
+      <div class="dep-box"><strong>Depende de Backend:</strong> ver <em>B-2 — Columnas faltantes en la tabla de estrategia</em>, que agrega <code>direccion_deseada</code> como columna persistible. El valor del horizonte (1/3/6/8 meses) necesita definirse dónde se guarda — puede ser una columna nueva en la config de la empresa o en la propia estrategia, a decidir con Walter.</div>
+    </div>
+  </div>
+
+  <!-- I-2. Contador de tiempo de estrategia -->
+  <div class="item-card b-yellow">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-2. Mostrar el progreso de tiempo de la estrategia activa (inicio, fin, semana actual)</div>
+        <div class="item-where">Panel › Estrategia RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo</span>
+        <span class="badge panel">Panel UI</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Un espacio visual (tipo widget/caja) que muestre, para la estrategia ya generada y aprobada: cuándo inició, cuándo termina, y en qué semana del plan van actualmente — ej. "Semana 4 de 13".
+      </p>
+      <div class="dep-box"><strong>Estado de nuestro lado (n8n):</strong> el Strategist AI ya calcula y manda <code>fecha_inicio</code>, <code>fecha_fin</code> y <code>semanas_totales</code> en cada guardado de estrategia.</div>
+      <div class="dep-box"><strong>Depende de Backend:</strong> mismo ítem que I-1, <em>B-2 — Columnas faltantes en la tabla de estrategia</em>. Esos 3 valores se mandan hoy pero G54 los descarta en silencio porque no existen como columnas en la base de datos.</div>
+    </div>
+  </div>
+
+  <!-- I-3. Mensaje de fallo de publicación -->
+  <div class="item-card b-red">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-3. Mostrar al cliente cuándo y por qué falló una publicación programada</div>
+        <div class="item-where">Panel › Editor de Posts</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo</span>
+        <span class="badge panel">Panel UI</span>
+        <span class="badge p0">🔴 P0</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Cuando Distribution AI intenta publicar un post programado y falla (ej. falta de imagen para Instagram, token vencido, etc.), el cliente necesita ver un mensaje claro de que la publicación no se concretó y por qué, para poder revisar y reprogramarla. Hoy no hay ningún aviso — el post simplemente se queda atascado en "programado" sin explicación (ver B-1) o, si el revert funcionara, volvería a "aprobado" sin decir qué pasó.
+      </p>
+      <div class="dep-box"><strong>Depende de Backend:</strong> dos ítems — <em>B-1, AGENT_TOKEN no funciona en el revert de estado</em> (sin esto el post ni siquiera vuelve a un estado editable) y habilitar la escritura del campo <code>error_message</code> que ya existe en el schema del post pero no se puede llenar. Nuestro workflow (Distribution AI) queda listo para mandar el motivo real del fallo en cuanto ambos se resuelvan.</div>
+    </div>
+  </div>
+
+  <!-- I-4. Justificación de idea -->
+  <div class="item-card b-teal">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-4. Mostrar por qué se generó cada idea (justificación / ángulo)</div>
+        <div class="item-where">Panel › Ideas de Contenido</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo</span>
+        <span class="badge panel">Panel UI</span>
+        <span class="badge opcional">Sugerencia — no bloqueante</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Sugerencia de experiencia de usuario: mostrar junto a cada idea generada la justificación de por qué se creó — la conexión entre la keyword real asignada y el título/ángulo elegido por la IA.
+      </p>
+      <div class="dep-box"><strong>Estado de nuestro lado (n8n):</strong> el dato ya existe y ya se manda a G54 al guardar. Desde el rediseño del 13-jul (validación de coherencia keyword→idea), Ideas AI exige un campo <code>angulo</code> por cada idea que justifica la conexión entre la keyword de G54 y el título propuesto — cualquier idea sin esa justificación se descarta automáticamente antes de guardarse. Solo falta que el panel lo muestre.</div>
+    </div>
+  </div>
+
+  <!-- I-5. Botón regenerar idea -->
+  <div class="item-card b-orange">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-5. Botón "Regenerar idea" manteniendo la misma keyword</div>
+        <div class="item-where">Panel › Ideas de Contenido</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo — funcionalidad no existe hoy</span>
+        <span class="badge panel">Panel UI</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Cuando al cliente le gusta la keyword asignada a una idea pero no el título/ángulo específico que generó la IA, debería poder pedir que se regenere solo esa idea puntual, conservando la misma keyword, en vez de descartarla por completo y perder la asignación semanal.
+      </p>
+      <div class="warn-box"><strong>Esto es funcionalidad nueva en ambos lados</strong> — no existe hoy ni un botón en el panel ni un modo en Ideas AI que reciba "regenera esta idea puntual conservando su keyword y plataforma". Requiere: un botón en el panel junto a cada idea, y un nuevo modo en el webhook de Ideas AI (<code>ideas-ai-g54</code>) que reciba <code>{keyword, platform, idea_id}</code> ya asignados y genere solo un título/ángulo nuevo para ese par exacto, sin tocar el resto del plan semanal ni contar contra el cupo de ideas de la semana.</div>
+    </div>
+  </div>
+
+  <!-- I-6. Analytics por post agrupado por semana -->
+  <div class="item-card b-orange">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-6. En Analytics, agrupar los registros de cada post por semana (fecha + número de semana de la estrategia)</div>
+        <div class="item-where">Panel › Métricas RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo</span>
+        <span class="badge panel">Panel UI</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Cada post publicado debería verse en el reporte de Analytics agrupado por la semana de la estrategia a la que pertenece, con su fecha real de publicación y el número de semana correspondiente — ej. "Semana 3 — post publicado el 15 de julio".
+      </p>
+      <div class="dep-box"><strong>Estado de nuestro lado (n8n):</strong> el campo <code>semana</code> ya se genera en Ideas AI al crear cada idea (<code>ctx.weekNum</code>), pero no está confirmado que ese número viaje desde la idea hasta el post final publicado sin perderse en el camino — hay que revisarlo.</div>
+      <div class="dep-box"><strong>Depende de Backend:</strong> <em>B-1 (post_id_platform)</em> y la posibilidad de leer métricas por post individual son requisito para que el Analytics pueda mostrar cada post por separado en vez de solo el agregado de cuenta.</div>
+    </div>
+  </div>
+
+  <!-- I-7. Botón refresh manual -->
+  <div class="item-card b-yellow">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-7. Botón de refresh manual de métricas</div>
+        <div class="item-where">Panel › Métricas RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo</span>
+        <span class="badge panel">Panel UI</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        El mecanismo ya existe de nuestro lado y quedó probado en vivo hoy — el webhook del Analytics Semanal (<code>GET https://n8n.mdarthurdigital.com/webhook/analytics-semanal-g54?company_id={id}</code>) se puede llamar en cualquier momento, no solo el lunes 8am programado, y refresca las métricas generales de cuenta sin necesitar nada nuevo de nuestro lado. Solo falta el botón en el panel que lo dispare.
+      </p>
+      <div class="warn-box"><strong>Importante:</strong> la llamada debe ser <code>GET</code>, no <code>POST</code>.</div>
+    </div>
+  </div>
+
+  <!-- I-8. Marca visual tendencia -->
+  <div class="item-card b-gray">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-8. Marca visual para ideas de tendencia</div>
+        <div class="item-where">Panel › Ideas de Contenido</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo</span>
+        <span class="badge panel">Panel UI</span>
+        <span class="badge p2">⚪ P2</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        El motor de tendencias de Ideas AI ya funciona de verdad (2 bugs corregidos y confirmados en vivo hoy — antes generaba tendencias pero nunca pasaban la verificación). Sería valioso que el panel muestre qué idea de la semana es "de tendencia" vs. las normales generadas por keyword — hoy se ven todas igual, sin ninguna distinción visual.
+      </p>
+    </div>
+  </div>
+
+  <!-- I-9. Total del CRM -->
+  <div class="item-card b-gray">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-9. El "Total" de cada columna del tablero CRM no corresponde a ningún dato real</div>
+        <div class="item-where">Panel › CRM Kanban</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo</span>
+        <span class="badge panel">Panel UI</span>
+        <span class="badge p2">⚪ P2</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Probando el CRM en vivo, una columna con 2 deals mostraba "Total: $12,400" — confirmado contra <code>GET /api/crm/board</code> que ambos deals tienen <code>valor_estimado: null</code>. El número no sale de ningún dato real de esos deals específicos; parece un total cacheado o de otra fuente.
+      </p>
+    </div>
+  </div>
+
+  <!-- I-10. Distinguir sin imagen vs imagen rota -->
+  <div class="item-card b-gray">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-10. Distinguir visualmente "sin imagen" de "imagen con error de carga"</div>
+        <div class="item-where">Panel › Editor de Posts</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo</span>
+        <span class="badge panel">Panel UI</span>
+        <span class="badge p2">⚪ P2</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Hoy el editor muestra el mismo placeholder "Sin imagen" tanto para un post que nunca tuvo imagen generada como para uno que sí tiene <code>imagen_url</code> guardada pero está rota (404 — ver B-6). El cliente no puede distinguir ambos casos desde el editor, se entera recién al intentar publicar.
+      </p>
+    </div>
+  </div>
+
+  <!-- ============ BACKEND ============ -->
+  <div class="cat-header cat-backend">
+    <span class="cat-icon">⚙️</span>
+    <span class="cat-title">Backend (API)</span>
+    <span class="cat-sub">Endpoints, columnas de base de datos, permisos de escritura</span>
+  </div>
+
+  <!-- B-1. AGENT_TOKEN revert -->
+  <div class="item-card b-red">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-1. AGENT_TOKEN no funciona en PUT /api/rrss/posts/{id}/status — el revert automático de posts fallidos nunca funcionó de verdad</div>
+        <div class="item-where">API Backend — Posts / RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Reconfirma el ítem del 10-jul</span>
+        <span class="badge api">Endpoint</span>
+        <span class="badge p0">🔴 P0</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Cuando Distribution AI falla al publicar un post, debería revertirlo automáticamente de "programado" a "aprobado" para que se pueda reprogramar. Probamos el endpoint exacto que usa ese paso (<code>PUT /api/rrss/posts/{id}/status</code> con el AGENT_TOKEN) directo contra la API, en dos posts distintos, y devuelve <code>401 Unauthenticated</code> en ambos casos. Este endpoint es parte de la misma familia de rutas descubierta el 13-jul que solo acepta el token de sesión (login), no el AGENT_TOKEN. Se había reportado antes pero, como la ejecución de n8n no marca error visible (queda absorbido por <code>continueOnFail</code>), nadie lo había reconfirmado hasta ahora.
+      </p>
+      <p class="item-why">
+        <strong>Impacto real:</strong> cuando falla una publicación, el post queda atascado en "programado" para siempre, sin ningún aviso — hay que revertirlo a mano. Es la causa de fondo de varios posts atascados que tuvimos que revertir manualmente. No lo vamos a resolver metiendo credenciales de administrador en un workflow de producción — necesitamos que el AGENT_TOKEN funcione en esta ruta, igual que funciona en las demás rutas de escritura del agente.
+      </p>
+      <div class="dep-box"><strong>Bloquea:</strong> I-3 (mensaje de fallo visible al cliente) y la mejora de nuestro lado que manda <code>error_message</code> al revertir.</div>
+    </div>
+  </div>
+
+  <!-- B-2. Columnas de estrategia -->
+  <div class="item-card b-orange">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-2. Columnas faltantes en la tabla de estrategia</div>
+        <div class="item-where">API Backend — Estrategia RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Carry-over</span>
+        <span class="badge api">Columnas nuevas</span>
+        <span class="badge blocker">🟠 Bloqueante</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        <strong>Campos que sí necesita ver el cliente en el panel (prioridad — habilitan I-1 e I-2):</strong> <code>fecha_inicio</code>, <code>fecha_fin</code>, <code>direccion_deseada</code>. Estos tres se mandan al guardar la estrategia pero G54 los descarta en silencio porque no existen como columnas. De nuestro lado ya está listo el cálculo del horizonte de 1/3/6/8 meses, la lectura obligatoria del campo de dirección deseada, y el cálculo del contador de tiempo — todos están esperando estas 3 columnas para funcionar de verdad.
+      </p>
+      <div class="dep-box"><strong>Habilita directamente:</strong> I-1 (formulario horizonte + dirección deseada) e I-2 (contador de tiempo de estrategia).</div>
+      <p class="item-why">
+        <strong>Campos de uso interno — el cliente no necesita verlos en el panel:</strong> <code>resumen_estrategico</code>, <code>keyword_strategy</code>, <code>mapa_preguntas_aeo</code>, <code>faqs</code>, <code>clusters</code>, <code>plan_publicacion</code>. También se descartan al guardar, pero son datos que usan nuestros propios agentes de IA para trabajar con más contexto (estrategia de keywords, preguntas frecuentes para AEO, agrupación temática de contenido, etc.) — no están pensados para mostrarse en ninguna pantalla del cliente. Menor prioridad que los 3 de arriba; Walter puede decidir si vale la pena agregar estas columnas o no.
+      </p>
+    </div>
+  </div>
+
+  <!-- B-3. post_id_platform -->
+  <div class="item-card b-red">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-3. Habilitar la escritura de post_id_platform</div>
+        <div class="item-where">API Backend — Posts / RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Carry-over</span>
+        <span class="badge api">Endpoint</span>
+        <span class="badge p0">🔴 P0</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        La columna ya existe en la base de datos, pero ni <code>mark-published</code> (AGENT_TOKEN) ni el <code>PUT</code> bare (token de sesión) permiten escribirla — ambos devuelven <code>ok:true</code> pero el valor queda en <code>null</code>. Distribution AI ya captura y manda el ID real que devuelve Meta al publicar — apenas se habilite el campo, empieza a guardarse solo, sin tocar n8n de nuevo.
+      </p>
+      <div class="dep-box"><strong>Bloquea:</strong> analytics por post individual y I-6 (Analytics agrupado por semana), y cualquier retroalimentación de desempeño hacia el Ideas AI.</div>
+    </div>
+  </div>
+
+  <!-- B-4. Métricas como string -->
+  <div class="item-card b-red">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-4. Métricas RRSS devueltas como texto en vez de número, y el GET no refleja el valor recién guardado</div>
+        <div class="item-where">API Backend — Métricas RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo</span>
+        <span class="badge api">Backend</span>
+        <span class="badge p0">🔴 P0</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        El dashboard de Métricas RRSS mostraba números como <code>050003200</code> en Alcance Total — es "5000" + "3200" concatenados como texto en vez de sumados. Confirmado que no es un bug de nuestro lado: n8n manda valores numéricos reales al guardar (ej. <code>alcance: 16</code>, tipo número genuino, verificado en la ejecución real). El endpoint <code>GET /api/rrss/metricas</code> los devuelve como <strong>string</strong> (<code>"alcance_total": "5000"</code>), y además <strong>no devuelve el valor más reciente</strong>: mandamos <code>16</code> y la lectura siguió mostrando <code>"5000"</code>, un valor viejo.
+      </p>
+      <div class="warn-box"><strong>Pedido concreto:</strong> (1) que los campos numéricos se devuelvan como número, no como texto; (2) revisar por qué el <code>GET</code> no refleja lo que el <code>POST</code> acaba de guardar — parece estar leyendo de una fuente vieja o cacheada.</div>
+    </div>
+  </div>
+
+  <!-- B-5. Enum origen -->
+  <div class="item-card b-gray">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-5. El campo "origen" no distingue Facebook/Instagram — solo acepta rrss/web (leads) o whatsapp/web/manual (deals)</div>
+        <div class="item-where">API Backend — /api/agent/whatsapp/inbound y /api/crm/deals</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo</span>
+        <span class="badge api">Enum</span>
+        <span class="badge p2">⚪ P2</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Un lead que llega por un comentario de Facebook queda etiquetado como "rrss" en el contacto y como "manual" (el menos incorrecto de las 3 opciones válidas, elegido a propósito) en el deal del CRM — no hay forma de que diga "Facebook" o "Instagram". Probamos explícitamente mandar <code>facebook</code>, <code>instagram</code>, <code>social</code>, <code>meta</code> a <code>/api/agent/whatsapp/inbound</code>: todos rechazados por el enum, solo <code>rrss</code> y <code>web</code> son válidos ahí. Igual en <code>/api/crm/deals</code>, solo <code>whatsapp</code>/<code>web</code>/<code>manual</code>. Sería útil agregar valores por plataforma (<code>facebook</code>, <code>instagram</code>) a ambos enums.
+      </p>
+    </div>
+  </div>
+
+  <!-- B-6. 404 storage -->
+  <div class="item-card b-red">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-6. 404 al cargar imágenes subidas — falta el enlace de storage público</div>
+        <div class="item-where">Servidor — Storage</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Carry-over</span>
+        <span class="badge api">Servidor</span>
+        <span class="badge p0">🔴 P0</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Confirmado múltiples veces, incluso con una imagen subida directamente desde el panel — el endpoint de subida funciona y devuelve una URL válida, pero esa URL siempre da 404. Diagnóstico: falta <code>php artisan storage:link</code> (o equivalente) en el servidor de producción. Reconfirmado con datos reales: de los 4 posts que hoy tienen <code>imagen_url</code> guardada, los 4 dan 404 — ningún post con imagen se ve realmente en este momento. Es el cuello de botella más visible para el cliente final — un post aprobado sin imagen es un post débil para Instagram.
+      </p>
+      <div class="dep-box"><strong>Habilita:</strong> I-10 (distinguir sin imagen vs. imagen rota) deja de ser necesario una vez resuelto esto de raíz.</div>
+    </div>
+  </div>
+
+  <!-- B-7. DELETE posts -->
+  <div class="item-card b-yellow">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-7. DELETE de posts restringido solo a estado "borrador"</div>
+        <div class="item-where">API Backend — Posts / RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Carry-over — reconfirmado</span>
+        <span class="badge api">Endpoint</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        No se puede revertir un post de "aprobado" a "borrador" para poder borrarlo, ni siquiera con el token de sesión (más permisos que el de agente). Dejó un post duplicado huérfano sin poder limpiar en una de las empresas de prueba.
+      </p>
+    </div>
+  </div>
+
+  <!-- B-8. PUT deals telefono/origen -->
+  <div class="item-card b-red">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-8. PUT /api/crm/deals/{id} no permite editar telefono ni origen en un deal ya creado</div>
+        <div class="item-where">API Backend — CRM</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo</span>
+        <span class="badge api">Endpoint</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Al intentar corregir un deal que había quedado con un teléfono mal guardado, probamos <code>PUT /api/crm/deals/{id}</code> mandando <code>telefono</code> y <code>origen</code> de tres formas distintas (cada uno solo, ambos juntos, y junto con <code>nombre</code> para confirmar que el PUT en sí funciona) — siempre responde 200 pero esos dos campos específicos nunca cambian. Sin esto, un dato mal guardado en esos dos campos queda así para siempre — la única forma de corregirlo es borrar el contacto completo, lo cual borra también su conversación real asociada.
+      </p>
+    </div>
+  </div>
+
+  <!-- B-9. ig_user_id null -->
+  <div class="item-card b-yellow">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-9. ig_user_id null en GET /api/n8n/pages/{pageId}</div>
+        <div class="item-where">API Backend — Páginas / Meta</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Carry-over</span>
+        <span class="badge api">Endpoint</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">Sigue igual desde hace semanas. ID correcto confirmado: <code>17841446392201293</code>.</p>
+    </div>
+  </div>
+
+  <!-- B-10. Endpoint reporte mensual -->
+  <div class="item-card b-yellow">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-10. Endpoint para guardar el reporte HTML mensual en G54</div>
+        <div class="item-where">API Backend — Reportes / Analytics</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo</span>
+        <span class="badge api">Endpoint nuevo</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Hoy el Analytics Mensual manda el reporte por correo directo desde n8n (SMTP), sin pasar por la plataforma. El diseño que se quiere: el HTML del reporte se manda a G54, se muestra en el panel, y desde ahí el cliente decide compartirlo por correo. Falta el endpoint donde guardar ese reporte (probamos 6 rutas razonables, todas 404) — se necesita algo tipo <code>POST /reportes</code> por empresa + período, y el botón de "compartir por correo" del lado del panel.
+      </p>
+    </div>
+  </div>
+
+  <!-- ============ CONSULTAS Y OPCIONALES ============ -->
+  <div class="cat-header cat-consultas">
+    <span class="cat-icon">💬</span>
+    <span class="cat-title">Consultas y opcionales</span>
+    <span class="cat-sub">Preguntas que necesitan respuesta de Walter, o mejoras que no bloquean nada</span>
+  </div>
+
+  <!-- C-1. Historial semanal métricas -->
+  <div class="item-card b-orange">
+    <div class="item-header">
+      <div>
+        <div class="item-title">C-1. Consulta: ¿el guardado de métricas acumula historial semanal o sobrescribe el mismo registro?</div>
+        <div class="item-where">API Backend — Métricas RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Consulta</span>
+        <span class="badge blocker">🟠 Bloqueante para I-6</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Cada guardado de métricas manda <code>period_start</code> y <code>period_end</code> correctamente, pero al releer <code>GET /api/rrss/metricas</code> solo aparece un valor actual por plataforma, sin desglose por semana — y como se ve en B-4, ni siquiera es el valor más reciente. Sospechamos que el backend sobrescribe el mismo registro en vez de acumular uno por semana. Necesitamos que Walter lo confirme: si sobrescribe, además de perder el historial ("semana 1, semana 2, semana 3...") significaría que consultar métricas de un post individual podría <strong>pisar el número agregado general de la cuenta</strong> en vez de guardarse aparte.
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Éxodo G54 · Equipo Sol × Walter · 14 de julio 2026 — ordenado por Interfaz / Backend / Consultas
+</footer>
+
+</body>
+</html>
