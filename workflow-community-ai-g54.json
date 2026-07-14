@@ -806,7 +806,7 @@
       ],
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const board = $('📋 G54: Buscar Deal Existente (CRM)').item.json;\nconst telefono = $('🔍 Extraer Evento FB/IG').item.json.usuarioId || ('fb_' + $('🔍 Extraer Evento FB/IG').item.json.comentarioId);\n\nlet match = null;\ntry {\n  for (const etapa of Object.keys(board)) {\n    const deals = board[etapa] || [];\n    const found = deals.find(d => d.telefono === telefono);\n    if (found) { match = found; break; }\n  }\n} catch (e) { /* si el board no cargó, seguimos como si no existiera */ }\n\nlet wa_contact_id = null;\ntry {\n  const contactData = $('🔍 Buscar Contact ID (G54)').item.json.data || [];\n  wa_contact_id = contactData[0]?.id || null;\n} catch (e) { /* si falló el lookup, seguimos sin el vínculo */ }\n\nreturn [{ json: {\n  existe: !!match,\n  deal_id: match ? match.id : null,\n  telefono,\n  wa_contact_id,\n}}];"
+        "jsCode": "const board = $('📋 G54: Buscar Deal Existente (CRM)').item.json;\n\nlet wa_contact_id = null;\ntry {\n  const contactData = $('🔍 Buscar Contact ID (G54)').item.json.data || [];\n  wa_contact_id = contactData[0]?.id || null;\n} catch (e) { /* si falló el lookup, seguimos sin el vínculo */ }\n\n// Community AI (FB/IG) nunca tiene un teléfono real — el usuarioId de Facebook\n// se usa solo como clave interna para G54 (endpoints /inbound y /wa/leads lo piden\n// como \"phone\"), pero no se muestra como teléfono en el CRM para no inventar uno.\nlet match = null;\ntry {\n  for (const etapa of Object.keys(board)) {\n    const deals = board[etapa] || [];\n    const found = deals.find(d => wa_contact_id && d.wa_contact_id === wa_contact_id);\n    if (found) { match = found; break; }\n  }\n} catch (e) { /* si el board no cargó, seguimos como si no existiera */ }\n\nreturn [{ json: {\n  existe: !!match,\n  deal_id: match ? match.id : null,\n  wa_contact_id,\n}}];"
       }
     },
     {
@@ -908,7 +908,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ nombre: $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre || $('🔍 Encontrar Deal por Teléfono').item.json.telefono, telefono: $('🔍 Encontrar Deal por Teléfono').item.json.telefono, origen: 'whatsapp', temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', wa_contact_id: $('🔍 Encontrar Deal por Teléfono').item.json.wa_contact_id, notas: 'Lead generado por Community AI (RRSS): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
+        "jsonBody": "={{ JSON.stringify({ nombre: $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre || 'Contacto FB/IG sin nombre', telefono: null, origen: 'manual', temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', wa_contact_id: $('🔍 Encontrar Deal por Teléfono').item.json.wa_contact_id, notas: 'Lead generado por Community AI (RRSS - ' + ($('🔍 Extraer Evento FB/IG').item.json.plataforma || '') + '): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
         "options": {}
       }
     },
