@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-14T17:40:05.140Z",
+  "updatedAt": "2026-07-14T17:55:28.364Z",
   "createdAt": "2026-06-20T20:02:45.377Z",
   "id": "62tIvF0snsrMj0sM",
   "name": "Community AI — G54",
@@ -806,7 +806,7 @@
       ],
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const board = $('📋 G54: Buscar Deal Existente (CRM)').item.json;\nconst telefono = $('🔍 Extraer Evento FB/IG').item.json.usuarioId || ('fb_' + $('🔍 Extraer Evento FB/IG').item.json.comentarioId);\n\nlet match = null;\ntry {\n  for (const etapa of Object.keys(board)) {\n    const deals = board[etapa] || [];\n    const found = deals.find(d => d.telefono === telefono);\n    if (found) { match = found; break; }\n  }\n} catch (e) { /* si el board no cargó, seguimos como si no existiera */ }\n\nreturn [{ json: {\n  existe: !!match,\n  deal_id: match ? match.id : null,\n  telefono,\n}}];\n"
+        "jsCode": "const board = $('📋 G54: Buscar Deal Existente (CRM)').item.json;\nconst telefono = $('🔍 Extraer Evento FB/IG').item.json.usuarioId || ('fb_' + $('🔍 Extraer Evento FB/IG').item.json.comentarioId);\n\nlet match = null;\ntry {\n  for (const etapa of Object.keys(board)) {\n    const deals = board[etapa] || [];\n    const found = deals.find(d => d.telefono === telefono);\n    if (found) { match = found; break; }\n  }\n} catch (e) { /* si el board no cargó, seguimos como si no existiera */ }\n\nlet wa_contact_id = null;\ntry {\n  const contactData = $('🔍 Buscar Contact ID (G54)').item.json.data || [];\n  wa_contact_id = contactData[0]?.id || null;\n} catch (e) { /* si falló el lookup, seguimos sin el vínculo */ }\n\nreturn [{ json: {\n  existe: !!match,\n  deal_id: match ? match.id : null,\n  telefono,\n  wa_contact_id,\n}}];"
       }
     },
     {
@@ -872,7 +872,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', notas: 'Última interacción vía Community AI (RRSS): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
+        "jsonBody": "={{ JSON.stringify({ wa_contact_id: $('🔍 Encontrar Deal por Teléfono').item.json.wa_contact_id, temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', notas: 'Última interacción vía Community AI (RRSS): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
         "options": {}
       }
     },
@@ -908,7 +908,45 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ nombre: $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre || $('🔍 Encontrar Deal por Teléfono').item.json.telefono, telefono: $('🔍 Encontrar Deal por Teléfono').item.json.telefono, origen: 'whatsapp', temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', notas: 'Lead generado por Community AI (RRSS): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
+        "jsonBody": "={{ JSON.stringify({ nombre: $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre || $('🔍 Encontrar Deal por Teléfono').item.json.telefono, telefono: $('🔍 Encontrar Deal por Teléfono').item.json.telefono, origen: 'whatsapp', temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', wa_contact_id: $('🔍 Encontrar Deal por Teléfono').item.json.wa_contact_id, notas: 'Lead generado por Community AI (RRSS): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "crm-buscar-contact-id",
+      "name": "🔍 Buscar Contact ID (G54)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        3520,
+        800
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('🏢 Aplicar Config Empresa').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID + '/wa/leads' }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $('🔍 Extraer Evento FB/IG').item.json.usuarioId || 'fb_' + $('🔍 Extraer Evento FB/IG').item.json.comentarioId }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🏢 Aplicar Config Empresa').item.json.G54_N8N_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
         "options": {}
       }
     }
@@ -1172,7 +1210,7 @@
             "index": 0
           },
           {
-            "node": "🔐 G54: Login CRM",
+            "node": "🔍 Buscar Contact ID (G54)",
             "type": "main",
             "index": 0
           }
@@ -1273,6 +1311,17 @@
           }
         ]
       ]
+    },
+    "🔍 Buscar Contact ID (G54)": {
+      "main": [
+        [
+          {
+            "node": "🔐 G54: Login CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -1284,9 +1333,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": null,
-  "versionId": "0f11bb18-812c-45a3-875e-cf4d7ad3fd8e",
-  "activeVersionId": "0f11bb18-812c-45a3-875e-cf4d7ad3fd8e",
-  "versionCounter": 9,
+  "versionId": "5e1eefe4-48e0-44b7-99f4-3662eeb44237",
+  "activeVersionId": "5e1eefe4-48e0-44b7-99f4-3662eeb44237",
+  "versionCounter": 10,
   "triggerCount": 2,
   "sourceWorkflowId": null,
   "shared": [
@@ -1311,9 +1360,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-07-14T17:40:05.146Z",
-    "createdAt": "2026-07-14T17:40:05.146Z",
-    "versionId": "0f11bb18-812c-45a3-875e-cf4d7ad3fd8e",
+    "updatedAt": "2026-07-14T17:55:28.367Z",
+    "createdAt": "2026-07-14T17:55:28.367Z",
+    "versionId": "5e1eefe4-48e0-44b7-99f4-3662eeb44237",
     "workflowId": "62tIvF0snsrMj0sM",
     "nodes": [
       {
@@ -2115,7 +2164,7 @@
         ],
         "typeVersion": 2,
         "parameters": {
-          "jsCode": "const board = $('📋 G54: Buscar Deal Existente (CRM)').item.json;\nconst telefono = $('🔍 Extraer Evento FB/IG').item.json.usuarioId || ('fb_' + $('🔍 Extraer Evento FB/IG').item.json.comentarioId);\n\nlet match = null;\ntry {\n  for (const etapa of Object.keys(board)) {\n    const deals = board[etapa] || [];\n    const found = deals.find(d => d.telefono === telefono);\n    if (found) { match = found; break; }\n  }\n} catch (e) { /* si el board no cargó, seguimos como si no existiera */ }\n\nreturn [{ json: {\n  existe: !!match,\n  deal_id: match ? match.id : null,\n  telefono,\n}}];\n"
+          "jsCode": "const board = $('📋 G54: Buscar Deal Existente (CRM)').item.json;\nconst telefono = $('🔍 Extraer Evento FB/IG').item.json.usuarioId || ('fb_' + $('🔍 Extraer Evento FB/IG').item.json.comentarioId);\n\nlet match = null;\ntry {\n  for (const etapa of Object.keys(board)) {\n    const deals = board[etapa] || [];\n    const found = deals.find(d => d.telefono === telefono);\n    if (found) { match = found; break; }\n  }\n} catch (e) { /* si el board no cargó, seguimos como si no existiera */ }\n\nlet wa_contact_id = null;\ntry {\n  const contactData = $('🔍 Buscar Contact ID (G54)').item.json.data || [];\n  wa_contact_id = contactData[0]?.id || null;\n} catch (e) { /* si falló el lookup, seguimos sin el vínculo */ }\n\nreturn [{ json: {\n  existe: !!match,\n  deal_id: match ? match.id : null,\n  telefono,\n  wa_contact_id,\n}}];"
         }
       },
       {
@@ -2181,7 +2230,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', notas: 'Última interacción vía Community AI (RRSS): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
+          "jsonBody": "={{ JSON.stringify({ wa_contact_id: $('🔍 Encontrar Deal por Teléfono').item.json.wa_contact_id, temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', notas: 'Última interacción vía Community AI (RRSS): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
           "options": {}
         }
       },
@@ -2217,7 +2266,45 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ nombre: $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre || $('🔍 Encontrar Deal por Teléfono').item.json.telefono, telefono: $('🔍 Encontrar Deal por Teléfono').item.json.telefono, origen: 'whatsapp', temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', notas: 'Lead generado por Community AI (RRSS): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
+          "jsonBody": "={{ JSON.stringify({ nombre: $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre || $('🔍 Encontrar Deal por Teléfono').item.json.telefono, telefono: $('🔍 Encontrar Deal por Teléfono').item.json.telefono, origen: 'whatsapp', temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', wa_contact_id: $('🔍 Encontrar Deal por Teléfono').item.json.wa_contact_id, notas: 'Lead generado por Community AI (RRSS): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "crm-buscar-contact-id",
+        "name": "🔍 Buscar Contact ID (G54)",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          3520,
+          800
+        ],
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "GET",
+          "url": "={{ $('🏢 Aplicar Config Empresa').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID + '/wa/leads' }}",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "phone",
+                "value": "={{ $('🔍 Extraer Evento FB/IG').item.json.usuarioId || 'fb_' + $('🔍 Extraer Evento FB/IG').item.json.comentarioId }}"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🏢 Aplicar Config Empresa').item.json.G54_N8N_TOKEN }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
           "options": {}
         }
       }
@@ -2481,7 +2568,7 @@
               "index": 0
             },
             {
-              "node": "🔐 G54: Login CRM",
+              "node": "🔍 Buscar Contact ID (G54)",
               "type": "main",
               "index": 0
             }
@@ -2582,6 +2669,17 @@
             }
           ]
         ]
+      },
+      "🔍 Buscar Contact ID (G54)": {
+        "main": [
+          [
+            {
+              "node": "🔐 G54: Login CRM",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -2591,18 +2689,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-07-14T17:40:05.372Z",
-        "id": 2044,
+        "createdAt": "2026-07-14T17:55:28.535Z",
+        "id": 2050,
         "workflowId": "62tIvF0snsrMj0sM",
-        "versionId": "0f11bb18-812c-45a3-875e-cf4d7ad3fd8e",
+        "versionId": "5e1eefe4-48e0-44b7-99f4-3662eeb44237",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-07-14T17:40:05.315Z",
-        "id": 2043,
+        "createdAt": "2026-07-14T17:55:28.486Z",
+        "id": 2049,
         "workflowId": "62tIvF0snsrMj0sM",
-        "versionId": "0f11bb18-812c-45a3-875e-cf4d7ad3fd8e",
+        "versionId": "5e1eefe4-48e0-44b7-99f4-3662eeb44237",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
