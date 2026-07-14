@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-14T17:55:28.364Z",
+  "updatedAt": "2026-07-14T19:18:18.272Z",
   "createdAt": "2026-06-20T20:02:45.377Z",
   "id": "62tIvF0snsrMj0sM",
   "name": "Community AI — G54",
@@ -129,7 +129,7 @@
             {
               "id": "a6",
               "name": "FB_ACCESS_TOKEN",
-              "value": "REDACTED_FB_ACCESS_TOKEN",
+              "value": "",
               "type": "string"
             },
             {
@@ -197,7 +197,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst resolver = $('🔍 Resolver Empresa').item.json;\nconst pageData = $('🔍 Obtener Config Página (G54)').item.json;\n\n// company_id: de la API de páginas > query param > fallback CE\nconst company_id = String(pageData.company_id || resolver.queryCompanyId || config.G54_COMPANY_ID || '1');\n\n// Tokens: de la API de páginas > fallback Config (para entornos sin registro en G54 aún)\nconst fb_access_token = pageData.fb_access_token || config.FB_ACCESS_TOKEN || '';\nconst ig_user_id = pageData.ig_user_id || config.IG_USER_ID || '';\n\nreturn [{ json: {\n  G54_BASE_URL: config.G54_BASE_URL,\n  G54_N8N_TOKEN: config.G54_N8N_TOKEN,\n  G54_AGENT_TOKEN: config.G54_AGENT_TOKEN,\n  G54_COMPANY_ID: company_id,\n  FB_PAGE_ID: resolver.pageId || config.FB_PAGE_ID || '',\n  FB_ACCESS_TOKEN: fb_access_token,\n  IG_USER_ID: ig_user_id,\n  GROQ_API_KEY: config.GROQ_API_KEY,\n  WA_LINK: config.WA_LINK || ''\n}}];"
+        "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst resolver = $('🔍 Resolver Empresa').item.json;\nconst pageData = $('🔍 Obtener Config Página (G54)').item.json;\n\n// company_id: de la API de páginas > query param > fallback CE\nconst company_id = String(pageData.company_id || resolver.queryCompanyId || config.G54_COMPANY_ID || '1');\n\n// Tokens: preferir el Page Access Token real (intercambiado desde el token de G54,\n// necesario porque el token guardado en G54 es de usuario, no de página — Meta rechaza\n// publicar comentarios/DMs con un token de usuario aunque sí sirva para otras acciones).\nlet fb_access_token = pageData.fb_access_token || config.FB_ACCESS_TOKEN || '';\ntry {\n  const exchanged = $('🔑 Intercambiar Page Token (FB)').item.json;\n  if (exchanged && exchanged.access_token) fb_access_token = exchanged.access_token;\n} catch (e) { /* si falló el intercambio, seguimos con el token original de G54 */ }\n\nconst ig_user_id = pageData.ig_user_id || config.IG_USER_ID || '';\n\nreturn [{ json: {\n  G54_BASE_URL: config.G54_BASE_URL,\n  G54_N8N_TOKEN: config.G54_N8N_TOKEN,\n  G54_AGENT_TOKEN: config.G54_AGENT_TOKEN,\n  G54_COMPANY_ID: company_id,\n  FB_PAGE_ID: resolver.pageId || config.FB_PAGE_ID || '',\n  FB_ACCESS_TOKEN: fb_access_token,\n  IG_USER_ID: ig_user_id,\n  GROQ_API_KEY: config.GROQ_API_KEY,\n  WA_LINK: config.WA_LINK || ''\n}}];"
       },
       "id": "aplicar-config",
       "name": "🏢 Aplicar Config Empresa",
@@ -949,6 +949,35 @@
         },
         "options": {}
       }
+    },
+    {
+      "id": "fb-exchange-page-token",
+      "name": "🔑 Intercambiar Page Token (FB)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2320,
+        480
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v19.0/{{ $('🔍 Resolver Empresa').item.json.pageId || $('🔍 Obtener Config Página (G54)').item.json.page_id || '' }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "access_token"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('🔍 Obtener Config Página (G54)').item.json.fb_access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      }
     }
   ],
   "connections": {
@@ -1232,7 +1261,7 @@
       "main": [
         [
           {
-            "node": "🏢 Aplicar Config Empresa",
+            "node": "🔑 Intercambiar Page Token (FB)",
             "type": "main",
             "index": 0
           }
@@ -1322,6 +1351,17 @@
           }
         ]
       ]
+    },
+    "🔑 Intercambiar Page Token (FB)": {
+      "main": [
+        [
+          {
+            "node": "🏢 Aplicar Config Empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -1333,9 +1373,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": null,
-  "versionId": "5e1eefe4-48e0-44b7-99f4-3662eeb44237",
-  "activeVersionId": "5e1eefe4-48e0-44b7-99f4-3662eeb44237",
-  "versionCounter": 10,
+  "versionId": "6b0fc9c9-6a97-4f03-9535-f63e72be85a3",
+  "activeVersionId": "6b0fc9c9-6a97-4f03-9535-f63e72be85a3",
+  "versionCounter": 11,
   "triggerCount": 2,
   "sourceWorkflowId": null,
   "shared": [
@@ -1360,9 +1400,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-07-14T17:55:28.367Z",
-    "createdAt": "2026-07-14T17:55:28.367Z",
-    "versionId": "5e1eefe4-48e0-44b7-99f4-3662eeb44237",
+    "updatedAt": "2026-07-14T19:18:18.276Z",
+    "createdAt": "2026-07-14T19:18:18.276Z",
+    "versionId": "6b0fc9c9-6a97-4f03-9535-f63e72be85a3",
     "workflowId": "62tIvF0snsrMj0sM",
     "nodes": [
       {
@@ -1487,7 +1527,7 @@
               {
                 "id": "a6",
                 "name": "FB_ACCESS_TOKEN",
-                "value": "REDACTED_FB_ACCESS_TOKEN",
+                "value": "",
                 "type": "string"
               },
               {
@@ -1555,7 +1595,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst resolver = $('🔍 Resolver Empresa').item.json;\nconst pageData = $('🔍 Obtener Config Página (G54)').item.json;\n\n// company_id: de la API de páginas > query param > fallback CE\nconst company_id = String(pageData.company_id || resolver.queryCompanyId || config.G54_COMPANY_ID || '1');\n\n// Tokens: de la API de páginas > fallback Config (para entornos sin registro en G54 aún)\nconst fb_access_token = pageData.fb_access_token || config.FB_ACCESS_TOKEN || '';\nconst ig_user_id = pageData.ig_user_id || config.IG_USER_ID || '';\n\nreturn [{ json: {\n  G54_BASE_URL: config.G54_BASE_URL,\n  G54_N8N_TOKEN: config.G54_N8N_TOKEN,\n  G54_AGENT_TOKEN: config.G54_AGENT_TOKEN,\n  G54_COMPANY_ID: company_id,\n  FB_PAGE_ID: resolver.pageId || config.FB_PAGE_ID || '',\n  FB_ACCESS_TOKEN: fb_access_token,\n  IG_USER_ID: ig_user_id,\n  GROQ_API_KEY: config.GROQ_API_KEY,\n  WA_LINK: config.WA_LINK || ''\n}}];"
+          "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst resolver = $('🔍 Resolver Empresa').item.json;\nconst pageData = $('🔍 Obtener Config Página (G54)').item.json;\n\n// company_id: de la API de páginas > query param > fallback CE\nconst company_id = String(pageData.company_id || resolver.queryCompanyId || config.G54_COMPANY_ID || '1');\n\n// Tokens: preferir el Page Access Token real (intercambiado desde el token de G54,\n// necesario porque el token guardado en G54 es de usuario, no de página — Meta rechaza\n// publicar comentarios/DMs con un token de usuario aunque sí sirva para otras acciones).\nlet fb_access_token = pageData.fb_access_token || config.FB_ACCESS_TOKEN || '';\ntry {\n  const exchanged = $('🔑 Intercambiar Page Token (FB)').item.json;\n  if (exchanged && exchanged.access_token) fb_access_token = exchanged.access_token;\n} catch (e) { /* si falló el intercambio, seguimos con el token original de G54 */ }\n\nconst ig_user_id = pageData.ig_user_id || config.IG_USER_ID || '';\n\nreturn [{ json: {\n  G54_BASE_URL: config.G54_BASE_URL,\n  G54_N8N_TOKEN: config.G54_N8N_TOKEN,\n  G54_AGENT_TOKEN: config.G54_AGENT_TOKEN,\n  G54_COMPANY_ID: company_id,\n  FB_PAGE_ID: resolver.pageId || config.FB_PAGE_ID || '',\n  FB_ACCESS_TOKEN: fb_access_token,\n  IG_USER_ID: ig_user_id,\n  GROQ_API_KEY: config.GROQ_API_KEY,\n  WA_LINK: config.WA_LINK || ''\n}}];"
         },
         "id": "aplicar-config",
         "name": "🏢 Aplicar Config Empresa",
@@ -2307,6 +2347,35 @@
           },
           "options": {}
         }
+      },
+      {
+        "id": "fb-exchange-page-token",
+        "name": "🔑 Intercambiar Page Token (FB)",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          2320,
+          480
+        ],
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "GET",
+          "url": "=https://graph.facebook.com/v19.0/{{ $('🔍 Resolver Empresa').item.json.pageId || $('🔍 Obtener Config Página (G54)').item.json.page_id || '' }}",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "fields",
+                "value": "access_token"
+              },
+              {
+                "name": "access_token",
+                "value": "={{ $('🔍 Obtener Config Página (G54)').item.json.fb_access_token }}"
+              }
+            ]
+          },
+          "options": {}
+        }
       }
     ],
     "connections": {
@@ -2590,7 +2659,7 @@
         "main": [
           [
             {
-              "node": "🏢 Aplicar Config Empresa",
+              "node": "🔑 Intercambiar Page Token (FB)",
               "type": "main",
               "index": 0
             }
@@ -2680,6 +2749,17 @@
             }
           ]
         ]
+      },
+      "🔑 Intercambiar Page Token (FB)": {
+        "main": [
+          [
+            {
+              "node": "🏢 Aplicar Config Empresa",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -2689,18 +2769,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-07-14T17:55:28.535Z",
-        "id": 2050,
+        "createdAt": "2026-07-14T19:18:18.458Z",
+        "id": 2054,
         "workflowId": "62tIvF0snsrMj0sM",
-        "versionId": "5e1eefe4-48e0-44b7-99f4-3662eeb44237",
+        "versionId": "6b0fc9c9-6a97-4f03-9535-f63e72be85a3",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-07-14T17:55:28.486Z",
-        "id": 2049,
+        "createdAt": "2026-07-14T19:18:18.415Z",
+        "id": 2053,
         "workflowId": "62tIvF0snsrMj0sM",
-        "versionId": "5e1eefe4-48e0-44b7-99f4-3662eeb44237",
+        "versionId": "6b0fc9c9-6a97-4f03-9535-f63e72be85a3",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
