@@ -128,9 +128,9 @@
     </div>
     <div class="item-body">
       <p class="item-why">
-        El dashboard de Métricas RRSS muestra números como <code>050003200</code> en Alcance Total — es literalmente "5000" + "3200" pegados como texto en vez de sumados (5000 + 3200 = 8200). Confirmado por qué pasa: el endpoint <code>GET /api/rrss/metricas</code> devuelve <code>alcance_total</code> (y los demás campos numéricos) como <strong>string</strong>, no como número — ej. <code>"alcance_total": "5000"</code>. El mismo patrón rompe Clics Totales y Generación de Leads. Se ve roto para cualquier cliente que abra esa pantalla hoy.
+        El dashboard de Métricas RRSS muestra números como <code>050003200</code> en Alcance Total — es literalmente "5000" + "3200" pegados como texto en vez de sumados (5000 + 3200 = 8200). Confirmado que <strong>no es un bug de nuestro lado</strong>: n8n manda valores numéricos reales al guardar (ej. <code>alcance: 16</code>, sin comillas, tipo número genuino — verificado en la ejecución real). El endpoint <code>GET /api/rrss/metricas</code> los devuelve como <strong>string</strong> (<code>"alcance_total": "5000"</code>), y además — esto es lo más importante — <strong>ni siquiera devuelve el valor más reciente</strong>: mandamos <code>16</code> recién y la lectura siguió mostrando <code>"5000"</code>, un valor viejo de antes. El guardado (<code>POST</code>) responde <code>ok:true, created:2</code> como si hubiera funcionado, pero esos datos no se reflejan al leer.
       </p>
-      <div class="warn-box"><strong>Pedido concreto:</strong> que esos campos se devuelvan como número (<code>5000</code>) y no como texto (<code>"5000"</code>) en la respuesta de la API — con eso el panel debería sumar bien sin más cambios de su lado.</div>
+      <div class="warn-box"><strong>Pedido concreto:</strong> dos cosas — (1) que <code>alcance_total</code> y los demás campos numéricos se devuelvan como número, no como texto; (2) revisar por qué el <code>GET</code> no refleja el valor recién guardado por el <code>POST</code> — parece que está leyendo de una fuente vieja/cacheada en vez del dato más reciente.</div>
     </div>
   </div>
 
@@ -149,7 +149,7 @@
     </div>
     <div class="item-body">
       <p class="item-why">
-        Cada guardado de métricas manda <code>period_start</code> y <code>period_end</code> (n8n ya lo hace bien), pero al releer <code>GET /api/rrss/metricas</code> solo aparece un valor actual por plataforma, sin desglose por semana. Sospechamos que el backend sobrescribe el mismo registro en vez de ir acumulando uno por semana — necesitamos confirmarlo, porque además de perder el historial ("semana 1, semana 2, semana 3...") esto significa que si en el futuro consultamos métricas de un post individual, podría <strong>pisar el número agregado general de la cuenta</strong> en vez de guardarse aparte.
+        Cada guardado de métricas manda <code>period_start</code> y <code>period_end</code> (n8n ya lo hace bien), pero al releer <code>GET /api/rrss/metricas</code> solo aparece un valor actual por plataforma, sin desglose por semana — y como se ve en el ítem 1, ni siquiera es el valor más reciente. Sospechamos que el backend sobrescribe el mismo registro en vez de ir acumulando uno por semana — necesitamos confirmarlo, porque además de perder el historial ("semana 1, semana 2, semana 3...") esto significa que si en el futuro consultamos métricas de un post individual, podría <strong>pisar el número agregado general de la cuenta</strong> en vez de guardarse aparte.
       </p>
     </div>
   </div>
