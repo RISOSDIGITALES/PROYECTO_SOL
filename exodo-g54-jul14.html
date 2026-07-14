@@ -101,10 +101,10 @@
   <div class="header-inner">
     <div class="header-label">G54 Platform — Genesis Backend</div>
     <h1>Éxodo — Pendientes para <span>Walter</span> · 14 Jul 2026</h1>
-    <p>Documento vivo — se va completando durante el día a medida que aparecen hallazgos. 15 requerimientos activos para el Módulo 1.</p>
+    <p>Documento vivo — se va completando durante el día a medida que aparecen hallazgos. 13 pedidos para Walter + 2 tareas de nuestro lado.</p>
     <div class="header-meta">
       <div class="meta-item"><div class="dot"></div> 14 de julio 2026 — en construcción</div>
-      <div class="meta-item"><div class="dot"></div> 3 P0 · 3 bloqueantes · 6 P1 · 3 P2</div>
+      <div class="meta-item"><div class="dot"></div> 3 P0 · 3 bloqueantes · 7 P1/P2 · 2 nuestras</div>
     </div>
   </div>
 </div>
@@ -354,6 +354,72 @@ El mecanismo ya existe de nuestro lado y quedó probado hoy en vivo — el webho
         Confirmado múltiples veces, incluso con una imagen subida directamente desde el panel — el endpoint de subida funciona y devuelve una URL válida, pero esa URL siempre da 404. Diagnóstico: falta <code>php artisan storage:link</code> (o equivalente) en el servidor de producción. Es el cuello de botella más visible para el cliente final hoy — un post aprobado sin imagen es un post débil para Instagram. <strong>Reconfirmado hoy con datos reales:</strong> de los 4 posts que hoy tienen <code>imagen_url</code> guardada (3 de Crating Express, 1 de Orison), <strong>los 4 dan 404</strong> — ningún post con imagen se ve realmente en este momento. Existe un ajuste posible de nuestro lado (usar el link externo de Pollinations en vez del de G54 mientras se arregla) pero se decidió no aplicarlo — no es nuestro bug y no vale la pena parchar algo que no es responsabilidad nuestra.
       </p>
     </div>
+  </div>
+
+  <!-- 13. Distinguir sin imagen vs imagen rota -->
+  <div class="item-card b-gray">
+    <div class="item-header">
+      <div>
+        <div class="item-title">13. Distinguir visualmente "sin imagen" de "imagen con error de carga"</div>
+        <div class="item-where">Panel › Editor de Posts</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo</span>
+        <span class="badge panel">Panel UI</span>
+        <span class="badge p2">⚪ P2</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Hoy el editor muestra el mismo placeholder "Sin imagen" tanto para un post que nunca tuvo imagen generada como para uno que sí tiene <code>imagen_url</code> guardada pero está rota (404, ver ítem 12). El cliente no puede distinguir ambos casos desde el editor — se entera recién al publicar.
+      </p>
+    </div>
+  </div>
+
+  <div class="section-label">Mejoras de nuestro lado — no dependen de Walter</div>
+
+  <!-- 14. error_message -->
+  <div class="item-card b-gray">
+    <div class="item-header">
+      <div>
+        <div class="item-title">14. Mandar el error real al revertir un post fallido</div>
+        <div class="item-where">n8n — Distribution AI</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuestro</span>
+        <span class="badge p1">🟡 Por construir</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Confirmado hoy: el post tiene un campo <code>error_message</code> en el schema, pero el nodo que revierte un post fallido a "aprobado" solo manda el cambio de estado, nunca el motivo del fallo. El cliente ve que su post programado volvió atrás sin ninguna explicación. Ya tenemos el error real disponible en cada intento fallido — solo falta mandarlo. 100% construible por nosotros, sin depender de Walter.
+      </p>
+    </div>
+  </div>
+
+  <div class="section-label">Tareas pendientes de prueba (nuestro lado)</div>
+
+  <!-- 15. LinkedIn -->
+  <div class="item-card b-gray">
+    <div class="item-header">
+      <div>
+        <div class="item-title">15. Probar conexión real de LinkedIn</div>
+        <div class="item-where">Nuestra configuración de canal</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuestro</span>
+        <span class="badge p2">Por probar</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        LinkedIn aparece como opción en el editor pero su <code>connection_status</code> sigue en "pendiente" — hay que conectar un LinkedIn real (el nuestro, para prueba) y validar el flujo completo antes de confiar en que esa opción funciona para un cliente.
+      </p>
+    </div>
+  </div>
+
+  <div class="warn-box" style="margin-top: 8px;">
+    <strong>Confirmado como diseño intencional, no son gaps:</strong> (1) el cliente recibe una sola imagen generada por post — si no le gusta, la opción es subir la suya propia desde su galería, no regenerar con IA; (2) no existe un modo de "generar solo imágenes" suelto, siempre va atado a un post; (3) que no se puedan borrar posts en estado aprobado/programado (solo revertir) también es a propósito.
   </div>
 
 </div>
