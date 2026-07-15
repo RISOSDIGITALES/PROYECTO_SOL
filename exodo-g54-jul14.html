@@ -212,16 +212,17 @@
         <div class="item-where">Panel › Ideas de Contenido</div>
       </div>
       <div class="item-tags">
-        <span class="badge nuevo">Nuevo</span>
+        <span class="badge nuevo">Actualizado 15-jul</span>
         <span class="badge panel">Panel UI</span>
-        <span class="badge opcional">Sugerencia — no bloqueante</span>
+        <span class="badge blocker">🟠 Bloqueante (corregido el 15-jul)</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
         Sugerencia de experiencia de usuario: mostrar junto a cada idea generada la justificación de por qué se creó — la conexión entre la keyword real asignada y el título/ángulo elegido por la IA.
       </p>
-      <div class="dep-box"><strong>Estado de nuestro lado (n8n):</strong> el dato ya existe y ya se manda a G54 al guardar. Desde el rediseño del 13-jul (validación de coherencia keyword→idea), Ideas AI exige un campo <code>angulo</code> por cada idea que justifica la conexión entre la keyword de G54 y el título propuesto — cualquier idea sin esa justificación se descarta automáticamente antes de guardarse. Solo falta que el panel lo muestre.</div>
+      <div class="dep-box"><strong>Estado de nuestro lado (n8n):</strong> el dato se genera — Ideas AI exige un campo <code>angulo</code> por cada idea que justifica la conexión entre la keyword de G54 y el título propuesto, cualquier idea sin esa justificación se descarta automáticamente antes de guardarse.</div>
+      <div class="dep-box"><strong>Corrección del 15-jul:</strong> ayer se dijo que solo faltaba que el panel lo mostrara — no es así. Se confirmó contra <code>GET /api/rrss/ideas</code> que el campo de justificación <strong>no existe en el schema de la idea guardada</strong> — G54 lo descarta en el mismo momento de crear la idea, igual que otros campos ya reportados. No hay nada que mostrar en el panel todavía porque el dato nunca llega a persistirse. Depende de que Walter agregue una columna para esto (ej. <code>justificacion</code> o <code>angulo</code>) en la tabla de ideas.</div>
     </div>
   </div>
 
@@ -254,16 +255,16 @@
         <div class="item-where">Panel › Métricas RRSS</div>
       </div>
       <div class="item-tags">
-        <span class="badge nuevo">Nuevo</span>
+        <span class="badge nuevo">Actualizado 15-jul</span>
         <span class="badge panel">Panel UI</span>
-        <span class="badge p1">🟡 P1</span>
+        <span class="badge blocker">🟠 Bloqueante — confirmado el 15-jul</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
         Cada post publicado debería verse en el reporte de Analytics agrupado por la semana de la estrategia a la que pertenece, con su fecha real de publicación y el número de semana correspondiente — ej. "Semana 3 — post publicado el 15 de julio".
       </p>
-      <div class="dep-box"><strong>Estado de nuestro lado (n8n):</strong> el campo <code>semana</code> ya se genera en Ideas AI al crear cada idea (<code>ctx.weekNum</code>), pero no está confirmado que ese número viaje desde la idea hasta el post final publicado sin perderse en el camino — hay que revisarlo.</div>
+      <div class="dep-box"><strong>Confirmado el 15-jul, no sobrevive:</strong> el campo <code>semana</code> se genera en Ideas AI al crear cada idea (<code>ctx.weekNum</code>) y se manda en el POST de guardado, pero se comprobó contra <code>GET /api/rrss/ideas</code> que <strong>no existe en el schema de la idea guardada</strong> — G54 lo descarta de entrada, en el mismo punto donde también se pierde <code>justificacion</code> (ver I-4). No hay nada que agrupar por semana en Analytics porque el dato ni siquiera llega a la idea, mucho menos al post. Depende de que Walter agregue la columna <code>semana</code> a la tabla de ideas (y que ese valor se copie al crear el post desde la idea).</div>
       <div class="dep-box"><strong>Depende de Backend:</strong> <em>B-1 (post_id_platform)</em> y la posibilidad de leer métricas por post individual son requisito para que el Analytics pueda mostrar cada post por separado en vez de solo el agregado de cuenta.</div>
     </div>
   </div>
@@ -562,6 +563,27 @@
       <p class="item-why">
         Hoy el Analytics Mensual manda el reporte por correo directo desde n8n (SMTP), sin pasar por la plataforma. El diseño que se quiere: el HTML del reporte se manda a G54, se muestra en el panel, y desde ahí el cliente decide compartirlo por correo. Falta el endpoint donde guardar ese reporte (probamos 6 rutas razonables, todas 404) — se necesita algo tipo <code>POST /reportes</code> por empresa + período, y el botón de "compartir por correo" del lado del panel.
       </p>
+    </div>
+  </div>
+
+  <!-- B-11. Columnas faltantes en la tabla de ideas -->
+  <div class="item-card b-red">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-11. Columnas faltantes en la tabla de ideas — semana y justificacion se descartan al crear la idea</div>
+        <div class="item-where">API Backend — Ideas RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo — 15-jul</span>
+        <span class="badge api">Columnas nuevas</span>
+        <span class="badge blocker">🟠 Bloqueante</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Al crear una idea, Ideas AI manda <code>semana</code> (número de semana de la estrategia a la que pertenece) y <code>justificacion</code> (por qué esa idea corresponde a esa keyword, campo obligatorio desde la validación de coherencia del 13-jul). Se confirmó contra <code>GET /api/rrss/ideas</code> que ninguno de los dos existe en el schema de la idea guardada — el registro real solo tiene <code>id, company_id, topic, platform, keyword, status, fecha_propuesta, generated_by, created_at, updated_at</code>. Mismo patrón de descarte silencioso ya visto en la tabla de estrategia (B-2).
+      </p>
+      <div class="dep-box"><strong>Habilita directamente:</strong> I-4 (justificación visible de cada idea) e I-6 (Analytics agrupado por semana) — ninguno de los dos se puede construir sin estas columnas, sin importar lo que se haga del lado del panel.</div>
     </div>
   </div>
 
