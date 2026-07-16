@@ -1,0 +1,1177 @@
+{
+  "updatedAt": "2026-07-16T15:29:18.875Z",
+  "createdAt": "2026-04-08T19:21:43.977Z",
+  "id": "38fO1D5uJpVUDMqm",
+  "name": "CE Blog - Publicar en Todas las Redes",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                2
+              ],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "trigger-schedule",
+      "name": "⏰ Trigger Martes 9am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        304
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "trigger-manual",
+      "name": "▶️ Ejecutar Manualmente",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('🔧 Config Empresa').item.json.data.website }}/wp-json/wp/v2/posts",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "per_page",
+              "value": "100"
+            },
+            {
+              "name": "status",
+              "value": "publish"
+            },
+            {
+              "name": "orderby",
+              "value": "date"
+            },
+            {
+              "name": "order",
+              "value": "asc"
+            },
+            {
+              "name": "_fields",
+              "value": "id,title,excerpt,link,date,_links,_embedded"
+            },
+            {
+              "name": "_embed",
+              "value": "wp:featuredmedia"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-blogs",
+      "name": "📰 Obtener Blogs de WordPress",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        288,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Blogs ordered ASC by date from WordPress (via Verificar Stock)\nconst blogs = $input.all().map(i => {\n  // Verificar Stock adds _total_blogs/_low_stock; get original WP fields\n  const b = i.json;\n  return b;\n});\n\nif (!blogs.length) throw new Error('No blogs found in WordPress');\n\n// Rotate by ISO week number — deterministic, no storage needed\nconst now = new Date();\nconst startOfYear = new Date(now.getFullYear(), 0, 1);\nconst weekNumber = Math.floor((now - startOfYear) / (7 * 24 * 60 * 60 * 1000));\nconst index = weekNumber % blogs.length;\nconst siguiente = blogs[index];\n\nfunction stripHtml(h) {\n  return (h || '').replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();\n}\n\nconst img =\n  siguiente._embedded &&\n  siguiente._embedded['wp:featuredmedia'] &&\n  siguiente._embedded['wp:featuredmedia'][0]\n    ? siguiente._embedded['wp:featuredmedia'][0].source_url || ''\n    : '';\n\nreturn [{\n  json: {\n    wp_id: siguiente.id,\n    titulo: siguiente.title ? siguiente.title.rendered || '' : '',\n    extracto: stripHtml(siguiente.excerpt ? siguiente.excerpt.rendered || '' : '').slice(0, 500),\n    url: siguiente.link,\n    fecha_wp: siguiente.date,\n    featured_image_url: img\n  }\n}];"
+      },
+      "id": "select-blog",
+      "name": "🔧 Seleccionar Blog",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.featured_image_url }}",
+        "options": {}
+      },
+      "id": "download-image",
+      "name": "⬇️ Descargar Imagen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        304
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED_GROQ_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "groq-multi",
+      "name": "🤖 Groq: Generar Contenido Multi-Canal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        304
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.item.json.choices && $input.item.json.choices[0]\n  ? $input.item.json.choices[0].message.content || '{}'\n  : '{}';\n\nlet content;\ntry { content = JSON.parse(raw); }\ncatch(e) {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  content = m ? JSON.parse(m[0]) : {};\n}\n\n// Use cross-node reference — blog data is safe regardless of image download result\nconst blog = $('🔧 Seleccionar Blog').first().json;\n\n// ── LinkedIn: enforce EXACTLY 7 specific hashtags ──────────────────────────\nfunction enforceLinkedInHashtags(text) {\n  if (!text) return text;\n  const REQUIRED = ['#ISPM15'];\n  const POOL = [\n    '#WoodCrating','#CustomCrating','#WoodPackaging','#IndustrialPackaging',\n    '#FreightProtection','#ExportCrating','#HeavyEquipmentShipping','#MiamiLogistics',\n    '#ShippingCrates','#SupplyChain','#ExportPackaging','#B2BLogistics','#ManufacturingMiami'\n  ];\n  const found = (text.match(/#[A-Za-z0-9_]+/g) || []);\n  const seen = new Set();\n  const hashtags = [];\n  REQUIRED.forEach(function(h) { if (!seen.has(h)) { seen.add(h); hashtags.push(h); } });\n  found.forEach(function(h)    { if (!seen.has(h) && hashtags.length < 7) { seen.add(h); hashtags.push(h); } });\n  for (let i = 0; i < POOL.length && hashtags.length < 7; i++) {\n    if (!seen.has(POOL[i])) { seen.add(POOL[i]); hashtags.push(POOL[i]); }\n  }\n  const cleanText = text.replace(/#[A-Za-z0-9_]+/g, '').replace(/\\n{3,}/g, '\\n\\n').trim();\n  return cleanText + '\\n\\n' + hashtags.slice(0, 7).join(' ');\n}\n\nconst linkedinFinal = enforceLinkedInHashtags(content.linkedin || '');\n\n// Pass image binary from download node so LinkedIn can upload it directly\nlet imgBinary = {};\ntry { imgBinary = $('⬇️ Descargar Imagen').first().binary || {}; } catch(e) {}\n\n// ── UTM Tracking ─────────────────────────────────────────────────────────────\nfunction addUtm(text, source, medium, campaign) {\n  if (!text) return text;\n  return text.replace(\n    /https?:\\/\\/(www\\.)?cratingexpress\\.com(\\/[^\\s\"'<>\\)]*)?/g,\n    function(match) {\n      if (match.includes('utm_source')) return match;\n      const sep = match.includes('?') ? '&' : '?';\n      return match + sep + 'utm_source=' + source +\n             '&utm_medium=' + medium + '&utm_campaign=' + campaign;\n    }\n  );\n}\n\nreturn [{\n  json: {\n    wp_id:     blog.wp_id,\n    titulo:    blog.titulo,\n    extracto:  blog.extracto || '',\n    url:       blog.url,\n    fecha_wp:  blog.fecha_wp,\n    featured_image_url: blog.featured_image_url || '',\n    linkedin:      addUtm(linkedinFinal,           'linkedin',  'social',     'blog-semanal'),\n    instagram:     addUtm(content.instagram  || '', 'instagram', 'social',     'blog-semanal'),\n    facebook:      addUtm(content.facebook   || '', 'facebook',  'social',     'blog-semanal'),\n    email_subject: content.email_subject || ('Blog Update: ' + blog.titulo).slice(0, 45),\n    email_body:    addUtm(content.email_body || '', 'email',     'newsletter', 'blog-semanal'),\n    slide_title:   content.slide_title || '',\n    slide_description: content.slide_description || '',\n  },\n  binary: imgBinary\n}];"
+      },
+      "id": "parse-content",
+      "name": "🔍 Parsear Contenido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.linkedin.com/v2/ugcPosts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "linkedInOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "LinkedIn-Version",
+              "value": "20260101"
+            },
+            {
+              "name": "X-Restli-Protocol-Version",
+              "value": "2.0.0"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  author: \"urn:li:organization:112205115\",\n  lifecycleState: \"PUBLISHED\",\n  specificContent: {\n    \"com.linkedin.ugc.ShareContent\": {\n      shareCommentary: { text: $('🔍 Parsear Contenido').item.json.linkedin },\n      shareMediaCategory: \"ARTICLE\",\n      media: [{\n        status: \"READY\",\n        originalUrl: $('🔍 Parsear Contenido').item.json.url,\n        title: { text: $('🔍 Parsear Contenido').item.json.titulo },\n        description: { text: $('🔍 Parsear Contenido').item.json.extracto || \"\" }\n      }]\n    }\n  },\n  visibility: { \"com.linkedin.ugc.MemberNetworkVisibility\": \"PUBLIC\" }\n}) }}",
+        "options": {}
+      },
+      "id": "publish-linkedin",
+      "name": "📢 Publicar en LinkedIn",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3376,
+        832
+      ],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "EdRerqCGO9tt9sGO",
+          "name": "LinkedIn account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/1713965015486703/photos",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $('📸 Slides: Obtener Thumbnail').item.json.contentUrl }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $('🔍 Parsear Contenido').item.json.facebook }}"
+            },
+            {
+              "name": "access_token",
+              "value": "REDACTED_FB_ACCESS_TOKEN"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "publish-facebook",
+      "name": "📘 Publicar en Facebook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3120,
+        432
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.instagram.com/v25.0/26563071519994138/media",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "caption",
+              "value": "={{ $('🔍 Parsear Contenido').item.json.instagram }}"
+            },
+            {
+              "name": "image_url",
+              "value": "={{ $('📸 Slides: Obtener Thumbnail').item.json.contentUrl }}"
+            },
+            {
+              "name": "access_token",
+              "value": "IGAAXzay9JChhBZAGE4YW55cHR0WmExMU5TbGl4NlhRb1NmT01UcG0wSEdoN1JJem5tX0FONEhHdGFpMUljZAHdCaUJUaGVHbXA5a0hvR2pESElybExiamx1QUlubFBUdTBiY3J2Q0xLWDEycHhhdFJKMHdsSUdBR0ktdFhfSUVFcwZDZD"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "publish-instagram",
+      "name": "📸 Instagram: Crear Container",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3120,
+        592
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "subject": "={{ $('🔍 Parsear Contenido').item.json.email_subject }}",
+        "options": {
+          "appendAttribution": false
+        },
+        "toEmail": "={{ $('🔧 Config Empresa').item.json.data.emails[0] }}",
+        "fromEmail": "risosadmi@gmail.com",
+        "html": "=<!DOCTYPE html><html><body style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;\">\n<div style=\"background:#305468;color:#fff;padding:24px 28px;border-radius:8px 8px 0 0;\">\n  <h2 style=\"margin:0;font-size:20px;\">&#128230; Crating Express &mdash; Latest from our Blog</h2>\n</div>\n<div style=\"padding:24px 28px;border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;\">\n  <p>Hi there,</p>\n  <h2 style=\"margin:0 0 16px;font-size:20px;color:#305468;line-height:1.3;\">{{ $('🔍 Parsear Contenido').item.json.email_subject }}</h2>\n  <div style=\"margin:16px 0 0;padding:0;line-height:0;\">\n    <img src=\"{{ $('🔍 Parsear Contenido').item.json.featured_image_url }}\" \n         alt=\"{{ $('🔍 Parsear Contenido').item.json.email_subject }}\"\n         style=\"width:100%;max-width:548px;display:block;border-radius:4px;\" />\n  </div>\n  <div style=\"margin-top:20px;\">\n    {{ $('🔍 Parsear Contenido').item.json.email_body }}\n  </div>\n  <div style=\"text-align:center;margin:28px 0;\">\n    <a href=\"{{ $('🔍 Parsear Contenido').item.json.url }}\" style=\"display:inline-block;background:#ff6900;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:15px;\">Read Full Article &rarr;</a><br>\n    <a href=\"https://wa.me/17865586007?text=Hi%2C%20I%27m%20interested%20in%20crating%20solutions\" style=\"display:inline-block;background:#25D366;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:15px;margin-top:10px;\">&#128172; Chat on WhatsApp</a>\n  </div>\n  <div style=\"text-align:center;margin:24px 0 16px;\">\n    <img src=\"https://lh3.googleusercontent.com/d/14EmfG1bLlmxbvvRFyVFaHyehs-_9r5Lh\" alt=\"Crating Express\" style=\"max-width:100%;width:548px;\" />\n  </div>\n  <p style=\"margin:0;padding-top:14px;border-top:1px solid #eee;font-size:12px;color:#999;text-align:center;\"><strong>Crating Express</strong> &middot; 7764 NW 64 Street, Miami FL 33166<br>Phone: 786-558-6007 &middot; <a href=\"https://cratingexpress.com\" style=\"color:#999;\">cratingexpress.com</a></p>\n</div>\n</body></html>"
+      },
+      "id": "send-email",
+      "name": "📧 Enviar Newsletter",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1680,
+        112
+      ],
+      "webhookId": "f4ec7f92-aa8e-4527-9e33-62ae0c1ebacb",
+      "credentials": {
+        "smtp": {
+          "id": "iWBBSSe5AWsCMo89",
+          "name": "Gmail SMTP — risosadmi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "subject": "=CE Blog Publicado — {{ $json.titulo || $json.title || \"Post\" }} | {{ new Date().toLocaleDateString(\"es-US\") }}",
+        "options": {
+          "senderName": "Growth54"
+        },
+        "toEmail": "={{ $('🔧 Config Empresa').item.json.data.emails[0] }}",
+        "fromEmail": "risosadmi@gmail.com",
+        "html": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;color:#333;\"><div style=\"background:#305468;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0;\"><strong>Growth54 — Reporte Automático</strong></div><div style=\"padding:16px 20px;border:1px solid #ddd;border-top:none;border-radius:0 0 6px 6px;\"><p><strong>Workflow:</strong> CE Blog — Publicar en Todas las Redes</p><p><strong>Fecha:</strong> {{new Date().toLocaleString(\"es-US\",{timeZone:\"America/New_York\"})}}</p><p><strong>Estado:</strong> ✅ Completado</p><hr style=\"border:none;border-top:1px solid #eee;margin:12px 0;\"><p><strong>Blog publicado:</strong> {{ $json.titulo || $json.title || \"N/A\" }}</p><p><strong>Plataformas:</strong> LinkedIn, Facebook, Instagram, Newsletter</p><p><strong>Slide generado:</strong> ✅</p><p><strong>Guardado en Airtable:</strong> ✅</p></div></div>"
+      },
+      "id": "notify",
+      "name": "🔔 Notificar Publicación",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1968,
+        112
+      ],
+      "webhookId": "e69053bb-9245-40d6-b59d-f92c503c68b8",
+      "credentials": {
+        "smtp": {
+          "id": "iWBBSSe5AWsCMo89",
+          "name": "Gmail SMTP — risosadmi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/drive/v3/files/134-ojOjBOKq0tNSqJL7paOdslEcwHeURYbvfVoQSTYk/copy",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ name: 'Blog Post - ' + $('\\u{1F50D} Parsear Contenido').item.json.titulo }) }}",
+        "options": {}
+      },
+      "id": "slides-copiar-blog",
+      "name": "📋 Slides: Copiar Template",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        512
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "7t2xPBRoZ9Zn8Xys",
+          "name": "SEARCH KEYWORDS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://slides.googleapis.com/v1/presentations/' + $json.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "options": {}
+      },
+      "id": "slides-estructura-blog",
+      "name": "📄 Slides: Obtener Estructura",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        512
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "7t2xPBRoZ9Zn8Xys",
+          "name": "SEARCH KEYWORDS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const estructura = $input.item.json;\nconst blog = $('🔍 Parsear Contenido').first().json;\nconst presentacionId = $('📋 Slides: Copiar Template').first().json.id;\nconst slideImg = $('🖼️ Seleccionar Imagen Slide').first().json;\n\nconst pageElements = estructura.slides?.[0]?.pageElements || [];\n\n// English slide content from Groq; fallback to blog title\nconst titulo = blog.slide_title || blog.titulo || 'Blog Post';\nconst extracto = blog.slide_description || (blog.extracto || '').slice(0, 120);\n\n// Use JPEG/PNG image (Google Slides doesn't accept WebP)\nconst imageUrl = slideImg.slide_image_url || blog.featured_image_url || '';\n\n// Adaptive font size\nlet fontSize = 52;\nif (titulo.length > 15) fontSize = 40;\nif (titulo.length > 22) fontSize = 32;\nif (titulo.length > 30) fontSize = 26;\n\nconst textRequests = [\n  { replaceAllText: { containsText: { text: '[titulo_post]',      matchCase: true }, replaceText: titulo   } },\n  { replaceAllText: { containsText: { text: '[descripcion_post]', matchCase: true }, replaceText: extracto } }\n];\n\nconst titleShape = pageElements.find(el =>\n  (el.shape?.text?.textElements || []).some(te => (te.textRun?.content || '').includes('[titulo_post]'))\n);\nif (titleShape) {\n  textRequests.push({\n    updateTextStyle: {\n      objectId: titleShape.objectId,\n      textRange: { type: 'ALL' },\n      style: { fontSize: { magnitude: fontSize, unit: 'PT' } },\n      fields: 'fontSize'\n    }\n  });\n}\n\nlet imageRequest = null;\nif (imageUrl) {\n  const imageElement = pageElements.find(el => el.image !== undefined);\n  if (imageElement) {\n    imageRequest = {\n      requests: [{\n        replaceImage: {\n          imageObjectId: imageElement.objectId,\n          url: imageUrl,\n          imageReplaceMethod: 'CENTER_CROP'\n        }\n      }]\n    };\n  }\n}\n\nreturn [{ json: { presentacionId, textRequests, imageRequest, titulo } }];"
+      },
+      "id": "slides-preparar-blog",
+      "name": "🔧 Slides: Preparar Reemplazos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://slides.googleapis.com/v1/presentations/' + $json.presentacionId + ':batchUpdate' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ requests: $json.textRequests }) }}",
+        "options": {}
+      },
+      "id": "slides-reemplazar-texto-blog",
+      "name": "✏️ Slides: Reemplazar Texto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        512
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "7t2xPBRoZ9Zn8Xys",
+          "name": "SEARCH KEYWORDS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://slides.googleapis.com/v1/presentations/' + $('\\u270f\\uFE0F Slides: Reemplazar Texto').item.json.presentationId + ':batchUpdate' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('\\u{1F527} Slides: Preparar Reemplazos').item.json.imageRequest || { requests: [] }) }}",
+        "options": {}
+      },
+      "id": "slides-reemplazar-imagen-blog",
+      "name": "🖼️ Slides: Reemplazar Imagen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        512
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "7t2xPBRoZ9Zn8Xys",
+          "name": "SEARCH KEYWORDS"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://slides.googleapis.com/v1/presentations/' + $('\\u{1F527} Slides: Preparar Reemplazos').item.json.presentacionId + '/pages/p1/thumbnail?thumbnailProperties.thumbnailSize=LARGE' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "options": {}
+      },
+      "id": "slides-thumbnail-blog",
+      "name": "📸 Slides: Obtener Thumbnail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2880,
+        512
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "7t2xPBRoZ9Zn8Xys",
+          "name": "SEARCH KEYWORDS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.instagram.com/v25.0/26563071519994138/media_publish",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "IGAAXzay9JChhBZAGE4YW55cHR0WmExMU5TbGl4NlhRb1NmT01UcG0wSEdoN1JJem5tX0FONEhHdGFpMUljZAHdCaUJUaGVHbXA5a0hvR2pESElybExiamx1QUlubFBUdTBiY3J2Q0xLWDEycHhhdFJKMHdsSUdBR0ktdFhfSUVFcwZDZD"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "instagram-publish",
+      "name": "✅ Instagram: Publicar Container",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3376,
+        592
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const blog = $('🔧 Seleccionar Blog').first().json;\n\nconst systemPrompt = \"You are an expert social media strategist and SEO specialist for Crating Express, a wood packaging and custom crating company based in Miami FL. You write B2B industrial content. ALL output MUST be in English. Respond ONLY with valid JSON, zero extra text.\";\n\nconst userPrompt = [\n  'BLOG TITLE: ' + blog.titulo,\n  'BLOG EXCERPT: ' + (blog.extracto || '').slice(0, 300),\n  'ARTICLE URL: ' + blog.url,\n  '',\n  \"LINKEDIN HASHTAG RULE: The LAST line of the linkedin field MUST contain EXACTLY 7 hashtags separated by spaces, nothing else. #ISPM15 is MANDATORY in every post. Pick the other 6 from this pool: #WoodCrating #CustomCrating #WoodPackaging #IndustrialPackaging #FreightProtection #ExportCrating #HeavyEquipmentShipping #MiamiLogistics #ShippingCrates #SupplyChain #ExportPackaging #B2BLogistics #ManufacturingMiami. NEVER use generic hashtags like #business #marketing.\\n\\nINSTAGRAM HASHTAG RULE: After a blank line add EXACTLY 13 hashtags. Mix: 3 high-competition from (#packaging #logistics #shipping #manufacturing #miami), 5 medium-competition from (#woodpackaging #customcrating #industrialpackaging #woodencrates #freightprotection #heavyequipment #palletcrating), 5 niche from (#ISPM15 #woodcrating #exportcrating #cratingexpress #miamilogistics #exportpackaging #heavyequipmentcrating #industrialshipping).\",\n  \"\\n\\nPLATFORM CONTENT REQUIREMENTS (all in English):\\n\\nlinkedin: 200-250 words total. First 2 lines = strong hook. Body = 2-3 short paragraphs with B2B keywords. CTA line with article URL. Blank line. Final line = EXACTLY 7 hashtags.\\n\\ninstagram: 80-120 word caption. First line = hook, no hashtags. 2-3 emojis. CTA at end. Blank line. EXACTLY 13 hashtags.\\n\\nfacebook: 120-150 words. Engaging question or bold fact. Conversational tone. 1-2 emojis. End with: Read more (URL). 4-5 hashtags.\\n\\nemail_subject: Max 45 chars. Curiosity-driven. No spam words. Do NOT start with New article.\\n\\nemail_body: Valid HTML. H2 heading. 2 short paragraphs (150-200 words). CTA button linked to URL. Professional Crating Express closing.\\n\\nslide_title: MAX 6 words. Punchy English headline for a graphic slide. No subtitle, no punctuation at end. Example: \\\"Cut Crating Costs in South Florida\\\".\\n\\nslide_description: 1 sentence, max 20 words. Supports the slide_title. English only. No hashtags.\"\n].join('\\n');\n\nreturn [{\n  json: {\n    model: 'llama-3.3-70b-versatile',\n    messages: [\n      { role: 'system', content: systemPrompt },\n      { role: 'user', content: userPrompt }\n    ],\n    temperature: 0.7,\n    max_tokens: 2200,\n    response_format: { type: 'json_object' }\n  }\n}];"
+      },
+      "id": "prep-groq-request",
+      "name": "🔧 Preparar Request Groq",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('📸 Slides: Obtener Thumbnail').item.json.contentUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "download-thumbnail",
+      "name": "⬇️ Descargar Thumbnail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3072,
+        832
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 7
+      },
+      "id": "instagram-wait",
+      "name": "⏳ Esperar 7s (Instagram)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3248,
+        592
+      ],
+      "webhookId": "ig-wait-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const url = $json.featured_image_url || \"\";\nif (!url) return [];\nreturn [{ json: { source_url: url, mime_type: \"image/jpeg\", alt_text: $json.titulo || \"\" } }];"
+      },
+      "id": "wp-fetch-jpeg",
+      "name": "🔎 WP: Imagen JPEG del Post",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        848,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Seleccionar la mejor imagen JPEG/PNG para el slide\nconst mediaItems = $input.all().map(i => i.json);\nconst blog = $('🔧 Seleccionar Blog').first().json;\n\n// mediaItems es array de imágenes del post (JPEG/PNG solamente)\n// Excluir logos, íconos, badges\nconst EXCLUDE_KEYWORDS = ['logo', 'brand', 'icon', 'badge', 'seal', 'stamp', 'cert', 'award'];\n\nconst filtered = mediaItems.filter(m => {\n  const urlLower = (m.source_url || '').toLowerCase();\n  const altLower = (m.alt_text || '').toLowerCase();\n  return !EXCLUDE_KEYWORDS.some(k => urlLower.includes(k) || altLower.includes(k));\n});\n\nlet imageUrl = null;\n\n// Preferir PNG sobre JPEG, luego primera disponible\nconst png = filtered.find(m => m.mime_type === 'image/png');\nconst jpg = filtered.find(m => ['image/jpeg','image/jpg'].includes(m.mime_type));\nconst best = png || jpg || filtered[0];\n\nif (best) {\n  imageUrl = best.source_url;\n} else {\n  // Fallback: convertir WebP a JPG (WordPress guarda el original)\n  imageUrl = (blog.featured_image_url || '').replace(/\\.webp$/, '.jpg');\n}\n\nreturn [{\n  json: {\n    ...blog,\n    slide_image_url: imageUrl || blog.featured_image_url || ''\n  }\n}];"
+      },
+      "id": "select-jpeg-img",
+      "name": "🖼️ Seleccionar Imagen Slide",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const blogs = $input.all();\nconst total = blogs.length;\n// Pass through all items, but flag if low stock\nreturn blogs.map((b,i) => ({json:{...b.json, _total_blogs: total, _low_stock: total < 5}}))"
+      },
+      "id": "fb9ec1c1-76c2-4bfb-bf66-af7af5a5b332",
+      "name": "🔢 Verificar Stock Blogs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "subject": "⚠️ CE Blog — Quedan menos de 5 posts disponibles",
+        "options": {
+          "senderName": "Growth54"
+        },
+        "toEmail": "={{ $('🔧 Config Empresa').item.json.data.emails[0] }}",
+        "fromEmail": "risosadmi@gmail.com",
+        "html": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;color:#333;\"><div style=\"background:#305468;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0;\"><strong>Growth54 — Reporte Automático</strong></div><div style=\"padding:16px 20px;border:1px solid #ddd;border-top:none;border-radius:0 0 6px 6px;\"><p><strong>Workflow:</strong> CE Blog — Alerta de Contenido</p><p><strong>Fecha:</strong> {{new Date().toLocaleString(\"es-US\",{timeZone:\"America/New_York\"})}}</p><p><strong>Estado:</strong> ✅ Completado</p><hr style=\"border:none;border-top:1px solid #eee;margin:12px 0;\"><p style=\"color:#c0392b;font-weight:bold;\">⚠️ Quedan menos de 5 blogs sin publicar.</p><p>Es momento de crear nuevo contenido para mantener el calendario editorial.</p><p><strong>Acción recomendada:</strong> Publicar al menos 4 nuevos artículos en WordPress.</p></div></div>"
+      },
+      "id": "f2c1ac19-bc51-42fd-b45f-a616be342f30",
+      "name": "⚠️ Alerta: Pocos Blogs",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        608,
+        512
+      ],
+      "webhookId": "074c60bd-c363-4daa-a3fc-b3fa0a0384ee",
+      "credentials": {
+        "smtp": {
+          "id": "iWBBSSe5AWsCMo89",
+          "name": "Gmail SMTP — risosadmi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "db754d01-a386-4f6d-84d4-3d754788bee2",
+              "leftValue": "={{ $json._low_stock }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c1b85c4a-2a99-4d47-9125-a6aeeb0d9c8e",
+      "name": "❓ ¿Pocos Blogs?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        400,
+        656
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "blog-getleads",
+      "name": "📋 Obtener Leads para Blog",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1680,
+        800
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "QE2RlAxaMLoYefTD",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst leads = $input.all();\nconst blog  = $('🔍 Parsear Contenido').first().json;\nconst result = [];\n\nfor (const item of leads) {\n  const d = item.json;\n  if (!d.email) continue;\n  if ((d.estado_email || '').toLowerCase() === 'bloqueado') continue;\n\n  result.push({\n    json: {\n      email:          d.email,\n      nombre:         d.nombre || d.Nombre || 'there',\n      row_number:     d.row_number,\n      blog_titulo:    blog.titulo,\n      blog_url:       blog.url,\n      blog_extracto:  blog.extracto,\n      blog_imagen:    blog.featured_image_url,\n      email_subject:  blog.email_subject,\n      email_body:     blog.email_body,\n    }\n  });\n}\n\nreturn result;\n",
+        "code": "// Filtrar leads con email + deduplicar + enriquecer con datos del blog\nconst leads = $input.all();\nconst seen = new Set();\nconst result = [];\n\n// Get blog data from upstream nodes (set once for all leads)\nlet blogUrl = '';\nlet blogTitulo = '';\nlet blogImagen = '';\nlet emailSubject = '';\nlet emailBody = '';\n\ntry {\n  const parsed = $('🔍 Parsear Contenido').first().json;\n  blogUrl       = parsed.url || '';\n  blogTitulo    = parsed.titulo || '';\n  blogImagen    = parsed.featured_image_url || '';\n  emailSubject  = parsed.email_subject || '';\n  emailBody     = parsed.email_body || '';\n} catch(e) {}\n\n// Fallback: try Seleccionar Blog directly\nif (!blogUrl) {\n  try {\n    const blog = $('🔧 Seleccionar Blog').first().json;\n    blogUrl    = blog.url || blog.link || '';\n    blogTitulo = blog.titulo || blog.title?.rendered || '';\n    blogImagen = blog.featured_image_url || '';\n  } catch(e) {}\n}\n\nfor (const item of leads) {\n  const d = item.json;\n  const email = (d.email || '').trim().toLowerCase();\n\n  // Skip sin email\n  if (!email) continue;\n\n  // Skip duplicados (mismo email)\n  if (seen.has(email)) continue;\n  seen.add(email);\n\n  result.push({\n    json: {\n      nombre:        d.nombre || d.name || d.empresa || 'there',\n      email:         d.email.trim(),\n      empresa:       d.empresa || d.nombre || '',\n      nicho:         d.nicho || '',\n      email_subject: emailSubject || `Crating Express — Secure Shipping for ${d.empresa || 'Your Business'}`,\n      email_body:    emailBody,\n      blog_url:      blogUrl,\n      blog_titulo:   blogTitulo,\n      blog_imagen:   blogImagen,\n    }\n  });\n}\n\nreturn result;"
+      },
+      "id": "blog-filtrar",
+      "name": "🔍 Filtrar Leads Blog",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-blog-leads",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "blog-ifleads",
+      "name": "❓ ¿Hay leads para blog?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "subject": "={{ $json.email_subject }}",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Marc @ Crating Express"
+        },
+        "toEmail": "={{ $json.email }}",
+        "fromEmail": "risosadmi@gmail.com",
+        "html": "=<!DOCTYPE html><html><body style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;\">\n<div style=\"background:#305468;color:#fff;padding:24px 28px;border-radius:8px 8px 0 0;\">\n  <h2 style=\"margin:0;font-size:20px;\">&#128230; Crating Express &mdash; Latest from our Blog</h2>\n</div>\n<div style=\"padding:24px 28px;border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;\">\n  <p>Hi {{ $json.nombre }},</p>\n  <h2 style=\"margin:0 0 16px;font-size:20px;color:#305468;line-height:1.3;\">{{ $json.blog_titulo }}</h2>\n  <div style=\"margin:16px 0 0;padding:0;line-height:0;\">\n    <img src=\"{{ $json.blog_imagen }}\" \n         alt=\"{{ $json.blog_titulo }}\"\n         style=\"width:100%;max-width:548px;display:block;border-radius:4px;\" />\n  </div>\n  <div style=\"margin-top:20px;\">\n    {{ $json.email_body }}\n  </div>\n  <div style=\"text-align:center;margin:28px 0;\">\n    <a href=\"{{ $json.blog_url }}\" style=\"display:inline-block;background:#ff6900;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:15px;\">Read Full Article &rarr;</a><br>\n    <a href=\"https://wa.me/17865586007?text=Hi%2C%20I%27m%20interested%20in%20crating%20solutions\" style=\"display:inline-block;background:#25D366;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:15px;margin-top:10px;\">&#128172; Chat on WhatsApp</a>\n  </div>\n</div>\n<div style=\"text-align:center;margin:24px 0;\"><img src=\"https://lh3.googleusercontent.com/d/14EmfG1bLlmxbvvRFyVFaHyehs-_9r5Lh\" alt=\"Crating Express\" style=\"max-width:100%;width:600px;\" /></div><p style=\"margin-top:16px;padding-top:14px;border-top:1px solid #eee;font-size:12px;color:#999;text-align:center;\"><strong>Crating Express</strong> &middot; 7764 NW 64 Street, Miami FL 33166<br>Phone: 786-558-6007 &middot; <a href=\"https://cratingexpress.com\" style=\"color:#999;\">cratingexpress.com</a></p>\n</body></html>"
+      },
+      "id": "blog-send",
+      "name": "📧 Enviar Blog a Leads",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2400,
+        800
+      ],
+      "webhookId": "8afad5cc-a654-4a97-8e87-d0b7b491da10",
+      "credentials": {
+        "smtp": {
+          "id": "iWBBSSe5AWsCMo89",
+          "name": "Gmail SMTP — risosadmi"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "fecha_ultima_interaccion": "={{ new Date().toISOString().split('T')[0] }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fecha_ultima_interaccion",
+              "displayName": "fecha_ultima_interaccion",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "blog-update",
+      "name": "✅ Actualizar fecha_blog",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2640,
+        800
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "QE2RlAxaMLoYefTD",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://apigrowth.mdarthurdigital.com/api/n8n/companies/1",
+        "options": {}
+      },
+      "id": "config-empresa-38fO1D5uJpVUDMqm",
+      "name": "🔧 Config Empresa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        176,
+        496
+      ]
+    }
+  ],
+  "connections": {
+    "▶️ Ejecutar Manualmente": {
+      "main": [
+        [
+          {
+            "node": "🔧 Config Empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📰 Obtener Blogs de WordPress": {
+      "main": [
+        [
+          {
+            "node": "🔢 Verificar Stock Blogs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Seleccionar Blog": {
+      "main": [
+        [
+          {
+            "node": "🔎 WP: Imagen JPEG del Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⬇️ Descargar Imagen": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Request Groq",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Groq: Generar Contenido Multi-Canal": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Contenido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Parsear Contenido": {
+      "main": [
+        [
+          {
+            "node": "📋 Slides: Copiar Template",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📧 Enviar Newsletter",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📋 Obtener Leads para Blog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Enviar Newsletter": {
+      "main": [
+        [
+          {
+            "node": "🔔 Notificar Publicación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Slides: Copiar Template": {
+      "main": [
+        [
+          {
+            "node": "📄 Slides: Obtener Estructura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📄 Slides: Obtener Estructura": {
+      "main": [
+        [
+          {
+            "node": "🔧 Slides: Preparar Reemplazos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Slides: Preparar Reemplazos": {
+      "main": [
+        [
+          {
+            "node": "✏️ Slides: Reemplazar Texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✏️ Slides: Reemplazar Texto": {
+      "main": [
+        [
+          {
+            "node": "🖼️ Slides: Reemplazar Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🖼️ Slides: Reemplazar Imagen": {
+      "main": [
+        [
+          {
+            "node": "📸 Slides: Obtener Thumbnail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📸 Slides: Obtener Thumbnail": {
+      "main": [
+        [
+          {
+            "node": "📘 Publicar en Facebook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📸 Instagram: Crear Container",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "⬇️ Descargar Thumbnail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Request Groq": {
+      "main": [
+        [
+          {
+            "node": "🤖 Groq: Generar Contenido Multi-Canal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📸 Instagram: Crear Container": {
+      "main": [
+        [
+          {
+            "node": "⏳ Esperar 7s (Instagram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⬇️ Descargar Thumbnail": {
+      "main": [
+        [
+          {
+            "node": "📢 Publicar en LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏳ Esperar 7s (Instagram)": {
+      "main": [
+        [
+          {
+            "node": "✅ Instagram: Publicar Container",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔎 WP: Imagen JPEG del Post": {
+      "main": [
+        [
+          {
+            "node": "🖼️ Seleccionar Imagen Slide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🖼️ Seleccionar Imagen Slide": {
+      "main": [
+        [
+          {
+            "node": "⬇️ Descargar Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔢 Verificar Stock Blogs": {
+      "main": [
+        [
+          {
+            "node": "🔧 Seleccionar Blog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ ¿Pocos Blogs?": {
+      "main": [
+        [
+          {
+            "node": "⚠️ Alerta: Pocos Blogs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "📋 Obtener Leads para Blog": {
+      "main": [
+        [
+          {
+            "node": "🔍 Filtrar Leads Blog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Filtrar Leads Blog": {
+      "main": [
+        [
+          {
+            "node": "❓ ¿Hay leads para blog?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ ¿Hay leads para blog?": {
+      "main": [
+        [
+          {
+            "node": "📧 Enviar Blog a Leads",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "📧 Enviar Blog a Leads": {
+      "main": [
+        [
+          {
+            "node": "✅ Actualizar fecha_blog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏰ Trigger Martes 9am": {
+      "main": [
+        [
+          {
+            "node": "🔧 Config Empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Config Empresa": {
+      "main": [
+        [
+          {
+            "node": "📰 Obtener Blogs de WordPress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "CKOju9JVnSMymfKv"
+  },
+  "staticData": {
+    "node:⏰ Trigger Martes 9am": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "a3b88318-7f5c-422b-9255-7d5243b14c28",
+  "activeVersionId": "a3b88318-7f5c-422b-9255-7d5243b14c28",
+  "versionCounter": 101,
+  "triggerCount": 1,
+  "sourceWorkflowId": null
+}

@@ -1,0 +1,868 @@
+{
+  "updatedAt": "2026-07-16T15:29:25.529Z",
+  "createdAt": "2026-04-09T19:49:04.875Z",
+  "id": "bFjarbrGigp90UCL",
+  "name": "CE Email - Outreach Prospectos",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                4
+              ],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "⏰ Trigger Jueves 9am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        288
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "▶️ Ejecutar Manualmente",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Lead",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "get-leads",
+      "name": "📋 Obtener Leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        368
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "QE2RlAxaMLoYefTD",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst today = new Date();\nconst result = [];\n\nfor (const item of items) {\n  const d = item.json;\n\n  // Track leads with no email\n  if (!d.email) {\n    result.push({ json: { ...d, email_tipo: 0, skip_reason: 'sin_email' } });\n    continue;\n  }\n\n  const estado = (d.estado_email || '').toLowerCase().trim();\n  if (estado === 'completado') continue;\n\n  const fecha_c1 = d.fecha_c1 || '';\n  const fecha_c2 = d.fecha_c2 || '';\n  const fecha_ultima = d.fecha_ultima_interaccion || '';\n\n  let email_tipo = null;\n\n  if (fecha_ultima && estado !== 'reactivado') {\n    const dias = (today - new Date(fecha_ultima)) / 86400000;\n    if (dias >= 90) { email_tipo = 4; }\n  }\n  if (!email_tipo && !fecha_c1) { email_tipo = 1; }\n  if (!email_tipo && fecha_c1 && !fecha_c2) {\n    const dias = (today - new Date(fecha_c1)) / 86400000;\n    if (dias >= 3) email_tipo = 2;\n  }\n  if (!email_tipo && fecha_c2 && !d.fecha_c3) {\n    const dias = (today - new Date(fecha_c2)) / 86400000;\n    if (dias >= 9) email_tipo = 3;\n  }\n\n  if (email_tipo) {\n    result.push({ json: { ...d, email_tipo } });\n  }\n}\n\nreturn result;"
+      },
+      "id": "clasificar-leads",
+      "name": "🔍 Clasificar Leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json._no_leads }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-hay-leads",
+      "name": "❓ ¿Hay leads hoy?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        976,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\nconst results = [];\n\nfor (const __item of allItems) {\n// ── per-item scope ───────────────────────────────────────────────────\nconst d = __item.json;\nconst tipo   = d.email_tipo;\nconst nombre = d.nombre || 'there';\nconst nicho  = (d.nicho || '').toLowerCase().trim();\nconst today  = new Date().toISOString().slice(0, 10);\n\nconst idioma = (d.idioma || '').toLowerCase().trim()\n  || (nicho === 'cotizacion-web' ? 'es' : 'en');\n\n// Brand colors from cratingexpress.com\nconst NAVY   = '#305468';\nconst ORANGE = '#ff6900';\nconst GREEN  = '#25D366';\n\nconst btnRed   = `display:inline-block;background:${ORANGE};color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:15px;`;\nconst btnGreen = `display:inline-block;background:${GREEN};color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:15px;margin-top:10px;`;\nconst wrap = 'font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;';\nconst hdr  = `background:${NAVY};color:#fff;padding:24px 28px;border-radius:8px 8px 0 0;`;\nconst bdy  = 'padding:24px 28px;border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;';\nconst ftr  = 'margin-top:16px;padding-top:14px;border-top:1px solid #eee;font-size:12px;color:#999;text-align:center;';\nconst ns   = `color:#555;font-style:italic;border-left:3px solid ${ORANGE};padding-left:12px;`;\n\nconst waLink = 'https://wa.me/17865586007?text=Hi%2C%20I%27m%20interested%20in%20crating%20solutions';\nconst waES   = 'https://wa.me/17865586007?text=Hola%2C%20me%20interesa%20cotizar%20un%20servicio%20de%20embalaje';\nconst ql     = 'https://cratingcotiza.mdarthurdigital.com/cotizar-caja';\nconst rl     = 'https://cratingcotiza.mdarthurdigital.com/cotizar-caja?utm_campaign=reactivacion';\nconst banner = '<div style=\"text-align:center;margin:24px 0;\"><img src=\"https://lh3.googleusercontent.com/d/14EmfG1bLlmxbvvRFyVFaHyehs-_9r5Lh\" alt=\"Crating Express\" style=\"max-width:100%;width:600px;\" /></div>';\n\nconst nichoEN = {\n  'customs-brokers':     'We work closely with customs brokers across Miami &mdash; packaging is one of those details that can make or break a shipment, and we want to make sure you have a reliable partner when your clients need it done right.',\n  'freight-forwarders':  'We work closely with freight forwarders across Miami &mdash; a properly engineered crate means fewer claims, cleaner documentation, and smoother deliveries for your clients.',\n  'importers-exporters': 'We work with importers and exporters across Miami who know that international shipments have zero margin for packaging errors &mdash; we want to be your go-to when that need comes up.',\n  'heavy-equip':    'We work with heavy equipment dealers across Miami &mdash; when you are shipping machinery, a standard pallet is rarely enough, and we want to make sure you have the right partner for those jobs.',\n  'art-galleries':       'We work with art galleries and collectors across Miami &mdash; artwork needs a crate built to its exact dimensions, material, and fragility, and we want to be your go-to for those shipments.',\n  'aerospace':           'We work with aerospace companies across Miami &mdash; components require packaging held to the same standards as the parts themselves, and we want to make sure you have a reliable partner for those jobs.',\n  'medical-equipment':   'We work with medical equipment companies across Miami &mdash; high-value, fragile cargo needs packaging that accounts for vibration, impact, and humidity, and we want to be your go-to for those shipments.',\n  'manufacturing':       'We work with manufacturers across Miami &mdash; damage in transit is a direct hit to margins and customer relationships, and we want to make sure you have a reliable crating partner to prevent that.',\n};\nconst nichoES = {\n  'customs-brokers':     'Trabajamos seguido con agentes de aduanas en Miami &mdash; el embalaje es uno de esos detalles que puede complicar o agilizar un embarque, y queremos asegurarnos de que tengas un socio confiable cuando tus clientes lo necesiten.',\n  'freight-forwarders':  'Trabajamos seguido con freight forwarders en Miami &mdash; un caj\\u00f3n bien construido significa menos reclamaciones, documentaci\\u00f3n m\\u00e1s limpia y entregas sin contratiempos para tus clientes.',\n  'importers-exporters': 'Trabajamos con importadores y exportadores en Miami que saben que los embarques internacionales no tienen margen para errores de embalaje &mdash; queremos ser tu primera opci\\u00f3n cuando esa necesidad surja.',\n  'heavy-equip':    'Trabajamos con distribuidores de maquinaria pesada en Miami &mdash; cuando embarcas maquinaria, un pallet est\\u00e1ndar casi nunca es suficiente, y queremos asegurarnos de que tengas el socio adecuado para esos trabajos.',\n  'art-galleries':       'Trabajamos con galer\\u00edas de arte y coleccionistas en Miami &mdash; las obras necesitan un caj\\u00f3n construido seg\\u00fan sus dimensiones, material y fragilidad, y queremos ser tu primera opci\\u00f3n para esos embarques.',\n  'aerospace':           'Trabajamos con empresas aeroespaciales en Miami &mdash; los componentes requieren embalaje con los mismos est\\u00e1ndares que las piezas, y queremos asegurarnos de que tengas un socio confiable para esos trabajos.',\n  'medical-equipment':   'Trabajamos con empresas de equipo m\\u00e9dico en Miami &mdash; la carga de alto valor y fragilidad necesita un embalaje que tenga en cuenta vibraci\\u00f3n, impacto y humedad, y queremos ser tu primera opci\\u00f3n.',\n  'manufacturing':       'Trabajamos con fabricantes en Miami &mdash; los da\\u00f1os en tr\\u00e1nsito impactan directamente tus m\\u00e1rgenes y la relaci\\u00f3n con tus clientes, y queremos asegurarnos de que tengas un socio confiable para prevenirlo.',\n};\n\nconst nEN = nichoEN[nicho] ? `<p style=\"${ns}\">${nichoEN[nicho]}</p>` : '';\nconst nES = nichoES[nicho] ? `<p style=\"${ns}\">${nichoES[nicho]}</p>` : '';\n\nconst fEN = `${banner}<p style=\"${ftr}\"><strong>Crating Express</strong> &middot; 7764 NW 64 Street, Miami FL 33166<br>Phone: 786-558-6007 &middot; <a href=\"https://cratingexpress.com\" style=\"color:#999;\">cratingexpress.com</a></p>`;\nconst fES = `${banner}<p style=\"${ftr}\"><strong>Crating Express</strong> &middot; 7764 NW 64 Street, Miami FL 33166<br>Tel: 786-558-6007 &middot; <a href=\"https://cratingexpress.com\" style=\"color:#999;\">cratingexpress.com</a></p>`;\n\nconst ctaEN = `<div style=\"text-align:center;margin:28px 0;\"><a href=\"${ql}\" style=\"${btnRed}\">Get an Instant Quote &rarr;</a><br><a href=\"${waLink}\" style=\"${btnGreen}\">&#128172; Chat on WhatsApp</a></div>`;\nconst ctaES = `<div style=\"text-align:center;margin:28px 0;\"><a href=\"${ql}\" style=\"${btnRed}\">Cotizar Ahora &rarr;</a><br><a href=\"${waES}\" style=\"${btnGreen}\">&#128172; Esch\\u00edbenos por WhatsApp</a></div>`;\nconst ctaEN_react = `<div style=\"text-align:center;margin:28px 0;\"><a href=\"${rl}\" style=\"${btnRed}\">Get an Instant Quote &rarr;</a><br><a href=\"${waLink}\" style=\"${btnGreen}\">&#128172; Chat on WhatsApp</a></div>`;\nconst ctaES_react = `<div style=\"text-align:center;margin:28px 0;\"><a href=\"${rl}\" style=\"${btnRed}\">Cotizar Ahora &rarr;</a><br><a href=\"${waES}\" style=\"${btnGreen}\">&#128172; Esch\\u00edbenos por WhatsApp</a></div>`;\n\nlet subject = '', emailBody = '';\n\nif (tipo === 1) {\n  if (idioma === 'es') {\n    subject = `Soluciones de embalaje a medida \\u2014 Crating Express, Miami`;\n    emailBody = `<!DOCTYPE html><html><body style=\"${wrap}\"><div style=\"${hdr}\"><h2 style=\"margin:0;font-size:20px;\">&#128230; Crating Express &mdash; Cajones de Madera a Medida, Miami FL</h2></div><div style=\"${bdy}\"><p>Hola ${nombre},</p><p>Soy Marc, Manager en Crating Express, una empresa especializada en cajones de madera a medida y embalaje de madera ubicada en Miami, FL.</p>${nES}<p>Ofrecemos servicios on-site de cajones de madera a medida para empresas que embarcan maquinaria, maquinaria pesada, carga fr\\u00e1gil, mercanc\\u00eda de alto valor, etc. &mdash; todo construido seg\\u00fan las dimensiones y el peso de cada env\\u00edo.</p><p>Algunas de las cosas que manejamos:</p><ul style=\"padding-left:20px;line-height:1.9;\"><li><strong>Cajones de madera a medida</strong> para cualquier tama\\u00f1o, forma o peso</li><li>Madera tratada con calor ISPM-15 con sellos de certificaci\\u00f3n, requerida en la mayor\\u00eda de los embarques internacionales</li><li>Pallets, repalletizado, reacondicionado de cajones de madera a medida, etc.</li><li>Entrega en Miami &mdash; en muchos casos podemos entregar en 24 horas, y a veces incluso el mismo d\\u00eda, sin costo adicional por urgencia</li></ul><p>Si alguna vez necesitas mover algo que no cabe en una caja est\\u00e1ndar &mdash; o cualquier cosa con requerimientos de exportaci\\u00f3n internacional &mdash; nos encantar\\u00eda ser tu primera opci\\u00f3n en cajones de madera a medida.</p><p>Cotizar toma minutos &mdash; solo comparte las dimensiones, una foto y el peso en nuestro estimador:</p>${ctaES}${fES}</div></body></html>`;\n  } else {\n    subject = `Custom wood crating solutions \\u2014 Crating Express, Miami`;\n    emailBody = `<!DOCTYPE html><html><body style=\"${wrap}\"><div style=\"${hdr}\"><h2 style=\"margin:0;font-size:20px;\">&#128230; Crating Express &mdash; Custom Wood Crating, Miami FL</h2></div><div style=\"${bdy}\"><p>Hi ${nombre},</p><p>I&rsquo;m Marc, Manager at Crating Express, a custom wood crating and packaging company based in Miami, FL.</p>${nEN}<p>We provide on-site custom wood crating services for businesses that ship machinery, heavy equipment, fragile cargo, high-value freight, and more &mdash; everything built to the dimensions and weight of each shipment.</p><p>A few things we handle:</p><ul style=\"padding-left:20px;line-height:1.9;\"><li><strong>Custom-made wood crates</strong> for any size, shape, or weight</li><li>ISPM-15 heat-treated wood with certification seals, required for most international shipments</li><li>Pallets, repalletizing, custom wood crate reconditioning, etc.</li><li>Delivery in Miami &mdash; we can often deliver within 24 hours, and in some cases even same day, at no extra charge for urgency</li></ul><p>If you ever need to move something that doesn&rsquo;t fit a standard box &mdash; or anything with international export requirements &mdash; we&rsquo;d love to be your go-to for custom wood packaging.</p><p>Getting a quote takes minutes &mdash; just share the dimensions, a photo, and the weight through our estimator:</p>${ctaEN}${fEN}</div></body></html>`;\n  }\n} else if (tipo === 2) {\n  if (idioma === 'es') {\n    subject = `Un poco m\\u00e1s sobre lo que hacemos \\u2014 Crating Express`;\n    emailBody = `<!DOCTYPE html><html><body style=\"${wrap}\"><div style=\"${hdr}\"><h2 style=\"margin:0;font-size:20px;\">&#128297; Seguimiento de Crating Express</h2></div><div style=\"${bdy}\"><p>Hola ${nombre},</p><p>Soy Marc, Manager en Crating Express. Te hago seguimiento a mi mensaje anterior &mdash; quer\\u00eda darte una idea m\\u00e1s clara de lo que hacemos, porque &ldquo;crating&rdquo; puede significar cosas distintas dependiendo de a qui\\u00e9n le preguntes.</p><p>En Crating Express, todo empieza con las dimensiones y el peso de tu carga. A partir de ah\\u00ed determinamos la soluci\\u00f3n adecuada:</p><ul style=\"padding-left:20px;line-height:1.9;\"><li><strong>Cajones de madera a medida</strong> para carga oversized, fr\\u00e1gil o de forma irregular</li><li><strong>Pallets para exportaci\\u00f3n</strong> &mdash; madera tratada ISPM-15 con sellos de certificaci\\u00f3n incluidos</li><li><strong>Repalletizado</strong> &mdash; transferimos tu carga de un pallet da\\u00f1ado o no certificado a uno nuevo y certificado</li><li><strong>Reacondicionado de cajones de madera</strong> &mdash; reparamos y reforzamos cajones a medida o pallets existentes antes de exportar, etc.</li></ul><p>Adem\\u00e1s, tambi\\u00e9n disponemos de:</p><ul style=\"padding-left:20px;line-height:1.9;\"><li>Protecci\\u00f3n adicional &mdash; foam, bubble wrap, fieltro, aislamiento t\\u00e9rmico, etc.</li><li>Etiquetado IMO para carga con requerimientos especiales</li><li>Posicionamiento especial y cunas de madera a medida, etc.</li><li>Servicio on-site &mdash; vamos a tu warehouse, no tienes que mover nada</li></ul><p>Toda nuestra madera es certificada ISPM-15 de serie. Operamos desde Miami y en muchos casos podemos entregar en 24 horas &mdash; a veces incluso el mismo d\\u00eda, sin costo adicional por urgencia.</p><p>Cotizar toma minutos &mdash; solo comparte las dimensiones, una foto y el peso:</p>${ctaES}${fES}</div></body></html>`;\n  } else {\n    subject = `A bit more about what we do \\u2014 Crating Express`;\n    emailBody = `<!DOCTYPE html><html><body style=\"${wrap}\"><div style=\"${hdr}\"><h2 style=\"margin:0;font-size:20px;\">&#128297; A Quick Follow-Up from Crating Express</h2></div><div style=\"${bdy}\"><p>Hi ${nombre},</p><p>I&rsquo;m Marc, Manager at Crating Express. Following up on my last note &mdash; wanted to give you a clearer picture of what we actually do, since &ldquo;crating&rdquo; can mean different things depending on who you ask.</p><p>At Crating Express, every job starts with the dimensions and weight of your cargo. From there we figure out the right solution:</p><ul style=\"padding-left:20px;line-height:1.9;\"><li><strong>Custom-made wood crates</strong> for oversized, fragile, or irregular freight</li><li><strong>Export pallets</strong> &mdash; ISPM-15 heat-treated wood with certification seals included</li><li><strong>Repalletizing</strong> &mdash; transferring cargo from a damaged or non-compliant pallet to a new certified one</li><li><strong>Wood crate reconditioning</strong> &mdash; repair and reinforce existing custom wood crates or pallets before export, etc.</li></ul><p>We can also provide:</p><ul style=\"padding-left:20px;line-height:1.9;\"><li>Additional protection &mdash; foam, bubble wrap, felt, heat insulation, etc.</li><li>IMO labeling for cargo with special handling requirements</li><li>Special positioning and custom wood cradles, etc.</li><li>On-site service &mdash; we come to your warehouse, no need to move anything</li></ul><p>All our wood is ISPM-15 certified as standard. We&rsquo;re based in Miami and can often deliver within 24 hours &mdash; in some cases even same day, at no extra charge for urgency.</p><p>Getting a quote takes minutes &mdash; just share the dimensions, a photo, and the weight:</p>${ctaEN}${fEN}</div></body></html>`;\n  }\n} else if (tipo === 3) {\n  if (idioma === 'es') {\n    subject = `\\u00daltimo mensaje \\u2014 Crating Express`;\n    emailBody = `<!DOCTYPE html><html><body style=\"${wrap}\"><div style=\"${hdr}\"><h2 style=\"margin:0;font-size:20px;\">&#128203; \\u00daltimo Mensaje de Crating Express</h2></div><div style=\"${bdy}\"><p>Hola ${nombre},</p><p>Soy Marc, Manager en Crating Express. Este es mi \\u00faltimo mensaje &mdash; no quiero seguir ocupando tu bandeja de entrada.</p><p>Cuando tengas un embarque que necesite cajones de madera a medida, pallets, repalletizado o cualquier tipo de embalaje para exportaci\\u00f3n, aqu\\u00ed estamos. Toda nuestra madera es certificada ISPM-15 de serie, operamos desde Miami y en muchos casos podemos entregar en 24 horas &mdash; a veces incluso el mismo d\\u00eda, sin costo adicional por urgencia.</p><p>Tambi\\u00e9n disponemos de materiales de protecci\\u00f3n adicional, etiquetado IMO, posicionamiento especial, servicio on-site, etc. &mdash; lo que tu embarque necesite.</p><p>Cotizar toma minutos &mdash; solo dimensiones, una foto y el peso:</p>${ctaES}${fES}</div></body></html>`;\n  } else {\n    subject = `Last note \\u2014 Crating Express`;\n    emailBody = `<!DOCTYPE html><html><body style=\"${wrap}\"><div style=\"${hdr}\"><h2 style=\"margin:0;font-size:20px;\">&#128203; One Last Note &mdash; Crating Express</h2></div><div style=\"${bdy}\"><p>Hi ${nombre},</p><p>I&rsquo;m Marc, Manager at Crating Express. This is my last note &mdash; I don&rsquo;t want to keep filling up your inbox.</p><p>Whenever you have a shipment that needs custom-made wood crates, pallets, repalletizing, or any kind of export packaging, we&rsquo;re here. All our wood is ISPM-15 certified as standard, we&rsquo;re based in Miami, and we can often deliver within 24 hours &mdash; in some cases even same day, at no extra charge for urgency.</p><p>We also have available additional protection materials, IMO labeling, special positioning, on-site service, etc. &mdash; whatever your shipment requires.</p><p>Getting a quote takes minutes &mdash; just dimensions, a photo, and weight:</p>${ctaEN}${fEN}</div></body></html>`;\n  }\n} else if (tipo === 4) {\n  if (idioma === 'es') {\n    subject = `Nos ponemos en contacto \\u2014 Crating Express`;\n    emailBody = `<!DOCTYPE html><html><body style=\"${wrap}\"><div style=\"${hdr}\"><h2 style=\"margin:0;font-size:20px;\">&#129309; Retomando el Contacto &mdash; Crating Express</h2></div><div style=\"${bdy}\"><p>Hola ${nombre},</p><p>Soy Marc, Manager en Crating Express. Ha pasado un tiempo desde la \\u00faltima vez que estuvimos en contacto &mdash; quer\\u00eda escribirte para ver si tienes alg\\u00fan embarque pr\\u00f3ximo en el que podamos ayudarte.</p><p>Un recordatorio r\\u00e1pido de lo que ofrecemos: cajones de madera a medida, pallets y embalaje para exportaci\\u00f3n, todo con madera certificada ISPM-15 de serie. Tambi\\u00e9n disponemos de protecci\\u00f3n adicional, etiquetado IMO, servicio on-site, etc.</p><p>Operamos desde Miami y en muchos casos podemos entregar en 24 horas &mdash; a veces incluso el mismo d\\u00eda, sin costo adicional por urgencia.</p><p>Cotizar toma minutos &mdash; solo dimensiones, una foto y el peso:</p>${ctaES_react}${fES}</div></body></html>`;\n  } else {\n    subject = `Checking in \\u2014 Crating Express`;\n    emailBody = `<!DOCTYPE html><html><body style=\"${wrap}\"><div style=\"${hdr}\"><h2 style=\"margin:0;font-size:20px;\">&#129309; Checking In &mdash; Crating Express</h2></div><div style=\"${bdy}\"><p>Hi ${nombre},</p><p>I&rsquo;m Marc, Manager at Crating Express. It&rsquo;s been a while since we were last in touch &mdash; wanted to check in and see if you have any upcoming shipments where we could help.</p><p>A quick reminder of what we do: custom-made wood crates, pallets, and export packaging, all with ISPM-15 certified wood as standard. We can also provide additional protection, IMO labeling, on-site service, etc.</p><p>We&rsquo;re based in Miami and can often deliver within 24 hours &mdash; in some cases even same day, at no extra charge for urgency.</p><p>Getting a quote takes minutes &mdash; just dimensions, a photo, and weight:</p>${ctaEN_react}${fEN}</div></body></html>`;\n  }\n}\n\nresults.push({json:{...d,email_subject:subject,email_body:emailBody,email_idioma:idioma,update_correo_enviado:'SI',update_fecha_c1:tipo===1?today:(d.fecha_c1||''),update_fecha_c2:tipo===2?today:(d.fecha_c2||''),update_fecha_c3:tipo===3?today:(d.fecha_c3||''),update_estado_email:tipo===3?'completado':tipo===4?'reactivado':'activo'}});\n// ── end per-item ─────────────────────────────────────────────────────\n}\n\nreturn results;"
+      },
+      "id": "build-email",
+      "name": "✉️ Preparar Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond2",
+              "leftValue": "={{ $json.email_subject }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-tiene-body",
+      "name": "✅ Email válido",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "subject": "={{ $json.email_subject }}",
+        "options": {
+          "senderName": "Crating Express",
+          "replyTo": "cratingexpress01@gmail.com"
+        },
+        "fromName": "Crating Express",
+        "toEmail": "={{ $json.email }}",
+        "fromEmail": "risosadmi@gmail.com",
+        "html": "={{ $json.email_body }}"
+      },
+      "id": "send-email",
+      "name": "📧 Enviar Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        192
+      ],
+      "webhookId": "52c3a572-b689-4ceb-b915-34235d17a677",
+      "credentials": {
+        "smtp": {
+          "id": "iWBBSSe5AWsCMo89",
+          "name": "Gmail SMTP — risosadmi"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $(\"✉️ Preparar Email\").item.json.row_number }}",
+            "correo_enviado": "={{ $(\"✉️ Preparar Email\").item.json.update_correo_enviado }}",
+            "fecha_c1": "={{ $(\"✉️ Preparar Email\").item.json.update_fecha_c1 }}",
+            "fecha_c2": "={{ $(\"✉️ Preparar Email\").item.json.update_fecha_c2 }}",
+            "fecha_c3": "={{ $(\"✉️ Preparar Email\").item.json.update_fecha_c3 }}",
+            "estado_email": "={{ $(\"✉️ Preparar Email\").item.json.update_estado_email }}",
+            "fecha_ultima_interaccion": "={{ new Date().toISOString().split(\"T\")[0] }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "canBeUsedToMatch": true,
+              "defaultMatch": true
+            },
+            {
+              "id": "correo_enviado",
+              "displayName": "correo_enviado",
+              "canBeUsedToMatch": false,
+              "defaultMatch": false
+            },
+            {
+              "id": "fecha_c1",
+              "displayName": "fecha_c1",
+              "canBeUsedToMatch": false,
+              "defaultMatch": false
+            },
+            {
+              "id": "fecha_c2",
+              "displayName": "fecha_c2",
+              "canBeUsedToMatch": false,
+              "defaultMatch": false
+            },
+            {
+              "id": "fecha_c3",
+              "displayName": "fecha_c3",
+              "canBeUsedToMatch": false,
+              "defaultMatch": false
+            },
+            {
+              "id": "estado_email",
+              "displayName": "estado_email",
+              "canBeUsedToMatch": false,
+              "defaultMatch": false
+            },
+            {
+              "id": "fecha_ultima_interaccion",
+              "displayName": "fecha_ultima_interaccion",
+              "canBeUsedToMatch": false,
+              "defaultMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "update-lead",
+      "name": "✏️ Actualizar en Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1920,
+        192
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "QE2RlAxaMLoYefTD",
+          "name": "Google Sheets account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "subject": "CE Email Outreach — Sin leads hoy",
+        "options": {
+          "senderName": "Growth54"
+        },
+        "toEmail": "risosadmi@gmail.com",
+        "fromEmail": "risosadmi@gmail.com",
+        "html": "<div style=\"font-family:Arial,sans-serif;max-width:600px;color:#333;\">\n<div style=\"background:#305468;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0;\">\n<strong>Growth54 — Reporte Automático</strong>\n</div>\n<div style=\"padding:16px 20px;border:1px solid #ddd;border-top:none;border-radius:0 0 6px 6px;\">\n<p><strong>Workflow:</strong> CE Email — Outreach Prospectos</p>\n<p><strong>Fecha:</strong> {{new Date().toLocaleString('es-US', {timeZone:'America/New_York'})}}</p>\n<p><strong>Estado:</strong> ✅ Ejecutado correctamente</p>\n<hr style=\"border:none;border-top:1px solid #eee;margin:12px 0;\">\n<p>No había leads elegibles para envío en esta ejecución.</p>\n</div>\n</div>"
+      },
+      "id": "no-leads-notif",
+      "name": "📭 Sin Leads Hoy",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        400
+      ],
+      "webhookId": "75e0c0d9-eacc-4802-b2a5-17e8fa6f275a",
+      "credentials": {
+        "smtp": {
+          "id": "iWBBSSe5AWsCMo89",
+          "name": "Gmail SMTP — risosadmi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1pVwP9adnV1_2lbl5pzjhi0BsBjvr5yoPbxwV6P7sNQc",
+          "mode": "list",
+          "cachedResultName": "CLIENTES CE COPIA",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1pVwP9adnV1_2lbl5pzjhi0BsBjvr5yoPbxwV6P7sNQc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1789357450,
+          "mode": "list",
+          "cachedResultName": "Hoja 2",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1pVwP9adnV1_2lbl5pzjhi0BsBjvr5yoPbxwV6P7sNQc/edit#gid=1789357450"
+        },
+        "options": {}
+      },
+      "id": "get-clients",
+      "name": "📊 Obtener Clientes",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        336,
+        624
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "QE2RlAxaMLoYefTD",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "merge-sync",
+      "name": "🔀 Merge Leads + Clientes",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        736,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\n\n// Separar clientes de leads por sus columnas características\nconst clients = items.filter(i =>\n  i.json['Cliente/ Notas'] !== undefined ||\n  i.json['Cliente/Notas'] !== undefined\n);\nconst leads = items.filter(i =>\n  i.json['email'] !== undefined || i.json['nombre'] !== undefined\n);\n\n// Set de emails que ya existen en leads\nconst existing = new Set(\n  leads\n    .map(l => (l.json.email || '').toString().toLowerCase().trim())\n    .filter(e => e.includes('@'))\n);\n\nconst newClients = [];\n\nfor (const c of clients) {\n  const nombre = (\n    c.json['Cliente/ Notas'] || c.json['Cliente/Notas'] || ''\n  ).toString().trim();\n  if (!nombre) continue;\n\n  // Puede tener múltiples correos separados por espacios o saltos\n  const rawEmails = (c.json['Correos para Cobranza'] || '').toString().trim();\n  if (!rawEmails) continue;\n\n  const emails = rawEmails\n    .split(/[\\s,;\\n]+/)\n    .map(e => e.trim().toLowerCase())\n    .filter(e => e.includes('@'));\n  if (emails.length === 0) continue;\n\n  const email = emails[0];\n  if (existing.has(email)) continue; // ya está en el sistema\n\n  const direccion = (c.json['Direccion y Telefono'] || '').toString().trim();\n\n  newClients.push({ json: {\n    nombre,\n    email,\n    direccion,\n    correo_enviado: '0',\n    fecha_c1:       '',\n    fecha_c2:       '',\n    fecha_c3:       '',\n    estado_email:   'reactivar'\n  }});\n}\n\nif (newClients.length === 0) {\n  return [{ json: { _sin_nuevos: true, count: 0 } }];\n}\n\nreturn newClients;\n"
+      },
+      "id": "sync-nuevos-code",
+      "name": "🔄 Sync: Detectar Nuevos Clientes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-sin-nuevos",
+              "leftValue": "={{ $json._sin_nuevos }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-hay-nuevos",
+      "name": "❓ Hay Nuevos Clientes?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1232,
+        688
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nombre": "={{ $json.nombre }}",
+            "direccion": "={{ $json.direccion }}",
+            "email": "={{ $json.email }}",
+            "correo_enviado": "={{ $json.correo_enviado }}",
+            "fecha_c1": "={{ $json.fecha_c1 }}",
+            "fecha_c2": "={{ $json.fecha_c2 }}",
+            "fecha_c3": "={{ $json.fecha_c3 }}",
+            "estado_email": "={{ $json.estado_email }}"
+          },
+          "matchingColumns": [
+            "nombre"
+          ],
+          "schema": [
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "direccion",
+              "displayName": "direccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "correo_enviado",
+              "displayName": "correo_enviado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "fecha_c1",
+              "displayName": "fecha_c1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "fecha_c2",
+              "displayName": "fecha_c2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "fecha_c3",
+              "displayName": "fecha_c3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "estado_email",
+              "displayName": "estado_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "append-clientes",
+      "name": "➕ Agregar Nuevos Clientes",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1488,
+        704
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "QE2RlAxaMLoYefTD",
+          "name": "Google Sheets account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "clientes_nuevos",
+        "options": {}
+      },
+      "id": "aggregate-post-append",
+      "name": "📊 Agrupar Post-Append",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1712,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Lead",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "get-leads-fresh",
+      "name": "📋 Leads Actualizados",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1952,
+        704
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "QE2RlAxaMLoYefTD",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "subject": "={{ $json.subject }}",
+        "options": {
+          "senderName": "Growth54"
+        },
+        "toEmail": "risosadmi@gmail.com",
+        "fromEmail": "risosadmi@gmail.com",
+        "html": "={{ $json.htmlBody }}"
+      },
+      "id": "1a9472ac-53c6-4dbb-b942-7ef78fd1100d",
+      "name": "📊 Reporte Growth54",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2368,
+        64
+      ],
+      "webhookId": "5643f684-b1bf-4bcf-a261-5246e002e9da",
+      "credentials": {
+        "smtp": {
+          "id": "iWBBSSe5AWsCMo89",
+          "name": "Gmail SMTP — risosadmi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst prepItems = $('✉️ Preparar Email').all();\nconst allLeads = $('🔍 Clasificar Leads').all();\n\n// Sent emails\nconst sent = items.map((item, idx) => {\n  const lead = (prepItems[idx] || prepItems[0] || {json:{}}).json;\n  return {\n    empresa: lead.empresa || lead.nombre || '—',\n    nombre:  lead.nombre  || lead.empresa || '—',\n    email:   lead.email   || '—',\n    nicho:   lead.nicho   || '—',\n    email_tipo:   String(lead.email_tipo || '—'),\n    email_idioma: lead.email_idioma || '—'\n  };\n});\n\n// Skipped (no email)\nconst skipped = allLeads\n  .filter(l => l.json.skip_reason === 'sin_email')\n  .map(l => ({\n    nombre:  l.json.nombre  || l.json.empresa || '—',\n    empresa: l.json.empresa || l.json.nombre  || '—',\n    nicho:   l.json.nicho   || '—'\n  }));\n\nreturn [{ json: { data: sent, skipped } }];"
+      },
+      "id": "aggregate-emails-sent",
+      "name": "📦 Agrupar Emails Enviados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2144,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst data = d.data || [];\nconst skipped = d.skipped || [];\n\nconst fecha = new Date().toLocaleString('es-US', { timeZone: 'America/New_York' });\nconst fechaCorta = new Date().toLocaleDateString('es-US', { timeZone: 'America/New_York' });\n\nconst rowsSent = data.map((item, i) =>\n  '<tr style=\"border-bottom:1px solid #eee;\">' +\n  '<td style=\"color:#999;\">' + (i+1) + '</td>' +\n  '<td><strong>' + (item.empresa || item.nombre || '-') + '</strong></td>' +\n  '<td style=\"color:#305468;\">' + (item.email || '-') + '</td>' +\n  '<td>' + (item.nicho || '-') + '</td>' +\n  '<td style=\"text-align:center;\">' + (item.email_tipo || '-') + '</td>' +\n  '<td>' + (item.email_idioma || '-') + '</td>' +\n  '</tr>'\n).join('');\n\nconst skippedRows = skipped.map(s =>\n  '<tr><td style=\"border-bottom:1px solid #f0f0f0;\">' + s.empresa + '</td>' +\n  '<td style=\"border-bottom:1px solid #f0f0f0;\">' + s.nicho + '</td></tr>'\n).join('');\n\nconst skippedTable = skipped.length > 0\n  ? '<table width=\"100%\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse;font-size:13px;\">' +\n    '<thead><tr style=\"background:#f5f5f5;\">' +\n    '<th style=\"text-align:left;border-bottom:1px solid #ddd;\">Empresa</th>' +\n    '<th style=\"text-align:left;border-bottom:1px solid #ddd;\">Nicho</th>' +\n    '</tr></thead><tbody>' + skippedRows + '</tbody></table>'\n  : '<p style=\"color:#999;\">Ninguno</p>';\n\nconst htmlBody =\n  '<div style=\"font-family:Arial,sans-serif;max-width:660px;color:#333;\">' +\n  '<div style=\"background:#305468;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0;\">' +\n  '<strong>Growth54 — Reporte Automático de Email Outreach</strong></div>' +\n  '<div style=\"padding:16px 20px;border:1px solid #ddd;border-top:none;border-radius:0 0 6px 6px;\">' +\n  '<p><strong>Fecha:</strong> ' + fecha + '</p>' +\n  '<p><strong>Total emails enviados hoy:</strong> ' + data.length + '</p>' +\n  '<hr style=\"border:none;border-top:1px solid #eee;margin:12px 0;\">' +\n  '<table width=\"100%\" cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse;font-size:14px;\">' +\n  '<thead><tr style=\"background:#f5f5f5;\">' +\n  '<th style=\"text-align:left;border-bottom:2px solid #ddd;\">#</th>' +\n  '<th style=\"text-align:left;border-bottom:2px solid #ddd;\">Empresa / Nombre</th>' +\n  '<th style=\"text-align:left;border-bottom:2px solid #ddd;\">Email</th>' +\n  '<th style=\"text-align:left;border-bottom:2px solid #ddd;\">Nicho</th>' +\n  '<th style=\"text-align:left;border-bottom:2px solid #ddd;\">Tipo</th>' +\n  '<th style=\"text-align:left;border-bottom:2px solid #ddd;\">Idioma</th>' +\n  '</tr></thead>' +\n  '<tbody>' + rowsSent + '</tbody></table>' +\n  '<p style=\"margin-top:16px;font-size:12px;color:#999;\">Workflow: CE Email — Outreach Prospectos</p>' +\n  '<hr style=\"border:none;border-top:1px solid #eee;margin:16px 0;\">' +\n  '<p><strong>Leads sin email (' + skipped.length + '):</strong></p>' +\n  skippedTable +\n  '</div></div>';\n\nconst subject = '📊 CE Email Outreach — Reporte del día ' + fechaCorta;\n\nreturn [{ json: { htmlBody, subject } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2144,
+        64
+      ],
+      "id": "build-html-reporte",
+      "name": "🔧 Construir HTML Reporte"
+    }
+  ],
+  "connections": {
+    "▶️ Ejecutar Manualmente": {
+      "main": [
+        [
+          {
+            "node": "📋 Obtener Leads",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📊 Obtener Clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Obtener Leads": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Leads + Clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Clasificar Leads": {
+      "main": [
+        [
+          {
+            "node": "❓ ¿Hay leads hoy?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ ¿Hay leads hoy?": {
+      "main": [
+        [
+          {
+            "node": "✉️ Preparar Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📭 Sin Leads Hoy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✉️ Preparar Email": {
+      "main": [
+        [
+          {
+            "node": "✅ Email válido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Email válido": {
+      "main": [
+        [
+          {
+            "node": "📧 Enviar Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "📧 Enviar Email": {
+      "main": [
+        [
+          {
+            "node": "✏️ Actualizar en Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Obtener Clientes": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Leads + Clientes",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "🔀 Merge Leads + Clientes": {
+      "main": [
+        [
+          {
+            "node": "🔄 Sync: Detectar Nuevos Clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Sync: Detectar Nuevos Clientes": {
+      "main": [
+        [
+          {
+            "node": "❓ Hay Nuevos Clientes?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Hay Nuevos Clientes?": {
+      "main": [
+        [
+          {
+            "node": "➕ Agregar Nuevos Clientes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📋 Leads Actualizados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "➕ Agregar Nuevos Clientes": {
+      "main": [
+        [
+          {
+            "node": "📊 Agrupar Post-Append",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Agrupar Post-Append": {
+      "main": [
+        [
+          {
+            "node": "📋 Leads Actualizados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Leads Actualizados": {
+      "main": [
+        [
+          {
+            "node": "🔍 Clasificar Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏰ Trigger Jueves 9am": {
+      "main": [
+        [
+          {
+            "node": "📋 Obtener Leads",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📊 Obtener Clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✏️ Actualizar en Sheets": {
+      "main": [
+        [
+          {
+            "node": "📦 Agrupar Emails Enviados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Agrupar Emails Enviados": {
+      "main": [
+        [
+          {
+            "node": "🔧 Construir HTML Reporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Construir HTML Reporte": {
+      "main": [
+        [
+          {
+            "node": "📊 Reporte Growth54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "CKOju9JVnSMymfKv",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:⏰ Trigger Jueves 9am": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "356dd42f-dfdf-49b9-9b76-48abdd4cb112",
+  "activeVersionId": "356dd42f-dfdf-49b9-9b76-48abdd4cb112",
+  "versionCounter": 111,
+  "triggerCount": 1,
+  "sourceWorkflowId": null
+}
