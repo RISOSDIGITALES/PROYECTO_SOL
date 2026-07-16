@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-16T14:35:54.980Z",
+  "updatedAt": "2026-07-16T14:55:58.857Z",
   "createdAt": "2026-07-04T15:12:32.233Z",
   "id": "5GU89AeWsBZ86FWa",
   "name": "Marco CE — 06 Procesador de Medios",
@@ -84,7 +84,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "const inp = $('📥 Recibir Datos Medio').first().json;\nconst binary = $input.first().binary;\n\n// Get base64 from binary data\nconst binaryKey = Object.keys(binary || {})[0] || 'data';\nconst fileData = binary?.[binaryKey];\nconst base64 = fileData?.data || '';\nconst mimeType = inp.mime_type || fileData?.mimeType || 'application/octet-stream';\nconst filename = inp.filename || fileData?.fileName || 'archivo';\nconst caption = inp.caption || '';\nconst geminiKey = inp.gemini_api_key || $vars.GEMINI_API_KEY || '';\nconst convertApiKey = inp.convert_api_key || '';\n\n// Classify type\nlet mediaCategory;\nif (mimeType.startsWith('image/')) {\n  mediaCategory = 'image';\n} else if (mimeType.startsWith('audio/') || mimeType.startsWith('video/ogg')) {\n  mediaCategory = 'audio';\n} else if (mimeType === 'application/pdf') {\n  mediaCategory = 'pdf';\n} else if (['application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n            'application/msword',\n            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',\n            'application/vnd.ms-excel',\n            'application/vnd.openxmlformats-officedocument.presentationml.presentation'\n           ].includes(mimeType)) {\n  mediaCategory = 'office';\n} else if (mimeType.startsWith('video/')) {\n  mediaCategory = 'video';\n} else {\n  mediaCategory = 'unknown';\n}\n\nreturn [{ json: { base64, mimeType, filename, caption, mediaCategory, geminiKey, convertApiKey }, binary }];"
+        "jsCode": "const inp = $('📥 Recibir Datos Medio').first().json;\nconst binary = $input.first().binary;\n\n// Get base64 from binary data\nconst binaryKey = Object.keys(binary || {})[0] || 'data';\nconst fileData = binary?.[binaryKey];\nconst base64 = fileData?.data || '';\nconst mimeType = inp.mime_type || fileData?.mimeType || 'application/octet-stream';\nconst filename = inp.filename || fileData?.fileName || 'archivo';\nconst caption = inp.caption || '';\nconst geminiKey = inp.gemini_api_key || $vars.GEMINI_API_KEY || '';\nconst convertApiKey = inp.convert_api_key || '';\n\n// Classify type\nlet mediaCategory;\nif (mimeType.startsWith('image/')) {\n  mediaCategory = 'image';\n} else if (mimeType.startsWith('audio/') || mimeType.startsWith('video/ogg')) {\n  mediaCategory = 'audio';\n} else if (mimeType === 'application/pdf') {\n  mediaCategory = 'pdf';\n} else if (['application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n            'application/msword',\n            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',\n            'application/vnd.ms-excel',\n            'application/vnd.openxmlformats-officedocument.presentationml.presentation'\n           ].includes(mimeType)) {\n  mediaCategory = 'office';\n} else if (mimeType.startsWith('video/')) {\n  mediaCategory = 'video';\n} else {\n  mediaCategory = 'unknown';\n}\n\nconst media_id = inp.media_id || '';\nconst phone_number_id = inp.phone_number_id || '';\n\nreturn [{ json: { base64, mimeType, filename, caption, mediaCategory, geminiKey, convertApiKey, media_id, phone_number_id }, binary }];"
       }
     },
     {
@@ -257,7 +257,7 @@
         260
       ],
       "parameters": {
-        "jsCode": "const d = $input.first().json;\nconst caption = d.caption ? `El cliente adjuntó este texto con la imagen: \"${d.caption}\". ` : '';\nconst prompt = `${caption}Eres el asistente de ventas Marco de Crating Express (empresa de embalaje industrial en Miami). Analiza esta imagen enviada por un cliente y extrae toda la información relevante para una cotización de embalaje: describe el objeto/artículo visible, sus dimensiones aproximadas si son visibles, materiales, estado, cualquier texto o etiqueta relevante, y cualquier detalle que ayude a cotizar un cajón o embalaje de madera. Sé específico y práctico.`;\n\nconst body = {\n  model: 'meta-llama/llama-4-scout-17b-16e-instruct',\n  messages: [{\n    role: 'user',\n    content: [\n      { type: 'text', text: prompt },\n      { type: 'image_url', image_url: { url: `data:${d.mimeType};base64,${d.base64}` } }\n    ]\n  }],\n  temperature: 0.2,\n  max_tokens: 800\n};\n\nreturn [{ json: { body: JSON.stringify(body), mimeType: d.mimeType, caption: d.caption } }];"
+        "jsCode": "const d = $input.first().json;\nconst caption = d.caption ? `El cliente adjuntó este texto con la imagen: \"${d.caption}\". ` : '';\nconst prompt = `${caption}Eres el asistente de ventas Marco de Crating Express (empresa de embalaje industrial en Miami). Analiza esta imagen enviada por un cliente y extrae toda la información relevante para una cotización de embalaje: describe el objeto/artículo visible, sus dimensiones aproximadas si son visibles, materiales, estado, cualquier texto o etiqueta relevante, y cualquier detalle que ayude a cotizar un cajón o embalaje de madera. Sé específico y práctico.`;\n\nconst proxyUrl = `https://n8n.mdarthurdigital.com/webhook/media-proxy-g54?media_id=${encodeURIComponent(d.media_id)}&phone_number_id=${encodeURIComponent(d.phone_number_id)}&secret=g54_agent_produccion_2026`;\n\nconst body = {\n  model: 'meta-llama/llama-4-scout-17b-16e-instruct',\n  messages: [{\n    role: 'user',\n    content: [\n      { type: 'text', text: prompt },\n      { type: 'image_url', image_url: { url: proxyUrl } }\n    ]\n  }],\n  temperature: 0.2,\n  max_tokens: 800\n};\n\nreturn [{ json: { body: JSON.stringify(body), mimeType: d.mimeType, caption: d.caption } }];"
       }
     },
     {
@@ -666,9 +666,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": null,
-  "versionId": "84736540-f7fc-4270-af16-10107479b5bb",
-  "activeVersionId": "84736540-f7fc-4270-af16-10107479b5bb",
-  "versionCounter": 8,
+  "versionId": "10e00fc6-cf53-4206-841a-104036a3087a",
+  "activeVersionId": "10e00fc6-cf53-4206-841a-104036a3087a",
+  "versionCounter": 10,
   "triggerCount": 0,
   "sourceWorkflowId": null
 }
