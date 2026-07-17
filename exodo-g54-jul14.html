@@ -236,16 +236,36 @@
         <div class="item-where">Panel › Ideas de Contenido</div>
       </div>
       <div class="item-tags">
-        <span class="badge nuevo">Nuevo — funcionalidad no existe hoy</span>
+        <span class="badge resuelto">✅ Nuestro lado listo desde el 15-jul</span>
         <span class="badge panel">Panel UI</span>
-        <span class="badge p1">🟡 P1</span>
+        <span class="badge p1">🟡 Falta confirmar conexión</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
         Cuando al cliente le gusta la keyword asignada a una idea pero no el título/ángulo específico que generó la IA, debería poder pedir que se regenere solo esa idea puntual, conservando la misma keyword, en vez de descartarla por completo y perder la asignación semanal.
       </p>
-      <div class="warn-box"><strong>Esto es funcionalidad nueva en ambos lados</strong> — no existe hoy ni un botón en el panel ni un modo en Ideas AI que reciba "regenera esta idea puntual conservando su keyword y plataforma". Requiere: un botón en el panel junto a cada idea, y un nuevo modo en el webhook de Ideas AI (<code>ideas-ai-g54</code>) que reciba <code>{keyword, platform, idea_id}</code> ya asignados y genere solo un título/ángulo nuevo para ese par exacto, sin tocar el resto del plan semanal ni contar contra el cupo de ideas de la semana.</div>
+      <div class="dep-box"><strong>De nuestro lado ya está construido y probado desde el 15-jul:</strong> el webhook de Ideas AI (<code>ideas-ai-g54</code>) acepta <code>{modo:"regenerar", idea_id, keyword, platform}</code>, genera un ángulo distinto para la misma keyword y actualiza la idea existente in-place (<code>PUT /api/rrss/ideas/{id}</code>) sin duplicarla ni tocar el resto del plan semanal. Reconfirmado en vivo el 17-jul. El botón "REGENERADOR" que ya aparece en el panel — si llama a este webhook con esos 3 campos, debería funcionar tal cual; no podemos confirmar desde acá si está conectado al lugar correcto, hace falta que alguien lo pruebe desde el panel y confirme que el título de la idea cambia de verdad.</div>
+    </div>
+  </div>
+
+  <!-- B-13. PUT ideas descarta angulo al actualizar -->
+  <div class="item-card b-orange">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-13. PUT /api/rrss/ideas/{id} descarta el campo angulo al actualizar (sí funciona al crear)</div>
+        <div class="item-where">API Backend — Ideas RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo — 17-jul</span>
+        <span class="badge api">Endpoint</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Al crear una idea nueva, el campo <code>angulo</code> se guarda correctamente (ver B-11, ya resuelto). Pero al <strong>actualizar</strong> una idea existente con <code>PUT /api/rrss/ideas/{id}</code> — el mismo endpoint que usa el modo "regenerar" de Ideas AI — el campo <code>angulo</code> se descarta en silencio, solo se actualiza <code>topic</code>. Probado mandando <code>angulo</code> solo (sin ningún otro campo) directo por API: la respuesta sigue devolviendo <code>angulo: null</code>. Mismo patrón de "ruta PUT con lista de campos editables incompleta" ya visto antes en otros endpoints del proyecto. Impacto: cuando el cliente usa "Regenerar idea" (I-5), el nuevo título sí se actualiza pero la justificación de por qué esa idea corresponde a la keyword se pierde.
+      </p>
     </div>
   </div>
 
