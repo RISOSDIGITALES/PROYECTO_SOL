@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-17T14:07:47.014Z",
+  "updatedAt": "2026-07-17T14:39:10.419Z",
   "createdAt": "2026-06-25T16:00:34.918Z",
   "name": "📢 Distribution AI — Crating Express v1.0 (G54)",
   "description": null,
@@ -49,6 +49,18 @@
               "id": "a7",
               "name": "IG_USER_ID",
               "value": "",
+              "type": "string"
+            },
+            {
+              "id": "a8",
+              "name": "G54_MASTER_EMAIL",
+              "value": "master@growth54.local",
+              "type": "string"
+            },
+            {
+              "id": "a9",
+              "name": "G54_MASTER_PASSWORD",
+              "value": "REDACTED_MASTER_PASSWORD",
               "type": "string"
             }
           ]
@@ -424,7 +436,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://graph.facebook.com/v19.0/{{ $json.IG_USER_ID }}/media_publish",
+        "url": "=https://graph.facebook.com/v19.0/{{ $('🔧 Preparar Datos Post').item.json.IG_USER_ID }}/media_publish",
         "sendBody": true,
         "contentType": "form-urlencoded",
         "bodyParameters": {
@@ -435,7 +447,7 @@
             },
             {
               "name": "access_token",
-              "value": "={{ $json.FB_ACCESS_TOKEN }}"
+              "value": "={{ $('🔧 Preparar Datos Post').item.json.FB_ACCESS_TOKEN }}"
             }
           ]
         },
@@ -587,7 +599,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{ $('⚙️ Config Distribution').item.json.G54_AGENT_TOKEN }}"
+              "value": "=Bearer {{ $('🔐 G54: Login Sesión').item.json.access_token }}"
             }
           ]
         },
@@ -600,7 +612,8 @@
             }
           ]
         },
-        "options": {}
+        "options": {},
+        "continueOnFail": true
       },
       "id": "error-g54-node-001",
       "name": "♻️ G54: Revertir → Aprobado",
@@ -668,6 +681,62 @@
         -56,
         406
       ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Distribution').item.json.G54_BASE_URL }}/api/auth/login",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config Distribution').item.json.G54_MASTER_EMAIL, password: $('⚙️ Config Distribution').item.json.G54_MASTER_PASSWORD }) }}",
+        "options": {},
+        "continueOnFail": true
+      },
+      "id": "g54-login",
+      "name": "🔐 G54: Login Sesión",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -624,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Distribution').item.json.G54_BASE_URL }}/api/auth/switch-company",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('🔐 G54: Login Sesión').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: Number($('⚙️ Config Distribution').item.json.G54_COMPANY_ID || 1) }) }}",
+        "options": {},
+        "continueOnFail": true
+      },
+      "id": "g54-switch-co",
+      "name": "🏢 G54: Cambiar Empresa Activa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -624,
+        256
+      ]
     }
   ],
   "connections": {
@@ -675,7 +744,7 @@
       "main": [
         [
           {
-            "node": "🔑 Obtener Tokens Página (G54)",
+            "node": "🔐 G54: Login Sesión",
             "type": "main",
             "index": 0
           }
@@ -903,6 +972,28 @@
           }
         ]
       ]
+    },
+    "🔐 G54: Login Sesión": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa Activa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 G54: Cambiar Empresa Activa": {
+      "main": [
+        [
+          {
+            "node": "🔑 Obtener Tokens Página (G54)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -922,7 +1013,7 @@
     }
   },
   "nodeGroups": [],
-  "activeVersionId": "40002da4-6f40-4e1d-a930-972fabf4eced",
-  "versionCounter": 62,
+  "activeVersionId": "6cd0f878-2cec-42de-a0d5-28cc27bd6065",
+  "versionCounter": 63,
   "sourceWorkflowId": null
 }
