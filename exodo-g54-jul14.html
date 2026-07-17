@@ -78,6 +78,7 @@
     .badge.nuevo { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
     .badge.carry { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-border); }
     .badge.opcional { background: var(--teal-bg); color: var(--teal); border: 1px solid var(--teal-border); }
+    .badge.resuelto { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
 
     .item-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
     .item-card.b-red { border-left: 3px solid var(--red); }
@@ -85,6 +86,7 @@
     .item-card.b-yellow { border-left: 3px solid var(--yellow); }
     .item-card.b-gray { border-left: 3px solid var(--gray); }
     .item-card.b-teal { border-left: 3px solid var(--teal); }
+    .item-card.b-green { border-left: 3px solid var(--green); }
 
     .item-header {
       display: flex; justify-content: space-between; align-items: flex-start;
@@ -441,9 +443,9 @@
     </div>
     <div class="item-body">
       <p class="item-why">
-        El dashboard de Métricas RRSS mostraba números como <code>050003200</code> en Alcance Total — es "5000" + "3200" concatenados como texto en vez de sumados. Confirmado que no es un bug de nuestro lado: n8n manda valores numéricos reales al guardar (ej. <code>alcance: 16</code>, tipo número genuino, verificado en la ejecución real). El endpoint <code>GET /api/rrss/metricas</code> los devuelve como <strong>string</strong> (<code>"alcance_total": "5000"</code>), y además <strong>no devuelve el valor más reciente</strong>: mandamos <code>16</code> y la lectura siguió mostrando <code>"5000"</code>, un valor viejo.
+        El dashboard de Métricas RRSS mostraba números como <code>050003200</code> en Alcance Total — es "5000" + "3200" concatenados como texto en vez de sumados. <strong>Parte 1 resuelta el 17-jul:</strong> los campos numéricos ya se devuelven como número real (<code>int</code>), confirmado. <strong>Parte 2 sigue sin resolverse, y es la más grave — reconfirmado el 17-jul con una prueba definitiva:</strong> se guardó directo por API un valor imposible de confundir con nada preexistente (<code>alcance_total: 88888</code>), confirmado <code>{"ok":true,"created":1}</code> — al releer <code>GET /api/rrss/metricas</code> (con <code>company_id</code>, sin parámetro, y con <code>empresa_id</code>) el 88888 no aparece en ningún caso, siempre los mismos valores fijos de siempre. Se probó también guardando por el endpoint de sesión (<code>POST /api/rrss/metricas</code>, el mismo que usaría el botón "+ Registrar Métricas" del panel) — tampoco se refleja. El endpoint de lectura que alimenta el dashboard no está conectado a ninguna de las dos rutas de escritura que probamos — es casi seguro un valor insertado directo en base de datos hace semanas que nunca se limpió, y el dashboard nunca se va a mover sin importar cuántas métricas reales se guarden hasta que esto se conecte bien.
       </p>
-      <div class="warn-box"><strong>Pedido concreto:</strong> (1) que los campos numéricos se devuelvan como número, no como texto; (2) revisar por qué el <code>GET</code> no refleja lo que el <code>POST</code> acaba de guardar — parece estar leyendo de una fuente vieja o cacheada.</div>
+      <div class="warn-box"><strong>Pedido concreto, actualizado:</strong> el bug de formato (texto vs número) ya está resuelto, gracias. Lo que falta es reconectar <code>GET /api/rrss/metricas</code> a la tabla real donde se guardan las métricas — probado que ni el guardado automático (AGENT_TOKEN) ni el guardado manual de sesión actualizan lo que muestra el dashboard.</div>
     </div>
   </div>
 
@@ -464,27 +466,26 @@
       <p class="item-why">
         Un lead que llega por un comentario de Facebook queda etiquetado como "rrss" en el contacto y como "manual" (el menos incorrecto de las 3 opciones válidas, elegido a propósito) en el deal del CRM — no hay forma de que diga "Facebook" o "Instagram". Probamos explícitamente mandar <code>facebook</code>, <code>instagram</code>, <code>social</code>, <code>meta</code> a <code>/api/agent/whatsapp/inbound</code>: todos rechazados por el enum, solo <code>rrss</code> y <code>web</code> son válidos ahí. Igual en <code>/api/crm/deals</code>, solo <code>whatsapp</code>/<code>web</code>/<code>manual</code>. Sería útil agregar valores por plataforma (<code>facebook</code>, <code>instagram</code>) a ambos enums.
       </p>
+      <div class="warn-box"><strong>Mejora parcial confirmada el 17-jul:</strong> mandar <code>origen: "facebook"</code> a <code>/api/crm/deals</code> ya no da <code>500 Server Error</code> (era un crash real del servidor) — ahora responde <code>422</code> con mensaje claro ("The selected origen is invalid."). El enum en sí sigue sin aceptar facebook/instagram, pero al menos ya no hay riesgo de que un valor inesperado tumbe el servidor. Gracias por el fix del crash — el pedido original (agregar los valores) sigue en pie.</div>
     </div>
   </div>
 
   <!-- B-6. 404 storage -->
-  <div class="item-card b-red">
+  <div class="item-card b-green">
     <div class="item-header">
       <div>
         <div class="item-title">B-6. 404 al cargar imágenes subidas — falta el enlace de storage público</div>
         <div class="item-where">Servidor — Storage</div>
       </div>
       <div class="item-tags">
-        <span class="badge carry">Carry-over</span>
+        <span class="badge resuelto">✅ RESUELTO — 17-jul</span>
         <span class="badge api">Servidor</span>
-        <span class="badge p0">🔴 P0</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        Confirmado múltiples veces, incluso con una imagen subida directamente desde el panel — el endpoint de subida funciona y devuelve una URL válida, pero esa URL siempre da 404. Diagnóstico: falta <code>php artisan storage:link</code> (o equivalente) en el servidor de producción. Reconfirmado con datos reales: de los 4 posts que hoy tienen <code>imagen_url</code> guardada, los 4 dan 404 — ningún post con imagen se ve realmente en este momento. Es el cuello de botella más visible para el cliente final — un post aprobado sin imagen es un post débil para Instagram.
+        <strong>Confirmado resuelto el 17-jul:</strong> la URL de imagen de un post real devuelve <code>200</code> con un JPEG genuino servido por nginx. Con esto desbloqueado, se corrió una simulación completa de punta a punta (Ideas AI → Content AI → generador de imagen → Distribution AI) y se logró la primera publicación real de Instagram de toda la historia del proyecto. Gracias.
       </p>
-      <div class="dep-box"><strong>Habilita:</strong> I-10 (distinguir sin imagen vs. imagen rota) deja de ser necesario una vez resuelto esto de raíz.</div>
     </div>
   </div>
 
@@ -509,21 +510,20 @@
   </div>
 
   <!-- B-8. PUT deals telefono/origen -->
-  <div class="item-card b-red">
+  <div class="item-card b-green">
     <div class="item-header">
       <div>
         <div class="item-title">B-8. PUT /api/crm/deals/{id} no permite editar telefono ni origen en un deal ya creado</div>
         <div class="item-where">API Backend — CRM</div>
       </div>
       <div class="item-tags">
-        <span class="badge nuevo">Nuevo</span>
+        <span class="badge resuelto">✅ RESUELTO — 17-jul</span>
         <span class="badge api">Endpoint</span>
-        <span class="badge p1">🟡 P1</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        Al intentar corregir un deal que había quedado con un teléfono mal guardado, probamos <code>PUT /api/crm/deals/{id}</code> mandando <code>telefono</code> y <code>origen</code> de tres formas distintas (cada uno solo, ambos juntos, y junto con <code>nombre</code> para confirmar que el PUT en sí funciona) — siempre responde 200 pero esos dos campos específicos nunca cambian. Sin esto, un dato mal guardado en esos dos campos queda así para siempre — la única forma de corregirlo es borrar el contacto completo, lo cual borra también su conversación real asociada.
+        <strong>Confirmado resuelto el 17-jul:</strong> probado en vivo sobre un deal real — <code>PUT /api/crm/deals/{id}</code> con <code>telefono</code> y con <code>origen</code> por separado, ambos se guardaron correctamente y se reflejaron al releer el deal. Gracias.
       </p>
     </div>
   </div>
@@ -632,13 +632,14 @@
       <p class="item-why">
         Cada guardado de métricas manda <code>period_start</code> y <code>period_end</code> correctamente, pero al releer <code>GET /api/rrss/metricas</code> solo aparece un valor actual por plataforma, sin desglose por semana — y como se ve en B-4, ni siquiera es el valor más reciente. Sospechamos que el backend sobrescribe el mismo registro en vez de acumular uno por semana. Necesitamos que Walter lo confirme: si sobrescribe, además de perder el historial ("semana 1, semana 2, semana 3...") significaría que consultar métricas de un post individual podría <strong>pisar el número agregado general de la cuenta</strong> en vez de guardarse aparte.
       </p>
+      <div class="warn-box"><strong>Parcialmente respondida el 17-jul, del lado de la escritura:</strong> cada <code>POST</code> a <code>/api/agent/rrss/metricas</code> o <code>/api/rrss/metricas</code> devuelve un <code>id</code> nuevo cada vez (<code>created:1</code>), no actualiza uno existente — así que del lado del guardado sí parece acumular registros separados, no sobrescribir. Pero como <code>GET /api/rrss/metricas</code> está completamente desconectado de esa tabla (ver B-4), no podemos confirmar si ese historial acumulado realmente se puede leer en algún lado o si el problema de fondo de B-4 también afecta esto — sigue siendo una consulta abierta hasta que B-4 se resuelva.</div>
     </div>
   </div>
 
 </div>
 
 <footer>
-  Éxodo G54 · Equipo Sol × Walter · 14 de julio 2026 — ordenado por Interfaz / Backend / Consultas
+  Éxodo G54 · Equipo Sol × Walter · 14 de julio 2026, actualizado 17 de julio 2026 — ordenado por Interfaz / Backend / Consultas
 </footer>
 
 </body>
