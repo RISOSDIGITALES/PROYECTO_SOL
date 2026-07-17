@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-17T15:57:50.024Z",
+  "updatedAt": "2026-07-17T16:04:12.640Z",
   "createdAt": "2026-06-20T00:45:39.368Z",
   "name": "💬 Sales AI — Motor de Conversación G54",
   "description": null,
@@ -488,7 +488,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: 'llama-3.3-70b-versatile',\n  messages: [\n    {\n      role: 'system',\n      content: $json.promptSistema\n    },\n    {\n      role: 'user',\n      content:\n        'HISTORIAL:\\n' + ($json.historial || '(primer mensaje)') +\n        '\\n\\nDATOS RECOLECTADOS HASTA AHORA (no volver a preguntar si ya están):\\n' +\n        JSON.stringify($json.datosRecolectados || {}) +\n        '\\n\\nMENSAJE ACTUAL: \"' + $json.texto + '\"' +\n        '\\nSaludo por hora: \"' + $json.saludoHora + '\"' +\n        '\\nCliente nuevo: ' + ($json.esNuevo ? 'SÍ' : 'NO') +\n        '\\n\\nResponde SOLO con JSON válido (sin markdown, sin texto extra):\\n' +\n        '{\"mensaje\":\"\",\"datos_actualizados\":{},\"clasificacion\":\"frio\",\"todos_recolectados\":false,\"resumen_lead\":\"\"}\\n' +\n        '- mensaje: tu respuesta al cliente\\n' +\n        '- datos_actualizados: objeto libre con todos los datos recolectados (incluye anteriores + nuevos del mensaje actual)\\n' +\n        '- clasificacion: \"frio\" | \"tibio\" | \"caliente\"\\n' +\n        '- todos_recolectados: true solo cuando el prompt haya confirmado todos los datos necesarios\\n' +\n        '- resumen_lead: breve descripción del lead para el vendedor (vacio si no hay datos suficientes)'\n    }\n  ],\n  temperature: 0.3,\n  max_tokens: 600,\n  response_format: { type: 'json_object' }\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'llama-3.3-70b-versatile',\n  messages: [\n    {\n      role: 'system',\n      content: $('🔧 Preparar Contexto IA').item.json.promptSistema\n    },\n    {\n      role: 'user',\n      content:\n        'HISTORIAL:\\n' + ($('🔧 Preparar Contexto IA').item.json.historial || '(primer mensaje)') +\n        '\\n\\nDATOS RECOLECTADOS HASTA AHORA (no volver a preguntar si ya están):\\n' +\n        JSON.stringify($('🔧 Preparar Contexto IA').item.json.datosRecolectados || {}) +\n        '\\n\\nMENSAJE ACTUAL: \"' + $('🔧 Preparar Contexto IA').item.json.texto + '\"' +\n        '\\nSaludo por hora: \"' + $('🔧 Preparar Contexto IA').item.json.saludoHora + '\"' +\n        '\\nCliente nuevo: ' + ($('🔧 Preparar Contexto IA').item.json.esNuevo ? 'SÍ' : 'NO') +\n        '\\nIDIOMA DEL CLIENTE (detectado automaticamente): ' + ($('🌐 Detectar Idioma').item.json.choices?.[0]?.message?.content?.trim() || 'español') + ' — tu campo \"mensaje\" DEBE estar escrito en ese idioma exacto, sin importar en que idioma esten tus otras instrucciones.' +\n        '\\n\\nResponde SOLO con JSON válido (sin markdown, sin texto extra):\\n' +\n        '{\"mensaje\":\"\",\"datos_actualizados\":{},\"clasificacion\":\"frio\",\"todos_recolectados\":false,\"resumen_lead\":\"\"}\\n' +\n        '- mensaje: tu respuesta al cliente\\n' +\n        '- datos_actualizados: objeto libre con todos los datos recolectados (incluye anteriores + nuevos del mensaje actual)\\n' +\n        '- clasificacion: \"frio\" | \"tibio\" | \"caliente\"\\n' +\n        '- todos_recolectados: true solo cuando el prompt haya confirmado todos los datos necesarios\\n' +\n        '- resumen_lead: breve descripción del lead para el vendedor (vacio si no hay datos suficientes)'\n    }\n  ],\n  temperature: 0.3,\n  max_tokens: 600,\n  response_format: { type: 'json_object' }\n}) }}",
         "options": {}
       }
     },
@@ -1682,6 +1682,42 @@
         1040,
         0
       ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: 'Detecta el idioma del ULTIMO mensaje del cliente. Si el mensaje es muy corto o ambiguo (ej: \"ok\", \"si\", un numero), usa el idioma predominante del historial de conversacion en su lugar. Responde UNICAMENTE con el nombre del idioma en espanol, todo en minusculas, una sola palabra (ejemplos validos: espanol, ingles, portugues, frances). Sin explicaciones.' }, { role: 'user', content: 'HISTORIAL:\\n' + ($json.historial || '(sin historial)') + '\\n\\nMENSAJE ACTUAL: \"' + $json.texto + '\"' }], temperature: 0, max_tokens: 10 }) }}",
+        "options": {}
+      },
+      "id": "detectar-idioma",
+      "name": "🌐 Detectar Idioma",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        180
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq account"
+        }
+      }
     }
   ],
   "connections": {
@@ -1871,7 +1907,7 @@
       "main": [
         [
           {
-            "node": "🤖 Groq: Conversación IA",
+            "node": "🌐 Detectar Idioma",
             "type": "main",
             "index": 0
           }
@@ -2356,6 +2392,17 @@
           }
         ]
       ]
+    },
+    "🌐 Detectar Idioma": {
+      "main": [
+        [
+          {
+            "node": "🤖 Groq: Conversación IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -2370,7 +2417,7 @@
     }
   },
   "nodeGroups": [],
-  "activeVersionId": "fe0c22e0-c579-4799-aaf0-5150902e7df2",
-  "versionCounter": 25,
+  "activeVersionId": "9735d0c3-5c61-4e4a-8adf-8b117f88ce19",
+  "versionCounter": 28,
   "sourceWorkflowId": null
 }
