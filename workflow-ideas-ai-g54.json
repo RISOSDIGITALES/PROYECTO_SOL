@@ -1,11 +1,9 @@
 {
-  "updatedAt": "2026-07-15T15:18:20.695Z",
+  "updatedAt": "2026-07-17T20:15:31.754Z",
   "createdAt": "2026-07-13T20:46:43.062Z",
-  "id": "nHawWPIIu51ABBgl",
   "name": "🧠 Ideas AI — RRSS G54",
   "description": null,
   "active": true,
-  "isArchived": false,
   "nodes": [
     {
       "id": "ideas-webhook",
@@ -167,7 +165,7 @@
             {
               "id": "g54-master-pass",
               "name": "G54_MASTER_PASSWORD",
-              "value": "REDACTED_G54_MASTER_PASSWORD",
+              "value": "wx2026_master",
               "type": "string"
             }
           ]
@@ -358,7 +356,7 @@
     },
     {
       "parameters": {
-        "url": "=https://newsapi.org/v2/everything?q={{ encodeURIComponent($('🔧 Preparar Query NewsAPI').item.json.newsapi_query) }}&language=en&sortBy=publishedAt&pageSize=8&apiKey=de29024eefed4c2d813c639e92f73dd6",
+        "url": "=https://newsapi.org/v2/everything?q={{ encodeURIComponent($('🔧 Preparar Query NewsAPI').item.json.newsapi_query) }}&language=en&sortBy=publishedAt&pageSize=8&apiKey=REDACTED_NEWSAPI_KEY",
         "options": {
           "response": {
             "response": {
@@ -447,7 +445,7 @@
     },
     {
       "parameters": {
-        "url": "=https://newsapi.org/v2/everything?q={{ encodeURIComponent($('🔍 Parsear Tema Tendencia').item.json.trend_keyword_en || $('🔍 Parsear Tema Tendencia').item.json.trend_keyword || $('🔍 Parsear Tema Tendencia').item.json.trend_topic) }}&language=en&sortBy=publishedAt&from={{ $now.minus({days:3}).toFormat('yyyy-MM-dd') }}&pageSize=10&apiKey=de29024eefed4c2d813c639e92f73dd6",
+        "url": "=https://newsapi.org/v2/everything?q={{ encodeURIComponent($('🔍 Parsear Tema Tendencia').item.json.trend_keyword_en || $('🔍 Parsear Tema Tendencia').item.json.trend_keyword || $('🔍 Parsear Tema Tendencia').item.json.trend_topic) }}&language=en&sortBy=publishedAt&from={{ $now.minus({days:3}).toFormat('yyyy-MM-dd') }}&pageSize=10&apiKey=REDACTED_NEWSAPI_KEY",
         "options": {
           "response": {
             "response": {
@@ -598,7 +596,7 @@
       ],
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const ctx = $('🔧 Preparar Contexto Ideas').item.json;\nconst raw = $input.item.json.choices?.[0]?.message?.content\n  || $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text\n  || '{}';\n\nlet parsed;\ntry { parsed = JSON.parse(raw); }\ncatch (e) {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  try { parsed = m ? JSON.parse(m[0]) : {}; } catch (e2) { parsed = {}; }\n}\n\nconst ideasRaw = Array.isArray(parsed.ideas) ? parsed.ideas : [];\n\n// asignaciones = [{keyword, platform}] ya decididas por el contexto ANTES de llamar a la IA —\n// la plataforma se fuerza desde aquí, nunca se confía en lo que la IA devuelva en ese campo.\nconst asignadas = new Map(ctx.asignaciones.map(a => [a.keyword.toLowerCase().trim(), a.platform]));\n\nconst ideasValidas = [];\nconst ideasDescartadas = [];\n\nfor (const idea of ideasRaw) {\n  const kw = (idea.keyword || '').toLowerCase().trim();\n  const topic = (idea.topic || '').trim();\n  if (!kw || !asignadas.has(kw)) {\n    ideasDescartadas.push({ motivo: 'keyword no coincide con la lista asignada', idea });\n    continue;\n  }\n  if (!topic || !idea.angulo) {\n    ideasDescartadas.push({ motivo: 'falta topic o angulo de justificación', idea });\n    continue;\n  }\n  ideasValidas.push({\n    topic,\n    tipo: idea.tipo || 'TOFU',\n    keyword: idea.keyword,\n    platform: asignadas.get(kw), // plataforma forzada, no la de la IA\n    semana: ctx.weekNum,\n    estado: 'pendiente',\n    es_tendencia: false,\n    justificacion: idea.angulo,\n  });\n}\n\n// Agregar la idea de tendencia si fue verificada y el modo la incluyó como slot\n// (ya viene con su propia justificación del análisis de noticias, no pasa por la IA de ideas)\nif (ctx.trend_verificada && ctx.trend_topic) {\n  ideasValidas.push({\n    topic: ctx.trend_topic,\n    tipo: 'TOFU',\n    keyword: ctx.trend_keyword || '',\n    platform: ctx.trend_platform,\n    semana: ctx.weekNum,\n    estado: 'pendiente',\n    es_tendencia: true,\n    justificacion: ctx.trend_justify || '',\n  });\n}\n\nreturn [{ json: {\n  company_id: ctx.company_id,\n  modo: ctx.modo,\n  idea_id: ctx.idea_id || null,\n  ideas: ideasValidas,\n  ideas_descartadas_count: ideasDescartadas.length,\n  ideas_descartadas: ideasDescartadas,\n}}];\n"
+        "jsCode": "const ctx = $('🔧 Preparar Contexto Ideas').item.json;\nconst raw = $input.item.json.choices?.[0]?.message?.content\n  || $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text\n  || '{}';\n\nlet parsed;\ntry { parsed = JSON.parse(raw); }\ncatch (e) {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  try { parsed = m ? JSON.parse(m[0]) : {}; } catch (e2) { parsed = {}; }\n}\n\nconst ideasRaw = Array.isArray(parsed.ideas) ? parsed.ideas : [];\n\n// asignaciones = [{keyword, platform}] ya decididas por el contexto ANTES de llamar a la IA —\n// la plataforma se fuerza desde aquí, nunca se confía en lo que la IA devuelva en ese campo.\nconst asignadas = new Map(ctx.asignaciones.map(a => [a.keyword.toLowerCase().trim(), a.platform]));\n\nconst ideasValidas = [];\nconst ideasDescartadas = [];\n\nfor (const idea of ideasRaw) {\n  const kw = (idea.keyword || '').toLowerCase().trim();\n  const topic = (idea.topic || '').trim();\n  if (!kw || !asignadas.has(kw)) {\n    ideasDescartadas.push({ motivo: 'keyword no coincide con la lista asignada', idea });\n    continue;\n  }\n  if (!topic || !idea.angulo) {\n    ideasDescartadas.push({ motivo: 'falta topic o angulo de justificación', idea });\n    continue;\n  }\n  ideasValidas.push({\n    topic,\n    tipo: idea.tipo || 'TOFU',\n    keyword: idea.keyword,\n    platform: asignadas.get(kw), // plataforma forzada, no la de la IA\n    semana: ctx.weekNum,\n    estado: 'pendiente',\n    es_tendencia: false,\n    angulo: idea.angulo,\n  });\n}\n\n// Agregar la idea de tendencia si fue verificada y el modo la incluyó como slot\n// (ya viene con su propia justificación del análisis de noticias, no pasa por la IA de ideas)\nif (ctx.trend_verificada && ctx.trend_topic) {\n  ideasValidas.push({\n    topic: ctx.trend_topic,\n    tipo: 'TOFU',\n    keyword: ctx.trend_keyword || '',\n    platform: ctx.trend_platform,\n    semana: ctx.weekNum,\n    estado: 'pendiente',\n    es_tendencia: true,\n    angulo: ctx.trend_justify || '',\n  });\n}\n\nreturn [{ json: {\n  company_id: ctx.company_id,\n  modo: ctx.modo,\n  idea_id: ctx.idea_id || null,\n  ideas: ideasValidas,\n  ideas_descartadas_count: ideasDescartadas.length,\n  ideas_descartadas: ideasDescartadas,\n}}];\n"
       }
     },
     {
@@ -1061,33 +1059,8 @@
       "recurrenceRules": []
     }
   },
-  "meta": null,
   "nodeGroups": [],
-  "pinData": null,
-  "versionId": "338fd13b-20f4-485f-baae-44637492a617",
-  "activeVersionId": "338fd13b-20f4-485f-baae-44637492a617",
-  "versionCounter": 7,
-  "triggerCount": 2,
-  "sourceWorkflowId": null,
-  "shared": [
-    {
-      "updatedAt": "2026-07-13T20:46:43.067Z",
-      "createdAt": "2026-07-13T20:46:43.067Z",
-      "role": "workflow:owner",
-      "workflowId": "nHawWPIIu51ABBgl",
-      "projectId": "scK6yPpEmlkikl67",
-      "project": {
-        "updatedAt": "2026-03-16T19:58:01.773Z",
-        "createdAt": "2026-03-16T19:56:18.866Z",
-        "id": "scK6yPpEmlkikl67",
-        "name": "Solange  Torrez <risosadmi@gmail.com>",
-        "type": "personal",
-        "icon": null,
-        "description": null,
-        "customTelemetryTags": [],
-        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      }
-    }
-  ],
-  "tags": []
+  "activeVersionId": "149a2cec-c55a-4e05-916b-5562ff81a89d",
+  "versionCounter": 8,
+  "sourceWorkflowId": null
 }
