@@ -1,0 +1,249 @@
+{
+  "updatedAt": "2026-07-18T19:41:52.964Z",
+  "createdAt": "2026-06-15T15:49:48.985Z",
+  "id": "PqbfMghL0E7xKflC",
+  "name": "Marco CE — 05 Guardar Lead",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Recibir Datos",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "prep",
+      "name": "🔧 Preparar Campos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const ctx = $input.first().json;\nconst d = ctx.datosRecolectados || {};\n\nconst notas = JSON.stringify({\n  tipo_cajon:        d.tipo_cajon,\n  proteccion_extra:  d.proteccion_extra,\n  correo_contacto:   d.correo_contacto,\n  nombre_cliente:    d.nombre_cliente,\n  fecha:             d.fecha,\n  tipo_flujo:        d.tipo_flujo,\n  cotizacion_enviada: ctx.cotizacionEnviada || ctx.cotizadorEnviado,\n  escalada_enviada: ctx.clasificacion === 'Consulta' || ctx.escaladaEnviada || false,\n  escalada_pendiente: ctx.clasificacion === 'Consulta' ? false : (ctx.escaladaPendiente || false),\n  idioma: ctx.idiomaConversacion || null\n});\n\n// Estado mapping usando nuevoEstado real del contexto\nconst estadoValido = ['Nuevo','En calificación','Calificado','Vendedor notificado','Cerrado'];\nlet estadoFinal;\nif (ctx.nuevoEstado && estadoValido.includes(ctx.nuevoEstado)) {\n  estadoFinal = ctx.nuevoEstado;\n} else if (ctx.esNuevo) {\n  estadoFinal = 'Nuevo';\n} else {\n  estadoFinal = 'En calificación';\n}\n\nconst fields = {\n  Telefono:          '+' + ctx.telefono,\n  Nombre_Contacto:   d.nombre_cliente || ctx.nombreContacto || '',\n  Articulo:          d.producto || '',\n  'Medidas y Peso':  d.medidas || '',\n  Estado:            estadoFinal,\n  Historial_Mensajes: ctx.nuevoHistorial || '',\n  Origen:            'IA de ventas',\n  Descripcion_Lead:  ctx.todosRecolectados\n    ? `${d.producto || ''} — ${d.medidas || ''}`\n    : (d.producto || ''),\n  Ultima_Actividad:  new Date().toISOString(),\n  Notas:             notas,\n};\n\n// Proteccion_extra: guardar como string 'true'/'false' en el campo de Airtable\nif (d.proteccion_extra !== null && d.proteccion_extra !== undefined) {\n  fields['¿Protección adicional?'] = String(d.proteccion_extra);\n}\n\n// Tema_Consulta: solo incluir si hay valor (no sobreescribir con null)\nif (ctx.temaConsulta) {\n  fields.Tema_Consulta = ctx.temaConsulta;\n}\n\n// Clasificacion: Frío/Tibio/Caliente\nconst clasifMap = { Caliente: 'Caliente', Tibio: 'Tibio', Frio: 'Frío', Frío: 'Frío' };\nif (ctx.clasificacion && clasifMap[ctx.clasificacion]) {\n  fields.Clasificacion = clasifMap[ctx.clasificacion];\n}\n\n// Tipo_Interaccion: Cotización/Consulta/Mixta\nconst tipoMap = { cotizacion: 'Cotización', consulta: 'Consulta', mixta: 'Mixta' };\nif (d.tipo_flujo && tipoMap[d.tipo_flujo]) {\n  fields.Tipo_Interaccion = tipoMap[d.tipo_flujo];\n}\n\nreturn [{ json: { ...ctx, _airtableFields: fields } }];"
+      }
+    },
+    {
+      "id": "g54-inbound",
+      "name": "☁️ G54: Sync Conversación",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1060,
+        300
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/agent/whatsapp/inbound",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer g54_agent_produccion_2026"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  empresa_id: 1,\n  phone: '+' + $json.telefono,\n  contact_name: $json._airtableFields?.Nombre_Contacto || $json.datosRecolectados?.nombre_cliente || '',\n  clasificacion: $json.clasificacion || 'frio',\n  datos_calificacion: {\n    ...($json.datosRecolectados || {}),\n    cotizacion_enviada: !!($json.cotizacionEnviada || $json.cotizadorEnviado),\n    escalada_enviada: !!$json.escaladaEnviada,\n    idioma: $json.idiomaConversacion || null\n  },\n  messages: [\n    ...($json.nuevoHistorial || '').split('\\n').filter(l => l.trim() && l.includes('] ') && !l.includes('[D:')).map(l => {\n      const content = l.replace(/^\\[.*?\\]\\s*/, '');\n      const isBot = content.startsWith('Bot:') || content.startsWith('Marco:');\n      return { rol: isBot ? 'bot' : 'user', contenido: content.replace(/^(Bot|Marco|Cliente):\\s*/, '') };\n    }).filter(m => m.contenido)\n  ]\n}) }}",
+        "options": {
+          "retry": {
+            "enabled": true,
+            "maxTries": 3,
+            "waitBetweenTries": 1000
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Recibir Datos": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Campos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Campos": {
+      "main": [
+        [
+          {
+            "node": "☁️ G54: Sync Conversación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": null,
+  "versionId": "cbf41d2a-049f-4ba4-baf6-38bd7e49f973",
+  "activeVersionId": "cbf41d2a-049f-4ba4-baf6-38bd7e49f973",
+  "versionCounter": 52,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-06-15T15:49:48.990Z",
+      "createdAt": "2026-06-15T15:49:48.990Z",
+      "role": "workflow:owner",
+      "workflowId": "PqbfMghL0E7xKflC",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "updatedAt": "2026-03-16T19:58:01.773Z",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-18T19:41:52.967Z",
+    "createdAt": "2026-07-18T19:41:52.967Z",
+    "versionId": "cbf41d2a-049f-4ba4-baf6-38bd7e49f973",
+    "workflowId": "PqbfMghL0E7xKflC",
+    "nodes": [
+      {
+        "id": "trigger",
+        "name": "Recibir Datos",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "parameters": {}
+      },
+      {
+        "id": "prep",
+        "name": "🔧 Preparar Campos",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          260,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const ctx = $input.first().json;\nconst d = ctx.datosRecolectados || {};\n\nconst notas = JSON.stringify({\n  tipo_cajon:        d.tipo_cajon,\n  proteccion_extra:  d.proteccion_extra,\n  correo_contacto:   d.correo_contacto,\n  nombre_cliente:    d.nombre_cliente,\n  fecha:             d.fecha,\n  tipo_flujo:        d.tipo_flujo,\n  cotizacion_enviada: ctx.cotizacionEnviada || ctx.cotizadorEnviado,\n  escalada_enviada: ctx.clasificacion === 'Consulta' || ctx.escaladaEnviada || false,\n  escalada_pendiente: ctx.clasificacion === 'Consulta' ? false : (ctx.escaladaPendiente || false),\n  idioma: ctx.idiomaConversacion || null\n});\n\n// Estado mapping usando nuevoEstado real del contexto\nconst estadoValido = ['Nuevo','En calificación','Calificado','Vendedor notificado','Cerrado'];\nlet estadoFinal;\nif (ctx.nuevoEstado && estadoValido.includes(ctx.nuevoEstado)) {\n  estadoFinal = ctx.nuevoEstado;\n} else if (ctx.esNuevo) {\n  estadoFinal = 'Nuevo';\n} else {\n  estadoFinal = 'En calificación';\n}\n\nconst fields = {\n  Telefono:          '+' + ctx.telefono,\n  Nombre_Contacto:   d.nombre_cliente || ctx.nombreContacto || '',\n  Articulo:          d.producto || '',\n  'Medidas y Peso':  d.medidas || '',\n  Estado:            estadoFinal,\n  Historial_Mensajes: ctx.nuevoHistorial || '',\n  Origen:            'IA de ventas',\n  Descripcion_Lead:  ctx.todosRecolectados\n    ? `${d.producto || ''} — ${d.medidas || ''}`\n    : (d.producto || ''),\n  Ultima_Actividad:  new Date().toISOString(),\n  Notas:             notas,\n};\n\n// Proteccion_extra: guardar como string 'true'/'false' en el campo de Airtable\nif (d.proteccion_extra !== null && d.proteccion_extra !== undefined) {\n  fields['¿Protección adicional?'] = String(d.proteccion_extra);\n}\n\n// Tema_Consulta: solo incluir si hay valor (no sobreescribir con null)\nif (ctx.temaConsulta) {\n  fields.Tema_Consulta = ctx.temaConsulta;\n}\n\n// Clasificacion: Frío/Tibio/Caliente\nconst clasifMap = { Caliente: 'Caliente', Tibio: 'Tibio', Frio: 'Frío', Frío: 'Frío' };\nif (ctx.clasificacion && clasifMap[ctx.clasificacion]) {\n  fields.Clasificacion = clasifMap[ctx.clasificacion];\n}\n\n// Tipo_Interaccion: Cotización/Consulta/Mixta\nconst tipoMap = { cotizacion: 'Cotización', consulta: 'Consulta', mixta: 'Mixta' };\nif (d.tipo_flujo && tipoMap[d.tipo_flujo]) {\n  fields.Tipo_Interaccion = tipoMap[d.tipo_flujo];\n}\n\nreturn [{ json: { ...ctx, _airtableFields: fields } }];"
+        }
+      },
+      {
+        "id": "g54-inbound",
+        "name": "☁️ G54: Sync Conversación",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1060,
+          300
+        ],
+        "continueOnFail": true,
+        "parameters": {
+          "method": "POST",
+          "url": "https://apigrowth.mdarthurdigital.com/api/agent/whatsapp/inbound",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer g54_agent_produccion_2026"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({\n  empresa_id: 1,\n  phone: '+' + $json.telefono,\n  contact_name: $json._airtableFields?.Nombre_Contacto || $json.datosRecolectados?.nombre_cliente || '',\n  clasificacion: $json.clasificacion || 'frio',\n  datos_calificacion: {\n    ...($json.datosRecolectados || {}),\n    cotizacion_enviada: !!($json.cotizacionEnviada || $json.cotizadorEnviado),\n    escalada_enviada: !!$json.escaladaEnviada,\n    idioma: $json.idiomaConversacion || null\n  },\n  messages: [\n    ...($json.nuevoHistorial || '').split('\\n').filter(l => l.trim() && l.includes('] ') && !l.includes('[D:')).map(l => {\n      const content = l.replace(/^\\[.*?\\]\\s*/, '');\n      const isBot = content.startsWith('Bot:') || content.startsWith('Marco:');\n      return { rol: isBot ? 'bot' : 'user', contenido: content.replace(/^(Bot|Marco|Cliente):\\s*/, '') };\n    }).filter(m => m.contenido)\n  ]\n}) }}",
+          "options": {
+            "retry": {
+              "enabled": true,
+              "maxTries": 3,
+              "waitBetweenTries": 1000
+            }
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Recibir Datos": {
+        "main": [
+          [
+            {
+              "node": "🔧 Preparar Campos",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Preparar Campos": {
+        "main": [
+          [
+            {
+              "node": "☁️ G54: Sync Conversación",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-07-18T19:41:53.059Z",
+        "id": 2213,
+        "workflowId": "PqbfMghL0E7xKflC",
+        "versionId": "cbf41d2a-049f-4ba4-baf6-38bd7e49f973",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      },
+      {
+        "createdAt": "2026-07-18T19:41:53.033Z",
+        "id": 2212,
+        "workflowId": "PqbfMghL0E7xKflC",
+        "versionId": "cbf41d2a-049f-4ba4-baf6-38bd7e49f973",
+        "event": "deactivated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    ]
+  }
+}
