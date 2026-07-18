@@ -1,0 +1,1619 @@
+{
+  "updatedAt": "2026-07-18T17:03:07.929Z",
+  "createdAt": "2026-06-12T20:28:34.750Z",
+  "id": "EX9K1AZwKeouSJ9G",
+  "name": "📊 Analytics AI Semanal — G54",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "trigger-semanal",
+      "name": "⏰ Trigger Semanal (Lunes 8am)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        400
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "manualTriggerButtonLabel": "Ejecutar Análisis"
+      },
+      "id": "trigger-manual",
+      "name": "▶️ Ejecutar Manualmente",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "G54_BASE_URL",
+              "value": "https://apigrowth.mdarthurdigital.com",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "G54_N8N_TOKEN",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "G54_AGENT_TOKEN",
+              "value": "g54_agent_produccion_2026",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "G54_COMPANY_ID",
+              "value": "={{ $('🌐 Trigger Webhook').isExecuted ? ($('🌐 Trigger Webhook').item.json.body.company_id || $('🌐 Trigger Webhook').item.json.query.company_id || '') : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "GROQ_API_KEY",
+              "value": "GROQ_KEY_REDACTED",
+              "type": "string"
+            },
+            {
+              "id": "a6",
+              "name": "DIAS_ANALISIS",
+              "value": "30",
+              "type": "number"
+            },
+            {
+              "id": "fb-token",
+              "name": "FB_ACCESS_TOKEN",
+              "value": "FB_TOKEN_REDACTED",
+              "type": "string"
+            },
+            {
+              "id": "fb-page",
+              "name": "FB_PAGE_ID",
+              "value": "={{ $('🌐 Trigger Webhook').isExecuted ? ($('🌐 Trigger Webhook').item.json.body.fb_page_id || $('🌐 Trigger Webhook').item.json.query.fb_page_id || '') : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "ig-user",
+              "name": "IG_USER_ID",
+              "value": "={{ $('🌐 Trigger Webhook').isExecuted ? ($('🌐 Trigger Webhook').item.json.body.ig_user_id || $('🌐 Trigger Webhook').item.json.query.ig_user_id || '') : '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "config",
+      "name": "⚙️ Config Growth54",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-empresa",
+      "name": "📊 Obtener Perfil Empresa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        480
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID + '/rrss/estrategia' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-estrategia",
+      "name": "🎯 Obtener Estrategia G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        480
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID + '/rrss/posts?status=publicado&limit=20' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-posts",
+      "name": "📝 Obtener Posts Publicados G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        480
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID + '/wa/leads?limit=50' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-leads",
+      "name": "💼 Obtener Leads G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        480
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID + '/rrss/metricas?limit=20' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-metricas-g54",
+      "name": "📈 Obtener Métricas G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        480
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config Growth54').item.json.FB_PAGE_ID }}/published_posts?fields=id,created_time,message,full_picture,permalink_url,insights.metric(post_clicks,post_fan_reach,post_reactions_like_total,post_clicks_by_type,post_reactions_by_type_total,post_video_views)&limit=10&access_token={{ $('🔑 Obtener Page Token FB').item.json.access_token }}",
+        "options": {}
+      },
+      "id": "get-fb-insights",
+      "name": "📊 Graph API: FB Insights",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        360
+      ],
+      "onError": "continueRegularOutput",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v19.0/{{ $('🔑 Obtener Tokens Sociales G64').item.json.ig_user_id }}/insights?metric=reach,profile_views,accounts_engaged,website_clicks&metric_type=total_value&period=day&access_token={{ $('🔑 Obtener Page Token FB').item.json.access_token }}",
+        "options": {}
+      },
+      "id": "get-ig-insights",
+      "name": "📊 Graph API: IG Insights",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        600
+      ],
+      "onError": "continueRegularOutput",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item?.json || {};\nconst estRaw = $('🎯 Obtener Estrategia G54').item?.json || {};\nconst postsRaw = $('📝 Obtener Posts Publicados G54').item?.json || {};\nconst leadsRaw = $('💼 Obtener Leads G54').item?.json || {};\nconst metricasRaw = $('📈 Obtener Métricas G54').item?.json || {};\nlet fbInsights = {};\ntry { fbInsights = $('📊 Graph API: FB Insights').item?.json || {}; } catch(e) {}\nlet igInsights = {};\ntry { igInsights = $('📊 Graph API: IG Insights').item?.json || {}; } catch(e) {}\n\nconst empresa = empresaRaw.data || {};\nconst estrategia = estRaw.data || {};\nconst posts = postsRaw.data || [];\nconst leads = leadsRaw.data || [];\nconst metricas = metricasRaw.data || [];\nconst fbPosts = fbInsights.data || [];\nconst igMedia = igInsights.data || [];\n\n// Leads stats\nconst totalLeads = leads.length;\nconst leadsCalientes = leads.filter(l => (l.clasificacion || '').toLowerCase() === 'caliente').length;\nconst leadsTibios = leads.filter(l => (l.clasificacion || '').toLowerCase() === 'tibio').length;\nconst leadsPorOrigen = leads.reduce((acc, l) => {\n  const o = l.origen || 'desconocido';\n  acc[o] = (acc[o] || 0) + 1;\n  return acc;\n}, {});\n\n// Posts stats from G54\nconst totalPosts = posts.length;\nconst postsPorPlataforma = posts.reduce((acc, p) => {\n  const pl = p.platform || 'sin_plataforma';\n  acc[pl] = (acc[pl] || 0) + 1;\n  return acc;\n}, {});\n\n// FB insights summary\nconst fbResumen = fbPosts.map(p => {\n  const ins = p.insights?.data || [];\n  const reach = ins.find(i => i.name === 'reach')?.values?.[0]?.value || 0;\n  const impressions = ins.find(i => i.name === 'impressions')?.values?.[0]?.value || 0;\n  const engaged = ins.find(i => i.name === 'engaged_users')?.values?.[0]?.value || 0;\n  const clicks = ins.find(i => i.name === 'post_clicks')?.values?.[0]?.value || 0;\n  return { id: p.id, mensaje: (p.message || '').slice(0, 100), reach, impressions, engaged, clicks };\n});\n\n// IG insights summary\nconst igResumen = igMedia.map(m => ({\n  id: m.id,\n  caption: (m.caption || '').slice(0, 100),\n  likes: m.like_count || 0,\n  comments: m.comments_count || 0,\n  tipo: m.media_type || 'IMAGE'\n}));\n\n// Metricas from G54 (if available)\nconst metricasResumen = metricas.slice(0, 10).map(m => ({\n  fecha: m.fecha || m.created_at || '',\n  plataforma: m.platform || '',\n  alcance: m.reach || 0,\n  engagement: m.engagement || 0,\n  clicks: m.clicks || 0\n}));\n\n// KPIs from strategy\nconst kpis = estrategia.kpis || [];\nconst objetivo = estrategia.objetivo || '';\nconst audiencia = estrategia.audiencia || '';\nconst pilares = estrategia.pilares || [];\n\nconst periodoAnalisis = config.DIAS_ANALISIS || 30;\nconst nombreEmpresa = empresa.name || 'la empresa';\n\nconst contextoAnalytics = `EMPRESA: ${nombreEmpresa}\nOBJETIVO ESTRATÉGICO: ${objetivo}\nAUDIENCIA: ${audiencia}\nPILARES DE CONTENIDO: ${Array.isArray(pilares) ? pilares.join(', ') : pilares}\nKPIs DEFINIDOS: ${Array.isArray(kpis) ? kpis.join(', ') : kpis}\nPERÍODO: últimos ${periodoAnalisis} días\n\n--- DATOS DE CONTENIDO (G54) ---\nTotal posts publicados: ${totalPosts}\nDistribución por plataforma: ${JSON.stringify(postsPorPlataforma)}\n\n--- MÉTRICAS REDES SOCIALES (Graph API) ---\nFACEBOOK (últimos 10 posts):\n${fbResumen.length > 0 ? JSON.stringify(fbResumen, null, 2) : 'Sin datos disponibles (token no configurado)'}\n\nINSTAGRAM (últimos 10 posts):\n${igResumen.length > 0 ? JSON.stringify(igResumen, null, 2) : 'Sin datos disponibles (token no configurado)'}\n\nMÉTRICAS HISTÓRICAS G54:\n${metricasResumen.length > 0 ? JSON.stringify(metricasResumen, null, 2) : 'Sin métricas guardadas aún'}\n\n--- DATOS DE CONVERSIÓN (G54) ---\nTotal leads período: ${totalLeads}\nLeads calientes: ${leadsCalientes}\nLeads tibios: ${leadsTibios}\nLeads por origen: ${JSON.stringify(leadsPorOrigen)}\nTasa de calificación: ${totalLeads > 0 ? Math.round((leadsCalientes / totalLeads) * 100) : 0}%`;\n\nreturn [{ json: {\n  contextoAnalytics,\n  nombreEmpresa,\n  emailEmpresa: (empresa.emails || [])[0] || '',\n  totalPosts,\n  totalLeads,\n  leadsCalientes,\n  periodoAnalisis\n}}];"
+      },
+      "id": "preparar-datos",
+      "name": "🔧 Preparar Datos Analytics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": false,
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Actúa como un analista senior de marketing orgánico basado en SEO, AEO y GEO.\\n\\nTu función es analizar datos y optimizar la estrategia de contenido.\\n\\nDebes:\\n1. Identificar contenido de alto rendimiento\\n2. Detectar contenido de bajo rendimiento\\n3. Analizar keywords y temas que generan más engagement (SEO)\\n4. Analizar preguntas frecuentes e interacciones útiles (AEO)\\n5. Evaluar qué estructuras de contenido funcionan mejor (GEO)\\n6. Detectar patrones: horarios, formatos, temas\\n7. Proponer optimizaciones claras y accionables\\n\\nIMPORTANTE — FORMATOS:\\nG54 publica automáticamente imagen estática y post de texto.\\nSi recomiendas un formato diferente (carrusel, reel, video, story), márcalo explícitamente con la etiqueta [Recomendación manual — fuera de G54] para que el cliente sepa que debe ejecutarlo por su cuenta desde Meta Business Suite.\\n\\nEntrega EXACTAMENTE en este formato:\\nREPORTE:\\nTOP CONTENIDO:\\nBAJO RENDIMIENTO:\\nINSIGHTS SEO:\\nINSIGHTS AEO:\\nINSIGHTS GEO:\\nINSIGHTS CONVERSIÓN:\\nRECOMENDACIONES:\\n\\nSé claro, accionable y orientado a mejora continua. Sin relleno.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": $('🔧 Preparar Datos Analytics').item.json.contextoAnalytics\n    }\n  ],\n  \"temperature\": 0.5,\n  \"max_tokens\": 1200\n}) }}",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi"
+      },
+      "id": "groq-analytics",
+      "name": "🤖 Groq: Analytics AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        480
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const groqRaw = $('🤖 Groq: Analytics AI').item.json;\nconst texto = groqRaw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`${label}[:\\\\s]+([\\\\s\\\\S]*?)(?=\\\\n[A-ZÁÉÍÓÚ\\\\s]+:|$)`, 'i');\n  const match = texto.match(regex);\n  return (match?.[1] || '').trim();\n};\n\nconst reporte = get('REPORTE');\nconst topContenido = get('TOP CONTENIDO');\nconst bajoRendimiento = get('BAJO RENDIMIENTO');\nconst insightsSEO = get('INSIGHTS SEO');\nconst insightsAEO = get('INSIGHTS AEO');\nconst insightsGEO = get('INSIGHTS GEO');\nconst insightsConversion = get('INSIGHTS CONVERSI[ÓO]N');\nconst recomendaciones = get('RECOMENDACIONES');\n\nconst datos = $('🔧 Preparar Datos Analytics').item.json;\n\nreturn [{ json: {\n  reporte,\n  topContenido,\n  bajoRendimiento,\n  insightsSEO,\n  insightsAEO,\n  insightsGEO,\n  insightsConversion,\n  recomendaciones,\n  texto_completo: texto,\n  nombreEmpresa: datos.nombreEmpresa,\n  emailEmpresa: datos.emailEmpresa,\n  totalPosts: datos.totalPosts,\n  totalLeads: datos.totalLeads,\n  leadsCalientes: datos.leadsCalientes,\n  periodoAnalisis: datos.periodoAnalisis\n}}];"
+      },
+      "id": "parsear-reporte",
+      "name": "🔍 Parsear Reporte Analytics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        480
+      ]
+    },
+    {
+      "id": "prep-metricas-g54",
+      "name": "📊 Preparar Métricas G54",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3120,
+        480
+      ],
+      "parameters": {
+        "jsCode": "const config  = $('⚙️ Config Growth54').item.json;\nconst now = new Date();\nconst periodEnd = now.toISOString().slice(0,10);\nconst periodStart = new Date(now - 7*86400000).toISOString().slice(0,10);\n\nlet alcanceFB = 0, engFB = 0, cliquesFB = 0, reaccionesFB = 0, postCount = 0;\nlet alcanceIG = 0, engIG = 0, cliqueIG = 0, profileViewsIG = 0;\n\n// FB post-level metrics\ntry {\n  const fbPosts = ($('📊 Graph API: FB Insights').item?.json?.data || []);\n  postCount = fbPosts.length;\n  fbPosts.forEach(p => {\n    const ins = p.insights?.data || [];\n    const getVal = (name) => ins.find(i => i.name === name)?.values?.[0]?.value || 0;\n    const getObjSum = (name) => {\n      const v = ins.find(i => i.name === name)?.values?.[0]?.value;\n      if (!v) return 0;\n      if (typeof v === 'object') return Object.values(v).reduce((a,b) => a+b, 0);\n      return v;\n    };\n    alcanceFB    += getVal('post_fan_reach');\n    reaccionesFB += getVal('post_reactions_like_total');\n    cliquesFB    += getObjSum('post_clicks_by_type');\n    engFB        += getVal('post_reactions_like_total') + getObjSum('post_clicks_by_type');\n  });\n} catch(e) {}\n\n// IG account-level metrics (metric_type=total_value)\ntry {\n  const igData = ($('📊 Graph API: IG Insights').item?.json?.data || []);\n  const getIG = (name) => igData.find(m => m.name === name)?.total_value?.value || 0;\n  alcanceIG     = getIG('reach');\n  profileViewsIG = getIG('profile_views');\n  engIG         = getIG('accounts_engaged');\n  cliqueIG      = getIG('website_clicks');\n} catch(e) {}\n\nconst engRateFB = (alcanceFB > 0) ? parseFloat((engFB / alcanceFB * 100).toFixed(2)) : 0;\nconst engRateIG = (alcanceIG > 0) ? parseFloat((engIG / alcanceIG * 100).toFixed(2)) : 0;\n\nreturn [{\n  json: {\n    period_start: periodStart,\n    period_end: periodEnd,\n    fb: { alcance: alcanceFB, engagement: engFB, clics: cliquesFB, reacciones: reaccionesFB, posts: postCount },\n    ig: { alcance: alcanceIG, engagement: engIG, clics: cliqueIG, profile_views: profileViewsIG },\n    engagement_rate_fb: engRateFB,\n    engagement_rate_ig: engRateIG,\n    engagement_rate: engRateFB\n  }\n}];"
+      }
+    },
+    {
+      "id": "guardar-analytics-g54",
+      "name": "💾 Guardar Métricas en G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "continueOnFail": true,
+      "position": [
+        3360,
+        480
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/agent/rrss/metricas' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({\n  company_id: parseInt($('⚙️ Config Growth54').item.json.G54_COMPANY_ID) || 1,\n  metricas: [\n    {\n      platform: 'facebook',\n      period_start: $('📊 Preparar Métricas G54').item.json.period_start,\n      period_end: $('📊 Preparar Métricas G54').item.json.period_end,\n      alcance_total: $('📊 Preparar Métricas G54').item.json.fb.alcance,\n      impresiones_total: $('📊 Preparar Métricas G54').item.json.fb.alcance,\n      engagement_total: $('📊 Preparar Métricas G54').item.json.fb.engagement,\n      engagement_rate_avg: $('📊 Preparar Métricas G54').item.json.engagement_rate,\n      clics_total: $('📊 Preparar Métricas G54').item.json.fb.clics,\n      leads_total: 0\n    },\n    {\n      platform: 'instagram',\n      period_start: $('📊 Preparar Métricas G54').item.json.period_start,\n      period_end: $('📊 Preparar Métricas G54').item.json.period_end,\n      alcance_total: 0,\n      impresiones_total: 0,\n      engagement_total: 0,\n      engagement_rate_avg: 0,\n      clics_total: 0,\n      leads_total: 0\n    }\n  ]\n}) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "trigger-webhook",
+      "name": "🌐 Trigger Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        220
+      ],
+      "parameters": {
+        "path": "analytics-semanal-g54",
+        "responseMode": "onReceived",
+        "responseData": "firstEntryJson"
+      },
+      "webhookId": "25cf4b39-2e95-413e-a39e-2cf08e8bb80e"
+    },
+    {
+      "id": "tokens-g64-semanal",
+      "name": "🔑 Obtener Tokens Sociales G64",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        480
+      ],
+      "parameters": {
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/pages/' + $('⚙️ Config Growth54').item.json.FB_PAGE_ID }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "if-post-individual",
+      "name": "🔀 ¿Post individual?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        920,
+        480
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-post-id",
+              "leftValue": "={{ $('🌐 Trigger Webhook').isExecuted ? ($('🌐 Trigger Webhook').item.json.query.post_id || $('🌐 Trigger Webhook').item.json.body?.post_id) : '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "meta-post-insights",
+      "name": "📊 Meta API: Post Insights",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1140,
+        360
+      ],
+      "parameters": {
+        "url": "=https://graph.facebook.com/v19.0/{{ $('🌐 Trigger Webhook').item.json.query.post_id || $('🌐 Trigger Webhook').item.json.body.post_id }}/insights?metric=post_fan_reach,post_reactions_like_total,post_clicks_by_type,post_video_views&access_token={{ $('🔑 Obtener Page Token FB').item.json.access_token }}",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "preparar-metricas-post",
+      "name": "📊 Preparar Métricas Post",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        360
+      ],
+      "parameters": {
+        "jsCode": "const query = $('🌐 Trigger Webhook').item.json.query || {};\nconst body  = $('🌐 Trigger Webhook').item.json.body  || {};\nconst postId    = query.post_id    || body.post_id;\nconst companyId = query.company_id || body.company_id || $('⚙️ Config Growth54').item.json.G54_COMPANY_ID;\n\nconst insData = $('📊 Meta API: Post Insights').item?.json?.data || [];\n\nconst getVal = (name) => insData.find(i => i.name === name)?.values?.[0]?.value || 0;\nconst getObjSum = (name) => {\n  const v = insData.find(i => i.name === name)?.values?.[0]?.value;\n  if (!v) return 0;\n  if (typeof v === 'object') return Object.values(v).reduce((a,b) => a+b, 0);\n  return v;\n};\n\nconst alcance    = getVal('post_fan_reach');\nconst reacciones = getVal('post_reactions_like_total');\nconst clics      = getObjSum('post_clicks_by_type');\nconst engagement = reacciones + clics;\nconst engRate    = alcance > 0 ? parseFloat((engagement / alcance * 100).toFixed(2)) : 0;\nconst today      = new Date().toISOString().slice(0,10);\n\nreturn [{\n  json: {\n    company_id: parseInt(companyId) || 1,\n    post_id: postId,\n    platform: String(postId).includes('_') ? 'facebook' : 'instagram',\n    period_start: today,\n    period_end: today,\n    alcance_total: alcance,\n    impresiones_total: alcance,\n    engagement_total: engagement,\n    engagement_rate_avg: engRate,\n    clics_total: clics,\n    leads_total: 0\n  }\n}];"
+      }
+    },
+    {
+      "id": "guardar-metricas-post",
+      "name": "💾 Guardar Métricas Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1580,
+        360
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/agent/rrss/metricas' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({\n  company_id: $('📊 Preparar Métricas Post').item.json.company_id,\n  metricas: [{\n    platform: $('📊 Preparar Métricas Post').item.json.platform,\n    period_start: $('📊 Preparar Métricas Post').item.json.period_start,\n    period_end: $('📊 Preparar Métricas Post').item.json.period_end,\n    alcance_total: $('📊 Preparar Métricas Post').item.json.alcance_total,\n    impresiones_total: $('📊 Preparar Métricas Post').item.json.impresiones_total,\n    engagement_total: $('📊 Preparar Métricas Post').item.json.engagement_total,\n    engagement_rate_avg: $('📊 Preparar Métricas Post').item.json.engagement_rate_avg,\n    clics_total: $('📊 Preparar Métricas Post').item.json.clics_total,\n    leads_total: 0\n  }]\n}) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "get-page-token",
+      "name": "🔑 Obtener Page Token FB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        480
+      ],
+      "parameters": {
+        "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config Growth54').item.json.FB_PAGE_ID }}?fields=access_token&access_token={{ $('🔑 Obtener Tokens Sociales G64').item.json.fb_access_token }}",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "⏰ Trigger Semanal (Lunes 8am)": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config Growth54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ Ejecutar Manualmente": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config Growth54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Config Growth54": {
+      "main": [
+        [
+          {
+            "node": "📊 Obtener Perfil Empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Obtener Perfil Empresa": {
+      "main": [
+        [
+          {
+            "node": "🎯 Obtener Estrategia G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎯 Obtener Estrategia G54": {
+      "main": [
+        [
+          {
+            "node": "📝 Obtener Posts Publicados G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Obtener Posts Publicados G54": {
+      "main": [
+        [
+          {
+            "node": "💼 Obtener Leads G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💼 Obtener Leads G54": {
+      "main": [
+        [
+          {
+            "node": "📈 Obtener Métricas G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📈 Obtener Métricas G54": {
+      "main": [
+        [
+          {
+            "node": "🔑 Obtener Tokens Sociales G64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Graph API: FB Insights": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Datos Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Graph API: IG Insights": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Datos Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Datos Analytics": {
+      "main": [
+        [
+          {
+            "node": "🤖 Groq: Analytics AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Groq: Analytics AI": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Reporte Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Parsear Reporte Analytics": {
+      "main": [
+        [
+          {
+            "node": "📊 Preparar Métricas G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Preparar Métricas G54": {
+      "main": [
+        [
+          {
+            "node": "💾 Guardar Métricas en G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 Trigger Webhook": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config Growth54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Guardar Métricas en G54": {
+      "main": [
+        []
+      ]
+    },
+    "🔑 Obtener Tokens Sociales G64": {
+      "main": [
+        [
+          {
+            "node": "🔑 Obtener Page Token FB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Post individual?": {
+      "main": [
+        [
+          {
+            "node": "📊 Meta API: Post Insights",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📊 Graph API: FB Insights",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📊 Graph API: IG Insights",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Meta API: Post Insights": {
+      "main": [
+        [
+          {
+            "node": "📊 Preparar Métricas Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Preparar Métricas Post": {
+      "main": [
+        [
+          {
+            "node": "💾 Guardar Métricas Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔑 Obtener Page Token FB": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Post individual?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:⏰ Trigger Semanal (Lunes 8am)": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": null,
+  "versionId": "ad5f6025-e96a-484f-b4d5-b36472bfee83",
+  "activeVersionId": "ad5f6025-e96a-484f-b4d5-b36472bfee83",
+  "versionCounter": 17,
+  "triggerCount": 1,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-06-12T20:28:34.755Z",
+      "createdAt": "2026-06-12T20:28:34.755Z",
+      "role": "workflow:owner",
+      "workflowId": "EX9K1AZwKeouSJ9G",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "updatedAt": "2026-03-16T19:58:01.773Z",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-18T17:03:07.934Z",
+    "createdAt": "2026-07-18T17:03:07.934Z",
+    "versionId": "ad5f6025-e96a-484f-b4d5-b36472bfee83",
+    "workflowId": "EX9K1AZwKeouSJ9G",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "weeks",
+                "weeksInterval": 1,
+                "triggerAtDay": [
+                  1
+                ],
+                "triggerAtHour": 8
+              }
+            ]
+          }
+        },
+        "id": "trigger-semanal",
+        "name": "⏰ Trigger Semanal (Lunes 8am)",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          240,
+          400
+        ],
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "manualTriggerButtonLabel": "Ejecutar Análisis"
+        },
+        "id": "trigger-manual",
+        "name": "▶️ Ejecutar Manualmente",
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1,
+        "position": [
+          240,
+          560
+        ]
+      },
+      {
+        "parameters": {
+          "mode": "manual",
+          "duplicateItem": false,
+          "assignments": {
+            "assignments": [
+              {
+                "id": "a1",
+                "name": "G54_BASE_URL",
+                "value": "https://apigrowth.mdarthurdigital.com",
+                "type": "string"
+              },
+              {
+                "id": "a2",
+                "name": "G54_N8N_TOKEN",
+                "value": "",
+                "type": "string"
+              },
+              {
+                "id": "a3",
+                "name": "G54_AGENT_TOKEN",
+                "value": "g54_agent_produccion_2026",
+                "type": "string"
+              },
+              {
+                "id": "a4",
+                "name": "G54_COMPANY_ID",
+                "value": "={{ $('🌐 Trigger Webhook').isExecuted ? ($('🌐 Trigger Webhook').item.json.body.company_id || $('🌐 Trigger Webhook').item.json.query.company_id || '') : '' }}",
+                "type": "string"
+              },
+              {
+                "id": "a5",
+                "name": "GROQ_API_KEY",
+                "value": "GROQ_KEY_REDACTED",
+                "type": "string"
+              },
+              {
+                "id": "a6",
+                "name": "DIAS_ANALISIS",
+                "value": "30",
+                "type": "number"
+              },
+              {
+                "id": "fb-token",
+                "name": "FB_ACCESS_TOKEN",
+                "value": "FB_TOKEN_REDACTED",
+                "type": "string"
+              },
+              {
+                "id": "fb-page",
+                "name": "FB_PAGE_ID",
+                "value": "={{ $('🌐 Trigger Webhook').isExecuted ? ($('🌐 Trigger Webhook').item.json.body.fb_page_id || $('🌐 Trigger Webhook').item.json.query.fb_page_id || '') : '' }}",
+                "type": "string"
+              },
+              {
+                "id": "ig-user",
+                "name": "IG_USER_ID",
+                "value": "={{ $('🌐 Trigger Webhook').isExecuted ? ($('🌐 Trigger Webhook').item.json.body.ig_user_id || $('🌐 Trigger Webhook').item.json.query.ig_user_id || '') : '' }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "config",
+        "name": "⚙️ Config Growth54",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          480,
+          480
+        ]
+      },
+      {
+        "parameters": {
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "get-empresa",
+        "name": "📊 Obtener Perfil Empresa",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          720,
+          480
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID + '/rrss/estrategia' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "get-estrategia",
+        "name": "🎯 Obtener Estrategia G54",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          960,
+          480
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID + '/rrss/posts?status=publicado&limit=20' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "get-posts",
+        "name": "📝 Obtener Posts Publicados G54",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1200,
+          480
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID + '/wa/leads?limit=50' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "get-leads",
+        "name": "💼 Obtener Leads G54",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1440,
+          480
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID + '/rrss/metricas?limit=20' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "get-metricas-g54",
+        "name": "📈 Obtener Métricas G54",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1680,
+          480
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config Growth54').item.json.FB_PAGE_ID }}/published_posts?fields=id,created_time,message,full_picture,permalink_url,insights.metric(post_clicks,post_fan_reach,post_reactions_like_total,post_clicks_by_type,post_reactions_by_type_total,post_video_views)&limit=10&access_token={{ $('🔑 Obtener Page Token FB').item.json.access_token }}",
+          "options": {}
+        },
+        "id": "get-fb-insights",
+        "name": "📊 Graph API: FB Insights",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1920,
+          360
+        ],
+        "onError": "continueRegularOutput",
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "url": "=https://graph.facebook.com/v19.0/{{ $('🔑 Obtener Tokens Sociales G64').item.json.ig_user_id }}/insights?metric=reach,profile_views,accounts_engaged,website_clicks&metric_type=total_value&period=day&access_token={{ $('🔑 Obtener Page Token FB').item.json.access_token }}",
+          "options": {}
+        },
+        "id": "get-ig-insights",
+        "name": "📊 Graph API: IG Insights",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1920,
+          600
+        ],
+        "onError": "continueRegularOutput",
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item?.json || {};\nconst estRaw = $('🎯 Obtener Estrategia G54').item?.json || {};\nconst postsRaw = $('📝 Obtener Posts Publicados G54').item?.json || {};\nconst leadsRaw = $('💼 Obtener Leads G54').item?.json || {};\nconst metricasRaw = $('📈 Obtener Métricas G54').item?.json || {};\nlet fbInsights = {};\ntry { fbInsights = $('📊 Graph API: FB Insights').item?.json || {}; } catch(e) {}\nlet igInsights = {};\ntry { igInsights = $('📊 Graph API: IG Insights').item?.json || {}; } catch(e) {}\n\nconst empresa = empresaRaw.data || {};\nconst estrategia = estRaw.data || {};\nconst posts = postsRaw.data || [];\nconst leads = leadsRaw.data || [];\nconst metricas = metricasRaw.data || [];\nconst fbPosts = fbInsights.data || [];\nconst igMedia = igInsights.data || [];\n\n// Leads stats\nconst totalLeads = leads.length;\nconst leadsCalientes = leads.filter(l => (l.clasificacion || '').toLowerCase() === 'caliente').length;\nconst leadsTibios = leads.filter(l => (l.clasificacion || '').toLowerCase() === 'tibio').length;\nconst leadsPorOrigen = leads.reduce((acc, l) => {\n  const o = l.origen || 'desconocido';\n  acc[o] = (acc[o] || 0) + 1;\n  return acc;\n}, {});\n\n// Posts stats from G54\nconst totalPosts = posts.length;\nconst postsPorPlataforma = posts.reduce((acc, p) => {\n  const pl = p.platform || 'sin_plataforma';\n  acc[pl] = (acc[pl] || 0) + 1;\n  return acc;\n}, {});\n\n// FB insights summary\nconst fbResumen = fbPosts.map(p => {\n  const ins = p.insights?.data || [];\n  const reach = ins.find(i => i.name === 'reach')?.values?.[0]?.value || 0;\n  const impressions = ins.find(i => i.name === 'impressions')?.values?.[0]?.value || 0;\n  const engaged = ins.find(i => i.name === 'engaged_users')?.values?.[0]?.value || 0;\n  const clicks = ins.find(i => i.name === 'post_clicks')?.values?.[0]?.value || 0;\n  return { id: p.id, mensaje: (p.message || '').slice(0, 100), reach, impressions, engaged, clicks };\n});\n\n// IG insights summary\nconst igResumen = igMedia.map(m => ({\n  id: m.id,\n  caption: (m.caption || '').slice(0, 100),\n  likes: m.like_count || 0,\n  comments: m.comments_count || 0,\n  tipo: m.media_type || 'IMAGE'\n}));\n\n// Metricas from G54 (if available)\nconst metricasResumen = metricas.slice(0, 10).map(m => ({\n  fecha: m.fecha || m.created_at || '',\n  plataforma: m.platform || '',\n  alcance: m.reach || 0,\n  engagement: m.engagement || 0,\n  clicks: m.clicks || 0\n}));\n\n// KPIs from strategy\nconst kpis = estrategia.kpis || [];\nconst objetivo = estrategia.objetivo || '';\nconst audiencia = estrategia.audiencia || '';\nconst pilares = estrategia.pilares || [];\n\nconst periodoAnalisis = config.DIAS_ANALISIS || 30;\nconst nombreEmpresa = empresa.name || 'la empresa';\n\nconst contextoAnalytics = `EMPRESA: ${nombreEmpresa}\nOBJETIVO ESTRATÉGICO: ${objetivo}\nAUDIENCIA: ${audiencia}\nPILARES DE CONTENIDO: ${Array.isArray(pilares) ? pilares.join(', ') : pilares}\nKPIs DEFINIDOS: ${Array.isArray(kpis) ? kpis.join(', ') : kpis}\nPERÍODO: últimos ${periodoAnalisis} días\n\n--- DATOS DE CONTENIDO (G54) ---\nTotal posts publicados: ${totalPosts}\nDistribución por plataforma: ${JSON.stringify(postsPorPlataforma)}\n\n--- MÉTRICAS REDES SOCIALES (Graph API) ---\nFACEBOOK (últimos 10 posts):\n${fbResumen.length > 0 ? JSON.stringify(fbResumen, null, 2) : 'Sin datos disponibles (token no configurado)'}\n\nINSTAGRAM (últimos 10 posts):\n${igResumen.length > 0 ? JSON.stringify(igResumen, null, 2) : 'Sin datos disponibles (token no configurado)'}\n\nMÉTRICAS HISTÓRICAS G54:\n${metricasResumen.length > 0 ? JSON.stringify(metricasResumen, null, 2) : 'Sin métricas guardadas aún'}\n\n--- DATOS DE CONVERSIÓN (G54) ---\nTotal leads período: ${totalLeads}\nLeads calientes: ${leadsCalientes}\nLeads tibios: ${leadsTibios}\nLeads por origen: ${JSON.stringify(leadsPorOrigen)}\nTasa de calificación: ${totalLeads > 0 ? Math.round((leadsCalientes / totalLeads) * 100) : 0}%`;\n\nreturn [{ json: {\n  contextoAnalytics,\n  nombreEmpresa,\n  emailEmpresa: (empresa.emails || [])[0] || '',\n  totalPosts,\n  totalLeads,\n  leadsCalientes,\n  periodoAnalisis\n}}];"
+        },
+        "id": "preparar-datos",
+        "name": "🔧 Preparar Datos Analytics",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2160,
+          480
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.groq.com/openai/v1/chat/completions",
+          "sendHeaders": false,
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Actúa como un analista senior de marketing orgánico basado en SEO, AEO y GEO.\\n\\nTu función es analizar datos y optimizar la estrategia de contenido.\\n\\nDebes:\\n1. Identificar contenido de alto rendimiento\\n2. Detectar contenido de bajo rendimiento\\n3. Analizar keywords y temas que generan más engagement (SEO)\\n4. Analizar preguntas frecuentes e interacciones útiles (AEO)\\n5. Evaluar qué estructuras de contenido funcionan mejor (GEO)\\n6. Detectar patrones: horarios, formatos, temas\\n7. Proponer optimizaciones claras y accionables\\n\\nIMPORTANTE — FORMATOS:\\nG54 publica automáticamente imagen estática y post de texto.\\nSi recomiendas un formato diferente (carrusel, reel, video, story), márcalo explícitamente con la etiqueta [Recomendación manual — fuera de G54] para que el cliente sepa que debe ejecutarlo por su cuenta desde Meta Business Suite.\\n\\nEntrega EXACTAMENTE en este formato:\\nREPORTE:\\nTOP CONTENIDO:\\nBAJO RENDIMIENTO:\\nINSIGHTS SEO:\\nINSIGHTS AEO:\\nINSIGHTS GEO:\\nINSIGHTS CONVERSIÓN:\\nRECOMENDACIONES:\\n\\nSé claro, accionable y orientado a mejora continua. Sin relleno.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": $('🔧 Preparar Datos Analytics').item.json.contextoAnalytics\n    }\n  ],\n  \"temperature\": 0.5,\n  \"max_tokens\": 1200\n}) }}",
+          "options": {},
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "groqApi"
+        },
+        "id": "groq-analytics",
+        "name": "🤖 Groq: Analytics AI",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2400,
+          480
+        ],
+        "credentials": {
+          "groqApi": {
+            "id": "jORffbRhRNohHT1B",
+            "name": "Groq account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const groqRaw = $('🤖 Groq: Analytics AI').item.json;\nconst texto = groqRaw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`${label}[:\\\\s]+([\\\\s\\\\S]*?)(?=\\\\n[A-ZÁÉÍÓÚ\\\\s]+:|$)`, 'i');\n  const match = texto.match(regex);\n  return (match?.[1] || '').trim();\n};\n\nconst reporte = get('REPORTE');\nconst topContenido = get('TOP CONTENIDO');\nconst bajoRendimiento = get('BAJO RENDIMIENTO');\nconst insightsSEO = get('INSIGHTS SEO');\nconst insightsAEO = get('INSIGHTS AEO');\nconst insightsGEO = get('INSIGHTS GEO');\nconst insightsConversion = get('INSIGHTS CONVERSI[ÓO]N');\nconst recomendaciones = get('RECOMENDACIONES');\n\nconst datos = $('🔧 Preparar Datos Analytics').item.json;\n\nreturn [{ json: {\n  reporte,\n  topContenido,\n  bajoRendimiento,\n  insightsSEO,\n  insightsAEO,\n  insightsGEO,\n  insightsConversion,\n  recomendaciones,\n  texto_completo: texto,\n  nombreEmpresa: datos.nombreEmpresa,\n  emailEmpresa: datos.emailEmpresa,\n  totalPosts: datos.totalPosts,\n  totalLeads: datos.totalLeads,\n  leadsCalientes: datos.leadsCalientes,\n  periodoAnalisis: datos.periodoAnalisis\n}}];"
+        },
+        "id": "parsear-reporte",
+        "name": "🔍 Parsear Reporte Analytics",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2640,
+          480
+        ]
+      },
+      {
+        "id": "prep-metricas-g54",
+        "name": "📊 Preparar Métricas G54",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3120,
+          480
+        ],
+        "parameters": {
+          "jsCode": "const config  = $('⚙️ Config Growth54').item.json;\nconst now = new Date();\nconst periodEnd = now.toISOString().slice(0,10);\nconst periodStart = new Date(now - 7*86400000).toISOString().slice(0,10);\n\nlet alcanceFB = 0, engFB = 0, cliquesFB = 0, reaccionesFB = 0, postCount = 0;\nlet alcanceIG = 0, engIG = 0, cliqueIG = 0, profileViewsIG = 0;\n\n// FB post-level metrics\ntry {\n  const fbPosts = ($('📊 Graph API: FB Insights').item?.json?.data || []);\n  postCount = fbPosts.length;\n  fbPosts.forEach(p => {\n    const ins = p.insights?.data || [];\n    const getVal = (name) => ins.find(i => i.name === name)?.values?.[0]?.value || 0;\n    const getObjSum = (name) => {\n      const v = ins.find(i => i.name === name)?.values?.[0]?.value;\n      if (!v) return 0;\n      if (typeof v === 'object') return Object.values(v).reduce((a,b) => a+b, 0);\n      return v;\n    };\n    alcanceFB    += getVal('post_fan_reach');\n    reaccionesFB += getVal('post_reactions_like_total');\n    cliquesFB    += getObjSum('post_clicks_by_type');\n    engFB        += getVal('post_reactions_like_total') + getObjSum('post_clicks_by_type');\n  });\n} catch(e) {}\n\n// IG account-level metrics (metric_type=total_value)\ntry {\n  const igData = ($('📊 Graph API: IG Insights').item?.json?.data || []);\n  const getIG = (name) => igData.find(m => m.name === name)?.total_value?.value || 0;\n  alcanceIG     = getIG('reach');\n  profileViewsIG = getIG('profile_views');\n  engIG         = getIG('accounts_engaged');\n  cliqueIG      = getIG('website_clicks');\n} catch(e) {}\n\nconst engRateFB = (alcanceFB > 0) ? parseFloat((engFB / alcanceFB * 100).toFixed(2)) : 0;\nconst engRateIG = (alcanceIG > 0) ? parseFloat((engIG / alcanceIG * 100).toFixed(2)) : 0;\n\nreturn [{\n  json: {\n    period_start: periodStart,\n    period_end: periodEnd,\n    fb: { alcance: alcanceFB, engagement: engFB, clics: cliquesFB, reacciones: reaccionesFB, posts: postCount },\n    ig: { alcance: alcanceIG, engagement: engIG, clics: cliqueIG, profile_views: profileViewsIG },\n    engagement_rate_fb: engRateFB,\n    engagement_rate_ig: engRateIG,\n    engagement_rate: engRateFB\n  }\n}];"
+        }
+      },
+      {
+        "id": "guardar-analytics-g54",
+        "name": "💾 Guardar Métricas en G54",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "continueOnFail": true,
+        "position": [
+          3360,
+          480
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/agent/rrss/metricas' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_AGENT_TOKEN }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ ({\n  company_id: parseInt($('⚙️ Config Growth54').item.json.G54_COMPANY_ID) || 1,\n  metricas: [\n    {\n      platform: 'facebook',\n      period_start: $('📊 Preparar Métricas G54').item.json.period_start,\n      period_end: $('📊 Preparar Métricas G54').item.json.period_end,\n      alcance_total: $('📊 Preparar Métricas G54').item.json.fb.alcance,\n      impresiones_total: $('📊 Preparar Métricas G54').item.json.fb.alcance,\n      engagement_total: $('📊 Preparar Métricas G54').item.json.fb.engagement,\n      engagement_rate_avg: $('📊 Preparar Métricas G54').item.json.engagement_rate,\n      clics_total: $('📊 Preparar Métricas G54').item.json.fb.clics,\n      leads_total: 0\n    },\n    {\n      platform: 'instagram',\n      period_start: $('📊 Preparar Métricas G54').item.json.period_start,\n      period_end: $('📊 Preparar Métricas G54').item.json.period_end,\n      alcance_total: 0,\n      impresiones_total: 0,\n      engagement_total: 0,\n      engagement_rate_avg: 0,\n      clics_total: 0,\n      leads_total: 0\n    }\n  ]\n}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "trigger-webhook",
+        "name": "🌐 Trigger Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          240,
+          220
+        ],
+        "parameters": {
+          "path": "analytics-semanal-g54",
+          "responseMode": "onReceived",
+          "responseData": "firstEntryJson"
+        },
+        "webhookId": "25cf4b39-2e95-413e-a39e-2cf08e8bb80e"
+      },
+      {
+        "id": "tokens-g64-semanal",
+        "name": "🔑 Obtener Tokens Sociales G64",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          700,
+          480
+        ],
+        "parameters": {
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/pages/' + $('⚙️ Config Growth54').item.json.FB_PAGE_ID }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{ $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "if-post-individual",
+        "name": "🔀 ¿Post individual?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          920,
+          480
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "has-post-id",
+                "leftValue": "={{ $('🌐 Trigger Webhook').isExecuted ? ($('🌐 Trigger Webhook').item.json.query.post_id || $('🌐 Trigger Webhook').item.json.body?.post_id) : '' }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty"
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        }
+      },
+      {
+        "id": "meta-post-insights",
+        "name": "📊 Meta API: Post Insights",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1140,
+          360
+        ],
+        "parameters": {
+          "url": "=https://graph.facebook.com/v19.0/{{ $('🌐 Trigger Webhook').item.json.query.post_id || $('🌐 Trigger Webhook').item.json.body.post_id }}/insights?metric=post_fan_reach,post_reactions_like_total,post_clicks_by_type,post_video_views&access_token={{ $('🔑 Obtener Page Token FB').item.json.access_token }}",
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "preparar-metricas-post",
+        "name": "📊 Preparar Métricas Post",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1360,
+          360
+        ],
+        "parameters": {
+          "jsCode": "const query = $('🌐 Trigger Webhook').item.json.query || {};\nconst body  = $('🌐 Trigger Webhook').item.json.body  || {};\nconst postId    = query.post_id    || body.post_id;\nconst companyId = query.company_id || body.company_id || $('⚙️ Config Growth54').item.json.G54_COMPANY_ID;\n\nconst insData = $('📊 Meta API: Post Insights').item?.json?.data || [];\n\nconst getVal = (name) => insData.find(i => i.name === name)?.values?.[0]?.value || 0;\nconst getObjSum = (name) => {\n  const v = insData.find(i => i.name === name)?.values?.[0]?.value;\n  if (!v) return 0;\n  if (typeof v === 'object') return Object.values(v).reduce((a,b) => a+b, 0);\n  return v;\n};\n\nconst alcance    = getVal('post_fan_reach');\nconst reacciones = getVal('post_reactions_like_total');\nconst clics      = getObjSum('post_clicks_by_type');\nconst engagement = reacciones + clics;\nconst engRate    = alcance > 0 ? parseFloat((engagement / alcance * 100).toFixed(2)) : 0;\nconst today      = new Date().toISOString().slice(0,10);\n\nreturn [{\n  json: {\n    company_id: parseInt(companyId) || 1,\n    post_id: postId,\n    platform: String(postId).includes('_') ? 'facebook' : 'instagram',\n    period_start: today,\n    period_end: today,\n    alcance_total: alcance,\n    impresiones_total: alcance,\n    engagement_total: engagement,\n    engagement_rate_avg: engRate,\n    clics_total: clics,\n    leads_total: 0\n  }\n}];"
+        }
+      },
+      {
+        "id": "guardar-metricas-post",
+        "name": "💾 Guardar Métricas Post",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1580,
+          360
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/agent/rrss/metricas' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_AGENT_TOKEN }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ ({\n  company_id: $('📊 Preparar Métricas Post').item.json.company_id,\n  metricas: [{\n    platform: $('📊 Preparar Métricas Post').item.json.platform,\n    period_start: $('📊 Preparar Métricas Post').item.json.period_start,\n    period_end: $('📊 Preparar Métricas Post').item.json.period_end,\n    alcance_total: $('📊 Preparar Métricas Post').item.json.alcance_total,\n    impresiones_total: $('📊 Preparar Métricas Post').item.json.impresiones_total,\n    engagement_total: $('📊 Preparar Métricas Post').item.json.engagement_total,\n    engagement_rate_avg: $('📊 Preparar Métricas Post').item.json.engagement_rate_avg,\n    clics_total: $('📊 Preparar Métricas Post').item.json.clics_total,\n    leads_total: 0\n  }]\n}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "get-page-token",
+        "name": "🔑 Obtener Page Token FB",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          920,
+          480
+        ],
+        "parameters": {
+          "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config Growth54').item.json.FB_PAGE_ID }}?fields=access_token&access_token={{ $('🔑 Obtener Tokens Sociales G64').item.json.fb_access_token }}",
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
+      }
+    ],
+    "connections": {
+      "⏰ Trigger Semanal (Lunes 8am)": {
+        "main": [
+          [
+            {
+              "node": "⚙️ Config Growth54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "▶️ Ejecutar Manualmente": {
+        "main": [
+          [
+            {
+              "node": "⚙️ Config Growth54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "⚙️ Config Growth54": {
+        "main": [
+          [
+            {
+              "node": "📊 Obtener Perfil Empresa",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📊 Obtener Perfil Empresa": {
+        "main": [
+          [
+            {
+              "node": "🎯 Obtener Estrategia G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🎯 Obtener Estrategia G54": {
+        "main": [
+          [
+            {
+              "node": "📝 Obtener Posts Publicados G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📝 Obtener Posts Publicados G54": {
+        "main": [
+          [
+            {
+              "node": "💼 Obtener Leads G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "💼 Obtener Leads G54": {
+        "main": [
+          [
+            {
+              "node": "📈 Obtener Métricas G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📈 Obtener Métricas G54": {
+        "main": [
+          [
+            {
+              "node": "🔑 Obtener Tokens Sociales G64",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📊 Graph API: FB Insights": {
+        "main": [
+          [
+            {
+              "node": "🔧 Preparar Datos Analytics",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📊 Graph API: IG Insights": {
+        "main": [
+          [
+            {
+              "node": "🔧 Preparar Datos Analytics",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Preparar Datos Analytics": {
+        "main": [
+          [
+            {
+              "node": "🤖 Groq: Analytics AI",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 Groq: Analytics AI": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Reporte Analytics",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔍 Parsear Reporte Analytics": {
+        "main": [
+          [
+            {
+              "node": "📊 Preparar Métricas G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📊 Preparar Métricas G54": {
+        "main": [
+          [
+            {
+              "node": "💾 Guardar Métricas en G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🌐 Trigger Webhook": {
+        "main": [
+          [
+            {
+              "node": "⚙️ Config Growth54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "💾 Guardar Métricas en G54": {
+        "main": [
+          []
+        ]
+      },
+      "🔑 Obtener Tokens Sociales G64": {
+        "main": [
+          [
+            {
+              "node": "🔑 Obtener Page Token FB",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Post individual?": {
+        "main": [
+          [
+            {
+              "node": "📊 Meta API: Post Insights",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📊 Graph API: FB Insights",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "📊 Graph API: IG Insights",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📊 Meta API: Post Insights": {
+        "main": [
+          [
+            {
+              "node": "📊 Preparar Métricas Post",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📊 Preparar Métricas Post": {
+        "main": [
+          [
+            {
+              "node": "💾 Guardar Métricas Post",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔑 Obtener Page Token FB": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Post individual?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-07-18T17:03:08.068Z",
+        "id": 2197,
+        "workflowId": "EX9K1AZwKeouSJ9G",
+        "versionId": "ad5f6025-e96a-484f-b4d5-b36472bfee83",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      },
+      {
+        "createdAt": "2026-07-18T17:03:08.026Z",
+        "id": 2196,
+        "workflowId": "EX9K1AZwKeouSJ9G",
+        "versionId": "ad5f6025-e96a-484f-b4d5-b36472bfee83",
+        "event": "deactivated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    ]
+  }
+}

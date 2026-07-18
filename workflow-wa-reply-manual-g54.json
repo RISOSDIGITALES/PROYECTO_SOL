@@ -1,0 +1,527 @@
+{
+  "updatedAt": "2026-07-18T17:02:25.918Z",
+  "createdAt": "2026-06-23T20:14:55.164Z",
+  "id": "IzsQTrOI2SMUJ4xx",
+  "name": "📤 WA Reply — Envío Manual desde G54",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "webhook-reply",
+      "name": "📲 Webhook Responder",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        300
+      ],
+      "webhookId": "wa-reply-g54",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wa-reply-g54",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "resp-200",
+      "name": "✅ Responder 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        160
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "cfg",
+      "name": "⚙️ Config G54",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "G54_BASE_URL",
+              "value": "https://apigrowth.mdarthurdigital.com",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "G54_AGENT_TOKEN",
+              "value": "g54_agent_produccion_2026",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "preparar",
+      "name": "🔧 Preparar Envío",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const body = $('📲 Webhook Responder').item.json.body || $('📲 Webhook Responder').item.json;\n\nconst phone = String(body.phone || '');\nconst message = String(body.message || '');\nconst company_id = String(body.company_id || '');\n\nconst waConfigRaw = $('⚙️ Obtener WA Config G54').item.json;\nconst waConfig = waConfigRaw?.data || {};\n\nconst wa_access_token = waConfig.wa_access_token || '';\nconst phone_number_id = waConfig.phone_number_id || '';\n\nif (!phone || !message || !wa_access_token) {\n  throw new Error(`Faltan datos: phone=${phone}, message=${!!message}, token=${!!wa_access_token}`);\n}\n\nreturn [{ json: { phone, message, company_id, wa_access_token, phone_number_id } }];"
+      }
+    },
+    {
+      "id": "enviar-wa",
+      "name": "📤 Enviar Mensaje WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://graph.facebook.com/v19.0/' + $json.phone_number_id + '/messages' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $json.wa_access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.phone, type: 'text', text: { body: $json.message } }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "guardar-g54",
+      "name": "💾 Guardar en G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/agent/whatsapp/inbound' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ empresa_id: Number($('🔧 Preparar Envío').item.json.company_id), phone: $('🔧 Preparar Envío').item.json.phone, messages: [{ rol: 'agent', contenido: $('🔧 Preparar Envío').item.json.message }] }) }}",
+        "options": {}
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.G54_BASE_URL + '/api/n8n/companies/' + ($('📲 Webhook Responder').item.json.body.company_id || $('📲 Webhook Responder').item.json.body?.company_id || '') + '/whatsapp/config' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $json.G54_AGENT_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wa-reply-fetch-config",
+      "name": "⚙️ Obtener WA Config G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "📲 Webhook Responder": {
+      "main": [
+        [
+          {
+            "node": "✅ Responder 200",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "⚙️ Config G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Config G54": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Obtener WA Config G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Envío": {
+      "main": [
+        [
+          {
+            "node": "📤 Enviar Mensaje WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Enviar Mensaje WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "💾 Guardar en G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Obtener WA Config G54": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Envío",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": null,
+  "versionId": "a7ff8c66-8fab-4c59-a68b-8dddea981b87",
+  "activeVersionId": "a7ff8c66-8fab-4c59-a68b-8dddea981b87",
+  "versionCounter": 2,
+  "triggerCount": 1,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-06-23T20:14:55.183Z",
+      "createdAt": "2026-06-23T20:14:55.183Z",
+      "role": "workflow:owner",
+      "workflowId": "IzsQTrOI2SMUJ4xx",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "updatedAt": "2026-03-16T19:58:01.773Z",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-18T17:02:25.920Z",
+    "createdAt": "2026-07-18T17:02:25.920Z",
+    "versionId": "a7ff8c66-8fab-4c59-a68b-8dddea981b87",
+    "workflowId": "IzsQTrOI2SMUJ4xx",
+    "nodes": [
+      {
+        "id": "webhook-reply",
+        "name": "📲 Webhook Responder",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -200,
+          300
+        ],
+        "webhookId": "wa-reply-g54",
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "wa-reply-g54",
+          "responseMode": "responseNode",
+          "options": {}
+        }
+      },
+      {
+        "id": "resp-200",
+        "name": "✅ Responder 200",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          0,
+          160
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ ok: true }) }}",
+          "options": {
+            "responseCode": 200
+          }
+        }
+      },
+      {
+        "id": "cfg",
+        "name": "⚙️ Config G54",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          0,
+          300
+        ],
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "a1",
+                "name": "G54_BASE_URL",
+                "value": "https://apigrowth.mdarthurdigital.com",
+                "type": "string"
+              },
+              {
+                "id": "a2",
+                "name": "G54_AGENT_TOKEN",
+                "value": "g54_agent_produccion_2026",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "preparar",
+        "name": "🔧 Preparar Envío",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          220,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const body = $('📲 Webhook Responder').item.json.body || $('📲 Webhook Responder').item.json;\n\nconst phone = String(body.phone || '');\nconst message = String(body.message || '');\nconst company_id = String(body.company_id || '');\n\nconst waConfigRaw = $('⚙️ Obtener WA Config G54').item.json;\nconst waConfig = waConfigRaw?.data || {};\n\nconst wa_access_token = waConfig.wa_access_token || '';\nconst phone_number_id = waConfig.phone_number_id || '';\n\nif (!phone || !message || !wa_access_token) {\n  throw new Error(`Faltan datos: phone=${phone}, message=${!!message}, token=${!!wa_access_token}`);\n}\n\nreturn [{ json: { phone, message, company_id, wa_access_token, phone_number_id } }];"
+        }
+      },
+      {
+        "id": "enviar-wa",
+        "name": "📤 Enviar Mensaje WhatsApp",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          440,
+          300
+        ],
+        "continueOnFail": true,
+        "parameters": {
+          "method": "POST",
+          "url": "={{ 'https://graph.facebook.com/v19.0/' + $json.phone_number_id + '/messages' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $json.wa_access_token }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.phone, type: 'text', text: { body: $json.message } }) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "guardar-g54",
+        "name": "💾 Guardar en G54",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          660,
+          300
+        ],
+        "continueOnFail": true,
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/agent/whatsapp/inbound' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_AGENT_TOKEN }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ empresa_id: Number($('🔧 Preparar Envío').item.json.company_id), phone: $('🔧 Preparar Envío').item.json.phone, messages: [{ rol: 'agent', contenido: $('🔧 Preparar Envío').item.json.message }] }) }}",
+          "options": {}
+        }
+      },
+      {
+        "parameters": {
+          "url": "={{ $json.G54_BASE_URL + '/api/n8n/companies/' + ($('📲 Webhook Responder').item.json.body.company_id || $('📲 Webhook Responder').item.json.body?.company_id || '') + '/whatsapp/config' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $json.G54_AGENT_TOKEN }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "wa-reply-fetch-config",
+        "name": "⚙️ Obtener WA Config G54",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          220,
+          300
+        ],
+        "onError": "continueRegularOutput"
+      }
+    ],
+    "connections": {
+      "📲 Webhook Responder": {
+        "main": [
+          [
+            {
+              "node": "✅ Responder 200",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "⚙️ Config G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "⚙️ Config G54": {
+        "main": [
+          [
+            {
+              "node": "⚙️ Obtener WA Config G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Preparar Envío": {
+        "main": [
+          [
+            {
+              "node": "📤 Enviar Mensaje WhatsApp",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📤 Enviar Mensaje WhatsApp": {
+        "main": [
+          [
+            {
+              "node": "💾 Guardar en G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "⚙️ Obtener WA Config G54": {
+        "main": [
+          [
+            {
+              "node": "🔧 Preparar Envío",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-07-18T17:02:26.051Z",
+        "id": 2195,
+        "workflowId": "IzsQTrOI2SMUJ4xx",
+        "versionId": "a7ff8c66-8fab-4c59-a68b-8dddea981b87",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      },
+      {
+        "createdAt": "2026-07-18T17:02:26.004Z",
+        "id": 2194,
+        "workflowId": "IzsQTrOI2SMUJ4xx",
+        "versionId": "a7ff8c66-8fab-4c59-a68b-8dddea981b87",
+        "event": "deactivated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    ]
+  }
+}
