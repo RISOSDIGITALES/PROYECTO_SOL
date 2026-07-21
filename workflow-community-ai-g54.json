@@ -141,7 +141,7 @@
             {
               "id": "a9",
               "name": "WA_LINK",
-              "value": "https://wa.me/17867880417",
+              "value": "",
               "type": "string"
             },
             {
@@ -153,7 +153,7 @@
             {
               "id": "crm-pass",
               "name": "G54_MASTER_PASSWORD",
-              "value": "wx2026_master",
+              "value": "REDACTED_PASSWORD",
               "type": "string"
             }
           ]
@@ -266,7 +266,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const config = $('🏢 Aplicar Config Empresa').item.json;\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\nconst empresa = empresaRaw.data || empresaRaw || {};\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\nconst postRaw = $('📄 Obtener Contenido del Post').item?.json || {};\nconst contenidoPost = postRaw.message || postRaw.story || '';\n\nconst nombre_empresa = empresa.name || empresa.nombre || '';\nconst descripcion = empresa.description || empresa.descripcion || '';\nconst tono = estrategia.tono || 'profesional, cercano y directo';\nconst wa_link = config.WA_LINK || '';\n\nconst seccionPost = contenidoPost\n  ? `\\nCONTEXTO DEL POST COMENTADO:\\n${contenidoPost}\\n`\n  : '';\n\nconst promptSistema = `Actúa como un Community Manager experto en conversión, integrando SEO, AEO y GEO.\n\nEmpresa: ${nombre_empresa}\nDescripción: ${descripcion}\nTono de marca: ${tono}\nLink de WhatsApp: ${wa_link}\n\nTu función es:\n- responder con claridad (AEO)\n- detectar intención del usuario\n- calificar el lead\n- llevar la conversación FUERA del comentario público, hacia WhatsApp, lo antes posible\n\nDebes:\n1. Identificar la intención: informacional, comercial o transaccional\n2. Dar una micro-respuesta útil y breve (máximo 1 oración) que demuestre que entendiste lo que pidió — sin resolverlo por completo en el comentario\n3. Invitar a continuar por WhatsApp usando el link EXACTO: ${wa_link} — esto va SIEMPRE, en cada respuesta, sin excepción, incluso en el primer mensaje\n4. NO hagas preguntas de calificación (medidas, tipo de servicio, etc.) dentro del comentario público — esas se resuelven en WhatsApp, no aquí\n\nIMPORTANTE:\n- La RESPUESTA debe ser corta (máximo 2 oraciones), apta para publicar directamente en el comentario/DM\n- NO uses markdown, bullets ni emojis excesivos en la respuesta pública\n- SIEMPRE incluye el link de WhatsApp tal cual: ${wa_link}\n- Sé cálido pero directo — el objetivo es mover la conversación a WhatsApp, no resolverla en público\n- Si hay CONTEXTO DEL POST COMENTADO, úsalo para que la micro-respuesta sea más relevante y específica\n\nEntrega EXACTAMENTE en este formato:\nINTENCIÓN: [informacional|comercial|transaccional]\nRESPUESTA: [texto listo para publicar en redes, SIEMPRE con el link de WhatsApp incluido]\nLEAD: [frío|tibio|caliente]\nPREGUNTA: [pregunta de calificación, se usará en WhatsApp, no en el comentario]\nSIGUIENTE PASO: [whatsapp]`;\n\nconst mensajeUsuario = `Plataforma: ${evento.plataforma}\nTipo: ${evento.tipo}${seccionPost}\nMensaje del usuario: ${evento.mensaje}`;\n\nreturn [{ json: {\n  promptSistema,\n  mensajeUsuario,\n  evento,\n  wa_link,\n  empresa_nombre: nombre_empresa\n}}];"
+        "jsCode": "const config = $('🏢 Aplicar Config Empresa').item.json;\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\nconst empresa = empresaRaw.data || empresaRaw || {};\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\nconst postRaw = $('📄 Obtener Contenido del Post').item?.json || {};\nconst contenidoPost = postRaw.message || postRaw.story || '';\n\nconst nombre_empresa = empresa.name || empresa.nombre || '';\nconst descripcion = empresa.description || empresa.descripcion || '';\nconst tono = estrategia.tono || 'profesional, cercano y directo';\nconst wa_link = config.WA_LINK || '';\n\n// Canal de escalada: WhatsApp si la empresa tiene link configurado, si no, DM en la misma plataforma — nunca un canal fijo\nconst canalEscalada = wa_link ? `WhatsApp (link EXACTO: ${wa_link})` : 'mensaje privado (DM) en esta misma plataforma';\nconst siguientePasoValor = wa_link ? 'whatsapp' : 'dm';\n\nconst seccionPost = contenidoPost\n  ? `\\nCONTEXTO DEL POST COMENTADO:\\n${contenidoPost}\\n`\n  : '';\n\nconst promptSistema = `Actúa como un Community Manager experto en conversión, integrando SEO, AEO y GEO.\n\nEmpresa: ${nombre_empresa}\nDescripción: ${descripcion}\nTono de marca: ${tono}\nCanal de escalada: ${canalEscalada}\n\nTu función es:\n- responder con claridad (AEO)\n- detectar intención del usuario\n- calificar el lead\n- llevar la conversación FUERA del comentario público, hacia ${canalEscalada}, lo antes posible\n\nDebes:\n1. Identificar la intención: informacional, comercial o transaccional\n2. Dar una micro-respuesta útil y breve (máximo 1 oración) que demuestre que entendiste lo que pidió — sin resolverlo por completo en el comentario\n3. Invitar a continuar por ${canalEscalada} — esto va SIEMPRE, en cada respuesta, sin excepción, incluso en el primer mensaje\n4. NO hagas preguntas de calificación (medidas, tipo de servicio, etc.) dentro del comentario público — esas se resuelven por ${canalEscalada}, no aquí\n\nIMPORTANTE:\n- La RESPUESTA debe ser corta (máximo 2 oraciones), apta para publicar directamente en el comentario/DM\n- NO uses markdown, bullets ni emojis excesivos en la respuesta pública\n${wa_link ? `- SIEMPRE incluye el link de WhatsApp tal cual: ${wa_link}` : '- Invita a escribir por mensaje privado, sin inventar ningún link ni número'}\n- Sé cálido pero directo — el objetivo es mover la conversación a ${canalEscalada}, no resolverla en público\n- Si hay CONTEXTO DEL POST COMENTADO, úsalo para que la micro-respuesta sea más relevante y específica\n\nEntrega EXACTAMENTE en este formato:\nINTENCIÓN: [informacional|comercial|transaccional]\nRESPUESTA: [texto listo para publicar en redes${wa_link ? ', SIEMPRE con el link de WhatsApp incluido' : ''}]\nLEAD: [frío|tibio|caliente]\nPREGUNTA: [pregunta de calificación, se usará por ${canalEscalada}, no en el comentario]\nSIGUIENTE PASO: [${siguientePasoValor}]`;\n\nconst mensajeUsuario = `Plataforma: ${evento.plataforma}\nTipo: ${evento.tipo}${seccionPost}\nMensaje del usuario: ${evento.mensaje}`;\n\nreturn [{ json: {\n  promptSistema,\n  mensajeUsuario,\n  evento,\n  wa_link,\n  empresa_nombre: nombre_empresa\n}}];"
       },
       "id": "preparar-contexto",
       "name": "🔧 Preparar Contexto Community AI",
@@ -1751,7 +1751,7 @@
               {
                 "id": "crm-pass",
                 "name": "G54_MASTER_PASSWORD",
-                "value": "wx2026_master",
+                "value": "REDACTED_PASSWORD",
                 "type": "string"
               }
             ]
