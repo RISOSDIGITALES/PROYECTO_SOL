@@ -1,0 +1,248 @@
+{
+  "updatedAt": "2026-07-16T14:54:43.196Z",
+  "createdAt": "2026-07-16T14:54:43.196Z",
+  "id": "OMZLwErubDaiGgO7",
+  "name": "🖼️ Marco — Media Proxy (G54)",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "media-proxy-g54",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "🌐 Webhook: Media Proxy",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "cf21ba4c-9e9a-4952-b3c4-440b994a333a"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.query.secret }}",
+              "rightValue": "g54_agent_produccion_2026",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check_secret",
+      "name": "🔀 ¿Secreto válido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"error\": \"forbidden\"}",
+        "options": {
+          "responseCode": 403
+        }
+      },
+      "id": "reject",
+      "name": "❌ Rechazar",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        400,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://apigrowth.mdarthurdigital.com/api/agent/wa/empresa-by-phone/{{ $('🌐 Webhook: Media Proxy').item.json.query.phone_number_id || '1083260611538246' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer g54_agent_produccion_2026"
+            }
+          ]
+        },
+        "options": {},
+        "continueOnFail": true
+      },
+      "id": "wa_config",
+      "name": "🔑 Obtener Config WA (G54)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v18.0/{{ $('🌐 Webhook: Media Proxy').item.json.query.media_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.wa_access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "resolve_url",
+      "name": "🔗 Resolver URL Media",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('🔑 Obtener Config WA (G54)').item.json.wa_access_token }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "download",
+      "name": "📦 Descargar Archivo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "binary",
+        "responseDataSource": "input",
+        "options": {}
+      },
+      "id": "respond_binary",
+      "name": "📤 Responder con Binario",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "🌐 Webhook: Media Proxy": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Secreto válido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Secreto válido?": {
+      "main": [
+        [
+          {
+            "node": "🔑 Obtener Config WA (G54)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❌ Rechazar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔑 Obtener Config WA (G54)": {
+      "main": [
+        [
+          {
+            "node": "🔗 Resolver URL Media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 Resolver URL Media": {
+      "main": [
+        [
+          {
+            "node": "📦 Descargar Archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Descargar Archivo": {
+      "main": [
+        [
+          {
+            "node": "📤 Responder con Binario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": null,
+  "versionId": "84f9fb0e-9426-4754-983c-46ff6ffefa39",
+  "activeVersionId": "84f9fb0e-9426-4754-983c-46ff6ffefa39",
+  "versionCounter": 1,
+  "triggerCount": 1,
+  "sourceWorkflowId": null
+}

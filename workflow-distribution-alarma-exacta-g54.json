@@ -1,0 +1,123 @@
+{
+  "updatedAt": "2026-07-16T15:02:10.153Z",
+  "createdAt": "2026-07-16T15:02:10.153Z",
+  "id": "sNNhTEH8IzJsOIm3",
+  "name": "⏰ Distribution AI — Alarma Exacta (G54)",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "schedule-alarm-g54",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "🌐 Webhook: Programar Alarma",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "615d10e3-5d04-437f-8384-34c19ba3bb33"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body || {};\nconst post_id = b.post_id;\nconst company_id = b.company_id || 1;\nconst fecha_programada = b.fecha_programada;\n\nif (!fecha_programada) {\n  throw new Error('fecha_programada es obligatoria para programar la alarma');\n}\n\nreturn [{ json: { post_id, company_id, fecha_programada } }];"
+      },
+      "id": "validar",
+      "name": "🔍 Validar Datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "specificTime",
+        "dateTime": "={{ $json.fecha_programada }}"
+      },
+      "id": "wait",
+      "name": "⏳ Esperar Hasta la Hora Exacta",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        400,
+        0
+      ],
+      "webhookId": "alarm-wait-g54"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.mdarthurdigital.com/webhook/distribution-publish-g54",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: $json.company_id }) }}",
+        "options": {},
+        "continueOnFail": true
+      },
+      "id": "trigger_dist",
+      "name": "📢 Disparar Distribution AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "🌐 Webhook: Programar Alarma": {
+      "main": [
+        [
+          {
+            "node": "🔍 Validar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Validar Datos": {
+      "main": [
+        [
+          {
+            "node": "⏳ Esperar Hasta la Hora Exacta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏳ Esperar Hasta la Hora Exacta": {
+      "main": [
+        [
+          {
+            "node": "📢 Disparar Distribution AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": null,
+  "versionId": "3835716c-ebfc-4a82-910f-9015418356d2",
+  "activeVersionId": null,
+  "versionCounter": 1,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "parentFolder": null
+}

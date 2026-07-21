@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arquitectura Strategist AI / Ideas AI — 13 Jul 2026</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0d16;
+      --surface: #111520;
+      --border: #1a2035;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --subtle: #8b98b8;
+
+      --green: #4ade80; --green-bg: #052e16; --green-border: #166534;
+      --yellow: #fbbf24; --yellow-bg: #1c1200; --yellow-border: #78350f;
+      --red: #f87171; --red-bg: #2d0a0a; --red-border: #7f1d1d;
+      --blue: #60a5fa; --blue-bg: #0c1a3a; --blue-border: #1e3a6e;
+      --purple: #c084fc; --purple-bg: #1e0840; --purple-border: #4c1d95;
+      --orange: #fb923c; --orange-bg: #1a0a00; --orange-border: #7c2d12;
+      --gray: #9ca3af; --gray-bg: #17191f; --gray-border: #374151;
+      --accent: #7c3aed; --accent-light: #a78bfa;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #0d1020 0%, #140a2e 50%, #0a1030 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 40px;
+    }
+    .header-inner { max-width: 900px; margin: 0 auto; }
+    .header-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-light); margin-bottom: 12px; }
+    h1 { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+    h1 span { color: var(--accent-light); }
+    .header p { font-size: 14px; color: var(--subtle); max-width: 640px; margin-bottom: 20px; }
+    .header-meta { display: flex; gap: 24px; flex-wrap: wrap; }
+    .meta-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-light); }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 40px; display: grid; gap: 20px; }
+
+    .section-label {
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--accent-light); margin: 20px 0 -4px 2px;
+    }
+    .section-label:first-child { margin-top: 0; }
+
+    .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+    .badge.ready { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+    .badge.walter { background: var(--orange-bg); color: var(--orange); border: 1px solid var(--orange-border); }
+    .badge.live { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
+
+    .card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+    .card.b-purple { border-left: 3px solid var(--accent); }
+    .card.b-green { border-left: 3px solid var(--green); }
+    .card.b-orange { border-left: 3px solid var(--orange); }
+    .card.b-blue { border-left: 3px solid var(--blue); }
+
+    .card-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 16px; padding: 16px 20px;
+      background: #0d1120; border-bottom: 1px solid var(--border); flex-wrap: wrap;
+    }
+    .card-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .card-where { font-size: 12px; color: var(--muted); }
+    .card-tags { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+    .card-body { padding: 20px; display: grid; gap: 14px; }
+    .card-body p { color: var(--subtle); font-size: 13px; line-height: 1.7; }
+    .card-body p strong { color: var(--text); }
+    .card-body ul { color: var(--subtle); font-size: 13px; line-height: 1.7; padding-left: 20px; }
+    .card-body li { margin-bottom: 4px; }
+
+    code {
+      font-family: 'Courier New', monospace; background: #141825;
+      border: 1px solid var(--border); color: var(--blue);
+      padding: 1px 5px; border-radius: 3px; font-size: 11.5px;
+    }
+
+    .example-box { background: #080b14; border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; font-size: 12.5px; }
+    .example-box .ex-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; }
+    .example-box code { display: block; background: none; border: none; padding: 0; color: var(--green); white-space: pre-wrap; }
+
+    .warn-box { background: var(--orange-bg); border: 1px solid var(--orange-border); border-radius: 6px; padding: 12px 16px; font-size: 12.5px; color: var(--subtle); }
+    .warn-box strong { color: var(--orange); }
+
+    .note-box { background: var(--blue-bg); border: 1px solid var(--blue-border); border-radius: 6px; padding: 12px 16px; font-size: 12.5px; color: var(--subtle); }
+    .note-box strong { color: var(--blue); }
+
+    .ok-box { background: var(--green-bg); border: 1px solid var(--green-border); border-radius: 6px; padding: 12px 16px; font-size: 12.5px; color: var(--subtle); }
+    .ok-box strong { color: var(--green); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    th { text-align: left; color: var(--muted); font-weight: 700; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.06em; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    td { padding: 9px 10px; border-bottom: 1px solid var(--border); color: var(--subtle); }
+    td strong { color: var(--text); }
+    tr:last-child td { border-bottom: none; }
+
+    .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12.5px; color: var(--subtle); padding: 4px 0; }
+    .flow .step { background: #141825; border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; color: var(--text); font-weight: 600; }
+    .flow .arrow { color: var(--muted); }
+
+    .footer { max-width: 900px; margin: 0 auto; padding: 0 40px 60px; color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-inner">
+      <div class="header-label">Documento de referencia — G54 Módulo 1</div>
+      <h1>Por qué separamos <span>Strategist AI</span> de <span>Ideas AI</span></h1>
+      <p>Este documento explica las decisiones de diseño detrás del rediseño del 13 de julio, para que quede memoria de <strong>por qué</strong> se construyó así — no solo el registro de cambios que ya vive en CLAUDE.md. Pensado para releerlo si se te olvida el razonamiento detrás de alguna pieza.</p>
+      <div class="header-meta">
+        <div class="meta-item"><span class="dot"></span> 13 julio 2026</div>
+        <div class="meta-item"><span class="dot"></span> Strategist AI v3.0 · <code>S62o0wcXq8Wfj67S</code></div>
+        <div class="meta-item"><span class="dot"></span> Ideas AI · <code>nHawWPIIu51ABBgl</code></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <div class="section-label">1 — El problema que resolvimos</div>
+    <div class="card b-purple">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Antes: un solo workflow hacía todo, sin disparo semanal real</div>
+          <div class="card-where">Strategist AI v2.0/v3.0 (versión previa al 13-jul)</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p>El Strategist generaba la estrategia completa <strong>y</strong> las ideas de todo el plan (39 ideas para 13 semanas, por ejemplo) en una sola corrida. Eso tenía dos problemas de fondo:</p>
+        <ul>
+          <li><strong>No existía ningún disparador semanal.</strong> Las 39 ideas se generaban todas de una vez el día que corrías el Strategist — no había forma de que llegaran ideas nuevas semana a semana según pasara el tiempo, ni de reaccionar a tendencias recientes en la semana 8 en vez de solo en la semana 1.</li>
+          <li><strong>Estaba atado a la keyword equivocada.</strong> El proceso real era "la IA piensa un tema y le pega una keyword que sobraba" en vez de "la keyword define el tema" — eso fue lo que causó el bug de la idea de piscina con keyword de hospital militar del 2 de julio.</li>
+        </ul>
+        <p><strong>Decisión:</strong> separar en dos agentes independientes pero coordinados — el Strategist construye el plan (objetivo, audiencia, tono, plataformas, pilares, KPIs, frecuencia), y un nuevo agente, Ideas AI, es el único que genera ideas — siempre a partir de la estrategia ya aprobada, nunca inventándola de nuevo.</p>
+      </div>
+    </div>
+
+    <div class="section-label">2 — Cómo quedó la relación entre los dos agentes</div>
+    <div class="card b-green">
+      <div class="card-header">
+        <div class="card-title">Independientes pero en equipo — nunca cada uno por su cuenta</div>
+      </div>
+      <div class="card-body">
+        <div class="flow">
+          <div class="step">Cliente corre Strategist</div>
+          <div class="arrow">→</div>
+          <div class="step">Construye y guarda la estrategia completa</div>
+          <div class="arrow">→</div>
+          <div class="step">Llama a Ideas AI automáticamente<br>(<code>modo: "semanal"</code>)</div>
+          <div class="arrow">→</div>
+          <div class="step">Ideas de la semana 1 quedan listas</div>
+        </div>
+        <div class="flow">
+          <div class="step">Cada semana después</div>
+          <div class="arrow">→</div>
+          <div class="step">Ideas AI se auto-dispara solo<br>(mismo patrón que el puente de Distribution AI)</div>
+          <div class="arrow">→</div>
+          <div class="step">Lee la estrategia YA aprobada<br>(refrescada, no cacheada)</div>
+          <div class="arrow">→</div>
+          <div class="step">Genera las ideas de esa semana</div>
+        </div>
+        <p>El Strategist <strong>ya no genera ninguna idea</strong> — solo arma el plan y avisa. Ideas AI nunca reinventa la estrategia — solo la lee y la sigue. Si el cliente edita la estrategia desde el panel a mitad de camino, Ideas AI la vuelve a leer completa en cada corrida (no guarda copia local ni caché), así que el cambio se refleja automáticamente en la próxima semana sin que nadie tenga que avisarle a nadie.</p>
+      </div>
+    </div>
+
+    <div class="section-label">3 — El modo dual: por qué "semanal" y "manual" no son lo mismo</div>
+    <div class="card b-purple">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Dos formas de llamar a Ideas AI, dos cantidades distintas</div>
+          <div class="card-where">Nodo <code>🔧 Preparar Contexto Ideas</code> — campo <code>modo</code> en el body del webhook</div>
+        </div>
+        <span class="badge live">Confirmado en vivo</span>
+      </div>
+      <div class="card-body">
+        <p>Pediste explícitamente separar dos escenarios que se veían iguales pero no lo son: el disparo automático semanal (que reparte publicaciones entre plataformas) y el botón de "generar una idea suelta" del panel (que siempre es una sola).</p>
+        <table>
+          <tr><th>Modo</th><th>Cuándo se usa</th><th>Cuántas ideas genera</th></tr>
+          <tr>
+            <td><strong>semanal</strong><br><code>{"modo":"semanal"}</code></td>
+            <td>Trigger automático semanal, o la primera llamada que hace el Strategist al terminar</td>
+            <td>El total que indique el desglose por plataforma de la estrategia — <strong>nunca un número fijo</strong></td>
+          </tr>
+          <tr>
+            <td><strong>manual</strong><br>(default, sin <code>modo</code> o cualquier otro valor)</td>
+            <td>Botón "Generar idea" individual del panel</td>
+            <td><strong>Exactamente 1</strong>, siempre, en la plataforma con mayor cuota semanal</td>
+          </tr>
+        </table>
+        <div class="example-box">
+          <div class="ex-label">Ejemplo real probado hoy — estrategia de Crating Express</div>
+          <code>frecuencia = "Facebook 2x/sem, Instagram 1x/sem"
+
+modo=semanal  → genera 3 ideas: 2 en Facebook + 1 en Instagram
+modo=manual   → genera 1 idea: en Facebook (la de mayor cuota)</code>
+        </div>
+        <p>Esto resuelve directamente tu preocupación de <em>"no me vaya a salir con que hizo 34"</em> — el modo semanal ya no genera el plan completo de golpe, solo la porción de esa semana; y el botón manual jamás genera más de una, sin importar qué diga la estrategia.</p>
+      </div>
+    </div>
+
+    <div class="section-label">4 — Cómo se calcula el desglose por plataforma</div>
+    <div class="card b-blue">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Codificado dentro del campo de texto <code>frecuencia</code></div>
+          <div class="card-where">Función <code>parsearDesglose()</code> en <code>🔧 Preparar Contexto Ideas</code></div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p>G54 solo tiene una columna de texto libre (<code>frecuencia</code>, máx. 100 caracteres) para guardar esto — no existe todavía una tabla de "cuántas veces por semana por plataforma". En vez de esperar a que Walter la construya, el Strategist ahora escribe la frecuencia en un formato fijo y parseable:</p>
+        <div class="example-box"><code>"Facebook 2x/sem, Instagram 1x/sem"</code></div>
+        <p>Ideas AI lee ese mismo string con una expresión regular (<code>/([A-Za-zÀ-ÿ]+)\s*(\d+)\s*x\s*\/?\s*sem/gi</code>) y reconstruye el desglose exacto. <strong>Con red de seguridad incluida:</strong> si el texto no tiene ese formato (por ejemplo, una estrategia vieja generada antes de este cambio, como pasó en la primera prueba de hoy con el texto "3 veces por semana — lunes, miércoles, viernes"), el código no truena — reparte el total de <code>G54_FRECUENCIA_SEMANAL</code> equitativamente entre las plataformas activas como respaldo.</p>
+      </div>
+    </div>
+
+    <div class="section-label">5 — Coherencia forzada: keyword primero, idea después</div>
+    <div class="card b-green">
+      <div class="card-header">
+        <div class="card-title">Tu regla exacta, aplicada en dos capas</div>
+        <span class="badge ready">Vigente desde el rediseño del 13-jul</span>
+      </div>
+      <div class="card-body">
+        <p>Dijiste: <em>"no es que cada idea corresponda a su keyword, ES QUE AGARRA LA KEYWORD Y DE AHÍ CREA LA IDEA"</em>. Esto se implementó en dos capas, no solo una instrucción de prompt que la IA podría ignorar:</p>
+        <ul>
+          <li><strong>Capa 1 — Asignación previa:</strong> antes de llamarla, el código ya decidió qué keyword real de G54 le toca a cada slot de idea y a qué plataforma. La IA recibe la lista ya armada — "keyword X → plataforma Y" — y nunca elige la keyword por su cuenta.</li>
+          <li><strong>Capa 2 — Validación por código, no por confianza:</strong> el nodo <code>🔍 Parsear y Validar Ideas</code> descarta automáticamente cualquier idea cuya keyword devuelta no sea <em>exactamente</em> una de las asignadas, y fuerza la plataforma desde la asignación original (nunca confía en el campo <code>platform</code> que devuelve la IA). También exige un campo <code>angulo</code> por idea — una frase que justifique por qué ese título responde a esa keyword específica.</li>
+        </ul>
+        <div class="ok-box"><strong>Confirmado en vivo hoy:</strong> 4 ideas generadas en las pruebas de este rediseño, 0 descartadas por incoherencia, cada una con su <code>angulo</code> genuino y verificable.</div>
+      </div>
+    </div>
+
+    <div class="section-label">6 — Lo que pediste y quedó listo del lado de n8n (esperando a Walter)</div>
+    <div class="card b-orange">
+      <div class="card-header">
+        <div class="card-title">"Deja todo listo para que funcione como te digo"</div>
+        <span class="badge walter">Requiere campos nuevos de G54</span>
+      </div>
+      <div class="card-body">
+        <p>Como pediste, no se te va a pedir nada a Walter todavía por esto — se deja listo del lado de n8n para que funcione solo apenas él agregue los campos correspondientes:</p>
+        <table>
+          <tr><th>Pedido</th><th>Estado en n8n</th><th>Qué falta en G54</th></tr>
+          <tr>
+            <td>Duración de estrategia seleccionable: 1 / 3 / 6 / 8 meses</td>
+            <td>✅ El Strategist ya soporta las 4 opciones (<code>mesesMap</code> en <code>Preparar Contexto</code>) y calcula semanas/total de ideas automáticamente</td>
+            <td>Selector en el panel + guardar el valor elegido en un campo que el Strategist pueda leer (hoy usa el default fijo <code>G54_PLAN_HORIZONTE</code> del Config node)</td>
+          </tr>
+          <tr>
+            <td>Campo de texto libre: dirección deseada de la estrategia</td>
+            <td>✅ El prompt ya lee <code>direccion_deseada</code> y la marca como obligatoria ("SI O SI") si viene con contenido</td>
+            <td>Campo nuevo en <code>/api/n8n/companies/{id}/rrss/config</code> (o similar) donde el cliente escriba ese texto</td>
+          </tr>
+          <tr>
+            <td>Contador de tiempo: semanas restantes, fecha fin</td>
+            <td>✅ El Strategist ya calcula y manda <code>fecha_inicio</code>, <code>fecha_fin</code> y <code>semanas_totales</code> en cada guardado</td>
+            <td>Columnas nuevas en la tabla de estrategia de G54 (hoy estos campos se descartan al guardar, mismo caso que <code>resumen_estrategico</code>) + el widget visual en el panel</td>
+          </tr>
+        </table>
+        <div class="note-box"><strong>Por qué no truena mientras tanto:</strong> todos estos campos van en el body del guardado con <code>continueOnFail</code>/valores por defecto — si G54 los ignora (como hace hoy), el resto de la estrategia se guarda igual, sin errores. El día que Walter agregue las columnas, empiezan a persistir solos, sin tocar n8n de nuevo.</div>
+      </div>
+    </div>
+
+    <div class="section-label">7 — Bugs encontrados en el camino (no relacionados al diseño, pero surgieron probándolo)</div>
+    <div class="card b-orange">
+      <div class="card-body">
+        <table>
+          <tr><th>Bug</th><th>Causa</th><th>Fix</th></tr>
+          <tr>
+            <td>422 al guardar la estrategia</td>
+            <td><code>tono</code>/<code>frecuencia</code>/<code>embudo</code> tienen límite real de 100 caracteres en la base de datos de G54</td>
+            <td>Prompt reescrito para pedir contenido corto en esos 3 campos; el detalle largo se movió a <code>resumen_estrategico</code></td>
+          </tr>
+          <tr>
+            <td>Ideas AI repetía las mismas keywords en corridas seguidas</td>
+            <td>El chequeo de "ideas ya existentes" usaba el endpoint viejo filtrado (solo ve estado <code>aprobado</code>) — las ideas recién creadas quedan en <code>idea</code>, invisibles para ese filtro</td>
+            <td>Se agregó login de sesión + endpoint sin filtrar (<code>GET /api/rrss/ideas</code>) — mismo patrón ya aplicado hoy en Content AI</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="section-label">8 — Estado final confirmado en vivo (13-jul)</div>
+    <div class="card b-green">
+      <div class="card-body">
+        <div class="flow">
+          <div class="step">POST /webhook/strategist-g54-v3</div>
+          <div class="arrow">→</div>
+          <div class="step">Estrategia guardada limpia, sin truncar</div>
+          <div class="arrow">→</div>
+          <div class="step">Dispara Ideas AI (modo semanal)</div>
+          <div class="arrow">→</div>
+          <div class="step">3 ideas: 2 FB + 1 IG</div>
+          <div class="arrow">→</div>
+          <div class="step">0 descartadas, guardadas en G54</div>
+        </div>
+        <p style="margin-top:8px">Y por separado: llamada manual sin <code>modo</code> → exactamente 1 idea, en Facebook (la plataforma de mayor cuota). Las 4 ideas de esta ronda de pruebas se borraron después de confirmar el comportamiento — Crating Express queda con las 7 ideas reales pendientes de revisión del rediseño anterior (ítem 120), listas para que las repases en el panel.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    Documento de referencia interno — PROYECTO_SOL / G54 Platform. Generado el 13 de julio de 2026 junto con el rediseño de Strategist AI / Ideas AI. Ver CLAUDE.md para el changelog técnico completo.
+  </div>
+
+</body>
+</html>
