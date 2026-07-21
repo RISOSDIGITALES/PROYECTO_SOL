@@ -68,7 +68,7 @@
             {
               "id": "crm-pass",
               "name": "G54_MASTER_PASSWORD",
-              "value": "wx2026_master",
+              "value": "REDACTED_PASSWORD",
               "type": "string"
             }
           ]
@@ -423,7 +423,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "// Determine which extractor has the message (WA or Social)\nlet msgData;\ntry { msgData = $('🔧 Extraer Mensaje WA').item.json; } catch(e) {}\nif (!msgData || msgData.skip) {\n  try { msgData = $('🔧 Extraer Mensaje FB/IG DM').item.json; } catch(e) {}\n}\n\nlet texto = msgData?.texto || '';\ntry {\n  const medioResult = $('🔧 Combinar Texto de Medio').first().json;\n  if (medioResult && medioResult.texto) texto = medioResult.texto;\n} catch (e) { /* no vino por la rama de medios, se usa el texto original */ }\nconst telefono = msgData?.telefono || '';\nconst canal = msgData?.canal || 'whatsapp';\nconst nombreContacto = msgData?.nombreContacto || '';\nconst usuarioId = msgData?.usuarioId || '';\nconst messageId = msgData?.messageId || '';\n\n// Empresa\nconst empresaRaw = $('🏢 Obtener Empresa G54').item.json;\nconst empresa = empresaRaw?.data || empresaRaw || {};\nconst empresa_nombre = empresa.name || 'Empresa';\nconst empresa_descripcion = empresa.description || '';\nconst empresa_ciudad = empresa.base_city || '';\nconst empresa_web = empresa.website || '';\nconst emailsVendedor = (empresa.emails || []).join(',') || '';\n\n// WA Config (todo desde G54)\nconst waConfigRaw = $('⚙️ Obtener WA Config G54').item.json;\nconst waConfig = waConfigRaw?.data || {};\n\nconst wa_access_token = waConfig.wa_access_token || '';\nconst phone_number_id = waConfig.phone_number_id || '';\nconst auto_reply = waConfig.auto_reply !== undefined ? waConfig.auto_reply : true;\nconst nombre_agente = waConfig.agent_name || 'Agente';\nconst bienvenida = waConfig.welcome_message || `Hola 👋 Soy ${nombre_agente}, el asistente de ${empresa_nombre}. ¿En qué te puedo ayudar?`;\nconst instruccionesIA = waConfig.ia_instructions || '';\nconst promptTemplate = waConfig.system_prompt || `Eres {{AGENTE}}, asistente virtual de {{EMPRESA}}. Ayuda al cliente a conocer los productos y servicios disponibles. Catálogo:\\n{{CATALOGO}}\\n{{INSTRUCCIONES}}`;\nconst followup24 = waConfig.followup_24h || '';\nconst followup72 = waConfig.followup_72h || '';\n\n// Productos\nconst productosRaw = $('📦 Obtener Productos G54').item.json;\nconst productos = productosRaw?.data || [];\nconst catalogoProductos = productos.map(p => {\n  const nombre = p.name || '';\n  const desc = p.description || '';\n  const kw = (p.keywords || []).join(', ');\n  return `• ${nombre}: ${desc}${kw ? ' [' + kw + ']' : ''}`;\n}).filter(l => l.length > 3).join('\\n');\n\n// Lead existente\nconst leadRaw = $('📋 Buscar Lead Existente').item.json;\nconst leads = leadRaw?.data || [];\nconst leadExistente = leads[0] || null;\nconst leadId = leadExistente?.id || null;\n// Parse __DATOS__ marker from G54 historial for datos persistence\nconst rawHistorial = leadExistente?.historial || '';\nconst historialLines = rawHistorial.split('\\n');\nlet leadDatos = {};\nconst datosLine = [...historialLines].reverse().find(l => l.includes('[__DATOS__]'));\nif (datosLine) {\n  try { leadDatos = JSON.parse(datosLine.replace(/^.*\\[__DATOS__\\]/, '')); } catch(e) {}\n}\nconst historial = historialLines.filter(l => !l.includes('[__DATOS__]')).join('\\n');\nconst estado = leadExistente?.estado || 'Nuevo';\nconst esNuevo = !leadId;\n\n// datos_actualizados is a free object — the prompt defines what to collect\n// We carry over whatever was stored previously and let AI merge\nconst datosRecolectados = typeof leadDatos === 'object' ? leadDatos : {};\n\n// Build prompt — replace placeholders\nconst promptSistema = promptTemplate\n  .replace(/\\{\\{AGENTE\\}\\}/g, nombre_agente)\n  .replace(/\\{\\{EMPRESA\\}\\}/g, empresa_nombre)\n  .replace(/\\{\\{CATALOGO\\}\\}/g, catalogoProductos || '(sin catálogo disponible)')\n  .replace(/\\{\\{INSTRUCCIONES\\}\\}/g, instruccionesIA ? 'Instrucciones adicionales:\\n' + instruccionesIA : '')\n  .trim();\n\n// Hora local (Miami UTC-4)\nconst h = (new Date().getUTCHours() - 4 + 24) % 24;\nconst saludoHora = h >= 6 && h < 12 ? 'buenos días' : h >= 12 && h < 19 ? 'buenas tardes' : 'buenas noches';\n\nreturn [{ json: {\n  // Message\n  texto,\n  telefono,\n  canal,\n  nombreContacto,\n  usuarioId,\n  messageId,\n  // Context\n  promptSistema,\n  nombre_agente,\n  empresa_nombre,\n  empresa_descripcion,\n  empresa_ciudad,\n  empresa_web,\n  emailsVendedor,\n  bienvenida,\n  followup24,\n  followup72,\n  catalogoProductos,\n  // WA credentials (from G54 config)\n  wa_access_token,\n  phone_number_id,\n  auto_reply,\n  // Lead\n  leadId,\n  estado,\n  historial,\n  datosRecolectados,\n  esNuevo,\n  saludoHora\n} }];"
+        "jsCode": "// Determine which extractor has the message (WA or Social)\nlet msgData;\ntry { msgData = $('🔧 Extraer Mensaje WA').item.json; } catch(e) {}\nif (!msgData || msgData.skip) {\n  try { msgData = $('🔧 Extraer Mensaje FB/IG DM').item.json; } catch(e) {}\n}\n\nlet texto = msgData?.texto || '';\ntry {\n  const medioResult = $('🔧 Combinar Texto de Medio').first().json;\n  if (medioResult && medioResult.texto) texto = medioResult.texto;\n} catch (e) { /* no vino por la rama de medios, se usa el texto original */ }\nconst telefono = msgData?.telefono || '';\nconst canal = msgData?.canal || 'whatsapp';\nconst nombreContacto = msgData?.nombreContacto || '';\nconst usuarioId = msgData?.usuarioId || '';\nconst messageId = msgData?.messageId || '';\n\n// Empresa\nconst empresaRaw = $('🏢 Obtener Empresa G54').item.json;\nconst empresa = empresaRaw?.data || empresaRaw || {};\nconst empresa_nombre = empresa.name || 'Empresa';\nconst empresa_descripcion = empresa.description || '';\nconst empresa_ciudad = empresa.base_city || '';\nconst empresa_web = empresa.website || '';\nconst emailsVendedor = (empresa.emails || []).join(',') || '';\n\n// WA Config (todo desde G54)\nconst waConfigRaw = $('⚙️ Obtener WA Config G54').item.json;\nconst waConfig = waConfigRaw?.data || {};\n\nconst wa_access_token = waConfig.wa_access_token || '';\nconst phone_number_id = waConfig.phone_number_id || '';\nconst auto_reply = waConfig.auto_reply !== undefined ? waConfig.auto_reply : true;\nconst nombre_agente = waConfig.agent_name || 'Agente';\nconst bienvenida = waConfig.welcome_message || `Hola 👋 Soy ${nombre_agente}, el asistente de ${empresa_nombre}. ¿En qué te puedo ayudar?`;\nconst instruccionesIA = waConfig.ia_instructions || '';\nconst promptTemplate = waConfig.system_prompt || `Eres {{AGENTE}}, asistente virtual de {{EMPRESA}}. Ayuda al cliente a conocer los productos y servicios disponibles. Catálogo:\\n{{CATALOGO}}\\n{{INSTRUCCIONES}}`;\nconst followup24 = waConfig.followup_24h || '';\nconst followup72 = waConfig.followup_72h || '';\n\n// Productos\nconst productosRaw = $('📦 Obtener Productos G54').item.json;\nconst productos = productosRaw?.data || [];\nconst catalogoProductos = productos.map(p => {\n  const nombre = p.name || '';\n  const desc = p.description || '';\n  const kw = (p.keywords || []).join(', ');\n  return `• ${nombre}: ${desc}${kw ? ' [' + kw + ']' : ''}`;\n}).filter(l => l.length > 3).join('\\n');\n\n// Lead existente\nconst leadRaw = $('📋 Buscar Lead Existente').item.json;\nconst leads = leadRaw?.data || [];\nconst leadExistente = leads[0] || null;\nconst leadId = leadExistente?.id || null;\n// Parse __DATOS__ marker from G54 historial for datos persistence\nconst rawHistorial = leadExistente?.historial || '';\nconst historialLines = rawHistorial.split('\\n');\nlet leadDatos = {};\nconst datosLine = [...historialLines].reverse().find(l => l.includes('[__DATOS__]'));\nif (datosLine) {\n  try { leadDatos = JSON.parse(datosLine.replace(/^.*\\[__DATOS__\\]/, '')); } catch(e) {}\n}\nconst historial = historialLines.filter(l => !l.includes('[__DATOS__]')).join('\\n');\nconst estado = leadExistente?.estado || 'Nuevo';\nconst esNuevo = !leadId;\n\n// datos_actualizados is a free object — the prompt defines what to collect\n// We carry over whatever was stored previously and let AI merge\nconst datosRecolectados = typeof leadDatos === 'object' ? leadDatos : {};\n\n// Build prompt — replace placeholders\nconst promptSistema = promptTemplate\n  .replace(/\\{\\{AGENTE\\}\\}/g, nombre_agente)\n  .replace(/\\{\\{EMPRESA\\}\\}/g, empresa_nombre)\n  .replace(/\\{\\{CATALOGO\\}\\}/g, catalogoProductos || '(sin catálogo disponible)')\n  .replace(/\\{\\{INSTRUCCIONES\\}\\}/g, instruccionesIA ? 'Instrucciones adicionales:\\n' + instruccionesIA : '')\n  .trim();\n\n// Hora local — se lee la zona horaria real de la empresa desde G54 (nunca fija a Miami)\nlet h;\ntry {\n  const tz = $('🕐 Resolver Timezone Empresa').item.json.empresa_timezone;\n  if (tz) {\n    h = parseInt(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hour12: false }).format(new Date()), 10);\n  } else {\n    throw new Error('sin timezone resuelta');\n  }\n} catch (e) {\n  // Fallback: si G54 no tiene la zona horaria configurada o el login falló, Miami (UTC-4) como último recurso\n  h = (new Date().getUTCHours() - 4 + 24) % 24;\n}\nconst saludoHora = h >= 6 && h < 12 ? 'buenos días' : h >= 12 && h < 19 ? 'buenas tardes' : 'buenas noches';\n\nreturn [{ json: {\n  // Message\n  texto,\n  telefono,\n  canal,\n  nombreContacto,\n  usuarioId,\n  messageId,\n  // Context\n  promptSistema,\n  nombre_agente,\n  empresa_nombre,\n  empresa_descripcion,\n  empresa_ciudad,\n  empresa_web,\n  emailsVendedor,\n  bienvenida,\n  followup24,\n  followup72,\n  catalogoProductos,\n  // WA credentials (from G54 config)\n  wa_access_token,\n  phone_number_id,\n  auto_reply,\n  // Lead\n  leadId,\n  estado,\n  historial,\n  datosRecolectados,\n  esNuevo,\n  saludoHora\n} }];"
       }
     },
     {
@@ -1756,6 +1756,47 @@
         160,
         700
       ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('🏢 Aplicar Config Empresa').item.json.G54_BASE_URL }}/api/auth/login",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config G54').item.json.G54_MASTER_EMAIL, password: $('⚙️ Config G54').item.json.G54_MASTER_PASSWORD }) }}",
+        "options": {}
+      },
+      "id": "tz-login-node-001",
+      "name": "🔐 G54: Login (Timezone)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        450
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Solo lee el array de empresas del login — NUNCA llama switch-company,\n// para no tocar el interruptor compartido de \"empresa activa\" de la cuenta master.\nconst config = $('🏢 Aplicar Config Empresa').item.json;\nconst companyId = String(config.G54_COMPANY_ID || '');\n\nlet timezone = null;\ntry {\n  const loginResp = $('🔐 G54: Login (Timezone)').item.json;\n  const companies = loginResp.companies || [];\n  const match = companies.find(c => String(c.id) === companyId);\n  timezone = match?.timezone || null;\n} catch (e) {\n  // login falló — seguimos con el fallback de abajo\n}\n\nreturn [{ json: { ...config, empresa_timezone: timezone } }];"
+      },
+      "id": "tz-resolver-node-001",
+      "name": "🕐 Resolver Timezone Empresa",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        600
+      ]
     }
   ],
   "connections": {
@@ -1885,7 +1926,7 @@
       "main": [
         [
           {
-            "node": "🔑 Intercambiar Page Token (FB)",
+            "node": "🔐 G54: Login (Timezone)",
             "type": "main",
             "index": 0
           }
@@ -2463,6 +2504,28 @@
           }
         ]
       ]
+    },
+    "🔐 G54: Login (Timezone)": {
+      "main": [
+        [
+          {
+            "node": "🕐 Resolver Timezone Empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🕐 Resolver Timezone Empresa": {
+      "main": [
+        [
+          {
+            "node": "🔑 Intercambiar Page Token (FB)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -2572,7 +2635,7 @@
               {
                 "id": "crm-pass",
                 "name": "G54_MASTER_PASSWORD",
-                "value": "wx2026_master",
+                "value": "REDACTED_PASSWORD",
                 "type": "string"
               }
             ]
