@@ -1499,6 +1499,14 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ---
 
+### 2026-07-21 (Martes)
+
+Hoy dediqué la mayor parte del día a una revisión completa de toda la plataforma, probando cada agente contra una segunda empresa real, no solo Crating Express, para confirmar que de verdad funciona para cualquier cliente y no solo para nosotros. En el camino encontré varios problemas reales que llevaban tiempo sin detectarse: el generador de contenido seguía escrito pensando solo en embalaje y Miami, el generador de imágenes le ponía cajones de madera a cualquier negocio sin importar el rubro, el motor de tendencias caía en lo mismo cuando no reconocía la industria de la empresa, y el que responde comentarios asumía que todo cliente usa WhatsApp como canal, cosa que generaba respuestas rotas para quien no lo tuviera configurado. Los cuatro quedaron corregidos y confirmados con contenido real generado antes y después del arreglo. También encontré, de pura casualidad probando dos sesiones a la vez, que la cuenta que usamos para las pruebas comparte una sola "empresa activa" entre todos los procesos que corren al mismo tiempo — aclaramos que esto es un tema exclusivo de cómo nosotros probamos con una cuenta de administrador, no algo que le vaya a pasar a un cliente real, así que quedó documentado pero no es un problema urgente.
+
+Sobre el cierre arreglé también que el bot de ventas saludaba con la hora de Miami sin importar el país de la empresa — ahora lee la zona horaria real configurada en el sistema. Y para terminar el día ayudé con dos cosas más chicas para Marco: le di cinco opciones de mensaje de bienvenida automático para WhatsApp y le indiqué dónde se cambia la foto de perfil del número. Con eso cerramos la jornada.
+
+---
+
 ### 2026-07-18 (Sábado)
 
 El día empezó revisando punto por punto la lista de pendientes que le habíamos dejado a Walter, confirmando cuáles ya había resuelto y armando el botón de "Compartir" del reporte de métricas que estaba pendiente en el panel. En eso, revisando el código de publicación de redes, encontré yo misma un dato de Crating Express que había quedado fijo en el sistema en vez de leerse dinámicamente por cliente, y me enojé bastante porque llevábamos semanas confiando en que la plataforma ya funcionaba para cualquier empresa sin ese tipo de atajos. Pedí una revisión completa de todos los agentes y aparecieron ocho con el mismo problema, y peor: cuatro tenían contraseñas o tokens reales expuestos directamente en el código, incluyendo uno de otro cliente nuestro (Orison) metido como respaldo en el motor de ventas genérico. Se corrigió todo, se sacaron los datos sensibles, y se desactivaron dos agentes viejos que ya no se usaban y solo generaban confusión.
