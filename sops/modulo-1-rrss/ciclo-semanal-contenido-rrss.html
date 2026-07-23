@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOP — Ciclo semanal de contenido RRSS · G54</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0d16;
+      --surface: #111520;
+      --border: #1a2035;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --subtle: #8b98b8;
+
+      --green: #4ade80; --green-bg: #052e16; --green-border: #166534;
+      --yellow: #fbbf24; --yellow-bg: #1c1200; --yellow-border: #78350f;
+      --red: #f87171; --red-bg: #2d0a0a; --red-border: #7f1d1d;
+      --blue: #60a5fa; --blue-bg: #0c1a3a; --blue-border: #1e3a6e;
+      --purple: #c084fc; --purple-bg: #1e0840; --purple-border: #4c1d95;
+      --orange: #fb923c; --orange-bg: #1a0a00; --orange-border: #7c2d12;
+      --gray: #9ca3af; --gray-bg: #17191f; --gray-border: #374151;
+      --teal: #2dd4bf; --teal-bg: #042f2c; --teal-border: #115e59;
+      --accent: #7c3aed; --accent-light: #a78bfa;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .breadcrumb { max-width: 900px; margin: 0 auto; padding: 18px 40px 0; font-size: 12px; color: var(--muted); }
+    .breadcrumb a { color: var(--accent-light); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+
+    .header {
+      background: linear-gradient(135deg, #0d1020 0%, #140a2e 50%, #0a1030 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 32px 40px 40px;
+      margin-top: 14px;
+    }
+    .header-inner { max-width: 900px; margin: 0 auto; }
+    .header-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-light); margin-bottom: 12px; }
+    h1 { font-size: 26px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+    h1 span { color: var(--accent-light); }
+    .header p { font-size: 14px; color: var(--subtle); max-width: 680px; margin-bottom: 20px; }
+    .header-meta { display: flex; gap: 24px; flex-wrap: wrap; }
+    .meta-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-light); }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 40px; display: grid; gap: 20px; }
+
+    .section-label {
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--accent-light); margin: 24px 0 -4px 2px;
+    }
+    .section-label:first-child { margin-top: 0; }
+
+    .fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 640px) { .fields-grid { grid-template-columns: 1fr; } }
+
+    .field-card { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 16px 18px; }
+    .field-card.span2 { grid-column: 1 / -1; }
+    .field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px; }
+    .field-value { font-size: 13px; color: var(--text); line-height: 1.65; }
+    .field-value strong { color: var(--accent-light); }
+
+    .steps { display: grid; gap: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+    .step { display: flex; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .step:last-child { border-bottom: none; }
+    .step-num {
+      flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+      background: var(--purple-bg); border: 1px solid var(--purple-border); color: var(--purple);
+      display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+    }
+    .step-body { flex: 1; }
+    .step-title { font-size: 13.5px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .step-desc { font-size: 12.5px; color: var(--subtle); line-height: 1.65; }
+    .step-agent { display: inline-block; margin-top: 6px; }
+
+    .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+    .badge.agent { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border); }
+    .badge.human { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
+    .badge.auto { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+
+    code {
+      font-family: 'Courier New', monospace; background: #141825;
+      border: 1px solid var(--border); color: var(--blue);
+      padding: 1px 5px; border-radius: 3px; font-size: 11.5px;
+    }
+
+    .warn-box { background: var(--orange-bg); border: 1px solid var(--orange-border); border-radius: 6px; padding: 14px 18px; font-size: 12.5px; color: var(--subtle); line-height: 1.7; }
+    .warn-box strong { color: var(--orange); }
+    .warn-box ul { margin: 8px 0 0 18px; }
+    .warn-box li { margin-bottom: 4px; }
+
+    .note-box { background: var(--blue-bg); border: 1px solid var(--blue-border); border-radius: 6px; padding: 14px 18px; font-size: 12.5px; color: var(--subtle); line-height: 1.7; }
+    .note-box strong { color: var(--blue); }
+
+    .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12.5px; color: var(--subtle); padding: 4px 0; }
+    .flow .step-chip { background: #141825; border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; color: var(--text); font-weight: 600; }
+    .flow .arrow { color: var(--muted); }
+
+    .changelog { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 16px 20px; }
+    .changelog-entry { display: flex; gap: 14px; font-size: 12.5px; color: var(--subtle); padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .changelog-entry:last-child { border-bottom: none; }
+    .changelog-date { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+    footer { background: #070a12; border-top: 1px solid var(--border); padding: 22px 40px; text-align: center; color: var(--muted); font-size: 12px; margin-top: 40px; }
+  </style>
+</head>
+<body>
+
+  <div class="breadcrumb"><a href="../index.html">← SOPs</a> / Módulo 1 — RRSS</div>
+
+  <div class="header">
+    <div class="header-inner">
+      <div class="header-label">SOP · G54 Platform · Módulo 1 — Social Media</div>
+      <h1>Ciclo semanal de <span>generación y aprobación</span> de contenido RRSS</h1>
+      <p>De la estrategia aprobada de un cliente hasta un post real publicado en Facebook o Instagram, sin que nadie escriba una sola línea de contenido a mano — salvo la aprobación final, que siempre queda en manos de una persona.</p>
+      <div class="header-meta">
+        <div class="meta-item"><span class="dot"></span> Última actualización: 23 julio 2026</div>
+        <div class="meta-item"><span class="dot"></span> Estado: <strong style="color:#4ade80">Vigente</strong></div>
+        <div class="meta-item"><span class="dot"></span> Aplica a: cualquier empresa activa en G54</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <div class="section-label">Ficha del proceso</div>
+    <div class="fields-grid">
+      <div class="field-card span2">
+        <div class="field-label">Objetivo</div>
+        <div class="field-value">Generar, revisar y publicar contenido de redes sociales para un cliente de G54 de forma recurrente y coherente con su estrategia ya aprobada — sin que ningún dato, prompt o preferencia de un cliente específico quede hardcodeado en los agentes de plataforma.</div>
+      </div>
+      <div class="field-card span2">
+        <div class="field-label">Outcome ideal</div>
+        <div class="field-value">Cada semana, el cliente encuentra en su panel las ideas de contenido que le tocan según su frecuencia configurada, ya redactadas con imagen incluida, listas para aprobar. Al aprobar y programar, el post se publica solo — sin errores, sin duplicados, sin intervención técnica de nuestro lado.</div>
+      </div>
+      <div class="field-card">
+        <div class="field-label">Frecuencia y asignación</div>
+        <div class="field-value">
+          <strong>Automático</strong>, disparo semanal (Ideas AI). Cantidad de ideas por semana = frecuencia real configurada en la estrategia del cliente (ej. <code>Facebook 2x/sem, Instagram 1x/sem</code>).<br><br>
+          Responsable operativo: supervisión humana + los 7 agentes IA del Módulo 1 como ejecutores.
+        </div>
+      </div>
+      <div class="field-card">
+        <div class="field-label">Pre-requisitos</div>
+        <div class="field-value">
+          · Estrategia aprobada en G54 (vía Strategist AI)<br>
+          · Keywords activas cargadas por empresa<br>
+          · Canales sociales conectados (token de página FB/IG vigente)<br>
+          · Los 4 agentes de la cadena activos en n8n
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Flujo end-to-end</div>
+    <div class="flow">
+      <span class="step-chip">Ideas AI</span><span class="arrow">→</span>
+      <span class="step-chip">Content AI</span><span class="arrow">→</span>
+      <span class="step-chip">Image Generator AI</span><span class="arrow">→</span>
+      <span class="step-chip">Aprobación humana</span><span class="arrow">→</span>
+      <span class="step-chip">Distribution AI</span><span class="arrow">→</span>
+      <span class="step-chip">Analytics AI</span>
+    </div>
+
+    <div class="section-label">Pasos secuenciales</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Ideas AI dispara — semanal o al terminar el Strategist en la semana 1</div>
+          <div class="step-desc">Lee la estrategia ya aprobada + las keywords activas de la empresa, y verifica si hay un tema real de tendencia en el sector (NewsAPI + verificación por volumen de artículos recientes).</div>
+          <span class="step-agent"><span class="badge auto">Automático</span></span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Genera N ideas, siempre keyword → idea, nunca al revés</div>
+          <div class="step-desc">La cantidad y el reparto por plataforma sale del desglose real de frecuencia de la estrategia. Cada idea se descarta automáticamente si su título no corresponde de verdad a la keyword asignada (coherencia forzada por código, no solo por prompt).</div>
+          <span class="step-agent"><span class="badge agent">Ideas AI</span></span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Las ideas quedan pendientes de revisión en el panel</div>
+          <div class="step-desc">Estado <code>idea</code>. El cliente (o quien administre su cuenta) elige cuáles aprobar para convertir en post — puede regenerar una idea puntual si no le convence, sin perder el cupo semanal.</div>
+          <span class="step-agent"><span class="badge human">Decisión humana</span></span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Al aprobar una idea, se dispara Content AI</div>
+          <div class="step-desc">Redacta el post siguiendo el framework de 8 pasos SEO/AEO/GEO (intención de búsqueda, keywords secundarias, respuesta directa para IA, hook, desarrollo, geolocalización real de la empresa, tono de red social, CTA con URL obligatorio) y lo guarda en G54 como <code>borrador</code>.</div>
+          <span class="step-agent"><span class="badge agent">Content AI</span></span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">Se dispara automáticamente el Image Generator AI</div>
+          <div class="step-desc">Lee la configuración de estilo real por canal (formato, modo de texto) configurada por el cliente, genera la imagen y la sube al storage de G54 — el post llega al editor ya con imagen puesta, sin que nadie tenga que pedirla aparte.</div>
+          <span class="step-agent"><span class="badge auto">Automático</span></span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <div class="step-title">Revisión y aprobación del post</div>
+          <div class="step-desc">El cliente revisa copy + imagen en el editor del panel, aprueba (<code>status → aprobado</code>) o pide un cambio. Este es el único punto de control humano obligatorio de todo el ciclo.</div>
+          <span class="step-agent"><span class="badge human">Decisión humana</span></span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">7</div>
+        <div class="step-body">
+          <div class="step-title">Se programa fecha y hora de publicación</div>
+          <div class="step-desc">El botón "Programar" del panel dispara la alarma exacta (o, mientras esa conexión no esté activa del lado de Walter, el post queda pendiente para el puente de sondeo temporal que corre cada 2 minutos).</div>
+          <span class="step-agent"><span class="badge human">Decisión humana</span></span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">8</div>
+        <div class="step-body">
+          <div class="step-title">Distribution AI publica en la hora exacta</div>
+          <div class="step-desc">Resuelve el token de página real por post (con canje a Token de Página, nunca el token de usuario crudo), publica en Facebook y/o Instagram según corresponda, y marca el post como <code>publicado</code> en G54.</div>
+          <span class="step-agent"><span class="badge agent">Distribution AI</span></span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">9</div>
+        <div class="step-body">
+          <div class="step-title">Analytics AI recoge métricas</div>
+          <div class="step-desc">Reporte semanal (lunes 8am) y mensual (día 1), con posibilidad de refresco bajo demanda vía webhook — alimenta el dashboard de Métricas del panel.</div>
+          <span class="step-agent"><span class="badge agent">Analytics AI</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Limitaciones conocidas al día de hoy</div>
+    <div class="warn-box">
+      <strong>No es un proceso 100% terso todavía — estos puntos están identificados y viven en el Éxodo pendiente para Walter:</strong>
+      <ul>
+        <li>El 404 de storage de imágenes tuvo una regresión — se había resuelto una vez y volvió a romperse; cuando ocurre, la imagen no carga aunque todo el resto del post esté bien.</li>
+        <li>El ID real de la publicación en Meta (<code>post_id_platform</code>) no persiste todavía en G54 — bloquea que Analytics pueda pedir métricas de un post específico automáticamente.</li>
+        <li>El dashboard de Métricas RRSS del panel muestra números fijos que no reflejan las métricas reales ya guardadas — es un bug de lectura del backend, no de los agentes.</li>
+        <li>Si falla la publicación real, el revert automático a "aprobado" depende de una ruta de G54 que a veces requiere credenciales de sesión — mitigado, no eliminado del todo.</li>
+      </ul>
+    </div>
+
+    <div class="note-box">
+      <strong>Regla de oro de este proceso</strong> — ningún workflow de plataforma (Ideas AI, Content AI, Image Generator AI, Distribution AI, Community AI, Sales AI, Analytics AI) puede tener nada específico de un cliente escrito en su código. Toda variación entre clientes viene de datos que se leen en vivo desde la API de G54 (perfil de empresa, estrategia, keywords, configuración de canal). Confirmado con auditorías reales probando contra una segunda empresa, no solo Crating Express.
+    </div>
+
+    <div class="section-label">Historial de este documento</div>
+    <div class="changelog">
+      <div class="changelog-entry">
+        <div class="changelog-date">23 jul 2026</div>
+        <div>Primera versión — proceso documentado a partir del estado real y verificado en producción de los 8 agentes del Módulo 1.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>G54 Platform — Documentación interna · PROYECTO_SOL · sops/modulo-1-rrss/</footer>
+
+</body>
+</html>
