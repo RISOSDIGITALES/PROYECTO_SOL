@@ -1,11 +1,5 @@
 {
-  "updatedAt": "2026-07-16T14:55:58.857Z",
-  "createdAt": "2026-07-04T15:12:32.233Z",
-  "id": "5GU89AeWsBZ86FWa",
   "name": "Marco CE — 06 Procesador de Medios",
-  "description": null,
-  "active": true,
-  "isArchived": false,
   "nodes": [
     {
       "id": "sw06-trigger",
@@ -257,7 +251,7 @@
         260
       ],
       "parameters": {
-        "jsCode": "const d = $input.first().json;\nconst caption = d.caption ? `El cliente adjuntó este texto con la imagen: \"${d.caption}\". ` : '';\nconst prompt = `${caption}Eres el asistente de ventas Marco de Crating Express (empresa de embalaje industrial en Miami). Analiza esta imagen enviada por un cliente y extrae toda la información relevante para una cotización de embalaje: describe el objeto/artículo visible, sus dimensiones aproximadas si son visibles, materiales, estado, cualquier texto o etiqueta relevante, y cualquier detalle que ayude a cotizar un cajón o embalaje de madera. Sé específico y práctico.`;\n\nconst proxyUrl = `https://n8n.mdarthurdigital.com/webhook/media-proxy-g54?media_id=${encodeURIComponent(d.media_id)}&phone_number_id=${encodeURIComponent(d.phone_number_id)}&secret=g54_agent_produccion_2026`;\n\nconst body = {\n  model: 'meta-llama/llama-4-scout-17b-16e-instruct',\n  messages: [{\n    role: 'user',\n    content: [\n      { type: 'text', text: prompt },\n      { type: 'image_url', image_url: { url: proxyUrl } }\n    ]\n  }],\n  temperature: 0.2,\n  max_tokens: 800\n};\n\nreturn [{ json: { body: JSON.stringify(body), mimeType: d.mimeType, caption: d.caption } }];"
+        "jsCode": "const d = $input.first().json;\nconst caption = d.caption ? `El cliente adjuntó este texto con la imagen: \"${d.caption}\". ` : '';\nconst prompt = `${caption}Eres el asistente de ventas Marco de Crating Express (empresa de embalaje industrial en Miami). Analiza esta imagen enviada por un cliente y extrae toda la información relevante para una cotización de embalaje: describe el objeto/artículo visible, sus dimensiones aproximadas si son visibles, materiales, estado, cualquier texto o etiqueta relevante, y cualquier detalle que ayude a cotizar un cajón o embalaje de madera. Sé específico y práctico.`;\n\nlet proxyUrl;\ntry {\n  const tgUrl = $('🔧 TG: Construir URL Descarga').first().json.file_url;\n  proxyUrl = tgUrl || `https://n8n.mdarthurdigital.com/webhook/media-proxy-g54?media_id=${encodeURIComponent(d.media_id)}&phone_number_id=${encodeURIComponent(d.phone_number_id)}&secret=g54_agent_produccion_2026`;\n} catch (e) {\n  proxyUrl = `https://n8n.mdarthurdigital.com/webhook/media-proxy-g54?media_id=${encodeURIComponent(d.media_id)}&phone_number_id=${encodeURIComponent(d.phone_number_id)}&secret=g54_agent_produccion_2026`;\n}\n\nconst body = {\n  model: 'meta-llama/llama-4-scout-17b-16e-instruct',\n  messages: [{\n    role: 'user',\n    content: [\n      { type: 'text', text: prompt },\n      { type: 'image_url', image_url: { url: proxyUrl } }\n    ]\n  }],\n  temperature: 0.2,\n  max_tokens: 800\n};\n\nreturn [{ json: { body: JSON.stringify(body), mimeType: d.mimeType, caption: d.caption } }];"
       }
     },
     {
@@ -292,7 +286,7 @@
       "credentials": {
         "groqApi": {
           "id": "jORffbRhRNohHT1B",
-          "name": "Groq account"
+          "name": "Groq API"
         }
       }
     },
@@ -440,6 +434,88 @@
         1520,
         200
       ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "plat-tg",
+              "leftValue": "={{ $json.platform }}",
+              "rightValue": "telegram",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "sw06-plat-tg",
+      "name": "🔀 ¿Plataforma Telegram?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -160,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.telegram.org/botREDACTED_TELEGRAM_BOT_TOKEN/getFile?file_id={{ $json.media_id }}",
+        "options": {},
+        "onError": "continueRegularOutput"
+      },
+      "id": "sw06-tg-getfile",
+      "name": "📁 TG: getFile",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        80,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $input.first().json;\nconst filePath = resp?.result?.file_path;\nconst BOT_TOKEN = 'REDACTED_TELEGRAM_BOT_TOKEN';\nconst fileUrl = filePath ? `https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}` : '';\nreturn [{ json: { file_url: fileUrl } }];"
+      },
+      "id": "sw06-tg-construir-url",
+      "name": "🔧 TG: Construir URL Descarga",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.file_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      "id": "sw06-tg-descargar",
+      "name": "📦 TG: Descargar Archivo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        260
+      ]
     }
   ],
   "connections": {
@@ -447,7 +523,7 @@
       "main": [
         [
           {
-            "node": "🔑 Obtener Config WA (G54)",
+            "node": "🔀 ¿Plataforma Telegram?",
             "type": "main",
             "index": 0
           }
@@ -657,18 +733,60 @@
           }
         ]
       ]
+    },
+    "🔀 ¿Plataforma Telegram?": {
+      "main": [
+        [
+          {
+            "node": "📁 TG: getFile",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔑 Obtener Config WA (G54)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📁 TG: getFile": {
+      "main": [
+        [
+          {
+            "node": "🔧 TG: Construir URL Descarga",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 TG: Construir URL Descarga": {
+      "main": [
+        [
+          {
+            "node": "📦 TG: Descargar Archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 TG: Descargar Archivo": {
+      "main": [
+        [
+          {
+            "node": "🔧 Leer Binario y Tipo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
     "executionOrder": "v1"
-  },
-  "staticData": null,
-  "meta": null,
-  "nodeGroups": [],
-  "pinData": null,
-  "versionId": "10e00fc6-cf53-4206-841a-104036a3087a",
-  "activeVersionId": "10e00fc6-cf53-4206-841a-104036a3087a",
-  "versionCounter": 10,
-  "triggerCount": 0,
-  "sourceWorkflowId": null
+  }
 }

@@ -1,0 +1,838 @@
+{
+  "name": "CE Telegram Engine — Marco",
+  "nodes": [
+    {
+      "id": "tg-trigger",
+      "name": "📲 Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "2866d067-d9d4-498e-976c-ec09b6d214f9",
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "QDPLJdTRChEFaEDG",
+          "name": "Telegram Marco Bot"
+        }
+      }
+    },
+    {
+      "id": "tg-hay-mensaje",
+      "name": "🔀 ¿Hay mensaje de texto?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        220,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "hay-texto",
+              "leftValue": "={{ $json.message?.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "tg-extraer",
+      "name": "🔧 Extraer Mensaje Telegram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst msg = $json.message || {};\nconst chatId = msg.chat?.id;\nconst texto = msg.text || '';\nconst messageId = msg.message_id;\nconst nombreContacto = [msg.from?.first_name, msg.from?.last_name].filter(Boolean).join(' ') || msg.from?.username || '';\n\nif (!chatId || !texto) {\n  return [{ json: { skip: true, skipReason: 'sin_chat_id_o_texto' } }];\n}\n\n// Deduplicación — mismo patrón que WhatsApp (Meta reenvía a veces)\nif (!staticData.seenTgMessageIds) staticData.seenTgMessageIds = {};\nconst now = Date.now();\nObject.keys(staticData.seenTgMessageIds).forEach(id => {\n  if (now - staticData.seenTgMessageIds[id] > 60000) delete staticData.seenTgMessageIds[id];\n});\nconst dedupeKey = `${chatId}_${messageId}`;\nif (staticData.seenTgMessageIds[dedupeKey]) {\n  return [{ json: { skip: true, skipReason: 'duplicate_messageId' } }];\n}\nstaticData.seenTgMessageIds[dedupeKey] = now;\n\nreturn [{\n  json: {\n    telefono: 'tg_' + chatId,\n    chatId,\n    texto,\n    messageId,\n    nombreContacto,\n    tipoMensaje: 'text',\n    skip: false\n  }\n}];"
+      }
+    },
+    {
+      "id": "tl-detectar",
+      "name": "🌐 Detectar Idioma Entrada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        460
+      ],
+      "parameters": {
+        "jsCode": "\nconst ctx = $input.first().json;\nconst t = (ctx.texto || '').toLowerCase();\nconst enWords = (t.match(/\\b(i|the|you|need|have|want|please|thanks|yes|for|and|my|is|are|can|would|like|to|of|in|with|it|this|that|hi|hello|good|morning|afternoon|evening|crate|inches|inch|by|next|about|looking|want|send|ship|pack|protection|foam|email|quote|price|we|our|us|them|they|what|when|where|how|who|why|get|make|do|go|come|take|give|use|find|know|see|look|think|work|call|ask|tell|help|keep|let|put|seem|feel|try|leave|still|start|might|could|should|would|same|well|just|over|back|after|before|also|been|here|there|then|than|these|those|more|most|some|such|only|both|too|very|much|many|your|their|her|his|him|her|she|he|it|we|them|will|was|were|had|has|have|did|does|do|am|be|been|being|an|a|at|from|by|with|out|up|down|off|on|into|through|during|before|after|above|below|between|each|few|more|most|other|some|such|than|too|very|just|because|as|until|while|although|whether|either|neither|however|therefore|meanwhile|furthermore|accordingly|consequently|subsequently)\\b/g) || []).length;\nconst esWords = (t.match(/\\b(quiero|necesito|tengo|hola|gracias|por|sí|si|no|para|con|una|un|que|me|mi|el|la|los|las|de|en|es|son|buenas|buenos|embalar|cajón|cerrado|abierto|medidas|correo|cotización|precio|protección|espuma|soy|como|pero|cuando|donde|quien|este|esta|esto|también|muy|más|porque|ser|estar|hacer|poder|tener|deber|querer|hay|fue|era|han|del|al|le|se|lo|ya|cada|todo|toda|todos|todas|algo|alguien|nadie|nunca|siempre|antes|después|aquí|allí|ahora|luego|hoy|mañana|ayer|semana|mes|año|tiempo|momento|forma|lugar|parte|caso|tipo|manera|favor|empresa|trabajo|equipo|cliente|servicio)\\b/g) || []).length;\nconst esIngles = enWords > esWords && enWords >= 2;\nreturn [{ json: { ...ctx, idiomaOriginal: esIngles ? 'inglés' : 'español', textoOriginal: ctx.texto } }];\n"
+      }
+    },
+    {
+      "id": "tl-if-en",
+      "name": "🔀 ¿Mensaje EN?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.idiomaOriginal }}",
+              "rightValue": "inglés",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "tl-groq-entrada",
+      "name": "🔄 Traducir Entrada EN→ES",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        460
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: 'Eres un traductor. Traduce el siguiente mensaje al español de forma natural, conservando el tono y la intención. Devuelve ÚNICAMENTE el texto traducido, sin explicaciones ni notas.' }, { role: 'user', content: $json.textoOriginal }], temperature: 0.1, max_tokens: 500 }) }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi"
+      },
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq API"
+        }
+      }
+    },
+    {
+      "id": "tl-aplicar",
+      "name": "📝 Aplicar Traducción Entrada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        300
+      ],
+      "parameters": {
+        "jsCode": "\nconst prev = $('🌐 Detectar Idioma Entrada').first().json;\nconst raw = $input.first().json;\nconst traducido = raw.choices?.[0]?.message?.content?.trim() || prev.textoOriginal;\nreturn [{ json: { ...prev, texto: traducido } }];\n"
+      }
+    },
+    {
+      "id": "n-exec02",
+      "name": "▶️ 02 Contexto y Lead",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        1540,
+        460
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": "s1Z7jKoFzy5x7XvC",
+        "mode": "once",
+        "inputData": "={{ [{ json: $json }] }}"
+      }
+    },
+    {
+      "id": "tg-fusionar",
+      "name": "🔀 Fusionar Datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const extractNode = $(\"🔧 Extraer Mensaje Telegram\");\nconst extract = extractNode.isExecuted ? extractNode.first().json : $(\"🔧 Combinar Texto de Medio (TG)\").first().json;\nconst ctx02 = $(\"▶️ 02 Contexto y Lead\").first().json;\nreturn [{ json: { ...extract, ...ctx02 } }];"
+      }
+    },
+    {
+      "id": "n-exec01",
+      "name": "▶️ 01 Clasificador",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        1980,
+        460
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": "1PXcg3dOQBt8hrrT",
+        "mode": "once",
+        "inputData": "={{ [{ json: $json }] }}"
+      }
+    },
+    {
+      "id": "n-exec03",
+      "name": "▶️ 03 Generador IA",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        2200,
+        300
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": "J8qbKOF7t4GnhRDT",
+        "mode": "once",
+        "inputData": "={{ [{ json: $json }] }}"
+      }
+    },
+    {
+      "id": "n-cotizador-http",
+      "name": "💰 API Cotizador",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2420,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://cratingcotiza.mdarthurdigital.com/api/cotizar",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "tipo_caja",
+              "value": "={{ $json.datosRecolectados?.tipo_cajon || $json.tipoCajaApi || 'cajones_cerrados' }}"
+            },
+            {
+              "name": "cant",
+              "value": "=1"
+            },
+            {
+              "name": "largo",
+              "value": "={{ $json.dimensiones?.largo || 100 }}"
+            },
+            {
+              "name": "ancho",
+              "value": "={{ $json.dimensiones?.ancho || 50 }}"
+            },
+            {
+              "name": "alto",
+              "value": "={{ $json.dimensiones?.alto || 50 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n-armar-mensaje",
+      "name": "📝 Armar Mensaje Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const ctx = $('▶️ 03 Generador IA').first().json;\nconst d = ctx.datosRecolectados || {};\n\n// Only show price if all data collected and not already sent\n// Use proximoPaso from 01 Clasificador as source of truth — includes all checks (correo, proteccion, etc.)\nif (ctx.proximoPaso !== 'LISTO_PARA_COTIZAR' || ctx.cotizacionEnviada) {\n  return [{ json: { ...ctx } }];\n}\n\n// Read precio from HTTP node result\nconst apiResp = $input.first().json;\nconst precio = apiResp?.data?.precio_total || apiResp?.precio_total || null;\n\nconst idioma = ctx.idiomaConversacion || 'español';\nconst nombre = d.nombre_cliente ? `, ${d.nombre_cliente.split(' ')[0]}` : '';\nconst tieneProteccion = d.proteccion_extra === true || d.proteccion_extra === 'true';\n\nlet mensajeFinal;\nif (precio) {\n  if (idioma === 'inglés') {\n    mensajeFinal = `Here is your estimate${nombre}! 🎉\\n\\n📦 *${d.producto || 'Crate'}*\\n📐 Dimensions: ${d.medidas || '—'}\"\\n🗓 Needed by: ${d.fecha || '—'}\\n🛡 Extra protection: ${tieneProteccion ? 'Yes' : 'No'}\\n\\n💵 *Estimated price: $${precio} USD*\\n_This is an estimate. The final price may vary after inspection._\\n\\nWould you like a formal quote sent to your email?`;\n  } else {\n    mensajeFinal = `¡Aquí está tu estimado${nombre}! 🎉\\n\\n📦 *${d.producto || 'Cajón'}*\\n📐 Medidas: ${d.medidas || '—'}\"\\n🗓 Para: ${d.fecha || '—'}\\n🛡 Protección extra: ${tieneProteccion ? 'Sí' : 'No'}\\n\\n💵 *Precio estimado: $${precio} USD*\\n_Este es un estimado. El precio final puede variar luego de la inspección._\\n\\n¿Le gustaría que le enviemos la cotización formal a su correo?`;\n  }\n} else {\n  mensajeFinal = ctx.mensaje;\n}\n\nreturn [{ json: {\n  ...ctx,\n  mensaje: mensajeFinal,\n  mensajeRespuesta: mensajeFinal,\n  cotizadorEnviado: !!precio\n} }];"
+      }
+    },
+    {
+      "id": "tl-if-resp",
+      "name": "🔀 ¿Responder EN?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2860,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $('🌐 Detectar Idioma Entrada').first().json.idiomaOriginal }}",
+              "rightValue": "inglés",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "tl-groq-salida",
+      "name": "🔄 Traducir Respuesta ES→EN",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3080,
+        300
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: 'You are a translator. Translate the following message to English naturally, preserving the tone and intent. Return ONLY the translated text, no explanations.' }, { role: 'user', content: $('📝 Armar Mensaje Final').first().json.mensajeRespuesta || $('📝 Armar Mensaje Final').first().json.mensaje || '' }], temperature: 0.1, max_tokens: 500 }) }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi"
+      },
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq API"
+        }
+      }
+    },
+    {
+      "id": "tl-msg-final",
+      "name": "📨 Mensaje Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3300,
+        460
+      ],
+      "parameters": {
+        "jsCode": "\nconst armar = $('📝 Armar Mensaje Final').first().json;\nconst tradResp = $input.first().json;\n// Extract translated text from Groq response\nconst traducido = tradResp.choices?.[0]?.message?.content?.trim();\nconst mensajeFinal = traducido || armar.mensajeRespuesta || armar.mensaje || '';\nreturn [{ json: { ...armar, mensaje: mensajeFinal, mensajeRespuesta: mensajeFinal } }];\n"
+      }
+    },
+    {
+      "id": "n-exec05",
+      "name": "▶️ 05 Guardar Lead",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        3520,
+        300
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": "PqbfMghL0E7xKflC",
+        "mode": "once",
+        "inputData": "={{ [{ json: $json }] }}"
+      }
+    },
+    {
+      "id": "n-ifhot",
+      "name": "🔀 ¿Lead Caliente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3740,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "combinator": "or",
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $('📝 Armar Mensaje Final').item.json.clasificacion }}",
+              "rightValue": "Caliente",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "2",
+              "leftValue": "={{ $('📝 Armar Mensaje Final').item.json.clasificacion }}",
+              "rightValue": "Consulta",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n-gmail",
+      "name": "📧 Notificar Vendedor",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3960,
+        300
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TESHSjzjMCpCxBBk",
+          "name": "Gmail account"
+        }
+      },
+      "parameters": {
+        "sendTo": "={{ $('📝 Armar Mensaje Final').item.json.emailVendedor?.split('\\n').join(',') || 'risosadmi@gmail.com' }}",
+        "subject": "={{ $('📝 Armar Mensaje Final').item.json.clasificacion === 'Consulta' ? '💬 Consulta sin respuesta — ' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.nombre_cliente || $('📝 Armar Mensaje Final').item.json.telefono) : '🔥 Lead Caliente WhatsApp — ' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.nombre_cliente || $('📝 Armar Mensaje Final').item.json.telefono) }}",
+        "message": "={{ $('📝 Armar Mensaje Final').item.json.clasificacion === 'Consulta'\n  ? '<table style=\"font-family:Arial,sans-serif;font-size:14px;border-collapse:collapse;width:100%\"><tr><td colspan=2 style=\"background:#2196F3;color:white;padding:12px 16px;font-size:16px;font-weight:bold\">💬 Consulta sin respuesta — necesita agente</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Cliente</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.nombre_cliente || '(sin nombre)') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Teléfono</td><td style=\"padding:8px 16px\">+' + $('📝 Armar Mensaje Final').item.json.telefono + '</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Correo</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.correo_contacto || '(no proporcionado — contactar por WhatsApp)') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Consulta</td><td style=\"padding:8px 16px\">' + ($('📝 Armar Mensaje Final').item.json.temaConsulta || $('📝 Armar Mensaje Final').item.json.texto || '(ver historial)') + '</td></tr><tr><td colspan=2 style=\"padding:8px 16px;color:#888;font-size:12px\">Marco no pudo responder esta consulta. El cliente espera ser contactado por un agente.</td></tr></table>'\n  : '<table style=\"font-family:Arial,sans-serif;font-size:14px;border-collapse:collapse;width:100%\"><tr><td colspan=2 style=\"background:#ff4444;color:white;padding:12px 16px;font-size:16px;font-weight:bold\">🔥 Lead Caliente — cotización aceptada</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Cliente</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.nombre_cliente || '(sin nombre)') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Teléfono</td><td style=\"padding:8px 16px\">+' + $('📝 Armar Mensaje Final').item.json.telefono + '</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Correo</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.correo_contacto || '—') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Producto</td><td style=\"padding:8px 16px\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.producto || '—') + '</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Medidas</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.medidas || '—') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Fecha</td><td style=\"padding:8px 16px\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.fecha || '—') + '</td></tr></table>'\n}}",
+        "options": {
+          "contentType": "html"
+        }
+      },
+      "webhookId": "9df59eff-5fba-4263-83ac-5cdb62a63eec"
+    },
+    {
+      "id": "tg-enviar",
+      "name": "📤 Enviar Mensaje Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4180,
+        460
+      ],
+      "parameters": {
+        "chatId": "={{ $(\"🔧 Extraer Mensaje Telegram\").isExecuted ? $(\"🔧 Extraer Mensaje Telegram\").first().json.chatId : $(\"🔧 Combinar Texto de Medio (TG)\").first().json.chatId }}",
+        "text": "={{ $json.mensaje || $json.mensajeRespuesta }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "QDPLJdTRChEFaEDG",
+          "name": "Telegram Marco Bot"
+        }
+      },
+      "webhookId": "37b2ac3a-e697-477d-8825-23e8ce272e12"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "es-medio",
+              "leftValue": "={{ !!($json.message?.photo || $json.message?.voice || $json.message?.audio || $json.message?.document) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "tg-es-medio",
+      "name": "🔀 ¿Es medio?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -160,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst msg = $json.message || {};\nconst chatId = msg.chat?.id;\nconst messageId = msg.message_id;\nconst nombreContacto = [msg.from?.first_name, msg.from?.last_name].filter(Boolean).join(' ') || msg.from?.username || '';\n\nlet fileId = null, mimeType = null, tipoMensaje = 'document', caption = msg.caption || '';\nif (msg.photo && msg.photo.length) {\n  const best = msg.photo[msg.photo.length - 1];\n  fileId = best.file_id;\n  mimeType = 'image/jpeg';\n  tipoMensaje = 'image';\n} else if (msg.voice) {\n  fileId = msg.voice.file_id;\n  mimeType = msg.voice.mime_type || 'audio/ogg';\n  tipoMensaje = 'audio';\n} else if (msg.audio) {\n  fileId = msg.audio.file_id;\n  mimeType = msg.audio.mime_type || 'audio/mpeg';\n  tipoMensaje = 'audio';\n} else if (msg.document) {\n  fileId = msg.document.file_id;\n  mimeType = msg.document.mime_type || 'application/octet-stream';\n  tipoMensaje = mimeType === 'application/pdf' ? 'pdf' : 'document';\n}\n\nif (!chatId || !fileId) {\n  return [{ json: { skip: true, skipReason: 'sin_chat_id_o_file_id' } }];\n}\n\nif (!staticData.seenTgMessageIds) staticData.seenTgMessageIds = {};\nconst now = Date.now();\nObject.keys(staticData.seenTgMessageIds).forEach(id => {\n  if (now - staticData.seenTgMessageIds[id] > 60000) delete staticData.seenTgMessageIds[id];\n});\nconst dedupeKey = `${chatId}_${messageId}`;\nif (staticData.seenTgMessageIds[dedupeKey]) {\n  return [{ json: { skip: true, skipReason: 'duplicate_messageId' } }];\n}\nstaticData.seenTgMessageIds[dedupeKey] = now;\n\nreturn [{ json: {\n  telefono: 'tg_' + chatId,\n  chatId, fileId, mimeType, tipoMensaje, caption, nombreContacto, messageId, skip: false\n} }];"
+      },
+      "id": "tg-extraer-medio",
+      "name": "🔧 Extraer Datos de Medio (TG)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ext = $json;\nreturn [{ json: {\n  media_id: ext.fileId,\n  mime_type: ext.mimeType,\n  caption: ext.caption,\n  platform: 'telegram',\n  phone_number_id: '',\n  gemini_api_key: ''\n} }];"
+      },
+      "id": "tg-preparar-medios",
+      "name": "🔧 Preparar Datos para Medios (TG)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": "5GU89AeWsBZ86FWa",
+        "mode": "once",
+        "inputData": "={{ [{ json: $json }] }}"
+      },
+      "id": "tg-06-procesador-v2",
+      "name": "▶️ 06 Procesador de Medios (TG)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        560,
+        260
+      ],
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const resultado = $input.first().json;\nconst ext = $('🔧 Extraer Datos de Medio (TG)').first().json;\nconst tipo = ext.tipoMensaje || 'archivo';\nconst etiquetas = { image: 'imagen', audio: 'audio', document: 'documento', pdf: 'documento', video: 'video' };\nconst prefijo = `[Cliente envió ${etiquetas[tipo] || 'un archivo'}] `;\nconst textoProcesado = (resultado && !resultado.error && resultado.texto) ? resultado.texto : '[No se pudo procesar el archivo enviado]';\n\nreturn [{ json: {\n  telefono: ext.telefono,\n  chatId: ext.chatId,\n  texto: prefijo + textoProcesado,\n  messageId: ext.messageId,\n  nombreContacto: ext.nombreContacto,\n  tipoMensaje: ext.tipoMensaje,\n  skip: false\n} }];"
+      },
+      "id": "tg-combinar-medio",
+      "name": "🔧 Combinar Texto de Medio (TG)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        260
+      ]
+    }
+  ],
+  "connections": {
+    "📲 Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Hay mensaje de texto?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Hay mensaje de texto?": {
+      "main": [
+        [
+          {
+            "node": "🔧 Extraer Mensaje Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔀 ¿Es medio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Extraer Mensaje Telegram": {
+      "main": [
+        [
+          {
+            "node": "🌐 Detectar Idioma Entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 Detectar Idioma Entrada": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Mensaje EN?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Mensaje EN?": {
+      "main": [
+        [
+          {
+            "node": "🔄 Traducir Entrada EN→ES",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "▶️ 02 Contexto y Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Traducir Entrada EN→ES": {
+      "main": [
+        [
+          {
+            "node": "📝 Aplicar Traducción Entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Aplicar Traducción Entrada": {
+      "main": [
+        [
+          {
+            "node": "▶️ 02 Contexto y Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ 02 Contexto y Lead": {
+      "main": [
+        [
+          {
+            "node": "🔀 Fusionar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Fusionar Datos": {
+      "main": [
+        [
+          {
+            "node": "▶️ 01 Clasificador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ 01 Clasificador": {
+      "main": [
+        [
+          {
+            "node": "▶️ 03 Generador IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ 03 Generador IA": {
+      "main": [
+        [
+          {
+            "node": "💰 API Cotizador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💰 API Cotizador": {
+      "main": [
+        [
+          {
+            "node": "📝 Armar Mensaje Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Armar Mensaje Final": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Responder EN?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "▶️ 05 Guardar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Responder EN?": {
+      "main": [
+        [
+          {
+            "node": "🔄 Traducir Respuesta ES→EN",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📤 Enviar Mensaje Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Traducir Respuesta ES→EN": {
+      "main": [
+        [
+          {
+            "node": "📨 Mensaje Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📨 Mensaje Final": {
+      "main": [
+        [
+          {
+            "node": "📤 Enviar Mensaje Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ 05 Guardar Lead": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Lead Caliente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Lead Caliente?": {
+      "main": [
+        [
+          {
+            "node": "📧 Notificar Vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "🔀 ¿Es medio?": {
+      "main": [
+        [
+          {
+            "node": "🔧 Extraer Datos de Medio (TG)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "🔧 Extraer Datos de Medio (TG)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Datos para Medios (TG)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Datos para Medios (TG)": {
+      "main": [
+        [
+          {
+            "node": "▶️ 06 Procesador de Medios (TG)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ 06 Procesador de Medios (TG)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Combinar Texto de Medio (TG)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Combinar Texto de Medio (TG)": {
+      "main": [
+        [
+          {
+            "node": "🌐 Detectar Idioma Entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
