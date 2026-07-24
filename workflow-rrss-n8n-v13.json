@@ -117,7 +117,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ====================================================\n// Preparar Contexto para IA — G54 Field Mapping\n// G54 API fields:\n//   company: name, description, value_proposition, base_city, website, emails[], phones[]\n//   products: name, description, keywords[]\n//   ideas: id, topic, keyword, platform, description\n//   estrategia: objetivo, audiencia, tono, cta_principal, embudo, pilares[]\n// ====================================================\n\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\n// G54 wraps in .data, Airtable uses .fields\nconst empresa = empresaRaw.data || empresaRaw.fields || empresaRaw || {};\n\nconst productosRaw = $('📦 Obtener Servicios Activos').item.json;\n// G54: { company_id, data: [{id, name, description, keywords[]}] }\nconst productosData = productosRaw.data || productosRaw.items || productosRaw.records || (Array.isArray(productosRaw) ? productosRaw : []);\n\n// G54 ideas response: { data: [{id, topic, keyword, platform, description}] }\nconst temaRaw = $('📅 Obtener Próximo Tema Semanal').item.json;\nconst temaList = temaRaw.data || temaRaw.items || temaRaw.records || (Array.isArray(temaRaw) ? temaRaw : [temaRaw]);\n\n// Ideas que ya tienen un post generado (cualquier estado: borrador/aprobado/publicado) — para no volver a generar el mismo tema\nlet usedIdeaIds = new Set();\ntry {\n  const postsRaw = $('📋 Obtener Posts Existentes (G54)').item.json;\n  const postsList = postsRaw.data || (Array.isArray(postsRaw) ? postsRaw : []);\n  usedIdeaIds = new Set(postsList.map(p => p.social_idea_id).filter(id => id !== null && id !== undefined));\n} catch (e) {\n  // Si la lectura de posts falla (login caído, etc.), seguimos sin filtrar — mismo comportamiento de antes\n}\n\n// Use idea_id from webhook if provided (G54 sends it in mode:post)\nconst webhookBody = $('🔔 Webhook G54').item?.json?.body || $('🔔 Webhook G54').item?.json || {};\nconst webhookIdeaId = webhookBody.idea_id;\nconst temaList2 = Array.isArray(temaList) ? temaList : [temaList];\nlet temaItem;\nif (webhookIdeaId) {\n  temaItem = temaList2.find(t => String(t.id) === String(webhookIdeaId)) || temaList2[0];\n} else {\n  // Nunca caer de vuelta a una idea ya usada — si no hay ninguna disponible, se detiene en vez de duplicar un post\n  temaItem = temaList2.find(t => !usedIdeaIds.has(t.id));\n  if (!temaItem) {\n    throw new Error('No hay ninguna idea sin usar disponible para generar un post — todas las ideas ya tienen un post asociado. Genera ideas nuevas antes de correr Content AI de nuevo.');\n  }\n}\ntemaItem = temaItem || {};\nconst tema = temaItem.fields || temaItem || {};\nconst temaId = temaItem.id || temaItem.social_idea_id || temaItem.tema_id || null;\n\n// Estrategia (continueOnFail — null if not configured yet)\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\n// Build product/service summary — handles G54 (name/description) and Airtable fallback\nconst servicios = productosData\n  .filter(p => (p.fields || p).is_active !== false)\n  .map(p => {\n    const f = p.fields || p;\n    const nombre = f.name || f.nombre || f['Nombre de Servicio'] || '';\n    const desc   = f.description || f.descripcion || f['Descripción comercial'] || '';\n    const kws    = Array.isArray(f.keywords) ? f.keywords.slice(0,3).join(', ') : '';\n    return `- ${nombre}: ${desc}${kws ? ' [' + kws + ']' : ''}`.slice(0, 220);\n  })\n  .join('\\n');\n\nreturn [{\n  json: {\n    // ---- Empresa (G54 field names first, Airtable fallback) ----\n    empresa_nombre:          empresa.name || empresa.nombre_empresa || empresa['\\ufeffnombre_empresa'] || '',\n    empresa_descripcion:     empresa.description || empresa.descripcion_corta || '',\n    empresa_propuesta_valor: empresa.value_proposition || empresa.propuesta_valor || '',\n    empresa_ciudad:          empresa.base_city || empresa.ciudad_base || empresa['ciudad base'] || '',\n    empresa_web:             empresa.website || empresa.sitio_web || '',\n    empresa_telefono:        (empresa.phones || [])[0] || empresa.telefono || '',\n    empresa_email:           (empresa.emails || [])[0] || '',\n    empresa_geografia:       empresa.geography || empresa.coverage || '',\n    empresa_competidores:    (empresa.competitors_known || []).slice(0,3).map(c => c.name).join(', '),\n    servicios_resumen:       servicios,\n    // ---- Tema / Idea G54 ----\n    tema_id:                 temaId,\n    tema_texto:              tema.topic || tema.tema || tema['Tema'] || '',\n    tema_descripcion:        tema.fecha_propuesta || '',\n    tema_palabras_clave:     tema.keyword || tema.palabras_clave || '',\n    keyword_principal:       tema.keyword || tema.keyword_principal || '',\n    tema_semana:             tema.week || tema.semana || tema['Semana'] || 0,\n    tema_plataforma:         tema.platform || tema.plataforma || 'Instagram',\n    fecha_post:              new Date().toLocaleDateString('es-US', {timeZone: 'America/New_York'}),\n    // ---- Estrategia G54 ----\n    estrategia_objetivo:     estrategia.objetivo || estrategia.primary_goal || empresa.primary_goal || '',\n    estrategia_audiencia:    estrategia.audiencia || estrategia.target_market || empresa.target_market || '',\n    estrategia_tono:         estrategia.tono || 'profesional, directo y humano',\n    estrategia_cta:          estrategia.cta_principal || (empresa.website || empresa.sitio_web || ''),\n    estrategia_embudo:       estrategia.embudo || 'TOFU-MOFU',\n    estrategia_pilares:      Array.isArray(estrategia.pilares) ? estrategia.pilares.join(', ') : (estrategia.pilares || ''),\n    // ---- Imagen (G54 provee la URL — subida por usuario o generada por Image AI) ----\n    imagen_url:              tema.imagen_url || tema.image_url || null,\n    imagen_specs:            tema.imagen_specs || tema.image_specs || '',\n  }\n}];\n"
+        "jsCode": "// ====================================================\n// Preparar Contexto para IA — G54 Field Mapping\n// G54 API fields:\n//   company: name, description, value_proposition, base_city, website, emails[], phones[]\n//   products: name, description, keywords[]\n//   ideas: id, topic, keyword, platform, description\n//   estrategia: objetivo, audiencia, tono, cta_principal, embudo, pilares[]\n// ====================================================\n\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\n// G54 wraps in .data, Airtable uses .fields\nconst empresa = empresaRaw.data || empresaRaw.fields || empresaRaw || {};\n\nconst productosRaw = $('📦 Obtener Servicios Activos').item.json;\n// G54: { company_id, data: [{id, name, description, keywords[]}] }\nconst productosData = productosRaw.data || productosRaw.items || productosRaw.records || (Array.isArray(productosRaw) ? productosRaw : []);\n\n// G54 ideas response: { data: [{id, topic, keyword, platform, description}] }\nconst temaRaw = $('📅 Obtener Próximo Tema Semanal').item.json;\nconst temaList = temaRaw.data || temaRaw.items || temaRaw.records || (Array.isArray(temaRaw) ? temaRaw : [temaRaw]);\n\n// Ideas que ya tienen un post generado (cualquier estado: borrador/aprobado/publicado) — para no volver a generar el mismo tema\nlet usedIdeaIds = new Set();\ntry {\n  const postsRaw = $('📋 Obtener Posts Existentes (G54)').item.json;\n  const postsList = postsRaw.data || (Array.isArray(postsRaw) ? postsRaw : []);\n  usedIdeaIds = new Set(postsList.map(p => p.social_idea_id).filter(id => id !== null && id !== undefined));\n} catch (e) {\n  // Si la lectura de posts falla (login caído, etc.), seguimos sin filtrar — mismo comportamiento de antes\n}\n\n// Use idea_id from webhook if provided (G54 sends it in mode:post)\nconst webhookBody = $('🔔 Webhook G54').item?.json?.body || $('🔔 Webhook G54').item?.json || {};\nconst webhookIdeaId = webhookBody.idea_id;\nconst temaList2 = Array.isArray(temaList) ? temaList : [temaList];\nlet temaItem;\nif (webhookIdeaId) {\n  temaItem = temaList2.find(t => String(t.id) === String(webhookIdeaId)) || temaList2[0];\n} else {\n  // Nunca caer de vuelta a una idea ya usada — si no hay ninguna disponible, se detiene en vez de duplicar un post\n  temaItem = temaList2.find(t => !usedIdeaIds.has(t.id));\n  if (!temaItem) {\n    throw new Error('No hay ninguna idea sin usar disponible para generar un post — todas las ideas ya tienen un post asociado. Genera ideas nuevas antes de correr Content AI de nuevo.');\n  }\n}\ntemaItem = temaItem || {};\nconst tema = temaItem.fields || temaItem || {};\nconst temaId = temaItem.id || temaItem.social_idea_id || temaItem.tema_id || null;\n\n// Estrategia (continueOnFail — null if not configured yet)\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\n// Build product/service summary — handles G54 (name/description) and Airtable fallback\nconst servicios = productosData\n  .filter(p => (p.fields || p).is_active !== false)\n  .map(p => {\n    const f = p.fields || p;\n    const nombre = f.name || f.nombre || f['Nombre de Servicio'] || '';\n    const desc   = f.description || f.descripcion || f['Descripción comercial'] || '';\n    const kws    = Array.isArray(f.keywords) ? f.keywords.slice(0,3).join(', ') : '';\n    return `- ${nombre}: ${desc}${kws ? ' [' + kws + ']' : ''}`.slice(0, 220);\n  })\n  .join('\\n');\n\nreturn [{\n  json: {\n    // ---- Empresa (G54 field names first, Airtable fallback) ----\n    empresa_nombre:          empresa.name || empresa.nombre_empresa || empresa['\\ufeffnombre_empresa'] || '',\n    empresa_descripcion:     empresa.description || empresa.descripcion_corta || '',\n    empresa_propuesta_valor: empresa.value_proposition || empresa.propuesta_valor || '',\n    empresa_ciudad:          empresa.base_city || empresa.ciudad_base || empresa['ciudad base'] || '',\n    empresa_web:             empresa.website || empresa.sitio_web || '',\n    empresa_telefono:        (empresa.phones || [])[0] || empresa.telefono || '',\n    empresa_email:           (empresa.emails || [])[0] || '',\n    empresa_geografia:       empresa.geography || empresa.coverage || '',\n    empresa_competidores:    (empresa.competitors_known || []).slice(0,3).map(c => c.name).join(', '),\n    servicios_resumen:       servicios,\n    // ---- Tema / Idea G54 ----\n    tema_id:                 temaId,\n    tema_texto:              tema.topic || tema.tema || tema['Tema'] || '',\n    tema_descripcion:        tema.fecha_propuesta || '',\n    tema_palabras_clave:     tema.keyword || tema.palabras_clave || '',\n    keyword_principal:       tema.keyword || tema.keyword_principal || '',\n    tema_semana:             tema.week || tema.semana || tema['Semana'] || 0,\n    tema_plataforma:         tema.platform || tema.plataforma || 'Instagram',\n    fecha_post:              new Date().toISOString().slice(0, 10), // UTC, sin asumir zona horaria de ninguna empresa\n    // ---- Estrategia G54 ----\n    estrategia_objetivo:     estrategia.objetivo || estrategia.primary_goal || empresa.primary_goal || '',\n    estrategia_audiencia:    estrategia.audiencia || estrategia.target_market || empresa.target_market || '',\n    estrategia_tono:         estrategia.tono || 'profesional, directo y humano',\n    estrategia_cta:          estrategia.cta_principal || (empresa.website || empresa.sitio_web || ''),\n    estrategia_embudo:       estrategia.embudo || 'TOFU-MOFU',\n    estrategia_pilares:      Array.isArray(estrategia.pilares) ? estrategia.pilares.join(', ') : (estrategia.pilares || ''),\n    // ---- Imagen (G54 provee la URL — subida por usuario o generada por Image AI) ----\n    imagen_url:              tema.imagen_url || tema.image_url || null,\n    imagen_specs:            tema.imagen_specs || tema.image_specs || '',\n  }\n}];\n"
       },
       "id": "preparar-contexto",
       "name": "🔧 Preparar Contexto para IA",
@@ -230,7 +230,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const aiResponse = $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text || $input.item.json.choices?.[0]?.message?.content || '{}';\nlet post;\ntry {\n  post = JSON.parse(aiResponse);\n} catch(e) {\n  const match = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  post = match ? JSON.parse(match[0]) : {};\n}\n\nconst contexto = $('🔧 Preparar Contexto para IA').item.json;\n\n// Normalizar hashtags: array → string\nconst rawHashtags = post.hashtags || '';\nconst hashtags = Array.isArray(rawHashtags) ? rawHashtags.join(' ') : rawHashtags;\n\n// Garantizar URL en el CTA (por si Groq no lo incluye)\nconst QUOTE_URL = contexto.estrategia_cta || 'https://wa.me/17867880417';\nlet cta = post.cta || '';\nif (!cta.includes('cratingexpress.com') && !cta.includes('wa.me') && !cta.includes('http')) {\n  cta = cta.trim() + ' → ' + QUOTE_URL;\n}\n\nreturn [{\n  json: {\n    ...contexto,\n    hook_es: post.hook || '',\n    mensaje_es: post.mensaje || '',\n    cta_es: cta,\n    hashtags: hashtags,\n    post_completo_es: [post.hook || '', post.mensaje || '', cta].filter(Boolean).join('\\n\\n'),\n    hashtags_es: hashtags,\n    texto_canva_titulo: post.texto_canva_titulo || '',\n    texto_canva_subtitulo: post.texto_canva_subtitulo || ''\n  }\n}];"
+        "jsCode": "const aiResponse = $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text || $input.item.json.choices?.[0]?.message?.content || '{}';\nlet post;\ntry {\n  post = JSON.parse(aiResponse);\n} catch(e) {\n  const match = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  post = match ? JSON.parse(match[0]) : {};\n}\n\nconst contexto = $('🔧 Preparar Contexto para IA').item.json;\n\n// Normalizar hashtags: array → string\nconst rawHashtags = post.hashtags || '';\nconst hashtags = Array.isArray(rawHashtags) ? rawHashtags.join(' ') : rawHashtags;\n\n// Garantizar URL en el CTA (por si la IA no lo incluye) — SOLO con datos reales de ESTA empresa\n// (contexto.estrategia_cta ya resuelve estrategia.cta_principal || empresa.website en 🔧 Preparar Contexto para IA).\n// Nunca se rellena con el dato de otra empresa: si no hay nada configurado, se marca como pendiente\n// en vez de inventar un link, y se dispara una alerta aparte para que se configure.\nconst QUOTE_URL = contexto.estrategia_cta || '';\nlet cta = post.cta || '';\nlet ctaSinConfigurar = false;\nif (!cta.includes('http') && !cta.includes('wa.me')) {\n  if (QUOTE_URL) {\n    cta = cta.trim() + ' → ' + QUOTE_URL;\n  } else {\n    cta = cta.trim() + ' [CTA PENDIENTE — falta configurar cta_principal o sitio web en G54]';\n    ctaSinConfigurar = true;\n  }\n}\n\nreturn [{\n  json: {\n    ...contexto,\n    hook_es: post.hook || '',\n    mensaje_es: post.mensaje || '',\n    cta_es: cta,\n    hashtags: hashtags,\n    post_completo_es: [post.hook || '', post.mensaje || '', cta].filter(Boolean).join('\\n\\n'),\n    hashtags_es: hashtags,\n    texto_canva_titulo: post.texto_canva_titulo || '',\n    texto_canva_subtitulo: post.texto_canva_subtitulo || '',\n    ctaSinConfigurar\n  }\n}];"
       },
       "id": "parsear-post-es",
       "name": "🔍 Parsear Post Español",
@@ -594,6 +594,65 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "if-cta-sin-configurar",
+      "name": "🔀 ¿CTA sin configurar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2160,
+        620
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.ctaSinConfigurar }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "alert-cta-email",
+      "name": "📧 Alertar CTA sin Configurar",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2400,
+        620
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "fromEmail": "Alerta G54 <risosadmi@gmail.com>",
+        "toEmail": "risosadmi@gmail.com",
+        "subject": "={{ '⚠️ Falta configurar CTA — ' + ($json.empresa_nombre || 'empresa sin nombre') }}",
+        "text": "={{ 'La empresa \"' + ($json.empresa_nombre || '') + '\" (company_id ' + ($json.company_id || '?') + ') generó un post sin ningún CTA real disponible — no tiene cta_principal en su estrategia NI website configurado en su perfil de G54.\\n\\nEl post se creó igual, con un marcador visible [CTA PENDIENTE] en vez de inventar un link de otra empresa. Configurar cta_principal (estrategia) o website (perfil) en G54 para esta empresa.' }}",
+        "html": "={{ 'La empresa \"' + ($json.empresa_nombre || '') + '\" (company_id ' + ($json.company_id || '?') + ') generó un post sin ningún CTA real disponible — no tiene cta_principal en su estrategia NI website configurado en su perfil de G54.<br><br>El post se creó igual, con un marcador visible [CTA PENDIENTE] en vez de inventar un link de otra empresa. Configurar cta_principal (estrategia) o website (perfil) en G54 para esta empresa.' }}",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": {
+          "id": "iWBBSSe5AWsCMo89",
+          "name": "Gmail SMTP — risosadmi"
+        }
+      },
+      "webhookId": "31bcc536-766f-4794-8eac-f7d4edff0ef2"
     }
   ],
   "connections": {
@@ -698,6 +757,11 @@
         [
           {
             "node": "🖼️ Obtener URL de Imagen",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔀 ¿CTA sin configurar?",
             "type": "main",
             "index": 0
           }
@@ -812,6 +876,18 @@
             "index": 0
           }
         ]
+      ]
+    },
+    "🔀 ¿CTA sin configurar?": {
+      "main": [
+        [
+          {
+            "node": "📧 Alertar CTA sin Configurar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
       ]
     }
   },
