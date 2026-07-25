@@ -547,6 +547,113 @@
         800,
         260
       ]
+    },
+    {
+      "id": "tg-heal-trigger",
+      "name": "⏰ Chequeo Webhook (cada 30 min)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        700
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tg-heal-check",
+      "name": "🔍 Verificar Webhook Telegram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        700
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Guardia anti-race: G54 tiene su propio webhook de Telegram (usado por el panel \"Configurar bot\")\n// y n8n también se registra directo — Telegram solo permite UNO a la vez, gana el último que se registró.\n// Este chequeo confirma que el webhook real siga apuntando a n8n y lo re-registra solo si alguien\n// (ej. G54) lo pisó, sin esperar a que alguien note que Marco dejó de responder.\nconst BOT_TOKEN = \"REDACTED_TELEGRAM_BOT_TOKEN\";\nconst EXPECTED_URL = \"https://n8n.mdarthurdigital.com/webhook/2866d067-d9d4-498e-976c-ec09b6d214f9/webhook\";\n\nconst resp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: `https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo`,\n  json: true\n});\n\nconst currentUrl = resp?.result?.url || \"\";\nconst correcto = currentUrl === EXPECTED_URL;\n\nreturn [{ json: { correcto, currentUrl, expectedUrl: EXPECTED_URL } }];"
+      }
+    },
+    {
+      "id": "tg-heal-if",
+      "name": "🔀 ¿Webhook Correcto?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        700
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.correcto }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "tg-heal-fix",
+      "name": "🔧 Re-registrar Webhook (n8n)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        620
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const BOT_TOKEN = \"REDACTED_TELEGRAM_BOT_TOKEN\";\nconst EXPECTED_URL = \"https://n8n.mdarthurdigital.com/webhook/2866d067-d9d4-498e-976c-ec09b6d214f9/webhook\";\n\nconst resp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: `https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${encodeURIComponent(EXPECTED_URL)}&allowed_updates=%5B%22message%22%5D`,\n  json: true\n});\n\nreturn [{ json: { ...$json, reRegistrado: true, resultado: resp } }];"
+      }
+    },
+    {
+      "id": "tg-heal-alert",
+      "name": "📧 Alertar Webhook Re-registrado",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        880,
+        620
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "fromEmail": "Marco Telegram — Auto-chequeo <risosadmi@gmail.com>",
+        "toEmail": "risosadmi@gmail.com",
+        "subject": "⚠️ Webhook de Telegram de Marco se había desviado — re-registrado solo",
+        "text": "={{ 'El webhook de Telegram del bot de Marco ya no apuntaba a n8n (probablemente lo pisó el registro propio de G54 al guardar/actualizar la config del bot en el panel).\\n\\nURL encontrada: ' + $json.currentUrl + '\\nURL esperada: ' + $json.expectedUrl + '\\n\\nSe volvió a registrar automáticamente apuntando a n8n. Si Marco dejó de responder en algún momento antes de este correo, esta pudo ser la causa — ya debería estar funcionando de nuevo.' }}",
+        "html": "={{ 'El webhook de Telegram del bot de Marco ya no apuntaba a n8n (probablemente lo pisó el registro propio de G54 al guardar/actualizar la config del bot en el panel).<br><br>URL encontrada: ' + $json.currentUrl + '<br>URL esperada: ' + $json.expectedUrl + '<br><br>Se volvió a registrar automáticamente apuntando a n8n. Si Marco dejó de responder en algún momento antes de este correo, esta pudo ser la causa — ya debería estar funcionando de nuevo.' }}",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": {
+          "id": "iWBBSSe5AWsCMo89",
+          "name": "Gmail SMTP — risosadmi"
+        }
+      },
+      "webhookId": "08f88287-5cad-4b48-8f9c-cce0303c96d3"
     }
   ],
   "connections": {
@@ -825,6 +932,51 @@
         [
           {
             "node": "🌐 Detectar Idioma Entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏰ Chequeo Webhook (cada 30 min)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Verificar Webhook Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Verificar Webhook Telegram": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Webhook Correcto?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Webhook Correcto?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "🔧 Re-registrar Webhook (n8n)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Re-registrar Webhook (n8n)": {
+      "main": [
+        [
+          {
+            "node": "📧 Alertar Webhook Re-registrado",
             "type": "main",
             "index": 0
           }
