@@ -22,7 +22,8 @@
           "id": "QDPLJdTRChEFaEDG",
           "name": "Telegram Marco Bot"
         }
-      }
+      },
+      "disabled": true
     },
     {
       "id": "tg-hay-mensaje",
@@ -188,7 +189,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "const extractNode = $(\"🔧 Extraer Mensaje Telegram\");\nconst extract = extractNode.isExecuted ? extractNode.first().json : $(\"🔧 Combinar Texto de Medio (TG)\").first().json;\nconst ctx02 = $(\"▶️ 02 Contexto y Lead\").first().json;\nreturn [{ json: { ...extract, ...ctx02 } }];"
+        "jsCode": "const extractNode = $(\"🔧 Extraer Mensaje (Relevo G54)\");\nconst extract = extractNode.isExecuted ? extractNode.first().json : {};\nconst ctx02 = $(\"▶️ 02 Contexto y Lead\").first().json;\nreturn [{ json: { ...extract, ...ctx02 } }];"
       }
     },
     {
@@ -457,7 +458,8 @@
           "name": "Telegram Marco Bot"
         }
       },
-      "webhookId": "37b2ac3a-e697-477d-8825-23e8ce272e12"
+      "webhookId": "37b2ac3a-e697-477d-8825-23e8ce272e12",
+      "disabled": true
     },
     {
       "parameters": {
@@ -566,7 +568,8 @@
             }
           ]
         }
-      }
+      },
+      "disabled": true
     },
     {
       "id": "tg-heal-check",
@@ -654,6 +657,161 @@
         }
       },
       "webhookId": "08f88287-5cad-4b48-8f9c-cce0303c96d3"
+    },
+    {
+      "id": "tg-g54-webhook",
+      "name": "🔔 Webhook G54 (Telegram Relevo)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        900
+      ],
+      "webhookId": "telegram-marco-g54",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-marco-g54",
+        "options": {}
+      }
+    },
+    {
+      "id": "tg-extract-g54",
+      "name": "🔧 Extraer Mensaje (Relevo G54)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        900
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst body = $json.body || $json;\nconst chatId = body.chat_id;\nconst texto = (body.texto || '').trim();\nconst conversationId = body.conversation_id;\nconst contactId = body.contact_id;\nconst nombreContacto = body.nombre || '';\nconst empresaId = body.empresa_id;\n\nif (!chatId || !texto) {\n  return [{ json: { skip: true, skipReason: 'sin_chat_id_o_texto' } }];\n}\n\n// Deduplicación — G54 no manda un ID único de mensaje en el relevo, se arma con chat+conversación+texto+ventana de tiempo\nif (!staticData.seenTgMessageIds) staticData.seenTgMessageIds = {};\nconst now = Date.now();\nObject.keys(staticData.seenTgMessageIds).forEach(id => {\n  if (now - staticData.seenTgMessageIds[id] > 60000) delete staticData.seenTgMessageIds[id];\n});\nconst dedupeKey = `${chatId}_${conversationId}_${texto}`;\nif (staticData.seenTgMessageIds[dedupeKey]) {\n  return [{ json: { skip: true, skipReason: 'duplicate_message' } }];\n}\nstaticData.seenTgMessageIds[dedupeKey] = now;\n\nreturn [{\n  json: {\n    telefono: 'tg_' + chatId,\n    chatId,\n    texto,\n    nombreContacto,\n    conversationId,\n    contactId,\n    empresaId,\n    tipoMensaje: 'text',\n    skip: false\n  }\n}];"
+      }
+    },
+    {
+      "id": "tg-skip-if",
+      "name": "🔀 ¿Mensaje Válido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        900
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "tg-reply-login",
+      "name": "🔐 G54: Login (Reply TG)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        500
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/auth/login",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_PASSWORD' }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "tg-reply-switch",
+      "name": "🏢 G54: Cambiar Empresa (Reply TG)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        500
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/auth/switch-company",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Reply TG)').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: 1 }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "tg-reply-send",
+      "name": "📤 G54: Responder Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        500
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/telegram/reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Reply TG)').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ conversation_id: $('🔧 Extraer Mensaje (Relevo G54)').first().json.conversationId, message: ($('📨 Mensaje Final').isExecuted ? $('📨 Mensaje Final').first().json.mensaje : $('📝 Armar Mensaje Final').first().json.mensaje) || '' }) }}",
+        "options": {}
+      }
     }
   ],
   "connections": {
@@ -830,7 +988,7 @@
         ],
         [
           {
-            "node": "📤 Enviar Mensaje Telegram",
+            "node": "🔐 G54: Login (Reply TG)",
             "type": "main",
             "index": 0
           }
@@ -852,7 +1010,7 @@
       "main": [
         [
           {
-            "node": "📤 Enviar Mensaje Telegram",
+            "node": "🔐 G54: Login (Reply TG)",
             "type": "main",
             "index": 0
           }
@@ -981,6 +1139,62 @@
             "index": 0
           }
         ]
+      ]
+    },
+    "🔐 G54: Login (Reply TG)": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa (Reply TG)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 G54: Cambiar Empresa (Reply TG)": {
+      "main": [
+        [
+          {
+            "node": "📤 G54: Responder Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔔 Webhook G54 (Telegram Relevo)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Extraer Mensaje (Relevo G54)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Extraer Mensaje (Relevo G54)": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Mensaje Válido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Mensaje Válido?": {
+      "main": [
+        [
+          {
+            "node": "🌐 Detectar Idioma Entrada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
       ]
     }
   },
