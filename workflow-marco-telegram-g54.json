@@ -1,5 +1,11 @@
 {
+  "updatedAt": "2026-07-25T14:37:04.838Z",
+  "createdAt": "2026-07-23T15:36:21.963Z",
+  "id": "HaSG63Q9C2tGOLH3",
   "name": "CE Telegram Engine — Marco",
+  "description": null,
+  "active": true,
+  "isArchived": false,
   "nodes": [
     {
       "id": "tg-trigger",
@@ -275,7 +281,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "const ctx = $('▶️ 03 Generador IA').first().json;\nconst d = ctx.datosRecolectados || {};\n\n// Only show price if all data collected and not already sent\n// Use proximoPaso from 01 Clasificador as source of truth — includes all checks (correo, proteccion, etc.)\nif (ctx.proximoPaso !== 'LISTO_PARA_COTIZAR' || ctx.cotizacionEnviada) {\n  return [{ json: { ...ctx } }];\n}\n\n// Read precio from HTTP node result\nconst apiResp = $input.first().json;\nconst precio = apiResp?.data?.precio_total || apiResp?.precio_total || null;\n\nconst idioma = ctx.idiomaConversacion || 'español';\nconst nombre = d.nombre_cliente ? `, ${d.nombre_cliente.split(' ')[0]}` : '';\nconst tieneProteccion = d.proteccion_extra === true || d.proteccion_extra === 'true';\n\nlet mensajeFinal;\nif (precio) {\n  if (idioma === 'inglés') {\n    mensajeFinal = `Here is your estimate${nombre}! 🎉\\n\\n📦 *${d.producto || 'Crate'}*\\n📐 Dimensions: ${d.medidas || '—'}\"\\n🗓 Needed by: ${d.fecha || '—'}\\n🛡 Extra protection: ${tieneProteccion ? 'Yes' : 'No'}\\n\\n💵 *Estimated price: $${precio} USD*\\n_This is an estimate. The final price may vary after inspection._\\n\\nWould you like a formal quote sent to your email?`;\n  } else {\n    mensajeFinal = `¡Aquí está tu estimado${nombre}! 🎉\\n\\n📦 *${d.producto || 'Cajón'}*\\n📐 Medidas: ${d.medidas || '—'}\"\\n🗓 Para: ${d.fecha || '—'}\\n🛡 Protección extra: ${tieneProteccion ? 'Sí' : 'No'}\\n\\n💵 *Precio estimado: $${precio} USD*\\n_Este es un estimado. El precio final puede variar luego de la inspección._\\n\\n¿Le gustaría que le enviemos la cotización formal a su correo?`;\n  }\n} else {\n  mensajeFinal = ctx.mensaje;\n}\n\nreturn [{ json: {\n  ...ctx,\n  mensaje: mensajeFinal,\n  mensajeRespuesta: mensajeFinal,\n  cotizadorEnviado: !!precio\n} }];"
+        "jsCode": "const ctx = $('▶️ 03 Generador IA').first().json;\nconst d = ctx.datosRecolectados || {};\n\n// Only show price if all data collected and not already sent\n// Use proximoPaso from 01 Clasificador as source of truth — includes all checks (correo, proteccion, etc.)\nif (!ctx.todosRecolectados || ctx.cotizacionEnviada) {\n  return [{ json: { ...ctx } }];\n}\n\n// Read precio from HTTP node result\nconst apiResp = $input.first().json;\nconst precio = apiResp?.data?.precio_total || apiResp?.precio_total || null;\n\nconst idioma = ctx.idiomaConversacion || 'español';\nconst nombre = d.nombre_cliente ? `, ${d.nombre_cliente.split(' ')[0]}` : '';\nconst tieneProteccion = d.proteccion_extra === true || d.proteccion_extra === 'true';\n\nlet mensajeFinal;\nif (precio) {\n  if (idioma === 'inglés') {\n    mensajeFinal = `Here is your estimate${nombre}! 🎉\\n\\n📦 *${d.producto || 'Crate'}*\\n📐 Dimensions: ${d.medidas || '—'}\"\\n🗓 Needed by: ${d.fecha || '—'}\\n🛡 Extra protection: ${tieneProteccion ? 'Yes' : 'No'}\\n\\n💵 *Estimated price: $${precio} USD*\\n_This is an estimate. The final price may vary after inspection._\\n\\nWould you like a formal quote sent to your email?`;\n  } else {\n    mensajeFinal = `¡Aquí está tu estimado${nombre}! 🎉\\n\\n📦 *${d.producto || 'Cajón'}*\\n📐 Medidas: ${d.medidas || '—'}\"\\n🗓 Para: ${d.fecha || '—'}\\n🛡 Protección extra: ${tieneProteccion ? 'Sí' : 'No'}\\n\\n💵 *Precio estimado: $${precio} USD*\\n_Este es un estimado. El precio final puede variar luego de la inspección._\\n\\n¿Le gustaría que le enviemos la cotización formal a su correo?`;\n  }\n} else {\n  mensajeFinal = ctx.mensaje;\n}\n\nreturn [{ json: {\n  ...ctx,\n  mensaje: mensajeFinal,\n  mensajeRespuesta: mensajeFinal,\n  cotizadorEnviado: !!precio\n} }];"
       }
     },
     {
@@ -582,7 +588,7 @@
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Guardia anti-race: G54 tiene su propio webhook de Telegram (usado por el panel \"Configurar bot\")\n// y n8n también se registra directo — Telegram solo permite UNO a la vez, gana el último que se registró.\n// Este chequeo confirma que el webhook real siga apuntando a n8n y lo re-registra solo si alguien\n// (ej. G54) lo pisó, sin esperar a que alguien note que Marco dejó de responder.\nconst BOT_TOKEN = \"REDACTED_TELEGRAM_BOT_TOKEN\";\nconst EXPECTED_URL = \"https://n8n.mdarthurdigital.com/webhook/2866d067-d9d4-498e-976c-ec09b6d214f9/webhook\";\n\nconst resp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: `https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo`,\n  json: true\n});\n\nconst currentUrl = resp?.result?.url || \"\";\nconst correcto = currentUrl === EXPECTED_URL;\n\nreturn [{ json: { correcto, currentUrl, expectedUrl: EXPECTED_URL } }];"
+        "jsCode": "// Guardia anti-race: G54 tiene su propio webhook de Telegram (usado por el panel \"Configurar bot\")\n// y n8n también se registra directo — Telegram solo permite UNO a la vez, gana el último que se registró.\n// Este chequeo confirma que el webhook real siga apuntando a n8n y lo re-registra solo si alguien\n// (ej. G54) lo pisó, sin esperar a que alguien note que Marco dejó de responder.\nconst BOT_TOKEN = \"8821887883:AAGdWLtXtfaGDq3vSTrvd2p-zlu3NilK6CE\";\nconst EXPECTED_URL = \"https://n8n.mdarthurdigital.com/webhook/2866d067-d9d4-498e-976c-ec09b6d214f9/webhook\";\n\nconst resp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: `https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo`,\n  json: true\n});\n\nconst currentUrl = resp?.result?.url || \"\";\nconst correcto = currentUrl === EXPECTED_URL;\n\nreturn [{ json: { correcto, currentUrl, expectedUrl: EXPECTED_URL } }];"
       }
     },
     {
@@ -629,7 +635,7 @@
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const BOT_TOKEN = \"REDACTED_TELEGRAM_BOT_TOKEN\";\nconst EXPECTED_URL = \"https://n8n.mdarthurdigital.com/webhook/2866d067-d9d4-498e-976c-ec09b6d214f9/webhook\";\n\nconst resp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: `https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${encodeURIComponent(EXPECTED_URL)}&allowed_updates=%5B%22message%22%5D`,\n  json: true\n});\n\nreturn [{ json: { ...$json, reRegistrado: true, resultado: resp } }];"
+        "jsCode": "const BOT_TOKEN = \"8821887883:AAGdWLtXtfaGDq3vSTrvd2p-zlu3NilK6CE\";\nconst EXPECTED_URL = \"https://n8n.mdarthurdigital.com/webhook/2866d067-d9d4-498e-976c-ec09b6d214f9/webhook\";\n\nconst resp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: `https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${encodeURIComponent(EXPECTED_URL)}&allowed_updates=%5B%22message%22%5D`,\n  json: true\n});\n\nreturn [{ json: { ...$json, reRegistrado: true, resultado: resp } }];"
       }
     },
     {
@@ -745,7 +751,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_PASSWORD' }) }}",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'MASTER_PASSWORD_REDACTED' }) }}",
         "options": {}
       }
     },
@@ -1200,5 +1206,1276 @@
   },
   "settings": {
     "executionOrder": "v1"
+  },
+  "staticData": {
+    "global": {
+      "seenTgMessageIds": {
+        "770001_770001_soy Cristal": 1785159675830
+      }
+    },
+    "node:⏰ Chequeo Webhook (cada 30 min)": {
+      "recurrenceRules": [
+        null
+      ],
+      "recurrenceRuleSignatures": [
+        null
+      ]
+    }
+  },
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": null,
+  "versionId": "dd118d51-11d2-4bd2-a507-dbbe69e184fe",
+  "activeVersionId": "dd118d51-11d2-4bd2-a507-dbbe69e184fe",
+  "versionCounter": 13,
+  "triggerCount": 1,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-07-23T15:36:21.970Z",
+      "createdAt": "2026-07-23T15:36:21.970Z",
+      "role": "workflow:owner",
+      "workflowId": "HaSG63Q9C2tGOLH3",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "updatedAt": "2026-03-16T19:58:01.773Z",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-25T14:37:04.849Z",
+    "createdAt": "2026-07-25T14:37:04.849Z",
+    "versionId": "dd118d51-11d2-4bd2-a507-dbbe69e184fe",
+    "workflowId": "HaSG63Q9C2tGOLH3",
+    "nodes": [
+      {
+        "id": "tg-trigger",
+        "name": "📲 Telegram Trigger",
+        "type": "n8n-nodes-base.telegramTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          0,
+          300
+        ],
+        "webhookId": "2866d067-d9d4-498e-976c-ec09b6d214f9",
+        "parameters": {
+          "updates": [
+            "message"
+          ],
+          "additionalFields": {}
+        },
+        "credentials": {
+          "telegramApi": {
+            "id": "QDPLJdTRChEFaEDG",
+            "name": "Telegram Marco Bot"
+          }
+        },
+        "disabled": true
+      },
+      {
+        "id": "tg-hay-mensaje",
+        "name": "🔀 ¿Hay mensaje de texto?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          220,
+          460
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "hay-texto",
+                "leftValue": "={{ $json.message?.text }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEquals"
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        }
+      },
+      {
+        "id": "tg-extraer",
+        "name": "🔧 Extraer Mensaje Telegram",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          440,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst msg = $json.message || {};\nconst chatId = msg.chat?.id;\nconst texto = msg.text || '';\nconst messageId = msg.message_id;\nconst nombreContacto = [msg.from?.first_name, msg.from?.last_name].filter(Boolean).join(' ') || msg.from?.username || '';\n\nif (!chatId || !texto) {\n  return [{ json: { skip: true, skipReason: 'sin_chat_id_o_texto' } }];\n}\n\n// Deduplicación — mismo patrón que WhatsApp (Meta reenvía a veces)\nif (!staticData.seenTgMessageIds) staticData.seenTgMessageIds = {};\nconst now = Date.now();\nObject.keys(staticData.seenTgMessageIds).forEach(id => {\n  if (now - staticData.seenTgMessageIds[id] > 60000) delete staticData.seenTgMessageIds[id];\n});\nconst dedupeKey = `${chatId}_${messageId}`;\nif (staticData.seenTgMessageIds[dedupeKey]) {\n  return [{ json: { skip: true, skipReason: 'duplicate_messageId' } }];\n}\nstaticData.seenTgMessageIds[dedupeKey] = now;\n\nreturn [{\n  json: {\n    telefono: 'tg_' + chatId,\n    chatId,\n    texto,\n    messageId,\n    nombreContacto,\n    tipoMensaje: 'text',\n    skip: false\n  }\n}];"
+        }
+      },
+      {
+        "id": "tl-detectar",
+        "name": "🌐 Detectar Idioma Entrada",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          660,
+          460
+        ],
+        "parameters": {
+          "jsCode": "\nconst ctx = $input.first().json;\nconst t = (ctx.texto || '').toLowerCase();\nconst enWords = (t.match(/\\b(i|the|you|need|have|want|please|thanks|yes|for|and|my|is|are|can|would|like|to|of|in|with|it|this|that|hi|hello|good|morning|afternoon|evening|crate|inches|inch|by|next|about|looking|want|send|ship|pack|protection|foam|email|quote|price|we|our|us|them|they|what|when|where|how|who|why|get|make|do|go|come|take|give|use|find|know|see|look|think|work|call|ask|tell|help|keep|let|put|seem|feel|try|leave|still|start|might|could|should|would|same|well|just|over|back|after|before|also|been|here|there|then|than|these|those|more|most|some|such|only|both|too|very|much|many|your|their|her|his|him|her|she|he|it|we|them|will|was|were|had|has|have|did|does|do|am|be|been|being|an|a|at|from|by|with|out|up|down|off|on|into|through|during|before|after|above|below|between|each|few|more|most|other|some|such|than|too|very|just|because|as|until|while|although|whether|either|neither|however|therefore|meanwhile|furthermore|accordingly|consequently|subsequently)\\b/g) || []).length;\nconst esWords = (t.match(/\\b(quiero|necesito|tengo|hola|gracias|por|sí|si|no|para|con|una|un|que|me|mi|el|la|los|las|de|en|es|son|buenas|buenos|embalar|cajón|cerrado|abierto|medidas|correo|cotización|precio|protección|espuma|soy|como|pero|cuando|donde|quien|este|esta|esto|también|muy|más|porque|ser|estar|hacer|poder|tener|deber|querer|hay|fue|era|han|del|al|le|se|lo|ya|cada|todo|toda|todos|todas|algo|alguien|nadie|nunca|siempre|antes|después|aquí|allí|ahora|luego|hoy|mañana|ayer|semana|mes|año|tiempo|momento|forma|lugar|parte|caso|tipo|manera|favor|empresa|trabajo|equipo|cliente|servicio)\\b/g) || []).length;\nconst esIngles = enWords > esWords && enWords >= 2;\nreturn [{ json: { ...ctx, idiomaOriginal: esIngles ? 'inglés' : 'español', textoOriginal: ctx.texto } }];\n"
+        }
+      },
+      {
+        "id": "tl-if-en",
+        "name": "🔀 ¿Mensaje EN?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          880,
+          300
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": false,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 1
+            },
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.idiomaOriginal }}",
+                "rightValue": "inglés",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "tl-groq-entrada",
+        "name": "🔄 Traducir Entrada EN→ES",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1100,
+          460
+        ],
+        "continueOnFail": true,
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.groq.com/openai/v1/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: 'Eres un traductor. Traduce el siguiente mensaje al español de forma natural, conservando el tono y la intención. Devuelve ÚNICAMENTE el texto traducido, sin explicaciones ni notas.' }, { role: 'user', content: $json.textoOriginal }], temperature: 0.1, max_tokens: 500 }) }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "groqApi"
+        },
+        "credentials": {
+          "groqApi": {
+            "id": "jORffbRhRNohHT1B",
+            "name": "Groq API"
+          }
+        }
+      },
+      {
+        "id": "tl-aplicar",
+        "name": "📝 Aplicar Traducción Entrada",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1320,
+          300
+        ],
+        "parameters": {
+          "jsCode": "\nconst prev = $('🌐 Detectar Idioma Entrada').first().json;\nconst raw = $input.first().json;\nconst traducido = raw.choices?.[0]?.message?.content?.trim() || prev.textoOriginal;\nreturn [{ json: { ...prev, texto: traducido } }];\n"
+        }
+      },
+      {
+        "id": "n-exec02",
+        "name": "▶️ 02 Contexto y Lead",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          1540,
+          460
+        ],
+        "parameters": {
+          "source": "database",
+          "workflowId": "s1Z7jKoFzy5x7XvC",
+          "mode": "once",
+          "inputData": "={{ [{ json: $json }] }}"
+        }
+      },
+      {
+        "id": "tg-fusionar",
+        "name": "🔀 Fusionar Datos",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1760,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const extractNode = $(\"🔧 Extraer Mensaje (Relevo G54)\");\nconst extract = extractNode.isExecuted ? extractNode.first().json : {};\nconst ctx02 = $(\"▶️ 02 Contexto y Lead\").first().json;\nreturn [{ json: { ...extract, ...ctx02 } }];"
+        }
+      },
+      {
+        "id": "n-exec01",
+        "name": "▶️ 01 Clasificador",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          1980,
+          460
+        ],
+        "parameters": {
+          "source": "database",
+          "workflowId": "1PXcg3dOQBt8hrrT",
+          "mode": "once",
+          "inputData": "={{ [{ json: $json }] }}"
+        }
+      },
+      {
+        "id": "n-exec03",
+        "name": "▶️ 03 Generador IA",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          2200,
+          300
+        ],
+        "parameters": {
+          "source": "database",
+          "workflowId": "J8qbKOF7t4GnhRDT",
+          "mode": "once",
+          "inputData": "={{ [{ json: $json }] }}"
+        }
+      },
+      {
+        "id": "n-cotizador-http",
+        "name": "💰 API Cotizador",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2420,
+          460
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://cratingcotiza.mdarthurdigital.com/api/cotizar",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "tipo_caja",
+                "value": "={{ $json.datosRecolectados?.tipo_cajon || $json.tipoCajaApi || 'cajones_cerrados' }}"
+              },
+              {
+                "name": "cant",
+                "value": "=1"
+              },
+              {
+                "name": "largo",
+                "value": "={{ $json.dimensiones?.largo || 100 }}"
+              },
+              {
+                "name": "ancho",
+                "value": "={{ $json.dimensiones?.ancho || 50 }}"
+              },
+              {
+                "name": "alto",
+                "value": "={{ $json.dimensiones?.alto || 50 }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "n-armar-mensaje",
+        "name": "📝 Armar Mensaje Final",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2640,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const ctx = $('▶️ 03 Generador IA').first().json;\nconst d = ctx.datosRecolectados || {};\n\n// Only show price if all data collected and not already sent\n// Use proximoPaso from 01 Clasificador as source of truth — includes all checks (correo, proteccion, etc.)\nif (ctx.proximoPaso !== 'LISTO_PARA_COTIZAR' || ctx.cotizacionEnviada) {\n  return [{ json: { ...ctx } }];\n}\n\n// Read precio from HTTP node result\nconst apiResp = $input.first().json;\nconst precio = apiResp?.data?.precio_total || apiResp?.precio_total || null;\n\nconst idioma = ctx.idiomaConversacion || 'español';\nconst nombre = d.nombre_cliente ? `, ${d.nombre_cliente.split(' ')[0]}` : '';\nconst tieneProteccion = d.proteccion_extra === true || d.proteccion_extra === 'true';\n\nlet mensajeFinal;\nif (precio) {\n  if (idioma === 'inglés') {\n    mensajeFinal = `Here is your estimate${nombre}! 🎉\\n\\n📦 *${d.producto || 'Crate'}*\\n📐 Dimensions: ${d.medidas || '—'}\"\\n🗓 Needed by: ${d.fecha || '—'}\\n🛡 Extra protection: ${tieneProteccion ? 'Yes' : 'No'}\\n\\n💵 *Estimated price: $${precio} USD*\\n_This is an estimate. The final price may vary after inspection._\\n\\nWould you like a formal quote sent to your email?`;\n  } else {\n    mensajeFinal = `¡Aquí está tu estimado${nombre}! 🎉\\n\\n📦 *${d.producto || 'Cajón'}*\\n📐 Medidas: ${d.medidas || '—'}\"\\n🗓 Para: ${d.fecha || '—'}\\n🛡 Protección extra: ${tieneProteccion ? 'Sí' : 'No'}\\n\\n💵 *Precio estimado: $${precio} USD*\\n_Este es un estimado. El precio final puede variar luego de la inspección._\\n\\n¿Le gustaría que le enviemos la cotización formal a su correo?`;\n  }\n} else {\n  mensajeFinal = ctx.mensaje;\n}\n\nreturn [{ json: {\n  ...ctx,\n  mensaje: mensajeFinal,\n  mensajeRespuesta: mensajeFinal,\n  cotizadorEnviado: !!precio\n} }];"
+        }
+      },
+      {
+        "id": "tl-if-resp",
+        "name": "🔀 ¿Responder EN?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          2860,
+          460
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": false,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 1
+            },
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $('🌐 Detectar Idioma Entrada').first().json.idiomaOriginal }}",
+                "rightValue": "inglés",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "tl-groq-salida",
+        "name": "🔄 Traducir Respuesta ES→EN",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3080,
+          300
+        ],
+        "continueOnFail": true,
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.groq.com/openai/v1/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: 'You are a translator. Translate the following message to English naturally, preserving the tone and intent. Return ONLY the translated text, no explanations.' }, { role: 'user', content: $('📝 Armar Mensaje Final').first().json.mensajeRespuesta || $('📝 Armar Mensaje Final').first().json.mensaje || '' }], temperature: 0.1, max_tokens: 500 }) }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "groqApi"
+        },
+        "credentials": {
+          "groqApi": {
+            "id": "jORffbRhRNohHT1B",
+            "name": "Groq API"
+          }
+        }
+      },
+      {
+        "id": "tl-msg-final",
+        "name": "📨 Mensaje Final",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3300,
+          460
+        ],
+        "parameters": {
+          "jsCode": "\nconst armar = $('📝 Armar Mensaje Final').first().json;\nconst tradResp = $input.first().json;\n// Extract translated text from Groq response\nconst traducido = tradResp.choices?.[0]?.message?.content?.trim();\nconst mensajeFinal = traducido || armar.mensajeRespuesta || armar.mensaje || '';\nreturn [{ json: { ...armar, mensaje: mensajeFinal, mensajeRespuesta: mensajeFinal } }];\n"
+        }
+      },
+      {
+        "id": "n-exec05",
+        "name": "▶️ 05 Guardar Lead",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          3520,
+          300
+        ],
+        "parameters": {
+          "source": "database",
+          "workflowId": "PqbfMghL0E7xKflC",
+          "mode": "once",
+          "inputData": "={{ [{ json: $json }] }}"
+        }
+      },
+      {
+        "id": "n-ifhot",
+        "name": "🔀 ¿Lead Caliente?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          3740,
+          460
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {},
+            "combinator": "or",
+            "conditions": [
+              {
+                "id": "1",
+                "leftValue": "={{ $('📝 Armar Mensaje Final').item.json.clasificacion }}",
+                "rightValue": "Caliente",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              },
+              {
+                "id": "2",
+                "leftValue": "={{ $('📝 Armar Mensaje Final').item.json.clasificacion }}",
+                "rightValue": "Consulta",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "n-gmail",
+        "name": "📧 Notificar Vendedor",
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          3960,
+          300
+        ],
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "TESHSjzjMCpCxBBk",
+            "name": "Gmail account"
+          }
+        },
+        "parameters": {
+          "sendTo": "={{ $('📝 Armar Mensaje Final').item.json.emailVendedor?.split('\\n').join(',') || 'risosadmi@gmail.com' }}",
+          "subject": "={{ $('📝 Armar Mensaje Final').item.json.clasificacion === 'Consulta' ? '💬 Consulta sin respuesta — ' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.nombre_cliente || $('📝 Armar Mensaje Final').item.json.telefono) : '🔥 Lead Caliente WhatsApp — ' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.nombre_cliente || $('📝 Armar Mensaje Final').item.json.telefono) }}",
+          "message": "={{ $('📝 Armar Mensaje Final').item.json.clasificacion === 'Consulta'\n  ? '<table style=\"font-family:Arial,sans-serif;font-size:14px;border-collapse:collapse;width:100%\"><tr><td colspan=2 style=\"background:#2196F3;color:white;padding:12px 16px;font-size:16px;font-weight:bold\">💬 Consulta sin respuesta — necesita agente</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Cliente</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.nombre_cliente || '(sin nombre)') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Teléfono</td><td style=\"padding:8px 16px\">+' + $('📝 Armar Mensaje Final').item.json.telefono + '</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Correo</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.correo_contacto || '(no proporcionado — contactar por WhatsApp)') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Consulta</td><td style=\"padding:8px 16px\">' + ($('📝 Armar Mensaje Final').item.json.temaConsulta || $('📝 Armar Mensaje Final').item.json.texto || '(ver historial)') + '</td></tr><tr><td colspan=2 style=\"padding:8px 16px;color:#888;font-size:12px\">Marco no pudo responder esta consulta. El cliente espera ser contactado por un agente.</td></tr></table>'\n  : '<table style=\"font-family:Arial,sans-serif;font-size:14px;border-collapse:collapse;width:100%\"><tr><td colspan=2 style=\"background:#ff4444;color:white;padding:12px 16px;font-size:16px;font-weight:bold\">🔥 Lead Caliente — cotización aceptada</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Cliente</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.nombre_cliente || '(sin nombre)') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Teléfono</td><td style=\"padding:8px 16px\">+' + $('📝 Armar Mensaje Final').item.json.telefono + '</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Correo</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.correo_contacto || '—') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Producto</td><td style=\"padding:8px 16px\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.producto || '—') + '</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Medidas</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.medidas || '—') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Fecha</td><td style=\"padding:8px 16px\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.fecha || '—') + '</td></tr></table>'\n}}",
+          "options": {
+            "contentType": "html"
+          }
+        },
+        "webhookId": "9df59eff-5fba-4263-83ac-5cdb62a63eec"
+      },
+      {
+        "id": "tg-enviar",
+        "name": "📤 Enviar Mensaje Telegram",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          4180,
+          460
+        ],
+        "parameters": {
+          "chatId": "={{ $(\"🔧 Extraer Mensaje Telegram\").isExecuted ? $(\"🔧 Extraer Mensaje Telegram\").first().json.chatId : $(\"🔧 Combinar Texto de Medio (TG)\").first().json.chatId }}",
+          "text": "={{ $json.mensaje || $json.mensajeRespuesta }}",
+          "additionalFields": {
+            "parse_mode": "Markdown"
+          }
+        },
+        "credentials": {
+          "telegramApi": {
+            "id": "QDPLJdTRChEFaEDG",
+            "name": "Telegram Marco Bot"
+          }
+        },
+        "webhookId": "37b2ac3a-e697-477d-8825-23e8ce272e12",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "es-medio",
+                "leftValue": "={{ !!($json.message?.photo || $json.message?.voice || $json.message?.audio || $json.message?.document) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        },
+        "id": "tg-es-medio",
+        "name": "🔀 ¿Es medio?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          -160,
+          260
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst msg = $json.message || {};\nconst chatId = msg.chat?.id;\nconst messageId = msg.message_id;\nconst nombreContacto = [msg.from?.first_name, msg.from?.last_name].filter(Boolean).join(' ') || msg.from?.username || '';\n\nlet fileId = null, mimeType = null, tipoMensaje = 'document', caption = msg.caption || '';\nif (msg.photo && msg.photo.length) {\n  const best = msg.photo[msg.photo.length - 1];\n  fileId = best.file_id;\n  mimeType = 'image/jpeg';\n  tipoMensaje = 'image';\n} else if (msg.voice) {\n  fileId = msg.voice.file_id;\n  mimeType = msg.voice.mime_type || 'audio/ogg';\n  tipoMensaje = 'audio';\n} else if (msg.audio) {\n  fileId = msg.audio.file_id;\n  mimeType = msg.audio.mime_type || 'audio/mpeg';\n  tipoMensaje = 'audio';\n} else if (msg.document) {\n  fileId = msg.document.file_id;\n  mimeType = msg.document.mime_type || 'application/octet-stream';\n  tipoMensaje = mimeType === 'application/pdf' ? 'pdf' : 'document';\n}\n\nif (!chatId || !fileId) {\n  return [{ json: { skip: true, skipReason: 'sin_chat_id_o_file_id' } }];\n}\n\nif (!staticData.seenTgMessageIds) staticData.seenTgMessageIds = {};\nconst now = Date.now();\nObject.keys(staticData.seenTgMessageIds).forEach(id => {\n  if (now - staticData.seenTgMessageIds[id] > 60000) delete staticData.seenTgMessageIds[id];\n});\nconst dedupeKey = `${chatId}_${messageId}`;\nif (staticData.seenTgMessageIds[dedupeKey]) {\n  return [{ json: { skip: true, skipReason: 'duplicate_messageId' } }];\n}\nstaticData.seenTgMessageIds[dedupeKey] = now;\n\nreturn [{ json: {\n  telefono: 'tg_' + chatId,\n  chatId, fileId, mimeType, tipoMensaje, caption, nombreContacto, messageId, skip: false\n} }];"
+        },
+        "id": "tg-extraer-medio",
+        "name": "🔧 Extraer Datos de Medio (TG)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          80,
+          260
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const ext = $json;\nreturn [{ json: {\n  media_id: ext.fileId,\n  mime_type: ext.mimeType,\n  caption: ext.caption,\n  platform: 'telegram',\n  phone_number_id: '',\n  gemini_api_key: ''\n} }];"
+        },
+        "id": "tg-preparar-medios",
+        "name": "🔧 Preparar Datos para Medios (TG)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          320,
+          260
+        ]
+      },
+      {
+        "parameters": {
+          "source": "database",
+          "workflowId": "5GU89AeWsBZ86FWa",
+          "mode": "once",
+          "inputData": "={{ [{ json: $json }] }}"
+        },
+        "id": "tg-06-procesador-v2",
+        "name": "▶️ 06 Procesador de Medios (TG)",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          560,
+          260
+        ],
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const resultado = $input.first().json;\nconst ext = $('🔧 Extraer Datos de Medio (TG)').first().json;\nconst tipo = ext.tipoMensaje || 'archivo';\nconst etiquetas = { image: 'imagen', audio: 'audio', document: 'documento', pdf: 'documento', video: 'video' };\nconst prefijo = `[Cliente envió ${etiquetas[tipo] || 'un archivo'}] `;\nconst textoProcesado = (resultado && !resultado.error && resultado.texto) ? resultado.texto : '[No se pudo procesar el archivo enviado]';\n\nreturn [{ json: {\n  telefono: ext.telefono,\n  chatId: ext.chatId,\n  texto: prefijo + textoProcesado,\n  messageId: ext.messageId,\n  nombreContacto: ext.nombreContacto,\n  tipoMensaje: ext.tipoMensaje,\n  skip: false\n} }];"
+        },
+        "id": "tg-combinar-medio",
+        "name": "🔧 Combinar Texto de Medio (TG)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          800,
+          260
+        ]
+      },
+      {
+        "id": "tg-heal-trigger",
+        "name": "⏰ Chequeo Webhook (cada 30 min)",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          0,
+          700
+        ],
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "minutes",
+                "minutesInterval": 30
+              }
+            ]
+          }
+        },
+        "disabled": true
+      },
+      {
+        "id": "tg-heal-check",
+        "name": "🔍 Verificar Webhook Telegram",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          220,
+          700
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "// Guardia anti-race: G54 tiene su propio webhook de Telegram (usado por el panel \"Configurar bot\")\n// y n8n también se registra directo — Telegram solo permite UNO a la vez, gana el último que se registró.\n// Este chequeo confirma que el webhook real siga apuntando a n8n y lo re-registra solo si alguien\n// (ej. G54) lo pisó, sin esperar a que alguien note que Marco dejó de responder.\nconst BOT_TOKEN = \"8821887883:AAGdWLtXtfaGDq3vSTrvd2p-zlu3NilK6CE\";\nconst EXPECTED_URL = \"https://n8n.mdarthurdigital.com/webhook/2866d067-d9d4-498e-976c-ec09b6d214f9/webhook\";\n\nconst resp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: `https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo`,\n  json: true\n});\n\nconst currentUrl = resp?.result?.url || \"\";\nconst correcto = currentUrl === EXPECTED_URL;\n\nreturn [{ json: { correcto, currentUrl, expectedUrl: EXPECTED_URL } }];"
+        }
+      },
+      {
+        "id": "tg-heal-if",
+        "name": "🔀 ¿Webhook Correcto?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          440,
+          700
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.correcto }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "tg-heal-fix",
+        "name": "🔧 Re-registrar Webhook (n8n)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          660,
+          620
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const BOT_TOKEN = \"8821887883:AAGdWLtXtfaGDq3vSTrvd2p-zlu3NilK6CE\";\nconst EXPECTED_URL = \"https://n8n.mdarthurdigital.com/webhook/2866d067-d9d4-498e-976c-ec09b6d214f9/webhook\";\n\nconst resp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: `https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${encodeURIComponent(EXPECTED_URL)}&allowed_updates=%5B%22message%22%5D`,\n  json: true\n});\n\nreturn [{ json: { ...$json, reRegistrado: true, resultado: resp } }];"
+        }
+      },
+      {
+        "id": "tg-heal-alert",
+        "name": "📧 Alertar Webhook Re-registrado",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 2.1,
+        "position": [
+          880,
+          620
+        ],
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "fromEmail": "Marco Telegram — Auto-chequeo <risosadmi@gmail.com>",
+          "toEmail": "risosadmi@gmail.com",
+          "subject": "⚠️ Webhook de Telegram de Marco se había desviado — re-registrado solo",
+          "text": "={{ 'El webhook de Telegram del bot de Marco ya no apuntaba a n8n (probablemente lo pisó el registro propio de G54 al guardar/actualizar la config del bot en el panel).\\n\\nURL encontrada: ' + $json.currentUrl + '\\nURL esperada: ' + $json.expectedUrl + '\\n\\nSe volvió a registrar automáticamente apuntando a n8n. Si Marco dejó de responder en algún momento antes de este correo, esta pudo ser la causa — ya debería estar funcionando de nuevo.' }}",
+          "html": "={{ 'El webhook de Telegram del bot de Marco ya no apuntaba a n8n (probablemente lo pisó el registro propio de G54 al guardar/actualizar la config del bot en el panel).<br><br>URL encontrada: ' + $json.currentUrl + '<br>URL esperada: ' + $json.expectedUrl + '<br><br>Se volvió a registrar automáticamente apuntando a n8n. Si Marco dejó de responder en algún momento antes de este correo, esta pudo ser la causa — ya debería estar funcionando de nuevo.' }}",
+          "options": {}
+        },
+        "credentials": {
+          "smtp": {
+            "id": "iWBBSSe5AWsCMo89",
+            "name": "Gmail SMTP — risosadmi"
+          }
+        },
+        "webhookId": "08f88287-5cad-4b48-8f9c-cce0303c96d3"
+      },
+      {
+        "id": "tg-g54-webhook",
+        "name": "🔔 Webhook G54 (Telegram Relevo)",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          0,
+          900
+        ],
+        "webhookId": "telegram-marco-g54",
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "telegram-marco-g54",
+          "options": {}
+        }
+      },
+      {
+        "id": "tg-extract-g54",
+        "name": "🔧 Extraer Mensaje (Relevo G54)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          220,
+          900
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst body = $json.body || $json;\nconst chatId = body.chat_id;\nconst texto = (body.texto || '').trim();\nconst conversationId = body.conversation_id;\nconst contactId = body.contact_id;\nconst nombreContacto = body.nombre || '';\nconst empresaId = body.empresa_id;\n\nif (!chatId || !texto) {\n  return [{ json: { skip: true, skipReason: 'sin_chat_id_o_texto' } }];\n}\n\n// Deduplicación — G54 no manda un ID único de mensaje en el relevo, se arma con chat+conversación+texto+ventana de tiempo\nif (!staticData.seenTgMessageIds) staticData.seenTgMessageIds = {};\nconst now = Date.now();\nObject.keys(staticData.seenTgMessageIds).forEach(id => {\n  if (now - staticData.seenTgMessageIds[id] > 60000) delete staticData.seenTgMessageIds[id];\n});\nconst dedupeKey = `${chatId}_${conversationId}_${texto}`;\nif (staticData.seenTgMessageIds[dedupeKey]) {\n  return [{ json: { skip: true, skipReason: 'duplicate_message' } }];\n}\nstaticData.seenTgMessageIds[dedupeKey] = now;\n\nreturn [{\n  json: {\n    telefono: 'tg_' + chatId,\n    chatId,\n    texto,\n    nombreContacto,\n    conversationId,\n    contactId,\n    empresaId,\n    tipoMensaje: 'text',\n    skip: false\n  }\n}];"
+        }
+      },
+      {
+        "id": "tg-skip-if",
+        "name": "🔀 ¿Mensaje Válido?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          440,
+          900
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.skip }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "false",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "tg-reply-login",
+        "name": "🔐 G54: Login (Reply TG)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1320,
+          500
+        ],
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "POST",
+          "url": "https://apigrowth.mdarthurdigital.com/api/auth/login",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'MASTER_PASSWORD_REDACTED' }) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "tg-reply-switch",
+        "name": "🏢 G54: Cambiar Empresa (Reply TG)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1540,
+          500
+        ],
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "POST",
+          "url": "https://apigrowth.mdarthurdigital.com/api/auth/switch-company",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login (Reply TG)').item.json.access_token }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ company_id: 1 }) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "tg-reply-send",
+        "name": "📤 G54: Responder Telegram",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1760,
+          500
+        ],
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "POST",
+          "url": "https://apigrowth.mdarthurdigital.com/api/telegram/reply",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login (Reply TG)').item.json.access_token }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ conversation_id: $('🔧 Extraer Mensaje (Relevo G54)').first().json.conversationId, message: ($('📨 Mensaje Final').isExecuted ? $('📨 Mensaje Final').first().json.mensaje : $('📝 Armar Mensaje Final').first().json.mensaje) || '' }) }}",
+          "options": {}
+        }
+      }
+    ],
+    "connections": {
+      "📲 Telegram Trigger": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Hay mensaje de texto?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Hay mensaje de texto?": {
+        "main": [
+          [
+            {
+              "node": "🔧 Extraer Mensaje Telegram",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🔀 ¿Es medio?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Extraer Mensaje Telegram": {
+        "main": [
+          [
+            {
+              "node": "🌐 Detectar Idioma Entrada",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🌐 Detectar Idioma Entrada": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Mensaje EN?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Mensaje EN?": {
+        "main": [
+          [
+            {
+              "node": "🔄 Traducir Entrada EN→ES",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "▶️ 02 Contexto y Lead",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔄 Traducir Entrada EN→ES": {
+        "main": [
+          [
+            {
+              "node": "📝 Aplicar Traducción Entrada",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📝 Aplicar Traducción Entrada": {
+        "main": [
+          [
+            {
+              "node": "▶️ 02 Contexto y Lead",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "▶️ 02 Contexto y Lead": {
+        "main": [
+          [
+            {
+              "node": "🔀 Fusionar Datos",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 Fusionar Datos": {
+        "main": [
+          [
+            {
+              "node": "▶️ 01 Clasificador",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "▶️ 01 Clasificador": {
+        "main": [
+          [
+            {
+              "node": "▶️ 03 Generador IA",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "▶️ 03 Generador IA": {
+        "main": [
+          [
+            {
+              "node": "💰 API Cotizador",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "💰 API Cotizador": {
+        "main": [
+          [
+            {
+              "node": "📝 Armar Mensaje Final",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📝 Armar Mensaje Final": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Responder EN?",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "▶️ 05 Guardar Lead",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Responder EN?": {
+        "main": [
+          [
+            {
+              "node": "🔄 Traducir Respuesta ES→EN",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🔐 G54: Login (Reply TG)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔄 Traducir Respuesta ES→EN": {
+        "main": [
+          [
+            {
+              "node": "📨 Mensaje Final",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📨 Mensaje Final": {
+        "main": [
+          [
+            {
+              "node": "🔐 G54: Login (Reply TG)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "▶️ 05 Guardar Lead": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Lead Caliente?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Lead Caliente?": {
+        "main": [
+          [
+            {
+              "node": "📧 Notificar Vendedor",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          []
+        ]
+      },
+      "🔀 ¿Es medio?": {
+        "main": [
+          [
+            {
+              "node": "🔧 Extraer Datos de Medio (TG)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          []
+        ]
+      },
+      "🔧 Extraer Datos de Medio (TG)": {
+        "main": [
+          [
+            {
+              "node": "🔧 Preparar Datos para Medios (TG)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Preparar Datos para Medios (TG)": {
+        "main": [
+          [
+            {
+              "node": "▶️ 06 Procesador de Medios (TG)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "▶️ 06 Procesador de Medios (TG)": {
+        "main": [
+          [
+            {
+              "node": "🔧 Combinar Texto de Medio (TG)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Combinar Texto de Medio (TG)": {
+        "main": [
+          [
+            {
+              "node": "🌐 Detectar Idioma Entrada",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "⏰ Chequeo Webhook (cada 30 min)": {
+        "main": [
+          [
+            {
+              "node": "🔍 Verificar Webhook Telegram",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔍 Verificar Webhook Telegram": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Webhook Correcto?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Webhook Correcto?": {
+        "main": [
+          [],
+          [
+            {
+              "node": "🔧 Re-registrar Webhook (n8n)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Re-registrar Webhook (n8n)": {
+        "main": [
+          [
+            {
+              "node": "📧 Alertar Webhook Re-registrado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔐 G54: Login (Reply TG)": {
+        "main": [
+          [
+            {
+              "node": "🏢 G54: Cambiar Empresa (Reply TG)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🏢 G54: Cambiar Empresa (Reply TG)": {
+        "main": [
+          [
+            {
+              "node": "📤 G54: Responder Telegram",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔔 Webhook G54 (Telegram Relevo)": {
+        "main": [
+          [
+            {
+              "node": "🔧 Extraer Mensaje (Relevo G54)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Extraer Mensaje (Relevo G54)": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Mensaje Válido?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Mensaje Válido?": {
+        "main": [
+          [
+            {
+              "node": "🌐 Detectar Idioma Entrada",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          []
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-07-25T14:37:05.168Z",
+        "id": 2377,
+        "workflowId": "HaSG63Q9C2tGOLH3",
+        "versionId": "dd118d51-11d2-4bd2-a507-dbbe69e184fe",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      },
+      {
+        "createdAt": "2026-07-25T14:37:05.122Z",
+        "id": 2376,
+        "workflowId": "HaSG63Q9C2tGOLH3",
+        "versionId": "dd118d51-11d2-4bd2-a507-dbbe69e184fe",
+        "event": "deactivated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    ]
   }
 }
