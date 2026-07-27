@@ -355,7 +355,7 @@
             {
               "id": "g54-agent-token",
               "name": "G54_AGENT_TOKEN",
-              "value": "g54_agent_produccion_2026",
+              "value": "REDACTED_AGENT_TOKEN",
               "type": "string"
             },
             {
@@ -385,7 +385,7 @@
             {
               "id": "g54-master-pass",
               "name": "G54_MASTER_PASSWORD",
-              "value": "wx2026_master",
+              "value": "REDACTED_MASTER_PASSWORD",
               "type": "string"
             }
           ]
@@ -405,7 +405,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "rrss-automation-g54",
-        "responseMode": "onReceived",
+        "responseMode": "responseNode",
         "options": {}
       },
       "id": "webhook-g54-rrss",
@@ -653,6 +653,97 @@
         }
       },
       "webhookId": "31bcc536-766f-4794-8eac-f7d4edff0ef2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-mode-ideas",
+              "leftValue": "={{ $('🔔 Webhook G54').item.json.body.mode }}",
+              "rightValue": "ideas",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-mode-ideas",
+      "name": "🔀 ¿Mode = Ideas?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        304,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.mdarthurdigital.com/webhook/ideas-ai-g54",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: $('🔔 Webhook G54').item.json.body.company_id, idea_id: $('🔔 Webhook G54').item.json.body.idea_id || null }) }}",
+        "options": {
+          "timeout": 25000
+        }
+      },
+      "id": "reenviar-ideas-ai",
+      "name": "🔗 Reenviar a Ideas AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        528,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "responder-modo-ideas",
+      "name": "📤 Responder Modo Ideas",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [
+        752,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, mode: 'post', message: 'Generando post, disponible en unos segundos.' }) }}",
+        "options": {}
+      },
+      "id": "responder-modo-post",
+      "name": "📤 Responder Modo Post (Fire-and-Forget)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [
+        528,
+        260
+      ]
     }
   ],
   "connections": {
@@ -794,7 +885,7 @@
       "main": [
         [
           {
-            "node": "🔐 G54: Login Sesión",
+            "node": "🔀 ¿Mode = Ideas?",
             "type": "main",
             "index": 0
           }
@@ -889,9 +980,47 @@
         ],
         []
       ]
+    },
+    "🔀 ¿Mode = Ideas?": {
+      "main": [
+        [
+          {
+            "node": "🔗 Reenviar a Ideas AI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📤 Responder Modo Post (Fire-and-Forget)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔐 G54: Login Sesión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 Reenviar a Ideas AI": {
+      "main": [
+        [
+          {
+            "node": "📤 Responder Modo Ideas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "CKOju9JVnSMymfKv",
+    "availableInMCP": false
   }
 }
