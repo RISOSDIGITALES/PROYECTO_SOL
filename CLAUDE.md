@@ -1226,6 +1226,12 @@ Sincronizados al repo: `workflow-marco-telegram-g54.json` (estado final, 36 nodo
 
 Sincronizados `workflow-vigia-g54.json` y `workflow-sales-ai-motor-g54.json` al repo con todos los fixes (verificado contra el estado real de n8n justo antes de escribir al repo), secretos redactados.
 
+182. **Vigía — el correo solo se manda si hay al menos un hallazgo crítico real, a pedido explícito de la usuaria por exceso de correos** (2026-07-27, cierre de la tarde): hasta ahora, cualquier hallazgo nuevo (fuera de cooldown) disparaba un correo — incluyendo los de severidad "atención" (ideas estancadas, storage 404 ya conocido y sin poder resolverse de nuestro lado, timezone sin configurar, WA config incompleta de alguna empresa) que no son urgentes. Con el trigger de cada 2h ya corrigiendo hoy mismo (ítem 176/181), esos hallazgos menores empezaron a generar correos regulares, dando la sensación de spam.
+
+**Fix:** `🧮 Aplicar Cooldown 6h` ahora calcula `hayCritico` (si alguno de los hallazgos que pasaron el cooldown es severidad `critico`), y `🔀 ¿Hay Hallazgos Nuevos?` solo deja pasar al correo si `hayCritico` es verdadero — los hallazgos de "atención" se siguen calculando y respetan su propio cooldown (así no se acumulan invisibles para siempre), pero ya no generan un correo por sí solos. Si en algún momento coincide un hallazgo crítico real con hallazgos de atención pendientes, el correo sigue incluyendo ambos para dar contexto completo — el cambio es solo sobre qué dispara el envío, no sobre qué se muestra dentro de él.
+
+**Confirmado en vivo:** corrida real inmediatamente después del fix — 1 hallazgo crudo (la config de WhatsApp de Orison, ya conocida), `hayCritico: false`, cadena cortada antes de `📧 Enviar Alerta`, sin correo enviado. Sincronizado `workflow-vigia-g54.json` al repo.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
