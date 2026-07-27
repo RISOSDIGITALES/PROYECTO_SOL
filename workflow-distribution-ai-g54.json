@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-27T14:10:20.848Z",
+  "updatedAt": "2026-07-27T14:50:54.678Z",
   "createdAt": "2026-06-25T16:00:34.918Z",
   "id": "IRCoya91PKPjpT1T",
   "name": "📢 Distribution AI — RRSS G54 v1.0",
@@ -379,6 +379,96 @@
               },
               "renameOutput": true,
               "outputKey": "FB Story con imagen"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "r5a",
+                    "leftValue": "={{ $json.platform }}",
+                    "rightValue": "Instagram",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "singleValue": true
+                    }
+                  },
+                  {
+                    "id": "r5b",
+                    "leftValue": "={{ $json.content_type }}",
+                    "rightValue": "reel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "singleValue": true
+                    }
+                  },
+                  {
+                    "id": "r5c",
+                    "leftValue": "={{ $json.video_url }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "IG Reel"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "r6a",
+                    "leftValue": "={{ $json.platform }}",
+                    "rightValue": "Instagram",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals",
+                      "singleValue": true
+                    }
+                  },
+                  {
+                    "id": "r6b",
+                    "leftValue": "={{ $json.content_type }}",
+                    "rightValue": "reel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "singleValue": true
+                    }
+                  },
+                  {
+                    "id": "r6c",
+                    "leftValue": "={{ $json.video_url }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "FB Reel"
             }
           ]
         },
@@ -395,7 +485,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst config = $('⚙️ Config Distribution').item.json;\nconst tokens = $('🏢 Aplicar Tokens Empresa').item.json;\nconst webhookBody = $('🌐 Webhook: Publicar Post').item?.json?.body || {};\n\nreturn items.map(item => {\n  const p = item.json;\n  const f = p.fields || p;\n\n  const post_id        = p.id || p.record_id || '';\n  const copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || '';\n  const copy_instagram = f.copy_instagram || f.Post_Instagram_EN || '';\n  const imagen_url     = f.imagen_url     || f.imagen || '';\n  const platform       = f.platform || p.platform || 'Facebook';\n  const content_type   = webhookBody.content_type || f.content_type || p.content_type || 'post';\n\n  const FB_ACCESS_TOKEN = tokens.FB_ACCESS_TOKEN || p.access_token || '';\n  const FB_PAGE_ID = p.fb_page_id || p.page_id || config.FB_PAGE_ID || '';\n  const IG_USER_ID = p.instagram_account_id || tokens.IG_USER_ID || '';\n\n  return { json: {\n    post_id, copy_facebook, copy_instagram, imagen_url,\n    has_image: !!imagen_url, platform, content_type,\n    FB_ACCESS_TOKEN, FB_PAGE_ID, IG_USER_ID\n  } };\n});"
+        "jsCode": "const items = $input.all();\nconst config = $('⚙️ Config Distribution').item.json;\nconst tokens = $('🏢 Aplicar Tokens Empresa').item.json;\nconst webhookBody = $('🌐 Webhook: Publicar Post').item?.json?.body || {};\n\nreturn items.map(item => {\n  const p = item.json;\n  const f = p.fields || p;\n\n  const post_id        = p.id || p.record_id || '';\n  const copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || '';\n  const copy_instagram = f.copy_instagram || f.Post_Instagram_EN || '';\n  const imagen_url     = f.imagen_url     || f.imagen || '';\n  const video_url      = f.video_url      || p.video_url || '';\n  const platform       = f.platform || p.platform || 'Facebook';\n  const content_type   = webhookBody.content_type || f.content_type || p.content_type || 'post';\n\n  const FB_ACCESS_TOKEN = tokens.FB_ACCESS_TOKEN || p.access_token || '';\n  const FB_PAGE_ID = p.fb_page_id || p.page_id || config.FB_PAGE_ID || '';\n  const IG_USER_ID = p.instagram_account_id || tokens.IG_USER_ID || '';\n\n  return { json: {\n    post_id, copy_facebook, copy_instagram, imagen_url, video_url,\n    has_image: !!imagen_url, has_video: !!video_url, platform, content_type,\n    FB_ACCESS_TOKEN, FB_PAGE_ID, IG_USER_ID\n  } };\n});"
       },
       "id": "prep-post",
       "name": "🔧 Preparar Datos Post",
@@ -627,7 +717,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { \"post_id_platform\": $('📸 IG: Publicar').isExecuted ? ($('📸 IG: Publicar').item.json.id || null) : ($('📘 FB: Publicar con Foto').isExecuted ? ($('📘 FB: Publicar con Foto').item.json.post_id || $('📘 FB: Publicar con Foto').item.json.id || null) : ($('📘 FB: Publicar Solo Texto').isExecuted ? ($('📘 FB: Publicar Solo Texto').item.json.id || null) : ($('📱 IG: Publicar (Story)').isExecuted ? ($('📱 IG: Publicar (Story)').item.json.id || null) : ($('📘 FB: Publicar Story').isExecuted ? ($('📘 FB: Publicar Story').item.json.id || null) : null)))) } }}",
+        "jsonBody": "={{ { \"post_id_platform\": $('📸 IG: Publicar').isExecuted ? ($('📸 IG: Publicar').item.json.id || null) : ($('📘 FB: Publicar con Foto').isExecuted ? ($('📘 FB: Publicar con Foto').item.json.post_id || $('📘 FB: Publicar con Foto').item.json.id || null) : ($('📘 FB: Publicar Solo Texto').isExecuted ? ($('📘 FB: Publicar Solo Texto').item.json.id || null) : ($('📱 IG: Publicar (Story)').isExecuted ? ($('📱 IG: Publicar (Story)').item.json.id || null) : ($('📘 FB: Publicar Story').isExecuted ? ($('📘 FB: Publicar Story').item.json.id || null) : ($('📱 IG: Publicar (Reel)').isExecuted ? ($('📱 IG: Publicar (Reel)').item.json.id || null) : ($('📘 FB: Finalizar Reel (finish)').isExecuted ? ($('📘 FB: Iniciar Reel (start)').item.json.video_id || null) : null)))))) } }}",
         "options": {}
       },
       "id": "g54-pub",
@@ -1076,6 +1166,185 @@
       "parameters": {
         "amount": 8,
         "unit": "seconds"
+      },
+      "webhookId": "af2da8b6-de01-4c59-a8ce-95af3a2a6360"
+    },
+    {
+      "id": "ig-reel-container",
+      "name": "📱 IG: Crear Container (Reel)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1328,
+        1040
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $json.IG_USER_ID }}/media",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "video_url",
+              "value": "={{ $('🔧 Preparar Datos Post').item.json.video_url }}"
+            },
+            {
+              "name": "media_type",
+              "value": "REELS"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $('🔧 Preparar Datos Post').item.json.copy_instagram }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.FB_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ig-reel-wait-ready",
+      "name": "🎬 IG: Esperar Video Listo (Reel)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1544,
+        1040
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const containerId = $input.first().json.id;\nconst accessToken = $('🔧 Preparar Datos Post').item.json.FB_ACCESS_TOKEN;\nconst maxAttempts = 15;\nconst delayMs = 10000;\n\nfor (let i = 0; i < maxAttempts; i++) {\n  const res = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `https://graph.facebook.com/v19.0/${containerId}`,\n    qs: { fields: 'status_code', access_token: accessToken },\n    json: true\n  });\n  if (res.status_code === 'FINISHED') {\n    return [{ json: { id: containerId, ready: true, status_code: res.status_code } }];\n  }\n  if (res.status_code === 'ERROR' || res.status_code === 'EXPIRED') {\n    throw new Error('IG Reel container failed processing: ' + res.status_code);\n  }\n  if (i < maxAttempts - 1) {\n    await new Promise(resolve => setTimeout(resolve, delayMs));\n  }\n}\nthrow new Error('IG Reel container did not finish processing in time (timeout tras ' + (maxAttempts * delayMs / 1000) + 's)');"
+      }
+    },
+    {
+      "id": "ig-reel-publish",
+      "name": "📱 IG: Publicar (Reel)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        1040
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $('🔧 Preparar Datos Post').item.json.IG_USER_ID }}/media_publish",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('🔧 Preparar Datos Post').item.json.FB_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "fb-reel-start",
+      "name": "📘 FB: Iniciar Reel (start)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1328,
+        1220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $json.FB_PAGE_ID }}/video_reels",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "upload_phase",
+              "value": "start"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('🔧 Aplicar Token Intercambiado').item.json.FB_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "fb-reel-upload",
+      "name": "📘 FB: Subir Video Reel (file_url)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1544,
+        1220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.upload_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=OAuth {{ $('🔧 Aplicar Token Intercambiado').item.json.FB_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "file_url",
+              "value": "={{ $('🔧 Preparar Datos Post').item.json.video_url }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "fb-reel-finish",
+      "name": "📘 FB: Finalizar Reel (finish)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        1220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $('🔧 Preparar Datos Post').item.json.FB_PAGE_ID }}/video_reels",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "upload_phase",
+              "value": "finish"
+            },
+            {
+              "name": "video_id",
+              "value": "={{ $('📘 FB: Iniciar Reel (start)').item.json.video_id }}"
+            },
+            {
+              "name": "video_state",
+              "value": "PUBLISHED"
+            },
+            {
+              "name": "description",
+              "value": "={{ $('🔧 Preparar Datos Post').item.json.copy_facebook }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('🔧 Aplicar Token Intercambiado').item.json.FB_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
       }
     }
   ],
@@ -1302,6 +1571,20 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "📱 IG: Crear Container (Reel)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📘 FB: Iniciar Reel (start)",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -1436,6 +1719,72 @@
           }
         ]
       ]
+    },
+    "📱 IG: Crear Container (Reel)": {
+      "main": [
+        [
+          {
+            "node": "🎬 IG: Esperar Video Listo (Reel)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎬 IG: Esperar Video Listo (Reel)": {
+      "main": [
+        [
+          {
+            "node": "📱 IG: Publicar (Reel)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 IG: Publicar (Reel)": {
+      "main": [
+        [
+          {
+            "node": "✅ G54: Estado → Publicado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📘 FB: Iniciar Reel (start)": {
+      "main": [
+        [
+          {
+            "node": "📘 FB: Subir Video Reel (file_url)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📘 FB: Subir Video Reel (file_url)": {
+      "main": [
+        [
+          {
+            "node": "📘 FB: Finalizar Reel (finish)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📘 FB: Finalizar Reel (finish)": {
+      "main": [
+        [
+          {
+            "node": "✅ G54: Estado → Publicado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -1457,9 +1806,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "64aaeed0-8d1d-41fa-8506-741b59afd1fb",
-  "activeVersionId": "64aaeed0-8d1d-41fa-8506-741b59afd1fb",
-  "versionCounter": 74,
+  "versionId": "4e5b7f4f-6c5f-46a3-83db-72156b73a6f4",
+  "activeVersionId": "4e5b7f4f-6c5f-46a3-83db-72156b73a6f4",
+  "versionCounter": 76,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "shared": [
@@ -1484,9 +1833,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-07-27T14:10:20.855Z",
-    "createdAt": "2026-07-27T14:10:20.855Z",
-    "versionId": "64aaeed0-8d1d-41fa-8506-741b59afd1fb",
+    "updatedAt": "2026-07-27T14:50:54.682Z",
+    "createdAt": "2026-07-27T14:50:54.682Z",
+    "versionId": "4e5b7f4f-6c5f-46a3-83db-72156b73a6f4",
     "workflowId": "IRCoya91PKPjpT1T",
     "nodes": [
       {
@@ -1861,6 +2210,96 @@
                 },
                 "renameOutput": true,
                 "outputKey": "FB Story con imagen"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "r5a",
+                      "leftValue": "={{ $json.platform }}",
+                      "rightValue": "Instagram",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "singleValue": true
+                      }
+                    },
+                    {
+                      "id": "r5b",
+                      "leftValue": "={{ $json.content_type }}",
+                      "rightValue": "reel",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "singleValue": true
+                      }
+                    },
+                    {
+                      "id": "r5c",
+                      "leftValue": "={{ $json.video_url }}",
+                      "rightValue": "",
+                      "operator": {
+                        "type": "string",
+                        "operation": "notEquals",
+                        "singleValue": true
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "IG Reel"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "r6a",
+                      "leftValue": "={{ $json.platform }}",
+                      "rightValue": "Instagram",
+                      "operator": {
+                        "type": "string",
+                        "operation": "notEquals",
+                        "singleValue": true
+                      }
+                    },
+                    {
+                      "id": "r6b",
+                      "leftValue": "={{ $json.content_type }}",
+                      "rightValue": "reel",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "singleValue": true
+                      }
+                    },
+                    {
+                      "id": "r6c",
+                      "leftValue": "={{ $json.video_url }}",
+                      "rightValue": "",
+                      "operator": {
+                        "type": "string",
+                        "operation": "notEquals",
+                        "singleValue": true
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "FB Reel"
               }
             ]
           },
@@ -1877,7 +2316,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const items = $input.all();\nconst config = $('⚙️ Config Distribution').item.json;\nconst tokens = $('🏢 Aplicar Tokens Empresa').item.json;\nconst webhookBody = $('🌐 Webhook: Publicar Post').item?.json?.body || {};\n\nreturn items.map(item => {\n  const p = item.json;\n  const f = p.fields || p;\n\n  const post_id        = p.id || p.record_id || '';\n  const copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || '';\n  const copy_instagram = f.copy_instagram || f.Post_Instagram_EN || '';\n  const imagen_url     = f.imagen_url     || f.imagen || '';\n  const platform       = f.platform || p.platform || 'Facebook';\n  const content_type   = webhookBody.content_type || f.content_type || p.content_type || 'post';\n\n  const FB_ACCESS_TOKEN = tokens.FB_ACCESS_TOKEN || p.access_token || '';\n  const FB_PAGE_ID = p.fb_page_id || p.page_id || config.FB_PAGE_ID || '';\n  const IG_USER_ID = p.instagram_account_id || tokens.IG_USER_ID || '';\n\n  return { json: {\n    post_id, copy_facebook, copy_instagram, imagen_url,\n    has_image: !!imagen_url, platform, content_type,\n    FB_ACCESS_TOKEN, FB_PAGE_ID, IG_USER_ID\n  } };\n});"
+          "jsCode": "const items = $input.all();\nconst config = $('⚙️ Config Distribution').item.json;\nconst tokens = $('🏢 Aplicar Tokens Empresa').item.json;\nconst webhookBody = $('🌐 Webhook: Publicar Post').item?.json?.body || {};\n\nreturn items.map(item => {\n  const p = item.json;\n  const f = p.fields || p;\n\n  const post_id        = p.id || p.record_id || '';\n  const copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || '';\n  const copy_instagram = f.copy_instagram || f.Post_Instagram_EN || '';\n  const imagen_url     = f.imagen_url     || f.imagen || '';\n  const video_url      = f.video_url      || p.video_url || '';\n  const platform       = f.platform || p.platform || 'Facebook';\n  const content_type   = webhookBody.content_type || f.content_type || p.content_type || 'post';\n\n  const FB_ACCESS_TOKEN = tokens.FB_ACCESS_TOKEN || p.access_token || '';\n  const FB_PAGE_ID = p.fb_page_id || p.page_id || config.FB_PAGE_ID || '';\n  const IG_USER_ID = p.instagram_account_id || tokens.IG_USER_ID || '';\n\n  return { json: {\n    post_id, copy_facebook, copy_instagram, imagen_url, video_url,\n    has_image: !!imagen_url, has_video: !!video_url, platform, content_type,\n    FB_ACCESS_TOKEN, FB_PAGE_ID, IG_USER_ID\n  } };\n});"
         },
         "id": "prep-post",
         "name": "🔧 Preparar Datos Post",
@@ -2109,7 +2548,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ { \"post_id_platform\": $('📸 IG: Publicar').isExecuted ? ($('📸 IG: Publicar').item.json.id || null) : ($('📘 FB: Publicar con Foto').isExecuted ? ($('📘 FB: Publicar con Foto').item.json.post_id || $('📘 FB: Publicar con Foto').item.json.id || null) : ($('📘 FB: Publicar Solo Texto').isExecuted ? ($('📘 FB: Publicar Solo Texto').item.json.id || null) : ($('📱 IG: Publicar (Story)').isExecuted ? ($('📱 IG: Publicar (Story)').item.json.id || null) : ($('📘 FB: Publicar Story').isExecuted ? ($('📘 FB: Publicar Story').item.json.id || null) : null)))) } }}",
+          "jsonBody": "={{ { \"post_id_platform\": $('📸 IG: Publicar').isExecuted ? ($('📸 IG: Publicar').item.json.id || null) : ($('📘 FB: Publicar con Foto').isExecuted ? ($('📘 FB: Publicar con Foto').item.json.post_id || $('📘 FB: Publicar con Foto').item.json.id || null) : ($('📘 FB: Publicar Solo Texto').isExecuted ? ($('📘 FB: Publicar Solo Texto').item.json.id || null) : ($('📱 IG: Publicar (Story)').isExecuted ? ($('📱 IG: Publicar (Story)').item.json.id || null) : ($('📘 FB: Publicar Story').isExecuted ? ($('📘 FB: Publicar Story').item.json.id || null) : ($('📱 IG: Publicar (Reel)').isExecuted ? ($('📱 IG: Publicar (Reel)').item.json.id || null) : ($('📘 FB: Finalizar Reel (finish)').isExecuted ? ($('📘 FB: Iniciar Reel (start)').item.json.video_id || null) : null)))))) } }}",
           "options": {}
         },
         "id": "g54-pub",
@@ -2545,6 +2984,199 @@
           },
           "options": {}
         }
+      },
+      {
+        "id": "ig-story-wait",
+        "name": "⏳ Esperar Procesamiento (IG Story)",
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          1544,
+          700
+        ],
+        "parameters": {
+          "amount": 8,
+          "unit": "seconds"
+        },
+        "webhookId": "af2da8b6-de01-4c59-a8ce-95af3a2a6360"
+      },
+      {
+        "id": "ig-reel-container",
+        "name": "📱 IG: Crear Container (Reel)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1328,
+          1040
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "=https://graph.facebook.com/v19.0/{{ $json.IG_USER_ID }}/media",
+          "sendBody": true,
+          "contentType": "form-urlencoded",
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "video_url",
+                "value": "={{ $('🔧 Preparar Datos Post').item.json.video_url }}"
+              },
+              {
+                "name": "media_type",
+                "value": "REELS"
+              },
+              {
+                "name": "caption",
+                "value": "={{ $('🔧 Preparar Datos Post').item.json.copy_instagram }}"
+              },
+              {
+                "name": "access_token",
+                "value": "={{ $json.FB_ACCESS_TOKEN }}"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "ig-reel-wait-ready",
+        "name": "🎬 IG: Esperar Video Listo (Reel)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1544,
+          1040
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const containerId = $input.first().json.id;\nconst accessToken = $('🔧 Preparar Datos Post').item.json.FB_ACCESS_TOKEN;\nconst maxAttempts = 15;\nconst delayMs = 10000;\n\nfor (let i = 0; i < maxAttempts; i++) {\n  const res = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `https://graph.facebook.com/v19.0/${containerId}`,\n    qs: { fields: 'status_code', access_token: accessToken },\n    json: true\n  });\n  if (res.status_code === 'FINISHED') {\n    return [{ json: { id: containerId, ready: true, status_code: res.status_code } }];\n  }\n  if (res.status_code === 'ERROR' || res.status_code === 'EXPIRED') {\n    throw new Error('IG Reel container failed processing: ' + res.status_code);\n  }\n  if (i < maxAttempts - 1) {\n    await new Promise(resolve => setTimeout(resolve, delayMs));\n  }\n}\nthrow new Error('IG Reel container did not finish processing in time (timeout tras ' + (maxAttempts * delayMs / 1000) + 's)');"
+        }
+      },
+      {
+        "id": "ig-reel-publish",
+        "name": "📱 IG: Publicar (Reel)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1760,
+          1040
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "=https://graph.facebook.com/v19.0/{{ $('🔧 Preparar Datos Post').item.json.IG_USER_ID }}/media_publish",
+          "sendBody": true,
+          "contentType": "form-urlencoded",
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "creation_id",
+                "value": "={{ $json.id }}"
+              },
+              {
+                "name": "access_token",
+                "value": "={{ $('🔧 Preparar Datos Post').item.json.FB_ACCESS_TOKEN }}"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "fb-reel-start",
+        "name": "📘 FB: Iniciar Reel (start)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1328,
+          1220
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "=https://graph.facebook.com/v19.0/{{ $json.FB_PAGE_ID }}/video_reels",
+          "sendBody": true,
+          "contentType": "form-urlencoded",
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "upload_phase",
+                "value": "start"
+              },
+              {
+                "name": "access_token",
+                "value": "={{ $('🔧 Aplicar Token Intercambiado').item.json.FB_ACCESS_TOKEN }}"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "fb-reel-upload",
+        "name": "📘 FB: Subir Video Reel (file_url)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1544,
+          1220
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $json.upload_url }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=OAuth {{ $('🔧 Aplicar Token Intercambiado').item.json.FB_ACCESS_TOKEN }}"
+              },
+              {
+                "name": "file_url",
+                "value": "={{ $('🔧 Preparar Datos Post').item.json.video_url }}"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "fb-reel-finish",
+        "name": "📘 FB: Finalizar Reel (finish)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1760,
+          1220
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "=https://graph.facebook.com/v19.0/{{ $('🔧 Preparar Datos Post').item.json.FB_PAGE_ID }}/video_reels",
+          "sendBody": true,
+          "contentType": "form-urlencoded",
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "upload_phase",
+                "value": "finish"
+              },
+              {
+                "name": "video_id",
+                "value": "={{ $('📘 FB: Iniciar Reel (start)').item.json.video_id }}"
+              },
+              {
+                "name": "video_state",
+                "value": "PUBLISHED"
+              },
+              {
+                "name": "description",
+                "value": "={{ $('🔧 Preparar Datos Post').item.json.copy_facebook }}"
+              },
+              {
+                "name": "access_token",
+                "value": "={{ $('🔧 Aplicar Token Intercambiado').item.json.FB_ACCESS_TOKEN }}"
+              }
+            ]
+          },
+          "options": {}
+        }
       }
     ],
     "connections": {
@@ -2770,6 +3402,20 @@
               "type": "main",
               "index": 0
             }
+          ],
+          [
+            {
+              "node": "📱 IG: Crear Container (Reel)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📘 FB: Iniciar Reel (start)",
+              "type": "main",
+              "index": 0
+            }
           ]
         ]
       },
@@ -2843,7 +3489,7 @@
         "main": [
           [
             {
-              "node": "📱 IG: Publicar (Story)",
+              "node": "⏳ Esperar Procesamiento (IG Story)",
               "type": "main",
               "index": 0
             }
@@ -2893,6 +3539,83 @@
         "main": [
           []
         ]
+      },
+      "⏳ Esperar Procesamiento (IG Story)": {
+        "main": [
+          [
+            {
+              "node": "📱 IG: Publicar (Story)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📱 IG: Crear Container (Reel)": {
+        "main": [
+          [
+            {
+              "node": "🎬 IG: Esperar Video Listo (Reel)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🎬 IG: Esperar Video Listo (Reel)": {
+        "main": [
+          [
+            {
+              "node": "📱 IG: Publicar (Reel)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📱 IG: Publicar (Reel)": {
+        "main": [
+          [
+            {
+              "node": "✅ G54: Estado → Publicado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📘 FB: Iniciar Reel (start)": {
+        "main": [
+          [
+            {
+              "node": "📘 FB: Subir Video Reel (file_url)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📘 FB: Subir Video Reel (file_url)": {
+        "main": [
+          [
+            {
+              "node": "📘 FB: Finalizar Reel (finish)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📘 FB: Finalizar Reel (finish)": {
+        "main": [
+          [
+            {
+              "node": "✅ G54: Estado → Publicado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -2902,18 +3625,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-07-27T14:10:21.102Z",
-        "id": 2407,
+        "createdAt": "2026-07-27T14:50:54.882Z",
+        "id": 2411,
         "workflowId": "IRCoya91PKPjpT1T",
-        "versionId": "64aaeed0-8d1d-41fa-8506-741b59afd1fb",
+        "versionId": "4e5b7f4f-6c5f-46a3-83db-72156b73a6f4",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-07-27T14:10:21.019Z",
-        "id": 2406,
+        "createdAt": "2026-07-27T14:50:54.831Z",
+        "id": 2410,
         "workflowId": "IRCoya91PKPjpT1T",
-        "versionId": "64aaeed0-8d1d-41fa-8506-741b59afd1fb",
+        "versionId": "4e5b7f4f-6c5f-46a3-83db-72156b73a6f4",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
