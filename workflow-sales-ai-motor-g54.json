@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-27T19:13:55.988Z",
+  "updatedAt": "2026-07-27T19:23:47.307Z",
   "createdAt": "2026-06-20T00:45:39.368Z",
   "id": "otycsrxrMEMuxuwD",
   "name": "💬 Sales AI — Motor de Conversación G54",
@@ -1060,7 +1060,8 @@
         700
       ],
       "parameters": {
-        "jsCode": "const leadsRaw = $('📋 Obtener Leads Sin Respuesta').item.json;\nconst leads = leadsRaw?.data || leadsRaw?.records || [];\n\nlet waConfigRaw = {};\ntry { waConfigRaw = $('⚙️ Obtener WA Config Follow-up').item?.json || {}; } catch(e) {}\nconst waConfig = waConfigRaw?.data || {};\n\nconst followup24 = waConfig.followup_24h || 'Hola 👋 ¿Sigues necesitando ayuda? Aquí estamos para asistirte.';\nconst followup72 = waConfig.followup_72h || 'Seguimos disponibles cuando lo necesites 👍';\nconst wa_access_token = waConfig.wa_access_token || '';\nconst phone_number_id = waConfig.phone_number_id || '';\n\nconst now = new Date();\nconst results = [];\n\nfor (const lead of leads) {\n  const ultimaActividad = new Date(lead.ultima_actividad || lead.created_at || 0);\n  const horasDiff = (now - ultimaActividad) / (1000 * 60 * 60);\n  let tipoFollowup = null;\n  if (horasDiff >= 72) tipoFollowup = '72h';\n  else if (horasDiff >= 24) tipoFollowup = '24h';\n  if (!tipoFollowup) continue;\n\n  const telefono = (lead.phone || '').replace(/^\\+/, '');\n  if (!telefono || telefono.startsWith('fbig_')) continue;\n\n  results.push({ json: {\n    leadId: lead.id,\n    telefono,\n    nombre: lead.name || '',\n    tipoFollowup,\n    estado: lead.estado || '',\n    mensajeFollowup: tipoFollowup === '24h' ? followup24 : followup72,\n    wa_access_token,\n    phone_number_id\n  } });\n}\n\nreturn results.length ? results : [{ json: { skip: true } }];"
+        "jsCode": "const configs = $('⚙️ Config G54 Follow-up').all();\nconst leadsPorEmpresa = $('📋 Obtener Leads Sin Respuesta').all();\nconst waConfigsPorEmpresa = $('⚙️ Obtener WA Config Follow-up').all();\n\nconst now = new Date();\nconst results = [];\n\nfor (let i = 0; i < configs.length; i++) {\n  const cfg = configs[i].json;\n  const leadsRaw = leadsPorEmpresa[i] ? leadsPorEmpresa[i].json : {};\n  const leads = leadsRaw?.data || leadsRaw?.records || [];\n\n  let waConfig = {};\n  try { waConfig = (waConfigsPorEmpresa[i] ? waConfigsPorEmpresa[i].json : {})?.data || {}; } catch(e) {}\n\n  const followup24 = waConfig.followup_24h || 'Hola 👋 ¿Sigues necesitando ayuda? Aquí estamos para asistirte.';\n  const followup72 = waConfig.followup_72h || 'Seguimos disponibles cuando lo necesites 👍';\n  const wa_access_token = waConfig.wa_access_token || '';\n  const phone_number_id = waConfig.phone_number_id || '';\n\n  for (const lead of leads) {\n    const ultimaActividad = new Date(lead.ultima_actividad || lead.created_at || 0);\n    const horasDiff = (now - ultimaActividad) / (1000 * 60 * 60);\n    let tipoFollowup = null;\n    if (horasDiff >= 72) tipoFollowup = '72h';\n    else if (horasDiff >= 24) tipoFollowup = '24h';\n    if (!tipoFollowup) continue;\n\n    const telefono = (lead.phone || '').replace(/^\\+/, '');\n    if (!telefono || telefono.startsWith('fbig_')) continue;\n\n    results.push({ json: {\n      leadId: lead.id,\n      telefono,\n      nombre: lead.name || '',\n      tipoFollowup,\n      estado: lead.estado || '',\n      mensajeFollowup: tipoFollowup === '24h' ? followup24 : followup72,\n      wa_access_token,\n      phone_number_id,\n      // Contexto de empresa propagado explícitamente — evita que los nodos downstream\n      // tengan que volver a buscar \"la\" empresa vía .item después de este fan-out\n      // (mismo tipo de bug de .item/.first() ya corregido antes en Distribution AI/Telegram).\n      G54_BASE_URL: cfg.G54_BASE_URL,\n      G54_AGENT_TOKEN: cfg.G54_AGENT_TOKEN,\n      G54_COMPANY_ID: cfg.G54_COMPANY_ID,\n      G54_MASTER_EMAIL: cfg.G54_MASTER_EMAIL,\n      G54_MASTER_PASSWORD: cfg.G54_MASTER_PASSWORD\n    } });\n  }\n}\n\nreturn results.length ? results : [{ json: { skip: true } }];",
+        "mode": "runOnceForAllItems"
       }
     },
     {
@@ -1138,13 +1139,13 @@
       "continueOnFail": true,
       "parameters": {
         "method": "PATCH",
-        "url": "={{ $('⚙️ Config G54 Follow-up').item.json.G54_BASE_URL + '/api/agent/wa/leads/' + $json.leadId }}",
+        "url": "={{ $('🔧 Procesar Follow-ups').item.json.G54_BASE_URL + '/api/agent/wa/leads/' + $('🔧 Procesar Follow-ups').item.json.leadId }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('⚙️ Config G54 Follow-up').item.json.G54_AGENT_TOKEN }}"
+              "value": "={{ 'Bearer ' + $('🔧 Procesar Follow-ups').item.json.G54_AGENT_TOKEN }}"
             },
             {
               "name": "Content-Type",
@@ -1903,7 +1904,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "={{ $('⚙️ Config G54 Follow-up').item.json.G54_BASE_URL }}/api/auth/login",
+        "url": "={{ $('🔧 Procesar Follow-ups').item.json.G54_BASE_URL }}/api/auth/login",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -1915,7 +1916,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config G54 Follow-up').item.json.G54_MASTER_EMAIL, password: $('⚙️ Config G54 Follow-up').item.json.G54_MASTER_PASSWORD }) }}",
+        "jsonBody": "={{ JSON.stringify({ email: $('🔧 Procesar Follow-ups').item.json.G54_MASTER_EMAIL, password: $('🔧 Procesar Follow-ups').item.json.G54_MASTER_PASSWORD }) }}",
         "options": {}
       },
       "onError": "continueRegularOutput"
@@ -1931,7 +1932,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "={{ $('⚙️ Config G54 Follow-up').item.json.G54_BASE_URL }}/api/auth/switch-company",
+        "url": "={{ $('🔧 Procesar Follow-ups').item.json.G54_BASE_URL }}/api/auth/switch-company",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -1943,7 +1944,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ company_id: Number($('⚙️ Config G54 Follow-up').item.json.G54_COMPANY_ID || 1) }) }}",
+        "jsonBody": "={{ JSON.stringify({ company_id: Number($('🔧 Procesar Follow-ups').item.json.G54_COMPANY_ID || 1) }) }}",
         "options": {}
       },
       "onError": "continueRegularOutput"
@@ -1959,7 +1960,7 @@
       ],
       "parameters": {
         "method": "GET",
-        "url": "={{ $('⚙️ Config G54 Follow-up').item.json.G54_BASE_URL }}/api/crm/board",
+        "url": "={{ $('🔧 Procesar Follow-ups').item.json.G54_BASE_URL }}/api/crm/board",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -2031,7 +2032,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "={{ $('⚙️ Config G54 Follow-up').item.json.G54_BASE_URL + '/api/crm/deals/' + $json.dealId + '/activities' }}",
+        "url": "={{ $('🔧 Procesar Follow-ups').item.json.G54_BASE_URL + '/api/crm/deals/' + $json.dealId + '/activities' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -2912,9 +2913,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "468ba789-43c3-4fff-96f9-665e02c6ea0a",
-  "activeVersionId": "468ba789-43c3-4fff-96f9-665e02c6ea0a",
-  "versionCounter": 38,
+  "versionId": "7d2e804b-e57d-401b-95b2-3da5af83af69",
+  "activeVersionId": "7d2e804b-e57d-401b-95b2-3da5af83af69",
+  "versionCounter": 39,
   "triggerCount": 3,
   "sourceWorkflowId": null,
   "shared": [
@@ -2939,9 +2940,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-07-27T19:13:55.993Z",
-    "createdAt": "2026-07-27T19:13:55.993Z",
-    "versionId": "468ba789-43c3-4fff-96f9-665e02c6ea0a",
+    "updatedAt": "2026-07-27T19:23:47.312Z",
+    "createdAt": "2026-07-27T19:23:47.312Z",
+    "versionId": "7d2e804b-e57d-401b-95b2-3da5af83af69",
     "workflowId": "otycsrxrMEMuxuwD",
     "nodes": [
       {
@@ -3997,7 +3998,8 @@
           700
         ],
         "parameters": {
-          "jsCode": "const leadsRaw = $('📋 Obtener Leads Sin Respuesta').item.json;\nconst leads = leadsRaw?.data || leadsRaw?.records || [];\n\nlet waConfigRaw = {};\ntry { waConfigRaw = $('⚙️ Obtener WA Config Follow-up').item?.json || {}; } catch(e) {}\nconst waConfig = waConfigRaw?.data || {};\n\nconst followup24 = waConfig.followup_24h || 'Hola 👋 ¿Sigues necesitando ayuda? Aquí estamos para asistirte.';\nconst followup72 = waConfig.followup_72h || 'Seguimos disponibles cuando lo necesites 👍';\nconst wa_access_token = waConfig.wa_access_token || '';\nconst phone_number_id = waConfig.phone_number_id || '';\n\nconst now = new Date();\nconst results = [];\n\nfor (const lead of leads) {\n  const ultimaActividad = new Date(lead.ultima_actividad || lead.created_at || 0);\n  const horasDiff = (now - ultimaActividad) / (1000 * 60 * 60);\n  let tipoFollowup = null;\n  if (horasDiff >= 72) tipoFollowup = '72h';\n  else if (horasDiff >= 24) tipoFollowup = '24h';\n  if (!tipoFollowup) continue;\n\n  const telefono = (lead.phone || '').replace(/^\\+/, '');\n  if (!telefono || telefono.startsWith('fbig_')) continue;\n\n  results.push({ json: {\n    leadId: lead.id,\n    telefono,\n    nombre: lead.name || '',\n    tipoFollowup,\n    estado: lead.estado || '',\n    mensajeFollowup: tipoFollowup === '24h' ? followup24 : followup72,\n    wa_access_token,\n    phone_number_id\n  } });\n}\n\nreturn results.length ? results : [{ json: { skip: true } }];"
+          "jsCode": "const configs = $('⚙️ Config G54 Follow-up').all();\nconst leadsPorEmpresa = $('📋 Obtener Leads Sin Respuesta').all();\nconst waConfigsPorEmpresa = $('⚙️ Obtener WA Config Follow-up').all();\n\nconst now = new Date();\nconst results = [];\n\nfor (let i = 0; i < configs.length; i++) {\n  const cfg = configs[i].json;\n  const leadsRaw = leadsPorEmpresa[i] ? leadsPorEmpresa[i].json : {};\n  const leads = leadsRaw?.data || leadsRaw?.records || [];\n\n  let waConfig = {};\n  try { waConfig = (waConfigsPorEmpresa[i] ? waConfigsPorEmpresa[i].json : {})?.data || {}; } catch(e) {}\n\n  const followup24 = waConfig.followup_24h || 'Hola 👋 ¿Sigues necesitando ayuda? Aquí estamos para asistirte.';\n  const followup72 = waConfig.followup_72h || 'Seguimos disponibles cuando lo necesites 👍';\n  const wa_access_token = waConfig.wa_access_token || '';\n  const phone_number_id = waConfig.phone_number_id || '';\n\n  for (const lead of leads) {\n    const ultimaActividad = new Date(lead.ultima_actividad || lead.created_at || 0);\n    const horasDiff = (now - ultimaActividad) / (1000 * 60 * 60);\n    let tipoFollowup = null;\n    if (horasDiff >= 72) tipoFollowup = '72h';\n    else if (horasDiff >= 24) tipoFollowup = '24h';\n    if (!tipoFollowup) continue;\n\n    const telefono = (lead.phone || '').replace(/^\\+/, '');\n    if (!telefono || telefono.startsWith('fbig_')) continue;\n\n    results.push({ json: {\n      leadId: lead.id,\n      telefono,\n      nombre: lead.name || '',\n      tipoFollowup,\n      estado: lead.estado || '',\n      mensajeFollowup: tipoFollowup === '24h' ? followup24 : followup72,\n      wa_access_token,\n      phone_number_id,\n      // Contexto de empresa propagado explícitamente — evita que los nodos downstream\n      // tengan que volver a buscar \"la\" empresa vía .item después de este fan-out\n      // (mismo tipo de bug de .item/.first() ya corregido antes en Distribution AI/Telegram).\n      G54_BASE_URL: cfg.G54_BASE_URL,\n      G54_AGENT_TOKEN: cfg.G54_AGENT_TOKEN,\n      G54_COMPANY_ID: cfg.G54_COMPANY_ID,\n      G54_MASTER_EMAIL: cfg.G54_MASTER_EMAIL,\n      G54_MASTER_PASSWORD: cfg.G54_MASTER_PASSWORD\n    } });\n  }\n}\n\nreturn results.length ? results : [{ json: { skip: true } }];",
+          "mode": "runOnceForAllItems"
         }
       },
       {
@@ -4075,13 +4077,13 @@
         "continueOnFail": true,
         "parameters": {
           "method": "PATCH",
-          "url": "={{ $('⚙️ Config G54 Follow-up').item.json.G54_BASE_URL + '/api/agent/wa/leads/' + $json.leadId }}",
+          "url": "={{ $('🔧 Procesar Follow-ups').item.json.G54_BASE_URL + '/api/agent/wa/leads/' + $('🔧 Procesar Follow-ups').item.json.leadId }}",
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('⚙️ Config G54 Follow-up').item.json.G54_AGENT_TOKEN }}"
+                "value": "={{ 'Bearer ' + $('🔧 Procesar Follow-ups').item.json.G54_AGENT_TOKEN }}"
               },
               {
                 "name": "Content-Type",
@@ -4840,7 +4842,7 @@
         ],
         "parameters": {
           "method": "POST",
-          "url": "={{ $('⚙️ Config G54 Follow-up').item.json.G54_BASE_URL }}/api/auth/login",
+          "url": "={{ $('🔧 Procesar Follow-ups').item.json.G54_BASE_URL }}/api/auth/login",
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
@@ -4852,7 +4854,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config G54 Follow-up').item.json.G54_MASTER_EMAIL, password: $('⚙️ Config G54 Follow-up').item.json.G54_MASTER_PASSWORD }) }}",
+          "jsonBody": "={{ JSON.stringify({ email: $('🔧 Procesar Follow-ups').item.json.G54_MASTER_EMAIL, password: $('🔧 Procesar Follow-ups').item.json.G54_MASTER_PASSWORD }) }}",
           "options": {}
         },
         "onError": "continueRegularOutput"
@@ -4868,7 +4870,7 @@
         ],
         "parameters": {
           "method": "POST",
-          "url": "={{ $('⚙️ Config G54 Follow-up').item.json.G54_BASE_URL }}/api/auth/switch-company",
+          "url": "={{ $('🔧 Procesar Follow-ups').item.json.G54_BASE_URL }}/api/auth/switch-company",
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
@@ -4880,7 +4882,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ company_id: Number($('⚙️ Config G54 Follow-up').item.json.G54_COMPANY_ID || 1) }) }}",
+          "jsonBody": "={{ JSON.stringify({ company_id: Number($('🔧 Procesar Follow-ups').item.json.G54_COMPANY_ID || 1) }) }}",
           "options": {}
         },
         "onError": "continueRegularOutput"
@@ -4896,7 +4898,7 @@
         ],
         "parameters": {
           "method": "GET",
-          "url": "={{ $('⚙️ Config G54 Follow-up').item.json.G54_BASE_URL }}/api/crm/board",
+          "url": "={{ $('🔧 Procesar Follow-ups').item.json.G54_BASE_URL }}/api/crm/board",
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
@@ -4968,7 +4970,7 @@
         ],
         "parameters": {
           "method": "POST",
-          "url": "={{ $('⚙️ Config G54 Follow-up').item.json.G54_BASE_URL + '/api/crm/deals/' + $json.dealId + '/activities' }}",
+          "url": "={{ $('🔧 Procesar Follow-ups').item.json.G54_BASE_URL + '/api/crm/deals/' + $json.dealId + '/activities' }}",
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
@@ -5842,18 +5844,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-07-27T19:13:56.247Z",
-        "id": 2421,
+        "createdAt": "2026-07-27T19:23:47.598Z",
+        "id": 2427,
         "workflowId": "otycsrxrMEMuxuwD",
-        "versionId": "468ba789-43c3-4fff-96f9-665e02c6ea0a",
+        "versionId": "7d2e804b-e57d-401b-95b2-3da5af83af69",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-07-27T19:13:56.182Z",
-        "id": 2420,
+        "createdAt": "2026-07-27T19:23:47.535Z",
+        "id": 2426,
         "workflowId": "otycsrxrMEMuxuwD",
-        "versionId": "468ba789-43c3-4fff-96f9-665e02c6ea0a",
+        "versionId": "7d2e804b-e57d-401b-95b2-3da5af83af69",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
