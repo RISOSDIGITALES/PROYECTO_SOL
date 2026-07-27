@@ -300,16 +300,14 @@
         <div class="item-where">Panel › Métricas RRSS</div>
       </div>
       <div class="item-tags">
-        <span class="badge nuevo">Nuevo</span>
+        <span class="badge resuelto">✅ RESUELTO — confirmado por la usuaria en el panel, 27-jul</span>
         <span class="badge panel">Panel UI</span>
-        <span class="badge p1">🟡 P1</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        El mecanismo ya existe de nuestro lado y quedó probado en vivo hoy — el webhook del Analytics Semanal (<code>GET https://n8n.mdarthurdigital.com/webhook/analytics-semanal-g54?company_id={id}</code>) se puede llamar en cualquier momento, no solo el lunes 8am programado, y refresca las métricas generales de cuenta sin necesitar nada nuevo de nuestro lado. Solo falta el botón en el panel que lo dispare.
+        El mecanismo ya existía de nuestro lado desde el 17-jul — el webhook del Analytics Semanal se puede llamar en cualquier momento y refresca las métricas generales de cuenta. El botón del panel que lo dispara ya está construido y confirmado visualmente por la usuaria.
       </p>
-      <div class="warn-box"><strong>Importante:</strong> la llamada debe ser <code>GET</code>, no <code>POST</code>.</div>
     </div>
   </div>
 
@@ -321,14 +319,13 @@
         <div class="item-where">Panel › Ideas de Contenido</div>
       </div>
       <div class="item-tags">
-        <span class="badge nuevo">Nuevo</span>
+        <span class="badge resuelto">✅ RESUELTO — confirmado por la usuaria en el panel, 27-jul</span>
         <span class="badge panel">Panel UI</span>
-        <span class="badge p2">⚪ P2</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        El motor de tendencias de Ideas AI ya funciona de verdad (2 bugs corregidos y confirmados en vivo hoy — antes generaba tendencias pero nunca pasaban la verificación). Sería valioso que el panel muestre qué idea de la semana es "de tendencia" vs. las normales generadas por keyword — hoy se ven todas igual, sin ninguna distinción visual.
+        El motor de tendencias de Ideas AI funciona de verdad desde el 14-jul. El panel ya distingue visualmente qué idea de la semana es "de tendencia" vs. las normales generadas por keyword, confirmado por la usuaria.
       </p>
     </div>
   </div>
@@ -341,14 +338,13 @@
         <div class="item-where">Panel › CRM Kanban</div>
       </div>
       <div class="item-tags">
-        <span class="badge nuevo">Nuevo</span>
+        <span class="badge resuelto">✅ RESUELTO — confirmado por la usuaria en el panel, 27-jul</span>
         <span class="badge panel">Panel UI</span>
-        <span class="badge p2">⚪ P2</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        Probando el CRM en vivo, una columna con 2 deals mostraba "Total: $12,400" — confirmado contra <code>GET /api/crm/board</code> que ambos deals tienen <code>valor_estimado: null</code>. El número no sale de ningún dato real de esos deals específicos; parece un total cacheado o de otra fuente.
+        Confirmado por la usuaria que el panel ya no muestra un total fabricado. <strong>Nota técnica sin resolver, sin impacto visual:</strong> el 27-jul se reconfirmó que <code>valor_estimado</code> sigue <code>null</code> en todos los deals reales (<code>GET /api/crm/board</code>) — si el panel corrigió el display a mostrar $0/"-" en vez de un número inventado, el bug de fondo (ningún deal tiene un valor estimado real cargado) sigue siendo un pendiente aparte, no de UI.
       </p>
     </div>
   </div>
@@ -361,14 +357,13 @@
         <div class="item-where">Panel › Editor de Posts</div>
       </div>
       <div class="item-tags">
-        <span class="badge nuevo">Nuevo</span>
+        <span class="badge">🗑️ Bajado de prioridad — la usuaria confirmó que ya se distingue fácilmente como usuaria</span>
         <span class="badge panel">Panel UI</span>
-        <span class="badge p2">⚪ P2</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        Hoy el editor muestra el mismo placeholder "Sin imagen" tanto para un post que nunca tuvo imagen generada como para uno que sí tiene <code>imagen_url</code> guardada pero está rota (404 — ver B-6). El cliente no puede distinguir ambos casos desde el editor, se entera recién al intentar publicar.
+        Retirado del pedido activo — la usuaria, que usa el panel a diario, confirmó que hoy ya es fácil distinguir "sin imagen" de "imagen rota" desde el editor. Se deja documentado por si cambia de opinión más adelante, pero no se le va a pedir a Walter.
       </p>
     </div>
   </div>
@@ -467,6 +462,7 @@
         El dashboard de Métricas RRSS mostraba números como <code>050003200</code> en Alcance Total — es "5000" + "3200" concatenados como texto en vez de sumados. <strong>Parte 1 resuelta el 17-jul:</strong> los campos numéricos ya se devuelven como número real (<code>int</code>), confirmado. <strong>Parte 2 sigue sin resolverse, y es la más grave — reconfirmado el 17-jul con una prueba definitiva:</strong> se guardó directo por API un valor imposible de confundir con nada preexistente (<code>alcance_total: 88888</code>), confirmado <code>{"ok":true,"created":1}</code> — al releer <code>GET /api/rrss/metricas</code> (con <code>company_id</code>, sin parámetro, y con <code>empresa_id</code>) el 88888 no aparece en ningún caso, siempre los mismos valores fijos de siempre. Se probó también guardando por el endpoint de sesión (<code>POST /api/rrss/metricas</code>, el mismo que usaría el botón "+ Registrar Métricas" del panel) — tampoco se refleja. El endpoint de lectura que alimenta el dashboard no está conectado a ninguna de las dos rutas de escritura que probamos — es casi seguro un valor insertado directo en base de datos hace semanas que nunca se limpió, y el dashboard nunca se va a mover sin importar cuántas métricas reales se guarden hasta que esto se conecte bien.
       </p>
       <div class="warn-box"><strong>Pedido concreto, actualizado:</strong> el bug de formato (texto vs número) ya está resuelto, gracias. Lo que falta es reconectar <code>GET /api/rrss/metricas</code> a la tabla real donde se guardan las métricas — probado que ni el guardado automático (AGENT_TOKEN) ni el guardado manual de sesión actualizan lo que muestra el dashboard.</div>
+      <div class="warn-box"><strong>Reconfirmado el 27-jul con una prueba más rigurosa, tras ver la doc nueva de "suma por período, no último valor":</strong> se guardó <code>alcance_total: 16</code> con <code>period_start</code>/<code>period_end</code> = hoy (2026-07-27) vía <code>POST /api/agent/rrss/metricas</code> — <code>{"ok":true,"created":1}</code>. Se releyó de 3 formas distintas: <code>GET /api/rrss/metricas</code> sin parámetros (sigue 5000/3200 exactos, ni sumado ni reemplazado), con <code>period_start</code>/<code>period_end</code> explícitos cubriendo hoy (mismo resultado, el filtro no cambia nada), y con el endpoint nuevo <code>GET /api/rrss/metricas/weekly</code> (que sí bucketea por semana real de la estrategia usando <code>fecha_inicio</code>/<code>fecha_fin</code> — la semana 1 de hoy muestra <code>alcance_total: 0</code>, ni rastro del 16 recién guardado). El bug de fondo sigue exactamente igual — no es un problema de "cómo se lee" (parámetros, endpoint viejo vs nuevo), es que el dato que se guarda no llega a ningún camino de lectura.</div>
     </div>
   </div>
 
@@ -659,7 +655,7 @@
 </div>
 
 <footer>
-  Éxodo G54 · Equipo Sol × Walter · 14 de julio 2026, actualizado 17 de julio 2026 — ordenado por Interfaz / Backend / Consultas
+  Éxodo G54 · Equipo Sol × Walter · 14 de julio 2026, actualizado 27 de julio 2026 — ordenado por Interfaz / Backend / Consultas
 </footer>
 
 </body>
