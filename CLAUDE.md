@@ -1290,6 +1290,12 @@ Sincronizado `workflow-ce-blog-publicar-redes.json` al repo con ambos fixes, key
 
 Sincronizado `workflow-analytics-v3-meta-reporte.json` al repo con los 3 cambios (fan-out del correo en ambos generadores, perfil de empresa en el modo post, fix de la referencia rota).
 
+191. **La gráfica de línea del reporte de Analytics no se veía en Gmail — confirmado que es un problema de compatibilidad, no de datos, y corregida cambiándola de SVG a imagen PNG** (2026-07-28, minutos después del ítem 190): a partir de la pregunta directa de la usuaria sobre por qué no veía la gráfica en la captura de un correo real, se investigó antes de asumir nada. El HTML real que devuelve el webhook sí trae la gráfica completa — un `<svg><polyline>` con puntos de datos reales (confirmado extrayendo el fragmento exacto del último correo de prueba) — pero Gmail no renderiza SVG embebido dentro del cuerpo de un correo, lo descarta en silencio. Coincide exacto con lo que mostraba la captura: la etiqueta "Interacciones diarias" visible, nada debajo.
+
+**Fix:** la función `buildChart()` de `🎨 Generar Reporte HTML` se reescribió para generar la gráfica como imagen real vía QuickChart.io (servicio público de renderizado de gráficas a PNG, sin necesitar API key) en vez de SVG inline — mismos datos diarios de 30 días, mismo estilo (línea con relleno degradado, sin ejes ni leyenda, 3 etiquetas de fecha). Probado antes de aplicar: la primera versión mostraba una leyenda "undefined" no deseada porque QuickChart usa la sintaxis de Chart.js v2 por defecto (`legend`/`scales.xAxes`/`yAxes` a nivel raíz de `options`, no `plugins.legend` de v3) — corregido y confirmado con una imagen de prueba limpia antes de tocar el workflow real.
+
+**Confirmado en vivo con el disparo real del reporte de hoy:** las 2 gráficas (Facebook e Instagram) del correo real se generaron con los picos reales de esta semana — descargada directamente la imagen de Facebook desde la URL que quedó en el HTML real (no una simulación), PNG válido con la forma de los datos reales. Sincronizado `workflow-analytics-v3-meta-reporte.json` al repo.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
