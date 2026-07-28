@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-25T14:37:04.838Z",
+  "updatedAt": "2026-07-28T17:51:41.751Z",
   "createdAt": "2026-07-23T15:36:21.963Z",
   "id": "HaSG63Q9C2tGOLH3",
   "name": "CE Telegram Engine — Marco",
@@ -654,7 +654,9 @@
         "subject": "⚠️ Webhook de Telegram de Marco se había desviado — re-registrado solo",
         "text": "={{ 'El webhook de Telegram del bot de Marco ya no apuntaba a n8n (probablemente lo pisó el registro propio de G54 al guardar/actualizar la config del bot en el panel).\\n\\nURL encontrada: ' + $json.currentUrl + '\\nURL esperada: ' + $json.expectedUrl + '\\n\\nSe volvió a registrar automáticamente apuntando a n8n. Si Marco dejó de responder en algún momento antes de este correo, esta pudo ser la causa — ya debería estar funcionando de nuevo.' }}",
         "html": "={{ 'El webhook de Telegram del bot de Marco ya no apuntaba a n8n (probablemente lo pisó el registro propio de G54 al guardar/actualizar la config del bot en el panel).<br><br>URL encontrada: ' + $json.currentUrl + '<br>URL esperada: ' + $json.expectedUrl + '<br><br>Se volvió a registrar automáticamente apuntando a n8n. Si Marco dejó de responder en algún momento antes de este correo, esta pudo ser la causa — ya debería estar funcionando de nuevo.' }}",
-        "options": {}
+        "options": {
+          "appendAttribution": false
+        }
       },
       "credentials": {
         "smtp": {
@@ -751,7 +753,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'MASTER_PASSWORD_REDACTED' }) }}",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_MASTER_PASSWORD' }) }}",
         "options": {}
       }
     },
@@ -1210,7 +1212,8 @@
   "staticData": {
     "global": {
       "seenTgMessageIds": {
-        "770001_770001_soy Cristal": 1785159675830
+        "770002_770002_hola, soy Cristal, ya te di todo, cuanto es el precio?": 1785159942624,
+        "770001_770001_dale gracias": 1785159970030
       }
     },
     "node:⏰ Chequeo Webhook (cada 30 min)": {
@@ -1225,9 +1228,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": null,
-  "versionId": "dd118d51-11d2-4bd2-a507-dbbe69e184fe",
-  "activeVersionId": "dd118d51-11d2-4bd2-a507-dbbe69e184fe",
-  "versionCounter": 13,
+  "versionId": "be7993d1-84b5-4ddb-966a-ec57650e1cb4",
+  "activeVersionId": "be7993d1-84b5-4ddb-966a-ec57650e1cb4",
+  "versionCounter": 15,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "shared": [
@@ -1252,9 +1255,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-07-25T14:37:04.849Z",
-    "createdAt": "2026-07-25T14:37:04.849Z",
-    "versionId": "dd118d51-11d2-4bd2-a507-dbbe69e184fe",
+    "updatedAt": "2026-07-28T17:51:41.754Z",
+    "createdAt": "2026-07-28T17:51:41.754Z",
+    "versionId": "be7993d1-84b5-4ddb-966a-ec57650e1cb4",
     "workflowId": "HaSG63Q9C2tGOLH3",
     "nodes": [
       {
@@ -1531,7 +1534,7 @@
           300
         ],
         "parameters": {
-          "jsCode": "const ctx = $('▶️ 03 Generador IA').first().json;\nconst d = ctx.datosRecolectados || {};\n\n// Only show price if all data collected and not already sent\n// Use proximoPaso from 01 Clasificador as source of truth — includes all checks (correo, proteccion, etc.)\nif (ctx.proximoPaso !== 'LISTO_PARA_COTIZAR' || ctx.cotizacionEnviada) {\n  return [{ json: { ...ctx } }];\n}\n\n// Read precio from HTTP node result\nconst apiResp = $input.first().json;\nconst precio = apiResp?.data?.precio_total || apiResp?.precio_total || null;\n\nconst idioma = ctx.idiomaConversacion || 'español';\nconst nombre = d.nombre_cliente ? `, ${d.nombre_cliente.split(' ')[0]}` : '';\nconst tieneProteccion = d.proteccion_extra === true || d.proteccion_extra === 'true';\n\nlet mensajeFinal;\nif (precio) {\n  if (idioma === 'inglés') {\n    mensajeFinal = `Here is your estimate${nombre}! 🎉\\n\\n📦 *${d.producto || 'Crate'}*\\n📐 Dimensions: ${d.medidas || '—'}\"\\n🗓 Needed by: ${d.fecha || '—'}\\n🛡 Extra protection: ${tieneProteccion ? 'Yes' : 'No'}\\n\\n💵 *Estimated price: $${precio} USD*\\n_This is an estimate. The final price may vary after inspection._\\n\\nWould you like a formal quote sent to your email?`;\n  } else {\n    mensajeFinal = `¡Aquí está tu estimado${nombre}! 🎉\\n\\n📦 *${d.producto || 'Cajón'}*\\n📐 Medidas: ${d.medidas || '—'}\"\\n🗓 Para: ${d.fecha || '—'}\\n🛡 Protección extra: ${tieneProteccion ? 'Sí' : 'No'}\\n\\n💵 *Precio estimado: $${precio} USD*\\n_Este es un estimado. El precio final puede variar luego de la inspección._\\n\\n¿Le gustaría que le enviemos la cotización formal a su correo?`;\n  }\n} else {\n  mensajeFinal = ctx.mensaje;\n}\n\nreturn [{ json: {\n  ...ctx,\n  mensaje: mensajeFinal,\n  mensajeRespuesta: mensajeFinal,\n  cotizadorEnviado: !!precio\n} }];"
+          "jsCode": "const ctx = $('▶️ 03 Generador IA').first().json;\nconst d = ctx.datosRecolectados || {};\n\n// Only show price if all data collected and not already sent\n// Use proximoPaso from 01 Clasificador as source of truth — includes all checks (correo, proteccion, etc.)\nif (!ctx.todosRecolectados || ctx.cotizacionEnviada) {\n  return [{ json: { ...ctx } }];\n}\n\n// Read precio from HTTP node result\nconst apiResp = $input.first().json;\nconst precio = apiResp?.data?.precio_total || apiResp?.precio_total || null;\n\nconst idioma = ctx.idiomaConversacion || 'español';\nconst nombre = d.nombre_cliente ? `, ${d.nombre_cliente.split(' ')[0]}` : '';\nconst tieneProteccion = d.proteccion_extra === true || d.proteccion_extra === 'true';\n\nlet mensajeFinal;\nif (precio) {\n  if (idioma === 'inglés') {\n    mensajeFinal = `Here is your estimate${nombre}! 🎉\\n\\n📦 *${d.producto || 'Crate'}*\\n📐 Dimensions: ${d.medidas || '—'}\"\\n🗓 Needed by: ${d.fecha || '—'}\\n🛡 Extra protection: ${tieneProteccion ? 'Yes' : 'No'}\\n\\n💵 *Estimated price: $${precio} USD*\\n_This is an estimate. The final price may vary after inspection._\\n\\nWould you like a formal quote sent to your email?`;\n  } else {\n    mensajeFinal = `¡Aquí está tu estimado${nombre}! 🎉\\n\\n📦 *${d.producto || 'Cajón'}*\\n📐 Medidas: ${d.medidas || '—'}\"\\n🗓 Para: ${d.fecha || '—'}\\n🛡 Protección extra: ${tieneProteccion ? 'Sí' : 'No'}\\n\\n💵 *Precio estimado: $${precio} USD*\\n_Este es un estimado. El precio final puede variar luego de la inspección._\\n\\n¿Le gustaría que le enviemos la cotización formal a su correo?`;\n  }\n} else {\n  mensajeFinal = ctx.mensaje;\n}\n\nreturn [{ json: {\n  ...ctx,\n  mensaje: mensajeFinal,\n  mensajeRespuesta: mensajeFinal,\n  cotizadorEnviado: !!precio\n} }];"
         }
       },
       {
@@ -1904,7 +1907,9 @@
           "subject": "⚠️ Webhook de Telegram de Marco se había desviado — re-registrado solo",
           "text": "={{ 'El webhook de Telegram del bot de Marco ya no apuntaba a n8n (probablemente lo pisó el registro propio de G54 al guardar/actualizar la config del bot en el panel).\\n\\nURL encontrada: ' + $json.currentUrl + '\\nURL esperada: ' + $json.expectedUrl + '\\n\\nSe volvió a registrar automáticamente apuntando a n8n. Si Marco dejó de responder en algún momento antes de este correo, esta pudo ser la causa — ya debería estar funcionando de nuevo.' }}",
           "html": "={{ 'El webhook de Telegram del bot de Marco ya no apuntaba a n8n (probablemente lo pisó el registro propio de G54 al guardar/actualizar la config del bot en el panel).<br><br>URL encontrada: ' + $json.currentUrl + '<br>URL esperada: ' + $json.expectedUrl + '<br><br>Se volvió a registrar automáticamente apuntando a n8n. Si Marco dejó de responder en algún momento antes de este correo, esta pudo ser la causa — ya debería estar funcionando de nuevo.' }}",
-          "options": {}
+          "options": {
+            "appendAttribution": false
+          }
         },
         "credentials": {
           "smtp": {
@@ -2001,7 +2006,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'MASTER_PASSWORD_REDACTED' }) }}",
+          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_MASTER_PASSWORD' }) }}",
           "options": {}
         }
       },
@@ -2461,18 +2466,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-07-25T14:37:05.168Z",
-        "id": 2377,
+        "createdAt": "2026-07-28T17:51:42.070Z",
+        "id": 2465,
         "workflowId": "HaSG63Q9C2tGOLH3",
-        "versionId": "dd118d51-11d2-4bd2-a507-dbbe69e184fe",
+        "versionId": "be7993d1-84b5-4ddb-966a-ec57650e1cb4",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-07-25T14:37:05.122Z",
-        "id": 2376,
+        "createdAt": "2026-07-28T17:51:42.031Z",
+        "id": 2464,
         "workflowId": "HaSG63Q9C2tGOLH3",
-        "versionId": "dd118d51-11d2-4bd2-a507-dbbe69e184fe",
+        "versionId": "be7993d1-84b5-4ddb-966a-ec57650e1cb4",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
