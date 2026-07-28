@@ -1824,11 +1824,17 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ---
 
+### 2026-07-28 (Martes)
+
+---
+
 ### 2026-07-27 (Lunes)
 
 Arranqué el día con el diagnóstico de rutina y directo a revisar por qué el vigía había mandado tantos correos todo el fin de semana — encontré que venía disparando cada hora en vez de cada dos, pese a que ya lo había intentado corregir el viernes con un simple apagar y prender. Esta vez lo dejé andando con un horario más confiable, y de paso corregí una alerta falsa que venía mandando sobre Community AI por un patrón suyo que ya sabíamos que es normal.
 
-Con eso resuelto retomé las pruebas de Marco que se habían quedado a medias el viernes por la cuota de Groq. Antes de tocar nada volví a correr los mismos casos con más espacio entre mensajes para no toparme con un límite distinto de Groq (uno por minuto, no el diario) que había contaminado los resultados anteriores — y en efecto, los dos "bugs" que había reportado el viernes no eran reales, eran síntomas de esa contaminación. Siguiendo con la prueba de la clienta que pedía una cotización completa, esta vez sí encontré uno de verdad, viejo y nunca resuelto hasta hoy: el cotizador calculaba el precio correctamente en cada conversación, pero el mensaje final nunca lo mostraba, porque el código revisaba un dato que quedaba desactualizado desde antes de que la IA respondiera ese turno. Lo corregí en el motor real de WhatsApp y en el de Telegram por igual, y confirmé en vivo que ahora sí llega el precio completo. Cerré el día documentando todo y dejando los cambios guardados.
+Con eso resuelto retomé las pruebas de Marco que se habían quedado a medias el viernes por la cuota de Groq. Antes de tocar nada volví a correr los mismos casos con más espacio entre mensajes para no toparme con un límite distinto de Groq (uno por minuto, no el diario) que había contaminado los resultados anteriores — y en efecto, los dos "bugs" que había reportado el viernes no eran reales, eran síntomas de esa contaminación. Siguiendo con la prueba de la clienta que pedía una cotización completa, esta vez sí encontré uno de verdad, viejo y nunca resuelto hasta hoy: el cotizador calculaba el precio correctamente en cada conversación, pero el mensaje final nunca lo mostraba, porque el código revisaba un dato que quedaba desactualizado desde antes de que la IA respondiera ese turno. Lo corregí en el motor real de WhatsApp y en el de Telegram por igual, y confirmé en vivo que ahora sí llega el precio completo.
+
+Cerrando el día, revisé unas capturas nuevas de la documentación de G54 que me mandó la usuaria y encontré algo serio: el botón nuevo "Generar Ideas" del panel ya manda un dato que nuestro Content AI ignoraba por completo, así que cada clic real hubiera generado un post no deseado en vez de una idea — lo corregí y confirmé con las dos formas de uso, sin ninguna falla. Después, revisando por qué las métricas del dashboard llevaban semanas sin moverse, encontré que el problema nunca fue de G54 sino mío: llevaba meses probando con nombres de campo equivocados. Al corregirlo salió algo peor — los dos agentes reales de Analytics nunca habían guardado un solo dato real en producción desde que se construyeron, aunque siempre parecieran funcionar bien. Los corregí y confirmé con un disparo real, aunque en el camino una prueba mía dejó un número de prueba mezclado con los datos reales de Crating Express, que no se puede borrar por ahora — quedó pendiente decidir qué hacer con eso.
 
 ---
 
