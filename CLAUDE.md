@@ -1272,6 +1272,8 @@ Sincronizados `workflow-analytics-semanal-g54.json` y `workflow-analytics-v3-met
 
 Sincronizado `workflow-ce-blog-publicar-redes.json` al repo con ambos fixes, key real redactada.
 
+188. **Nuevo Éxodo (`exodo-g54-jul28.html`) — reemplaza al del 14-jul, a pedido de la usuaria de reunir todas las limitantes vigentes** (2026-07-28): en vez de seguir parcheando el documento viejo, se armó uno nuevo desde cero con el mismo estilo visual, filtrando los 12 ítems ya resueltos desde el 14-jul a una lista corta de reconocimiento (sin ocupar espacio como tarjetas completas), reconfirmando los que siguen abiertos, y agregando 4 hallazgos nuevos de esta semana: B-14 (falta el campo `video_url` en la tabla de posts, bloquea Reels por completo, código ya listo de nuestro lado), B-15 (la doc dice que el enum de `origen` en `/api/agent/whatsapp/inbound` acepta `facebook`/`instagram` pero en vivo sigue dando `422` — pedido de aclaración, no se tocó producción), C-2 (pedido de limpiar el dato de prueba que quedó sumado al histórico real de métricas de Facebook) y C-3 (pedido de confirmar si las 2 keys de `agent-endpoints` que inventamos nosotros — `rrss_community_ai`, `rrss_sales_ai` — van a quedar oficiales, ya que la doc solo documenta 3 de las 7 que ya usamos). `exodo-g54-jul14.html` se deja sin tocar como registro histórico, ya no es el documento vigente.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.

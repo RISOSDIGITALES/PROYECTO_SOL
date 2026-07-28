@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Éxodo G54 — Pendientes ordenados · 28 Jul 2026</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0d16;
+      --surface: #111520;
+      --border: #1a2035;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --subtle: #8b98b8;
+
+      --green: #4ade80; --green-bg: #052e16; --green-border: #166534;
+      --yellow: #fbbf24; --yellow-bg: #1c1200; --yellow-border: #78350f;
+      --red: #f87171; --red-bg: #2d0a0a; --red-border: #7f1d1d;
+      --blue: #60a5fa; --blue-bg: #0c1a3a; --blue-border: #1e3a6e;
+      --purple: #c084fc; --purple-bg: #1e0840; --purple-border: #4c1d95;
+      --orange: #fb923c; --orange-bg: #1a0a00; --orange-border: #7c2d12;
+      --gray: #9ca3af; --gray-bg: #17191f; --gray-border: #374151;
+      --teal: #2dd4bf; --teal-bg: #042f2c; --teal-border: #115e59;
+      --accent: #7c3aed; --accent-light: #a78bfa;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #0d1020 0%, #140a2e 50%, #0a1030 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 40px;
+    }
+    .header-inner { max-width: 900px; margin: 0 auto; }
+    .header-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-light); margin-bottom: 12px; }
+    h1 { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+    h1 span { color: var(--accent-light); }
+    .header p { font-size: 14px; color: var(--subtle); max-width: 640px; margin-bottom: 20px; }
+    .header-meta { display: flex; gap: 24px; flex-wrap: wrap; }
+    .meta-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-light); }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 40px; display: grid; gap: 20px; }
+
+    .cat-header {
+      display: flex; align-items: center; gap: 12px;
+      margin: 28px 0 -2px 0; padding-bottom: 10px; border-bottom: 2px solid var(--border);
+    }
+    .cat-header:first-child { margin-top: 0; }
+    .cat-icon { font-size: 20px; }
+    .cat-title { font-size: 18px; font-weight: 800; color: #fff; }
+    .cat-sub { font-size: 12px; color: var(--muted); margin-left: auto; }
+    .cat-interfaz .cat-title { color: var(--blue); }
+    .cat-backend .cat-title { color: var(--purple); }
+    .cat-consultas .cat-title { color: var(--teal); }
+    .cat-resueltos .cat-title { color: var(--green); }
+
+    .section-label {
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--accent-light); margin: 10px 0 -4px 2px;
+    }
+
+    .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+    .badge.panel { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
+    .badge.api { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border); }
+    .badge.p0 { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+    .badge.p1 { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-border); }
+    .badge.p2 { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-border); }
+    .badge.blocker { background: var(--orange-bg); color: var(--orange); border: 1px solid var(--orange-border); }
+    .badge.nuevo { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+    .badge.carry { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-border); }
+    .badge.opcional { background: var(--teal-bg); color: var(--teal); border: 1px solid var(--teal-border); }
+    .badge.resuelto { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+
+    .item-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+    .item-card.b-red { border-left: 3px solid var(--red); }
+    .item-card.b-orange { border-left: 3px solid var(--orange); }
+    .item-card.b-yellow { border-left: 3px solid var(--yellow); }
+    .item-card.b-gray { border-left: 3px solid var(--gray); }
+    .item-card.b-teal { border-left: 3px solid var(--teal); }
+    .item-card.b-green { border-left: 3px solid var(--green); }
+
+    .item-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 16px; padding: 16px 20px;
+      background: #0d1120; border-bottom: 1px solid var(--border); flex-wrap: wrap;
+    }
+    .item-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .item-where { font-size: 12px; color: var(--muted); }
+    .item-tags { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+    .item-body { padding: 20px; display: grid; gap: 14px; }
+    .item-why { color: var(--subtle); font-size: 13px; line-height: 1.65; }
+    .item-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 4px; }
+    code {
+      font-family: 'Courier New', monospace; background: #141825;
+      border: 1px solid var(--border); color: var(--blue);
+      padding: 1px 5px; border-radius: 3px; font-size: 11px;
+    }
+
+    .warn-box { background: var(--orange-bg); border: 1px solid var(--orange-border); border-radius: 6px; padding: 12px 16px; font-size: 12px; color: var(--subtle); }
+    .warn-box strong { color: var(--orange); }
+    .note-box { background: var(--teal-bg); border: 1px solid var(--teal-border); border-radius: 6px; padding: 12px 16px; font-size: 12px; color: var(--subtle); }
+    .note-box strong { color: var(--teal); }
+    .dep-box { background: #141825; border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-size: 12px; color: var(--muted); }
+    .dep-box strong { color: var(--subtle); }
+
+    .resuelto-list { display: grid; gap: 8px; }
+    .resuelto-row { display: flex; align-items: baseline; gap: 10px; padding: 10px 16px; background: var(--surface); border: 1px solid var(--green-border); border-left: 3px solid var(--green); border-radius: 8px; font-size: 12px; }
+    .resuelto-row .rtitle { color: var(--text); font-weight: 600; }
+    .resuelto-row .rnote { color: var(--muted); }
+
+    footer { background: #070a12; border-top: 1px solid var(--border); padding: 22px 40px; text-align: center; color: var(--muted); font-size: 12px; margin-top: 40px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-label">G54 Platform — Documento maestro para Walter</div>
+    <h1>Éxodo — Pendientes ordenados por área · <span>28 Jul 2026</span></h1>
+    <p>Reemplaza al Éxodo del 14 de julio. Se sacaron del cuerpo principal todos los ítems ya resueltos (quedan listados abajo como registro), se reconfirmaron en vivo los que seguían abiertos, y se agregaron 2 hallazgos nuevos de esta semana. Cada ítem sigue incluyendo el contexto técnico necesario para que otro agente de IA pueda leerlo e implementarlo sin depender de conversación previa.</p>
+    <div class="header-meta">
+      <div class="meta-item"><div class="dot"></div> 28 de julio 2026</div>
+      <div class="meta-item"><div class="dot"></div> Reemplaza exodo-g54-jul14.html</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ============ RESUELTOS ============ -->
+  <div class="cat-header cat-resueltos">
+    <span class="cat-icon">✅</span>
+    <span class="cat-title">Resueltos desde el 14-jul</span>
+    <span class="cat-sub">Gracias — quedan como registro, no requieren más acción</span>
+  </div>
+
+  <div class="resuelto-list">
+    <div class="resuelto-row"><span class="rtitle">Métricas RRSS (B-4)</span><span class="rnote">— resultó ser un error propio de nombres de campo, no de G54. Ver nota abajo sobre un dato de prueba que quedó contaminado.</span></div>
+    <div class="resuelto-row"><span class="rtitle">Historial de métricas por período (C-1)</span><span class="rnote">— confirmado que el guardado acumula por período en vez de sobrescribir, una vez usados los nombres de campo correctos.</span></div>
+    <div class="resuelto-row"><span class="rtitle">fecha_inicio / fecha_fin / direccion_deseada de estrategia (B-2, parcial)</span><span class="rnote">— ya se guardan y persisten. Sigue faltando el panel (I-1, I-2) y las columnas de uso interno (resumen_estrategico, keyword_strategy, etc.).</span></div>
+    <div class="resuelto-row"><span class="rtitle">angulo y es_tendencia en ideas (B-11, parcial)</span><span class="rnote">— ya se guardan al crear una idea. Sigue faltando la columna semana (bloquea I-6) y sigue sin persistir al actualizar (B-13).</span></div>
+    <div class="resuelto-row"><span class="rtitle">Enum "origen" en /api/crm/deals (B-5, CRM)</span><span class="rnote">— acepta facebook/instagram correctamente desde el 17-jul. Ver B-15 abajo — el mismo cambio NO llegó al endpoint de contactos de WhatsApp, pese a que la doc dice que sí.</span></div>
+    <div class="resuelto-row"><span class="rtitle">404 de storage de imágenes (B-6)</span><span class="rnote">— resuelto el 17-jul. Habilitó la primera publicación real de Instagram del proyecto.</span></div>
+    <div class="resuelto-row"><span class="rtitle">PUT /api/crm/deals/{id} — editar telefono/origen (B-8)</span><span class="rnote">— confirmado funcionando el 17-jul.</span></div>
+    <div class="resuelto-row"><span class="rtitle">Botón de refresh manual de métricas (I-7)</span><span class="rnote">— confirmado por la usuaria en el panel.</span></div>
+    <div class="resuelto-row"><span class="rtitle">Marca visual de idea de tendencia (I-8)</span><span class="rnote">— confirmado por la usuaria en el panel.</span></div>
+    <div class="resuelto-row"><span class="rtitle">Total fabricado en el tablero CRM (I-9)</span><span class="rnote">— ya no se muestra un número inventado. valor_estimado sigue null en los deals reales, sin impacto visual.</span></div>
+    <div class="resuelto-row"><span class="rtitle">Distinguir "sin imagen" de "imagen rota" (I-10)</span><span class="rnote">— bajado de prioridad, la usuaria confirmó que ya se distingue bien como usuaria del panel.</span></div>
+    <div class="resuelto-row"><span class="rtitle">Justificación de idea visible (I-4)</span><span class="rnote">— resuelto de punta a punta junto con B-11.</span></div>
+  </div>
+
+  <!-- ============ INTERFAZ ============ -->
+  <div class="cat-header cat-interfaz">
+    <span class="cat-icon">🖥️</span>
+    <span class="cat-title">Interfaz (Panel)</span>
+    <span class="cat-sub">Cambios visibles al usuario final — pantallas, formularios, botones</span>
+  </div>
+
+  <!-- I-1 -->
+  <div class="item-card b-yellow">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-1. Formulario al crear una estrategia: horizonte de tiempo + dirección deseada</div>
+        <div class="item-where">Panel › Estrategia RRSS (pantalla de generar estrategia)</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Carry-over 14-jul</span>
+        <span class="badge panel">Panel UI</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Al crear una estrategia, el cliente debe poder elegir un "Período de esta estrategia" (<code>1 mes</code> / <code>3 meses</code> / <code>6 meses</code> / <code>8 meses</code>) y escribir en texto libre hacia dónde quiere que vaya su contenido.
+      </p>
+      <div class="dep-box"><strong>Estado de nuestro lado:</strong> el Strategist AI ya soporta ambos campos de punta a punta — solo falta que el panel los exponga. El backend (B-2) ya guarda <code>direccion_deseada</code>; el horizonte todavía necesita definirse dónde se persiste (columna nueva a decidir con Walter).</div>
+    </div>
+  </div>
+
+  <!-- I-2 -->
+  <div class="item-card b-yellow">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-2. Mostrar el progreso de tiempo de la estrategia activa (inicio, fin, semana actual)</div>
+        <div class="item-where">Panel › Estrategia RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Carry-over 14-jul</span>
+        <span class="badge panel">Panel UI</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">Widget tipo "Semana 4 de 13" con inicio/fin de la estrategia activa.</p>
+      <div class="dep-box"><strong>Estado de nuestro lado:</strong> <code>fecha_inicio</code>, <code>fecha_fin</code> y <code>semanas_totales</code> ya se guardan (B-2 resuelto) — falta solo el panel.</div>
+    </div>
+  </div>
+
+  <!-- I-3 -->
+  <div class="item-card b-red">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-3. Mostrar al cliente cuándo y por qué falló una publicación programada</div>
+        <div class="item-where">Panel › Editor de Posts</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Carry-over 14-jul</span>
+        <span class="badge panel">Panel UI</span>
+        <span class="badge p0">🔴 P0</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Hoy un post que falla al publicar se queda atascado sin ningún aviso al cliente de qué pasó.
+      </p>
+      <div class="dep-box"><strong>Depende de:</strong> B-1 (el revert de estado con AGENT_TOKEN sigue devolviendo 401) y habilitar la escritura del campo <code>error_message</code>, que ya existe en el schema pero no se puede llenar.</div>
+    </div>
+  </div>
+
+  <!-- I-5 -->
+  <div class="item-card b-red">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-5. Botón "Regenerar idea" del panel — sigue sin llamar a nuestro webhook</div>
+        <div class="item-where">Panel › Ideas de Contenido</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge resuelto">✅ Nuestro lado listo desde el 15-jul</span>
+        <span class="badge panel">Panel UI</span>
+        <span class="badge p0">🔴 Reconfirmado roto 3 veces (17, 18, 24-jul)</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Cuando al cliente le gusta la keyword de una idea pero no el título que generó la IA, debería poder regenerar solo ese título, conservando la keyword.
+      </p>
+      <div class="dep-box"><strong>De nuestro lado, listo y probado desde el 15-jul:</strong> <code>POST https://n8n.mdarthurdigital.com/webhook/ideas-ai-g54</code> con body <code>{"company_id": N, "modo": "regenerar", "idea_id": N, "keyword": "...", "platform": "..."}</code> — genera un ángulo distinto para la misma keyword y actualiza la idea in-place sin duplicarla.</div>
+      <div class="warn-box"><strong>Reconfirmado roto, con evidencia, 3 veces distintas:</strong> cada vez se comparó el timestamp de la última ejecución real en n8n contra el momento exacto de un clic real del botón en el panel — cero ejecuciones nuevas, ningún cambio en la idea. El botón sigue sin apuntar a la URL de arriba.</div>
+    </div>
+  </div>
+
+  <!-- I-6 -->
+  <div class="item-card b-orange">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-6. En Analytics, agrupar los registros de cada post por semana de la estrategia</div>
+        <div class="item-where">Panel › Métricas RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Carry-over 14-jul</span>
+        <span class="badge panel">Panel UI</span>
+        <span class="badge blocker">🟠 Bloqueante</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">Cada post debería verse agrupado por la semana de la estrategia a la que pertenece.</p>
+      <div class="dep-box"><strong>Depende de:</strong> B-11 (columna <code>semana</code> todavía no existe en la tabla de ideas) y B-3 (<code>post_id_platform</code> nunca se puede guardar, así que Analytics no puede identificar cada post individual).</div>
+    </div>
+  </div>
+
+  <!-- ============ BACKEND ============ -->
+  <div class="cat-header cat-backend">
+    <span class="cat-icon">⚙️</span>
+    <span class="cat-title">Backend (API)</span>
+    <span class="cat-sub">Endpoints, columnas de base de datos, permisos de escritura</span>
+  </div>
+
+  <!-- B-1 -->
+  <div class="item-card b-red">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-1. AGENT_TOKEN sigue devolviendo 401 en PUT /api/rrss/posts/{id}/status</div>
+        <div class="item-where">API Backend — Posts / RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Carry-over — reconfirmado 14-jul</span>
+        <span class="badge api">Endpoint</span>
+        <span class="badge p0">🔴 P0</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        El revert automático de un post que falla al publicar (de "programado" de vuelta a "aprobado") depende de este endpoint. Con AGENT_TOKEN sigue devolviendo <code>401 Unauthenticated</code> — misma familia de rutas que solo acepta token de sesión (login), descubierta el 13-jul. No lo vamos a resolver metiendo credenciales de administrador en un workflow de producción.
+      </p>
+      <div class="dep-box"><strong>Bloquea:</strong> I-3 y el envío de <code>error_message</code> al revertir un post.</div>
+    </div>
+  </div>
+
+  <!-- B-3 -->
+  <div class="item-card b-red">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-3. Habilitar la escritura de post_id_platform</div>
+        <div class="item-where">API Backend — Posts / RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Carry-over</span>
+        <span class="badge api">Endpoint</span>
+        <span class="badge p0">🔴 P0</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        La columna existe pero ni <code>mark-published</code> (AGENT_TOKEN) ni el <code>PUT</code> bare (token de sesión) la escriben — ambos devuelven <code>ok:true</code> con el valor en <code>null</code>. Distribution AI ya captura y manda el ID real que devuelve Meta al publicar — se guarda solo apenas se habilite el campo.
+      </p>
+      <div class="dep-box"><strong>Bloquea:</strong> analytics por post individual e I-6.</div>
+    </div>
+  </div>
+
+  <!-- B-7 -->
+  <div class="item-card b-yellow">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-7. DELETE de posts restringido solo a estado "borrador"</div>
+        <div class="item-where">API Backend — Posts / RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Carry-over</span>
+        <span class="badge api">Endpoint</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">No se puede revertir un post de "aprobado" a "borrador" para poder limpiarlo, ni con token de sesión.</p>
+    </div>
+  </div>
+
+  <!-- B-9 -->
+  <div class="item-card b-yellow">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-9. ig_user_id null en GET /api/n8n/pages/{pageId}</div>
+        <div class="item-where">API Backend — Páginas / Meta</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Carry-over</span>
+        <span class="badge api">Endpoint</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">Sigue igual desde hace semanas. ID correcto de Crating Express, por si sirve de referencia: <code>17841446392201293</code>.</p>
+    </div>
+  </div>
+
+  <!-- B-10 -->
+  <div class="item-card b-yellow">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-10. Endpoint para guardar el reporte HTML mensual en G54</div>
+        <div class="item-where">API Backend — Reportes / Analytics</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Carry-over</span>
+        <span class="badge api">Endpoint nuevo</span>
+        <span class="badge p2">⚪ P2 — hay workaround</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Diseño ideal: el reporte se guarda en G54 y el cliente lo comparte desde el panel. Probamos 6 rutas razonables, todas 404 — no existe endpoint para esto.
+      </p>
+      <div class="dep-box"><strong>Workaround ya construido, sin depender de este endpoint:</strong> un webhook propio (<code>analytics-meta-reporte</code>) devuelve el HTML completo bajo demanda, en 3 modos (mensual, por rango de fechas, por post individual) — listo para que el botón "Compartir" del panel lo llame directamente cuando exista.</div>
+    </div>
+  </div>
+
+  <!-- B-11 -->
+  <div class="item-card b-orange">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-11. Falta la columna "semana" en la tabla de ideas</div>
+        <div class="item-where">API Backend — Ideas RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge resuelto">✅ Parcial — angulo/es_tendencia resueltos 17-jul</span>
+        <span class="badge api">Columna nueva</span>
+        <span class="badge blocker">🟠 Bloqueante (lo que falta)</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">Lo único que falta de este ítem: la columna <code>semana</code> (número de semana de la estrategia a la que pertenece cada idea) todavía no existe en el schema.</p>
+      <div class="dep-box"><strong>Bloquea:</strong> I-6.</div>
+    </div>
+  </div>
+
+  <!-- B-12 -->
+  <div class="item-card b-yellow">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-12. El botón "Programar" del panel debe disparar un webhook nuestro una sola vez, al momento de programar</div>
+        <div class="item-where">Panel › Editor de Posts (backend del botón "Programar")</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Carry-over 16-jul</span>
+        <span class="badge api">Webhook nuevo</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Hoy la publicación automática depende de un puente temporal que revisa cada 2 minutos — funciona, pero no es exacto ni eficiente. Ya construimos y probamos en vivo el reemplazo (una alarma que duerme sin gastar recursos hasta el segundo exacto).
+      </p>
+      <div class="warn-box"><strong>Pedido concreto:</strong> que el botón "Programar", en el mismo momento en que guarda la fecha, haga una llamada HTTP única a <code>POST https://n8n.mdarthurdigital.com/webhook/schedule-alarm-g54</code> con <code>{"post_id": N, "company_id": N, "fecha_programada": "YYYY-MM-DDTHH:mm:ssZ"}</code>. Dispara y olvida, sin esperar respuesta.</div>
+      <div class="dep-box">Mientras esto no esté conectado seguimos con el puente de los 2 minutos — no lo vamos a apagar antes para no dejar el módulo sin publicación automática.</div>
+    </div>
+  </div>
+
+  <!-- B-13 -->
+  <div class="item-card b-orange">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-13. PUT /api/rrss/ideas/{id} descarta el campo angulo al actualizar (sí funciona al crear)</div>
+        <div class="item-where">API Backend — Ideas RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Carry-over 17-jul</span>
+        <span class="badge api">Endpoint</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Al crear una idea, <code>angulo</code> se guarda bien. Al <strong>actualizar</strong> una idea existente con este mismo endpoint (el que usa el modo "regenerar" de Ideas AI), <code>angulo</code> se descarta en silencio — probado mandándolo solo, sin ningún otro campo. Impacto: cuando se conecte I-5, el título se actualizará pero la justificación de por qué corresponde a la keyword se va a perder.
+      </p>
+    </div>
+  </div>
+
+  <!-- B-14 NUEVO -->
+  <div class="item-card b-red">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-14. No existe ningún campo video_url en la tabla de posts — bloquea Reels por completo</div>
+        <div class="item-where">API Backend — Posts / RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo — 27-jul</span>
+        <span class="badge api">Columna nueva</span>
+        <span class="badge p0">🔴 P0</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Construimos las 2 rutas completas de Reels en Distribution AI (Instagram Reel con polling real de procesamiento de video, Facebook Reel con el flujo de 3 fases que exige Meta) — pero al intentar guardar <code>video_url</code> en un post real vía <code>PUT /api/rrss/posts/{id}</code>, el campo se descarta en silencio (mismo patrón que otros campos ya reportados: <code>200 ok</code>, pero al releer el post el campo no existe). Sin este campo no hay forma de que un post traiga un video adjunto, ni desde n8n ni desde el panel — no hay ningún atajo posible de nuestro lado.
+      </p>
+      <div class="dep-box"><strong>Estado de nuestro lado:</strong> el código de publicación está listo y sincronizado, solo esperando esta columna para poder probarlo con un post real.</div>
+    </div>
+  </div>
+
+  <!-- B-15 NUEVO -->
+  <div class="item-card b-orange">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-15. La doc dice que /api/agent/whatsapp/inbound acepta facebook/instagram — en vivo sigue rechazándolos con 422</div>
+        <div class="item-where">API Backend — Contactos de WhatsApp/RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo — 28-jul</span>
+        <span class="badge api">Enum</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        La documentación de la API (sección de contactos de WhatsApp) marca <code>facebook</code> e <code>instagram</code> como "New" agregados el 17-jul, igual que en <code>crm_deals.origen</code> (ese sí confirmado funcionando, ver B-5 resuelto). Probado en vivo el 28-jul contra <code>/api/agent/whatsapp/inbound</code> con los 7 valores documentados uno por uno: <code>rrss</code>/<code>web</code>/<code>qr</code>/<code>ai</code>/<code>direct</code> responden <code>201</code> real, pero <code>facebook</code> e <code>instagram</code> siguen devolviendo <code>422 "The selected origen is invalid."</code>
+      </p>
+      <div class="warn-box"><strong>Necesitamos que Walter confirme cuál de las dos cosas es cierta:</strong> si el enum realmente se actualizó y hay un bug puntual en esta ruta, o si la documentación quedó adelantada a lo que hay en producción. Mientras tanto seguimos mandando <code>rrss</code> como siempre — no se tocó nada en producción por este hallazgo.</p>
+    </div>
+  </div>
+
+  <!-- ============ CONSULTAS Y OPCIONALES ============ -->
+  <div class="cat-header cat-consultas">
+    <span class="cat-icon">💬</span>
+    <span class="cat-title">Consultas y opcionales</span>
+    <span class="cat-sub">Preguntas que necesitan respuesta de Walter, o mejoras que no bloquean nada</span>
+  </div>
+
+  <!-- C-2 NUEVO -->
+  <div class="item-card b-teal">
+    <div class="item-header">
+      <div>
+        <div class="item-title">C-2. Pedido puntual: limpiar un dato de prueba que quedó sumado al histórico real de métricas</div>
+        <div class="item-where">Base de datos — Métricas RRSS, Crating Express</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo — 27-jul</span>
+        <span class="badge opcional">Opcional</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Al confirmar el fix de B-4, se guardó un valor de prueba real (<code>alcance: 123456</code>, Facebook, período del 27-jul) antes de confirmar que el endpoint de métricas no tiene <code>DELETE</code>. Como el guardado acumula por período en vez de sobrescribir, ese valor quedó sumado permanentemente — el agregado de Facebook de Crating Express hoy muestra ~128,456 en vez del valor real. Si es posible, pedimos que se borre esa fila específica a nivel de base de datos. Si no es posible, no es urgente — se va a diluir solo con datos reales futuros.
+      </p>
+    </div>
+  </div>
+
+  <!-- C-3 NUEVO -->
+  <div class="item-card b-teal">
+    <div class="item-header">
+      <div>
+        <div class="item-title">C-3. Confirmar las keys oficiales de /api/agent-endpoints — la doc solo documenta 3, nosotros ya usamos 7</div>
+        <div class="item-where">Panel › Configuración de Agentes</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo — 27-jul</span>
+        <span class="badge opcional">Opcional</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        La sección de la doc sobre "Agentes n8n — Config inicial" solo lista 3 keys oficiales: <code>rrss_strategist</code>, <code>rrss_content_ai</code>, <code>rrss_analytics</code>. Nosotros ya tenemos registrados y funcionando 7: los 3 de arriba más <code>rrss_distribution_ai</code>, <code>rrss_community_ai</code>, <code>rrss_sales_ai</code> y <code>telegram_agent</code> — las últimas 2 las inventamos nosotros mismos (sin ninguna convención documentada) al notar que el panel mostraba las tarjetas de "IA comunitaria" y "IA de ventas" como "Próximamente"/"En construcción" pese a que esos agentes llevan semanas activos en producción.
+      </p>
+      <div class="dep-box">Pedimos confirmar si esas 2 keys que inventamos van a quedar como oficiales, o si hay un nombre distinto que el panel espera — para no terminar con dos convenciones compitiendo si Walter define las suyas más adelante.</div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Éxodo G54 · Equipo Sol × Walter · 28 de julio 2026 — reemplaza al documento del 14 de julio
+</footer>
+
+</body>
+</html>
