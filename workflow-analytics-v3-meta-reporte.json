@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-28T17:51:44.785Z",
+  "updatedAt": "2026-07-28T19:58:22.676Z",
   "createdAt": "2026-07-06T17:45:34.443Z",
   "id": "YI9EfJYcWJN4bbM9",
   "name": "ANALYTICS MENSUAL V3-META REPORTE",
@@ -449,9 +449,9 @@
     {
       "parameters": {
         "fromEmail": "risosadmi@gmail.com",
-        "toEmail": "={{ $('🎨 Generar Reporte HTML').item.json.emailTo }}",
-        "subject": "={{ $('🎨 Generar Reporte HTML').item.json.emailSubject }}",
-        "html": "={{ $('🎨 Generar Reporte HTML').item.json.emailHtml }}",
+        "toEmail": "={{ $json.emailTo }}",
+        "subject": "={{ $json.emailSubject }}",
+        "html": "={{ $json.emailHtml }}",
         "options": {
           "appendAttribution": false
         }
@@ -662,7 +662,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst platform = (config.POST_PLATFORM || '').toLowerCase();\n\nlet fb = {}, ig = {};\ntry { fb = $('📘 FB: Post + Insights').first().json || {}; } catch(e) {}\ntry { ig = $('📷 IG: Media + Insights').first().json || {}; } catch(e) {}\n\nconst isIG = platform === 'instagram';\nconst data = isIG ? ig : fb;\n\nfunction metricVal(insightsObj, name) {\n  const arr = insightsObj?.data || [];\n  const m = arr.find(x => x.name === name);\n  if (!m || !m.values || !m.values.length) return 0;\n  const v = m.values[0].value;\n  return typeof v === 'object' ? Object.values(v).reduce((a,b)=>a+b,0) : (v||0);\n}\n\nconst fbLogo = `<span style=\"display:inline-block;width:14px;height:14px;background:#1877F2;border-radius:3px;text-align:center;line-height:14px;color:#fff;font-weight:900;font-size:10px;font-family:Arial;vertical-align:middle;margin-right:6px;\">f</span>`;\nconst igLogo = `<span style=\"display:inline-block;width:14px;height:14px;background:linear-gradient(45deg,#fdf497,#fd5949,#d6249f,#285AEB);border-radius:3px;text-align:center;line-height:14px;color:#fff;font-weight:900;font-size:8px;font-family:Arial;vertical-align:middle;margin-right:6px;\">ig</span>`;\n\nlet caption, imagen, fecha, permalink, likes, comentarios;\nlet statLabels, statValues;\n\nif (isIG) {\n  caption = data.caption || '(sin descripción)';\n  imagen = data.media_url || data.thumbnail_url || '';\n  fecha = data.timestamp || '';\n  permalink = data.permalink || '';\n  likes = data.like_count || 0;\n  comentarios = data.comments_count || 0;\n  const alcance = metricVal(data.insights, 'reach');\n  const guardados = metricVal(data.insights, 'saved');\n  const interacciones = metricVal(data.insights, 'total_interactions');\n  statLabels = ['Alcance', 'Interacciones', 'Guardados', 'Comentarios'];\n  statValues = [alcance, interacciones, guardados, comentarios];\n} else {\n  caption = data.message || '(sin texto)';\n  imagen = data.full_picture || '';\n  fecha = data.created_time || '';\n  permalink = data.permalink_url || '';\n  likes = data.likes?.summary?.total_count || 0;\n  comentarios = data.comments?.summary?.total_count || 0;\n  const clics = metricVal(data.insights, 'post_clicks');\n  const reacciones = metricVal(data.insights, 'post_reactions_by_type_total');\n  statLabels = ['Clics', 'Reacciones', 'Likes', 'Comentarios'];\n  statValues = [clics, reacciones, likes, comentarios];\n}\n\nfunction fmt(n) { if(n===null||n===undefined) return '—'; return n>=1000?(n/1000).toFixed(1)+'k':String(n); }\nfunction fmtDate(iso) {\n  if(!iso) return '';\n  const d = new Date(iso);\n  return d.toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'});\n}\n\nconst platLabel = isIG ? 'Instagram' : 'Facebook';\nconst platLogo = isIG ? igLogo : fbLogo;\nconst noData = !data || Object.keys(data).length === 0 || data.error;\n\nconst statsHtml = noData ? '' : statLabels.map((label, i) => `\n      <td width=\"25%\" style=\"text-align:center;padding:10px 4px;background:#f9fafb;${i===0?'border-radius:8px 0 0 8px;':''}${i===3?'border-radius:0 8px 8px 0;':''}\">\n        <div style=\"font-size:18px;font-weight:800;color:#111827;\">${fmt(statValues[i])}</div>\n        <div style=\"font-size:9px;color:#9ca3af;text-transform:uppercase;\">${label}</div>\n      </td>`).join('');\n\nconst html = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>G54 Analytics — Post individual</title></head><body style=\"margin:0;padding:32px 16px;background:#eef0f4;font-family:Arial,'Helvetica Neue',sans-serif;\">\n<table width=\"480\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 auto;\">\n<tr><td height=\"5\" style=\"background:linear-gradient(to right,#2D5BFF,#1877F2,#BC1888);border-radius:12px 12px 0 0;\"></td></tr>\n<tr><td style=\"background:#fff;border-radius:0 0 12px 12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);\">\n  <div style=\"font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;\">G54 Analytics · Post individual</div>\n  <div style=\"font-size:11px;color:#6b7280;margin-bottom:16px;\">${platLogo}${platLabel} · ${fmtDate(fecha)}</div>\n  ${noData ? `<div style=\"padding:20px;background:#fef2f2;border-radius:8px;color:#991b1b;font-size:13px;\">No se pudo obtener este post desde Meta. Puede que el ID no sea válido o que ya no exista.</div>` : `\n  ${imagen ? `<img src=\"${imagen}\" style=\"width:100%;border-radius:8px;margin-bottom:14px;display:block;\" />` : ''}\n  <div style=\"font-size:13px;color:#374151;line-height:1.5;margin-bottom:16px;white-space:pre-wrap;\">${caption.length > 220 ? caption.slice(0,220)+'…' : caption}</div>\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>${statsHtml}</tr></table>\n  ${permalink ? `<div style=\"margin-top:16px;text-align:center;\"><a href=\"${permalink}\" style=\"font-size:11px;color:#2D5BFF;text-decoration:none;\">Ver publicación original →</a></div>` : ''}\n  `}\n  <div style=\"margin-top:20px;padding-top:12px;border-top:1px solid #f3f4f6;text-align:center;font-size:9px;color:#9ca3af;\">Generado por G54 Platform</div>\n</td></tr>\n</table>\n</body></html>`;\n\nreturn [{ json: { postHtml: html } }];\n"
+        "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst platform = (config.POST_PLATFORM || '').toLowerCase();\n\nlet fb = {}, ig = {};\ntry { fb = $('📘 FB: Post + Insights').first().json || {}; } catch(e) {}\ntry { ig = $('📷 IG: Media + Insights').first().json || {}; } catch(e) {}\n\nconst isIG = platform === 'instagram';\nconst data = isIG ? ig : fb;\n\nfunction metricVal(insightsObj, name) {\n  const arr = insightsObj?.data || [];\n  const m = arr.find(x => x.name === name);\n  if (!m || !m.values || !m.values.length) return 0;\n  const v = m.values[0].value;\n  return typeof v === 'object' ? Object.values(v).reduce((a,b)=>a+b,0) : (v||0);\n}\n\nconst fbLogo = `<span style=\"display:inline-block;width:14px;height:14px;background:#1877F2;border-radius:3px;text-align:center;line-height:14px;color:#fff;font-weight:900;font-size:10px;font-family:Arial;vertical-align:middle;margin-right:6px;\">f</span>`;\nconst igLogo = `<span style=\"display:inline-block;width:14px;height:14px;background:linear-gradient(45deg,#fdf497,#fd5949,#d6249f,#285AEB);border-radius:3px;text-align:center;line-height:14px;color:#fff;font-weight:900;font-size:8px;font-family:Arial;vertical-align:middle;margin-right:6px;\">ig</span>`;\n\nlet caption, imagen, fecha, permalink, likes, comentarios;\nlet statLabels, statValues;\n\nif (isIG) {\n  caption = data.caption || '(sin descripción)';\n  imagen = data.media_url || data.thumbnail_url || '';\n  fecha = data.timestamp || '';\n  permalink = data.permalink || '';\n  likes = data.like_count || 0;\n  comentarios = data.comments_count || 0;\n  const alcance = metricVal(data.insights, 'reach');\n  const guardados = metricVal(data.insights, 'saved');\n  const interacciones = metricVal(data.insights, 'total_interactions');\n  statLabels = ['Alcance', 'Interacciones', 'Guardados', 'Comentarios'];\n  statValues = [alcance, interacciones, guardados, comentarios];\n} else {\n  caption = data.message || '(sin texto)';\n  imagen = data.full_picture || '';\n  fecha = data.created_time || '';\n  permalink = data.permalink_url || '';\n  likes = data.likes?.summary?.total_count || 0;\n  comentarios = data.comments?.summary?.total_count || 0;\n  const clics = metricVal(data.insights, 'post_clicks');\n  const reacciones = metricVal(data.insights, 'post_reactions_by_type_total');\n  statLabels = ['Clics', 'Reacciones', 'Likes', 'Comentarios'];\n  statValues = [clics, reacciones, likes, comentarios];\n}\n\nfunction fmt(n) { if(n===null||n===undefined) return '—'; return n>=1000?(n/1000).toFixed(1)+'k':String(n); }\nfunction fmtDate(iso) {\n  if(!iso) return '';\n  const d = new Date(iso);\n  return d.toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'});\n}\n\nconst platLabel = isIG ? 'Instagram' : 'Facebook';\nconst platLogo = isIG ? igLogo : fbLogo;\nconst noData = !data || Object.keys(data).length === 0 || data.error;\n\nconst statsHtml = noData ? '' : statLabels.map((label, i) => `\n      <td width=\"25%\" style=\"text-align:center;padding:10px 4px;background:#f9fafb;${i===0?'border-radius:8px 0 0 8px;':''}${i===3?'border-radius:0 8px 8px 0;':''}\">\n        <div style=\"font-size:18px;font-weight:800;color:#111827;\">${fmt(statValues[i])}</div>\n        <div style=\"font-size:9px;color:#9ca3af;text-transform:uppercase;\">${label}</div>\n      </td>`).join('');\n\nconst html = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>G54 Analytics — Post individual</title></head><body style=\"margin:0;padding:32px 16px;background:#eef0f4;font-family:Arial,'Helvetica Neue',sans-serif;\">\n<table width=\"480\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 auto;\">\n<tr><td height=\"5\" style=\"background:linear-gradient(to right,#2D5BFF,#1877F2,#BC1888);border-radius:12px 12px 0 0;\"></td></tr>\n<tr><td style=\"background:#fff;border-radius:0 0 12px 12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);\">\n  <div style=\"font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;\">G54 Analytics · Post individual</div>\n  <div style=\"font-size:11px;color:#6b7280;margin-bottom:16px;\">${platLogo}${platLabel} · ${fmtDate(fecha)}</div>\n  ${noData ? `<div style=\"padding:20px;background:#fef2f2;border-radius:8px;color:#991b1b;font-size:13px;\">No se pudo obtener este post desde Meta. Puede que el ID no sea válido o que ya no exista.</div>` : `\n  ${imagen ? `<img src=\"${imagen}\" style=\"width:100%;border-radius:8px;margin-bottom:14px;display:block;\" />` : ''}\n  <div style=\"font-size:13px;color:#374151;line-height:1.5;margin-bottom:16px;white-space:pre-wrap;\">${caption.length > 220 ? caption.slice(0,220)+'…' : caption}</div>\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>${statsHtml}</tr></table>\n  ${permalink ? `<div style=\"margin-top:16px;text-align:center;\"><a href=\"${permalink}\" style=\"font-size:11px;color:#2D5BFF;text-decoration:none;\">Ver publicación original →</a></div>` : ''}\n  `}\n  <div style=\"margin-top:20px;padding-top:12px;border-top:1px solid #f3f4f6;text-align:center;font-size:9px;color:#9ca3af;\">Generado por G54 Platform</div>\n</td></tr>\n</table>\n</body></html>`;\n\nlet empresa = {};\ntry { empresa = $('📊 Obtener Perfil Empresa (Post)').first().json?.data || $('📊 Obtener Perfil Empresa (Post)').first().json || {}; } catch(e) {}\nconst companyName = empresa.name || 'Empresa';\nconst emailDest = (empresa.emails || [])[0] || 'risosadmi@gmail.com';\nconst emailSubject = `Reporte de Post · ${companyName} · ${isIG ? 'Instagram' : 'Facebook'}`;\n\nreturn [{ json: { postHtml: html, emailHtml: html, emailTo: emailDest, emailSubject, companyName } }];\n"
       },
       "id": "html-post-mode",
       "name": "🎨 Generar Reporte HTML (Post)",
@@ -724,6 +724,34 @@
       "position": [
         482,
         3078
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "obtener-perfil-empresa-post",
+      "name": "📊 Obtener Perfil Empresa (Post)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -848,
+        3388
       ],
       "onError": "continueRegularOutput"
     }
@@ -890,6 +918,11 @@
             "node": "📤 Responder con HTML (Compartir)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "📧 Enviar Reporte por Email",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -932,6 +965,11 @@
         [
           {
             "node": "🔑 Tokens Página (Post)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📊 Obtener Perfil Empresa (Post)",
             "type": "main",
             "index": 0
           }
@@ -1003,6 +1041,11 @@
             "node": "📤 Responder con HTML (Post)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "📧 Enviar Reporte por Email",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -1056,9 +1099,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "b3230fa8-ff55-47af-a63f-ef71914e6756",
-  "activeVersionId": "b3230fa8-ff55-47af-a63f-ef71914e6756",
-  "versionCounter": 37,
+  "versionId": "0e56dd37-4ccf-49ee-99d7-6215b52cccfd",
+  "activeVersionId": "0e56dd37-4ccf-49ee-99d7-6215b52cccfd",
+  "versionCounter": 39,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "shared": [
@@ -1083,9 +1126,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-07-28T17:51:44.788Z",
-    "createdAt": "2026-07-28T17:51:44.788Z",
-    "versionId": "b3230fa8-ff55-47af-a63f-ef71914e6756",
+    "updatedAt": "2026-07-28T19:58:22.680Z",
+    "createdAt": "2026-07-28T19:58:22.680Z",
+    "versionId": "0e56dd37-4ccf-49ee-99d7-6215b52cccfd",
     "workflowId": "YI9EfJYcWJN4bbM9",
     "nodes": [
       {
@@ -1530,9 +1573,9 @@
       {
         "parameters": {
           "fromEmail": "risosadmi@gmail.com",
-          "toEmail": "={{ $('🎨 Generar Reporte HTML').item.json.emailTo }}",
-          "subject": "={{ $('🎨 Generar Reporte HTML').item.json.emailSubject }}",
-          "html": "={{ $('🎨 Generar Reporte HTML').item.json.emailHtml }}",
+          "toEmail": "={{ $json.emailTo }}",
+          "subject": "={{ $json.emailSubject }}",
+          "html": "={{ $json.emailHtml }}",
           "options": {
             "appendAttribution": false
           }
@@ -1743,7 +1786,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst platform = (config.POST_PLATFORM || '').toLowerCase();\n\nlet fb = {}, ig = {};\ntry { fb = $('📘 FB: Post + Insights').first().json || {}; } catch(e) {}\ntry { ig = $('📷 IG: Media + Insights').first().json || {}; } catch(e) {}\n\nconst isIG = platform === 'instagram';\nconst data = isIG ? ig : fb;\n\nfunction metricVal(insightsObj, name) {\n  const arr = insightsObj?.data || [];\n  const m = arr.find(x => x.name === name);\n  if (!m || !m.values || !m.values.length) return 0;\n  const v = m.values[0].value;\n  return typeof v === 'object' ? Object.values(v).reduce((a,b)=>a+b,0) : (v||0);\n}\n\nconst fbLogo = `<span style=\"display:inline-block;width:14px;height:14px;background:#1877F2;border-radius:3px;text-align:center;line-height:14px;color:#fff;font-weight:900;font-size:10px;font-family:Arial;vertical-align:middle;margin-right:6px;\">f</span>`;\nconst igLogo = `<span style=\"display:inline-block;width:14px;height:14px;background:linear-gradient(45deg,#fdf497,#fd5949,#d6249f,#285AEB);border-radius:3px;text-align:center;line-height:14px;color:#fff;font-weight:900;font-size:8px;font-family:Arial;vertical-align:middle;margin-right:6px;\">ig</span>`;\n\nlet caption, imagen, fecha, permalink, likes, comentarios;\nlet statLabels, statValues;\n\nif (isIG) {\n  caption = data.caption || '(sin descripción)';\n  imagen = data.media_url || data.thumbnail_url || '';\n  fecha = data.timestamp || '';\n  permalink = data.permalink || '';\n  likes = data.like_count || 0;\n  comentarios = data.comments_count || 0;\n  const alcance = metricVal(data.insights, 'reach');\n  const guardados = metricVal(data.insights, 'saved');\n  const interacciones = metricVal(data.insights, 'total_interactions');\n  statLabels = ['Alcance', 'Interacciones', 'Guardados', 'Comentarios'];\n  statValues = [alcance, interacciones, guardados, comentarios];\n} else {\n  caption = data.message || '(sin texto)';\n  imagen = data.full_picture || '';\n  fecha = data.created_time || '';\n  permalink = data.permalink_url || '';\n  likes = data.likes?.summary?.total_count || 0;\n  comentarios = data.comments?.summary?.total_count || 0;\n  const clics = metricVal(data.insights, 'post_clicks');\n  const reacciones = metricVal(data.insights, 'post_reactions_by_type_total');\n  statLabels = ['Clics', 'Reacciones', 'Likes', 'Comentarios'];\n  statValues = [clics, reacciones, likes, comentarios];\n}\n\nfunction fmt(n) { if(n===null||n===undefined) return '—'; return n>=1000?(n/1000).toFixed(1)+'k':String(n); }\nfunction fmtDate(iso) {\n  if(!iso) return '';\n  const d = new Date(iso);\n  return d.toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'});\n}\n\nconst platLabel = isIG ? 'Instagram' : 'Facebook';\nconst platLogo = isIG ? igLogo : fbLogo;\nconst noData = !data || Object.keys(data).length === 0 || data.error;\n\nconst statsHtml = noData ? '' : statLabels.map((label, i) => `\n      <td width=\"25%\" style=\"text-align:center;padding:10px 4px;background:#f9fafb;${i===0?'border-radius:8px 0 0 8px;':''}${i===3?'border-radius:0 8px 8px 0;':''}\">\n        <div style=\"font-size:18px;font-weight:800;color:#111827;\">${fmt(statValues[i])}</div>\n        <div style=\"font-size:9px;color:#9ca3af;text-transform:uppercase;\">${label}</div>\n      </td>`).join('');\n\nconst html = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>G54 Analytics — Post individual</title></head><body style=\"margin:0;padding:32px 16px;background:#eef0f4;font-family:Arial,'Helvetica Neue',sans-serif;\">\n<table width=\"480\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 auto;\">\n<tr><td height=\"5\" style=\"background:linear-gradient(to right,#2D5BFF,#1877F2,#BC1888);border-radius:12px 12px 0 0;\"></td></tr>\n<tr><td style=\"background:#fff;border-radius:0 0 12px 12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);\">\n  <div style=\"font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;\">G54 Analytics · Post individual</div>\n  <div style=\"font-size:11px;color:#6b7280;margin-bottom:16px;\">${platLogo}${platLabel} · ${fmtDate(fecha)}</div>\n  ${noData ? `<div style=\"padding:20px;background:#fef2f2;border-radius:8px;color:#991b1b;font-size:13px;\">No se pudo obtener este post desde Meta. Puede que el ID no sea válido o que ya no exista.</div>` : `\n  ${imagen ? `<img src=\"${imagen}\" style=\"width:100%;border-radius:8px;margin-bottom:14px;display:block;\" />` : ''}\n  <div style=\"font-size:13px;color:#374151;line-height:1.5;margin-bottom:16px;white-space:pre-wrap;\">${caption.length > 220 ? caption.slice(0,220)+'…' : caption}</div>\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>${statsHtml}</tr></table>\n  ${permalink ? `<div style=\"margin-top:16px;text-align:center;\"><a href=\"${permalink}\" style=\"font-size:11px;color:#2D5BFF;text-decoration:none;\">Ver publicación original →</a></div>` : ''}\n  `}\n  <div style=\"margin-top:20px;padding-top:12px;border-top:1px solid #f3f4f6;text-align:center;font-size:9px;color:#9ca3af;\">Generado por G54 Platform</div>\n</td></tr>\n</table>\n</body></html>`;\n\nreturn [{ json: { postHtml: html } }];\n"
+          "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst platform = (config.POST_PLATFORM || '').toLowerCase();\n\nlet fb = {}, ig = {};\ntry { fb = $('📘 FB: Post + Insights').first().json || {}; } catch(e) {}\ntry { ig = $('📷 IG: Media + Insights').first().json || {}; } catch(e) {}\n\nconst isIG = platform === 'instagram';\nconst data = isIG ? ig : fb;\n\nfunction metricVal(insightsObj, name) {\n  const arr = insightsObj?.data || [];\n  const m = arr.find(x => x.name === name);\n  if (!m || !m.values || !m.values.length) return 0;\n  const v = m.values[0].value;\n  return typeof v === 'object' ? Object.values(v).reduce((a,b)=>a+b,0) : (v||0);\n}\n\nconst fbLogo = `<span style=\"display:inline-block;width:14px;height:14px;background:#1877F2;border-radius:3px;text-align:center;line-height:14px;color:#fff;font-weight:900;font-size:10px;font-family:Arial;vertical-align:middle;margin-right:6px;\">f</span>`;\nconst igLogo = `<span style=\"display:inline-block;width:14px;height:14px;background:linear-gradient(45deg,#fdf497,#fd5949,#d6249f,#285AEB);border-radius:3px;text-align:center;line-height:14px;color:#fff;font-weight:900;font-size:8px;font-family:Arial;vertical-align:middle;margin-right:6px;\">ig</span>`;\n\nlet caption, imagen, fecha, permalink, likes, comentarios;\nlet statLabels, statValues;\n\nif (isIG) {\n  caption = data.caption || '(sin descripción)';\n  imagen = data.media_url || data.thumbnail_url || '';\n  fecha = data.timestamp || '';\n  permalink = data.permalink || '';\n  likes = data.like_count || 0;\n  comentarios = data.comments_count || 0;\n  const alcance = metricVal(data.insights, 'reach');\n  const guardados = metricVal(data.insights, 'saved');\n  const interacciones = metricVal(data.insights, 'total_interactions');\n  statLabels = ['Alcance', 'Interacciones', 'Guardados', 'Comentarios'];\n  statValues = [alcance, interacciones, guardados, comentarios];\n} else {\n  caption = data.message || '(sin texto)';\n  imagen = data.full_picture || '';\n  fecha = data.created_time || '';\n  permalink = data.permalink_url || '';\n  likes = data.likes?.summary?.total_count || 0;\n  comentarios = data.comments?.summary?.total_count || 0;\n  const clics = metricVal(data.insights, 'post_clicks');\n  const reacciones = metricVal(data.insights, 'post_reactions_by_type_total');\n  statLabels = ['Clics', 'Reacciones', 'Likes', 'Comentarios'];\n  statValues = [clics, reacciones, likes, comentarios];\n}\n\nfunction fmt(n) { if(n===null||n===undefined) return '—'; return n>=1000?(n/1000).toFixed(1)+'k':String(n); }\nfunction fmtDate(iso) {\n  if(!iso) return '';\n  const d = new Date(iso);\n  return d.toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'});\n}\n\nconst platLabel = isIG ? 'Instagram' : 'Facebook';\nconst platLogo = isIG ? igLogo : fbLogo;\nconst noData = !data || Object.keys(data).length === 0 || data.error;\n\nconst statsHtml = noData ? '' : statLabels.map((label, i) => `\n      <td width=\"25%\" style=\"text-align:center;padding:10px 4px;background:#f9fafb;${i===0?'border-radius:8px 0 0 8px;':''}${i===3?'border-radius:0 8px 8px 0;':''}\">\n        <div style=\"font-size:18px;font-weight:800;color:#111827;\">${fmt(statValues[i])}</div>\n        <div style=\"font-size:9px;color:#9ca3af;text-transform:uppercase;\">${label}</div>\n      </td>`).join('');\n\nconst html = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>G54 Analytics — Post individual</title></head><body style=\"margin:0;padding:32px 16px;background:#eef0f4;font-family:Arial,'Helvetica Neue',sans-serif;\">\n<table width=\"480\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 auto;\">\n<tr><td height=\"5\" style=\"background:linear-gradient(to right,#2D5BFF,#1877F2,#BC1888);border-radius:12px 12px 0 0;\"></td></tr>\n<tr><td style=\"background:#fff;border-radius:0 0 12px 12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);\">\n  <div style=\"font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;\">G54 Analytics · Post individual</div>\n  <div style=\"font-size:11px;color:#6b7280;margin-bottom:16px;\">${platLogo}${platLabel} · ${fmtDate(fecha)}</div>\n  ${noData ? `<div style=\"padding:20px;background:#fef2f2;border-radius:8px;color:#991b1b;font-size:13px;\">No se pudo obtener este post desde Meta. Puede que el ID no sea válido o que ya no exista.</div>` : `\n  ${imagen ? `<img src=\"${imagen}\" style=\"width:100%;border-radius:8px;margin-bottom:14px;display:block;\" />` : ''}\n  <div style=\"font-size:13px;color:#374151;line-height:1.5;margin-bottom:16px;white-space:pre-wrap;\">${caption.length > 220 ? caption.slice(0,220)+'…' : caption}</div>\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>${statsHtml}</tr></table>\n  ${permalink ? `<div style=\"margin-top:16px;text-align:center;\"><a href=\"${permalink}\" style=\"font-size:11px;color:#2D5BFF;text-decoration:none;\">Ver publicación original →</a></div>` : ''}\n  `}\n  <div style=\"margin-top:20px;padding-top:12px;border-top:1px solid #f3f4f6;text-align:center;font-size:9px;color:#9ca3af;\">Generado por G54 Platform</div>\n</td></tr>\n</table>\n</body></html>`;\n\nlet empresa = {};\ntry { empresa = $('📊 Obtener Perfil Empresa (Post)').first().json?.data || $('📊 Obtener Perfil Empresa (Post)').first().json || {}; } catch(e) {}\nconst companyName = empresa.name || 'Empresa';\nconst emailDest = (empresa.emails || [])[0] || 'risosadmi@gmail.com';\nconst emailSubject = `Reporte de Post · ${companyName} · ${isIG ? 'Instagram' : 'Facebook'}`;\n\nreturn [{ json: { postHtml: html, emailHtml: html, emailTo: emailDest, emailSubject, companyName } }];\n"
         },
         "id": "html-post-mode",
         "name": "🎨 Generar Reporte HTML (Post)",
@@ -1805,6 +1848,34 @@
         "position": [
           482,
           3078
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "obtener-perfil-empresa-post",
+        "name": "📊 Obtener Perfil Empresa (Post)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -848,
+          3388
         ],
         "onError": "continueRegularOutput"
       }
@@ -1971,6 +2042,11 @@
               "node": "📤 Responder con HTML (Compartir)",
               "type": "main",
               "index": 0
+            },
+            {
+              "node": "📧 Enviar Reporte por Email",
+              "type": "main",
+              "index": 0
             }
           ]
         ]
@@ -2013,6 +2089,11 @@
           [
             {
               "node": "🔑 Tokens Página (Post)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "📊 Obtener Perfil Empresa (Post)",
               "type": "main",
               "index": 0
             }
@@ -2084,6 +2165,11 @@
               "node": "📤 Responder con HTML (Post)",
               "type": "main",
               "index": 0
+            },
+            {
+              "node": "📧 Enviar Reporte por Email",
+              "type": "main",
+              "index": 0
             }
           ]
         ]
@@ -2128,18 +2214,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-07-28T17:51:45.071Z",
-        "id": 2469,
+        "createdAt": "2026-07-28T19:58:22.921Z",
+        "id": 2483,
         "workflowId": "YI9EfJYcWJN4bbM9",
-        "versionId": "b3230fa8-ff55-47af-a63f-ef71914e6756",
+        "versionId": "0e56dd37-4ccf-49ee-99d7-6215b52cccfd",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-07-28T17:51:45.014Z",
-        "id": 2468,
+        "createdAt": "2026-07-28T19:58:22.848Z",
+        "id": 2482,
         "workflowId": "YI9EfJYcWJN4bbM9",
-        "versionId": "b3230fa8-ff55-47af-a63f-ef71914e6756",
+        "versionId": "0e56dd37-4ccf-49ee-99d7-6215b52cccfd",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
