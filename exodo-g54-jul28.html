@@ -129,7 +129,7 @@
   <div class="header-inner">
     <div class="header-label">G54 Platform — Documento maestro para Walter</div>
     <h1>Éxodo — Pendientes ordenados por área · <span>29 Jul 2026</span></h1>
-    <p>Actualización del 29-jul: se leyó completa la documentación oficial de la API (no de memoria) y se probó cada ítem abierto en vivo. Resultado: 2 ítems resultaron ser bugs <strong>nuestros</strong> (ya corregidos, no dependían de Walter), 2 resultaron ser diseño deliberado de G54 (no bugs, se aclaran y se sacan de la lista de pendientes), y se encontró un camino nuevo para I-6 que no depende de B-11. El resto se reconfirmó sin cambios, con evidencia fresca de hoy.</p>
+    <p>Versión consolidada, lista para enviar. Se leyó completa la documentación oficial de la API (no de memoria) y se probó cada ítem en vivo — incluyendo apagar a propósito nuestro parche temporal de publicación para confirmar B-12 sin ninguna duda, y contrastar el dashboard real del panel contra los datos reales de la API. Resultado: 2 ítems resultaron ser bugs <strong>nuestros</strong> (ya corregidos, no dependían de Walter), 2 resultaron ser diseño deliberado de G54 (se aclaran y salen de la lista), I-2 ya se ve parcialmente resuelto en el panel, y se sumaron 3 hallazgos nuevos confirmados hoy con evidencia directa del dashboard real.</p>
     <div class="header-meta">
       <div class="meta-item"><div class="dot"></div> 29 de julio 2026</div>
       <div class="meta-item"><div class="dot"></div> Reemplaza la versión del 28-jul</div>
@@ -199,14 +199,14 @@
         <div class="item-where">Panel › Estrategia RRSS</div>
       </div>
       <div class="item-tags">
-        <span class="badge carry">Carry-over</span>
-        <span class="badge panel">Panel UI</span>
-        <span class="badge p1">🟡 P1</span>
+        <span class="badge resuelto">✅ Ya se ve parcial — confirmado 29-jul</span>
+        <span class="badge panel">Falta solo la semana actual</span>
+        <span class="badge p2">⚪ Bajamos la prioridad</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">Widget tipo "Semana 4 de 13" con inicio/fin de la estrategia activa.</p>
-      <div class="dep-box"><strong>Estado de nuestro lado:</strong> <code>fecha_inicio</code>, <code>fecha_fin</code> y <code>semanas_totales</code> ya se guardan (B-2 resuelto) — falta solo el panel. De paso: <code>GET /api/rrss/metricas/weekly</code> ya devuelve el desglose real por semana, útil para este widget.</div>
+      <div class="dep-box"><strong>¡Buena noticia, confirmada el 29-jul!</strong> El panel ya muestra "Estrategia vigente hasta el 26/10/2026" en la tarjeta de IA Estrategia — verificado contra la API real: coincide exacto con <code>fecha_fin</code> de la estrategia de Crating Express. El panel ya está leyendo esta fecha. Solo falta el detalle de "semana actual" (ej. "Semana 4 de 13") — <code>GET /api/rrss/metricas/weekly</code> ya devuelve el desglose real por semana si se quiere aprovechar para eso.</div>
     </div>
   </div>
 
@@ -336,6 +336,7 @@
       <div class="warn-box"><strong>Prueba definitiva del 29-jul, apagando el parche a propósito para descartar cualquier duda:</strong> confirmado primero que no había nada real programado en ninguna empresa activa (sin riesgo), se apagó el puente de los 2 minutos, se creó un post de prueba y se lo programó con el endpoint real <code>PUT /api/rrss/posts/{id}/schedule</code> (el mismo que usa el botón "Programar" del panel) para 90 segundos en el futuro. Se esperó a que pasara esa hora con el puente todavía apagado: <strong>la Alarma Exacta siguió en 0 ejecuciones, Distribution AI no recibió ninguna llamada nueva, y el post se quedó en <code>programado</code> sin publicarse.</strong> Puente reactivado de inmediato después de la prueba, post de prueba borrado. Confirma sin ninguna duda que programar un post hoy no dispara nada de nuestro lado — todo lo publicado hasta ahora salió exclusivamente por el parche de los 2 minutos.</div>
       <div class="warn-box"><strong>Pedido concreto:</strong> que el botón "Programar", en el mismo momento en que guarda la fecha, haga una llamada HTTP única a <code>POST https://n8n.mdarthurdigital.com/webhook/schedule-alarm-g54</code> con <code>{"post_id": N, "company_id": N, "fecha_programada": "YYYY-MM-DDTHH:mm:ssZ"}</code>. Dispara y olvida, sin esperar respuesta.</div>
       <div class="dep-box">Mientras esto no esté conectado seguimos con el puente de los 2 minutos. <strong>Mismo pedido exacto que I-5</strong> (que el panel llame a un webhook nuestro al hacer clic) — la diferencia es que acá hay un parche que disimula el síntoma.</div>
+      <div class="note-box"><strong>El propio panel ya asume este comportamiento, solo falta implementarlo:</strong> la tarjeta de "IA de distribución" dice textualmente <em>"Se activa al programar una publicación"</em> — confirma que el diseño ya contempla esto, es cuestión de conectar la llamada real.</div>
     </div>
   </div>
 
@@ -413,19 +414,61 @@
   <div class="item-card b-teal">
     <div class="item-header">
       <div>
-        <div class="item-title">C-3. Confirmar 2 keys de /api/agent-endpoints que inventamos nosotros (ya no son 4)</div>
-        <div class="item-where">Panel › Configuración de Agentes</div>
+        <div class="item-title">C-3 → B-16. Community AI y Sales AI Motor siguen "Próximamente"/"En construcción" en el panel pese a estar activos desde el 27-jul</div>
+        <div class="item-where">Panel › Dashboard de Agentes</div>
       </div>
       <div class="item-tags">
-        <span class="badge nuevo">Probado a fondo 29-jul</span>
-        <span class="badge opcional">Solo falta confirmar el panel</span>
+        <span class="badge p1">🟡 Confirmado con captura real 29-jul</span>
+        <span class="badge api">Lista fija de agentes</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        Confirmado en la doc que <code>rrss_distribution_ai</code> y <code>telegram_agent</code> ya son oficiales. Solo quedan sin confirmar <code>rrss_community_ai</code> y <code>rrss_sales_ai</code> — las inventamos nosotros al notar que el panel mostraba esas tarjetas como "Próximamente" pese a que esos agentes llevan semanas activos en producción.
+        Confirmado en la doc que <code>rrss_distribution_ai</code> y <code>telegram_agent</code> ya son oficiales. Quedaban sin confirmar <code>rrss_community_ai</code> y <code>rrss_sales_ai</code> — las inventamos nosotros al notar que el panel mostraba esas tarjetas como "Próximamente" pese a que esos agentes llevan semanas activos en producción.
       </p>
-      <div class="dep-box"><strong>Probado el 29-jul, del lado del backend está todo bien — y confirmado que no hay ningún nombre "correcto" que adivinar:</strong> las 2 keys ya existen como filas activas en <code>GET /api/agent-endpoints</code> (creadas el 27-jul), y probamos mandar una key totalmente inventada (<code>key_totalmente_inventada_xyz</code>) para confirmar si el endpoint valida contra un enum — la aceptó sin quejarse (201). El backend no restringe nombres en absoluto, así que no existe ninguna prueba de API que nos diga si el panel va a reconocer un nombre u otro. La única forma real de confirmarlo es mirar el panel: con <code>rrss_community_ai</code> y <code>rrss_sales_ai</code> ya activos desde el 27-jul, ¿esas 2 tarjetas siguen mostrando "Próximamente" hoy? Si siguen así pese a estar activos, confirma que el panel tiene una lista fija de agentes conocidos (probablemente del <code>AgentEndpointSeeder</code> que menciona la doc) y hace falta que Walter la actualice — no hay nada más que probar de nuestro lado.</div>
+      <div class="dep-box"><strong>Probado el 29-jul: del lado del backend no hay ningún bloqueo</strong> — las 2 keys ya existen como filas activas en <code>GET /api/agent-endpoints</code> (creadas el 27-jul), y probamos mandar una key totalmente inventada para confirmar si el endpoint valida contra un enum — la aceptó sin quejarse. El backend no restringe nombres en absoluto.</div>
+      <div class="warn-box"><strong>Confirmado con una captura real del dashboard, mismo día:</strong> "IA comunitaria" sigue en "Próximamente" ("En construcción. Hoy las conversaciones se atienden desde la bandeja de WhatsApp.") e "IA de ventas" también ("En construcción. Los leads que llegan hoy se gestionan desde el CRM.") — ambos con "Sin actividad aún", pese a estar registrados y activos desde hace 2 días. Esto ya no es una duda para confirmar, es un hallazgo cerrado: el panel tiene una lista fija de agentes conocidos (probablemente del <code>AgentEndpointSeeder</code> que menciona la doc) que no incluye estos 2 — hace falta que Walter la actualice para que dejen de mostrarse como no construidos.</div>
+    </div>
+  </div>
+
+  <!-- B-17 -->
+  <div class="item-card b-yellow">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-17. La estrategia sigue descartando resumen_estrategico, keyword_strategy, mapa_preguntas_aeo, faqs, clusters y plan_publicacion al guardar</div>
+        <div class="item-where">API Backend — Estrategia RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nunca antes agregado al Éxodo — reprobado 29-jul</span>
+        <span class="badge api">6 columnas nuevas</span>
+        <span class="badge p2">⚪ P2</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        El Strategist AI genera contenido real y útil para estos 6 campos en cada corrida (el keyword strategy completo, el mapa de preguntas AEO, las FAQs, los clusters temáticos, el plan de publicación) — pero G54 los descarta en silencio al guardar, igual que <code>fecha_inicio</code>/<code>fecha_fin</code>/<code>direccion_deseada</code> hasta que se resolvieron (B-2). Nunca se había agregado formalmente a ningún Éxodo anterior pese a estar documentado internamente desde julio.
+      </p>
+      <div class="dep-box"><strong>Reprobado en vivo el 29-jul, con control:</strong> se mandó <code>resumen_estrategico</code> por <code>PUT /api/rrss/estrategia</code> — respondió <code>200</code> pero el campo no vino en la respuesta ni persistió al releer. Mismo patrón exacto que ya se resolvió para los otros 3 campos — pedimos que se agreguen las mismas 6 columnas.</div>
+    </div>
+  </div>
+
+  <!-- B-18 -->
+  <div class="item-card b-teal">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-18. Consulta: ¿de dónde lee el panel "alcance acumulado" de IA Analítica? No coincide con /api/rrss/metricas</div>
+        <div class="item-where">Panel › Dashboard de Agentes, tarjeta "IA analítica"</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Hallazgo nuevo 29-jul — no pudimos resolverlo solos</span>
+        <span class="badge opcional">Consulta</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        El dashboard muestra "0 de alcance acumulado — Todavía no hay métricas recogidas" para Crating Express — pero <code>GET /api/rrss/metricas</code> (el que sí probamos y confirmamos funcionando el 28-jul, ítem 184) devuelve <code>alcance_total: 129671</code> (Facebook) + <code>3200</code> (Instagram) para la misma empresa, datos reales.
+      </p>
+      <div class="dep-box"><strong>Intentamos resolverlo nosotros antes de escalarlo:</strong> probamos ~8 rutas candidatas de resumen/dashboard (<code>/api/rrss/dashboard</code>, <code>/api/rrss/metricas/summary</code>, etc.) — todas 404, ninguna documentada tampoco. No encontramos qué endpoint alimenta este número específico del panel, así que no podemos saber si es un bug real o si el widget cuenta algo distinto a propósito (ej. solo corridas iniciadas desde el botón "Ejecutar" de esa tarjeta). Necesitamos que Walter confirme qué fuente de datos usa ese widget en particular.</div>
     </div>
   </div>
 
