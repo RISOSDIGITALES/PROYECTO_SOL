@@ -333,8 +333,9 @@
       <p class="item-why">
         Hoy la publicación automática depende de un puente temporal que revisa cada 2 minutos. Ya construimos y probamos en vivo el reemplazo (una alarma que duerme sin gastar recursos hasta el segundo exacto) — reconfirmado el 29-jul: cero ejecuciones nuevas del workflow de la alarma, el botón sigue sin llamarlo.
       </p>
+      <div class="warn-box"><strong>Aclaración importante, para que no se confunda con "ya funciona":</strong> revisamos las últimas 15 ejecuciones reales del Distribution AI — las 15 llegaron por webhook, cada 2 minutos exactos, coincidiendo uno a uno con el puente temporal. Cero llegaron por otra vía. Todo lo que publicamos y confirmamos estas semanas funcionó gracias al puente viejo (el parche), no porque el panel haya empezado a llamar la alarma nueva — el pedido de abajo sigue 100% sin cumplirse.</div>
       <div class="warn-box"><strong>Pedido concreto:</strong> que el botón "Programar", en el mismo momento en que guarda la fecha, haga una llamada HTTP única a <code>POST https://n8n.mdarthurdigital.com/webhook/schedule-alarm-g54</code> con <code>{"post_id": N, "company_id": N, "fecha_programada": "YYYY-MM-DDTHH:mm:ssZ"}</code>. Dispara y olvida, sin esperar respuesta.</div>
-      <div class="dep-box">Mientras esto no esté conectado seguimos con el puente de los 2 minutos.</div>
+      <div class="dep-box">Mientras esto no esté conectado seguimos con el puente de los 2 minutos. <strong>Mismo pedido exacto que I-5</strong> (que el panel llame a un webhook nuestro al hacer clic) — la diferencia es que acá hay un parche que disimula el síntoma.</div>
     </div>
   </div>
 
@@ -367,16 +368,17 @@
         <div class="item-where">API Backend — Contactos de WhatsApp/RRSS</div>
       </div>
       <div class="item-tags">
-        <span class="badge nuevo">Reprobado 29-jul con el shape 100% correcto</span>
+        <span class="badge nuevo">Reprobado 29-jul, dos veces, shape 100% correcto</span>
         <span class="badge api">Enum</span>
         <span class="badge p1">🟡 P1</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        La documentación marca <code>facebook</code>/<code>instagram</code> como agregados el 17-jul al enum de <code>origen</code> de este endpoint (igual que en <code>crm_deals.origen</code>, ese sí confirmado). Reprobado el 29-jul con el body exacto que documenta la API (<code>empresa_id</code>, <code>messages</code> con <code>rol</code> válido — no solo <code>company_id</code>/<code>mensaje</code> como en intentos anteriores) para descartar cualquier error de nuestro lado: sigue devolviendo <code>422 "The selected origen is invalid."</code>
+        La documentación marca <code>facebook</code>/<code>instagram</code> como agregados el 17-jul al enum de <code>origen</code> de este endpoint (igual que en <code>crm_deals.origen</code>, ese sí confirmado). Reprobado el 29-jul con el body exacto que documenta la API (<code>empresa_id</code>, <code>messages</code> con <code>rol</code> válido) y con un control en la misma tanda para descartar error propio:
       </p>
-      <div class="warn-box"><strong>Necesitamos que Walter confirme:</strong> si el enum realmente se actualizó y hay un bug puntual en esta ruta, o si la documentación quedó adelantada a lo que hay en producción. Mientras tanto seguimos mandando <code>rrss</code> como siempre.</p>
+      <div class="dep-box"><code>origen: facebook</code> → 422 &nbsp;|&nbsp; <code>origen: instagram</code> → 422 &nbsp;|&nbsp; <code>origen: rrss</code> (control) → 201 <code>ok:true</code>. El control funcionando en la misma llamada descarta que sea un error nuestro de request.</div>
+      <div class="warn-box"><strong>Necesitamos que Walter confirme:</strong> si el enum realmente se actualizó y hay un bug puntual en esta ruta, o si la documentación quedó adelantada a lo que hay en producción. Mientras tanto seguimos mandando <code>rrss</code> como siempre.</div>
     </div>
   </div>
 
@@ -423,7 +425,7 @@
       <p class="item-why">
         Confirmado en la doc que <code>rrss_distribution_ai</code> y <code>telegram_agent</code> ya son oficiales. Solo quedan sin confirmar <code>rrss_community_ai</code> y <code>rrss_sales_ai</code> — las inventamos nosotros al notar que el panel mostraba esas tarjetas como "Próximamente" pese a que esos agentes llevan semanas activos en producción.
       </p>
-      <div class="dep-box"><strong>Probado el 29-jul, del lado del backend está todo bien:</strong> las 2 keys ya existen como filas activas en <code>GET /api/agent-endpoints</code> (creadas en sesiones anteriores), y el endpoint de escritura no tiene ningún enum que las rechace — no hay ningún bloqueo técnico de nuestro lado. Lo único que genuinamente no podemos confirmar sin acceso al código fuente del panel es si su frontend reconoce estos 2 nombres exactos de key para dejar de mostrar "Próximamente" — eso sí necesita que lo confirmes vos o Walter mirando ese código.</div>
+      <div class="dep-box"><strong>Probado el 29-jul, del lado del backend está todo bien — y confirmado que no hay ningún nombre "correcto" que adivinar:</strong> las 2 keys ya existen como filas activas en <code>GET /api/agent-endpoints</code> (creadas el 27-jul), y probamos mandar una key totalmente inventada (<code>key_totalmente_inventada_xyz</code>) para confirmar si el endpoint valida contra un enum — la aceptó sin quejarse (201). El backend no restringe nombres en absoluto, así que no existe ninguna prueba de API que nos diga si el panel va a reconocer un nombre u otro. La única forma real de confirmarlo es mirar el panel: con <code>rrss_community_ai</code> y <code>rrss_sales_ai</code> ya activos desde el 27-jul, ¿esas 2 tarjetas siguen mostrando "Próximamente" hoy? Si siguen así pese a estar activos, confirma que el panel tiene una lista fija de agentes conocidos (probablemente del <code>AgentEndpointSeeder</code> que menciona la doc) y hace falta que Walter la actualice — no hay nada más que probar de nuestro lado.</div>
     </div>
   </div>
 
