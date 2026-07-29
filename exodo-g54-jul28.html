@@ -236,18 +236,18 @@
   <div class="item-card b-teal">
     <div class="item-header">
       <div>
-        <div class="item-title">I-6. En Analytics, agrupar los posts/métricas por semana de la estrategia</div>
-        <div class="item-where">Panel › Métricas RRSS</div>
+        <div class="item-title">I-6. Agrupar resultados por semana de la estrategia</div>
+        <div class="item-where">Panel › Métricas RRSS — la parte de nuestro lado ya está resuelta</div>
       </div>
       <div class="item-tags">
-        <span class="badge nuevo">Camino nuevo — 29-jul</span>
-        <span class="badge panel">Panel UI</span>
-        <span class="badge p1">🟡 Ya no bloqueante</span>
+        <span class="badge resuelto">✅ Resuelto de nuestro lado — 29-jul</span>
+        <span class="badge panel">Falta solo el panel</span>
+        <span class="badge p2">⚪ Ya no bloquea nada</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">Cada post debería verse agrupado por la semana de la estrategia a la que pertenece.</p>
-      <div class="dep-box"><strong>Ya no depende de B-11:</strong> encontramos y probamos <code>GET /api/rrss/metricas/weekly</code> — agrupa las métricas de cuenta por número de semana relativo al <code>fecha_inicio</code> de la estrategia, ya funcionando hoy. Solo falta construir el panel sobre este endpoint, que ya existe.</div>
+      <div class="dep-box"><strong>Ya no depende de nadie de tu lado:</strong> encontramos <code>GET /api/rrss/metricas/weekly</code> y lo conectamos directo a nuestro propio reporte de Analytics (el que ya generamos por webhook/correo) — ahora muestra una tabla real "Resultados por semana de la estrategia" con alcance/clics/leads por semana. Confirmado en vivo. Si en algún momento el panel quiere lo mismo, el endpoint ya existe y ya está probado — no es un pendiente urgente para nadie.</div>
     </div>
   </div>
 
@@ -401,8 +401,9 @@
     </div>
     <div class="item-body">
       <p class="item-why">
-        Un valor de prueba real (<code>alcance: 123456</code>, Facebook) quedó sumado permanentemente al agregado — hoy ya en ~129.600 por actividad real acumulada encima, confirmado también visible en <code>metricas/weekly</code> (semana 1). El endpoint no tiene <code>DELETE</code>. Si es posible, pedimos que se borre esa fila específica a nivel de base de datos. Si no es posible, no es urgente.
+        Un valor de prueba real (<code>alcance: 123456</code>, Facebook) quedó sumado permanentemente al agregado — hoy ya en ~129.600 por actividad real acumulada encima, confirmado también visible en <code>metricas/weekly</code> (semana 1).
       </p>
+      <div class="dep-box"><strong>Confirmado el 29-jul que no hay forma de resolverlo nosotros mismos:</strong> probamos mandar un valor negativo compensatorio (<code>alcance: -123456</code>) para que el acumulado se corrija solo — rechazado con <code>422 "must be at least 0"</code>. El endpoint solo tiene <code>GET/POST</code>, no <code>DELETE/PUT</code>. La única ruta de borrado que existe (<code>POST /api/dev/purge-current-company</code>) vacía <strong>toda</strong> la empresa, no solo esta fila — no es una opción real. Genuinamente necesita acceso a la base de datos de tu lado.</div>
     </div>
   </div>
 
@@ -414,15 +415,15 @@
         <div class="item-where">Panel › Configuración de Agentes</div>
       </div>
       <div class="item-tags">
-        <span class="badge nuevo">Acotado 29-jul</span>
-        <span class="badge opcional">Opcional</span>
+        <span class="badge nuevo">Probado a fondo 29-jul</span>
+        <span class="badge opcional">Solo falta confirmar el panel</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
         Confirmado en la doc que <code>rrss_distribution_ai</code> y <code>telegram_agent</code> ya son oficiales. Solo quedan sin confirmar <code>rrss_community_ai</code> y <code>rrss_sales_ai</code> — las inventamos nosotros al notar que el panel mostraba esas tarjetas como "Próximamente" pese a que esos agentes llevan semanas activos en producción.
       </p>
-      <div class="dep-box">Pedimos confirmar si esas 2 keys van a quedar oficiales, o si hay un nombre distinto que el panel espera.</div>
+      <div class="dep-box"><strong>Probado el 29-jul, del lado del backend está todo bien:</strong> las 2 keys ya existen como filas activas en <code>GET /api/agent-endpoints</code> (creadas en sesiones anteriores), y el endpoint de escritura no tiene ningún enum que las rechace — no hay ningún bloqueo técnico de nuestro lado. Lo único que genuinamente no podemos confirmar sin acceso al código fuente del panel es si su frontend reconoce estos 2 nombres exactos de key para dejar de mostrar "Próximamente" — eso sí necesita que lo confirmes vos o Walter mirando ese código.</div>
     </div>
   </div>
 
@@ -434,7 +435,7 @@
         <div class="item-where">API Backend — Ideas RRSS</div>
       </div>
       <div class="item-tags">
-        <span class="badge nuevo">Reencuadrado 29-jul</span>
+        <span class="badge nuevo">Confirmado sin salida propia 29-jul</span>
         <span class="badge opcional">Opcional — no es un bug</span>
       </div>
     </div>
@@ -442,7 +443,7 @@
       <p class="item-why">
         Confirmado en la doc que este endpoint acepta <strong>a propósito</strong> solo <code>topic</code>, <code>platform</code>, <code>keyword</code> (pensado para que el panel corrija la plataforma que asignó el Strategist AI). No es un bug — si en algún momento se conecta el botón "Regenerar idea" del panel (I-5) a este mismo endpoint, el nuevo ángulo/justificación no se actualizaría junto con el título.
       </p>
-      <div class="dep-box">No es urgente hoy porque I-5 sigue sin conectarse del lado del panel — se deja anotado para cuando eso avance.</div>
+      <div class="dep-box"><strong>Probamos buscarle la vuelta nosotros mismos el 29-jul y confirmamos que no hay forma:</strong> el endpoint de creación masiva de ideas ignora por completo un <code>id</code> existente en el body — mandarle el <code>id</code> real de una idea ya creada no la actualiza, crea una idea nueva y separada, dejando la original intacta (probado y confirmado en vivo, ambas ideas de prueba borradas después). No existe ningún camino de "upsert" en la API hoy. No es urgente porque I-5 sigue sin conectarse del lado del panel — se deja anotado para cuando eso avance, y ahí sí hace falta tu intervención en el backend.</div>
     </div>
   </div>
 
