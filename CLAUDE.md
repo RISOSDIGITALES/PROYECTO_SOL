@@ -1375,6 +1375,8 @@ Actualizado `exodo-g54-jul28.html`: I-6 pasó a "Resuelto de nuestro lado — 29
 
 Documento `exodo-g54-jul28.html` actualizado y consolidado con todos los hallazgos de hoy (ítems 195-199), encabezado reescrito como "versión consolidada, lista para enviar".
 
+200. **Éxodo depurado a pedido explícito de la usuaria ("todo lo que ya está resuelto quítalo")** (2026-07-29, minutos después del ítem 199): quitados del documento la sección "Resueltos" completa (13 filas, ya sin acción pendiente) y 2 cards individuales que ya no tenían ningún pedido real abierto — I-6 (resuelto de nuestro lado, "no es un pendiente urgente para nadie") y B-11 (angulo/es_tendencia ya resueltos, la columna semana "ya no bloquea nada, no urgente"). Se conservaron I-2 y I-5 pese a tener badges verdes de "resuelto" porque ambos siguen con un pedido real y activo (I-2: falta el widget de semana actual; I-5: nuestro lado listo pero el botón del panel sigue sin llamarlo). Quedó el documento con 13 pendientes reales, sin ningún ítem de puro registro histórico. Header y footer reescritos para reflejar la versión depurada.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
