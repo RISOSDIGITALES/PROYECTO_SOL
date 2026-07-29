@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-27T14:50:54.678Z",
+  "updatedAt": "2026-07-29T15:36:52.574Z",
   "createdAt": "2026-06-25T16:00:34.918Z",
   "id": "IRCoya91PKPjpT1T",
   "name": "📢 Distribution AI — RRSS G54 v1.0",
@@ -26,7 +26,7 @@
             {
               "id": "a3",
               "name": "G54_AGENT_TOKEN",
-              "value": "g54_agent_produccion_2026",
+              "value": "REDACTED_AGENT_TOKEN",
               "type": "string"
             },
             {
@@ -62,7 +62,7 @@
             {
               "id": "a9",
               "name": "G54_MASTER_PASSWORD",
-              "value": "MASTER_PASSWORD_REDACTED",
+              "value": "REDACTED_MASTER_PASSWORD",
               "type": "string"
             }
           ]
@@ -717,7 +717,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { \"post_id_platform\": $('📸 IG: Publicar').isExecuted ? ($('📸 IG: Publicar').item.json.id || null) : ($('📘 FB: Publicar con Foto').isExecuted ? ($('📘 FB: Publicar con Foto').item.json.post_id || $('📘 FB: Publicar con Foto').item.json.id || null) : ($('📘 FB: Publicar Solo Texto').isExecuted ? ($('📘 FB: Publicar Solo Texto').item.json.id || null) : ($('📱 IG: Publicar (Story)').isExecuted ? ($('📱 IG: Publicar (Story)').item.json.id || null) : ($('📘 FB: Publicar Story').isExecuted ? ($('📘 FB: Publicar Story').item.json.id || null) : ($('📱 IG: Publicar (Reel)').isExecuted ? ($('📱 IG: Publicar (Reel)').item.json.id || null) : ($('📘 FB: Finalizar Reel (finish)').isExecuted ? ($('📘 FB: Iniciar Reel (start)').item.json.video_id || null) : null)))))) } }}",
+        "jsonBody": "={{ { \"external_post_id\": $('📸 IG: Publicar').isExecuted ? ($('📸 IG: Publicar').item.json.id || null) : ($('📘 FB: Publicar con Foto').isExecuted ? ($('📘 FB: Publicar con Foto').item.json.post_id || $('📘 FB: Publicar con Foto').item.json.id || null) : ($('📘 FB: Publicar Solo Texto').isExecuted ? ($('📘 FB: Publicar Solo Texto').item.json.id || null) : ($('📱 IG: Publicar (Story)').isExecuted ? ($('📱 IG: Publicar (Story)').item.json.id || null) : ($('📘 FB: Publicar Story').isExecuted ? ($('📘 FB: Publicar Story').item.json.id || null) : ($('📱 IG: Publicar (Reel)').isExecuted ? ($('📱 IG: Publicar (Reel)').item.json.id || null) : ($('📘 FB: Finalizar Reel (finish)').isExecuted ? ($('📘 FB: Iniciar Reel (start)').item.json.video_id || null) : null)))))) } }}",
         "options": {}
       },
       "id": "g54-pub",
@@ -794,31 +794,32 @@
     },
     {
       "parameters": {
-        "method": "PUT",
-        "url": "={{ $('⚙️ Config Distribution').item.json.G54_BASE_URL }}/api/rrss/posts/{{ $('🔧 Preparar Datos Post').item.json.post_id }}/status",
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Distribution').item.json.G54_BASE_URL }}/api/agent/rrss/posts/{{ $('🔧 Preparar Datos Post').item.json.post_id }}/mark-published",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{ $('🔐 G54: Login Sesión').item.json.access_token }}"
+              "value": "={{ 'Bearer ' + $('⚙️ Config Distribution').item.json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
             }
           ]
         },
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "status",
-              "value": "aprobado"
-            }
-          ]
-        },
-        "options": {},
-        "continueOnFail": true
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"error_message\": $json.errorMessage } }}",
+        "options": {}
       },
       "id": "error-g54-node-001",
-      "name": "♻️ G54: Revertir → Aprobado",
+      "name": "♻️ G54: Revertir + Motivo (mark-published)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -1346,6 +1347,19 @@
         },
         "options": {}
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "let errorMessage = 'Fallo desconocido al publicar';\ntry {\n  if ($('🔀 Rutear: Plataforma + Imagen').isExecuted && $json.platform === 'Instagram' && !$json.imagen_url) {\n    errorMessage = 'Instagram requiere imagen: el post no tiene imagen_url';\n  } else if ($('⚠️ IG: Skip (container falló)').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'Instagram: falló la creación del container — ' + detail;\n  } else if ($('📘 FB: Publicar Solo Texto').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'Facebook: falló la publicación — ' + detail;\n  }\n} catch (e) {\n  errorMessage = 'Error al construir el mensaje de fallo: ' + e.message;\n}\nreturn [{ json: { errorMessage } }];"
+      },
+      "id": "b2c3d4e5-f6a7-4890-b1c2-d3e4f5a6b7c8",
+      "name": "🔧 Preparar Mensaje de Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1812,
+        584
+      ]
     }
   ],
   "connections": {
@@ -1426,7 +1440,7 @@
       "main": [
         [
           {
-            "node": "♻️ G54: Revertir → Aprobado",
+            "node": "🔧 Preparar Mensaje de Error",
             "type": "main",
             "index": 0
           }
@@ -1444,7 +1458,7 @@
         ],
         [
           {
-            "node": "♻️ G54: Revertir → Aprobado",
+            "node": "🔧 Preparar Mensaje de Error",
             "type": "main",
             "index": 0
           }
@@ -1539,7 +1553,7 @@
         ],
         [
           {
-            "node": "♻️ G54: Revertir → Aprobado",
+            "node": "🔧 Preparar Mensaje de Error",
             "type": "main",
             "index": 0
           }
@@ -1785,6 +1799,17 @@
           }
         ]
       ]
+    },
+    "🔧 Preparar Mensaje de Error": {
+      "main": [
+        [
+          {
+            "node": "♻️ G54: Revertir + Motivo (mark-published)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -1806,9 +1831,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "4e5b7f4f-6c5f-46a3-83db-72156b73a6f4",
-  "activeVersionId": "4e5b7f4f-6c5f-46a3-83db-72156b73a6f4",
-  "versionCounter": 76,
+  "versionId": "e3e76aa7-7464-4285-a03c-ba46e05dc519",
+  "activeVersionId": "e3e76aa7-7464-4285-a03c-ba46e05dc519",
+  "versionCounter": 78,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "shared": [
@@ -1833,9 +1858,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-07-27T14:50:54.682Z",
-    "createdAt": "2026-07-27T14:50:54.682Z",
-    "versionId": "4e5b7f4f-6c5f-46a3-83db-72156b73a6f4",
+    "updatedAt": "2026-07-29T15:36:52.577Z",
+    "createdAt": "2026-07-29T15:36:52.577Z",
+    "versionId": "e3e76aa7-7464-4285-a03c-ba46e05dc519",
     "workflowId": "IRCoya91PKPjpT1T",
     "nodes": [
       {
@@ -1857,7 +1882,7 @@
               {
                 "id": "a3",
                 "name": "G54_AGENT_TOKEN",
-                "value": "g54_agent_produccion_2026",
+                "value": "REDACTED_AGENT_TOKEN",
                 "type": "string"
               },
               {
@@ -1893,7 +1918,7 @@
               {
                 "id": "a9",
                 "name": "G54_MASTER_PASSWORD",
-                "value": "MASTER_PASSWORD_REDACTED",
+                "value": "REDACTED_MASTER_PASSWORD",
                 "type": "string"
               }
             ]
@@ -2548,7 +2573,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ { \"post_id_platform\": $('📸 IG: Publicar').isExecuted ? ($('📸 IG: Publicar').item.json.id || null) : ($('📘 FB: Publicar con Foto').isExecuted ? ($('📘 FB: Publicar con Foto').item.json.post_id || $('📘 FB: Publicar con Foto').item.json.id || null) : ($('📘 FB: Publicar Solo Texto').isExecuted ? ($('📘 FB: Publicar Solo Texto').item.json.id || null) : ($('📱 IG: Publicar (Story)').isExecuted ? ($('📱 IG: Publicar (Story)').item.json.id || null) : ($('📘 FB: Publicar Story').isExecuted ? ($('📘 FB: Publicar Story').item.json.id || null) : ($('📱 IG: Publicar (Reel)').isExecuted ? ($('📱 IG: Publicar (Reel)').item.json.id || null) : ($('📘 FB: Finalizar Reel (finish)').isExecuted ? ($('📘 FB: Iniciar Reel (start)').item.json.video_id || null) : null)))))) } }}",
+          "jsonBody": "={{ { \"external_post_id\": $('📸 IG: Publicar').isExecuted ? ($('📸 IG: Publicar').item.json.id || null) : ($('📘 FB: Publicar con Foto').isExecuted ? ($('📘 FB: Publicar con Foto').item.json.post_id || $('📘 FB: Publicar con Foto').item.json.id || null) : ($('📘 FB: Publicar Solo Texto').isExecuted ? ($('📘 FB: Publicar Solo Texto').item.json.id || null) : ($('📱 IG: Publicar (Story)').isExecuted ? ($('📱 IG: Publicar (Story)').item.json.id || null) : ($('📘 FB: Publicar Story').isExecuted ? ($('📘 FB: Publicar Story').item.json.id || null) : ($('📱 IG: Publicar (Reel)').isExecuted ? ($('📱 IG: Publicar (Reel)').item.json.id || null) : ($('📘 FB: Finalizar Reel (finish)').isExecuted ? ($('📘 FB: Iniciar Reel (start)').item.json.video_id || null) : null)))))) } }}",
           "options": {}
         },
         "id": "g54-pub",
@@ -2625,31 +2650,32 @@
       },
       {
         "parameters": {
-          "method": "PUT",
-          "url": "={{ $('⚙️ Config Distribution').item.json.G54_BASE_URL }}/api/rrss/posts/{{ $('🔧 Preparar Datos Post').item.json.post_id }}/status",
+          "method": "POST",
+          "url": "={{ $('⚙️ Config Distribution').item.json.G54_BASE_URL }}/api/agent/rrss/posts/{{ $('🔧 Preparar Datos Post').item.json.post_id }}/mark-published",
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "=Bearer {{ $('🔐 G54: Login Sesión').item.json.access_token }}"
+                "value": "={{ 'Bearer ' + $('⚙️ Config Distribution').item.json.G54_AGENT_TOKEN }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
               }
             ]
           },
           "sendBody": true,
-          "bodyParameters": {
-            "parameters": [
-              {
-                "name": "status",
-                "value": "aprobado"
-              }
-            ]
-          },
-          "options": {},
-          "continueOnFail": true
+          "specifyBody": "json",
+          "jsonBody": "={{ { \"error_message\": $json.errorMessage } }}",
+          "options": {}
         },
         "id": "error-g54-node-001",
-        "name": "♻️ G54: Revertir → Aprobado",
+        "name": "♻️ G54: Revertir + Motivo (mark-published)",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
@@ -3177,6 +3203,19 @@
           },
           "options": {}
         }
+      },
+      {
+        "parameters": {
+          "jsCode": "let errorMessage = 'Fallo desconocido al publicar';\ntry {\n  if ($('🔀 Rutear: Plataforma + Imagen').isExecuted && $json.platform === 'Instagram' && !$json.imagen_url) {\n    errorMessage = 'Instagram requiere imagen: el post no tiene imagen_url';\n  } else if ($('⚠️ IG: Skip (container falló)').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'Instagram: falló la creación del container — ' + detail;\n  } else if ($('📘 FB: Publicar Solo Texto').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'Facebook: falló la publicación — ' + detail;\n  }\n} catch (e) {\n  errorMessage = 'Error al construir el mensaje de fallo: ' + e.message;\n}\nreturn [{ json: { errorMessage } }];"
+        },
+        "id": "b2c3d4e5-f6a7-4890-b1c2-d3e4f5a6b7c8",
+        "name": "🔧 Preparar Mensaje de Error",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1812,
+          584
+        ]
       }
     ],
     "connections": {
@@ -3257,7 +3296,7 @@
         "main": [
           [
             {
-              "node": "♻️ G54: Revertir → Aprobado",
+              "node": "🔧 Preparar Mensaje de Error",
               "type": "main",
               "index": 0
             }
@@ -3275,7 +3314,7 @@
           ],
           [
             {
-              "node": "♻️ G54: Revertir → Aprobado",
+              "node": "🔧 Preparar Mensaje de Error",
               "type": "main",
               "index": 0
             }
@@ -3370,7 +3409,7 @@
           ],
           [
             {
-              "node": "♻️ G54: Revertir → Aprobado",
+              "node": "🔧 Preparar Mensaje de Error",
               "type": "main",
               "index": 0
             }
@@ -3616,6 +3655,17 @@
             }
           ]
         ]
+      },
+      "🔧 Preparar Mensaje de Error": {
+        "main": [
+          [
+            {
+              "node": "♻️ G54: Revertir + Motivo (mark-published)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -3625,18 +3675,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-07-27T14:50:54.882Z",
-        "id": 2411,
+        "createdAt": "2026-07-29T15:36:52.729Z",
+        "id": 2513,
         "workflowId": "IRCoya91PKPjpT1T",
-        "versionId": "4e5b7f4f-6c5f-46a3-83db-72156b73a6f4",
+        "versionId": "e3e76aa7-7464-4285-a03c-ba46e05dc519",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-07-27T14:50:54.831Z",
-        "id": 2410,
+        "createdAt": "2026-07-29T15:36:52.686Z",
+        "id": 2512,
         "workflowId": "IRCoya91PKPjpT1T",
-        "versionId": "4e5b7f4f-6c5f-46a3-83db-72156b73a6f4",
+        "versionId": "e3e76aa7-7464-4285-a03c-ba46e05dc519",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
