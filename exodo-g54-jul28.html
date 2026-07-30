@@ -253,26 +253,25 @@
   </div>
 
   <!-- B-12 -->
-  <div class="item-card b-red">
+  <div class="item-card b-yellow">
     <div class="item-header">
       <div>
-        <div class="item-title">B-12. El botón "Programar" del panel debe disparar un webhook nuestro una sola vez, al momento de programar</div>
+        <div class="item-title">B-12. Alarma al programar — hecho de los dos lados, decisión de cancelación ya tomada</div>
         <div class="item-where">Panel › Editor de Posts (backend del botón "Programar")</div>
       </div>
       <div class="item-tags">
-        <span class="badge p0">🔴 Confirmado con prueba en vivo, apagando el parche</span>
-        <span class="badge api">Webhook nuevo</span>
-        <span class="badge p1">🟡 P1</span>
+        <span class="badge wait">🟡 Sin desplegar (confirmado por Walter)</span>
+        <span class="badge resuelto">✅ Nuestro lado listo, probado en vivo</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        Hoy la publicación automática depende de un puente temporal que revisa cada 2 minutos. Ya construimos y probamos en vivo el reemplazo (una alarma que duerme sin gastar recursos hasta el segundo exacto) — el botón sigue sin llamarlo.
+        Walter confirmó que ya lo construyó: al programar un post sale una llamada única a <code>rrss_schedule_alarm</code> con <code>{"post_id","company_id","fecha_programada"}</code>, por los 4 caminos que dejan un post programado (botón, calendario, cambio de estado desde el editor, reprogramar). Dispara y olvida.
       </p>
-      <div class="warn-box"><strong>Prueba definitiva del 29-jul, apagando el parche a propósito para descartar cualquier duda:</strong> confirmado primero que no había nada real programado en ninguna empresa activa (sin riesgo), se apagó el puente de los 2 minutos, se creó un post de prueba y se lo programó con el endpoint real <code>PUT /api/rrss/posts/{id}/schedule</code> (el mismo que usa el botón "Programar" del panel) para 90 segundos en el futuro. Se esperó a que pasara esa hora con el puente todavía apagado: <strong>la Alarma Exacta siguió en 0 ejecuciones, Distribution AI no recibió ninguna llamada nueva, y el post se quedó en <code>programado</code> sin publicarse.</strong> Puente reactivado de inmediato después de la prueba, post de prueba borrado. Confirma sin ninguna duda que programar un post hoy no dispara nada de nuestro lado — todo lo publicado hasta ahora salió exclusivamente por el parche de los 2 minutos.</div>
-      <div class="warn-box"><strong>Pedido concreto:</strong> que el botón "Programar", en el mismo momento en que guarda la fecha, haga una llamada HTTP única a <code>POST https://n8n.mdarthurdigital.com/webhook/schedule-alarm-g54</code> con <code>{"post_id": N, "company_id": N, "fecha_programada": "YYYY-MM-DDTHH:mm:ssZ"}</code>. Dispara y olvida, sin esperar respuesta.</div>
-      <div class="dep-box">Mientras esto no esté conectado seguimos con el puente de los 2 minutos. <strong>Mismo pedido exacto que I-5</strong> (que el panel llame a un webhook nuestro al hacer clic) — la diferencia es que acá hay un parche que disimula el síntoma.</div>
-      <div class="note-box"><strong>El propio panel ya asume este comportamiento, solo falta implementarlo:</strong> la tarjeta de "IA de distribución" dice textualmente <em>"Se activa al programar una publicación"</em> — confirma que el diseño ya contempla esto, es cuestión de conectar la llamada real.</div>
+      <div class="dep-box"><strong>Decisión tomada:</strong> el aviso de cancelación va por el mismo webhook, con <code>{"post_id","company_id","cancelado":true}</code> — no un endpoint aparte.</div>
+      <div class="note-box"><strong>Nuestro lado ya está listo para esto, no hace falta que Walter espere a que lo hagamos:</strong> el nodo <code>🔀 ¿Cancelado?</code> de la Alarma Exacta ya distingue el caso — si <code>cancelado:true</code>, reconoce y termina sin programar ninguna espera; si no, sigue exactamente igual que antes. Confirmado en vivo hoy con los dos caminos por separado (una llamada de cancelación real y una de programación real de 15 segundos), ambos terminando en el nodo correcto.</div>
+      <div class="warn-box"><strong>Aclaración, no bloquea nada:</strong> nuestra Alarma solo le pasa <code>company_id</code> a Distribution AI al despertar, nunca un <code>post_id</code> fijo — así que siempre vuelve a consultar qué está realmente pendiente en G54 en el momento exacto de publicar. Un post cancelado ya no aparecería ahí de todas formas; el aviso de cancelación es una capa extra de seguridad, no algo de lo que dependamos para no publicar de más.</div>
+      <div class="dep-box">Sigue el puente de los 2 minutos activo hasta que Walter despliegue su parte — no lo vamos a apagar antes.</div>
     </div>
   </div>
 
