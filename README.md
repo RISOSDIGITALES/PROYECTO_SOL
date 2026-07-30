@@ -194,12 +194,41 @@ DB_PASSWORD=una_contraseña_segura
 DB_NAME=planilla_nicaragua
 JWT_SECRET=cadena_larga_y_aleatoria_minimo_32_caracteres
 PORT=3000
+APP_URL=https://nomina.orison.us
 ```
 
 > **Importante:** el `JWT_SECRET` debe ser una cadena larga y aleatoria. Podés generar una con:
 > ```bash
 > node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 > ```
+
+> **`APP_URL`** debe ser el dominio público real (con `https://`) — se usa para armar los enlaces del correo de recuperación de contraseña.
+
+---
+
+### 4.1 Variables de correo (SMTP) — **no te la saltes**
+
+`.env` está en `.gitignore` a propósito (nunca se sube a GitHub), así que **cada servidor nuevo empieza sin SMTP configurado**. Si no agregás estas variables, el sistema sigue funcionando pero cualquier botón de "Enviar por correo" (reporte de planilla, recibo individual, recuperación de contraseña, notificación de planilla pagada) devuelve el error `SMTP no configurado en el servidor. Agrega las variables de correo en .env`.
+
+Agregá esto al mismo `.env` del paso anterior:
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=tucorreo@gmail.com
+SMTP_PASS=tu_contraseña_de_aplicación_16_caracteres
+SMTP_FROM=tucorreo@gmail.com
+```
+
+- `SMTP_PASS` es una **contraseña de aplicación** de Gmail, no la contraseña normal de la cuenta. Se genera en `myaccount.google.com` → Seguridad → Verificación en dos pasos → Contraseñas de aplicaciones.
+- **Usá el puerto 465 (`SMTP_SECURE=true`), no el 587.** Muchos servidores/ISP bloquean el puerto 587 (SMTP con STARTTLS) por defecto y la conexión falla con `ETIMEDOUT`, aunque la contraseña esté bien. El puerto 465 usa SSL directo y no tiene ese problema. Si igual falla, probá:
+  ```bash
+  # Desde el servidor, confirmar qué puerto está abierto de salida:
+  node -e "const n=require('net');[587,465].forEach(p=>{const s=n.createConnection(p,'smtp.gmail.com');s.setTimeout(5000,()=>{console.log(p,'TIMEOUT');s.destroy()});s.on('connect',()=>{console.log(p,'OK');s.destroy()})})"
+  ```
+- Si al probar el envío el error es de tipo `Invalid login` / `535-5.7.8` / `EAUTH`, ahí sí es la contraseña de aplicación (venció, se revocó, o se copió mal) — regenerala en Gmail y actualizá `SMTP_PASS`.
+- Tras cualquier cambio en `.env`, reiniciar con `pm2 restart nomify` (los cambios de `.env` no se aplican solos).
 
 ---
 
