@@ -1461,6 +1461,10 @@ Resto del diagnóstico sin novedades: 0 posts atascados en "programado" (16 post
 
 Actualizado `exodo-g54-jul28.html` con los 7 ítems confirmados resueltos (B-14, B-15, B-16/C-3, B-18, C-4, B-12 con su detalle pendiente).
 
+212. **Corrección al ítem 211 — B-12 sí avisa al reprogramar, la duda de antes fue por revisar demasiado rápido, confirmado con una segunda prueba limpia sin ningún riesgo** (2026-07-30, minutos después del ítem 211): a pedido de la usuaria de cerrar los puntos que habían quedado a medias, se investigó el detalle de "reprogramar no dispara un segundo aviso" anotado en el ítem anterior. Revisando de nuevo la ejecución 47015 de la prueba de esa mañana (que en el chequeo original no había aparecido en el listado de las últimas ejecuciones) se confirmó que **sí existía** — con el payload exacto de la reprogramación (`post_id:113, fecha_programada:"...16:15:54Z"`) — simplemente no le había dado tiempo a aparecer en el listado cuando se revisó la primera vez, unos segundos demasiado pronto.
+
+**Reconfirmado con una segunda prueba, esta vez sin ningún riesgo real** (fechas de 30 y 35 minutos en el futuro, muy lejos de cualquier ciclo del puente temporal, para no repetir el incidente del ítem 211): post de prueba 114 programado dos veces seguidas a fechas distintas — llegaron 2 llamadas reales y separadas a la Alarma Exacta, cada una con su propia `fecha_programada` exacta. B-12 queda confirmado funcionando del todo, sin ningún detalle pendiente de Walter. Ambas esperas de prueba canceladas con el mecanismo real de `cancelado:true` y el post borrado de G54 antes de que llegaran a disparar nada. Actualizado `exodo-g54-jul28.html`, B-12 pasa de "un detalle por confirmar" a resuelto sin condiciones.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
