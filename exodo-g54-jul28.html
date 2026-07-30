@@ -252,68 +252,61 @@
   </div>
 
   <!-- B-12 -->
-  <div class="item-card b-yellow">
+  <div class="item-card b-green">
     <div class="item-header">
       <div>
-        <div class="item-title">B-12. Alarma al programar — hecho de los dos lados, decisión de cancelación ya tomada</div>
+        <div class="item-title">B-12. Alarma al programar — CONFIRMADO EN VIVO Y FUNCIONANDO (30-jul), un detalle de reprogramar por confirmar</div>
         <div class="item-where">Panel › Editor de Posts (backend del botón "Programar")</div>
       </div>
       <div class="item-tags">
-        <span class="badge wait">🟡 Sin desplegar (confirmado por Walter)</span>
-        <span class="badge resuelto">✅ Nuestro lado listo, probado en vivo</span>
+        <span class="badge resuelto">✅ Desplegado y confirmado con una prueba real</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        Walter confirmó que ya lo construyó: al programar un post sale una llamada única a <code>rrss_schedule_alarm</code> con <code>{"post_id","company_id","fecha_programada"}</code>, por los 4 caminos que dejan un post programado (botón, calendario, cambio de estado desde el editor, reprogramar). Dispara y olvida.
+        Confirmado con un post de prueba real, sin ningún atajo nuestro: se creó, se aprobó y se programó vía <code>PUT /api/rrss/posts/{id}/schedule</code> (el mismo endpoint del botón "Programar") — y a los 9 segundos llegó una llamada real y automática a nuestra Alarma Exacta con <code>{"post_id":113,"company_id":1,"fecha_programada":"..."}</code> exactos, sin que nosotros llamáramos nada.
       </p>
-      <div class="dep-box"><strong>Decisión tomada:</strong> el aviso de cancelación va por el mismo webhook, con <code>{"post_id","company_id","cancelado":true}</code> — no un endpoint aparte.</div>
-      <div class="note-box"><strong>Nuestro lado ya está listo para esto, no hace falta que Walter espere a que lo hagamos:</strong> el nodo <code>🔀 ¿Cancelado?</code> de la Alarma Exacta ya distingue el caso — si <code>cancelado:true</code>, reconoce y termina sin programar ninguna espera; si no, sigue exactamente igual que antes. Confirmado en vivo hoy con los dos caminos por separado (una llamada de cancelación real y una de programación real de 15 segundos), ambos terminando en el nodo correcto.</div>
-      <div class="warn-box"><strong>Aclaración, no bloquea nada:</strong> nuestra Alarma solo le pasa <code>company_id</code> a Distribution AI al despertar, nunca un <code>post_id</code> fijo — así que siempre vuelve a consultar qué está realmente pendiente en G54 en el momento exacto de publicar. Un post cancelado ya no aparecería ahí de todas formas; el aviso de cancelación es una capa extra de seguridad, no algo de lo que dependamos para no publicar de más.</div>
-      <div class="dep-box">Sigue el puente de los 2 minutos activo hasta que Walter despliegue su parte — no lo vamos a apagar antes.</div>
+      <div class="dep-box"><strong>Decisión de cancelación ya implementada de nuestro lado:</strong> <code>{"post_id","company_id","cancelado":true}</code> al mismo webhook — el nodo <code>🔀 ¿Cancelado?</code> reconoce y termina sin programar espera. Confirmado en vivo.</div>
+      <div class="warn-box"><strong>Un detalle para confirmar con Walter:</strong> al reprogramar el mismo post de prueba a una fecha distinta (vía el mismo endpoint <code>/schedule</code>), no llegó una segunda llamada a nuestra alarma — solo la primera programación disparó el aviso. Tu documento decía que reprogramar también debía avisar con la fecha nueva; en esta prueba puntual no pasó. Puede ser que la ruta que probamos (API directa) no sea exactamente el mismo camino que dispara el botón de reprogramar del panel — vale la pena que lo confirmes.</div>
+      <div class="note-box">Nuestra Alarma solo le pasa <code>company_id</code> a Distribution AI al despertar, nunca un <code>post_id</code> fijo — así que siempre vuelve a consultar qué está realmente pendiente en G54 en el momento exacto de publicar. Esto amortigua el caso de una reprogramación que no avise (Distribution AI igual respeta la fecha real más actual de G54 cuando el puente de los 2 minutos la revisa), pero no reemplaza tener el aviso real.</div>
+      <div class="dep-box">El puente de los 2 minutos sigue activo — no lo apagamos todavía, justo por el detalle de arriba.</div>
     </div>
   </div>
 
   <!-- B-14 -->
-  <div class="item-card b-red">
+  <div class="item-card b-green">
     <div class="item-header">
       <div>
-        <div class="item-title">B-14. No existe ningún campo video_url en la tabla de posts — bloquea Reels por completo</div>
+        <div class="item-title">B-14. video_url ya existe, persiste y no rompe nada más — confirmado en vivo</div>
         <div class="item-where">API Backend — Posts / RRSS</div>
       </div>
       <div class="item-tags">
-        <span class="badge carry">Reconfirmado 29-jul</span>
-        <span class="badge api">Columna nueva</span>
-        <span class="badge p0">🔴 P0</span>
+        <span class="badge resuelto">✅ Confirmado en vivo — 30-jul</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        Ya construimos las 2 rutas completas de Reels en Distribution AI — pero <code>video_url</code> se sigue descartando en silencio al guardarlo en un post (probado de nuevo el 29-jul). Sin este campo no hay forma de que un post traiga un video adjunto.
+        Probado con un post real: <code>PUT /api/rrss/posts/{id}</code> con <code>{"video_url":"https://..."}</code> devolvió <code>200</code>, y al releer el post con una llamada nueva y limpia el campo quedó persistido — confirmado además que <code>imagen_url</code> del mismo post no se vio afectado (no es un reemplazo total del registro). Valor de prueba revertido después de confirmar.
       </p>
-      <div class="dep-box"><strong>Estado de nuestro lado:</strong> código de publicación listo y sincronizado, solo esperando esta columna.</div>
+      <div class="note-box">Nuestras 2 rutas de Reels en Distribution AI ya estaban listas desde el 27-jul (ítem 179) — quedan disponibles para probar de punta a punta cuando quieran.</div>
     </div>
   </div>
 
   <!-- B-15 -->
-  <div class="item-card b-orange">
+  <div class="item-card b-green">
     <div class="item-header">
       <div>
-        <div class="item-title">B-15. La doc dice que /api/agent/whatsapp/inbound acepta facebook/instagram — en vivo sigue rechazándolos con 422</div>
+        <div class="item-title">B-15. facebook/instagram ya se aceptan — confirmado en vivo</div>
         <div class="item-where">API Backend — Contactos de WhatsApp/RRSS</div>
       </div>
       <div class="item-tags">
-        <span class="badge nuevo">Reprobado 29-jul, dos veces, shape 100% correcto</span>
-        <span class="badge api">Enum</span>
-        <span class="badge p1">🟡 P1</span>
+        <span class="badge resuelto">✅ Confirmado en vivo — 30-jul</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        La documentación marca <code>facebook</code>/<code>instagram</code> como agregados el 17-jul al enum de <code>origen</code> de este endpoint (igual que en <code>crm_deals.origen</code>, ese sí confirmado). Reprobado el 29-jul con el body exacto que documenta la API (<code>empresa_id</code>, <code>messages</code> con <code>rol</code> válido) y con un control en la misma tanda para descartar error propio:
+        Reprobado con el mismo shape que dio 422 el 29-jul: <code>origen: facebook</code> → <code>201 ok:true</code>, <code>origen: instagram</code> → <code>201 ok:true</code>. Contacto de prueba limpiado después de confirmar.
       </p>
-      <div class="dep-box"><code>origen: facebook</code> → 422 &nbsp;|&nbsp; <code>origen: instagram</code> → 422 &nbsp;|&nbsp; <code>origen: rrss</code> (control) → 201 <code>ok:true</code>. El control funcionando en la misma llamada descarta que sea un error nuestro de request.</div>
-      <div class="warn-box"><strong>Necesitamos que Walter confirme:</strong> si el enum realmente se actualizó y hay un bug puntual en esta ruta, o si la documentación quedó adelantada a lo que hay en producción. Mientras tanto seguimos mandando <code>rrss</code> como siempre.</div>
     </div>
   </div>
 
@@ -345,23 +338,20 @@
   </div>
 
   <!-- C-3 -->
-  <div class="item-card b-teal">
+  <div class="item-card b-green">
     <div class="item-header">
       <div>
-        <div class="item-title">C-3 → B-16. Community AI y Sales AI Motor siguen "Próximamente"/"En construcción" en el panel pese a estar activos desde el 27-jul</div>
+        <div class="item-title">C-3 → B-16. Community AI y Sales AI Motor — CONFIRMADO EN VIVO, ya no es lista fija</div>
         <div class="item-where">Panel › Dashboard de Agentes</div>
       </div>
       <div class="item-tags">
-        <span class="badge p1">🟡 Confirmado con captura real 29-jul</span>
-        <span class="badge api">Lista fija de agentes</span>
+        <span class="badge resuelto">✅ Confirmado en vivo — 30-jul</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        Confirmado en la doc que <code>rrss_distribution_ai</code> y <code>telegram_agent</code> ya son oficiales. Quedaban sin confirmar <code>rrss_community_ai</code> y <code>rrss_sales_ai</code> — las inventamos nosotros al notar que el panel mostraba esas tarjetas como "Próximamente" pese a que esos agentes llevan semanas activos en producción.
+        Confirmado con <code>GET /api/rrss/pipeline?company_id=1</code> (el endpoint real que alimenta el dashboard, ahora documentado): <code>rrss_community_ai</code> aparece con <code>"disponible":true, "configurado":true, "estado":"pendiente"</code> ("Conectado, todavía sin conversaciones desde redes" — correcto, es real que todavía no hubo tráfico); <code>rrss_sales_ai</code> aparece con <code>"estado":"listo", "valor":"5", "unidad":"oportunidades desde redes"</code> — ya cuenta actividad real del CRM, no un texto fijo.
       </p>
-      <div class="dep-box"><strong>Probado el 29-jul: del lado del backend no hay ningún bloqueo</strong> — las 2 keys ya existen como filas activas en <code>GET /api/agent-endpoints</code> (creadas el 27-jul), y probamos mandar una key totalmente inventada para confirmar si el endpoint valida contra un enum — la aceptó sin quejarse. El backend no restringe nombres en absoluto.</div>
-      <div class="warn-box"><strong>Confirmado con una captura real del dashboard, mismo día:</strong> "IA comunitaria" sigue en "Próximamente" ("En construcción. Hoy las conversaciones se atienden desde la bandeja de WhatsApp.") e "IA de ventas" también ("En construcción. Los leads que llegan hoy se gestionan desde el CRM.") — ambos con "Sin actividad aún", pese a estar registrados y activos desde hace 2 días. Esto ya no es una duda para confirmar, es un hallazgo cerrado: el panel tiene una lista fija de agentes conocidos (probablemente del <code>AgentEndpointSeeder</code> que menciona la doc) que no incluye estos 2 — hace falta que Walter la actualice para que dejen de mostrarse como no construidos.</div>
     </div>
   </div>
 
@@ -387,42 +377,38 @@
   </div>
 
   <!-- B-18 -->
-  <div class="item-card b-teal">
+  <div class="item-card b-green">
     <div class="item-header">
       <div>
-        <div class="item-title">B-18. Consulta: ¿de dónde lee el panel "alcance acumulado" de IA Analítica? No coincide con /api/rrss/metricas</div>
+        <div class="item-title">B-18. Resuelto — el número ya coincide exacto</div>
         <div class="item-where">Panel › Dashboard de Agentes, tarjeta "IA analítica"</div>
       </div>
       <div class="item-tags">
-        <span class="badge nuevo">Hallazgo nuevo 29-jul — no pudimos resolverlo solos</span>
-        <span class="badge opcional">Consulta</span>
+        <span class="badge resuelto">✅ Confirmado en vivo — 30-jul</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        El dashboard muestra "0 de alcance acumulado — Todavía no hay métricas recogidas" para Crating Express — pero <code>GET /api/rrss/metricas</code> (el que sí probamos y confirmamos funcionando el 28-jul, ítem 184) devuelve <code>alcance_total: 129671</code> (Facebook) + <code>3200</code> (Instagram) para la misma empresa, datos reales.
+        <code>GET /api/rrss/pipeline?company_id=1</code> ahora devuelve <code>"valor":"132.871"</code> de alcance acumulado para "IA analítica" — coincide exacto con <code>129671 + 3200 = 132871</code> de <code>/api/rrss/metricas</code> (Facebook + Instagram). Arreglado del todo.
       </p>
-      <div class="dep-box"><strong>Intentamos resolverlo nosotros antes de escalarlo:</strong> probamos ~8 rutas candidatas de resumen/dashboard (<code>/api/rrss/dashboard</code>, <code>/api/rrss/metricas/summary</code>, etc.) — todas 404, ninguna documentada tampoco. No encontramos qué endpoint alimenta este número específico del panel, así que no podemos saber si es un bug real o si el widget cuenta algo distinto a propósito (ej. solo corridas iniciadas desde el botón "Ejecutar" de esa tarjeta). Necesitamos que Walter confirme qué fuente de datos usa ese widget en particular.</div>
     </div>
   </div>
 
   <!-- C-4 -->
-  <div class="item-card b-teal">
+  <div class="item-card b-green">
     <div class="item-header">
       <div>
-        <div class="item-title">C-4. Pedido de ampliar el scope de PUT /api/rrss/ideas/{id} para aceptar también angulo</div>
+        <div class="item-title">C-4. Resuelto — angulo ya persiste en PUT /api/rrss/ideas/{id}</div>
         <div class="item-where">API Backend — Ideas RRSS</div>
       </div>
       <div class="item-tags">
-        <span class="badge nuevo">Confirmado sin salida propia 29-jul</span>
-        <span class="badge opcional">Opcional — no es un bug</span>
+        <span class="badge resuelto">✅ Confirmado en vivo — 30-jul</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        Confirmado en la doc que este endpoint acepta <strong>a propósito</strong> solo <code>topic</code>, <code>platform</code>, <code>keyword</code> (pensado para que el panel corrija la plataforma que asignó el Strategist AI). No es un bug — si en algún momento se conecta el botón "Regenerar idea" del panel (I-5) a este mismo endpoint, el nuevo ángulo/justificación no se actualizaría junto con el título.
+        Probado sobre una idea real: <code>PUT</code> con <code>{"angulo":"..."}</code> devolvió <code>200</code> y persistió al releer. Con esto, el flujo completo de "Regenerar idea" (I-5, ya resuelto) puede actualizar título y ángulo juntos sin ningún hueco.
       </p>
-      <div class="dep-box"><strong>Probamos buscarle la vuelta nosotros mismos el 29-jul y confirmamos que no hay forma:</strong> el endpoint de creación masiva de ideas ignora por completo un <code>id</code> existente en el body — mandarle el <code>id</code> real de una idea ya creada no la actualiza, crea una idea nueva y separada, dejando la original intacta (probado y confirmado en vivo, ambas ideas de prueba borradas después). No existe ningún camino de "upsert" en la API hoy. No es urgente porque I-5 sigue sin conectarse del lado del panel — se deja anotado para cuando eso avance, y ahí sí hace falta tu intervención en el backend.</div>
     </div>
   </div>
 
