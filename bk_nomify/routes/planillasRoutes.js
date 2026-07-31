@@ -49,6 +49,7 @@ router.get('/', requireAuth, async (req, res) => {
         p.total_deducciones AS \`Total deducciones\`,
         p.total_neto AS \`Total neto\`,
         p.created_at AS \`Fecha de pago\`,
+        p.empresa_id,
         COUNT(d.id) AS \`Total empleados\`
        FROM planillas p
        LEFT JOIN detalle_planilla d ON p.id = d.planilla_id
@@ -782,7 +783,7 @@ router.get('/papelera', requireAuth, requireMaster, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const [[row]] = await db.query(
-      `SELECT p.*, emp.nombre AS empresa_nombre
+      `SELECT p.*, emp.nombre AS empresa_nombre, COALESCE(emp.inatec_activo, 1) AS inatec_activo
        FROM planillas p LEFT JOIN empresas emp ON p.empresa_id = emp.id
        WHERE p.id = ?`, [req.params.id]
     );

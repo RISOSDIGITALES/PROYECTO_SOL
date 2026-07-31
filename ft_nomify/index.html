@@ -112,7 +112,7 @@
         <div class="kpi kpi-accent"><span class="kpi-icon">💵</span><div class="kpi-label">Neto última quincena</div>
           <div class="kpi-value" id="k-neto">—</div><div class="kpi-sub" id="k-neto-sub">—</div></div>
         <div class="kpi kpi-orange"><span class="kpi-icon">🏢</span><div class="kpi-label">Costo empresa (última)</div>
-          <div class="kpi-value" id="k-costo">—</div><div class="kpi-sub" style="color:var(--orange);font-size:10px">INSS pat. + INATEC incl.</div></div>
+          <div class="kpi-value" id="k-costo">—</div><div class="kpi-sub" id="k-costo-sub" style="color:var(--orange);font-size:10px">INSS pat. + INATEC incl.</div></div>
         <div class="kpi kpi-blue"><span class="kpi-icon">💰</span><div class="kpi-label">Préstamos activos</div>
           <div class="kpi-value" id="k-prest">—</div><div class="kpi-sub" id="k-prest-sub">—</div></div>
         <div class="kpi kpi-red"><span class="kpi-icon">⚡</span><div class="kpi-label">Adelantos pendientes</div>
@@ -428,6 +428,12 @@ async function loadDashboard() {
         + parseFloat(ultimaP.total_inss_patronal||0)
         + parseFloat(ultimaP.total_inatec||0);
       document.getElementById('k-costo').textContent = cs(costo || ultimaP['Total bruto']);
+      if (ultimaP.empresa_id) {
+        apiFetch(`/api/empresas/${ultimaP.empresa_id}`).then(emp => {
+          document.getElementById('k-costo-sub').textContent =
+            emp.inatec_activo ? 'INSS pat. + INATEC incl.' : 'INSS patronal incl.';
+        }).catch(() => {});
+      }
     } else {
       document.getElementById('k-neto').textContent  = 'C$ 0.00';
       document.getElementById('k-costo').textContent = 'C$ 0.00';

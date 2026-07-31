@@ -67,9 +67,11 @@ router.get('/planillas', requireAuth, async (req, res) => {
       SELECT p.folio, DATE_FORMAT(p.periodo,'%Y-%m-%d') AS periodo,
         p.tipo, p.estado, p.total_bruto, p.total_deducciones, p.total_neto,
         p.total_inss_patronal, p.total_inatec, p.costo_total_empresa,
+        COALESCE(em.inatec_activo, 1) AS inatec_activo,
         COUNT(d.id) AS empleados
       FROM planillas p
       LEFT JOIN detalle_planilla d ON d.planilla_id = p.id
+      LEFT JOIN empresas em ON em.id = p.empresa_id
       ${where} GROUP BY p.id ORDER BY p.periodo DESC, p.id DESC`, params);
 
     const headers = ['#Folio','Período','Tipo','Estado','Empleados',
@@ -78,7 +80,7 @@ router.get('/planillas', requireAuth, async (req, res) => {
     const data = [headers, ...rows.map(r => [
       r.folio, r.periodo, r.tipo||'—', r.estado||'Borrador', r.empleados,
       cs(r.total_bruto), cs(r.total_deducciones), cs(r.total_neto),
-      cs(r.total_inss_patronal), cs(r.total_inatec), cs(r.costo_total_empresa)
+      cs(r.total_inss_patronal), r.inatec_activo ? cs(r.total_inatec) : '—', cs(r.costo_total_empresa)
     ])];
     sendXlsx(res, data, 'Planillas', 'Planillas');
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -99,22 +101,27 @@ router.get('/planilla/:id', requireAuth, async (req, res) => {
       ORDER BY e.nombre ASC`, [req.params.id]);
 
     const [[plan]] = await db.query(
-      'SELECT folio, tipo, DATE_FORMAT(periodo,\'%Y-%m-%d\') AS periodo FROM planillas WHERE id = ?',
+      `SELECT p.folio, p.tipo, DATE_FORMAT(p.periodo,'%Y-%m-%d') AS periodo,
+              COALESCE(em.inatec_activo, 1) AS inatec_activo
+       FROM planillas p LEFT JOIN empresas em ON em.id = p.empresa_id
+       WHERE p.id = ?`,
       [req.params.id]);
 
-    const esAguinaldo = plan?.tipo === 'Aguinaldo';
+    const esAguinaldo   = plan?.tipo === 'Aguinaldo';
+    const inatecActivo  = plan ? !!plan.inatec_activo : true;
     const headers = esAguinaldo
       ? ['Empleado','Tipo planilla','Período','Meses trabajados','Aguinaldo']
       : ['Empleado','Tipo planilla','Período','Salario quincenal','INSS (7%)',
          'Desc. préstamo','Desc. adelanto','Otras deducciones','Extras',
-         'Total deducciones','Neto a recibir','INSS Patronal (21.5%)','INATEC (2%)'];
+         'Total deducciones','Neto a recibir','INSS Patronal (21.5%)',
+         ...(inatecActivo ? ['INATEC (2%)'] : [])];
 
     const data = [headers, ...rows.map(r => esAguinaldo
       ? [r.nombre, r.tipo_planilla, r.periodo, cs(r.meses_trabajados), cs(r.neto)]
       : [r.nombre, r.tipo_planilla, r.periodo, cs(r.salario_quincenal),
          cs(r.inss), cs(r.desc_prestamo), cs(r.desc_adelanto), cs(r.desc_deducciones),
          cs(r.extras), cs(r.total_deducciones), cs(r.neto),
-         cs(r.inss_patronal), cs(r.inatec)]
+         cs(r.inss_patronal), ...(inatecActivo ? [cs(r.inatec)] : [])]
     )];
 
     const fname = `Planilla-${plan?.folio||req.params.id}-${plan?.periodo||''}`;
