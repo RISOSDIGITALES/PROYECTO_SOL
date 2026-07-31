@@ -222,13 +222,13 @@
     },
     {
       "parameters": {
-        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID + '/wa/leads?limit=50' }}",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/whatsapp/conversations?per_page=100' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Leads)').item.json.access_token }}"
             },
             {
               "name": "Accept",
@@ -310,7 +310,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item?.json || {};\nconst estRaw = $('🎯 Obtener Estrategia G54').item?.json || {};\nconst postsRaw = $('📝 Obtener Posts Publicados G54').item?.json || {};\nconst leadsRaw = $('💼 Obtener Leads G54').item?.json || {};\nconst metricasRaw = $('📈 Obtener Métricas G54').item?.json || {};\nlet fbInsights = {};\ntry { fbInsights = $('📊 Meta API: FB Account Insights').item?.json || {}; } catch(e) {}\nlet igInsights = {};\ntry { igInsights = $('📊 Meta API: IG Account Insights').item?.json || {}; } catch(e) {}\n\nconst empresa = empresaRaw.data || {};\nconst estrategia = estRaw.data || {};\nconst posts = postsRaw.data || [];\nconst leads = leadsRaw.data || [];\nconst metricas = metricasRaw.data || [];\n\n// FB account-level metrics (array de {name, values:[{value, end_time}]})\nconst fbAccountMetrics = fbInsights.data || [];\n\n// IG account-level metrics\nconst igAccountMetrics = igInsights.data || [];\n\nfunction sumMetric(metrics, name) {\n  const m = metrics.find(x => x.name === name);\n  if (!m) return 0;\n  if (m.total_value) return m.total_value.value || 0;\n  if (!m.values) return 0;\n  return m.values.reduce((s, v) => {\n    const val = v.value || 0;\n    return s + (typeof val === 'object' ? Object.values(val).reduce((a, b) => a + b, 0) : val);\n  }, 0);\n}\n\n// Leads stats\nconst totalLeads = leads.length;\nconst leadsCalientes = leads.filter(l => (l.clasificacion || '').toLowerCase() === 'caliente').length;\nconst leadsTibios = leads.filter(l => (l.clasificacion || '').toLowerCase() === 'tibio').length;\nconst leadsPorOrigen = leads.reduce((acc, l) => {\n  const o = l.origen || 'desconocido';\n  acc[o] = (acc[o] || 0) + 1;\n  return acc;\n}, {});\n\n// Posts stats from G54\nconst totalPosts = posts.length;\nconst postsPorPlataforma = posts.reduce((acc, p) => {\n  const pl = p.platform || 'sin_plataforma';\n  acc[pl] = (acc[pl] || 0) + 1;\n  return acc;\n}, {});\n\n// FB account-level summary (corrected — no longer per-post)\nconst fbVistasPerfil = sumMetric(fbAccountMetrics, 'page_views_total');\nconst fbInteracciones = sumMetric(fbAccountMetrics, 'page_post_engagements');\nconst fbNuevosFans = sumMetric(fbAccountMetrics, 'page_daily_follows_unique');\nconst fbReacciones = sumMetric(fbAccountMetrics, 'page_actions_post_reactions_total');\n\nconst fbTieneDatos = fbAccountMetrics.length > 0;\n\n// IG account-level summary\n// 'impressions' NO se pide a Meta desde el fix del ítem 148 (incompatible con\n// metric_type=total_value en cuentas IG) — nunca se calcula acá para no reportarle\n// a la IA un \"Impresiones: 0\" falso que ni siquiera intentamos medir.\nconst igAlcance = sumMetric(igAccountMetrics, 'reach');\nconst igCuentasActivas = sumMetric(igAccountMetrics, 'accounts_engaged');\nconst igVistasPerfil = sumMetric(igAccountMetrics, 'profile_views');\nconst igClicksWeb = sumMetric(igAccountMetrics, 'website_clicks');\nconst igTieneDatos = igAccountMetrics.length > 0;\n\n// Metricas historicas G54\nconst metricasResumen = metricas.slice(0, 10).map(m => ({\n  fecha: m.fecha || m.created_at || '',\n  plataforma: m.platform || '',\n  alcance: m.reach || 0,\n  engagement: m.engagement || 0,\n  clicks: m.clicks || 0\n}));\n\n// KPIs from strategy\nconst kpis = estrategia.kpis || [];\nconst objetivo = estrategia.objetivo || '';\nconst audiencia = estrategia.audiencia || '';\nconst pilares = estrategia.pilares || [];\n\nconst periodoAnalisis = config.DIAS_ANALISIS || 30;\nconst periodoLabel = config.PERIODO_LABEL || '';\nconst nombreEmpresa = empresa.name || 'la empresa';\n\nconst contextoAnalytics = `EMPRESA: ${nombreEmpresa}\nOBJETIVO ESTRATÉGICO: ${objetivo}\nAUDIENCIA: ${audiencia}\nPILARES DE CONTENIDO: ${Array.isArray(pilares) ? pilares.join(', ') : pilares}\nKPIs DEFINIDOS: ${Array.isArray(kpis) ? kpis.join(', ') : kpis}\nPERÍODO: últimos ${periodoAnalisis} días\n\n--- DATOS DE CONTENIDO (G54) ---\nTotal posts publicados: ${totalPosts}\nDistribución por plataforma: ${JSON.stringify(postsPorPlataforma)}\n\n--- MÉTRICAS FACEBOOK (últimos 30 días, account-level) ---\n${fbTieneDatos ? `Visitas al perfil: ${fbVistasPerfil}\nInteracciones con posts: ${fbInteracciones}\nFans nuevos: ${fbNuevosFans}\nReacciones totales: ${fbReacciones}` : 'Sin datos de Facebook disponibles'}\n\n--- MÉTRICAS INSTAGRAM (últimos 30 días, account-level) ---\n${igTieneDatos ? `Alcance: ${igAlcance}\nCuentas activas: ${igCuentasActivas}\nVistas al perfil: ${igVistasPerfil}\nClics a web: ${igClicksWeb}` : 'Sin datos de Instagram (permiso instagram_manage_insights requerido)'}\n\n--- MÉTRICAS HISTÓRICAS G54 ---\n${metricasResumen.length > 0 ? JSON.stringify(metricasResumen, null, 2) : 'Sin métricas guardadas aún'}\n\n--- DATOS DE CONVERSIÓN (G54) ---\nTotal leads período: ${totalLeads}\nLeads calientes: ${leadsCalientes}\nLeads tibios: ${leadsTibios}\nLeads por origen: ${JSON.stringify(leadsPorOrigen)}\nTasa de calificación: ${totalLeads > 0 ? Math.round((leadsCalientes / totalLeads) * 100) : 0}%`;\n\nreturn [{ json: {\n  contextoAnalytics,\n  nombreEmpresa,\n  emailEmpresa: (empresa.emails || [])[0] || '',\n  totalPosts,\n  totalLeads,\n  leadsCalientes,\n  leadsTibios,\n  leadsPorOrigen,\n  periodoAnalisis,\n  periodoLabel\n}}];"
+        "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item?.json || {};\nconst estRaw = $('🎯 Obtener Estrategia G54').item?.json || {};\nconst postsRaw = $('📝 Obtener Posts Publicados G54').item?.json || {};\nconst leadsRaw = $('💼 Obtener Leads G54').item?.json || {};\nconst metricasRaw = $('📈 Obtener Métricas G54').item?.json || {};\nlet fbInsights = {};\ntry { fbInsights = $('📊 Meta API: FB Account Insights').item?.json || {}; } catch(e) {}\nlet igInsights = {};\ntry { igInsights = $('📊 Meta API: IG Account Insights').item?.json || {}; } catch(e) {}\n\nconst empresa = empresaRaw.data || {};\nconst estrategia = estRaw.data || {};\nconst posts = postsRaw.data || [];\nconst leads = leadsRaw.data || [];\nconst metricas = metricasRaw.data || [];\n\n// FB account-level metrics (array de {name, values:[{value, end_time}]})\nconst fbAccountMetrics = fbInsights.data || [];\n\n// IG account-level metrics\nconst igAccountMetrics = igInsights.data || [];\n\nfunction sumMetric(metrics, name) {\n  const m = metrics.find(x => x.name === name);\n  if (!m) return 0;\n  if (m.total_value) return m.total_value.value || 0;\n  if (!m.values) return 0;\n  return m.values.reduce((s, v) => {\n    const val = v.value || 0;\n    return s + (typeof val === 'object' ? Object.values(val).reduce((a, b) => a + b, 0) : val);\n  }, 0);\n}\n\n// Leads stats — leídos de GET /api/whatsapp/conversations (sesión), no del endpoint viejo\n// GET /api/n8n/companies/{id}/wa/leads, que exige un ?phone= puntual y por eso siempre\n// devolvía 422 sin datos cuando se le pedía la lista completa — la \"Generación de Demanda\"\n// mostraba 0 siempre, no porque no hubiera actividad, sino porque la llamada nunca funcionó.\n// Cada conversación real viene con { created_at, contact: { estado, origen } }.\nconst fechaInicioUnix = Number(config.FECHA_INICIO_UNIX) || Math.floor((Date.now() - 30*24*60*60*1000)/1000);\nconst fechaFinUnix = Number(config.FECHA_FIN_UNIX) || Math.floor(Date.now()/1000);\nconst leadsPeriodo = leads.filter(l => {\n  if (!l.created_at) return false;\n  const t = Math.floor(new Date(l.created_at).getTime() / 1000);\n  return t >= fechaInicioUnix && t <= fechaFinUnix;\n});\nconst estadoDe = (l) => ((l.contact && l.contact.estado) || '').toLowerCase();\nconst origenDe = (l) => (l.contact && l.contact.origen) || 'desconocido';\n\nconst totalLeads = leadsPeriodo.length;\nconst leadsCalientes = leadsPeriodo.filter(l => /caliente|hot/.test(estadoDe(l))).length;\nconst leadsTibios = leadsPeriodo.filter(l => /tibio|warm/.test(estadoDe(l))).length;\nconst leadsPorOrigen = leadsPeriodo.reduce((acc, l) => {\n  const o = origenDe(l);\n  acc[o] = (acc[o] || 0) + 1;\n  return acc;\n}, {});\n\n// Posts stats from G54\nconst totalPosts = posts.length;\nconst postsPorPlataforma = posts.reduce((acc, p) => {\n  const pl = p.platform || 'sin_plataforma';\n  acc[pl] = (acc[pl] || 0) + 1;\n  return acc;\n}, {});\n\n// FB account-level summary (corrected — no longer per-post)\nconst fbVistasPerfil = sumMetric(fbAccountMetrics, 'page_views_total');\nconst fbInteracciones = sumMetric(fbAccountMetrics, 'page_post_engagements');\nconst fbNuevosFans = sumMetric(fbAccountMetrics, 'page_daily_follows_unique');\nconst fbReacciones = sumMetric(fbAccountMetrics, 'page_actions_post_reactions_total');\n\nconst fbTieneDatos = fbAccountMetrics.length > 0;\n\n// IG account-level summary\n// 'impressions' NO se pide a Meta desde el fix del ítem 148 (incompatible con\n// metric_type=total_value en cuentas IG) — nunca se calcula acá para no reportarle\n// a la IA un \"Impresiones: 0\" falso que ni siquiera intentamos medir.\nconst igAlcance = sumMetric(igAccountMetrics, 'reach');\nconst igCuentasActivas = sumMetric(igAccountMetrics, 'accounts_engaged');\nconst igVistasPerfil = sumMetric(igAccountMetrics, 'profile_views');\nconst igClicksWeb = sumMetric(igAccountMetrics, 'website_clicks');\nconst igTieneDatos = igAccountMetrics.length > 0;\n\n// Metricas historicas G54\nconst metricasResumen = metricas.slice(0, 10).map(m => ({\n  fecha: m.fecha || m.created_at || '',\n  plataforma: m.platform || '',\n  alcance: m.reach || 0,\n  engagement: m.engagement || 0,\n  clicks: m.clicks || 0\n}));\n\n// KPIs from strategy\nconst kpis = estrategia.kpis || [];\nconst objetivo = estrategia.objetivo || '';\nconst audiencia = estrategia.audiencia || '';\nconst pilares = estrategia.pilares || [];\n\nconst periodoAnalisis = config.DIAS_ANALISIS || 30;\nconst periodoLabel = config.PERIODO_LABEL || '';\nconst nombreEmpresa = empresa.name || 'la empresa';\n\nconst contextoAnalytics = `EMPRESA: ${nombreEmpresa}\nOBJETIVO ESTRATÉGICO: ${objetivo}\nAUDIENCIA: ${audiencia}\nPILARES DE CONTENIDO: ${Array.isArray(pilares) ? pilares.join(', ') : pilares}\nKPIs DEFINIDOS: ${Array.isArray(kpis) ? kpis.join(', ') : kpis}\nPERÍODO: últimos ${periodoAnalisis} días\n\n--- DATOS DE CONTENIDO (G54) ---\nTotal posts publicados: ${totalPosts}\nDistribución por plataforma: ${JSON.stringify(postsPorPlataforma)}\n\n--- MÉTRICAS FACEBOOK (últimos 30 días, account-level) ---\n${fbTieneDatos ? `Visitas al perfil: ${fbVistasPerfil}\nInteracciones con posts: ${fbInteracciones}\nFans nuevos: ${fbNuevosFans}\nReacciones totales: ${fbReacciones}` : 'Sin datos de Facebook disponibles'}\n\n--- MÉTRICAS INSTAGRAM (últimos 30 días, account-level) ---\n${igTieneDatos ? `Alcance: ${igAlcance}\nCuentas activas: ${igCuentasActivas}\nVistas al perfil: ${igVistasPerfil}\nClics a web: ${igClicksWeb}` : 'Sin datos de Instagram (permiso instagram_manage_insights requerido)'}\n\n--- MÉTRICAS HISTÓRICAS G54 ---\n${metricasResumen.length > 0 ? JSON.stringify(metricasResumen, null, 2) : 'Sin métricas guardadas aún'}\n\n--- DATOS DE CONVERSIÓN (G54) ---\nTotal leads período: ${totalLeads}\nLeads calientes: ${leadsCalientes}\nLeads tibios: ${leadsTibios}\nLeads por origen: ${JSON.stringify(leadsPorOrigen)}\nTasa de calificación: ${totalLeads > 0 ? Math.round((leadsCalientes / totalLeads) * 100) : 0}%`;\n\nreturn [{ json: {\n  contextoAnalytics,\n  nombreEmpresa,\n  emailEmpresa: (empresa.emails || [])[0] || '',\n  totalPosts,\n  totalLeads,\n  leadsCalientes,\n  leadsTibios,\n  leadsPorOrigen,\n  periodoAnalisis,\n  periodoLabel\n}}];"
       },
       "id": "e85fbc71-83fe-49bb-bc3c-d6425cc71036",
       "name": "🔧 Preparar Datos Analytics",
@@ -1057,6 +1057,74 @@
         },
         "options": {}
       }
+    },
+    {
+      "id": "login-leads",
+      "name": "🔐 G54: Login (Leads)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -300,
+        3260
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/auth/login",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({email:'master@growth54.local', password:'REDACTED_MASTER_PASSWORD'}) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "switch-leads",
+      "name": "🏢 G54: Cambiar Empresa (Leads)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -230,
+        3260
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/auth/switch-company",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Leads)').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({company_id: parseInt($('⚙️ Config Growth54').item.json.G54_COMPANY_ID) || 1}) }}",
+        "options": {}
+      }
     }
   ],
   "connections": {
@@ -1108,7 +1176,7 @@
       "main": [
         [
           {
-            "node": "💼 Obtener Leads G54",
+            "node": "🔐 G54: Login (Leads)",
             "type": "main",
             "index": 0
           }
@@ -1518,6 +1586,28 @@
           }
         ],
         []
+      ]
+    },
+    "🔐 G54: Login (Leads)": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa (Leads)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 G54: Cambiar Empresa (Leads)": {
+      "main": [
+        [
+          {
+            "node": "💼 Obtener Leads G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
