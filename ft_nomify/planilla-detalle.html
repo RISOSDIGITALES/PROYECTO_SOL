@@ -136,6 +136,7 @@ const tipo       = _p.get('tipo')    || '';
 const folio      = _p.get('folio')   || planillaId;
 
 let _esBorrador = false;
+let _inatecActivo = true;
 
 onReady(['Master', 'Planillero'], async () => {
   initLayout();
@@ -146,6 +147,7 @@ onReady(['Master', 'Planillero'], async () => {
     try {
       const pl = await apiFetch(`/api/planillas/${planillaId}`);
       _esBorrador = pl.estado === 'Borrador';
+      _inatecActivo = pl.inatec_activo !== 0;
       if (_esBorrador) {
         document.getElementById('btn-guardar-cambios').style.display = '';
         showAlert('alert-det',
@@ -223,17 +225,32 @@ async function loadDetalle(planillaId, periodo, tipo) {
     const totAdel        = detalles.reduce((s, d) => s + pf(d.desc_adelanto), 0);
     const totDedOtras    = detalles.reduce((s, d) => s + pf(d.desc_deducciones), 0);
     const totExtra       = detalles.reduce((s, d) => s + pf(d.extras), 0);
+    const totVacPagadas  = detalles.reduce((s, d) => s + pf(d.vacaciones_pagadas), 0);
     const totDesc        = detalles.reduce((s, d) => s + pf(d.total_deducciones), 0);
     const totNeto        = detalles.reduce((s, d) => s + pf(d.neto), 0);
+    // Salario + extras (+ vacaciones pagadas si las hay) debe cuadrar exacto con Neto + Deducciones
+    const totSalExtra    = Math.round((totBruto + totExtra + totVacPagadas) * 100) / 100;
     const totPatronal    = detalles.reduce((s, d) => s + pf(d.inss_patronal), 0);
     const totInatec      = detalles.reduce((s, d) => s + pf(d.inatec), 0);
     const totCostoEmp    = totBruto + totPatronal + totInatec;
 
+    const signo = (s) => `<div style="flex:0 0 auto;font-size:22px;font-weight:700;color:var(--text-muted)">${s}</div>`;
+
     document.getElementById('resumen-cards').innerHTML = `
       <div class="card"><div class="label">Empleados</div><div class="value">${detalles.length}</div></div>
-      <div class="card"><div class="label">Total bruto</div><div class="value" style="font-size:18px">${fmt(totBruto)}</div></div>
-      <div class="card"><div class="label">Total deducciones</div><div class="value red" style="font-size:18px">${fmt(totDesc)}</div></div>
-      <div class="card"><div class="label">Neto a pagar</div><div class="value green" style="font-size:18px">${fmt(totNeto)}</div></div>
+      <div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="card" style="flex:1 1 160px">
+          <div class="label">Salario+extras</div><div class="value" style="font-size:18px">${fmt(totSalExtra)}</div>
+        </div>
+        ${signo('−')}
+        <div class="card" style="flex:1 1 160px">
+          <div class="label">Total deducciones</div><div class="value red" style="font-size:18px">${fmt(totDesc)}</div>
+        </div>
+        ${signo('=')}
+        <div class="card" style="flex:1 1 160px;border-color:rgba(46,204,113,.5)">
+          <div class="label">Neto a pagar</div><div class="value green" style="font-size:18px">${fmt(totNeto)}</div>
+        </div>
+      </div>
       <div style="width:100%;border-top:1px dashed rgba(230,126,34,.4);margin:4px 0;padding-top:4px;
                   font-size:11px;color:var(--orange);text-transform:uppercase;letter-spacing:.06em;
                   grid-column:1/-1">
@@ -243,10 +260,11 @@ async function loadDetalle(planillaId, periodo, tipo) {
         <div class="label" style="color:var(--orange)">INSS Patronal (21.5%)</div>
         <div class="value" style="font-size:18px;color:var(--orange)">${fmt(totPatronal)}</div>
       </div>
+      ${_inatecActivo ? `
       <div class="card" style="border-color:rgba(230,126,34,.5)">
         <div class="label" style="color:var(--orange)">INATEC (2%)</div>
         <div class="value" style="font-size:18px;color:var(--orange)">${fmt(totInatec)}</div>
-      </div>
+      </div>` : ''}
       <div class="card" style="border-color:var(--orange);background:rgba(230,126,34,.07)">
         <div class="label" style="color:var(--orange)">💰 Costo total empresa</div>
         <div class="value" style="font-size:20px;color:var(--orange);font-weight:800">${fmt(totCostoEmp)}</div>
@@ -265,6 +283,16 @@ async function loadDetalle(planillaId, periodo, tipo) {
         onfocus="this.select()" />`;
     };
 
+    // Extras + vacaciones pagadas en planilla (el detalle de la vacación vive en vacaciones.html;
+    // acá solo se refleja el monto sumado a Extras). El input editable sigue ligado únicamente
+    // al campo "extras" real para no corromper el vínculo con el registro de vacaciones al guardar.
+    const celdaExtras = (d) => {
+      const vac  = pf(d.vacaciones_pagadas);
+      const nota = vac > 0 ? `<br><span style="font-size:10px;color:var(--text-muted)">incl. ${fmt(vac)} vacaciones</span>` : '';
+      if (!_esBorrador) return `<span style="color:var(--green2)">${fmt(pf(d.extras) + vac)}</span>${nota}`;
+      return celdaEditable(d.id, 'extras', d.extras, 'var(--green2)') + nota;
+    };
+
     document.getElementById('tabla-detalle').innerHTML = detalles.map(d => `<tr
       data-detalle-id="${d.id}"
       data-salario="${pf(d.salario_quincenal)}"
@@ -277,7 +305,7 @@ async function loadDetalle(planillaId, periodo, tipo) {
       <td class="num" style="color:var(--red)">${celdaEditable(d.id,'desc_prestamo',d.desc_prestamo,'var(--red)')}</td>
       <td class="num" style="color:var(--red)">${celdaEditable(d.id,'desc_adelanto',d.desc_adelanto,'var(--red)')}</td>
       <td class="num" style="color:var(--red)">${celdaEditable(d.id,'desc_deducciones',d.desc_deducciones,'var(--red)')}</td>
-      <td class="num" style="color:var(--green2)">${celdaEditable(d.id,'extras',d.extras,'var(--green2)')}</td>
+      <td class="num" style="color:var(--green2)">${celdaExtras(d)}</td>
       <td class="num" style="color:var(--red)" id="td-desc-${d.id}"><strong>${fmt(d.total_deducciones)}</strong></td>
       <td class="num" id="td-neto-${d.id}"><strong style="color:var(--green2)">${fmt(d.neto)}</strong></td>
       <td><a href="/recibo.html?empleado_id=${d.empleado_id}&periodo=${encodeURIComponent(periodo)}"
@@ -293,7 +321,7 @@ async function loadDetalle(planillaId, periodo, tipo) {
         <td class="num" style="padding:12px 8px;color:var(--red);font-weight:700">${fmt(totPrest)}</td>
         <td class="num" style="padding:12px 8px;color:var(--red);font-weight:700">${fmt(totAdel)}</td>
         <td class="num" style="padding:12px 8px;color:var(--red);font-weight:700">${fmt(totDedOtras)}</td>
-        <td class="num" style="padding:12px 8px;color:var(--green2);font-weight:700">${fmt(totExtra)}</td>
+        <td class="num" style="padding:12px 8px;color:var(--green2);font-weight:700">${fmt(totExtra + totVacPagadas)}</td>
         <td class="num" style="padding:12px 8px;color:var(--red);font-weight:700">${fmt(totDesc)}</td>
         <td class="num" style="padding:12px 8px;color:var(--green2);font-weight:700;font-size:15px">${fmt(totNeto)}</td>
         <td></td>
@@ -305,7 +333,7 @@ async function loadDetalle(planillaId, periodo, tipo) {
         <div class="table-header" style="border-bottom:1px solid rgba(230,126,34,.3)">
           <h3 style="color:var(--orange)">📊 Costos patronales — empresa</h3>
           <span style="font-size:12px;color:var(--text-muted)">
-            No visible para empleados · INSS Patronal 21.5% · INATEC 2%
+            No visible para empleados · INSS Patronal 21.5%${_inatecActivo ? ' · INATEC 2%' : ''}
           </span>
         </div>
         <table>
@@ -314,7 +342,7 @@ async function loadDetalle(planillaId, periodo, tipo) {
               <th>Empleado</th>
               <th>Salario quincenal</th>
               <th style="color:var(--orange)">INSS Patronal (21.5%)</th>
-              <th style="color:var(--orange)">INATEC (2%)</th>
+              ${_inatecActivo ? '<th style="color:var(--orange)">INATEC (2%)</th>' : ''}
               <th style="color:var(--orange)"><strong>Costo total empresa</strong></th>
             </tr>
           </thead>
@@ -325,7 +353,7 @@ async function loadDetalle(planillaId, periodo, tipo) {
                 <td><strong>${d.nombre || '—'}</strong></td>
                 <td class="num">${fmt(d.salario_quincenal)}</td>
                 <td class="num" style="color:var(--orange)">${fmt(d.inss_patronal)}</td>
-                <td class="num" style="color:var(--orange)">${fmt(d.inatec)}</td>
+                ${_inatecActivo ? `<td class="num" style="color:var(--orange)">${fmt(d.inatec)}</td>` : ''}
                 <td class="num" style="color:var(--orange);font-weight:700">${fmt(costo)}</td>
               </tr>`;
             }).join('')}
@@ -335,7 +363,7 @@ async function loadDetalle(planillaId, periodo, tipo) {
               <td style="padding:12px 16px;font-weight:700;font-size:13px;color:var(--orange)">TOTALES</td>
               <td class="num" style="padding:12px 8px;font-weight:700">${fmt(totBruto)}</td>
               <td class="num" style="padding:12px 8px;color:var(--orange);font-weight:700">${fmt(totPatronal)}</td>
-              <td class="num" style="padding:12px 8px;color:var(--orange);font-weight:700">${fmt(totInatec)}</td>
+              ${_inatecActivo ? `<td class="num" style="padding:12px 8px;color:var(--orange);font-weight:700">${fmt(totInatec)}</td>` : ''}
               <td class="num" style="padding:12px 8px;color:var(--orange);font-weight:800;font-size:15px">${fmt(totCostoEmp)}</td>
             </tr>
           </tfoot>
