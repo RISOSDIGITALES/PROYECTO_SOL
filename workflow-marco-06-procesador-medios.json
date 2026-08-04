@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-04T16:38:19.753Z",
+  "updatedAt": "2026-08-04T16:51:53.854Z",
   "createdAt": "2026-07-04T15:12:32.233Z",
   "id": "5GU89AeWsBZ86FWa",
   "name": "Marco CE — 06 Procesador de Medios",
@@ -571,6 +571,50 @@
         "mode": "runOnceForAllItems",
         "jsCode": "const rows = $input.all().map(i => i.json);\nconst inp = $('🔧 Leer Binario y Tipo').first().json;\nconst filename = inp.filename || 'documento.xlsx';\n\nlet contenido = '';\nif (rows.length > 0) {\n  contenido = rows.slice(0, 30).map(r => Object.entries(r).map(([k,v]) => `${k}: ${v}`).join(', ')).join('\\n');\n} else {\n  contenido = 'No se pudo extraer el contenido de la hoja de cálculo.';\n}\ncontenido = contenido.slice(0, 3000);\n\nconst texto = `[Documento Excel recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
       }
+    },
+    {
+      "id": "sw06-office-rename-zip",
+      "name": "🔧 Renombrar a ZIP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        580
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const b = $input.first().binary.data;\nconst buf = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst renamed = await this.helpers.prepareBinaryData(buf, 'archivo.zip', 'application/zip');\nreturn [{ json: $input.first().json, binary: { data: renamed } }];"
+      }
+    },
+    {
+      "id": "sw06-office-decompress",
+      "name": "📦 n8n: Descomprimir Office",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        1980,
+        580
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "sw06-office-resultado-nuevo",
+      "name": "🔧 Resultado Office (n8n)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        580
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const inp = $('🔧 Leer Binario y Tipo').first().json;\nconst filename = inp.filename || 'documento';\nconst binary = $input.first().binary || {};\nconst keys = Object.keys(binary);\n\nlet contenido = '';\ntry {\n  const docKey = keys.find(k => (binary[k].fileName || '') === 'document.xml');\n  const slideKeys = keys.filter(k => /^slide\\d+\\.xml$/.test(binary[k].fileName || ''))\n    .sort((a, b) => parseInt(binary[a].fileName.match(/\\d+/)[0]) - parseInt(binary[b].fileName.match(/\\d+/)[0]));\n\n  if (docKey) {\n    // Word: texto en <w:t>\n    const buf = await this.helpers.getBinaryDataBuffer(0, docKey);\n    const xml = buf.toString('utf8');\n    const matches = [...xml.matchAll(/<w:t[^>]*>([\\s\\S]*?)<\\/w:t>/g)];\n    contenido = matches.map(m => m[1]).join(' ');\n  } else if (slideKeys.length > 0) {\n    // PowerPoint: texto en <a:t>, una diapositiva por archivo\n    const partes = [];\n    for (const key of slideKeys) {\n      const buf = await this.helpers.getBinaryDataBuffer(0, key);\n      const xml = buf.toString('utf8');\n      const matches = [...xml.matchAll(/<a:t>([\\s\\S]*?)<\\/a:t>/g)];\n      partes.push(matches.map(m => m[1]).join(' '));\n    }\n    contenido = partes.join('\\n');\n  }\n  contenido = contenido\n    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"').replace(/&apos;/g, \"'\")\n    .trim().slice(0, 3000);\n} catch (e) {}\n\nif (!contenido) {\n  contenido = 'No se pudo extraer el contenido del documento.';\n}\n\nconst texto = `[Documento Office recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
+      }
     }
   ],
   "connections": {
@@ -643,7 +687,7 @@
         ],
         [
           {
-            "node": "🔄 ConvertAPI: Office → Texto",
+            "node": "🔧 Renombrar a ZIP",
             "type": "main",
             "index": 0
           }
@@ -857,6 +901,39 @@
           }
         ]
       ]
+    },
+    "🔧 Renombrar a ZIP": {
+      "main": [
+        [
+          {
+            "node": "📦 n8n: Descomprimir Office",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 n8n: Descomprimir Office": {
+      "main": [
+        [
+          {
+            "node": "🔧 Resultado Office (n8n)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Resultado Office (n8n)": {
+      "main": [
+        [
+          {
+            "node": "📤 Devolver Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -866,9 +943,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": null,
-  "versionId": "0c4b1f38-a91d-4ba0-b13a-bb212e796984",
-  "activeVersionId": "0c4b1f38-a91d-4ba0-b13a-bb212e796984",
-  "versionCounter": 13,
+  "versionId": "79b39249-62ad-49f2-a10f-148c024dcc01",
+  "activeVersionId": "79b39249-62ad-49f2-a10f-148c024dcc01",
+  "versionCounter": 14,
   "triggerCount": 0,
   "sourceWorkflowId": null,
   "shared": [
@@ -893,9 +970,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-08-04T16:38:19.756Z",
-    "createdAt": "2026-08-04T16:38:19.756Z",
-    "versionId": "0c4b1f38-a91d-4ba0-b13a-bb212e796984",
+    "updatedAt": "2026-08-04T16:51:53.856Z",
+    "createdAt": "2026-08-04T16:51:53.856Z",
+    "versionId": "79b39249-62ad-49f2-a10f-148c024dcc01",
     "workflowId": "5GU89AeWsBZ86FWa",
     "nodes": [
       {
@@ -1462,6 +1539,50 @@
           "mode": "runOnceForAllItems",
           "jsCode": "const rows = $input.all().map(i => i.json);\nconst inp = $('🔧 Leer Binario y Tipo').first().json;\nconst filename = inp.filename || 'documento.xlsx';\n\nlet contenido = '';\nif (rows.length > 0) {\n  contenido = rows.slice(0, 30).map(r => Object.entries(r).map(([k,v]) => `${k}: ${v}`).join(', ')).join('\\n');\n} else {\n  contenido = 'No se pudo extraer el contenido de la hoja de cálculo.';\n}\ncontenido = contenido.slice(0, 3000);\n\nconst texto = `[Documento Excel recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
         }
+      },
+      {
+        "id": "sw06-office-rename-zip",
+        "name": "🔧 Renombrar a ZIP",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1760,
+          580
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const b = $input.first().binary.data;\nconst buf = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst renamed = await this.helpers.prepareBinaryData(buf, 'archivo.zip', 'application/zip');\nreturn [{ json: $input.first().json, binary: { data: renamed } }];"
+        }
+      },
+      {
+        "id": "sw06-office-decompress",
+        "name": "📦 n8n: Descomprimir Office",
+        "type": "n8n-nodes-base.compression",
+        "typeVersion": 1.1,
+        "position": [
+          1980,
+          580
+        ],
+        "parameters": {
+          "operation": "decompress",
+          "binaryPropertyName": "data",
+          "outputPrefix": "file_"
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "sw06-office-resultado-nuevo",
+        "name": "🔧 Resultado Office (n8n)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2200,
+          580
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const inp = $('🔧 Leer Binario y Tipo').first().json;\nconst filename = inp.filename || 'documento';\nconst binary = $input.first().binary || {};\nconst keys = Object.keys(binary);\n\nlet contenido = '';\ntry {\n  const docKey = keys.find(k => (binary[k].fileName || '') === 'document.xml');\n  const slideKeys = keys.filter(k => /^slide\\d+\\.xml$/.test(binary[k].fileName || ''))\n    .sort((a, b) => parseInt(binary[a].fileName.match(/\\d+/)[0]) - parseInt(binary[b].fileName.match(/\\d+/)[0]));\n\n  if (docKey) {\n    // Word: texto en <w:t>\n    const buf = await this.helpers.getBinaryDataBuffer(0, docKey);\n    const xml = buf.toString('utf8');\n    const matches = [...xml.matchAll(/<w:t[^>]*>([\\s\\S]*?)<\\/w:t>/g)];\n    contenido = matches.map(m => m[1]).join(' ');\n  } else if (slideKeys.length > 0) {\n    // PowerPoint: texto en <a:t>, una diapositiva por archivo\n    const partes = [];\n    for (const key of slideKeys) {\n      const buf = await this.helpers.getBinaryDataBuffer(0, key);\n      const xml = buf.toString('utf8');\n      const matches = [...xml.matchAll(/<a:t>([\\s\\S]*?)<\\/a:t>/g)];\n      partes.push(matches.map(m => m[1]).join(' '));\n    }\n    contenido = partes.join('\\n');\n  }\n  contenido = contenido\n    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"').replace(/&apos;/g, \"'\")\n    .trim().slice(0, 3000);\n} catch (e) {}\n\nif (!contenido) {\n  contenido = 'No se pudo extraer el contenido del documento.';\n}\n\nconst texto = `[Documento Office recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
+        }
       }
     ],
     "connections": {
@@ -1534,7 +1655,7 @@
           ],
           [
             {
-              "node": "🔄 ConvertAPI: Office → Texto",
+              "node": "🔧 Renombrar a ZIP",
               "type": "main",
               "index": 0
             }
@@ -1748,6 +1869,39 @@
             }
           ]
         ]
+      },
+      "🔧 Renombrar a ZIP": {
+        "main": [
+          [
+            {
+              "node": "📦 n8n: Descomprimir Office",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📦 n8n: Descomprimir Office": {
+        "main": [
+          [
+            {
+              "node": "🔧 Resultado Office (n8n)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Resultado Office (n8n)": {
+        "main": [
+          [
+            {
+              "node": "📤 Devolver Resultado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -1757,18 +1911,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-08-04T16:38:19.893Z",
-        "id": 2594,
+        "createdAt": "2026-08-04T16:51:54.017Z",
+        "id": 2607,
         "workflowId": "5GU89AeWsBZ86FWa",
-        "versionId": "0c4b1f38-a91d-4ba0-b13a-bb212e796984",
+        "versionId": "79b39249-62ad-49f2-a10f-148c024dcc01",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-08-04T16:38:19.860Z",
-        "id": 2593,
+        "createdAt": "2026-08-04T16:51:53.983Z",
+        "id": 2606,
         "workflowId": "5GU89AeWsBZ86FWa",
-        "versionId": "0c4b1f38-a91d-4ba0-b13a-bb212e796984",
+        "versionId": "79b39249-62ad-49f2-a10f-148c024dcc01",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
