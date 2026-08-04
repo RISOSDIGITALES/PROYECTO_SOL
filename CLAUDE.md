@@ -2170,6 +2170,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ---
 
+### 2026-08-03 (Lunes)
+
+El día arrancó revisando lo que Walter dijo que ya había resuelto de su lado — dos pendientes viejos del Éxodo. Le pedí a la herramienta que no me diera nada por bueno solo porque él lo dijera, así que probamos en vivo contra la API real: ninguno de los dos estaba reflejado todavía, pese a su confirmación. También revisé un formulario que había dado por confirmado mirando el código del panel — resultó que no era tan sencillo de encontrar como pensé, así que quedó pendiente de que lo revise yo misma en la interfaz real antes de darlo por cerrado.
+
+El resto del día se fue en el reporte de Analytics. Le pedí que confirmara, con rigor, que ningún dato del reporte saliera nunca en cero o inventado por un error silencioso — y encontró tres bugs reales de esa exacta familia: Facebook estaba duplicando el mismo número entre dos campos que debían ser distintos, Instagram nunca leía sus datos reales por un problema de formato, y el histórico de métricas le pegaba a una ruta que nunca existió. Los tres corregidos y confirmados con datos reales. De ahí seguí construyendo sobre el reporte: un resumen ejecutivo con datos reales de consistencia, valor y demanda, que tuve que rediseñar dos veces después de decirle que el primer formato de preguntas se veía desencajado del resto del reporte — terminó como tarjetas, igual que todo lo demás. También limpié jerga técnica que había quedado en una sección y una nota vieja que ya ni aplicaba.
+
+Sobre el cierre le pedí los logos oficiales de verdad de Facebook e Instagram en vez de la aproximación con texto, y salieron bien. Ya con todo armado, le pedí que criticara el reporte completo desde dos ángulos — como experto y como cliente — y salieron siete correcciones reales, sin inventar ningún umbral de negocio: entre ellas, desglosar la consistencia por plataforma en vez de un solo número agregado, lo que reveló al toque que Instagram iba muy por encima de lo comprometido mientras Facebook iba muy por debajo, algo que el número combinado tapaba por completo.
+
+---
+
 ### 2026-07-31 (Viernes)
 
 Hoy arranqué revisando un análisis que me habían pasado sobre cómo debería reportarse el marketing orgánico, con crítica directa a nuestro reporte actual por apoyarse en métricas de vanidad sin traducirlas a negocio real. Decidí arrancar por lo construible ya: agregué la sección de Generación de Demanda al reporte (hasta ese momento ni existía visualmente aunque el dato ya se calculaba), el desglose de guardados y compartidos por publicación, y la tasa de engagement de Instagram con un resguardo para no mostrar un porcentaje ridículo cuando la muestra es chica. En el camino encontré un bug real que no tenía nada que ver con el pedido: "Publicaciones recientes" nunca había funcionado en producción porque dos nodos colgaban de una rama huérfana sin garantía de orden, y lo corregí. Después ajusté la tipografía del header a pedido, pidiendo que me mostraran una muestra antes/después antes de aplicarlo a producción, iterando el tamaño del "54" del círculo hasta que quedó bien.
