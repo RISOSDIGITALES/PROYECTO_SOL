@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-04T15:15:06.924Z",
+  "updatedAt": "2026-08-04T16:38:19.753Z",
   "createdAt": "2026-07-04T15:12:32.233Z",
   "id": "5GU89AeWsBZ86FWa",
   "name": "Marco CE — 06 Procesador de Medios",
@@ -84,7 +84,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "const inp = $('📥 Recibir Datos Medio').first().json;\nconst binary = $input.first().binary;\n\n// Get base64 from binary data\nconst binaryKey = Object.keys(binary || {})[0] || 'data';\nconst fileData = binary?.[binaryKey];\nconst base64 = fileData?.data || '';\nconst mimeType = inp.mime_type || fileData?.mimeType || 'application/octet-stream';\nconst filename = inp.filename || fileData?.fileName || 'archivo';\nconst caption = inp.caption || '';\nconst geminiKey = inp.gemini_api_key || $vars.GEMINI_API_KEY || '';\nconst convertApiKey = inp.convert_api_key || '';\n\n// Classify type\nlet mediaCategory;\nif (mimeType.startsWith('image/')) {\n  mediaCategory = 'image';\n} else if (mimeType.startsWith('audio/') || mimeType.startsWith('video/ogg')) {\n  mediaCategory = 'audio';\n} else if (mimeType === 'application/pdf') {\n  mediaCategory = 'pdf';\n} else if (['application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n            'application/msword',\n            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',\n            'application/vnd.ms-excel',\n            'application/vnd.openxmlformats-officedocument.presentationml.presentation'\n           ].includes(mimeType)) {\n  mediaCategory = 'office';\n} else if (mimeType.startsWith('video/')) {\n  mediaCategory = 'video';\n} else {\n  mediaCategory = 'unknown';\n}\n\nconst media_id = inp.media_id || '';\nconst phone_number_id = inp.phone_number_id || '';\n\nreturn [{ json: { base64, mimeType, filename, caption, mediaCategory, geminiKey, convertApiKey, media_id, phone_number_id }, binary }];"
+        "jsCode": "const inp = $('📥 Recibir Datos Medio').first().json;\nconst binary = $input.first().binary;\n\n// Get base64 from binary data\nconst binaryKey = Object.keys(binary || {})[0] || 'data';\nconst fileData = binary?.[binaryKey];\nconst base64 = fileData?.data || '';\nconst mimeType = inp.mime_type || fileData?.mimeType || 'application/octet-stream';\nconst filename = inp.filename || fileData?.fileName || 'archivo';\nconst caption = inp.caption || '';\nconst geminiKey = inp.gemini_api_key || $vars.GEMINI_API_KEY || '';\nconst convertApiKey = inp.convert_api_key || '';\n\n// Classify type\nlet mediaCategory;\nif (mimeType.startsWith('image/')) {\n  mediaCategory = 'image';\n} else if (mimeType.startsWith('audio/') || mimeType.startsWith('video/ogg')) {\n  mediaCategory = 'audio';\n} else if (mimeType === 'application/pdf') {\n  mediaCategory = 'pdf';\n} else if (['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',\n            'application/vnd.ms-excel'].includes(mimeType)) {\n  // Excel se procesa localmente en n8n (extractFromFile), sin API externa —\n  // separado de 'office' (Word/PowerPoint), que sigue necesitando ConvertAPI.\n  mediaCategory = 'excel';\n} else if (['application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n            'application/msword',\n            'application/vnd.openxmlformats-officedocument.presentationml.presentation'\n           ].includes(mimeType)) {\n  mediaCategory = 'office';\n} else if (mimeType.startsWith('video/')) {\n  mediaCategory = 'video';\n} else {\n  mediaCategory = 'unknown';\n}\n\nconst media_id = inp.media_id || '';\nconst phone_number_id = inp.phone_number_id || '';\n\nreturn [{ json: { base64, mimeType, filename, caption, mediaCategory, geminiKey, convertApiKey, media_id, phone_number_id }, binary }];"
       }
     },
     {
@@ -182,6 +182,27 @@
               },
               "renameOutput": true,
               "outputKey": "office"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.mediaCategory }}",
+                    "rightValue": "excel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "excel"
             }
           ]
         },
@@ -321,7 +342,7 @@
         420
       ],
       "parameters": {
-        "jsCode": "const resp = $input.first().json;\nconst inp = $('🔧 Leer Binario y Tipo').first().json;\nconst filename = inp.filename || 'documento.pdf';\n\nlet contenido = '';\ntry {\n  const fileData = resp.Files?.[0]?.FileData || '';\n  if (fileData) {\n    contenido = Buffer.from(fileData, 'base64').toString('utf8').slice(0, 3000);\n  }\n} catch(e) {}\n\nif (!contenido) {\n  contenido = 'No se pudo extraer el contenido del documento.';\n}\n\nconst texto = `[Documento PDF recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
+        "jsCode": "const resp = $input.first().json;\nconst inp = $('🔧 Leer Binario y Tipo').first().json;\nconst filename = inp.filename || 'documento.pdf';\n\nlet contenido = (resp.text || '').trim().slice(0, 3000);\nif (!contenido) {\n  contenido = 'No se pudo extraer el contenido del documento.';\n}\n\nconst texto = `[Documento PDF recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
       }
     },
     {
@@ -425,23 +446,19 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "=https://v2.convertapi.com/convert/pdf/to/txt?Secret={{ $json.convertApiKey }}",
-        "sendBody": true,
-        "contentType": "multipart-form-data",
-        "sendBinaryData": true,
+        "operation": "pdf",
         "binaryPropertyName": "data",
-        "options": {},
-        "continueOnFail": true
+        "options": {}
       },
       "id": "sw06-pdf-convertapi",
       "name": "📄 ConvertAPI: PDF → Texto",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
       "position": [
         1520,
         200
-      ]
+      ],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -524,6 +541,36 @@
         560,
         260
       ]
+    },
+    {
+      "id": "sw06-excel-extract",
+      "name": "📊 n8n: Extraer Excel",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        420
+      ],
+      "parameters": {
+        "operation": "xlsx",
+        "binaryPropertyName": "data",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "sw06-excel-resultado",
+      "name": "🔧 Resultado Excel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        420
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const rows = $input.all().map(i => i.json);\nconst inp = $('🔧 Leer Binario y Tipo').first().json;\nconst filename = inp.filename || 'documento.xlsx';\n\nlet contenido = '';\nif (rows.length > 0) {\n  contenido = rows.slice(0, 30).map(r => Object.entries(r).map(([k,v]) => `${k}: ${v}`).join(', ')).join('\\n');\n} else {\n  contenido = 'No se pudo extraer el contenido de la hoja de cálculo.';\n}\ncontenido = contenido.slice(0, 3000);\n\nconst texto = `[Documento Excel recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
+      }
     }
   ],
   "connections": {
@@ -604,6 +651,13 @@
         [
           {
             "node": "🎬 Fallback Video/Desconocido",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📊 n8n: Extraer Excel",
             "type": "main",
             "index": 0
           }
@@ -781,6 +835,28 @@
           }
         ]
       ]
+    },
+    "📊 n8n: Extraer Excel": {
+      "main": [
+        [
+          {
+            "node": "🔧 Resultado Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Resultado Excel": {
+      "main": [
+        [
+          {
+            "node": "📤 Devolver Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -790,9 +866,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": null,
-  "versionId": "3902c4ed-7cbe-4870-a0d5-bf3b6fc9fadd",
-  "activeVersionId": "3902c4ed-7cbe-4870-a0d5-bf3b6fc9fadd",
-  "versionCounter": 12,
+  "versionId": "0c4b1f38-a91d-4ba0-b13a-bb212e796984",
+  "activeVersionId": "0c4b1f38-a91d-4ba0-b13a-bb212e796984",
+  "versionCounter": 13,
   "triggerCount": 0,
   "sourceWorkflowId": null,
   "shared": [
@@ -817,9 +893,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-08-04T15:15:06.933Z",
-    "createdAt": "2026-08-04T15:15:06.933Z",
-    "versionId": "3902c4ed-7cbe-4870-a0d5-bf3b6fc9fadd",
+    "updatedAt": "2026-08-04T16:38:19.756Z",
+    "createdAt": "2026-08-04T16:38:19.756Z",
+    "versionId": "0c4b1f38-a91d-4ba0-b13a-bb212e796984",
     "workflowId": "5GU89AeWsBZ86FWa",
     "nodes": [
       {
@@ -899,7 +975,7 @@
           300
         ],
         "parameters": {
-          "jsCode": "const inp = $('📥 Recibir Datos Medio').first().json;\nconst binary = $input.first().binary;\n\n// Get base64 from binary data\nconst binaryKey = Object.keys(binary || {})[0] || 'data';\nconst fileData = binary?.[binaryKey];\nconst base64 = fileData?.data || '';\nconst mimeType = inp.mime_type || fileData?.mimeType || 'application/octet-stream';\nconst filename = inp.filename || fileData?.fileName || 'archivo';\nconst caption = inp.caption || '';\nconst geminiKey = inp.gemini_api_key || $vars.GEMINI_API_KEY || '';\nconst convertApiKey = inp.convert_api_key || '';\n\n// Classify type\nlet mediaCategory;\nif (mimeType.startsWith('image/')) {\n  mediaCategory = 'image';\n} else if (mimeType.startsWith('audio/') || mimeType.startsWith('video/ogg')) {\n  mediaCategory = 'audio';\n} else if (mimeType === 'application/pdf') {\n  mediaCategory = 'pdf';\n} else if (['application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n            'application/msword',\n            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',\n            'application/vnd.ms-excel',\n            'application/vnd.openxmlformats-officedocument.presentationml.presentation'\n           ].includes(mimeType)) {\n  mediaCategory = 'office';\n} else if (mimeType.startsWith('video/')) {\n  mediaCategory = 'video';\n} else {\n  mediaCategory = 'unknown';\n}\n\nconst media_id = inp.media_id || '';\nconst phone_number_id = inp.phone_number_id || '';\n\nreturn [{ json: { base64, mimeType, filename, caption, mediaCategory, geminiKey, convertApiKey, media_id, phone_number_id }, binary }];"
+          "jsCode": "const inp = $('📥 Recibir Datos Medio').first().json;\nconst binary = $input.first().binary;\n\n// Get base64 from binary data\nconst binaryKey = Object.keys(binary || {})[0] || 'data';\nconst fileData = binary?.[binaryKey];\nconst base64 = fileData?.data || '';\nconst mimeType = inp.mime_type || fileData?.mimeType || 'application/octet-stream';\nconst filename = inp.filename || fileData?.fileName || 'archivo';\nconst caption = inp.caption || '';\nconst geminiKey = inp.gemini_api_key || $vars.GEMINI_API_KEY || '';\nconst convertApiKey = inp.convert_api_key || '';\n\n// Classify type\nlet mediaCategory;\nif (mimeType.startsWith('image/')) {\n  mediaCategory = 'image';\n} else if (mimeType.startsWith('audio/') || mimeType.startsWith('video/ogg')) {\n  mediaCategory = 'audio';\n} else if (mimeType === 'application/pdf') {\n  mediaCategory = 'pdf';\n} else if (['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',\n            'application/vnd.ms-excel'].includes(mimeType)) {\n  // Excel se procesa localmente en n8n (extractFromFile), sin API externa —\n  // separado de 'office' (Word/PowerPoint), que sigue necesitando ConvertAPI.\n  mediaCategory = 'excel';\n} else if (['application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n            'application/msword',\n            'application/vnd.openxmlformats-officedocument.presentationml.presentation'\n           ].includes(mimeType)) {\n  mediaCategory = 'office';\n} else if (mimeType.startsWith('video/')) {\n  mediaCategory = 'video';\n} else {\n  mediaCategory = 'unknown';\n}\n\nconst media_id = inp.media_id || '';\nconst phone_number_id = inp.phone_number_id || '';\n\nreturn [{ json: { base64, mimeType, filename, caption, mediaCategory, geminiKey, convertApiKey, media_id, phone_number_id }, binary }];"
         }
       },
       {
@@ -997,6 +1073,27 @@
                 },
                 "renameOutput": true,
                 "outputKey": "office"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "loose"
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.mediaCategory }}",
+                      "rightValue": "excel",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ]
+                },
+                "renameOutput": true,
+                "outputKey": "excel"
               }
             ]
           },
@@ -1136,7 +1233,7 @@
           420
         ],
         "parameters": {
-          "jsCode": "const resp = $input.first().json;\nconst inp = $('🔧 Leer Binario y Tipo').first().json;\nconst filename = inp.filename || 'documento.pdf';\n\nlet contenido = '';\ntry {\n  const fileData = resp.Files?.[0]?.FileData || '';\n  if (fileData) {\n    contenido = Buffer.from(fileData, 'base64').toString('utf8').slice(0, 3000);\n  }\n} catch(e) {}\n\nif (!contenido) {\n  contenido = 'No se pudo extraer el contenido del documento.';\n}\n\nconst texto = `[Documento PDF recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
+          "jsCode": "const resp = $input.first().json;\nconst inp = $('🔧 Leer Binario y Tipo').first().json;\nconst filename = inp.filename || 'documento.pdf';\n\nlet contenido = (resp.text || '').trim().slice(0, 3000);\nif (!contenido) {\n  contenido = 'No se pudo extraer el contenido del documento.';\n}\n\nconst texto = `[Documento PDF recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
         }
       },
       {
@@ -1240,23 +1337,19 @@
       },
       {
         "parameters": {
-          "method": "POST",
-          "url": "=https://v2.convertapi.com/convert/pdf/to/txt?Secret={{ $json.convertApiKey }}",
-          "sendBody": true,
-          "contentType": "multipart-form-data",
-          "sendBinaryData": true,
+          "operation": "pdf",
           "binaryPropertyName": "data",
-          "options": {},
-          "continueOnFail": true
+          "options": {}
         },
         "id": "sw06-pdf-convertapi",
         "name": "📄 ConvertAPI: PDF → Texto",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
+        "type": "n8n-nodes-base.extractFromFile",
+        "typeVersion": 1,
         "position": [
           1520,
           200
-        ]
+        ],
+        "onError": "continueRegularOutput"
       },
       {
         "parameters": {
@@ -1339,6 +1432,36 @@
           560,
           260
         ]
+      },
+      {
+        "id": "sw06-excel-extract",
+        "name": "📊 n8n: Extraer Excel",
+        "type": "n8n-nodes-base.extractFromFile",
+        "typeVersion": 1,
+        "position": [
+          1760,
+          420
+        ],
+        "parameters": {
+          "operation": "xlsx",
+          "binaryPropertyName": "data",
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "sw06-excel-resultado",
+        "name": "🔧 Resultado Excel",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1980,
+          420
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const rows = $input.all().map(i => i.json);\nconst inp = $('🔧 Leer Binario y Tipo').first().json;\nconst filename = inp.filename || 'documento.xlsx';\n\nlet contenido = '';\nif (rows.length > 0) {\n  contenido = rows.slice(0, 30).map(r => Object.entries(r).map(([k,v]) => `${k}: ${v}`).join(', ')).join('\\n');\n} else {\n  contenido = 'No se pudo extraer el contenido de la hoja de cálculo.';\n}\ncontenido = contenido.slice(0, 3000);\n\nconst texto = `[Documento Excel recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
+        }
       }
     ],
     "connections": {
@@ -1419,6 +1542,13 @@
           [
             {
               "node": "🎬 Fallback Video/Desconocido",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📊 n8n: Extraer Excel",
               "type": "main",
               "index": 0
             }
@@ -1596,6 +1726,28 @@
             }
           ]
         ]
+      },
+      "📊 n8n: Extraer Excel": {
+        "main": [
+          [
+            {
+              "node": "🔧 Resultado Excel",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Resultado Excel": {
+        "main": [
+          [
+            {
+              "node": "📤 Devolver Resultado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -1605,18 +1757,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-08-04T15:15:07.299Z",
-        "id": 2592,
+        "createdAt": "2026-08-04T16:38:19.893Z",
+        "id": 2594,
         "workflowId": "5GU89AeWsBZ86FWa",
-        "versionId": "3902c4ed-7cbe-4870-a0d5-bf3b6fc9fadd",
+        "versionId": "0c4b1f38-a91d-4ba0-b13a-bb212e796984",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-08-04T15:15:07.090Z",
-        "id": 2591,
+        "createdAt": "2026-08-04T16:38:19.860Z",
+        "id": 2593,
         "workflowId": "5GU89AeWsBZ86FWa",
-        "versionId": "3902c4ed-7cbe-4870-a0d5-bf3b6fc9fadd",
+        "versionId": "0c4b1f38-a91d-4ba0-b13a-bb212e796984",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
