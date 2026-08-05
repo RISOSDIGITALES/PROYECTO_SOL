@@ -1,11 +1,5 @@
 {
-  "updatedAt": "2026-07-15T15:48:25.139Z",
-  "createdAt": "2026-04-24T13:38:42.263Z",
-  "id": "FYKfTJBfgwsMpJV7",
   "name": "📞 CE Voice Agent — Marco (Fusionado)",
-  "description": null,
-  "active": true,
-  "isArchived": false,
   "nodes": [
     {
       "parameters": {
@@ -195,7 +189,7 @@
       "credentials": {
         "groqApi": {
           "id": "jORffbRhRNohHT1B",
-          "name": "Groq account"
+          "name": "Groq API"
         }
       },
       "continueOnFail": true
@@ -210,17 +204,37 @@
         400
       ],
       "parameters": {
-        "jsCode": "const ctx = $('🔧 Preparar Prompt Extracción').item.json;\n\nif (ctx.noTranscript) {\n  return [{ json: { ...ctx, nombre: '', empresa: '', interes: 'sin_transcript', notas: '' } }];\n}\n\nlet extracted = { nombre: '', empresa: '', interes: 'otro', notas: '' };\ntry {\n  const raw = $input.item.json;\n  const text = raw.choices?.[0]?.message?.content || '{}';\n  const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) extracted = JSON.parse(jsonMatch[0]);\n} catch (e) {}\n\nreturn [{ json: { ...ctx, ...extracted } }];"
+        "jsCode": "const ctx = $('🔧 Preparar Prompt Extracción').item.json;\n\nconst clasifMap = { cotizacion: 'caliente', urgente: 'caliente', informacion: 'tibio', no_interesado: 'frio', otro: 'frio', sin_transcript: 'frio' };\nfunction calcPhone(raw) {\n  const s = raw && raw !== 'unknown' ? String(raw) : '';\n  return s ? (s.startsWith('+') ? s : '+' + s) : ('vapi_' + Date.now());\n}\n\nif (ctx.noTranscript) {\n  return [{ json: { ...ctx, nombre: '', empresa: '', interes: 'sin_transcript', notas: '', phoneFormatted: calcPhone(ctx.callerPhone), clasificacionVoice: clasifMap['sin_transcript'] } }];\n}\n\nlet extracted = { nombre: '', empresa: '', interes: 'otro', notas: '' };\ntry {\n  const raw = $input.item.json;\n  const text = raw.choices?.[0]?.message?.content || '{}';\n  const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) extracted = JSON.parse(jsonMatch[0]);\n} catch (e) {}\n\nreturn [{ json: { ...ctx, ...extracted, phoneFormatted: calcPhone(ctx.callerPhone), clasificacionVoice: clasifMap[extracted.interes] || 'frio' } }];"
       }
     },
     {
       "parameters": {
-        "jsCode": "const data = $input.first().json;\nconst transcript = data.transcript || '';\nconst nombre = data.nombre || '';\nconst interes = data.interes || 'otro';\nconst notas = data.notas || '';\n\nconst estadoMap = {\n  cotizacion: 'Calificado',\n  urgente: 'Calificado',\n  informacion: 'En calificación',\n  no_interesado: 'Inactivo',\n  sin_transcript: 'Nuevo',\n  otro: 'Nuevo'\n};\nconst estado = estadoMap[interes] || 'Nuevo';\n\nconst fields = {\n  Nombre_Contacto: nombre,\n  Estado: estado,\n  Descripcion_Lead: notas,\n  Origen: 'IA de ventas',\n  Historial_Mensajes: transcript.slice(0, 10000),\n  Ultima_Actividad: new Date().toISOString()\n};\n\ntry {\n  const res = await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://api.airtable.com/v0/appUOYi54iBfaDcLn/tblGQXzr1zL1T57lS',\n    headers: {\n      'Authorization': 'Bearer ' + $vars.AIRTABLE_TOKEN,\n      'Content-Type': 'application/json'\n    },\n    body: { fields }\n  });\n  return [{ json: { success: true, airtableId: res.id, estado, nombre } }];\n} catch(e) {\n  return [{ json: { success: false, error: e.message } }];\n}"
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/agent/whatsapp/inbound",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED_AGENT_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  empresa_id: 1,\n  phone: $json.phoneFormatted,\n  contact_name: $json.nombre || '',\n  canal: 'llamada',\n  clasificacion: $json.clasificacionVoice || 'frio',\n  datos_calificacion: {\n    empresa: $json.empresa || '',\n    interes: $json.interes || 'otro',\n    notas: $json.notas || '',\n    duration_seconds: $json.duration || 0,\n    ended_reason: $json.endedReason || '',\n    fecha_llamada: $json.fechaLlamada || ''\n  },\n  messages: [\n    { rol: 'user', contenido: ($json.transcript || '').slice(0, 10000) }\n  ]\n}) }}",
+        "options": {
+          "onError": "continueRegularOutput"
+        }
       },
       "id": "1aff3141-0145-4e36-8f33-df206da6a8c2",
-      "name": "💾 Guardar Lead en Airtable",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "name": "💾 G54: Guardar Lead (Voice)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         1984,
         400
@@ -243,6 +257,306 @@
         1760,
         624
       ]
+    },
+    {
+      "id": "crm-voice-login",
+      "name": "🔐 G54: Login CRM (Voice)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        700
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/auth/login",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_MASTER_PASSWORD' }) }}",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "crm-voice-switch",
+      "name": "🏢 G54: Cambiar Empresa (CRM Voice)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2420,
+        700
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/auth/switch-company",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('🔐 G54: Login CRM (Voice)').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: 1 }) }}",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "crm-voice-findcontact",
+      "name": "🔍 Buscar Contact ID (CRM Voice)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        700
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://apigrowth.mdarthurdigital.com/api/n8n/companies/1/wa/leads?phone={{ encodeURIComponent($('💾 G54: Guardar Lead (Voice)').item.json.body?.phone || $('🔍 Parsear Extracción').item.json.phoneFormatted) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer "
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "crm-voice-board",
+      "name": "📋 G54: Buscar Deal Existente (CRM Voice)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2860,
+        700
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://apigrowth.mdarthurdigital.com/api/crm/board",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('🔐 G54: Login CRM (Voice)').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "crm-voice-matchdeal",
+      "name": "🔍 Encontrar Deal por Teléfono (Voice)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        3080,
+        700
+      ],
+      "parameters": {
+        "jsCode": "const board = $json;\nconst telefono = $('🔍 Parsear Extracción').item.json.phoneFormatted;\nlet found = null;\nfor (const etapa of Object.keys(board)) {\n  const deals = board[etapa];\n  if (!Array.isArray(deals)) continue;\n  for (const deal of deals) {\n    if (deal.telefono === telefono) { found = deal; break; }\n  }\n  if (found) break;\n}\nreturn [{ json: { dealExiste: !!found, dealId: found ? found.id : null, telefono } }];"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "crm-voice-ifdeal",
+      "name": "🔀 ¿Deal ya existe? (CRM Voice)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3300,
+        700
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "voice-deal-exists",
+              "leftValue": "={{ $json.dealExiste }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "crm-voice-update",
+      "name": "💾 G54: Actualizar Deal CRM (Voice)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3520,
+        600
+      ],
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://apigrowth.mdarthurdigital.com/api/crm/deals/{{ $json.dealId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('🔐 G54: Login CRM (Voice)').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  temperatura: {caliente:'alto', tibio:'medio', frio:'bajo'}[$('🔍 Parsear Extracción').item.json.clasificacionVoice] || 'bajo',\n  notas: 'Última interacción vía Marco (Voice CE)'\n}) }}",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "crm-voice-create",
+      "name": "💾 G54: Crear Deal CRM (Voice)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3520,
+        800
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/crm/deals",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('🔐 G54: Login CRM (Voice)').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  company_id: 1,\n  nombre: $('🔍 Parsear Extracción').item.json.nombre || $('🔍 Parsear Extracción').item.json.phoneFormatted,\n  telefono: $('🔍 Parsear Extracción').item.json.phoneFormatted,\n  wa_contact_id: null,\n  origen: 'whatsapp',\n  temperatura: {caliente:'alto', tibio:'medio', frio:'bajo'}[$('🔍 Parsear Extracción').item.json.clasificacionVoice] || 'bajo',\n  notas: 'Lead generado por Marco (Voice CE)'\n}) }}",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "crm-voice-notaprep",
+      "name": "📝 Preparar Nota Actividad (CRM Voice)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        3740,
+        700
+      ],
+      "parameters": {
+        "jsCode": "const dealId = $json.id || $('🔍 Encontrar Deal por Teléfono (Voice)').item.json.dealId;\nconst clasif = $('🔍 Parsear Extracción').item.json.clasificacionVoice;\nconst interes = $('🔍 Parsear Extracción').item.json.interes;\n\nlet contenido = null;\nif (clasif === 'caliente') {\n  contenido = `Marco (Voice): llamada clasificada como lead caliente (interés: ${interes}).`;\n} else if (interes === 'urgente') {\n  contenido = 'Marco (Voice): llamada marcada como urgente.';\n}\n\nreturn [{ json: { dealId, contenido, deberiaLoggear: !!contenido } }];"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "crm-voice-ifnota",
+      "name": "🔀 ¿Vale la pena loggear? (Voice)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3960,
+        700
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "voice-should-log",
+              "leftValue": "={{ $json.deberiaLoggear }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "crm-voice-notasend",
+      "name": "📌 G54: Agregar Nota CRM (Voice)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4180,
+        700
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://apigrowth.mdarthurdigital.com/api/crm/deals/{{ $json.dealId }}/activities",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('🔐 G54: Login CRM (Voice)').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tipo: 'sistema', contenido: $json.contenido }) }}",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -352,56 +666,144 @@
       "main": [
         [
           {
-            "node": "💾 Guardar Lead en Airtable",
+            "node": "💾 G54: Guardar Lead (Voice)",
             "type": "main",
             "index": 0
           }
         ]
       ]
+    },
+    "💾 G54: Guardar Lead (Voice)": {
+      "main": [
+        [
+          {
+            "node": "🔐 G54: Login CRM (Voice)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔐 G54: Login CRM (Voice)": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa (CRM Voice)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 G54: Cambiar Empresa (CRM Voice)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Buscar Contact ID (CRM Voice)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Buscar Contact ID (CRM Voice)": {
+      "main": [
+        [
+          {
+            "node": "📋 G54: Buscar Deal Existente (CRM Voice)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 G54: Buscar Deal Existente (CRM Voice)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Encontrar Deal por Teléfono (Voice)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Encontrar Deal por Teléfono (Voice)": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Deal ya existe? (CRM Voice)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Deal ya existe? (CRM Voice)": {
+      "main": [
+        [
+          {
+            "node": "💾 G54: Actualizar Deal CRM (Voice)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "💾 G54: Crear Deal CRM (Voice)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 G54: Actualizar Deal CRM (Voice)": {
+      "main": [
+        [
+          {
+            "node": "📝 Preparar Nota Actividad (CRM Voice)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 G54: Crear Deal CRM (Voice)": {
+      "main": [
+        [
+          {
+            "node": "📝 Preparar Nota Actividad (CRM Voice)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Preparar Nota Actividad (CRM Voice)": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Vale la pena loggear? (Voice)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Vale la pena loggear? (Voice)": {
+      "main": [
+        [
+          {
+            "node": "📌 G54: Agregar Nota CRM (Voice)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
     }
   },
   "settings": {
-    "executionOrder": "v1",
-    "callerPolicy": "workflowsFromSameOwner",
-    "availableInMCP": false
-  },
-  "staticData": null,
-  "meta": {
-    "templateCredsSetupCompleted": true
-  },
-  "nodeGroups": [],
-  "pinData": {},
-  "versionId": "b099129b-dd40-474c-a976-6da775a155ea",
-  "activeVersionId": "b099129b-dd40-474c-a976-6da775a155ea",
-  "versionCounter": 39,
-  "triggerCount": 1,
-  "sourceWorkflowId": null,
-  "shared": [
-    {
-      "updatedAt": "2026-04-24T13:38:42.272Z",
-      "createdAt": "2026-04-24T13:38:42.272Z",
-      "role": "workflow:owner",
-      "workflowId": "FYKfTJBfgwsMpJV7",
-      "projectId": "scK6yPpEmlkikl67",
-      "project": {
-        "updatedAt": "2026-03-16T19:58:01.773Z",
-        "createdAt": "2026-03-16T19:56:18.866Z",
-        "id": "scK6yPpEmlkikl67",
-        "name": "Solange  Torrez <risosadmi@gmail.com>",
-        "type": "personal",
-        "icon": null,
-        "description": null,
-        "customTelemetryTags": [],
-        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      }
-    }
-  ],
-  "tags": [
-    {
-      "updatedAt": "2026-05-04T16:04:54.762Z",
-      "createdAt": "2026-05-04T16:04:54.762Z",
-      "id": "2CrVJWitAB77MgTJ",
-      "name": "Alex"
-    }
-  ]
+    "executionOrder": "v1"
+  }
 }
