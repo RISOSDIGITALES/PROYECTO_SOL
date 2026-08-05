@@ -1765,6 +1765,14 @@ Limpiados los 14 leads de prueba y confirmado que no quedó ningún deal de prue
 
 Sincronizado `workflow-marco-ce.json` al repo (56 nodos, 10 nuevos), secretos redactados (token de agente, contraseña maestra y la key de Gemini ya conocida como muerta, ninguno agregado hoy).
 
+232. **Remitente de los correos de reporte corregido a "Growth54" — la usuaria detectó que el correo de Lead Caliente mostraba "RISOS" en vez del nombre de marca** (2026-08-05, misma tarde): captura real de un correo de Lead Caliente mostrando el remitente como "RISOS" (el nombre del perfil personal de Gmail de la cuenta SMTP, `risosadmi@gmail.com`) en vez de cualquier nombre de marca. Investigado contra el mismo bug ya documentado en el ítem 142/143 (16-jul): cuando el campo `fromEmail` de un nodo `emailSend`/`gmail` no lleva un nombre para mostrar (`"Nombre <correo>"`), el cliente de correo cae al nombre del perfil de la cuenta — nunca hay un `senderName` separado que funcione para este tipo de nodo.
+
+**Barrido de los 10 nodos de correo activos de toda la plataforma** confirmó 5 con este problema real (sin nombre visible, mostrando `risosadmi@gmail.com` crudo o vacío): `📧 Notificar Vendedor` de Marco WhatsApp, `📧 Notificar Vendedor` de Marco Telegram, `📧 Enviar Reporte por Email` de Analytics V3, `📧 Notificar Vendedor` de Sales AI Motor, y `Notificar Error` del Error Reporter. Los otros 5 (Vigía G54, Alerta CTA de Content AI, CE Gmail Monitor, el auto-chequeo de webhook de Telegram) ya tenían su propio nombre configurado — no mostraban "RISOS", no se tocaron.
+
+**Fix:** los 5 nodos ahora usan `fromEmail: "Growth54 <risosadmi@gmail.com>"` — mismo correo real de siempre (nada cambia del lado de envío/autenticación SMTP), solo el nombre que se muestra al destinatario. **Confirmado con una prueba SMTP aislada** (workflow descartable, sin pasar por Groq): el correo salió aceptado con el remitente mostrando "Growth54" en vez de "RISOS". El primer intento de confirmarlo con un disparo real del reporte de Analytics falló, pero por la cuota de Groq agotada de tanto probar hoy (sin relación con este fix) — no se reintentó para no seguir gastando cuota, la prueba aislada ya deja confirmado que el mecanismo funciona.
+
+Sincronizados `workflow-marco-ce.json`, `workflow-marco-telegram-g54.json`, `workflow-analytics-v3-meta-reporte.json`, `workflow-sales-ai-motor-g54.json` y `workflow-error-reporter-g54.json` al repo, secretos redactados.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
