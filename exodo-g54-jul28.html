@@ -130,8 +130,8 @@
     <div class="header-label">G54 Platform — Documento maestro para Walter</div>
     <h1>Éxodo — Pendientes ordenados por área · <span>29 Jul 2026</span></h1>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> Última actualización: 4 de agosto 2026</div>
-      <div class="meta-item"><div class="dot"></div> I-1 reabierto — el hallazgo del 03-ago apuntaba al lugar equivocado. Walter dice que B-9 y C-2 ya están — probado en vivo, la API real todavía no lo refleja</div>
+      <div class="meta-item"><div class="dot"></div> Última actualización: 5 de agosto 2026</div>
+      <div class="meta-item"><div class="dot" style="background:var(--red)"></div> B-19 nuevo — colisión real entre empresas, reproducida en vivo. Walter dice que B-9 y C-2 ya están — probado en vivo, la API real todavía no lo refleja</div>
     </div>
   </div>
 </div>
@@ -209,6 +209,29 @@
     <span class="cat-icon">⚙️</span>
     <span class="cat-title">Backend (API)</span>
     <span class="cat-sub">Endpoints, columnas de base de datos, permisos de escritura</span>
+  </div>
+
+  <!-- B-19 -->
+  <div class="item-card b-red">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-19. "Empresa activa" vive en el usuario de G54, no en el token de sesión — colisión real entre empresas, confirmada con evidencia, no teórica</div>
+        <div class="item-where">API Backend — Modelo de sesión (<code>POST /api/auth/switch-company</code>)</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge p0">🔴 P0</span>
+        <span class="badge carry">Nuevo — 05-ago, con reproducción en vivo</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Confirmado hoy con una prueba controlada: se hizo login dos veces (dos tokens de sesión distintos, mismo usuario <code>master@growth54.local</code>). Con el token A se cambió la empresa activa a la 1 y se leyó — 12 ideas, correcto. Sin volver a tocar el token A para nada, se usó el token B para cambiar la empresa activa a la 6. Al releer con el token A (sin ningún cambio propio de por medio), ya mostraba las 7 ideas de la empresa 6, no las 12 de la empresa 1. La respuesta de <code>switch-company</code> lo confirma explícito: <code>current_company_id</code> es un campo del objeto <code>user</code> (<code>id:1</code>, "Master User"), no del token — es decir, <b>cualquier</b> sesión que use esa misma cuenta cambia lo que ven <b>todas</b> las demás sesiones de esa cuenta, sin importar qué token tengan.
+      </p>
+      <div class="note-box"><strong>Por qué esto no es "un problema de que estamos en pruebas":</strong> el panel real de un cliente usa su propio usuario, aislado — eso nunca estuvo en riesgo. El problema es que ninguno de nuestros 8 agentes que necesitan sesión (Content AI, Ideas AI, Generador de Imágenes, Community AI, Sales AI Motor, Analytics, Vigía, Distribution AI) actúa como el cliente — todos actúan con <b>una sola cuenta de servicio compartida</b> para poder operar sobre cualquier empresa. Ese mecanismo es el mismo en pruebas que en producción real; lo único que cambia con más tráfico real de más clientes es que la probabilidad de que dos de esas 8 operaciones caigan cerca en el tiempo, para empresas distintas, deja de ser baja.</div>
+      <div class="dep-box"><strong>Qué pasaría en la práctica:</strong> un dato (idea, post, deal del CRM, config de WhatsApp) guardado o leído bajo la empresa equivocada — el tipo de bug más serio posible en una plataforma multiempresa, no solo un error visible.</div>
+      <div class="note-box"><strong>Arreglo real, del lado de Walter:</strong> que <code>current_company_id</code> viva en el token/sesión (o se acepte como parámetro explícito por request en las rutas que hoy dependen de <code>switch-company</code>), no en la fila del usuario. Mitigación más chica y ya propuesta: cuentas de servicio separadas por agente en vez de una sola compartida — reduce mucho el choque entre agentes distintos, aunque no cierra el caso de un mismo agente disparado dos veces casi al mismo tiempo para dos empresas distintas.</div>
+      <div class="note-box">De nuestro lado, revisado hoy: los únicos 2 workflows que iteran varias empresas dentro de una sola ejecución (Vigía y el puente de los 2 minutos) ya lo hacen en serie, uno por vez, nunca en paralelo — no agravan el problema. No existe ninguna forma segura de cerrar esto solo desde n8n sin una cuenta compartida entre agentes o sin cambios del lado de G54 — un candado propio en n8n es frágil (sin un almacén atómico real disponible, con riesgo de bloqueo permanente si una ejecución se cae mientras lo sostiene) y no se construyó por ese motivo.</div>
+    </div>
   </div>
 
   <!-- B-9 -->
