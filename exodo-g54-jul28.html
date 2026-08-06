@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Éxodo G54 — Pendientes ordenados · 29 Jul 2026</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0d16;
+      --surface: #111520;
+      --border: #1a2035;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --subtle: #8b98b8;
+
+      --green: #4ade80; --green-bg: #052e16; --green-border: #166534;
+      --yellow: #fbbf24; --yellow-bg: #1c1200; --yellow-border: #78350f;
+      --red: #f87171; --red-bg: #2d0a0a; --red-border: #7f1d1d;
+      --blue: #60a5fa; --blue-bg: #0c1a3a; --blue-border: #1e3a6e;
+      --purple: #c084fc; --purple-bg: #1e0840; --purple-border: #4c1d95;
+      --orange: #fb923c; --orange-bg: #1a0a00; --orange-border: #7c2d12;
+      --gray: #9ca3af; --gray-bg: #17191f; --gray-border: #374151;
+      --teal: #2dd4bf; --teal-bg: #042f2c; --teal-border: #115e59;
+      --accent: #7c3aed; --accent-light: #a78bfa;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #0d1020 0%, #140a2e 50%, #0a1030 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 40px;
+    }
+    .header-inner { max-width: 900px; margin: 0 auto; }
+    .header-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-light); margin-bottom: 12px; }
+    h1 { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+    h1 span { color: var(--accent-light); }
+    .header p { font-size: 14px; color: var(--subtle); max-width: 640px; margin-bottom: 20px; }
+    .header-meta { display: flex; gap: 24px; flex-wrap: wrap; }
+    .meta-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-light); }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 40px; display: grid; gap: 20px; }
+
+    .cat-header {
+      display: flex; align-items: center; gap: 12px;
+      margin: 28px 0 -2px 0; padding-bottom: 10px; border-bottom: 2px solid var(--border);
+    }
+    .cat-header:first-child { margin-top: 0; }
+    .cat-icon { font-size: 20px; }
+    .cat-title { font-size: 18px; font-weight: 800; color: #fff; }
+    .cat-sub { font-size: 12px; color: var(--muted); margin-left: auto; }
+    .cat-interfaz .cat-title { color: var(--blue); }
+    .cat-backend .cat-title { color: var(--purple); }
+    .cat-consultas .cat-title { color: var(--teal); }
+    .cat-resueltos .cat-title { color: var(--green); }
+
+    .section-label {
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--accent-light); margin: 10px 0 -4px 2px;
+    }
+
+    .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+    .badge.panel { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
+    .badge.api { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border); }
+    .badge.p0 { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+    .badge.p1 { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-border); }
+    .badge.p2 { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-border); }
+    .badge.blocker { background: var(--orange-bg); color: var(--orange); border: 1px solid var(--orange-border); }
+    .badge.nuevo { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+    .badge.carry { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-border); }
+    .badge.opcional { background: var(--teal-bg); color: var(--teal); border: 1px solid var(--teal-border); }
+    .badge.resuelto { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+    .badge.nuestro { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
+
+    .item-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+    .item-card.b-red { border-left: 3px solid var(--red); }
+    .item-card.b-orange { border-left: 3px solid var(--orange); }
+    .item-card.b-yellow { border-left: 3px solid var(--yellow); }
+    .item-card.b-gray { border-left: 3px solid var(--gray); }
+    .item-card.b-teal { border-left: 3px solid var(--teal); }
+    .item-card.b-green { border-left: 3px solid var(--green); }
+
+    .item-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 16px; padding: 16px 20px;
+      background: #0d1120; border-bottom: 1px solid var(--border); flex-wrap: wrap;
+    }
+    .item-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .item-where { font-size: 12px; color: var(--muted); }
+    .item-tags { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+    .item-body { padding: 20px; display: grid; gap: 14px; }
+    .item-why { color: var(--subtle); font-size: 13px; line-height: 1.65; }
+    .item-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 4px; }
+    code {
+      font-family: 'Courier New', monospace; background: #141825;
+      border: 1px solid var(--border); color: var(--blue);
+      padding: 1px 5px; border-radius: 3px; font-size: 11px;
+    }
+
+    .warn-box { background: var(--orange-bg); border: 1px solid var(--orange-border); border-radius: 6px; padding: 12px 16px; font-size: 12px; color: var(--subtle); }
+    .warn-box strong { color: var(--orange); }
+    .note-box { background: var(--teal-bg); border: 1px solid var(--teal-border); border-radius: 6px; padding: 12px 16px; font-size: 12px; color: var(--subtle); }
+    .note-box strong { color: var(--teal); }
+    .dep-box { background: #141825; border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-size: 12px; color: var(--muted); }
+    .dep-box strong { color: var(--subtle); }
+
+    .resuelto-list { display: grid; gap: 8px; }
+    .resuelto-row { display: flex; align-items: baseline; gap: 10px; padding: 10px 16px; background: var(--surface); border: 1px solid var(--green-border); border-left: 3px solid var(--green); border-radius: 8px; font-size: 12px; }
+    .resuelto-row .rtitle { color: var(--text); font-weight: 600; }
+    .resuelto-row .rnote { color: var(--muted); }
+
+    footer { background: #070a12; border-top: 1px solid var(--border); padding: 22px 40px; text-align: center; color: var(--muted); font-size: 12px; margin-top: 40px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-label">G54 Platform — Documento maestro para Walter</div>
+    <h1>Éxodo — Pendientes ordenados por área · <span>29 Jul 2026</span></h1>
+    <div class="header-meta">
+      <div class="meta-item"><div class="dot"></div> Última actualización: 5 de agosto 2026</div>
+      <div class="meta-item"><div class="dot" style="background:var(--red)"></div> B-19 nuevo — colisión real entre empresas, reproducida en vivo. Walter dice que B-9 y C-2 ya están — probado en vivo, la API real todavía no lo refleja</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ============ INTERFAZ ============ -->
+  <div class="cat-header cat-interfaz">
+    <span class="cat-icon">🖥️</span>
+    <span class="cat-title">Interfaz (Panel)</span>
+    <span class="cat-sub">Cambios visibles al usuario final — pantallas, formularios, botones</span>
+  </div>
+
+  <!-- I-1 -->
+  <div class="item-card b-yellow">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-1. Horizonte + dirección deseada — existen, pero solo en la edición manual, no en el botón que genera la estrategia con IA</div>
+        <div class="item-where">Panel › Estrategia RRSS → botón "Strategist AI" (generación) vs. botón "Crear/Editar estrategia" (edición manual)</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Reconfirmado abierto — 04-ago, corrige un hallazgo anterior equivocado</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Corrección a lo reportado el 03-ago: el selector de <code>Horizonte</code> (<code>1 mes</code>/<code>3 meses</code>/<code>6 meses</code>/<code>8 meses</code>) y el <code>&lt;textarea&gt;</code> de <code>direccion_deseada</code> sí existen en el bundle — pero viven en un modal de edición manual (<code>saveEstrategia</code>, guarda directo, sin IA de por medio), abierto por el mismo botón que dice "Crear estrategia" o "Editar estrategia" según si ya existe un registro. La usuaria buscó estos campos en el lugar correcto — el flujo real de <strong>generación</strong> — y confirmó que ahí no están: el botón "Strategist AI" (el que de verdad dispara nuestro agente de n8n) llama a <code>runStrategist()</code> en un solo clic, sin ningún formulario ni paso intermedio que pida horizonte o dirección antes de generar.
+      </p>
+      <div class="note-box">Workaround manual posible hoy, aunque no es una experiencia guiada: como nuestro Strategist AI ya lee <code>direccion_deseada</code>/fechas desde la estrategia guardada en G54 al momento de generar (confirmado desde el ítem 121), un cliente podría abrir "Crear/Editar estrategia", completar y guardar esos 2 campos primero, y recién después apretar "Strategist AI" — pero son dos pasos separados y no obvios, no un flujo único de creación. Pedido real a Walter: que el botón "Strategist AI" (o un paso previo a él) pida horizonte y dirección antes de disparar la generación, en vez de asumir lo que ya esté guardado.</div>
+    </div>
+  </div>
+
+  <!-- I-2 -->
+  <div class="item-card b-yellow">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-2. Mostrar el progreso de tiempo de la estrategia activa (inicio, fin, semana actual)</div>
+        <div class="item-where">Panel › Estrategia RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge resuelto">✅ Ya se ve parcial — confirmado 29-jul</span>
+        <span class="badge panel">Falta solo la semana actual</span>
+        <span class="badge p2">⚪ Bajamos la prioridad</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">Widget tipo "Semana 4 de 13" con inicio/fin de la estrategia activa.</p>
+      <div class="dep-box"><strong>¡Buena noticia, confirmada el 29-jul!</strong> El panel ya muestra "Estrategia vigente hasta el 26/10/2026" en la tarjeta de IA Estrategia — verificado contra la API real: coincide exacto con <code>fecha_fin</code> de la estrategia de Crating Express. El panel ya está leyendo esta fecha. Solo falta el detalle de "semana actual" (ej. "Semana 4 de 13") — <code>GET /api/rrss/metricas/weekly</code> ya devuelve el desglose real por semana si se quiere aprovechar para eso.</div>
+    </div>
+  </div>
+
+  <!-- I-5 -->
+  <div class="item-card b-green">
+    <div class="item-header">
+      <div>
+        <div class="item-title">I-5. Botón "Regenerar idea" del panel — RESUELTO, era un bug nuestro, no hace falta nada de Walter</div>
+        <div class="item-where">Panel › Ideas de Contenido</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge resuelto">✅ Resuelto 29-jul, reconfirmado 30-jul</span>
+        <span class="badge nuestro">Era nuestro, no del panel</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Las 4 veces que reportamos esto roto (17, 18, 24, 28-jul) estábamos revisando el lugar equivocado: el botón del panel sí funcionaba desde siempre, pero llama al webhook de Content AI (no al de Ideas AI directamente), que reenvía la orden sin avisarle que se trata de una regeneración. El resultado era una idea nueva duplicada en vez de actualizar la existente — nunca se vio como error porque técnicamente sí se generaba una idea, solo que la equivocada.
+      </p>
+      <div class="dep-box"><strong>Fix aplicado del lado de n8n (29-jul):</strong> Ideas AI ahora reconoce que es una regeneración con solo ver el <code>idea_id</code> en la llamada, sin depender de que el reenvío mande nada más — resuelve la keyword y la plataforma solo, de la idea ya existente.</div>
+      <div class="note-box"><strong>Confirmado en vivo dos veces, incluyendo hoy 30-jul con el mismo camino exacto que usa el botón real del panel</strong> (vía el webhook de Content AI, no uno de prueba): la idea se actualiza en el mismo lugar, sin crear duplicados. No requiere ningún cambio de Walter — se puede quitar de la lista de pendientes.</div>
+    </div>
+  </div>
+
+  <!-- ============ BACKEND ============ -->
+  <div class="cat-header cat-backend">
+    <span class="cat-icon">⚙️</span>
+    <span class="cat-title">Backend (API)</span>
+    <span class="cat-sub">Endpoints, columnas de base de datos, permisos de escritura</span>
+  </div>
+
+  <!-- B-19 -->
+  <div class="item-card b-red">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-19. "Empresa activa" vive en el usuario de G54, no en el token de sesión — colisión real entre empresas, confirmada con evidencia, no teórica</div>
+        <div class="item-where">API Backend — Modelo de sesión (<code>POST /api/auth/switch-company</code>)</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge p0">🔴 P0</span>
+        <span class="badge carry">Nuevo — 05-ago, con reproducción en vivo</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Confirmado hoy con una prueba controlada: se hizo login dos veces (dos tokens de sesión distintos, mismo usuario <code>master@growth54.local</code>). Con el token A se cambió la empresa activa a la 1 y se leyó — 12 ideas, correcto. Sin volver a tocar el token A para nada, se usó el token B para cambiar la empresa activa a la 6. Al releer con el token A (sin ningún cambio propio de por medio), ya mostraba las 7 ideas de la empresa 6, no las 12 de la empresa 1. La respuesta de <code>switch-company</code> lo confirma explícito: <code>current_company_id</code> es un campo del objeto <code>user</code> (<code>id:1</code>, "Master User"), no del token — es decir, <b>cualquier</b> sesión que use esa misma cuenta cambia lo que ven <b>todas</b> las demás sesiones de esa cuenta, sin importar qué token tengan.
+      </p>
+      <div class="note-box"><strong>Por qué esto no es "un problema de que estamos en pruebas":</strong> el panel real de un cliente usa su propio usuario, aislado — eso nunca estuvo en riesgo. El problema es que ninguno de nuestros 8 agentes que necesitan sesión (Content AI, Ideas AI, Generador de Imágenes, Community AI, Sales AI Motor, Analytics, Vigía, Distribution AI) actúa como el cliente — todos actúan con <b>una sola cuenta de servicio compartida</b> para poder operar sobre cualquier empresa. Ese mecanismo es el mismo en pruebas que en producción real; lo único que cambia con más tráfico real de más clientes es que la probabilidad de que dos de esas 8 operaciones caigan cerca en el tiempo, para empresas distintas, deja de ser baja.</div>
+      <div class="dep-box"><strong>Qué pasaría en la práctica:</strong> un dato (idea, post, deal del CRM, config de WhatsApp) guardado o leído bajo la empresa equivocada — el tipo de bug más serio posible en una plataforma multiempresa, no solo un error visible.</div>
+      <div class="note-box"><strong>Arreglo real, del lado de Walter:</strong> que <code>current_company_id</code> viva en el token/sesión (o se acepte como parámetro explícito por request en las rutas que hoy dependen de <code>switch-company</code>), no en la fila del usuario. Mitigación más chica y ya propuesta: cuentas de servicio separadas por agente en vez de una sola compartida — reduce mucho el choque entre agentes distintos, aunque no cierra el caso de un mismo agente disparado dos veces casi al mismo tiempo para dos empresas distintas.</div>
+      <div class="note-box">De nuestro lado, revisado hoy: los únicos 2 workflows que iteran varias empresas dentro de una sola ejecución (Vigía y el puente de los 2 minutos) ya lo hacen en serie, uno por vez, nunca en paralelo — no agravan el problema. No existe ninguna forma segura de cerrar esto solo desde n8n sin una cuenta compartida entre agentes o sin cambios del lado de G54 — un candado propio en n8n es frágil (sin un almacén atómico real disponible, con riesgo de bloqueo permanente si una ejecución se cae mientras lo sostiene) y no se construyó por ese motivo.</div>
+    </div>
+  </div>
+
+  <!-- B-9 -->
+  <div class="item-card b-yellow">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-9. ig_user_id — Walter dice que ya lo puso, la API real todavía dice que no</div>
+        <div class="item-where">API Backend — Páginas / Meta</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Sin confirmar en vivo — 03-ago</span>
+        <span class="badge p1">🟡 P1</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Walter dijo que el endpoint estaba bien todo este tiempo y que completó la fila de Crating Express con <code>17841446392201293</code>. Probado en vivo hoy mismo: <code>GET /api/n8n/pages/1713965015486703</code> sigue devolviendo <code>ig_user_id: null</code> — el cambio no llegó a producción, o no se guardó. Avisarle con esta evidencia concreta antes de dar el punto por cerrado.
+      </p>
+      <div class="note-box">No requiere ningún cambio de nuestro lado — Community AI, Distribution AI y Sales AI Motor ya leen este campo dinámicamente desde <code>/api/n8n/pages/{page_id}</code> en cada ejecución, así que empieza a funcionar solo apenas el dato está poblado.</div>
+    </div>
+  </div>
+
+  <!-- B-10 -->
+  <div class="item-card b-green">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-10. Reporte guardado en G54 — decisión tomada: sin link público, se comparte por correo desde el panel</div>
+        <div class="item-where">API Backend — Reportes / Analytics</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge resuelto">✅ Cerrado — 30-jul</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Walter ya construyó el endpoint de guardado (<code>POST /api/agent/rrss/reportes</code>, upsert por empresa+período+modo, se lee con <code>GET /api/rrss/reportes</code> e <code>/{id}</code>) y preguntó si además valía la pena un link público para compartir el reporte por fuera del panel — señaló que expondría las métricas de la empresa a cualquiera que tuviera el link, sin login.
+      </p>
+      <div class="dep-box"><strong>Decisión de la usuaria, explícita:</strong> no al link público — es lo más seguro. Si un cliente necesita compartir su propio reporte, lo hace desde el botón de enviar por correo que ya existe en el panel, con su propia sesión.</div>
+      <div class="note-box">No requiere ningún cambio adicional de Walter — el endpoint que ya construyó (guardado + lectura dentro del panel, con sesión) es suficiente tal como está. Nuestro workaround (<code>analytics-meta-reporte</code>, que devuelve el HTML bajo demanda en 3 modos) sigue disponible para que el botón "Compartir" del panel lo llame, sin necesitar ningún link público.</div>
+    </div>
+  </div>
+
+  <!-- B-12 -->
+  <div class="item-card b-green">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-12. Alarma al programar — CONFIRMADO EN VIVO Y FUNCIONANDO DEL TODO, incluyendo reprogramar</div>
+        <div class="item-where">Panel › Editor de Posts (backend del botón "Programar")</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge resuelto">✅ Desplegado y confirmado con 2 pruebas reales</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Confirmado con dos posts de prueba reales, sin ningún atajo nuestro: se crean, se aprueban y se programan vía <code>PUT /api/rrss/posts/{id}/schedule</code> (el mismo endpoint del botón "Programar") — y en segundos llega una llamada real y automática a nuestra Alarma Exacta con <code>{"post_id","company_id","fecha_programada"}</code> exactos, sin que nosotros llamáramos nada.
+      </p>
+      <div class="dep-box"><strong>Decisión de cancelación ya implementada de nuestro lado:</strong> <code>{"post_id","company_id","cancelado":true}</code> al mismo webhook — el nodo <code>🔀 ¿Cancelado?</code> reconoce y termina sin programar espera. Confirmado en vivo.</div>
+      <div class="note-box"><strong>Reprogramar también confirmado, con un segundo post de prueba (114) programado dos veces seguidas a fechas distintas:</strong> llegaron 2 llamadas reales separadas, una por cada programación, cada una con su propia <code>fecha_programada</code> exacta — <code>{"post_id":114,"fecha_programada":"...16:56:15Z"}</code> y después <code>{"post_id":114,"fecha_programada":"...17:02:03Z"}</code>. (Nuestra primera prueba con el post 113 pareció mostrar solo 1 llamada porque revisamos demasiado rápido, antes de que la segunda terminara de registrarse — con más tiempo de espera, sí estaba ahí.) Ambas pruebas canceladas y limpiadas después de confirmar, sin ningún riesgo esta vez (fechas de 30+ minutos).</div>
+      <div class="dep-box">El puente de los 2 minutos sigue activo — no lo apagamos todavía, justo por el detalle de arriba.</div>
+    </div>
+  </div>
+
+  <!-- B-14 -->
+  <div class="item-card b-green">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-14. video_url ya existe, persiste y no rompe nada más — confirmado en vivo</div>
+        <div class="item-where">API Backend — Posts / RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge resuelto">✅ Confirmado en vivo — 30-jul</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Probado con un post real: <code>PUT /api/rrss/posts/{id}</code> con <code>{"video_url":"https://..."}</code> devolvió <code>200</code>, y al releer el post con una llamada nueva y limpia el campo quedó persistido — confirmado además que <code>imagen_url</code> del mismo post no se vio afectado (no es un reemplazo total del registro). Valor de prueba revertido después de confirmar.
+      </p>
+      <div class="note-box">Nuestras 2 rutas de Reels en Distribution AI ya estaban listas desde el 27-jul (ítem 179) — quedan disponibles para probar de punta a punta cuando quieran.</div>
+    </div>
+  </div>
+
+  <!-- B-15 -->
+  <div class="item-card b-green">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-15. facebook/instagram ya se aceptan — confirmado en vivo</div>
+        <div class="item-where">API Backend — Contactos de WhatsApp/RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge resuelto">✅ Confirmado en vivo — 30-jul</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Reprobado con el mismo shape que dio 422 el 29-jul: <code>origen: facebook</code> → <code>201 ok:true</code>, <code>origen: instagram</code> → <code>201 ok:true</code>. Contacto de prueba limpiado después de confirmar.
+      </p>
+    </div>
+  </div>
+
+  <!-- ============ CONSULTAS Y OPCIONALES ============ -->
+  <div class="cat-header cat-consultas">
+    <span class="cat-icon">💬</span>
+    <span class="cat-title">Consultas y opcionales</span>
+    <span class="cat-sub">Preguntas que necesitan respuesta de Walter, o mejoras que no bloquean nada</span>
+  </div>
+
+  <!-- C-2 -->
+  <div class="item-card b-teal">
+    <div class="item-header">
+      <div>
+        <div class="item-title">C-2. Walter dice que lo borra por base de datos — el número real sigue igual de contaminado</div>
+        <div class="item-where">Base de datos — Métricas RRSS, Crating Express</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge carry">Sin confirmar en vivo — 03-ago</span>
+        <span class="badge opcional">Opcional</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Walter confirmó que <code>alcance</code> es un entero sin signo (el valor negativo compensatorio que habíamos probado el 29-jul era imposible por diseño) y dijo que lo iba a borrar directo por base de datos. Probado en vivo hoy: <code>GET /api/rrss/metricas</code> muestra <code>alcance_total: 130.301</code> en Facebook — más alto que los ~129.600 de hace unos días, consistente con que el dato contaminado sigue ahí sumándose con actividad real encima, no borrado todavía.
+      </p>
+    </div>
+  </div>
+
+  <!-- C-3 -->
+  <div class="item-card b-green">
+    <div class="item-header">
+      <div>
+        <div class="item-title">C-3 → B-16. Community AI y Sales AI Motor — CONFIRMADO EN VIVO, ya no es lista fija</div>
+        <div class="item-where">Panel › Dashboard de Agentes</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge resuelto">✅ Confirmado en vivo — 30-jul</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Confirmado con <code>GET /api/rrss/pipeline?company_id=1</code> (el endpoint real que alimenta el dashboard, ahora documentado): <code>rrss_community_ai</code> aparece con <code>"disponible":true, "configurado":true, "estado":"pendiente"</code> ("Conectado, todavía sin conversaciones desde redes" — correcto, es real que todavía no hubo tráfico); <code>rrss_sales_ai</code> aparece con <code>"estado":"listo", "valor":"5", "unidad":"oportunidades desde redes"</code> — ya cuenta actividad real del CRM, no un texto fijo.
+      </p>
+    </div>
+  </div>
+
+  <!-- B-17 -->
+  <div class="item-card b-green">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-17. Las 6 columnas ya existen — ajustamos nuestro Strategist AI al formato exacto que definió Walter, confirmado en vivo</div>
+        <div class="item-where">API Backend — Estrategia RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge resuelto">✅ Resuelto de nuestro lado — 30-jul</span>
+        <span class="badge nuestro">Walter ya tiene las columnas, faltaba nuestro formato</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Walter confirmó que las 6 columnas ya están creadas, pero antes de que las desplegara pedimos comparar el formato exacto que él ya definió (<code>keyword_strategy</code> como lista de <code>{kw,volumen,intencion}</code>, <code>faqs</code> como lista de <code>{q,a}</code>, <code>clusters</code> como lista plana de nombres, <code>plan_publicacion</code> como una fila por semana) contra lo que nuestro Strategist realmente generaba — y no coincidía en 4 de los 6 campos, incluyendo <code>faqs</code>, que ni siquiera se estaba mandando.
+      </p>
+      <div class="dep-box"><strong>Ajustado del lado de n8n, sin esperar su despliegue:</strong> <code>keyword_strategy</code> y <code>plan_publicacion</code> ahora se arman en código (no se le piden a la IA) — el primero a partir de las keywords reales de la empresa en G54 con una estimación de volumen relativo, el segundo repartiendo los pilares reales en una fila por cada semana del horizonte, evitando que la IA tenga que enumerar hasta 52 filas sin equivocarse. <code>faqs</code> y <code>clusters</code> se ajustaron al shape exacto pedido.</div>
+      <div class="note-box"><strong>Confirmado en vivo con una corrida real de la estrategia de Crating Express:</strong> los 4 campos quedaron guardados con el shape exacto — 34 keywords reales en <code>keyword_strategy</code>, 5 FAQs con pregunta y respuesta, 3 clusters como texto plano, 13 semanas en <code>plan_publicacion</code>. Nada más de nuestro lado — listo para cuando Walter despliegue su parte.</div>
+    </div>
+  </div>
+
+  <!-- B-18 -->
+  <div class="item-card b-green">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-18. Resuelto — el número ya coincide exacto</div>
+        <div class="item-where">Panel › Dashboard de Agentes, tarjeta "IA analítica"</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge resuelto">✅ Confirmado en vivo — 30-jul</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        <code>GET /api/rrss/pipeline?company_id=1</code> ahora devuelve <code>"valor":"132.871"</code> de alcance acumulado para "IA analítica" — coincide exacto con <code>129671 + 3200 = 132871</code> de <code>/api/rrss/metricas</code> (Facebook + Instagram). Arreglado del todo.
+      </p>
+    </div>
+  </div>
+
+  <!-- C-4 -->
+  <div class="item-card b-green">
+    <div class="item-header">
+      <div>
+        <div class="item-title">C-4. Resuelto — angulo ya persiste en PUT /api/rrss/ideas/{id}</div>
+        <div class="item-where">API Backend — Ideas RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge resuelto">✅ Confirmado en vivo — 30-jul</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Probado sobre una idea real: <code>PUT</code> con <code>{"angulo":"..."}</code> devolvió <code>200</code> y persistió al releer. Con esto, el flujo completo de "Regenerar idea" (I-5, ya resuelto) puede actualizar título y ángulo juntos sin ningún hueco.
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Éxodo G54 · Equipo Sol × Walter · actualizado 3 de agosto 2026 — solo pendientes reales
+</footer>
+
+</body>
+</html>

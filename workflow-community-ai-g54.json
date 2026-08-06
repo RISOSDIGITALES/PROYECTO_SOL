@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-18T18:17:58.539Z",
+  "updatedAt": "2026-07-28T13:50:51.535Z",
   "createdAt": "2026-06-20T20:02:45.377Z",
   "id": "62tIvF0snsrMj0sM",
   "name": "Community AI — G54",
@@ -111,7 +111,7 @@
             {
               "id": "a3",
               "name": "G54_AGENT_TOKEN",
-              "value": "g54_agent_produccion_2026",
+              "value": "REDACTED_AGENT_TOKEN",
               "type": "string"
             },
             {
@@ -141,7 +141,7 @@
             {
               "id": "a9",
               "name": "WA_LINK",
-              "value": "https://wa.me/17867880417",
+              "value": "",
               "type": "string"
             },
             {
@@ -153,7 +153,7 @@
             {
               "id": "crm-pass",
               "name": "G54_MASTER_PASSWORD",
-              "value": "wx2026_master",
+              "value": "REDACTED_MASTER_PASSWORD",
               "type": "string"
             }
           ]
@@ -266,7 +266,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const config = $('🏢 Aplicar Config Empresa').item.json;\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\nconst empresa = empresaRaw.data || empresaRaw || {};\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\nconst postRaw = $('📄 Obtener Contenido del Post').item?.json || {};\nconst contenidoPost = postRaw.message || postRaw.story || '';\n\nconst nombre_empresa = empresa.name || empresa.nombre || '';\nconst descripcion = empresa.description || empresa.descripcion || '';\nconst tono = estrategia.tono || 'profesional, cercano y directo';\nconst wa_link = config.WA_LINK || '';\n\nconst seccionPost = contenidoPost\n  ? `\\nCONTEXTO DEL POST COMENTADO:\\n${contenidoPost}\\n`\n  : '';\n\nconst promptSistema = `Actúa como un Community Manager experto en conversión, integrando SEO, AEO y GEO.\n\nEmpresa: ${nombre_empresa}\nDescripción: ${descripcion}\nTono de marca: ${tono}\nLink de WhatsApp: ${wa_link}\n\nTu función es:\n- responder con claridad (AEO)\n- detectar intención del usuario\n- calificar el lead\n- llevar la conversación FUERA del comentario público, hacia WhatsApp, lo antes posible\n\nDebes:\n1. Identificar la intención: informacional, comercial o transaccional\n2. Dar una micro-respuesta útil y breve (máximo 1 oración) que demuestre que entendiste lo que pidió — sin resolverlo por completo en el comentario\n3. Invitar a continuar por WhatsApp usando el link EXACTO: ${wa_link} — esto va SIEMPRE, en cada respuesta, sin excepción, incluso en el primer mensaje\n4. NO hagas preguntas de calificación (medidas, tipo de servicio, etc.) dentro del comentario público — esas se resuelven en WhatsApp, no aquí\n\nIMPORTANTE:\n- La RESPUESTA debe ser corta (máximo 2 oraciones), apta para publicar directamente en el comentario/DM\n- NO uses markdown, bullets ni emojis excesivos en la respuesta pública\n- SIEMPRE incluye el link de WhatsApp tal cual: ${wa_link}\n- Sé cálido pero directo — el objetivo es mover la conversación a WhatsApp, no resolverla en público\n- Si hay CONTEXTO DEL POST COMENTADO, úsalo para que la micro-respuesta sea más relevante y específica\n\nEntrega EXACTAMENTE en este formato:\nINTENCIÓN: [informacional|comercial|transaccional]\nRESPUESTA: [texto listo para publicar en redes, SIEMPRE con el link de WhatsApp incluido]\nLEAD: [frío|tibio|caliente]\nPREGUNTA: [pregunta de calificación, se usará en WhatsApp, no en el comentario]\nSIGUIENTE PASO: [whatsapp]`;\n\nconst mensajeUsuario = `Plataforma: ${evento.plataforma}\nTipo: ${evento.tipo}${seccionPost}\nMensaje del usuario: ${evento.mensaje}`;\n\nreturn [{ json: {\n  promptSistema,\n  mensajeUsuario,\n  evento,\n  wa_link,\n  empresa_nombre: nombre_empresa\n}}];"
+        "jsCode": "const config = $('🏢 Aplicar Config Empresa').item.json;\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\nconst empresa = empresaRaw.data || empresaRaw || {};\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\nconst postRaw = $('📄 Obtener Contenido del Post').item?.json || {};\nconst contenidoPost = postRaw.message || postRaw.story || '';\n\nconst nombre_empresa = empresa.name || empresa.nombre || '';\nconst descripcion = empresa.description || empresa.descripcion || '';\nconst tono = estrategia.tono || 'profesional, cercano y directo';\nconst wa_link = config.WA_LINK || '';\n\n// Canal de escalada: WhatsApp si la empresa tiene link configurado, si no, DM en la misma plataforma — nunca un canal fijo\nconst canalEscalada = wa_link ? `WhatsApp (link EXACTO: ${wa_link})` : 'mensaje privado (DM) en esta misma plataforma';\nconst siguientePasoValor = wa_link ? 'whatsapp' : 'dm';\n\nconst seccionPost = contenidoPost\n  ? `\\nCONTEXTO DEL POST COMENTADO:\\n${contenidoPost}\\n`\n  : '';\n\nconst promptSistema = `Actúa como un Community Manager experto en conversión, integrando SEO, AEO y GEO.\n\nEmpresa: ${nombre_empresa}\nDescripción: ${descripcion}\nTono de marca: ${tono}\nCanal de escalada: ${canalEscalada}\n\nTu función es:\n- responder con claridad (AEO)\n- detectar intención del usuario\n- calificar el lead\n- llevar la conversación FUERA del comentario público, hacia ${canalEscalada}, lo antes posible\n\nDebes:\n1. Identificar la intención: informacional, comercial o transaccional\n2. Dar una micro-respuesta útil y breve (máximo 1 oración) que demuestre que entendiste lo que pidió — sin resolverlo por completo en el comentario\n3. Invitar a continuar por ${canalEscalada} — esto va SIEMPRE, en cada respuesta, sin excepción, incluso en el primer mensaje\n4. NO hagas preguntas de calificación (medidas, tipo de servicio, etc.) dentro del comentario público — esas se resuelven por ${canalEscalada}, no aquí\n\nIMPORTANTE:\n- La RESPUESTA debe ser corta (máximo 2 oraciones), apta para publicar directamente en el comentario/DM\n- NO uses markdown, bullets ni emojis excesivos en la respuesta pública\n${wa_link ? `- SIEMPRE incluye el link de WhatsApp tal cual: ${wa_link}` : '- Invita a escribir por mensaje privado, sin inventar ningún link ni número'}\n- Sé cálido pero directo — el objetivo es mover la conversación a ${canalEscalada}, no resolverla en público\n- Si hay CONTEXTO DEL POST COMENTADO, úsalo para que la micro-respuesta sea más relevante y específica\n\nEntrega EXACTAMENTE en este formato:\nINTENCIÓN: [informacional|comercial|transaccional]\nRESPUESTA: [texto listo para publicar en redes${wa_link ? ', SIEMPRE con el link de WhatsApp incluido' : ''}]\nLEAD: [frío|tibio|caliente]\nPREGUNTA: [pregunta de calificación, se usará por ${canalEscalada}, no en el comentario]\nSIGUIENTE PASO: [${siguientePasoValor}]`;\n\nconst mensajeUsuario = `Plataforma: ${evento.plataforma}\nTipo: ${evento.tipo}${seccionPost}\nMensaje del usuario: ${evento.mensaje}`;\n\nreturn [{ json: {\n  promptSistema,\n  mensajeUsuario,\n  evento,\n  wa_link,\n  empresa_nombre: nombre_empresa\n}}];"
       },
       "id": "preparar-contexto",
       "name": "🔧 Preparar Contexto Community AI",
@@ -309,7 +309,7 @@
       "credentials": {
         "groqApi": {
           "id": "jORffbRhRNohHT1B",
-          "name": "Groq account"
+          "name": "Groq API"
         }
       }
     },
@@ -908,7 +908,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ nombre: $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre || 'Contacto FB/IG sin nombre', telefono: null, origen: 'manual', temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', wa_contact_id: $('🔍 Encontrar Deal por Teléfono').item.json.wa_contact_id, notas: 'Lead generado por Community AI (RRSS - ' + ($('🔍 Extraer Evento FB/IG').item.json.plataforma || '') + '): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
+        "jsonBody": "={{ JSON.stringify({ nombre: $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre || 'Contacto FB/IG sin nombre', telefono: null, origen: ($('🔍 Extraer Evento FB/IG').item.json.plataforma === 'instagram' ? 'instagram' : $('🔍 Extraer Evento FB/IG').item.json.plataforma === 'facebook' ? 'facebook' : 'manual'), temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', wa_contact_id: $('🔍 Encontrar Deal por Teléfono').item.json.wa_contact_id, notas: 'Lead generado por Community AI (RRSS - ' + ($('🔍 Extraer Evento FB/IG').item.json.plataforma || '') + '): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
         "options": {}
       }
     },
@@ -1114,6 +1114,87 @@
         2350,
         120
       ]
+    },
+    {
+      "id": "cai-nota-actividad-crm",
+      "name": "📝 Preparar Nota Actividad (CRM)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4740,
+        680
+      ],
+      "parameters": {
+        "jsCode": "const dealResp = $json;\nconst dealId = dealResp && dealResp.id ? dealResp.id : null;\n\nlet contenido = null;\ntry {\n  const parsed = $('🔍 Parsear Respuesta Community AI').item.json;\n  const lead = (parsed.lead || '').toLowerCase();\n  if (lead === 'caliente') {\n    contenido = 'Community AI: comentario/DM clasificado como lead caliente.';\n  }\n} catch (e) { /* si no se puede leer, no se loggea nada */ }\n\nreturn [{ json: { dealId, contenido, deberiaLoggear: !!(dealId && contenido) } }];"
+      }
+    },
+    {
+      "id": "cai-if-loggear-crm",
+      "name": "🔀 ¿Vale la pena loggear?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        4960,
+        680
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "vale-la-pena",
+              "leftValue": "={{ $json.deberiaLoggear }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "cai-post-actividad-crm",
+      "name": "📌 G54: Agregar Nota CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        5180,
+        680
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/crm/deals/' + $json.dealId + '/activities' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tipo: 'sistema', contenido: $json.contenido }) }}",
+        "options": {}
+      }
     }
   ],
   "connections": {
@@ -1562,6 +1643,51 @@
         ],
         []
       ]
+    },
+    "💾 G54: Crear Deal CRM": {
+      "main": [
+        [
+          {
+            "node": "📝 Preparar Nota Actividad (CRM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 G54: Actualizar Deal CRM": {
+      "main": [
+        [
+          {
+            "node": "📝 Preparar Nota Actividad (CRM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Preparar Nota Actividad (CRM)": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Vale la pena loggear?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Vale la pena loggear?": {
+      "main": [
+        [
+          {
+            "node": "📌 G54: Agregar Nota CRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
     }
   },
   "settings": {
@@ -1573,9 +1699,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": null,
-  "versionId": "286e7f58-1346-413e-ad69-265e47e380eb",
-  "activeVersionId": "286e7f58-1346-413e-ad69-265e47e380eb",
-  "versionCounter": 17,
+  "versionId": "d075f984-e0ed-4643-a7c6-4913623033a9",
+  "activeVersionId": "d075f984-e0ed-4643-a7c6-4913623033a9",
+  "versionCounter": 21,
   "triggerCount": 2,
   "sourceWorkflowId": null,
   "shared": [
@@ -1600,9 +1726,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-07-18T18:17:58.543Z",
-    "createdAt": "2026-07-18T18:17:58.543Z",
-    "versionId": "286e7f58-1346-413e-ad69-265e47e380eb",
+    "updatedAt": "2026-07-28T13:50:51.541Z",
+    "createdAt": "2026-07-28T13:50:51.541Z",
+    "versionId": "d075f984-e0ed-4643-a7c6-4913623033a9",
     "workflowId": "62tIvF0snsrMj0sM",
     "nodes": [
       {
@@ -1709,7 +1835,7 @@
               {
                 "id": "a3",
                 "name": "G54_AGENT_TOKEN",
-                "value": "g54_agent_produccion_2026",
+                "value": "REDACTED_AGENT_TOKEN",
                 "type": "string"
               },
               {
@@ -1739,7 +1865,7 @@
               {
                 "id": "a9",
                 "name": "WA_LINK",
-                "value": "https://wa.me/17867880417",
+                "value": "",
                 "type": "string"
               },
               {
@@ -1751,7 +1877,7 @@
               {
                 "id": "crm-pass",
                 "name": "G54_MASTER_PASSWORD",
-                "value": "wx2026_master",
+                "value": "REDACTED_MASTER_PASSWORD",
                 "type": "string"
               }
             ]
@@ -1864,7 +1990,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const config = $('🏢 Aplicar Config Empresa').item.json;\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\nconst empresa = empresaRaw.data || empresaRaw || {};\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\nconst postRaw = $('📄 Obtener Contenido del Post').item?.json || {};\nconst contenidoPost = postRaw.message || postRaw.story || '';\n\nconst nombre_empresa = empresa.name || empresa.nombre || '';\nconst descripcion = empresa.description || empresa.descripcion || '';\nconst tono = estrategia.tono || 'profesional, cercano y directo';\nconst wa_link = config.WA_LINK || '';\n\nconst seccionPost = contenidoPost\n  ? `\\nCONTEXTO DEL POST COMENTADO:\\n${contenidoPost}\\n`\n  : '';\n\nconst promptSistema = `Actúa como un Community Manager experto en conversión, integrando SEO, AEO y GEO.\n\nEmpresa: ${nombre_empresa}\nDescripción: ${descripcion}\nTono de marca: ${tono}\nLink de WhatsApp: ${wa_link}\n\nTu función es:\n- responder con claridad (AEO)\n- detectar intención del usuario\n- calificar el lead\n- llevar la conversación FUERA del comentario público, hacia WhatsApp, lo antes posible\n\nDebes:\n1. Identificar la intención: informacional, comercial o transaccional\n2. Dar una micro-respuesta útil y breve (máximo 1 oración) que demuestre que entendiste lo que pidió — sin resolverlo por completo en el comentario\n3. Invitar a continuar por WhatsApp usando el link EXACTO: ${wa_link} — esto va SIEMPRE, en cada respuesta, sin excepción, incluso en el primer mensaje\n4. NO hagas preguntas de calificación (medidas, tipo de servicio, etc.) dentro del comentario público — esas se resuelven en WhatsApp, no aquí\n\nIMPORTANTE:\n- La RESPUESTA debe ser corta (máximo 2 oraciones), apta para publicar directamente en el comentario/DM\n- NO uses markdown, bullets ni emojis excesivos en la respuesta pública\n- SIEMPRE incluye el link de WhatsApp tal cual: ${wa_link}\n- Sé cálido pero directo — el objetivo es mover la conversación a WhatsApp, no resolverla en público\n- Si hay CONTEXTO DEL POST COMENTADO, úsalo para que la micro-respuesta sea más relevante y específica\n\nEntrega EXACTAMENTE en este formato:\nINTENCIÓN: [informacional|comercial|transaccional]\nRESPUESTA: [texto listo para publicar en redes, SIEMPRE con el link de WhatsApp incluido]\nLEAD: [frío|tibio|caliente]\nPREGUNTA: [pregunta de calificación, se usará en WhatsApp, no en el comentario]\nSIGUIENTE PASO: [whatsapp]`;\n\nconst mensajeUsuario = `Plataforma: ${evento.plataforma}\nTipo: ${evento.tipo}${seccionPost}\nMensaje del usuario: ${evento.mensaje}`;\n\nreturn [{ json: {\n  promptSistema,\n  mensajeUsuario,\n  evento,\n  wa_link,\n  empresa_nombre: nombre_empresa\n}}];"
+          "jsCode": "const config = $('🏢 Aplicar Config Empresa').item.json;\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\nconst empresa = empresaRaw.data || empresaRaw || {};\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\nconst postRaw = $('📄 Obtener Contenido del Post').item?.json || {};\nconst contenidoPost = postRaw.message || postRaw.story || '';\n\nconst nombre_empresa = empresa.name || empresa.nombre || '';\nconst descripcion = empresa.description || empresa.descripcion || '';\nconst tono = estrategia.tono || 'profesional, cercano y directo';\nconst wa_link = config.WA_LINK || '';\n\n// Canal de escalada: WhatsApp si la empresa tiene link configurado, si no, DM en la misma plataforma — nunca un canal fijo\nconst canalEscalada = wa_link ? `WhatsApp (link EXACTO: ${wa_link})` : 'mensaje privado (DM) en esta misma plataforma';\nconst siguientePasoValor = wa_link ? 'whatsapp' : 'dm';\n\nconst seccionPost = contenidoPost\n  ? `\\nCONTEXTO DEL POST COMENTADO:\\n${contenidoPost}\\n`\n  : '';\n\nconst promptSistema = `Actúa como un Community Manager experto en conversión, integrando SEO, AEO y GEO.\n\nEmpresa: ${nombre_empresa}\nDescripción: ${descripcion}\nTono de marca: ${tono}\nCanal de escalada: ${canalEscalada}\n\nTu función es:\n- responder con claridad (AEO)\n- detectar intención del usuario\n- calificar el lead\n- llevar la conversación FUERA del comentario público, hacia ${canalEscalada}, lo antes posible\n\nDebes:\n1. Identificar la intención: informacional, comercial o transaccional\n2. Dar una micro-respuesta útil y breve (máximo 1 oración) que demuestre que entendiste lo que pidió — sin resolverlo por completo en el comentario\n3. Invitar a continuar por ${canalEscalada} — esto va SIEMPRE, en cada respuesta, sin excepción, incluso en el primer mensaje\n4. NO hagas preguntas de calificación (medidas, tipo de servicio, etc.) dentro del comentario público — esas se resuelven por ${canalEscalada}, no aquí\n\nIMPORTANTE:\n- La RESPUESTA debe ser corta (máximo 2 oraciones), apta para publicar directamente en el comentario/DM\n- NO uses markdown, bullets ni emojis excesivos en la respuesta pública\n${wa_link ? `- SIEMPRE incluye el link de WhatsApp tal cual: ${wa_link}` : '- Invita a escribir por mensaje privado, sin inventar ningún link ni número'}\n- Sé cálido pero directo — el objetivo es mover la conversación a ${canalEscalada}, no resolverla en público\n- Si hay CONTEXTO DEL POST COMENTADO, úsalo para que la micro-respuesta sea más relevante y específica\n\nEntrega EXACTAMENTE en este formato:\nINTENCIÓN: [informacional|comercial|transaccional]\nRESPUESTA: [texto listo para publicar en redes${wa_link ? ', SIEMPRE con el link de WhatsApp incluido' : ''}]\nLEAD: [frío|tibio|caliente]\nPREGUNTA: [pregunta de calificación, se usará por ${canalEscalada}, no en el comentario]\nSIGUIENTE PASO: [${siguientePasoValor}]`;\n\nconst mensajeUsuario = `Plataforma: ${evento.plataforma}\nTipo: ${evento.tipo}${seccionPost}\nMensaje del usuario: ${evento.mensaje}`;\n\nreturn [{ json: {\n  promptSistema,\n  mensajeUsuario,\n  evento,\n  wa_link,\n  empresa_nombre: nombre_empresa\n}}];"
         },
         "id": "preparar-contexto",
         "name": "🔧 Preparar Contexto Community AI",
@@ -1907,7 +2033,7 @@
         "credentials": {
           "groqApi": {
             "id": "jORffbRhRNohHT1B",
-            "name": "Groq account"
+            "name": "Groq API"
           }
         }
       },
@@ -2506,7 +2632,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ nombre: $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre || 'Contacto FB/IG sin nombre', telefono: null, origen: 'manual', temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', wa_contact_id: $('🔍 Encontrar Deal por Teléfono').item.json.wa_contact_id, notas: 'Lead generado por Community AI (RRSS - ' + ($('🔍 Extraer Evento FB/IG').item.json.plataforma || '') + '): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
+          "jsonBody": "={{ JSON.stringify({ nombre: $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre || 'Contacto FB/IG sin nombre', telefono: null, origen: ($('🔍 Extraer Evento FB/IG').item.json.plataforma === 'instagram' ? 'instagram' : $('🔍 Extraer Evento FB/IG').item.json.plataforma === 'facebook' ? 'facebook' : 'manual'), temperatura: ({frío:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta Community AI').item.json.lead] || 'bajo', wa_contact_id: $('🔍 Encontrar Deal por Teléfono').item.json.wa_contact_id, notas: 'Lead generado por Community AI (RRSS - ' + ($('🔍 Extraer Evento FB/IG').item.json.plataforma || '') + '): ' + ($('🔍 Parsear Respuesta Community AI').item.json.intencion || '') }) }}",
           "options": {}
         }
       },
@@ -2712,6 +2838,87 @@
           2350,
           120
         ]
+      },
+      {
+        "id": "cai-nota-actividad-crm",
+        "name": "📝 Preparar Nota Actividad (CRM)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          4740,
+          680
+        ],
+        "parameters": {
+          "jsCode": "const dealResp = $json;\nconst dealId = dealResp && dealResp.id ? dealResp.id : null;\n\nlet contenido = null;\ntry {\n  const parsed = $('🔍 Parsear Respuesta Community AI').item.json;\n  const lead = (parsed.lead || '').toLowerCase();\n  if (lead === 'caliente') {\n    contenido = 'Community AI: comentario/DM clasificado como lead caliente.';\n  }\n} catch (e) { /* si no se puede leer, no se loggea nada */ }\n\nreturn [{ json: { dealId, contenido, deberiaLoggear: !!(dealId && contenido) } }];"
+        }
+      },
+      {
+        "id": "cai-if-loggear-crm",
+        "name": "🔀 ¿Vale la pena loggear?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          4960,
+          680
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "vale-la-pena",
+                "leftValue": "={{ $json.deberiaLoggear }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        }
+      },
+      {
+        "id": "cai-post-actividad-crm",
+        "name": "📌 G54: Agregar Nota CRM",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          5180,
+          680
+        ],
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/crm/deals/' + $json.dealId + '/activities' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM').item.json.access_token }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ tipo: 'sistema', contenido: $json.contenido }) }}",
+          "options": {}
+        }
       }
     ],
     "connections": {
@@ -3160,6 +3367,51 @@
           ],
           []
         ]
+      },
+      "💾 G54: Crear Deal CRM": {
+        "main": [
+          [
+            {
+              "node": "📝 Preparar Nota Actividad (CRM)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "💾 G54: Actualizar Deal CRM": {
+        "main": [
+          [
+            {
+              "node": "📝 Preparar Nota Actividad (CRM)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📝 Preparar Nota Actividad (CRM)": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Vale la pena loggear?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Vale la pena loggear?": {
+        "main": [
+          [
+            {
+              "node": "📌 G54: Agregar Nota CRM",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          []
+        ]
       }
     },
     "nodeGroups": [],
@@ -3169,18 +3421,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-07-18T18:17:58.702Z",
-        "id": 2203,
+        "createdAt": "2026-07-28T13:50:51.851Z",
+        "id": 2439,
         "workflowId": "62tIvF0snsrMj0sM",
-        "versionId": "286e7f58-1346-413e-ad69-265e47e380eb",
+        "versionId": "d075f984-e0ed-4643-a7c6-4913623033a9",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-07-18T18:17:58.656Z",
-        "id": 2202,
+        "createdAt": "2026-07-28T13:50:51.733Z",
+        "id": 2438,
         "workflowId": "62tIvF0snsrMj0sM",
-        "versionId": "286e7f58-1346-413e-ad69-265e47e380eb",
+        "versionId": "d075f984-e0ed-4643-a7c6-4913623033a9",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }

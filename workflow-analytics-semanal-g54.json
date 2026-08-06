@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-07T16:35:12.003Z",
+  "updatedAt": "2026-07-28T20:45:01.261Z",
   "createdAt": "2026-06-12T20:28:34.750Z",
   "id": "EX9K1AZwKeouSJ9G",
   "name": "📊 Analytics AI Semanal — G54",
@@ -29,7 +29,8 @@
       "position": [
         240,
         400
-      ]
+      ],
+      "disabled": true
     },
     {
       "parameters": {
@@ -65,13 +66,13 @@
             {
               "id": "a3",
               "name": "G54_AGENT_TOKEN",
-              "value": "G54_AGENT_TOKEN_REDACTED",
+              "value": "REDACTED_AGENT_TOKEN",
               "type": "string"
             },
             {
               "id": "a4",
               "name": "G54_COMPANY_ID",
-              "value": "1",
+              "value": "={{ $('🌐 Trigger Webhook').isExecuted ? ($('🌐 Trigger Webhook').item.json.body.company_id || $('🌐 Trigger Webhook').item.json.query.company_id || '') : '' }}",
               "type": "string"
             },
             {
@@ -95,13 +96,13 @@
             {
               "id": "fb-page",
               "name": "FB_PAGE_ID",
-              "value": "1713965015486703",
+              "value": "={{ $('🌐 Trigger Webhook').isExecuted ? ($('🌐 Trigger Webhook').item.json.body.fb_page_id || $('🌐 Trigger Webhook').item.json.query.fb_page_id || '') : '' }}",
               "type": "string"
             },
             {
               "id": "ig-user",
               "name": "IG_USER_ID",
-              "value": "17841402206774619",
+              "value": "={{ $('🌐 Trigger Webhook').isExecuted ? ($('🌐 Trigger Webhook').item.json.body.ig_user_id || $('🌐 Trigger Webhook').item.json.query.ig_user_id || '') : '' }}",
               "type": "string"
             }
           ]
@@ -306,23 +307,13 @@
       "parameters": {
         "method": "POST",
         "url": "https://api.groq.com/openai/v1/chat/completions",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer GROQ_KEY_REDACTED"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
+        "sendHeaders": false,
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Actúa como un analista senior de marketing orgánico basado en SEO, AEO y GEO.\\n\\nTu función es analizar datos y optimizar la estrategia de contenido.\\n\\nDebes:\\n1. Identificar contenido de alto rendimiento\\n2. Detectar contenido de bajo rendimiento\\n3. Analizar keywords y temas que generan más engagement (SEO)\\n4. Analizar preguntas frecuentes e interacciones útiles (AEO)\\n5. Evaluar qué estructuras de contenido funcionan mejor (GEO)\\n6. Detectar patrones: horarios, formatos, temas\\n7. Proponer optimizaciones claras y accionables\\n\\nIMPORTANTE — FORMATOS:\\nG54 publica automáticamente imagen estática y post de texto.\\nSi recomiendas un formato diferente (carrusel, reel, video, story), márcalo explícitamente con la etiqueta [Recomendación manual — fuera de G54] para que el cliente sepa que debe ejecutarlo por su cuenta desde Meta Business Suite.\\n\\nEntrega EXACTAMENTE en este formato:\\nREPORTE:\\nTOP CONTENIDO:\\nBAJO RENDIMIENTO:\\nINSIGHTS SEO:\\nINSIGHTS AEO:\\nINSIGHTS GEO:\\nINSIGHTS CONVERSIÓN:\\nRECOMENDACIONES:\\n\\nSé claro, accionable y orientado a mejora continua. Sin relleno.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": $('🔧 Preparar Datos Analytics').item.json.contextoAnalytics\n    }\n  ],\n  \"temperature\": 0.5,\n  \"max_tokens\": 1200\n}) }}",
-        "options": {}
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi"
       },
       "id": "groq-analytics",
       "name": "🤖 Groq: Analytics AI",
@@ -331,11 +322,17 @@
       "position": [
         2400,
         480
-      ]
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq API"
+        }
+      }
     },
     {
       "parameters": {
-        "jsCode": "const groqRaw = $('🤖 Groq: Analytics AI').item.json;\nconst texto = groqRaw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`${label}[:\\\\s]+([\\\\s\\\\S]*?)(?=\\\\n[A-ZÁÉÍÓÚ\\\\s]+:|$)`, 'i');\n  const match = texto.match(regex);\n  return (match?.[1] || '').trim();\n};\n\nconst reporte = get('REPORTE');\nconst topContenido = get('TOP CONTENIDO');\nconst bajoRendimiento = get('BAJO RENDIMIENTO');\nconst insightsSEO = get('INSIGHTS SEO');\nconst insightsAEO = get('INSIGHTS AEO');\nconst insightsGEO = get('INSIGHTS GEO');\nconst insightsConversion = get('INSIGHTS CONVERSI[ÓO]N');\nconst recomendaciones = get('RECOMENDACIONES');\n\nconst datos = $('🔧 Preparar Datos Analytics').item.json;\n\nreturn [{ json: {\n  reporte,\n  topContenido,\n  bajoRendimiento,\n  insightsSEO,\n  insightsAEO,\n  insightsGEO,\n  insightsConversion,\n  recomendaciones,\n  texto_completo: texto,\n  nombreEmpresa: datos.nombreEmpresa,\n  emailEmpresa: datos.emailEmpresa,\n  totalPosts: datos.totalPosts,\n  totalLeads: datos.totalLeads,\n  leadsCalientes: datos.leadsCalientes,\n  periodoAnalisis: datos.periodoAnalisis\n}}];"
+        "jsCode": "const groqRaw = $('🤖 Groq: Analytics AI').item.json;\nconst texto = groqRaw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`(?:^|\\\\n)\\\\*{0,2}\\\\s*${label}\\\\s*\\\\*{0,2}[:\\\\s]+([\\\\s\\\\S]*?)(?=\\\\n\\\\*{0,2}[A-ZÁÉÍÓÚ][A-ZÁÉÍÓÚ\\\\s]+\\\\*{0,2}:|$)`, 'i');\n  const match = texto.match(regex);\n  return (match?.[1] || '').trim();\n};\n\nconst reporte = get('REPORTE');\nconst topContenido = get('TOP CONTENIDO');\nconst bajoRendimiento = get('BAJO RENDIMIENTO');\nconst insightsSEO = get('INSIGHTS SEO');\nconst insightsAEO = get('INSIGHTS AEO');\nconst insightsGEO = get('INSIGHTS GEO');\nconst insightsConversion = get('INSIGHTS CONVERSI[ÓO]N');\nconst recomendaciones = get('RECOMENDACIONES');\n\nconst datos = $('🔧 Preparar Datos Analytics').item.json;\n\nreturn [{ json: {\n  reporte,\n  topContenido,\n  bajoRendimiento,\n  insightsSEO,\n  insightsAEO,\n  insightsGEO,\n  insightsConversion,\n  recomendaciones,\n  texto_completo: texto,\n  nombreEmpresa: datos.nombreEmpresa,\n  emailEmpresa: datos.emailEmpresa,\n  totalPosts: datos.totalPosts,\n  totalLeads: datos.totalLeads,\n  leadsCalientes: datos.leadsCalientes,\n  periodoAnalisis: datos.periodoAnalisis\n}}];"
       },
       "id": "parsear-reporte",
       "name": "🔍 Parsear Reporte Analytics",
@@ -391,7 +388,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ ({\n  company_id: parseInt($('⚙️ Config Growth54').item.json.G54_COMPANY_ID) || 1,\n  metricas: [\n    {\n      platform: 'facebook',\n      period_start: $('📊 Preparar Métricas G54').item.json.period_start,\n      period_end: $('📊 Preparar Métricas G54').item.json.period_end,\n      alcance_total: $('📊 Preparar Métricas G54').item.json.fb.alcance,\n      impresiones_total: $('📊 Preparar Métricas G54').item.json.fb.alcance,\n      engagement_total: $('📊 Preparar Métricas G54').item.json.fb.engagement,\n      engagement_rate_avg: $('📊 Preparar Métricas G54').item.json.engagement_rate,\n      clics_total: $('📊 Preparar Métricas G54').item.json.fb.clics,\n      leads_total: 0\n    },\n    {\n      platform: 'instagram',\n      period_start: $('📊 Preparar Métricas G54').item.json.period_start,\n      period_end: $('📊 Preparar Métricas G54').item.json.period_end,\n      alcance_total: 0,\n      impresiones_total: 0,\n      engagement_total: 0,\n      engagement_rate_avg: 0,\n      clics_total: 0,\n      leads_total: 0\n    }\n  ]\n}) }}",
+        "jsonBody": "={{ ({\n  company_id: parseInt($('⚙️ Config Growth54').item.json.G54_COMPANY_ID) || 1,\n  metricas: [\n    {\n      platform: 'facebook',\n      period_start: $('📊 Preparar Métricas G54').item.json.period_start,\n      period_end: $('📊 Preparar Métricas G54').item.json.period_end,\n      alcance: $('📊 Preparar Métricas G54').item.json.fb.alcance,\n      impresiones: $('📊 Preparar Métricas G54').item.json.fb.alcance,\n      engagement_count: $('📊 Preparar Métricas G54').item.json.fb.engagement,\n      engagement_rate: $('📊 Preparar Métricas G54').item.json.engagement_rate,\n      clics: $('📊 Preparar Métricas G54').item.json.fb.clics,\n      leads: 0\n    },\n    {\n      platform: 'instagram',\n      period_start: $('📊 Preparar Métricas G54').item.json.period_start,\n      period_end: $('📊 Preparar Métricas G54').item.json.period_end,\n      alcance: 0,\n      impresiones: 0,\n      engagement_count: 0,\n      engagement_rate: 0,\n      clics: 0,\n      leads: 0\n    }\n  ]\n}) }}",
         "options": {}
       }
     },
@@ -521,7 +518,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ ({\n  company_id: $('📊 Preparar Métricas Post').item.json.company_id,\n  metricas: [{\n    platform: $('📊 Preparar Métricas Post').item.json.platform,\n    period_start: $('📊 Preparar Métricas Post').item.json.period_start,\n    period_end: $('📊 Preparar Métricas Post').item.json.period_end,\n    alcance_total: $('📊 Preparar Métricas Post').item.json.alcance_total,\n    impresiones_total: $('📊 Preparar Métricas Post').item.json.impresiones_total,\n    engagement_total: $('📊 Preparar Métricas Post').item.json.engagement_total,\n    engagement_rate_avg: $('📊 Preparar Métricas Post').item.json.engagement_rate_avg,\n    clics_total: $('📊 Preparar Métricas Post').item.json.clics_total,\n    leads_total: 0\n  }]\n}) }}",
+        "jsonBody": "={{ ({\n  company_id: $('📊 Preparar Métricas Post').item.json.company_id,\n  metricas: [{\n    platform: $('📊 Preparar Métricas Post').item.json.platform,\n    period_start: $('📊 Preparar Métricas Post').item.json.period_start,\n    period_end: $('📊 Preparar Métricas Post').item.json.period_end,\n    social_post_id: $('📊 Preparar Métricas Post').item.json.post_id,\n    alcance: $('📊 Preparar Métricas Post').item.json.alcance_total,\n    impresiones: $('📊 Preparar Métricas Post').item.json.impresiones_total,\n    engagement_count: $('📊 Preparar Métricas Post').item.json.engagement_total,\n    engagement_rate: $('📊 Preparar Métricas Post').item.json.engagement_rate_avg,\n    clics: $('📊 Preparar Métricas Post').item.json.clics_total,\n    leads: 0\n  }]\n}) }}",
         "options": {}
       }
     },
@@ -793,10 +790,10 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": null,
-  "versionId": "84e2dd34-3c86-418c-be35-9bb76457cd45",
-  "activeVersionId": "84e2dd34-3c86-418c-be35-9bb76457cd45",
-  "versionCounter": 14,
-  "triggerCount": 2,
+  "versionId": "efc7e717-c85e-4915-8ace-d05db54eb26b",
+  "activeVersionId": "efc7e717-c85e-4915-8ace-d05db54eb26b",
+  "versionCounter": 19,
+  "triggerCount": 1,
   "sourceWorkflowId": null,
   "shared": [
     {
@@ -820,9 +817,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-07-07T16:35:12.010Z",
-    "createdAt": "2026-07-07T16:35:12.010Z",
-    "versionId": "84e2dd34-3c86-418c-be35-9bb76457cd45",
+    "updatedAt": "2026-07-28T20:45:01.265Z",
+    "createdAt": "2026-07-28T20:45:01.265Z",
+    "versionId": "efc7e717-c85e-4915-8ace-d05db54eb26b",
     "workflowId": "EX9K1AZwKeouSJ9G",
     "nodes": [
       {
@@ -847,7 +844,8 @@
         "position": [
           240,
           400
-        ]
+        ],
+        "disabled": true
       },
       {
         "parameters": {
@@ -883,13 +881,13 @@
               {
                 "id": "a3",
                 "name": "G54_AGENT_TOKEN",
-                "value": "G54_AGENT_TOKEN_REDACTED",
+                "value": "REDACTED_AGENT_TOKEN",
                 "type": "string"
               },
               {
                 "id": "a4",
                 "name": "G54_COMPANY_ID",
-                "value": "1",
+                "value": "={{ $('🌐 Trigger Webhook').isExecuted ? ($('🌐 Trigger Webhook').item.json.body.company_id || $('🌐 Trigger Webhook').item.json.query.company_id || '') : '' }}",
                 "type": "string"
               },
               {
@@ -913,13 +911,13 @@
               {
                 "id": "fb-page",
                 "name": "FB_PAGE_ID",
-                "value": "1713965015486703",
+                "value": "={{ $('🌐 Trigger Webhook').isExecuted ? ($('🌐 Trigger Webhook').item.json.body.fb_page_id || $('🌐 Trigger Webhook').item.json.query.fb_page_id || '') : '' }}",
                 "type": "string"
               },
               {
                 "id": "ig-user",
                 "name": "IG_USER_ID",
-                "value": "17841402206774619",
+                "value": "={{ $('🌐 Trigger Webhook').isExecuted ? ($('🌐 Trigger Webhook').item.json.body.ig_user_id || $('🌐 Trigger Webhook').item.json.query.ig_user_id || '') : '' }}",
                 "type": "string"
               }
             ]
@@ -1124,23 +1122,13 @@
         "parameters": {
           "method": "POST",
           "url": "https://api.groq.com/openai/v1/chat/completions",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "Bearer GROQ_KEY_REDACTED"
-              },
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          },
+          "sendHeaders": false,
           "sendBody": true,
           "specifyBody": "json",
           "jsonBody": "={{ JSON.stringify({\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Actúa como un analista senior de marketing orgánico basado en SEO, AEO y GEO.\\n\\nTu función es analizar datos y optimizar la estrategia de contenido.\\n\\nDebes:\\n1. Identificar contenido de alto rendimiento\\n2. Detectar contenido de bajo rendimiento\\n3. Analizar keywords y temas que generan más engagement (SEO)\\n4. Analizar preguntas frecuentes e interacciones útiles (AEO)\\n5. Evaluar qué estructuras de contenido funcionan mejor (GEO)\\n6. Detectar patrones: horarios, formatos, temas\\n7. Proponer optimizaciones claras y accionables\\n\\nIMPORTANTE — FORMATOS:\\nG54 publica automáticamente imagen estática y post de texto.\\nSi recomiendas un formato diferente (carrusel, reel, video, story), márcalo explícitamente con la etiqueta [Recomendación manual — fuera de G54] para que el cliente sepa que debe ejecutarlo por su cuenta desde Meta Business Suite.\\n\\nEntrega EXACTAMENTE en este formato:\\nREPORTE:\\nTOP CONTENIDO:\\nBAJO RENDIMIENTO:\\nINSIGHTS SEO:\\nINSIGHTS AEO:\\nINSIGHTS GEO:\\nINSIGHTS CONVERSIÓN:\\nRECOMENDACIONES:\\n\\nSé claro, accionable y orientado a mejora continua. Sin relleno.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": $('🔧 Preparar Datos Analytics').item.json.contextoAnalytics\n    }\n  ],\n  \"temperature\": 0.5,\n  \"max_tokens\": 1200\n}) }}",
-          "options": {}
+          "options": {},
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "groqApi"
         },
         "id": "groq-analytics",
         "name": "🤖 Groq: Analytics AI",
@@ -1149,11 +1137,17 @@
         "position": [
           2400,
           480
-        ]
+        ],
+        "credentials": {
+          "groqApi": {
+            "id": "jORffbRhRNohHT1B",
+            "name": "Groq API"
+          }
+        }
       },
       {
         "parameters": {
-          "jsCode": "const groqRaw = $('🤖 Groq: Analytics AI').item.json;\nconst texto = groqRaw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`${label}[:\\\\s]+([\\\\s\\\\S]*?)(?=\\\\n[A-ZÁÉÍÓÚ\\\\s]+:|$)`, 'i');\n  const match = texto.match(regex);\n  return (match?.[1] || '').trim();\n};\n\nconst reporte = get('REPORTE');\nconst topContenido = get('TOP CONTENIDO');\nconst bajoRendimiento = get('BAJO RENDIMIENTO');\nconst insightsSEO = get('INSIGHTS SEO');\nconst insightsAEO = get('INSIGHTS AEO');\nconst insightsGEO = get('INSIGHTS GEO');\nconst insightsConversion = get('INSIGHTS CONVERSI[ÓO]N');\nconst recomendaciones = get('RECOMENDACIONES');\n\nconst datos = $('🔧 Preparar Datos Analytics').item.json;\n\nreturn [{ json: {\n  reporte,\n  topContenido,\n  bajoRendimiento,\n  insightsSEO,\n  insightsAEO,\n  insightsGEO,\n  insightsConversion,\n  recomendaciones,\n  texto_completo: texto,\n  nombreEmpresa: datos.nombreEmpresa,\n  emailEmpresa: datos.emailEmpresa,\n  totalPosts: datos.totalPosts,\n  totalLeads: datos.totalLeads,\n  leadsCalientes: datos.leadsCalientes,\n  periodoAnalisis: datos.periodoAnalisis\n}}];"
+          "jsCode": "const groqRaw = $('🤖 Groq: Analytics AI').item.json;\nconst texto = groqRaw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`(?:^|\\\\n)\\\\*{0,2}\\\\s*${label}\\\\s*\\\\*{0,2}[:\\\\s]+([\\\\s\\\\S]*?)(?=\\\\n\\\\*{0,2}[A-ZÁÉÍÓÚ][A-ZÁÉÍÓÚ\\\\s]+\\\\*{0,2}:|$)`, 'i');\n  const match = texto.match(regex);\n  return (match?.[1] || '').trim();\n};\n\nconst reporte = get('REPORTE');\nconst topContenido = get('TOP CONTENIDO');\nconst bajoRendimiento = get('BAJO RENDIMIENTO');\nconst insightsSEO = get('INSIGHTS SEO');\nconst insightsAEO = get('INSIGHTS AEO');\nconst insightsGEO = get('INSIGHTS GEO');\nconst insightsConversion = get('INSIGHTS CONVERSI[ÓO]N');\nconst recomendaciones = get('RECOMENDACIONES');\n\nconst datos = $('🔧 Preparar Datos Analytics').item.json;\n\nreturn [{ json: {\n  reporte,\n  topContenido,\n  bajoRendimiento,\n  insightsSEO,\n  insightsAEO,\n  insightsGEO,\n  insightsConversion,\n  recomendaciones,\n  texto_completo: texto,\n  nombreEmpresa: datos.nombreEmpresa,\n  emailEmpresa: datos.emailEmpresa,\n  totalPosts: datos.totalPosts,\n  totalLeads: datos.totalLeads,\n  leadsCalientes: datos.leadsCalientes,\n  periodoAnalisis: datos.periodoAnalisis\n}}];"
         },
         "id": "parsear-reporte",
         "name": "🔍 Parsear Reporte Analytics",
@@ -1209,7 +1203,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ ({\n  company_id: parseInt($('⚙️ Config Growth54').item.json.G54_COMPANY_ID) || 1,\n  metricas: [\n    {\n      platform: 'facebook',\n      period_start: $('📊 Preparar Métricas G54').item.json.period_start,\n      period_end: $('📊 Preparar Métricas G54').item.json.period_end,\n      alcance_total: $('📊 Preparar Métricas G54').item.json.fb.alcance,\n      impresiones_total: $('📊 Preparar Métricas G54').item.json.fb.alcance,\n      engagement_total: $('📊 Preparar Métricas G54').item.json.fb.engagement,\n      engagement_rate_avg: $('📊 Preparar Métricas G54').item.json.engagement_rate,\n      clics_total: $('📊 Preparar Métricas G54').item.json.fb.clics,\n      leads_total: 0\n    },\n    {\n      platform: 'instagram',\n      period_start: $('📊 Preparar Métricas G54').item.json.period_start,\n      period_end: $('📊 Preparar Métricas G54').item.json.period_end,\n      alcance_total: 0,\n      impresiones_total: 0,\n      engagement_total: 0,\n      engagement_rate_avg: 0,\n      clics_total: 0,\n      leads_total: 0\n    }\n  ]\n}) }}",
+          "jsonBody": "={{ ({\n  company_id: parseInt($('⚙️ Config Growth54').item.json.G54_COMPANY_ID) || 1,\n  metricas: [\n    {\n      platform: 'facebook',\n      period_start: $('📊 Preparar Métricas G54').item.json.period_start,\n      period_end: $('📊 Preparar Métricas G54').item.json.period_end,\n      alcance: $('📊 Preparar Métricas G54').item.json.fb.alcance,\n      impresiones: $('📊 Preparar Métricas G54').item.json.fb.alcance,\n      engagement_count: $('📊 Preparar Métricas G54').item.json.fb.engagement,\n      engagement_rate: $('📊 Preparar Métricas G54').item.json.engagement_rate,\n      clics: $('📊 Preparar Métricas G54').item.json.fb.clics,\n      leads: 0\n    },\n    {\n      platform: 'instagram',\n      period_start: $('📊 Preparar Métricas G54').item.json.period_start,\n      period_end: $('📊 Preparar Métricas G54').item.json.period_end,\n      alcance: 0,\n      impresiones: 0,\n      engagement_count: 0,\n      engagement_rate: 0,\n      clics: 0,\n      leads: 0\n    }\n  ]\n}) }}",
           "options": {}
         }
       },
@@ -1339,7 +1333,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ ({\n  company_id: $('📊 Preparar Métricas Post').item.json.company_id,\n  metricas: [{\n    platform: $('📊 Preparar Métricas Post').item.json.platform,\n    period_start: $('📊 Preparar Métricas Post').item.json.period_start,\n    period_end: $('📊 Preparar Métricas Post').item.json.period_end,\n    alcance_total: $('📊 Preparar Métricas Post').item.json.alcance_total,\n    impresiones_total: $('📊 Preparar Métricas Post').item.json.impresiones_total,\n    engagement_total: $('📊 Preparar Métricas Post').item.json.engagement_total,\n    engagement_rate_avg: $('📊 Preparar Métricas Post').item.json.engagement_rate_avg,\n    clics_total: $('📊 Preparar Métricas Post').item.json.clics_total,\n    leads_total: 0\n  }]\n}) }}",
+          "jsonBody": "={{ ({\n  company_id: $('📊 Preparar Métricas Post').item.json.company_id,\n  metricas: [{\n    platform: $('📊 Preparar Métricas Post').item.json.platform,\n    period_start: $('📊 Preparar Métricas Post').item.json.period_start,\n    period_end: $('📊 Preparar Métricas Post').item.json.period_end,\n    social_post_id: $('📊 Preparar Métricas Post').item.json.post_id,\n    alcance: $('📊 Preparar Métricas Post').item.json.alcance_total,\n    impresiones: $('📊 Preparar Métricas Post').item.json.impresiones_total,\n    engagement_count: $('📊 Preparar Métricas Post').item.json.engagement_total,\n    engagement_rate: $('📊 Preparar Métricas Post').item.json.engagement_rate_avg,\n    clics: $('📊 Preparar Métricas Post').item.json.clics_total,\n    leads: 0\n  }]\n}) }}",
           "options": {}
         }
       },
@@ -1605,18 +1599,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-07-07T16:35:12.163Z",
-        "id": 1891,
+        "createdAt": "2026-07-28T20:45:01.484Z",
+        "id": 2501,
         "workflowId": "EX9K1AZwKeouSJ9G",
-        "versionId": "84e2dd34-3c86-418c-be35-9bb76457cd45",
+        "versionId": "efc7e717-c85e-4915-8ace-d05db54eb26b",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-07-07T16:35:12.121Z",
-        "id": 1890,
+        "createdAt": "2026-07-28T20:45:01.416Z",
+        "id": 2500,
         "workflowId": "EX9K1AZwKeouSJ9G",
-        "versionId": "84e2dd34-3c86-418c-be35-9bb76457cd45",
+        "versionId": "efc7e717-c85e-4915-8ace-d05db54eb26b",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }

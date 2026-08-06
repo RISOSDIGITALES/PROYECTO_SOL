@@ -1,11 +1,5 @@
 {
-  "updatedAt": "2026-07-18T17:01:00.959Z",
-  "createdAt": "2026-06-20T00:45:39.368Z",
-  "id": "otycsrxrMEMuxuwD",
   "name": "💬 Sales AI — Motor de Conversación G54",
-  "description": null,
-  "active": true,
-  "isArchived": false,
   "nodes": [
     {
       "id": "sticky-info",
@@ -50,7 +44,7 @@
             {
               "id": "a3",
               "name": "G54_AGENT_TOKEN",
-              "value": "g54_agent_produccion_2026",
+              "value": "REDACTED_AGENT_TOKEN",
               "type": "string"
             },
             {
@@ -68,7 +62,7 @@
             {
               "id": "crm-pass",
               "name": "G54_MASTER_PASSWORD",
-              "value": "wx2026_master",
+              "value": "REDACTED_MASTER_PASSWORD",
               "type": "string"
             }
           ]
@@ -423,7 +417,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "// Determine which extractor has the message (WA or Social)\nlet msgData;\ntry { msgData = $('🔧 Extraer Mensaje WA').item.json; } catch(e) {}\nif (!msgData || msgData.skip) {\n  try { msgData = $('🔧 Extraer Mensaje FB/IG DM').item.json; } catch(e) {}\n}\n\nlet texto = msgData?.texto || '';\ntry {\n  const medioResult = $('🔧 Combinar Texto de Medio').first().json;\n  if (medioResult && medioResult.texto) texto = medioResult.texto;\n} catch (e) { /* no vino por la rama de medios, se usa el texto original */ }\nconst telefono = msgData?.telefono || '';\nconst canal = msgData?.canal || 'whatsapp';\nconst nombreContacto = msgData?.nombreContacto || '';\nconst usuarioId = msgData?.usuarioId || '';\nconst messageId = msgData?.messageId || '';\n\n// Empresa\nconst empresaRaw = $('🏢 Obtener Empresa G54').item.json;\nconst empresa = empresaRaw?.data || empresaRaw || {};\nconst empresa_nombre = empresa.name || 'Empresa';\nconst empresa_descripcion = empresa.description || '';\nconst empresa_ciudad = empresa.base_city || '';\nconst empresa_web = empresa.website || '';\nconst emailsVendedor = (empresa.emails || []).join(',') || '';\n\n// WA Config (todo desde G54)\nconst waConfigRaw = $('⚙️ Obtener WA Config G54').item.json;\nconst waConfig = waConfigRaw?.data || {};\n\nconst wa_access_token = waConfig.wa_access_token || '';\nconst phone_number_id = waConfig.phone_number_id || '';\nconst auto_reply = waConfig.auto_reply !== undefined ? waConfig.auto_reply : true;\nconst nombre_agente = waConfig.agent_name || 'Agente';\nconst bienvenida = waConfig.welcome_message || `Hola 👋 Soy ${nombre_agente}, el asistente de ${empresa_nombre}. ¿En qué te puedo ayudar?`;\nconst instruccionesIA = waConfig.ia_instructions || '';\nconst promptTemplate = waConfig.system_prompt || `Eres {{AGENTE}}, asistente virtual de {{EMPRESA}}. Ayuda al cliente a conocer los productos y servicios disponibles. Catálogo:\\n{{CATALOGO}}\\n{{INSTRUCCIONES}}`;\nconst followup24 = waConfig.followup_24h || '';\nconst followup72 = waConfig.followup_72h || '';\n\n// Productos\nconst productosRaw = $('📦 Obtener Productos G54').item.json;\nconst productos = productosRaw?.data || [];\nconst catalogoProductos = productos.map(p => {\n  const nombre = p.name || '';\n  const desc = p.description || '';\n  const kw = (p.keywords || []).join(', ');\n  return `• ${nombre}: ${desc}${kw ? ' [' + kw + ']' : ''}`;\n}).filter(l => l.length > 3).join('\\n');\n\n// Lead existente\nconst leadRaw = $('📋 Buscar Lead Existente').item.json;\nconst leads = leadRaw?.data || [];\nconst leadExistente = leads[0] || null;\nconst leadId = leadExistente?.id || null;\n// Parse __DATOS__ marker from G54 historial for datos persistence\nconst rawHistorial = leadExistente?.historial || '';\nconst historialLines = rawHistorial.split('\\n');\nlet leadDatos = {};\nconst datosLine = [...historialLines].reverse().find(l => l.includes('[__DATOS__]'));\nif (datosLine) {\n  try { leadDatos = JSON.parse(datosLine.replace(/^.*\\[__DATOS__\\]/, '')); } catch(e) {}\n}\nconst historial = historialLines.filter(l => !l.includes('[__DATOS__]')).join('\\n');\nconst estado = leadExistente?.estado || 'Nuevo';\nconst esNuevo = !leadId;\n\n// datos_actualizados is a free object — the prompt defines what to collect\n// We carry over whatever was stored previously and let AI merge\nconst datosRecolectados = typeof leadDatos === 'object' ? leadDatos : {};\n\n// Build prompt — replace placeholders\nconst promptSistema = promptTemplate\n  .replace(/\\{\\{AGENTE\\}\\}/g, nombre_agente)\n  .replace(/\\{\\{EMPRESA\\}\\}/g, empresa_nombre)\n  .replace(/\\{\\{CATALOGO\\}\\}/g, catalogoProductos || '(sin catálogo disponible)')\n  .replace(/\\{\\{INSTRUCCIONES\\}\\}/g, instruccionesIA ? 'Instrucciones adicionales:\\n' + instruccionesIA : '')\n  .trim();\n\n// Hora local (Miami UTC-4)\nconst h = (new Date().getUTCHours() - 4 + 24) % 24;\nconst saludoHora = h >= 6 && h < 12 ? 'buenos días' : h >= 12 && h < 19 ? 'buenas tardes' : 'buenas noches';\n\nreturn [{ json: {\n  // Message\n  texto,\n  telefono,\n  canal,\n  nombreContacto,\n  usuarioId,\n  messageId,\n  // Context\n  promptSistema,\n  nombre_agente,\n  empresa_nombre,\n  empresa_descripcion,\n  empresa_ciudad,\n  empresa_web,\n  emailsVendedor,\n  bienvenida,\n  followup24,\n  followup72,\n  catalogoProductos,\n  // WA credentials (from G54 config)\n  wa_access_token,\n  phone_number_id,\n  auto_reply,\n  // Lead\n  leadId,\n  estado,\n  historial,\n  datosRecolectados,\n  esNuevo,\n  saludoHora\n} }];"
+        "jsCode": "// Determine which extractor has the message (WA or Social)\nlet msgData;\ntry { msgData = $('🔧 Extraer Mensaje WA').item.json; } catch(e) {}\nif (!msgData || msgData.skip) {\n  try { msgData = $('🔧 Extraer Mensaje FB/IG DM').item.json; } catch(e) {}\n}\n\nlet texto = msgData?.texto || '';\ntry {\n  const medioResult = $('🔧 Combinar Texto de Medio').first().json;\n  if (medioResult && medioResult.texto) texto = medioResult.texto;\n} catch (e) { /* no vino por la rama de medios, se usa el texto original */ }\nconst telefono = msgData?.telefono || '';\nconst canal = msgData?.canal || 'whatsapp';\nconst nombreContacto = msgData?.nombreContacto || '';\nconst usuarioId = msgData?.usuarioId || '';\nconst messageId = msgData?.messageId || '';\n\n// Empresa\nconst empresaRaw = $('🏢 Obtener Empresa G54').item.json;\nconst empresa = empresaRaw?.data || empresaRaw || {};\nconst empresa_nombre = empresa.name || 'Empresa';\nconst empresa_descripcion = empresa.description || '';\nconst empresa_ciudad = empresa.base_city || '';\nconst empresa_web = empresa.website || '';\nconst emailsVendedor = (empresa.emails || []).join(',') || '';\n\n// WA Config (todo desde G54)\nconst waConfigRaw = $('⚙️ Obtener WA Config G54').item.json;\nconst waConfig = waConfigRaw?.data || {};\n\nconst wa_access_token = waConfig.wa_access_token || '';\nconst phone_number_id = waConfig.phone_number_id || '';\nconst auto_reply = waConfig.auto_reply !== undefined ? waConfig.auto_reply : true;\nconst nombre_agente = waConfig.agent_name || 'Agente';\nconst bienvenida = waConfig.welcome_message || `Hola 👋 Soy ${nombre_agente}, el asistente de ${empresa_nombre}. ¿En qué te puedo ayudar?`;\nconst instruccionesIA = waConfig.ia_instructions || '';\nconst promptTemplate = waConfig.system_prompt || `Eres {{AGENTE}}, asistente virtual de {{EMPRESA}}. Ayuda al cliente a conocer los productos y servicios disponibles. Catálogo:\\n{{CATALOGO}}\\n{{INSTRUCCIONES}}`;\nconst followup24 = waConfig.followup_24h || '';\nconst followup72 = waConfig.followup_72h || '';\n\n// Productos\nconst productosRaw = $('📦 Obtener Productos G54').item.json;\nconst productos = productosRaw?.data || [];\nconst catalogoProductos = productos.map(p => {\n  const nombre = p.name || '';\n  const desc = p.description || '';\n  const kw = (p.keywords || []).join(', ');\n  return `• ${nombre}: ${desc}${kw ? ' [' + kw + ']' : ''}`;\n}).filter(l => l.length > 3).join('\\n');\n\n// Lead existente\nconst leadRaw = $('📋 Buscar Lead Existente').item.json;\nconst leads = leadRaw?.data || [];\nconst leadExistente = leads[0] || null;\nconst leadId = leadExistente?.id || null;\n// Parse __DATOS__ marker from G54 historial for datos persistence\nconst rawHistorial = leadExistente?.historial || '';\nconst historialLines = rawHistorial.split('\\n');\nlet leadDatos = {};\nconst datosLine = [...historialLines].reverse().find(l => l.includes('[__DATOS__]'));\nif (datosLine) {\n  try { leadDatos = JSON.parse(datosLine.replace(/^.*\\[__DATOS__\\]/, '')); } catch(e) {}\n}\nconst historial = historialLines.filter(l => !l.includes('[__DATOS__]')).join('\\n');\nconst estado = leadExistente?.estado || 'Nuevo';\nconst esNuevo = !leadId;\n\n// datos_actualizados is a free object — the prompt defines what to collect\n// We carry over whatever was stored previously and let AI merge\nconst datosRecolectados = typeof leadDatos === 'object' ? leadDatos : {};\n\n// Build prompt — replace placeholders\nconst promptSistema = promptTemplate\n  .replace(/\\{\\{AGENTE\\}\\}/g, nombre_agente)\n  .replace(/\\{\\{EMPRESA\\}\\}/g, empresa_nombre)\n  .replace(/\\{\\{CATALOGO\\}\\}/g, catalogoProductos || '(sin catálogo disponible)')\n  .replace(/\\{\\{INSTRUCCIONES\\}\\}/g, instruccionesIA ? 'Instrucciones adicionales:\\n' + instruccionesIA : '')\n  .trim();\n\n// Hora local — se lee la zona horaria real de la empresa desde G54.\n// Si no está configurada, NUNCA se asume la de otra empresa (ni Miami ni ninguna otra) —\n// se usa UTC como neutral y el Vigía G54 alerta aparte para que se configure (ver workflow-vigia-g54.json).\nlet h;\ntry {\n  const tz = $('🕐 Resolver Timezone Empresa').item.json.empresa_timezone;\n  if (tz) {\n    h = parseInt(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hour12: false }).format(new Date()), 10);\n  } else {\n    throw new Error('sin timezone resuelta');\n  }\n} catch (e) {\n  h = new Date().getUTCHours();\n}\nconst saludoHora = h >= 6 && h < 12 ? 'buenos días' : h >= 12 && h < 19 ? 'buenas tardes' : 'buenas noches';\n\nreturn [{ json: {\n  // Message\n  texto,\n  telefono,\n  canal,\n  nombreContacto,\n  usuarioId,\n  messageId,\n  // Context\n  promptSistema,\n  nombre_agente,\n  empresa_nombre,\n  empresa_descripcion,\n  empresa_ciudad,\n  empresa_web,\n  emailsVendedor,\n  bienvenida,\n  followup24,\n  followup72,\n  catalogoProductos,\n  // WA credentials (from G54 config)\n  wa_access_token,\n  phone_number_id,\n  auto_reply,\n  // Lead\n  leadId,\n  estado,\n  historial,\n  datosRecolectados,\n  esNuevo,\n  saludoHora\n} }];"
       }
     },
     {
@@ -471,7 +465,7 @@
       "credentials": {
         "groqApi": {
           "id": "jORffbRhRNohHT1B",
-          "name": "Groq account"
+          "name": "Groq API"
         }
       },
       "parameters": {
@@ -674,10 +668,13 @@
       },
       "parameters": {
         "subject": "={{ ($json.escalada && $json.clasificacion !== 'caliente') ? ('🆘 Consulta sin respuesta — ' + ($json.empresa_nombre || 'G54') + ' — ' + ($json.nombreContacto || $json.telefono)) : ('🔥 Lead Caliente — ' + ($json.empresa_nombre || 'G54') + ' — ' + ($json.nombreContacto || $json.telefono)) }}",
-        "options": {},
+        "options": {
+          "appendAttribution": false
+        },
         "toEmail": "={{ $json.emailsVendedor || 'risosadmi@gmail.com' }}",
-        "fromEmail": "risosadmi@gmail.com",
-        "html": "={{ (($json.escalada && $json.clasificacion !== 'caliente') ? '<h2>🆘 Consulta sin respuesta — necesita un especialista</h2>' : '<h2>🔥 Lead Caliente</h2>') + '<p><strong>Canal:</strong> ' + $json.canal + '</p><p><strong>Teléfono/ID:</strong> ' + $json.telefono + '</p><p><strong>Nombre:</strong> ' + ($json.nombreContacto || 'No disponible') + '</p><hr><h3>Datos recolectados:</h3><pre>' + JSON.stringify($json.datosRecolectados, null, 2) + '</pre><hr><p><strong>Resumen:</strong> ' + ($json.resumenLead || '-') + '</p>' }}"
+        "fromEmail": "Growth54 <risosadmi@gmail.com>",
+        "html": "={{ (($json.escalada && $json.clasificacion !== 'caliente') ? '<h2>🆘 Consulta sin respuesta — necesita un especialista</h2>' : '<h2>🔥 Lead Caliente</h2>') + '<p><strong>Canal:</strong> ' + $json.canal + '</p><p><strong>Teléfono/ID:</strong> ' + $json.telefono + '</p><p><strong>Nombre:</strong> ' + ($json.nombreContacto || 'No disponible') + '</p><hr><h3>Datos recolectados:</h3><pre>' + JSON.stringify($json.datosRecolectados, null, 2) + '</pre><hr><p><strong>Resumen:</strong> ' + ($json.resumenLead || '-') + '</p>' }}",
+        "text": "={{ (($json.escalada && $json.clasificacion !== 'caliente') ? '<h2>🆘 Consulta sin respuesta — necesita un especialista</h2>' : '<h2>🔥 Lead Caliente</h2>') + '<p><strong>Canal:</strong> ' + $json.canal + '</p><p><strong>Teléfono/ID:</strong> ' + $json.telefono + '</p><p><strong>Nombre:</strong> ' + ($json.nombreContacto || 'No disponible') + '</p><hr><h3>Datos recolectados:</h3><pre>' + JSON.stringify($json.datosRecolectados, null, 2) + '</pre><hr><p><strong>Resumen:</strong> ' + ($json.resumenLead || '-') + '</p>' }}"
       },
       "disabled": true,
       "webhookId": "3ddb6f54-49bd-497c-90e3-b905e3aa6ebe"
@@ -962,13 +959,25 @@
             {
               "id": "f3",
               "name": "G54_AGENT_TOKEN",
-              "value": "g54_agent_produccion_2026",
+              "value": "REDACTED_AGENT_TOKEN",
               "type": "string"
             },
             {
               "id": "f4",
               "name": "G54_COMPANY_ID",
               "value": "={{ $json.company_id }}",
+              "type": "string"
+            },
+            {
+              "id": "f5",
+              "name": "G54_MASTER_EMAIL",
+              "value": "master@growth54.local",
+              "type": "string"
+            },
+            {
+              "id": "f6",
+              "name": "G54_MASTER_PASSWORD",
+              "value": "REDACTED_MASTER_PASSWORD",
               "type": "string"
             }
           ]
@@ -1047,7 +1056,8 @@
         700
       ],
       "parameters": {
-        "jsCode": "const leadsRaw = $('📋 Obtener Leads Sin Respuesta').item.json;\nconst leads = leadsRaw?.data || leadsRaw?.records || [];\n\nlet waConfigRaw = {};\ntry { waConfigRaw = $('⚙️ Obtener WA Config Follow-up').item?.json || {}; } catch(e) {}\nconst waConfig = waConfigRaw?.data || {};\n\nconst followup24 = waConfig.followup_24h || 'Hola 👋 ¿Sigues necesitando ayuda? Aquí estamos para asistirte.';\nconst followup72 = waConfig.followup_72h || 'Seguimos disponibles cuando lo necesites 👍';\nconst wa_access_token = waConfig.wa_access_token || '';\nconst phone_number_id = waConfig.phone_number_id || '';\n\nconst now = new Date();\nconst results = [];\n\nfor (const lead of leads) {\n  const ultimaActividad = new Date(lead.ultima_actividad || lead.created_at || 0);\n  const horasDiff = (now - ultimaActividad) / (1000 * 60 * 60);\n  let tipoFollowup = null;\n  if (horasDiff >= 72) tipoFollowup = '72h';\n  else if (horasDiff >= 24) tipoFollowup = '24h';\n  if (!tipoFollowup) continue;\n\n  const telefono = (lead.phone || '').replace(/^\\+/, '');\n  if (!telefono || telefono.startsWith('fbig_')) continue;\n\n  results.push({ json: {\n    leadId: lead.id,\n    telefono,\n    nombre: lead.name || '',\n    tipoFollowup,\n    estado: lead.estado || '',\n    mensajeFollowup: tipoFollowup === '24h' ? followup24 : followup72,\n    wa_access_token,\n    phone_number_id\n  } });\n}\n\nreturn results.length ? results : [{ json: { skip: true } }];"
+        "jsCode": "const configs = $('⚙️ Config G54 Follow-up').all();\nconst leadsPorEmpresa = $('📋 Obtener Leads Sin Respuesta').all();\nconst waConfigsPorEmpresa = $('⚙️ Obtener WA Config Follow-up').all();\n\nconst now = new Date();\nconst results = [];\n\nfor (let i = 0; i < configs.length; i++) {\n  const cfg = configs[i].json;\n  const leadsRaw = leadsPorEmpresa[i] ? leadsPorEmpresa[i].json : {};\n  const leads = leadsRaw?.data || leadsRaw?.records || [];\n\n  let waConfig = {};\n  try { waConfig = (waConfigsPorEmpresa[i] ? waConfigsPorEmpresa[i].json : {})?.data || {}; } catch(e) {}\n\n  const followup24 = waConfig.followup_24h || 'Hola 👋 ¿Sigues necesitando ayuda? Aquí estamos para asistirte.';\n  const followup72 = waConfig.followup_72h || 'Seguimos disponibles cuando lo necesites 👍';\n  const wa_access_token = waConfig.wa_access_token || '';\n  const phone_number_id = waConfig.phone_number_id || '';\n\n  for (const lead of leads) {\n    const ultimaActividad = new Date(lead.ultima_actividad || lead.created_at || 0);\n    const horasDiff = (now - ultimaActividad) / (1000 * 60 * 60);\n    let tipoFollowup = null;\n    if (horasDiff >= 72) tipoFollowup = '72h';\n    else if (horasDiff >= 24) tipoFollowup = '24h';\n    if (!tipoFollowup) continue;\n\n    const telefono = (lead.phone || '').replace(/^\\+/, '');\n    if (!telefono || telefono.startsWith('fbig_')) continue;\n\n    results.push({ json: {\n      leadId: lead.id,\n      telefono,\n      nombre: lead.name || '',\n      tipoFollowup,\n      estado: lead.estado || '',\n      mensajeFollowup: tipoFollowup === '24h' ? followup24 : followup72,\n      wa_access_token,\n      phone_number_id,\n      // Contexto de empresa propagado explícitamente — evita que los nodos downstream\n      // tengan que volver a buscar \"la\" empresa vía .item después de este fan-out\n      // (mismo tipo de bug de .item/.first() ya corregido antes en Distribution AI/Telegram).\n      G54_BASE_URL: cfg.G54_BASE_URL,\n      G54_AGENT_TOKEN: cfg.G54_AGENT_TOKEN,\n      G54_COMPANY_ID: cfg.G54_COMPANY_ID,\n      G54_MASTER_EMAIL: cfg.G54_MASTER_EMAIL,\n      G54_MASTER_PASSWORD: cfg.G54_MASTER_PASSWORD\n    } });\n  }\n}\n\nreturn results.length ? results : [{ json: { skip: true } }];",
+        "mode": "runOnceForAllItems"
       }
     },
     {
@@ -1125,13 +1135,13 @@
       "continueOnFail": true,
       "parameters": {
         "method": "PATCH",
-        "url": "={{ $('⚙️ Config G54 Follow-up').item.json.G54_BASE_URL + '/api/agent/wa/leads/' + $json.leadId }}",
+        "url": "={{ $('🔧 Procesar Follow-ups').item.json.G54_BASE_URL + '/api/agent/wa/leads/' + $('🔧 Procesar Follow-ups').item.json.leadId }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('⚙️ Config G54 Follow-up').item.json.G54_AGENT_TOKEN }}"
+              "value": "={{ 'Bearer ' + $('🔧 Procesar Follow-ups').item.json.G54_AGENT_TOKEN }}"
             },
             {
               "name": "Content-Type",
@@ -1193,7 +1203,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer g54_agent_produccion_2026"
+              "value": "Bearer REDACTED_AGENT_TOKEN"
             }
           ]
         },
@@ -1249,7 +1259,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer g54_agent_produccion_2026"
+              "value": "Bearer REDACTED_AGENT_TOKEN"
             },
             {
               "name": "Content-Type",
@@ -1517,7 +1527,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ nombre: $('🔍 Parsear Respuesta IA').item.json.nombreContacto || $('🔍 Encontrar Deal por Teléfono').item.json.telefono, telefono: $('🔍 Encontrar Deal por Teléfono').item.json.telefono, origen: 'whatsapp', wa_contact_id: $('🔍 Encontrar Deal por Teléfono').item.json.wa_contact_id, temperatura: ({frio:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta IA').item.json.clasificacion] || 'bajo', notas: 'Lead generado por Sales AI Motor: ' + ($('🔍 Parsear Respuesta IA').item.json.resumenLead || '') }) }}",
+        "jsonBody": "={{ JSON.stringify({ nombre: $('🔍 Parsear Respuesta IA').item.json.nombreContacto || $('🔍 Encontrar Deal por Teléfono').item.json.telefono, telefono: $('🔍 Encontrar Deal por Teléfono').item.json.telefono, origen: ({instagram_dm:'instagram', facebook_dm:'facebook'})[$('🔍 Parsear Respuesta IA').item.json.canal] || 'whatsapp', wa_contact_id: $('🔍 Encontrar Deal por Teléfono').item.json.wa_contact_id, temperatura: ({frio:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta IA').item.json.clasificacion] || 'bajo', notas: 'Lead generado por Sales AI Motor: ' + ($('🔍 Parsear Respuesta IA').item.json.resumenLead || '') }) }}",
         "options": {}
       }
     },
@@ -1726,7 +1736,7 @@
       "credentials": {
         "groqApi": {
           "id": "jORffbRhRNohHT1B",
-          "name": "Groq account"
+          "name": "Groq API"
         }
       }
     },
@@ -1756,6 +1766,292 @@
         160,
         700
       ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('🏢 Aplicar Config Empresa').item.json.G54_BASE_URL }}/api/auth/login",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config G54').item.json.G54_MASTER_EMAIL, password: $('⚙️ Config G54').item.json.G54_MASTER_PASSWORD }) }}",
+        "options": {}
+      },
+      "id": "tz-login-node-001",
+      "name": "🔐 G54: Login (Timezone)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        450
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Solo lee el array de empresas del login — NUNCA llama switch-company,\n// para no tocar el interruptor compartido de \"empresa activa\" de la cuenta master.\nconst config = $('🏢 Aplicar Config Empresa').item.json;\nconst companyId = String(config.G54_COMPANY_ID || '');\n\nlet timezone = null;\ntry {\n  const loginResp = $('🔐 G54: Login (Timezone)').item.json;\n  const companies = loginResp.companies || [];\n  const match = companies.find(c => String(c.id) === companyId);\n  timezone = match?.timezone || null;\n} catch (e) {\n  // login falló — seguimos con el fallback de abajo\n}\n\nreturn [{ json: { ...config, empresa_timezone: timezone } }];"
+      },
+      "id": "tz-resolver-node-001",
+      "name": "🕐 Resolver Timezone Empresa",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        600
+      ]
+    },
+    {
+      "id": "sam-nota-actividad-crm",
+      "name": "📝 Preparar Nota Actividad (CRM)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6020,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const dealResp = $json;\nconst dealId = dealResp && dealResp.id ? dealResp.id : null;\n\nlet contenido = null;\ntry {\n  const parsed = $('🔍 Parsear Respuesta IA').item.json;\n  const clasificacion = (parsed.clasificacion || '').toLowerCase();\n  const escalada = parsed.escalada === true;\n\n  if (escalada) {\n    contenido = 'Sales AI Motor: cliente escalado a un especialista.';\n  } else if (clasificacion === 'caliente') {\n    contenido = 'Sales AI Motor: lead clasificado como caliente.';\n  }\n} catch (e) { /* si no se puede leer, no se loggea nada */ }\n\nreturn [{ json: { dealId, contenido, deberiaLoggear: !!(dealId && contenido) } }];"
+      }
+    },
+    {
+      "id": "sam-if-loggear-crm",
+      "name": "🔀 ¿Vale la pena loggear?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        6240,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "vale-la-pena",
+              "leftValue": "={{ $json.deberiaLoggear }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "sam-post-actividad-crm",
+      "name": "📌 G54: Agregar Nota CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        6460,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/crm/deals/' + $json.dealId + '/activities' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tipo: 'sistema', contenido: $json.contenido }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "fu-crm-login",
+      "name": "🔐 G54: Login (Follow-up CRM)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1180,
+        900
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('🔧 Procesar Follow-ups').item.json.G54_BASE_URL }}/api/auth/login",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $('🔧 Procesar Follow-ups').item.json.G54_MASTER_EMAIL, password: $('🔧 Procesar Follow-ups').item.json.G54_MASTER_PASSWORD }) }}",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "fu-crm-switch",
+      "name": "🏢 G54: Cambiar Empresa (Follow-up CRM)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1400,
+        900
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('🔧 Procesar Follow-ups').item.json.G54_BASE_URL }}/api/auth/switch-company",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Follow-up CRM)').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: Number($('🔧 Procesar Follow-ups').item.json.G54_COMPANY_ID || 1) }) }}",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "fu-crm-board",
+      "name": "🔍 G54: Buscar Deal por Contact ID (Follow-up)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1620,
+        900
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('🔧 Procesar Follow-ups').item.json.G54_BASE_URL }}/api/crm/board",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Follow-up CRM)').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "fu-crm-find",
+      "name": "🔎 Encontrar Deal (Follow-up)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        900
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const board = $('🔍 G54: Buscar Deal por Contact ID (Follow-up)').item.json;\nconst leadId = $('🔧 Procesar Follow-ups').item.json.leadId;\nconst tipoFollowup = $('🔧 Procesar Follow-ups').item.json.tipoFollowup;\n\nlet dealId = null;\ntry {\n  for (const etapa of Object.keys(board)) {\n    const deals = board[etapa] || [];\n    const found = deals.find(d => String(d.wa_contact_id) === String(leadId));\n    if (found) { dealId = found.id; break; }\n  }\n} catch (e) { /* si el board no cargó, seguimos sin loggear */ }\n\nreturn { json: {\n  dealId,\n  contenido: `Sales AI Motor: follow-up de ${tipoFollowup} enviado (sin respuesta del cliente).`,\n  deberiaLoggear: !!dealId\n} };"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "fu-crm-gate",
+      "name": "🔀 ¿Deal Existe? (Follow-up)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2060,
+        900
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.deberiaLoggear }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "fu-crm-note",
+      "name": "📌 G54: Agregar Nota CRM (Follow-up)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2280,
+        900
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('🔧 Procesar Follow-ups').item.json.G54_BASE_URL + '/api/crm/deals/' + $json.dealId + '/activities' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Follow-up CRM)').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tipo: 'sistema', contenido: $json.contenido }) }}",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -1885,7 +2181,7 @@
       "main": [
         [
           {
-            "node": "🔑 Intercambiar Page Token (FB)",
+            "node": "🔐 G54: Login (Timezone)",
             "type": "main",
             "index": 0
           }
@@ -2463,2534 +2759,147 @@
           }
         ]
       ]
+    },
+    "🔐 G54: Login (Timezone)": {
+      "main": [
+        [
+          {
+            "node": "🕐 Resolver Timezone Empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🕐 Resolver Timezone Empresa": {
+      "main": [
+        [
+          {
+            "node": "🔑 Intercambiar Page Token (FB)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 G54: Crear Deal CRM": {
+      "main": [
+        [
+          {
+            "node": "📝 Preparar Nota Actividad (CRM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 G54: Actualizar Deal CRM": {
+      "main": [
+        [
+          {
+            "node": "📝 Preparar Nota Actividad (CRM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Preparar Nota Actividad (CRM)": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Vale la pena loggear?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Vale la pena loggear?": {
+      "main": [
+        [
+          {
+            "node": "📌 G54: Agregar Nota CRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "🔄 Actualizar Estado Follow-up": {
+      "main": [
+        [
+          {
+            "node": "🔐 G54: Login (Follow-up CRM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔐 G54: Login (Follow-up CRM)": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa (Follow-up CRM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 G54: Cambiar Empresa (Follow-up CRM)": {
+      "main": [
+        [
+          {
+            "node": "🔍 G54: Buscar Deal por Contact ID (Follow-up)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 G54: Buscar Deal por Contact ID (Follow-up)": {
+      "main": [
+        [
+          {
+            "node": "🔎 Encontrar Deal (Follow-up)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔎 Encontrar Deal (Follow-up)": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Deal Existe? (Follow-up)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Deal Existe? (Follow-up)": {
+      "main": [
+        [
+          {
+            "node": "📌 G54: Agregar Nota CRM (Follow-up)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
     }
   },
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false,
     "saveManualExecutions": true
-  },
-  "staticData": {
-    "node:⏰ Trigger Follow-up Check": {
-      "recurrenceRules": []
-    }
-  },
-  "meta": null,
-  "nodeGroups": [],
-  "pinData": {},
-  "versionId": "771e9e50-7c13-470f-963b-8d7e80cafba4",
-  "activeVersionId": "771e9e50-7c13-470f-963b-8d7e80cafba4",
-  "versionCounter": 33,
-  "triggerCount": 3,
-  "sourceWorkflowId": null,
-  "shared": [
-    {
-      "updatedAt": "2026-06-20T00:45:39.375Z",
-      "createdAt": "2026-06-20T00:45:39.375Z",
-      "role": "workflow:owner",
-      "workflowId": "otycsrxrMEMuxuwD",
-      "projectId": "scK6yPpEmlkikl67",
-      "project": {
-        "updatedAt": "2026-03-16T19:58:01.773Z",
-        "createdAt": "2026-03-16T19:56:18.866Z",
-        "id": "scK6yPpEmlkikl67",
-        "name": "Solange  Torrez <risosadmi@gmail.com>",
-        "type": "personal",
-        "icon": null,
-        "description": null,
-        "customTelemetryTags": [],
-        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      }
-    }
-  ],
-  "tags": [],
-  "activeVersion": {
-    "updatedAt": "2026-07-18T17:01:00.962Z",
-    "createdAt": "2026-07-18T17:01:00.962Z",
-    "versionId": "771e9e50-7c13-470f-963b-8d7e80cafba4",
-    "workflowId": "otycsrxrMEMuxuwD",
-    "nodes": [
-      {
-        "id": "sticky-info",
-        "name": "📋 INFO",
-        "type": "n8n-nodes-base.stickyNote",
-        "typeVersion": 1,
-        "position": [
-          -80,
-          -160
-        ],
-        "parameters": {
-          "content": "## 💬 Sales AI — Motor de Conversación G54\n\n**Genérico — multi-tenant — sin lógica de CE hardcodeada**\n\n- WA: webhook `/wa-engine-g54?company=N`\n- FB/IG DM: webhook `/sales-ai-social?company=N`\n- Comportamiento 100% desde `system_prompt` en G54 WA Config\n- Placeholders: `{{AGENTE}}` `{{EMPRESA}}` `{{CATALOGO}}` `{{INSTRUCCIONES}}`\n- IA: Groq llama-3.3-70b-versatile → fallback Gemini 1.5 Flash\n- Output JSON: `{ mensaje, datos_actualizados, clasificacion, todos_recolectados, resumen_lead }`\n- Estados: `Nuevo` | `En calificación` | `Calificado` | `Vendedor notificado`\n\n**Solo vars n8n:** `GEMINI_API_KEY`\n**Credencial n8n:** `groqApi` (ID: jORffbRhRNohHT1B), Gmail (ID: TESHSjzjMCpCxBBk)",
-          "height": 260,
-          "width": 520,
-          "color": 5
-        }
-      },
-      {
-        "id": "cfg-main",
-        "name": "⚙️ Config G54",
-        "type": "n8n-nodes-base.set",
-        "typeVersion": 3.4,
-        "position": [
-          240,
-          300
-        ],
-        "parameters": {
-          "assignments": {
-            "assignments": [
-              {
-                "id": "a1",
-                "name": "G54_BASE_URL",
-                "value": "https://apigrowth.mdarthurdigital.com",
-                "type": "string"
-              },
-              {
-                "id": "a2",
-                "name": "G54_N8N_TOKEN",
-                "value": "",
-                "type": "string"
-              },
-              {
-                "id": "a3",
-                "name": "G54_AGENT_TOKEN",
-                "value": "g54_agent_produccion_2026",
-                "type": "string"
-              },
-              {
-                "id": "a4",
-                "name": "G54_COMPANY_ID",
-                "value": "",
-                "type": "string"
-              },
-              {
-                "id": "crm-email",
-                "name": "G54_MASTER_EMAIL",
-                "value": "master@growth54.local",
-                "type": "string"
-              },
-              {
-                "id": "crm-pass",
-                "name": "G54_MASTER_PASSWORD",
-                "value": "wx2026_master",
-                "type": "string"
-              }
-            ]
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "webhook-wa",
-        "name": "📲 Webhook WhatsApp",
-        "type": "n8n-nodes-base.webhook",
-        "typeVersion": 2,
-        "position": [
-          -240,
-          160
-        ],
-        "webhookId": "wa-engine-g54",
-        "parameters": {
-          "httpMethod": "POST",
-          "path": "wa-engine-g54",
-          "responseMode": "responseNode",
-          "options": {}
-        }
-      },
-      {
-        "id": "webhook-social",
-        "name": "📲 Webhook FB/IG DM",
-        "type": "n8n-nodes-base.webhook",
-        "typeVersion": 2,
-        "position": [
-          -240,
-          440
-        ],
-        "webhookId": "sales-ai-social",
-        "parameters": {
-          "httpMethod": "POST",
-          "path": "sales-ai-social",
-          "responseMode": "responseNode",
-          "options": {}
-        }
-      },
-      {
-        "id": "check-hub-wa",
-        "name": "🔀 ¿Verificación WA?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2.2,
-        "position": [
-          -40,
-          160
-        ],
-        "parameters": {
-          "conditions": {
-            "options": {
-              "caseSensitive": false,
-              "typeValidation": "loose"
-            },
-            "conditions": [
-              {
-                "id": "c1",
-                "leftValue": "={{ $json.query?.['hub.mode'] }}",
-                "rightValue": "subscribe",
-                "operator": {
-                  "type": "string",
-                  "operation": "equals"
-                }
-              }
-            ],
-            "combinator": "and"
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "resp-verify-wa",
-        "name": "✅ Responder Verificación WA",
-        "type": "n8n-nodes-base.respondToWebhook",
-        "typeVersion": 1.1,
-        "position": [
-          180,
-          60
-        ],
-        "parameters": {
-          "respondWith": "text",
-          "responseBody": "={{ $json.query?.['hub.challenge'] }}",
-          "options": {
-            "responseCode": 200
-          }
-        }
-      },
-      {
-        "id": "resp-200-wa",
-        "name": "✅ Responder 200 WA",
-        "type": "n8n-nodes-base.respondToWebhook",
-        "typeVersion": 1.1,
-        "position": [
-          180,
-          240
-        ],
-        "parameters": {
-          "respondWith": "text",
-          "responseBody": "OK",
-          "options": {
-            "responseCode": 200
-          }
-        }
-      },
-      {
-        "id": "resp-200-social",
-        "name": "✅ Responder 200 Social",
-        "type": "n8n-nodes-base.respondToWebhook",
-        "typeVersion": 1.1,
-        "position": [
-          180,
-          440
-        ],
-        "parameters": {
-          "respondWith": "text",
-          "responseBody": "OK",
-          "options": {
-            "responseCode": 200
-          }
-        }
-      },
-      {
-        "id": "extraer-wa",
-        "name": "🔧 Extraer Mensaje WA",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          380,
-          240
-        ],
-        "parameters": {
-          "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst entry = (body.entry || [])[0];\nconst change = (entry?.changes || [])[0];\nconst value = change?.value;\nconst message = (value?.messages || [])[0];\n\nif (!message) return [{ json: { skip: true } }];\n\nconst telefono = String(message.from || '');\nconst texto = message.text?.body || '';\nconst messageId = message.id || '';\nconst timestamp = String(message.timestamp || Date.now());\nconst nombreContacto = (value?.contacts || [])[0]?.profile?.name || '';\nconst phoneNumberId = String(value?.metadata?.phone_number_id || '');\n\nconst tipoMensaje = message.type || 'text';\nlet mediaId = null, mimeType = null, mediaCaption = '';\nif (['image','audio','document','video'].includes(tipoMensaje)) {\n  const mediaObj = message[tipoMensaje] || {};\n  mediaId = mediaObj.id || null;\n  mimeType = mediaObj.mime_type || null;\n  mediaCaption = mediaObj.caption || '';\n}\n\nreturn [{ json: {\n  telefono,\n  texto,\n  messageId,\n  timestamp,\n  nombreContacto,\n  canal: 'whatsapp',\n  usuarioId: telefono,\n  resolveKey: phoneNumberId,\n  resolveType: 'wa',\n  tipoMensaje,\n  mediaId,\n  mimeType,\n  mediaCaption,\n  skip: false\n} }];"
-        }
-      },
-      {
-        "id": "extraer-social",
-        "name": "🔧 Extraer Mensaje FB/IG DM",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          380,
-          440
-        ],
-        "parameters": {
-          "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nlet canal = 'facebook_dm';\nlet usuarioId = '';\nlet texto = '';\nlet messageId = '';\nlet timestamp = String(Date.now());\nlet nombreContacto = '';\n\nif (body.object === 'instagram') {\n  canal = 'instagram_dm';\n  const entry = (body.entry || [])[0] || {};\n  const messaging = (entry.messaging || [])[0] || {};\n  if (messaging.message) {\n    usuarioId = messaging.sender?.id || '';\n    texto = messaging.message?.text || '';\n    messageId = messaging.message?.mid || '';\n  } else {\n    const ch = (entry.changes || [])[0] || {};\n    const val = ch.value || {};\n    usuarioId = val.from?.id || '';\n    texto = val.text || '';\n    messageId = val.id || '';\n  }\n} else {\n  canal = 'facebook_dm';\n  const entry = (body.entry || [])[0] || {};\n  const messaging = (entry.messaging || [])[0] || {};\n  usuarioId = messaging.sender?.id || '';\n  texto = messaging.message?.text || '';\n  messageId = messaging.message?.mid || '';\n  timestamp = String(messaging.timestamp || Date.now());\n}\n\nif (!texto.trim() || !usuarioId) return [{ json: { skip: true } }];\n\nconst pageId = String((body.entry || [])[0]?.id || '');\n\nreturn [{ json: {\n  telefono: 'fbig_' + usuarioId,\n  pageId,\n  texto,\n  messageId,\n  timestamp,\n  nombreContacto,\n  canal,\n  usuarioId,\n  resolveKey: pageId,\n  resolveType: 'page',\n  skip: false\n} }];"
-        }
-      },
-      {
-        "id": "check-skip",
-        "name": "🔀 ¿Hay mensaje?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2.2,
-        "position": [
-          600,
-          340
-        ],
-        "parameters": {
-          "conditions": {
-            "options": {
-              "caseSensitive": false,
-              "typeValidation": "loose"
-            },
-            "conditions": [
-              {
-                "id": "c1",
-                "leftValue": "={{ $json.skip }}",
-                "rightValue": true,
-                "operator": {
-                  "type": "boolean",
-                  "operation": "false"
-                }
-              }
-            ],
-            "combinator": "and"
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "preparar-resolucion",
-        "name": "🔍 Preparar Resolución",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          800,
-          300
-        ],
-        "parameters": {
-          "jsCode": "const config = $('⚙️ Config G54').item.json;\n\nlet resolveKey = '';\nlet resolveType = '';\nlet msgData = null;\n\ntry {\n  const waData = $('🔧 Extraer Mensaje WA').item.json;\n  if (waData && !waData.skip) { resolveKey = String(waData.resolveKey || ''); resolveType = 'wa'; msgData = waData; }\n} catch(e) {}\n\nif (!resolveKey) {\n  try {\n    const socialData = $('🔧 Extraer Mensaje FB/IG DM').item.json;\n    if (socialData && !socialData.skip) { resolveKey = String(socialData.resolveKey || ''); resolveType = 'page'; msgData = socialData; }\n  } catch(e) {}\n}\n\nlet queryCompanyId = '';\ntry { queryCompanyId = String($('📲 Webhook WhatsApp').item.json.query?.company || ''); } catch(e) {}\nif (!queryCompanyId) {\n  try { queryCompanyId = String($('📲 Webhook FB/IG DM').item.json.query?.company || ''); } catch(e) {}\n}\n\nconst resolverUrl = (!queryCompanyId && resolveKey)\n  ? config.G54_BASE_URL + '/api/n8n/' + (resolveType === 'wa' ? 'wa-phones' : 'pages') + '/' + resolveKey\n  : '';\n\nreturn [{ json: { ...config, resolveKey, resolveType, resolverUrl, queryCompanyId, _msgData: msgData } }];"
-        }
-      },
-      {
-        "id": "resolver-empresa",
-        "name": "🏢 Resolver Empresa (G54)",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          1000,
-          300
-        ],
-        "onError": "continueRegularOutput",
-        "parameters": {
-          "url": "={{ $json.resolverUrl || 'https://apigrowth.mdarthurdigital.com/api/n8n/noop' }}",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $json.G54_N8N_TOKEN }}"
-              },
-              {
-                "name": "Accept",
-                "value": "application/json"
-              }
-            ]
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "aplicar-config",
-        "name": "🏢 Aplicar Config Empresa",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          1200,
-          300
-        ],
-        "parameters": {
-          "jsCode": "const base = $('🔍 Preparar Resolución').item.json;\nlet resolved = {};\ntry {\n  const r = $('🏢 Resolver Empresa (G54)').item.json;\n  if (r && r.company_id && !r.error && !r.message) resolved = r.data || r;\n} catch(e) {}\n\nconst company_id = String(base.queryCompanyId || resolved.company_id || '');\nconst fb_access_token = resolved.fb_access_token || '';\n\nreturn [{ json: {\n  G54_BASE_URL: base.G54_BASE_URL,\n  G54_N8N_TOKEN: base.G54_N8N_TOKEN,\n  G54_AGENT_TOKEN: base.G54_AGENT_TOKEN,\n  G54_COMPANY_ID: company_id,\n  FB_ACCESS_TOKEN: fb_access_token\n} }];"
-        }
-      },
-      {
-        "id": "get-empresa",
-        "name": "🏢 Obtener Empresa G54",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          1400,
-          300
-        ],
-        "continueOnFail": true,
-        "parameters": {
-          "url": "={{ $('🏢 Aplicar Config Empresa').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID }}",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('🏢 Aplicar Config Empresa').item.json.G54_N8N_TOKEN }}"
-              }
-            ]
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "get-wa-config",
-        "name": "⚙️ Obtener WA Config G54",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          1600,
-          300
-        ],
-        "continueOnFail": true,
-        "parameters": {
-          "url": "={{ $('🏢 Aplicar Config Empresa').item.json.G54_BASE_URL + '/api/agent/wa/empresa-by-phone/' + $('🔧 Extraer Mensaje WA').item.json.phone_number_id }}",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('🏢 Aplicar Config Empresa').item.json.G54_AGENT_TOKEN }}"
-              }
-            ]
-          },
-          "options": {},
-          "continueOnFail": true
-        }
-      },
-      {
-        "id": "get-productos",
-        "name": "📦 Obtener Productos G54",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          1800,
-          300
-        ],
-        "continueOnFail": true,
-        "parameters": {
-          "url": "={{ $('🏢 Aplicar Config Empresa').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID + '/productos-servicios' }}",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('🏢 Aplicar Config Empresa').item.json.G54_N8N_TOKEN }}"
-              }
-            ]
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "get-lead",
-        "name": "📋 Buscar Lead Existente",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          2000,
-          300
-        ],
-        "continueOnFail": true,
-        "parameters": {
-          "url": "={{ $('🏢 Aplicar Config Empresa').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID + '/wa/leads' }} + '?phone=' + encodeURIComponent($json.telefono || '')",
-          "sendQuery": true,
-          "queryParameters": {
-            "parameters": [
-              {
-                "name": "phone",
-                "value": "={{ $('🔧 Extraer Mensaje WA').item.json?.telefono || $('🔧 Extraer Mensaje FB/IG DM').item.json?.telefono || '' }}"
-              },
-              {
-                "name": "limit",
-                "value": "1"
-              }
-            ]
-          },
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('🏢 Aplicar Config Empresa').item.json.G54_N8N_TOKEN }}"
-              }
-            ]
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "preparar-contexto",
-        "name": "🔧 Preparar Contexto IA",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          2200,
-          300
-        ],
-        "parameters": {
-          "jsCode": "// Determine which extractor has the message (WA or Social)\nlet msgData;\ntry { msgData = $('🔧 Extraer Mensaje WA').item.json; } catch(e) {}\nif (!msgData || msgData.skip) {\n  try { msgData = $('🔧 Extraer Mensaje FB/IG DM').item.json; } catch(e) {}\n}\n\nlet texto = msgData?.texto || '';\ntry {\n  const medioResult = $('🔧 Combinar Texto de Medio').first().json;\n  if (medioResult && medioResult.texto) texto = medioResult.texto;\n} catch (e) { /* no vino por la rama de medios, se usa el texto original */ }\nconst telefono = msgData?.telefono || '';\nconst canal = msgData?.canal || 'whatsapp';\nconst nombreContacto = msgData?.nombreContacto || '';\nconst usuarioId = msgData?.usuarioId || '';\nconst messageId = msgData?.messageId || '';\n\n// Empresa\nconst empresaRaw = $('🏢 Obtener Empresa G54').item.json;\nconst empresa = empresaRaw?.data || empresaRaw || {};\nconst empresa_nombre = empresa.name || 'Empresa';\nconst empresa_descripcion = empresa.description || '';\nconst empresa_ciudad = empresa.base_city || '';\nconst empresa_web = empresa.website || '';\nconst emailsVendedor = (empresa.emails || []).join(',') || '';\n\n// WA Config (todo desde G54)\nconst waConfigRaw = $('⚙️ Obtener WA Config G54').item.json;\nconst waConfig = waConfigRaw?.data || {};\n\nconst wa_access_token = waConfig.wa_access_token || '';\nconst phone_number_id = waConfig.phone_number_id || '';\nconst auto_reply = waConfig.auto_reply !== undefined ? waConfig.auto_reply : true;\nconst nombre_agente = waConfig.agent_name || 'Agente';\nconst bienvenida = waConfig.welcome_message || `Hola 👋 Soy ${nombre_agente}, el asistente de ${empresa_nombre}. ¿En qué te puedo ayudar?`;\nconst instruccionesIA = waConfig.ia_instructions || '';\nconst promptTemplate = waConfig.system_prompt || `Eres {{AGENTE}}, asistente virtual de {{EMPRESA}}. Ayuda al cliente a conocer los productos y servicios disponibles. Catálogo:\\n{{CATALOGO}}\\n{{INSTRUCCIONES}}`;\nconst followup24 = waConfig.followup_24h || '';\nconst followup72 = waConfig.followup_72h || '';\n\n// Productos\nconst productosRaw = $('📦 Obtener Productos G54').item.json;\nconst productos = productosRaw?.data || [];\nconst catalogoProductos = productos.map(p => {\n  const nombre = p.name || '';\n  const desc = p.description || '';\n  const kw = (p.keywords || []).join(', ');\n  return `• ${nombre}: ${desc}${kw ? ' [' + kw + ']' : ''}`;\n}).filter(l => l.length > 3).join('\\n');\n\n// Lead existente\nconst leadRaw = $('📋 Buscar Lead Existente').item.json;\nconst leads = leadRaw?.data || [];\nconst leadExistente = leads[0] || null;\nconst leadId = leadExistente?.id || null;\n// Parse __DATOS__ marker from G54 historial for datos persistence\nconst rawHistorial = leadExistente?.historial || '';\nconst historialLines = rawHistorial.split('\\n');\nlet leadDatos = {};\nconst datosLine = [...historialLines].reverse().find(l => l.includes('[__DATOS__]'));\nif (datosLine) {\n  try { leadDatos = JSON.parse(datosLine.replace(/^.*\\[__DATOS__\\]/, '')); } catch(e) {}\n}\nconst historial = historialLines.filter(l => !l.includes('[__DATOS__]')).join('\\n');\nconst estado = leadExistente?.estado || 'Nuevo';\nconst esNuevo = !leadId;\n\n// datos_actualizados is a free object — the prompt defines what to collect\n// We carry over whatever was stored previously and let AI merge\nconst datosRecolectados = typeof leadDatos === 'object' ? leadDatos : {};\n\n// Build prompt — replace placeholders\nconst promptSistema = promptTemplate\n  .replace(/\\{\\{AGENTE\\}\\}/g, nombre_agente)\n  .replace(/\\{\\{EMPRESA\\}\\}/g, empresa_nombre)\n  .replace(/\\{\\{CATALOGO\\}\\}/g, catalogoProductos || '(sin catálogo disponible)')\n  .replace(/\\{\\{INSTRUCCIONES\\}\\}/g, instruccionesIA ? 'Instrucciones adicionales:\\n' + instruccionesIA : '')\n  .trim();\n\n// Hora local (Miami UTC-4)\nconst h = (new Date().getUTCHours() - 4 + 24) % 24;\nconst saludoHora = h >= 6 && h < 12 ? 'buenos días' : h >= 12 && h < 19 ? 'buenas tardes' : 'buenas noches';\n\nreturn [{ json: {\n  // Message\n  texto,\n  telefono,\n  canal,\n  nombreContacto,\n  usuarioId,\n  messageId,\n  // Context\n  promptSistema,\n  nombre_agente,\n  empresa_nombre,\n  empresa_descripcion,\n  empresa_ciudad,\n  empresa_web,\n  emailsVendedor,\n  bienvenida,\n  followup24,\n  followup72,\n  catalogoProductos,\n  // WA credentials (from G54 config)\n  wa_access_token,\n  phone_number_id,\n  auto_reply,\n  // Lead\n  leadId,\n  estado,\n  historial,\n  datosRecolectados,\n  esNuevo,\n  saludoHora\n} }];"
-        }
-      },
-      {
-        "id": "marcar-leido",
-        "name": "✅ Marcar como Leído (WA)",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          2200,
-          160
-        ],
-        "continueOnFail": true,
-        "parameters": {
-          "method": "POST",
-          "url": "={{ 'https://graph.facebook.com/v19.0/' + $('🔧 Preparar Contexto IA').item.json.phone_number_id + '/messages' }}",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('🔧 Preparar Contexto IA').item.json.wa_access_token }}"
-              },
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', status: 'read', message_id: $('🔧 Preparar Contexto IA').item.json.messageId }) }}",
-          "options": {}
-        }
-      },
-      {
-        "id": "groq-ia",
-        "name": "🤖 Groq: Conversación IA",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          2400,
-          300
-        ],
-        "continueOnFail": true,
-        "credentials": {
-          "groqApi": {
-            "id": "jORffbRhRNohHT1B",
-            "name": "Groq account"
-          }
-        },
-        "parameters": {
-          "method": "POST",
-          "url": "https://api.groq.com/openai/v1/chat/completions",
-          "authentication": "predefinedCredentialType",
-          "nodeCredentialType": "groqApi",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({\n  model: 'llama-3.3-70b-versatile',\n  messages: [\n    {\n      role: 'system',\n      content: $('🔧 Preparar Contexto IA').item.json.promptSistema\n    },\n    {\n      role: 'user',\n      content:\n        'HISTORIAL:\\n' + ($('🔧 Preparar Contexto IA').item.json.historial || '(primer mensaje)') +\n        '\\n\\nDATOS RECOLECTADOS HASTA AHORA (no volver a preguntar si ya están):\\n' +\n        JSON.stringify($('🔧 Preparar Contexto IA').item.json.datosRecolectados || {}) +\n        '\\n\\nMENSAJE ACTUAL: \"' + $('🔧 Preparar Contexto IA').item.json.texto + '\"' +\n        '\\nSaludo por hora: \"' + $('🔧 Preparar Contexto IA').item.json.saludoHora + '\"' +\n        '\\nCliente nuevo: ' + ($('🔧 Preparar Contexto IA').item.json.esNuevo ? 'SÍ' : 'NO') +\n        '\\nIDIOMA DEL CLIENTE (detectado automaticamente): ' + ($('🌐 Detectar Idioma').item.json.choices?.[0]?.message?.content?.trim() || 'español') + ' — tu campo \"mensaje\" DEBE estar escrito en ese idioma exacto, sin importar en que idioma esten tus otras instrucciones.' +\n        '\\n\\nResponde SOLO con JSON válido (sin markdown, sin texto extra):\\n' +\n        '{\"mensaje\":\"\",\"datos_actualizados\":{},\"clasificacion\":\"frio\",\"todos_recolectados\":false,\"resumen_lead\":\"\",\"escalada\":false}\\n' +\n        '- mensaje: tu respuesta al cliente\\n' +\n        '- datos_actualizados: objeto libre con todos los datos recolectados (incluye anteriores + nuevos del mensaje actual)\\n' +\n        '- clasificacion: \"frio\" | \"tibio\" | \"caliente\"\\n' +\n        '- todos_recolectados: true solo cuando el prompt haya confirmado todos los datos necesarios\\n' +\n        '- resumen_lead: breve descripción del lead para el vendedor (vacio si no hay datos suficientes)\\n' +\n        '- escalada: true SOLO cuando corresponda escalar a un especialista humano\\n\\n' +\n        'ESCALACION A UN ESPECIALISTA (regla de la plataforma, aplica siempre sin importar el resto de tus instrucciones):\\n' +\n        'Si no puedes responder algo con la informacion que tienes, o si el MENSAJE ACTUAL contiene el marcador \"[No se pudo procesar el archivo enviado]\", el cliente necesita ayuda de un especialista humano.\\n' +\n        'Si datos_actualizados todavia NO tiene un email de contacto: explicale al cliente que un especialista lo va a ayudar y pidele su correo primero. NO marques escalada:true todavia.\\n' +\n        'Si datos_actualizados YA tiene un email de contacto (de este turno o de turnos anteriores): confirma que un especialista lo contactara pronto y marca escalada:true en este mismo turno.\\n' +\n        'No marques escalada:true para preguntas que si supiste responder normalmente.'\n    }\n  ],\n  temperature: 0.3,\n  max_tokens: 600,\n  response_format: { type: 'json_object' }\n}) }}",
-          "options": {}
-        }
-      },
-      {
-        "id": "if-groq-ok",
-        "name": "🔀 ¿Groq OK?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2.2,
-        "position": [
-          2600,
-          300
-        ],
-        "parameters": {
-          "conditions": {
-            "options": {
-              "caseSensitive": false,
-              "typeValidation": "loose"
-            },
-            "conditions": [
-              {
-                "id": "c1",
-                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
-                "rightValue": "",
-                "operator": {
-                  "type": "string",
-                  "operation": "notEmpty",
-                  "singleValue": true
-                }
-              }
-            ],
-            "combinator": "and"
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "gemini-fallback",
-        "name": "🤖 Gemini: Fallback IA",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          2800,
-          460
-        ],
-        "continueOnFail": true,
-        "parameters": {
-          "method": "POST",
-          "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $vars.GEMINI_API_KEY }}"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({\n  model: 'gemini-1.5-flash',\n  messages: [\n    {\n      role: 'system',\n      content: $('🔧 Preparar Contexto IA').item.json.promptSistema\n    },\n    {\n      role: 'user',\n      content:\n        'HISTORIAL:\\n' + ($('🔧 Preparar Contexto IA').item.json.historial || '(primer mensaje)') +\n        '\\n\\nDATOS RECOLECTADOS:\\n' +\n        JSON.stringify($('🔧 Preparar Contexto IA').item.json.datosRecolectados || {}) +\n        '\\n\\nMENSAJE ACTUAL: \"' + $('🔧 Preparar Contexto IA').item.json.texto + '\"' +\n        '\\nCliente nuevo: ' + ($('🔧 Preparar Contexto IA').item.json.esNuevo ? 'SÍ' : 'NO') +\n        '\\n\\nResponde SOLO con JSON válido:\\n' +\n        '{\"mensaje\":\"\",\"datos_actualizados\":{},\"clasificacion\":\"frio\",\"todos_recolectados\":false,\"resumen_lead\":\"\"}'\n    }\n  ],\n  temperature: 0.4,\n  max_tokens: 600,\n  response_format: { type: 'json_object' }\n}) }}",
-          "options": {}
-        }
-      },
-      {
-        "id": "if-gemini-ok",
-        "name": "🔀 ¿Gemini OK?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2.2,
-        "position": [
-          3000,
-          460
-        ],
-        "parameters": {
-          "conditions": {
-            "options": {
-              "caseSensitive": false,
-              "typeValidation": "loose"
-            },
-            "conditions": [
-              {
-                "id": "c1",
-                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
-                "rightValue": "",
-                "operator": {
-                  "type": "string",
-                  "operation": "notEmpty",
-                  "singleValue": true
-                }
-              }
-            ],
-            "combinator": "and"
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "fallback-estatico",
-        "name": "🆘 Respuesta de Emergencia",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          3200,
-          580
-        ],
-        "parameters": {
-          "jsCode": "const ctx = $('🔧 Preparar Contexto IA').item.json;\nconst nombre = ctx.nombre_agente || 'el agente';\nconst empresa = ctx.empresa_nombre || 'nosotros';\n\nreturn [{ json: {\n  choices: [{\n    message: {\n      content: JSON.stringify({\n        mensaje: `Hola, gracias por contactarnos. En este momento estamos experimentando un inconveniente técnico. Un representante de ${empresa} se pondrá en contacto contigo pronto. Disculpa las molestias.`,\n        datos_actualizados: ctx.datosRecolectados || {},\n        clasificacion: 'frio',\n        todos_recolectados: false,\n        resumen_lead: ''\n      })\n    }\n  }]\n} }];"
-        }
-      },
-      {
-        "id": "parsear-ia",
-        "name": "🔍 Parsear Respuesta IA",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          3200,
-          300
-        ],
-        "parameters": {
-          "jsCode": "// Accept output from Groq, Gemini (both OpenAI-compat) or emergency fallback\nconst raw = $input.item.json;\nconst content = raw.choices?.[0]?.message?.content || '{}';\n\nlet result;\ntry { result = JSON.parse(content); }\ncatch(e) {\n  result = {\n    mensaje: 'Gracias por tu mensaje. Te responderemos pronto.',\n    datos_actualizados: {},\n    clasificacion: 'frio',\n    todos_recolectados: false,\n    resumen_lead: ''\n  };\n}\n\nconst ctx = $('🔧 Preparar Contexto IA').item.json;\nconst datosAnt = ctx.datosRecolectados || {};\nconst datosNuevos = result.datos_actualizados || {};\n\n// Merge: new values override old, but only if non-empty/non-null\nconst clean = v => (v === null || v === undefined || v === '' || v === 'desconocido' || v === 'null') ? null : v;\nconst datosMerged = { ...datosAnt };\nfor (const [k, v] of Object.entries(datosNuevos)) {\n  const cleaned = clean(v);\n  if (cleaned !== null) datosMerged[k] = cleaned;\n}\n\n// Estado válidos en G54\nconst clasificacion = (result.clasificacion || 'frio').toLowerCase();\nlet nuevoEstado = ctx.estado || 'Nuevo';\nif (clasificacion === 'caliente') nuevoEstado = 'Vendedor notificado';\nelse if (clasificacion === 'tibio') nuevoEstado = 'Calificado';\nelse if (nuevoEstado === 'Nuevo') nuevoEstado = 'En calificación';\n\nconst ts = new Date().toISOString();\nconst nuevoHistorial = (ctx.historial ? ctx.historial + '\\n' : '') +\n  `[${ts}] Cliente: ${ctx.texto}\\n[${ts}] Bot: ${result.mensaje || ''}`;\n\nconst mensaje = result.mensaje || '';\nconst escalada = result.escalada === true;\n\nreturn [{ json: {\n  ...ctx,\n  mensaje,\n  datosRecolectados: datosMerged,\n  todos_recolectados: result.todos_recolectados === true,\n  clasificacion,\n  resumenLead: result.resumen_lead || '',\n  escalada,\n  nuevoEstado,\n  nuevoHistorial\n} }];"
-        }
-      },
-      {
-        "id": "if-caliente",
-        "name": "🔀 ¿Lead Caliente?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2.2,
-        "position": [
-          3400,
-          300
-        ],
-        "parameters": {
-          "conditions": {
-            "options": {
-              "caseSensitive": false,
-              "typeValidation": "loose"
-            },
-            "conditions": [
-              {
-                "id": "c1",
-                "leftValue": "={{ $json.clasificacion }}",
-                "rightValue": "caliente",
-                "operator": {
-                  "type": "string",
-                  "operation": "equals"
-                }
-              },
-              {
-                "id": "c2",
-                "leftValue": "={{ $json.escalada }}",
-                "rightValue": true,
-                "operator": {
-                  "type": "boolean",
-                  "operation": "true"
-                }
-              }
-            ],
-            "combinator": "or"
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "notificar-vendedor",
-        "name": "📧 Notificar Vendedor",
-        "type": "n8n-nodes-base.emailSend",
-        "typeVersion": 2.1,
-        "position": [
-          3600,
-          180
-        ],
-        "onError": "continueRegularOutput",
-        "credentials": {
-          "smtp": {
-            "id": "iWBBSSe5AWsCMo89",
-            "name": "Gmail SMTP — risosadmi"
-          }
-        },
-        "parameters": {
-          "subject": "={{ ($json.escalada && $json.clasificacion !== 'caliente') ? ('🆘 Consulta sin respuesta — ' + ($json.empresa_nombre || 'G54') + ' — ' + ($json.nombreContacto || $json.telefono)) : ('🔥 Lead Caliente — ' + ($json.empresa_nombre || 'G54') + ' — ' + ($json.nombreContacto || $json.telefono)) }}",
-          "options": {},
-          "toEmail": "={{ $json.emailsVendedor || 'risosadmi@gmail.com' }}",
-          "fromEmail": "risosadmi@gmail.com",
-          "html": "={{ (($json.escalada && $json.clasificacion !== 'caliente') ? '<h2>🆘 Consulta sin respuesta — necesita un especialista</h2>' : '<h2>🔥 Lead Caliente</h2>') + '<p><strong>Canal:</strong> ' + $json.canal + '</p><p><strong>Teléfono/ID:</strong> ' + $json.telefono + '</p><p><strong>Nombre:</strong> ' + ($json.nombreContacto || 'No disponible') + '</p><hr><h3>Datos recolectados:</h3><pre>' + JSON.stringify($json.datosRecolectados, null, 2) + '</pre><hr><p><strong>Resumen:</strong> ' + ($json.resumenLead || '-') + '</p>' }}"
-        },
-        "disabled": true,
-        "webhookId": "3ddb6f54-49bd-497c-90e3-b905e3aa6ebe"
-      },
-      {
-        "id": "esperar-typing",
-        "name": "⏳ Esperar (Typing 3s)",
-        "type": "n8n-nodes-base.wait",
-        "typeVersion": 1.1,
-        "position": [
-          3800,
-          300
-        ],
-        "webhookId": "typing-delay-sales-ai",
-        "parameters": {
-          "amount": 3
-        }
-      },
-      {
-        "id": "if-auto-reply",
-        "name": "🔀 ¿Auto Reply?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2.2,
-        "position": [
-          3980,
-          300
-        ],
-        "parameters": {
-          "conditions": {
-            "options": {
-              "caseSensitive": false,
-              "typeValidation": "loose"
-            },
-            "conditions": [
-              {
-                "id": "ar1",
-                "leftValue": "={{ $('🔧 Preparar Contexto IA').item.json.auto_reply }}",
-                "rightValue": false,
-                "operator": {
-                  "type": "boolean",
-                  "operation": "notEquals"
-                }
-              }
-            ],
-            "combinator": "and"
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "if-canal",
-        "name": "🔀 ¿Canal Social?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2.2,
-        "position": [
-          4000,
-          300
-        ],
-        "parameters": {
-          "conditions": {
-            "options": {
-              "caseSensitive": false,
-              "typeValidation": "loose"
-            },
-            "conditions": [
-              {
-                "id": "c1",
-                "leftValue": "={{ $json.canal }}",
-                "rightValue": "whatsapp",
-                "operator": {
-                  "type": "string",
-                  "operation": "notEquals"
-                }
-              }
-            ],
-            "combinator": "and"
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "enviar-dm-social",
-        "name": "📤 Enviar DM Social (FB/IG)",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          4200,
-          180
-        ],
-        "onError": "continueRegularOutput",
-        "parameters": {
-          "method": "POST",
-          "url": "https://graph.facebook.com/v19.0/me/messages",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({\n  recipient: { id: $json.usuarioId },\n  message: { text: $json.mensaje },\n  access_token: ($('🔑 Intercambiar Page Token (FB)').item.json.access_token || $('🏢 Aplicar Config Empresa').item.json.FB_ACCESS_TOKEN)\n}) }}",
-          "options": {}
-        }
-      },
-      {
-        "id": "enviar-wa",
-        "name": "📤 Enviar Mensaje WhatsApp",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          4200,
-          420
-        ],
-        "onError": "continueRegularOutput",
-        "parameters": {
-          "method": "POST",
-          "url": "={{ 'https://graph.facebook.com/v19.0/' + $json.phone_number_id + '/messages' }}",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $json.wa_access_token }}"
-              },
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.telefono, type: 'text', text: { body: $json.mensaje } }) }}",
-          "options": {}
-        }
-      },
-      {
-        "id": "if-crear-o-actualizar",
-        "name": "🔀 ¿Crear o Actualizar Lead?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2.2,
-        "position": [
-          4400,
-          300
-        ],
-        "parameters": {
-          "conditions": {
-            "options": {
-              "caseSensitive": false,
-              "typeValidation": "loose"
-            },
-            "conditions": [
-              {
-                "id": "c1",
-                "leftValue": "={{ $json.leadId }}",
-                "rightValue": "",
-                "operator": {
-                  "type": "string",
-                  "operation": "notEmpty",
-                  "singleValue": true
-                }
-              }
-            ],
-            "combinator": "and"
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "patch-lead",
-        "name": "💾 Actualizar Lead (PATCH)",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          4600,
-          180
-        ],
-        "continueOnFail": true,
-        "parameters": {
-          "method": "POST",
-          "url": "={{ $('🏢 Aplicar Config Empresa').item.json.G54_BASE_URL + '/api/agent/whatsapp/inbound' }}",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('🏢 Aplicar Config Empresa').item.json.G54_AGENT_TOKEN }}"
-              },
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({\n  empresa_id: Number($('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID),\n  phone: $json.telefono,\n  contact_name: $json.nombreContacto || '',\n  clasificacion: $json.clasificacion || 'frio',\n  messages: [\n    ...($json.nuevoHistorial || '').split('\\n').filter(l => l.trim() && l.includes('] ')).map(l => {\n    const content = l.replace(/^\\[.*?\\]\\s*/, '');\n    const isBot = content.startsWith('Bot:') || content.startsWith('Agente:');\n    return { rol: isBot ? 'bot' : 'user', contenido: content.replace(/^(Bot|Agente|Cliente):\\s*/, ''), isBot };\n  }).filter(m => m.contenido && ($('🔧 Preparar Contexto IA').item.json.auto_reply !== false || !m.isBot)).map(m => ({ rol: m.rol, contenido: m.contenido })),\n    { rol: 'bot', contenido: '[__DATOS__]' + JSON.stringify($json.datosRecolectados || {}) }\n  ]\n}) }}",
-          "options": {}
-        }
-      },
-      {
-        "id": "post-lead",
-        "name": "💾 Crear Lead (POST)",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          4600,
-          420
-        ],
-        "continueOnFail": true,
-        "parameters": {
-          "method": "POST",
-          "url": "={{ $('🏢 Aplicar Config Empresa').item.json.G54_BASE_URL + '/api/agent/whatsapp/inbound' }}",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('🏢 Aplicar Config Empresa').item.json.G54_AGENT_TOKEN }}"
-              },
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({\n  empresa_id: Number($('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID),\n  phone: $json.telefono,\n  contact_name: $json.nombreContacto || '',\n  clasificacion: $json.clasificacion || 'frio',\n  messages: [\n    ...($json.nuevoHistorial || '').split('\\n').filter(l => l.trim() && l.includes('] ')).map(l => {\n    const content = l.replace(/^\\[.*?\\]\\s*/, '');\n    const isBot = content.startsWith('Bot:') || content.startsWith('Agente:');\n    return { rol: isBot ? 'bot' : 'user', contenido: content.replace(/^(Bot|Agente|Cliente):\\s*/, ''), isBot };\n  }).filter(m => m.contenido && ($('🔧 Preparar Contexto IA').item.json.auto_reply !== false || !m.isBot)).map(m => ({ rol: m.rol, contenido: m.contenido })),\n    { rol: 'bot', contenido: '[__DATOS__]' + JSON.stringify($json.datosRecolectados || {}) }\n  ]\n}) }}",
-          "options": {}
-        }
-      },
-      {
-        "id": "trigger-followup",
-        "name": "⏰ Trigger Follow-up Check",
-        "type": "n8n-nodes-base.scheduleTrigger",
-        "typeVersion": 1.2,
-        "position": [
-          -240,
-          700
-        ],
-        "parameters": {
-          "rule": {
-            "interval": [
-              {
-                "field": "hours",
-                "hoursInterval": 1
-              }
-            ]
-          }
-        },
-        "disabled": true
-      },
-      {
-        "id": "cfg-followup",
-        "name": "⚙️ Config G54 Follow-up",
-        "type": "n8n-nodes-base.set",
-        "typeVersion": 3.4,
-        "position": [
-          -40,
-          700
-        ],
-        "parameters": {
-          "assignments": {
-            "assignments": [
-              {
-                "id": "f1",
-                "name": "G54_BASE_URL",
-                "value": "https://apigrowth.mdarthurdigital.com",
-                "type": "string"
-              },
-              {
-                "id": "f2",
-                "name": "G54_N8N_TOKEN",
-                "value": "",
-                "type": "string"
-              },
-              {
-                "id": "f3",
-                "name": "G54_AGENT_TOKEN",
-                "value": "g54_agent_produccion_2026",
-                "type": "string"
-              },
-              {
-                "id": "f4",
-                "name": "G54_COMPANY_ID",
-                "value": "={{ $json.company_id }}",
-                "type": "string"
-              }
-            ]
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "get-leads-followup",
-        "name": "📋 Obtener Leads Sin Respuesta",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          180,
-          700
-        ],
-        "continueOnFail": true,
-        "parameters": {
-          "url": "={{ $('⚙️ Config G54 Follow-up').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54 Follow-up').item.json.G54_COMPANY_ID + '/wa/leads' }}",
-          "sendQuery": true,
-          "queryParameters": {
-            "parameters": [
-              {
-                "name": "status",
-                "value": "active"
-              },
-              {
-                "name": "no_response_hours",
-                "value": "23"
-              }
-            ]
-          },
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('⚙️ Config G54 Follow-up').item.json.G54_N8N_TOKEN }}"
-              }
-            ]
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "get-wa-config-followup",
-        "name": "⚙️ Obtener WA Config Follow-up",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          380,
-          700
-        ],
-        "continueOnFail": true,
-        "parameters": {
-          "url": "={{ $('⚙️ Config G54 Follow-up').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54 Follow-up').item.json.G54_COMPANY_ID + '/whatsapp/config' }}",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('⚙️ Config G54 Follow-up').item.json.G54_N8N_TOKEN }}"
-              }
-            ]
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "procesar-followup",
-        "name": "🔧 Procesar Follow-ups",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          580,
-          700
-        ],
-        "parameters": {
-          "jsCode": "const leadsRaw = $('📋 Obtener Leads Sin Respuesta').item.json;\nconst leads = leadsRaw?.data || leadsRaw?.records || [];\n\nlet waConfigRaw = {};\ntry { waConfigRaw = $('⚙️ Obtener WA Config Follow-up').item?.json || {}; } catch(e) {}\nconst waConfig = waConfigRaw?.data || {};\n\nconst followup24 = waConfig.followup_24h || 'Hola 👋 ¿Sigues necesitando ayuda? Aquí estamos para asistirte.';\nconst followup72 = waConfig.followup_72h || 'Seguimos disponibles cuando lo necesites 👍';\nconst wa_access_token = waConfig.wa_access_token || '';\nconst phone_number_id = waConfig.phone_number_id || '';\n\nconst now = new Date();\nconst results = [];\n\nfor (const lead of leads) {\n  const ultimaActividad = new Date(lead.ultima_actividad || lead.created_at || 0);\n  const horasDiff = (now - ultimaActividad) / (1000 * 60 * 60);\n  let tipoFollowup = null;\n  if (horasDiff >= 72) tipoFollowup = '72h';\n  else if (horasDiff >= 24) tipoFollowup = '24h';\n  if (!tipoFollowup) continue;\n\n  const telefono = (lead.phone || '').replace(/^\\+/, '');\n  if (!telefono || telefono.startsWith('fbig_')) continue;\n\n  results.push({ json: {\n    leadId: lead.id,\n    telefono,\n    nombre: lead.name || '',\n    tipoFollowup,\n    estado: lead.estado || '',\n    mensajeFollowup: tipoFollowup === '24h' ? followup24 : followup72,\n    wa_access_token,\n    phone_number_id\n  } });\n}\n\nreturn results.length ? results : [{ json: { skip: true } }];"
-        }
-      },
-      {
-        "id": "if-followup-skip",
-        "name": "🔀 ¿Hay leads para follow-up?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2.2,
-        "position": [
-          780,
-          700
-        ],
-        "parameters": {
-          "conditions": {
-            "options": {
-              "caseSensitive": false,
-              "typeValidation": "loose"
-            },
-            "conditions": [
-              {
-                "id": "c1",
-                "leftValue": "={{ $json.skip }}",
-                "rightValue": true,
-                "operator": {
-                  "type": "boolean",
-                  "operation": "false"
-                }
-              }
-            ],
-            "combinator": "and"
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "enviar-followup",
-        "name": "📤 Enviar Follow-up WA",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          980,
-          700
-        ],
-        "continueOnFail": true,
-        "parameters": {
-          "method": "POST",
-          "url": "={{ 'https://graph.facebook.com/v19.0/' + $json.phone_number_id + '/messages' }}",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $json.wa_access_token }}"
-              },
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.telefono, type: 'text', text: { body: $json.mensajeFollowup } }) }}",
-          "options": {}
-        }
-      },
-      {
-        "id": "actualizar-estado-followup",
-        "name": "🔄 Actualizar Estado Follow-up",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          1180,
-          700
-        ],
-        "continueOnFail": true,
-        "parameters": {
-          "method": "PATCH",
-          "url": "={{ $('⚙️ Config G54 Follow-up').item.json.G54_BASE_URL + '/api/agent/wa/leads/' + $json.leadId }}",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('⚙️ Config G54 Follow-up').item.json.G54_AGENT_TOKEN }}"
-              },
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ estado: 'En calificación', ultima_actividad: new Date().toISOString() }) }}",
-          "options": {}
-        }
-      },
-      {
-        "id": "salesai-manual-webhook-001",
-        "name": "📩 Webhook Respuesta Manual",
-        "type": "n8n-nodes-base.webhook",
-        "typeVersion": 2,
-        "position": [
-          -240,
-          660
-        ],
-        "parameters": {
-          "httpMethod": "POST",
-          "path": "sales-ai-manual",
-          "responseMode": "responseNode",
-          "options": {}
-        },
-        "webhookId": "85e5b819-4ed7-4628-9bb0-251fd10cb1a4"
-      },
-      {
-        "id": "salesai-manual-respond-001",
-        "name": "✅ Responder OK a G54",
-        "type": "n8n-nodes-base.respondToWebhook",
-        "typeVersion": 1.1,
-        "position": [
-          0,
-          580
-        ],
-        "parameters": {
-          "respondWith": "json",
-          "responseBody": "={{ JSON.stringify({ ok: true }) }}"
-        }
-      },
-      {
-        "id": "salesai-manual-config-001",
-        "name": "⚙️ Config WA Manual",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          240,
-          660
-        ],
-        "parameters": {
-          "method": "GET",
-          "url": "=https://apigrowth.mdarthurdigital.com/api/agent/wa/empresa-by-phone/{{ $('📩 Webhook Respuesta Manual').item.json.body.phone_number_id }}",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "Bearer g54_agent_produccion_2026"
-              }
-            ]
-          },
-          "options": {}
-        },
-        "onError": "continueRegularOutput"
-      },
-      {
-        "id": "salesai-manual-send-001",
-        "name": "📤 Enviar Respuesta Manual WA",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          480,
-          660
-        ],
-        "parameters": {
-          "method": "POST",
-          "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config WA Manual').item.json.phone_number_id }}/messages",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('⚙️ Config WA Manual').item.json.wa_access_token }}"
-              },
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('📩 Webhook Respuesta Manual').item.json.body.phone, type: 'text', text: { body: $('📩 Webhook Respuesta Manual').item.json.body.mensaje } }) }}",
-          "options": {}
-        }
-      },
-      {
-        "id": "salesai-manual-save-001",
-        "name": "💾 Guardar en Historial G54",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          720,
-          660
-        ],
-        "parameters": {
-          "method": "POST",
-          "url": "https://apigrowth.mdarthurdigital.com/api/agent/whatsapp/inbound",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "Bearer g54_agent_produccion_2026"
-              },
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ empresa_id: $('📩 Webhook Respuesta Manual').item.json.body.company_id, phone: $('📩 Webhook Respuesta Manual').item.json.body.phone, canal: 'whatsapp', messages: [{ rol: 'agente', contenido: $('📩 Webhook Respuesta Manual').item.json.body.mensaje }], clasificacion: 'Vendedor activo' }) }}",
-          "options": {}
-        },
-        "onError": "continueRegularOutput"
-      },
-      {
-        "id": "salesai-check-lead-001",
-        "name": "🔍 Verificar Estado Lead",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          820,
-          340
-        ],
-        "parameters": {
-          "method": "GET",
-          "url": "=https://apigrowth.mdarthurdigital.com/api/n8n/companies/{{ $json.company_id || 1 }}/wa/leads?phone={{ encodeURIComponent($json.telefono || $json.from || '') }}",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "Bearer "
-              }
-            ]
-          },
-          "options": {}
-        },
-        "onError": "continueRegularOutput"
-      },
-      {
-        "id": "salesai-check-if-001",
-        "name": "🔀 ¿Bot puede responder?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2.2,
-        "position": [
-          1040,
-          340
-        ],
-        "parameters": {
-          "conditions": {
-            "options": {
-              "caseSensitive": false,
-              "leftValue": "",
-              "typeValidation": "loose"
-            },
-            "conditions": [
-              {
-                "id": "cond-bot-active",
-                "leftValue": "={{ (() => { const d = $json?.data; if (!d || !Array.isArray(d) || d.length === 0) return true; const clasificacion = (d[0].clasificacion || d[0].estado || '').toLowerCase(); const bloqueadas = ['vendedor activo','cerrado','vendido','no interesado']; return !bloqueadas.some(b => clasificacion.includes(b)); })() }}",
-                "rightValue": true,
-                "operator": {
-                  "type": "boolean",
-                  "operation": "true"
-                }
-              }
-            ],
-            "combinator": "and"
-          }
-        }
-      },
-      {
-        "id": "crm-login-sales",
-        "name": "🔐 G54: Login CRM",
-        "type": "n8n-nodes-base.httpRequest",
-        "position": [
-          4800,
-          300
-        ],
-        "typeVersion": 4.2,
-        "onError": "continueRegularOutput",
-        "parameters": {
-          "method": "POST",
-          "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL }}/api/auth/login",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Accept",
-                "value": "application/json"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config G54').item.json.G54_MASTER_EMAIL, password: $('⚙️ Config G54').item.json.G54_MASTER_PASSWORD }) }}",
-          "options": {}
-        }
-      },
-      {
-        "id": "crm-switch-company-sales",
-        "name": "🏢 G54: Cambiar Empresa (CRM)",
-        "type": "n8n-nodes-base.httpRequest",
-        "position": [
-          5000,
-          300
-        ],
-        "typeVersion": 4.2,
-        "onError": "continueRegularOutput",
-        "parameters": {
-          "method": "POST",
-          "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL }}/api/auth/switch-company",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM').item.json.access_token }}"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ company_id: Number($('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID || 1) }) }}",
-          "options": {}
-        }
-      },
-      {
-        "id": "crm-buscar-board-sales",
-        "name": "📋 G54: Buscar Deal Existente (CRM)",
-        "type": "n8n-nodes-base.httpRequest",
-        "position": [
-          5200,
-          300
-        ],
-        "typeVersion": 4.2,
-        "onError": "continueRegularOutput",
-        "parameters": {
-          "method": "GET",
-          "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL }}/api/crm/board",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM').item.json.access_token }}"
-              },
-              {
-                "name": "Accept",
-                "value": "application/json"
-              }
-            ]
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "crm-encontrar-deal-sales",
-        "name": "🔍 Encontrar Deal por Teléfono",
-        "type": "n8n-nodes-base.code",
-        "position": [
-          5400,
-          300
-        ],
-        "typeVersion": 2,
-        "parameters": {
-          "jsCode": "const board = $('📋 G54: Buscar Deal Existente (CRM)').item.json;\nconst origen = $('🔍 Parsear Respuesta IA').item.json;\nconst telefono = origen.telefono || '';\n\nlet match = null;\ntry {\n  for (const etapa of Object.keys(board)) {\n    const deals = board[etapa] || [];\n    const found = deals.find(d => d.telefono === telefono);\n    if (found) { match = found; break; }\n  }\n} catch (e) { /* si el board no cargó, seguimos como si no existiera */ }\n\nlet wa_contact_id = null;\ntry {\n  const contactData = $('🔍 Buscar Contact ID (G54)').item.json.data || [];\n  wa_contact_id = contactData[0]?.id || null;\n} catch (e) { /* si falló el lookup, seguimos sin el vínculo */ }\n\nreturn [{ json: {\n  existe: !!match,\n  deal_id: match ? match.id : null,\n  telefono,\n  wa_contact_id,\n}}];"
-        }
-      },
-      {
-        "id": "crm-existe-if-sales",
-        "name": "🔀 ¿Deal ya existe? (CRM)",
-        "type": "n8n-nodes-base.if",
-        "position": [
-          5600,
-          300
-        ],
-        "typeVersion": 2,
-        "parameters": {
-          "conditions": {
-            "options": {
-              "caseSensitive": true,
-              "leftValue": "",
-              "typeValidation": "strict"
-            },
-            "conditions": [
-              {
-                "id": "deal-existe",
-                "leftValue": "={{ String($json.existe) }}",
-                "rightValue": "true",
-                "operator": {
-                  "type": "string",
-                  "operation": "equals"
-                }
-              }
-            ],
-            "combinator": "and"
-          }
-        }
-      },
-      {
-        "id": "crm-actualizar-deal-sales",
-        "name": "💾 G54: Actualizar Deal CRM",
-        "type": "n8n-nodes-base.httpRequest",
-        "position": [
-          5800,
-          220
-        ],
-        "typeVersion": 4.2,
-        "onError": "continueRegularOutput",
-        "parameters": {
-          "method": "PUT",
-          "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/crm/deals/' + $('🔍 Encontrar Deal por Teléfono').item.json.deal_id }}",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM').item.json.access_token }}"
-              },
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "name": "Accept",
-                "value": "application/json"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ wa_contact_id: $('🔍 Encontrar Deal por Teléfono').item.json.wa_contact_id, temperatura: ({frio:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta IA').item.json.clasificacion] || 'bajo', notas: 'Última interacción vía Sales AI Motor: ' + ($('🔍 Parsear Respuesta IA').item.json.resumenLead || '') }) }}",
-          "options": {}
-        }
-      },
-      {
-        "id": "crm-crear-deal-sales",
-        "name": "💾 G54: Crear Deal CRM",
-        "type": "n8n-nodes-base.httpRequest",
-        "position": [
-          5800,
-          380
-        ],
-        "typeVersion": 4.2,
-        "onError": "continueRegularOutput",
-        "parameters": {
-          "method": "POST",
-          "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL }}/api/crm/deals",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM').item.json.access_token }}"
-              },
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "name": "Accept",
-                "value": "application/json"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ nombre: $('🔍 Parsear Respuesta IA').item.json.nombreContacto || $('🔍 Encontrar Deal por Teléfono').item.json.telefono, telefono: $('🔍 Encontrar Deal por Teléfono').item.json.telefono, origen: 'whatsapp', wa_contact_id: $('🔍 Encontrar Deal por Teléfono').item.json.wa_contact_id, temperatura: ({frio:'bajo', tibio:'medio', caliente:'alto'})[$('🔍 Parsear Respuesta IA').item.json.clasificacion] || 'bajo', notas: 'Lead generado por Sales AI Motor: ' + ($('🔍 Parsear Respuesta IA').item.json.resumenLead || '') }) }}",
-          "options": {}
-        }
-      },
-      {
-        "id": "crm-buscar-contact-id-sales",
-        "name": "🔍 Buscar Contact ID (G54)",
-        "type": "n8n-nodes-base.httpRequest",
-        "position": [
-          4800,
-          500
-        ],
-        "typeVersion": 4.2,
-        "onError": "continueRegularOutput",
-        "parameters": {
-          "method": "GET",
-          "url": "={{ $('🏢 Aplicar Config Empresa').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID + '/wa/leads' }}",
-          "sendQuery": true,
-          "queryParameters": {
-            "parameters": [
-              {
-                "name": "phone",
-                "value": "={{ $('🔍 Parsear Respuesta IA').item.json.telefono }}"
-              }
-            ]
-          },
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $('🏢 Aplicar Config Empresa').item.json.G54_N8N_TOKEN }}"
-              },
-              {
-                "name": "Accept",
-                "value": "application/json"
-              }
-            ]
-          },
-          "options": {}
-        }
-      },
-      {
-        "parameters": {
-          "conditions": {
-            "options": {
-              "caseSensitive": false
-            },
-            "conditions": [
-              {
-                "id": "not-self",
-                "leftValue": "={{ $json.usuarioId }}",
-                "rightValue": "={{ $json.pageId }}",
-                "operator": {
-                  "type": "string",
-                  "operation": "notEquals"
-                }
-              }
-            ],
-            "combinator": "and"
-          },
-          "options": {}
-        },
-        "id": "guard-not-self",
-        "name": "🚫 ¿Es la propia página?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2.2,
-        "position": [
-          490,
-          440
-        ]
-      },
-      {
-        "parameters": {
-          "method": "GET",
-          "url": "=https://graph.facebook.com/v19.0/{{ $('🔧 Extraer Mensaje FB/IG DM').isExecuted ? ($('🔧 Extraer Mensaje FB/IG DM').item.json.resolveKey || '') : '' }}",
-          "sendQuery": true,
-          "queryParameters": {
-            "parameters": [
-              {
-                "name": "fields",
-                "value": "access_token"
-              },
-              {
-                "name": "access_token",
-                "value": "={{ $json.FB_ACCESS_TOKEN }}"
-              }
-            ]
-          },
-          "options": {}
-        },
-        "id": "token-exchange-fb",
-        "name": "🔑 Intercambiar Page Token (FB)",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          -320,
-          780
-        ],
-        "onError": "continueRegularOutput"
-      },
-      {
-        "parameters": {
-          "conditions": {
-            "options": {
-              "caseSensitive": false,
-              "leftValue": "",
-              "typeValidation": "loose"
-            },
-            "conditions": [
-              {
-                "id": "check-media",
-                "leftValue": "={{ $('🔧 Extraer Mensaje WA').item.json.mediaId }}",
-                "rightValue": "",
-                "operator": {
-                  "type": "string",
-                  "operation": "notEmpty"
-                }
-              }
-            ],
-            "combinator": "and"
-          },
-          "options": {}
-        },
-        "id": "es-medio",
-        "name": "🔀 ¿Es medio?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2.2,
-        "position": [
-          380,
-          60
-        ]
-      },
-      {
-        "parameters": {
-          "jsCode": "const ext = $('🔧 Extraer Mensaje WA').item.json;\nreturn [{ json: {\n  media_id: ext.mediaId,\n  mime_type: ext.mimeType,\n  caption: ext.mediaCaption,\n  phone_number_id: ext.resolveKey\n} }];"
-        },
-        "id": "preparar-medios",
-        "name": "🔧 Preparar Datos para Medios",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          600,
-          0
-        ]
-      },
-      {
-        "parameters": {
-          "source": "database",
-          "workflowId": "5GU89AeWsBZ86FWa",
-          "mode": "once",
-          "inputData": "={{ [{ json: $json }] }}"
-        },
-        "id": "ejecutar-medios",
-        "name": "▶️ 06 Procesador de Medios",
-        "type": "n8n-nodes-base.executeWorkflow",
-        "typeVersion": 1.2,
-        "position": [
-          820,
-          0
-        ],
-        "onError": "continueRegularOutput",
-        "alwaysOutputData": true
-      },
-      {
-        "parameters": {
-          "jsCode": "const resultado = $input.first().json;\nconst tipo = $('🔧 Extraer Mensaje WA').item.json.tipoMensaje || 'archivo';\nconst etiquetas = { image: 'imagen', audio: 'audio', document: 'documento', video: 'video' };\nconst prefijo = `[Cliente envió ${etiquetas[tipo] || 'un archivo'}] `;\nconst textoProcesado = (resultado && !resultado.error && resultado.texto) ? resultado.texto : '[No se pudo procesar el archivo enviado]';\nreturn [{ json: { texto: prefijo + textoProcesado } }];"
-        },
-        "id": "combinar-medios",
-        "name": "🔧 Combinar Texto de Medio",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          1040,
-          0
-        ]
-      },
-      {
-        "parameters": {
-          "method": "POST",
-          "url": "https://api.groq.com/openai/v1/chat/completions",
-          "authentication": "predefinedCredentialType",
-          "nodeCredentialType": "groqApi",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: 'Detecta el idioma del ULTIMO mensaje del cliente. Si el mensaje es muy corto o ambiguo (ej: \"ok\", \"si\", un numero), usa el idioma predominante del historial de conversacion en su lugar. Responde UNICAMENTE con el nombre del idioma en espanol, todo en minusculas, una sola palabra (ejemplos validos: espanol, ingles, portugues, frances). Sin explicaciones.' }, { role: 'user', content: 'HISTORIAL:\\n' + ($json.historial || '(sin historial)') + '\\n\\nMENSAJE ACTUAL: \"' + $json.texto + '\"' }], temperature: 0, max_tokens: 10 }) }}",
-          "options": {}
-        },
-        "id": "detectar-idioma",
-        "name": "🌐 Detectar Idioma",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          2400,
-          180
-        ],
-        "onError": "continueRegularOutput",
-        "credentials": {
-          "groqApi": {
-            "id": "jORffbRhRNohHT1B",
-            "name": "Groq account"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "url": "https://apigrowth.mdarthurdigital.com/api/n8n/companies",
-          "options": {}
-        },
-        "id": "followup-get-companies",
-        "name": "🏢 Obtener Empresas Activas (Follow-up)",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          -40,
-          700
-        ]
-      },
-      {
-        "parameters": {
-          "jsCode": "const companies = $input.first().json.data || [];\nreturn companies.filter(c => c.is_active).map(c => ({ json: { company_id: c.id, name: c.name } }));"
-        },
-        "id": "followup-filter-companies",
-        "name": "🔧 Filtrar Empresas Activas (Follow-up)",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          160,
-          700
-        ]
-      }
-    ],
-    "connections": {
-      "📲 Webhook WhatsApp": {
-        "main": [
-          [
-            {
-              "node": "🔀 ¿Verificación WA?",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔀 ¿Verificación WA?": {
-        "main": [
-          [
-            {
-              "node": "✅ Responder Verificación WA",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "✅ Responder 200 WA",
-              "type": "main",
-              "index": 0
-            },
-            {
-              "node": "🔧 Extraer Mensaje WA",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "📲 Webhook FB/IG DM": {
-        "main": [
-          [
-            {
-              "node": "✅ Responder 200 Social",
-              "type": "main",
-              "index": 0
-            },
-            {
-              "node": "🔧 Extraer Mensaje FB/IG DM",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔧 Extraer Mensaje WA": {
-        "main": [
-          [
-            {
-              "node": "🔀 ¿Hay mensaje?",
-              "type": "main",
-              "index": 0
-            },
-            {
-              "node": "🔀 ¿Es medio?",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔧 Extraer Mensaje FB/IG DM": {
-        "main": [
-          [
-            {
-              "node": "🚫 ¿Es la propia página?",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔀 ¿Hay mensaje?": {
-        "main": [
-          [
-            {
-              "node": "🔍 Verificar Estado Lead",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          []
-        ]
-      },
-      "⚙️ Config G54": {
-        "main": [
-          [
-            {
-              "node": "🔍 Preparar Resolución",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔍 Preparar Resolución": {
-        "main": [
-          [
-            {
-              "node": "🏢 Resolver Empresa (G54)",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🏢 Resolver Empresa (G54)": {
-        "main": [
-          [
-            {
-              "node": "🏢 Aplicar Config Empresa",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🏢 Aplicar Config Empresa": {
-        "main": [
-          [
-            {
-              "node": "🔑 Intercambiar Page Token (FB)",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🏢 Obtener Empresa G54": {
-        "main": [
-          [
-            {
-              "node": "⚙️ Obtener WA Config G54",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "⚙️ Obtener WA Config G54": {
-        "main": [
-          [
-            {
-              "node": "📦 Obtener Productos G54",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "📦 Obtener Productos G54": {
-        "main": [
-          [
-            {
-              "node": "📋 Buscar Lead Existente",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "📋 Buscar Lead Existente": {
-        "main": [
-          [
-            {
-              "node": "🔧 Preparar Contexto IA",
-              "type": "main",
-              "index": 0
-            },
-            {
-              "node": "✅ Marcar como Leído (WA)",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔧 Preparar Contexto IA": {
-        "main": [
-          [
-            {
-              "node": "🌐 Detectar Idioma",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🤖 Groq: Conversación IA": {
-        "main": [
-          [
-            {
-              "node": "🔀 ¿Groq OK?",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔀 ¿Groq OK?": {
-        "main": [
-          [
-            {
-              "node": "🔍 Parsear Respuesta IA",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "🤖 Gemini: Fallback IA",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🤖 Gemini: Fallback IA": {
-        "main": [
-          [
-            {
-              "node": "🔀 ¿Gemini OK?",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔀 ¿Gemini OK?": {
-        "main": [
-          [
-            {
-              "node": "🔍 Parsear Respuesta IA",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "🆘 Respuesta de Emergencia",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🆘 Respuesta de Emergencia": {
-        "main": [
-          [
-            {
-              "node": "🔍 Parsear Respuesta IA",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔍 Parsear Respuesta IA": {
-        "main": [
-          [
-            {
-              "node": "🔀 ¿Lead Caliente?",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔀 ¿Lead Caliente?": {
-        "main": [
-          [
-            {
-              "node": "📧 Notificar Vendedor",
-              "type": "main",
-              "index": 0
-            },
-            {
-              "node": "⏳ Esperar (Typing 3s)",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "⏳ Esperar (Typing 3s)",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "📧 Notificar Vendedor": {
-        "main": [
-          []
-        ]
-      },
-      "⏳ Esperar (Typing 3s)": {
-        "main": [
-          [
-            {
-              "node": "🔀 ¿Auto Reply?",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔀 ¿Auto Reply?": {
-        "main": [
-          [
-            {
-              "node": "🔀 ¿Canal Social?",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "🔀 ¿Crear o Actualizar Lead?",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔀 ¿Canal Social?": {
-        "main": [
-          [
-            {
-              "node": "📤 Enviar DM Social (FB/IG)",
-              "type": "main",
-              "index": 0
-            },
-            {
-              "node": "🔀 ¿Crear o Actualizar Lead?",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "📤 Enviar Mensaje WhatsApp",
-              "type": "main",
-              "index": 0
-            },
-            {
-              "node": "🔀 ¿Crear o Actualizar Lead?",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔀 ¿Crear o Actualizar Lead?": {
-        "main": [
-          [
-            {
-              "node": "💾 Actualizar Lead (PATCH)",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "💾 Crear Lead (POST)",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "⏰ Trigger Follow-up Check": {
-        "main": [
-          [
-            {
-              "node": "🏢 Obtener Empresas Activas (Follow-up)",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "⚙️ Config G54 Follow-up": {
-        "main": [
-          [
-            {
-              "node": "📋 Obtener Leads Sin Respuesta",
-              "type": "main",
-              "index": 0
-            },
-            {
-              "node": "⚙️ Obtener WA Config Follow-up",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "📋 Obtener Leads Sin Respuesta": {
-        "main": [
-          [
-            {
-              "node": "🔧 Procesar Follow-ups",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "⚙️ Obtener WA Config Follow-up": {
-        "main": [
-          [
-            {
-              "node": "🔧 Procesar Follow-ups",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔧 Procesar Follow-ups": {
-        "main": [
-          [
-            {
-              "node": "🔀 ¿Hay leads para follow-up?",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔀 ¿Hay leads para follow-up?": {
-        "main": [
-          [
-            {
-              "node": "📤 Enviar Follow-up WA",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          []
-        ]
-      },
-      "📤 Enviar Follow-up WA": {
-        "main": [
-          [
-            {
-              "node": "🔄 Actualizar Estado Follow-up",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "📩 Webhook Respuesta Manual": {
-        "main": [
-          [
-            {
-              "node": "✅ Responder OK a G54",
-              "type": "main",
-              "index": 0
-            },
-            {
-              "node": "⚙️ Config WA Manual",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "⚙️ Config WA Manual": {
-        "main": [
-          [
-            {
-              "node": "📤 Enviar Respuesta Manual WA",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "📤 Enviar Respuesta Manual WA": {
-        "main": [
-          [
-            {
-              "node": "💾 Guardar en Historial G54",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔍 Verificar Estado Lead": {
-        "main": [
-          [
-            {
-              "node": "🔀 ¿Bot puede responder?",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔀 ¿Bot puede responder?": {
-        "main": [
-          [
-            {
-              "node": "⚙️ Config G54",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          []
-        ]
-      },
-      "💾 Actualizar Lead (PATCH)": {
-        "main": [
-          [
-            {
-              "node": "🔍 Buscar Contact ID (G54)",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "💾 Crear Lead (POST)": {
-        "main": [
-          [
-            {
-              "node": "🔍 Buscar Contact ID (G54)",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔐 G54: Login CRM": {
-        "main": [
-          [
-            {
-              "node": "🏢 G54: Cambiar Empresa (CRM)",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🏢 G54: Cambiar Empresa (CRM)": {
-        "main": [
-          [
-            {
-              "node": "📋 G54: Buscar Deal Existente (CRM)",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "📋 G54: Buscar Deal Existente (CRM)": {
-        "main": [
-          [
-            {
-              "node": "🔍 Encontrar Deal por Teléfono",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔍 Encontrar Deal por Teléfono": {
-        "main": [
-          [
-            {
-              "node": "🔀 ¿Deal ya existe? (CRM)",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔀 ¿Deal ya existe? (CRM)": {
-        "main": [
-          [
-            {
-              "node": "💾 G54: Actualizar Deal CRM",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "💾 G54: Crear Deal CRM",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔍 Buscar Contact ID (G54)": {
-        "main": [
-          [
-            {
-              "node": "🔐 G54: Login CRM",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🚫 ¿Es la propia página?": {
-        "main": [
-          [
-            {
-              "node": "🔀 ¿Hay mensaje?",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          []
-        ]
-      },
-      "🔑 Intercambiar Page Token (FB)": {
-        "main": [
-          [
-            {
-              "node": "🏢 Obtener Empresa G54",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔀 ¿Es medio?": {
-        "main": [
-          [
-            {
-              "node": "🔧 Preparar Datos para Medios",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          []
-        ]
-      },
-      "🔧 Preparar Datos para Medios": {
-        "main": [
-          [
-            {
-              "node": "▶️ 06 Procesador de Medios",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "▶️ 06 Procesador de Medios": {
-        "main": [
-          [
-            {
-              "node": "🔧 Combinar Texto de Medio",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🌐 Detectar Idioma": {
-        "main": [
-          [
-            {
-              "node": "🤖 Groq: Conversación IA",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🏢 Obtener Empresas Activas (Follow-up)": {
-        "main": [
-          [
-            {
-              "node": "🔧 Filtrar Empresas Activas (Follow-up)",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔧 Filtrar Empresas Activas (Follow-up)": {
-        "main": [
-          [
-            {
-              "node": "⚙️ Config G54 Follow-up",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      }
-    },
-    "nodeGroups": [],
-    "authors": "Solange  Torrez",
-    "name": null,
-    "description": null,
-    "autosaved": false,
-    "workflowPublishHistory": [
-      {
-        "createdAt": "2026-07-18T17:01:01.176Z",
-        "id": 2193,
-        "workflowId": "otycsrxrMEMuxuwD",
-        "versionId": "771e9e50-7c13-470f-963b-8d7e80cafba4",
-        "event": "activated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      },
-      {
-        "createdAt": "2026-07-18T17:01:01.102Z",
-        "id": 2192,
-        "workflowId": "otycsrxrMEMuxuwD",
-        "versionId": "771e9e50-7c13-470f-963b-8d7e80cafba4",
-        "event": "deactivated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      }
-    ]
   }
 }

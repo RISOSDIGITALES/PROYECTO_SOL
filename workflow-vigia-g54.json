@@ -1,0 +1,921 @@
+{
+  "updatedAt": "2026-08-04T14:28:41.046Z",
+  "createdAt": "2026-07-23T17:08:06.224Z",
+  "id": "zTm4tMOV9vMfUDnG",
+  "name": "👁️ Vigía G54 — Supervisor RRSS",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 */2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "trg-schedule",
+      "name": "⏰ Vigía — Cada 2 Horas",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "vigia-g54",
+        "options": {}
+      },
+      "id": "trg-webhook",
+      "name": "🔔 Webhook Manual",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        180
+      ],
+      "webhookId": "vigia-g54-manual"
+    },
+    {
+      "parameters": {
+        "jsCode": "const workflows = [\n  { id: 'S62o0wcXq8Wfj67S', nombre: 'Strategist AI v3.0', chequearLoop: false },\n  { id: 'nHawWPIIu51ABBgl', nombre: 'Ideas AI', chequearLoop: false },\n  { id: 'wyO1f93A66imn9qw', nombre: 'Content AI (RRSS v1.4)', chequearLoop: false },\n  { id: '1rsqmFabW5PjnlHy', nombre: 'Image Generator AI', chequearLoop: false },\n  { id: 'IRCoya91PKPjpT1T', nombre: 'Distribution AI', chequearLoop: false },\n  { id: 'aMCwIQ3eY1bzyMyt', nombre: 'Distribution AI — Puente Temporal (2min)', chequearLoop: true },\n  { id: 'sNNhTEH8IzJsOIm3', nombre: 'Distribution AI — Alarma Exacta', chequearLoop: false },\n  { id: '62tIvF0snsrMj0sM', nombre: 'Community AI', chequearLoop: true },\n  { id: 'otycsrxrMEMuxuwD', nombre: 'Sales AI Motor', chequearLoop: true },\n  { id: 'EX9K1AZwKeouSJ9G', nombre: 'Analytics AI Semanal', chequearLoop: false },\n  { id: 'YI9EfJYcWJN4bbM9', nombre: 'Analytics AI Mensual (V3 Meta Reporte)', chequearLoop: false },\n  { id: 'JN2vRUznkOXlej8q', nombre: 'CTA Click Tracker', chequearLoop: false }\n];\nreturn workflows.map(w => ({ json: w }));\n"
+      },
+      "id": "lista-workflows",
+      "name": "📋 Lista de Workflows RRSS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        90
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://n8n.mdarthurdigital.com/api/v1/workflows/{{ $json.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "get-workflow",
+      "name": "🔎 n8n: GET Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        80,
+        90
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GBLSmCbCbzRirBc7",
+          "name": "n8n API — Self (Vigía)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://n8n.mdarthurdigital.com/api/v1/executions?workflowId={{ $('📋 Lista de Workflows RRSS').item.json.id }}&limit=20",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "get-executions",
+      "name": "🔎 n8n: GET Ejecuciones",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        320,
+        90
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GBLSmCbCbzRirBc7",
+          "name": "n8n API — Self (Vigía)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const listaItems = $('📋 Lista de Workflows RRSS').all();\nconst wfItems = $('🔎 n8n: GET Workflow').all();\nconst execItems = $('🔎 n8n: GET Ejecuciones').all();\nconst hallazgos = [];\nconst now = Date.now();\n\nfor (let i = 0; i < listaItems.length; i++) {\n  const info = listaItems[i].json;\n  const wf = wfItems[i].json;\n  const ejecuciones = (execItems[i].json.data) || [];\n\n  if (wf.active !== true) {\n    hallazgos.push({\n      tipo: 'workflow_inactivo',\n      severidad: 'critico',\n      clave: `inactivo_${info.id}`,\n      mensaje: `El workflow \"${info.nombre}\" está DESACTIVADO en n8n y debería estar activo.`\n    });\n  }\n\n  const recientes = ejecuciones.slice(0, 3);\n  const todasFallidas = recientes.length > 0 && recientes.every(e => e.status === 'error');\n  if (todasFallidas) {\n    // Antes de alertar: descartar el patron benigno conocido de Community AI\n    // (webhooks de Facebook sin texto real - likes, ediciones - que el workflow\n    // descarta correctamente pero que n8n cuenta como \"error\").\n    let esBenigno = false;\n    if (info.id === '62tIvF0snsrMj0sM') {\n      try {\n        const N8N_API_KEY = \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4MGQxYjQ2MS1kNGI3LTRjOGMtOGMwZi1kNTNkOWExMjRjNzMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiZjg3ZGY5NzMtOTgzOC00ZjFmLWI1ZjktM2E5MzlmY2U5OTljIiwiaWF0IjoxNzc3NzQyNDMxfQ.o8WeA87-KQjr3gbWSoqMqqNpjaQN9rjYzO4Xuer-P7E\";\n        const detalles = await Promise.all(recientes.map(e =>\n          this.helpers.httpRequest({\n            method: 'GET',\n            url: `https://n8n.mdarthurdigital.com/api/v1/executions/${e.id}?includeData=true`,\n            headers: { 'X-N8N-API-KEY': N8N_API_KEY },\n            json: true\n          }).catch(() => null)\n        ));\n        esBenigno = detalles.every(d => {\n          const msg = d?.data?.resultData?.error?.message || '';\n          return msg.includes('empty message');\n        });\n      } catch (e) {\n        esBenigno = false; // si la verificacion falla, tratar como hallazgo real por seguridad\n      }\n    }\n    if (!esBenigno) {\n      hallazgos.push({\n        tipo: 'ejecuciones_fallidas',\n        severidad: 'critico',\n        clave: `fallas_${info.id}`,\n        mensaje: `\"${info.nombre}\" — las últimas ${recientes.length} ejecuciones terminaron en error.`\n      });\n    }\n  }\n\n  if (info.chequearLoop) {\n    const quinceMinAtras = now - 15 * 60 * 1000;\n    const recientesVolumen = ejecuciones.filter(e => {\n      const t = new Date(e.startedAt).getTime();\n      return !isNaN(t) && t >= quinceMinAtras;\n    });\n    if (recientesVolumen.length > 15) {\n      hallazgos.push({\n        tipo: 'volumen_anomalo',\n        severidad: 'critico',\n        clave: `loop_${info.id}`,\n        mensaje: `\"${info.nombre}\" — ${recientesVolumen.length} ejecuciones en los últimos 15 minutos, posible loop (mismo patrón del incidente real del 14-jul en Community AI).`\n      });\n    }\n  }\n}\n\nreturn [{ json: { hallazgos } }];"
+      },
+      "id": "evaluar-salud",
+      "name": "🩺 Evaluar Salud Workflow",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        90
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const G54 = 'https://api.growth54.com';\nconst MASTER_EMAIL = 'master@growth54.local';\nconst MASTER_PASSWORD = 'REDACTED_MASTER_PASSWORD';\nconst hallazgos = ($input.first().json.hallazgos || []).slice();\n\ntry {\n  const loginResp = await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${G54}/api/auth/login`,\n    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },\n    body: { email: MASTER_EMAIL, password: MASTER_PASSWORD },\n    json: true\n  });\n  const token = loginResp.access_token;\n  const companiesFromLogin = loginResp.companies || [];\n\n  const companiesResp = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `${G54}/api/n8n/companies`,\n    headers: { Accept: 'application/json' },\n    json: true\n  });\n  const empresas = (companiesResp.data || companiesResp || []).filter(e => e.is_active !== false && e.activo !== false);\n  const ahora = Date.now();\n\n  for (const empresa of empresas) {\n    const empresaId = empresa.id || empresa.company_id;\n    const empresaNombre = empresa.name || empresa.nombre || String(empresaId);\n    try {\n      await this.helpers.httpRequest({\n        method: 'POST',\n        url: `${G54}/api/auth/switch-company`,\n        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },\n        body: { company_id: empresaId },\n        json: true\n      });\n\n      const infoLogin = companiesFromLogin.find(c => String(c.id) === String(empresaId));\n      if (!infoLogin || !infoLogin.timezone) {\n        hallazgos.push({\n          tipo: 'timezone_sin_configurar',\n          severidad: 'atencion',\n          clave: `timezone_sin_configurar_${empresaId}`,\n          mensaje: `Empresa \"${empresaNombre}\" no tiene zona horaria configurada en G54 — Sales AI Motor usa UTC como neutral en vez de asumir la de otra empresa, pero conviene configurar la real para que los saludos (buenos días/tardes/noches) salgan correctos.`\n        });\n      }\n\n      const postsResp = await this.helpers.httpRequest({\n        method: 'GET',\n        url: `${G54}/api/rrss/posts`,\n        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },\n        json: true\n      });\n      const posts = postsResp.data || postsResp || [];\n\n      const atascados = posts.filter(p => {\n        if (p.status !== 'programado' || !p.fecha_programada) return false;\n        const fechaProg = new Date(p.fecha_programada).getTime();\n        return !isNaN(fechaProg) && (ahora - fechaProg) > 15 * 60 * 1000;\n      });\n\n      if (atascados.length > 0) {\n        const revertidos = [];\n        const fallidos = [];\n        for (const p of atascados) {\n          try {\n            await this.helpers.httpRequest({\n              method: 'PUT',\n              url: `${G54}/api/rrss/posts/${p.id}/status`,\n              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },\n              body: { status: 'aprobado' },\n              json: true\n            });\n            revertidos.push(p.id);\n          } catch (revertErr) {\n            fallidos.push(p.id);\n          }\n        }\n        const detalle = revertidos.length ? ` Revertidos automáticamente a \"aprobado\" (vigía): ${revertidos.join(', ')}.` : '';\n        const detalleFallo = fallidos.length ? ` No se pudo revertir: ${fallidos.join(', ')} (requiere revisión manual).` : '';\n        hallazgos.push({\n          tipo: 'posts_atascados',\n          severidad: fallidos.length > 0 ? 'critico' : 'atencion',\n          clave: `atascados_empresa_${empresaId}`,\n          mensaje: `Empresa \"${empresaNombre}\" — ${atascados.length} post(s) en \"programado\" con fecha vencida hace más de 15 min (IDs: ${atascados.map(p => p.id).join(', ')}).${detalle}${detalleFallo}`,\n          autoCorregido: fallidos.length === 0\n        });\n      }\n\n      // Chequeo de contenido cruzado: ¿el copy de un post reciente menciona el nombre de OTRA empresa activa?\n      // Mismo tipo de bug ya encontrado a mano el 21-jul (ítem 157) — mezcla de datos entre empresas.\n      const recientes = posts.filter(p => {\n        const fechaRef = p.updated_at || p.created_at;\n        if (!fechaRef) return false;\n        const t = new Date(fechaRef).getTime();\n        return !isNaN(t) && (ahora - t) < 7 * 24 * 60 * 60 * 1000;\n      });\n      const otrasEmpresas = empresas.filter(e => String(e.id || e.company_id) !== String(empresaId) && (e.name || e.nombre));\n      for (const p of recientes) {\n        const textoPost = [p.copy_facebook, p.copy_instagram, p.copy_linkedin, p.tema, p.hook].filter(Boolean).join(' ').toLowerCase();\n        if (!textoPost) continue;\n        for (const otra of otrasEmpresas) {\n          const nombreOtra = (otra.name || otra.nombre || '').trim();\n          if (nombreOtra.length < 4) continue;\n          if (textoPost.includes(nombreOtra.toLowerCase())) {\n            hallazgos.push({\n              tipo: 'contenido_cruzado',\n              severidad: 'critico',\n              clave: `contenido_cruzado_${empresaId}_${p.id}`,\n              mensaje: `Empresa \"${empresaNombre}\" — el post ${p.id} menciona el nombre de otra empresa de la plataforma (\"${nombreOtra}\") en su copy. Posible mezcla de datos entre empresas (mismo tipo de bug del ítem 157) — revisar manualmente, no se corrige solo.`\n            });\n            break;\n          }\n        }\n      }\n\n      const porIdea = {};\n      for (const p of posts) {\n        if (!p.social_idea_id) continue;\n        if (!porIdea[p.social_idea_id]) porIdea[p.social_idea_id] = [];\n        porIdea[p.social_idea_id].push(p.id);\n      }\n      const duplicados = Object.entries(porIdea).filter(([, ids]) => ids.length > 1);\n      if (duplicados.length > 0) {\n        hallazgos.push({\n          tipo: 'posts_duplicados',\n          severidad: 'atencion',\n          clave: `duplicados_empresa_${empresaId}`,\n          mensaje: `Empresa \"${empresaNombre}\" — ${duplicados.length} idea(s) con más de un post generado (posible regresión del bug de duplicación de Content AI): ${duplicados.map(([ideaId, ids]) => `idea ${ideaId} → posts ${ids.join('/')}`).join('; ')}. Revisar manualmente cuál conservar — no se borra nada automáticamente.`\n        });\n      }\n\n      // Mismo embotellamiento humano que \"ideas sin aprobar\", un paso más adelante en el\n      // embudo — reusa el array `posts` ya traído arriba, sin ninguna llamada nueva.\n      // Confirmado con datos reales el 04-ago: Crating Express tiene un post aprobado desde\n      // el 01-jul (34 días) nunca programado, y Orison tiene sus 3 posts aprobados desde\n      // julio sin tocar (caso ya conocido, pausado a propósito en el puente por el ítem 120 —\n      // se reporta igual como hecho real, no se oculta ni se excluye).\n      const SIETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;\n      const postsSinRevisar = posts.filter(p => {\n        if (p.status !== 'borrador') return false;\n        const t = new Date(p.updated_at || p.created_at || 0).getTime();\n        return t > 0 && (ahora - t) > SIETE_DIAS_MS;\n      });\n      const postsSinProgramar = posts.filter(p => {\n        if (p.status !== 'aprobado') return false;\n        const t = new Date(p.updated_at || p.created_at || 0).getTime();\n        return t > 0 && (ahora - t) > SIETE_DIAS_MS;\n      });\n      if (postsSinRevisar.length > 0 || postsSinProgramar.length > 0) {\n        const partes = [];\n        if (postsSinRevisar.length) partes.push(`${postsSinRevisar.length} en borrador sin revisar (IDs: ${postsSinRevisar.map(p => p.id).join(', ')})`);\n        if (postsSinProgramar.length) partes.push(`${postsSinProgramar.length} aprobado(s) sin programar nunca (IDs: ${postsSinProgramar.map(p => p.id).join(', ')})`);\n        hallazgos.push({\n          tipo: 'pipeline_estancado',\n          severidad: 'atencion',\n          clave: `pipeline_estancado_${empresaId}`,\n          mensaje: `Empresa \"${empresaNombre}\" — contenido esperando revisión hace más de 7 días: ${partes.join(' · ')}. Mismo tipo de embotellamiento humano que el chequeo de ideas sin aprobar — revisar el panel.`\n        });\n      }\n\n      try {\n        const ideasResp = await this.helpers.httpRequest({\n          method: 'GET',\n          url: `${G54}/api/rrss/ideas`,\n          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },\n          json: true\n        });\n        const ideas = ideasResp.data || ideasResp || [];\n        if (ideas.length > 0) {\n          const masReciente = ideas.reduce((max, i) => {\n            const t = new Date(i.created_at || i.fecha_propuesta || 0).getTime();\n            return t > max ? t : max;\n          }, 0);\n          const diasSinIdeas = (ahora - masReciente) / (24 * 60 * 60 * 1000);\n          if (diasSinIdeas > 8) {\n            hallazgos.push({\n              tipo: 'ideas_estancadas',\n              severidad: 'atencion',\n              clave: `ideas_estancadas_${empresaId}`,\n              mensaje: `Empresa \"${empresaNombre}\" — la idea más reciente tiene ${Math.floor(diasSinIdeas)} días. El disparo semanal de Ideas AI puede estar roto para esta empresa.`\n            });\n          }\n\n          // Backlog de ideas sin aprobar — distinto del chequeo de arriba (que detecta si\n          // dejaron de GENERARSE ideas). Este detecta el caso opuesto, real y confirmado el\n          // 04-ago para Crating Express: las ideas se generan bien cada semana, pero se\n          // acumulan sin que nadie las revise/apruebe, así que nunca llegan a convertirse\n          // en post. Ideas con más de 7 días todavía en estado 'idea' (nunca tocadas).\n          const backlogSinAprobar = ideas.filter(i => {\n            if (i.status !== 'idea') return false;\n            const t = new Date(i.created_at || i.fecha_propuesta || 0).getTime();\n            if (!t) return false;\n            return (ahora - t) / (24 * 60 * 60 * 1000) > 7;\n          });\n          if (backlogSinAprobar.length >= 3) {\n            const porPlataforma = backlogSinAprobar.reduce((acc, i) => {\n              const pl = i.platform || 'sin_plataforma';\n              acc[pl] = (acc[pl] || 0) + 1;\n              return acc;\n            }, {});\n            const desglose = Object.entries(porPlataforma).map(([pl, n]) => `${pl}: ${n}`).join(', ');\n            hallazgos.push({\n              tipo: 'ideas_sin_aprobar',\n              severidad: 'atencion',\n              clave: `ideas_sin_aprobar_${empresaId}`,\n              mensaje: `Empresa \"${empresaNombre}\" — ${backlogSinAprobar.length} idea(s) generada(s) hace más de 7 días siguen sin aprobar (${desglose}). El pipeline de generación funciona bien, pero nadie las está revisando — revisar el panel de Ideas.`\n            });\n          }\n        }\n      } catch (ideasErr) {\n        // no bloquear el resto de chequeos por esto\n      }\n\n      {\n        const conImagen = posts.find(p => p.imagen_url);\n        if (conImagen) {\n          try {\n            await this.helpers.httpRequest({ method: 'GET', url: conImagen.imagen_url, json: false, returnFullResponse: true });\n          } catch (imgErr) {\n            const status = imgErr.statusCode || (imgErr.response && imgErr.response.statusCode) || (imgErr.cause && imgErr.cause.statusCode);\n            if (status === 404) {\n              hallazgos.push({\n                tipo: 'storage_404',\n                severidad: 'atencion',\n                clave: `storage_404_${empresaId}`,\n                mensaje: `Empresa \"${empresaNombre}\" — el storage de imágenes de G54 devuelve 404 (post ${conImagen.id}). Mismo tipo de bug ya visto antes en el storage de G54 (depende del servidor de Walter, no se puede auto-corregir).`\n              });\n            }\n          }\n        }\n\n        try {\n          const waResp = await this.helpers.httpRequest({\n            method: 'GET',\n            url: `${G54}/api/whatsapp/config`,\n            headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },\n            json: true\n          });\n          const waData = waResp.data || waResp;\n          const prompt = waData && waData.system_prompt;\n          if (!prompt) {\n            hallazgos.push({\n              tipo: 'wa_config_g54_invalido',\n              severidad: 'atencion',\n              clave: `wa_config_${empresaId}`,\n              mensaje: `Empresa \"${empresaNombre}\" — GET /api/whatsapp/config no trae ningún system_prompt configurado. Si esta empresa usa WhatsApp, el bot va a caer a su fallback genérico sin instrucciones reales de negocio.`\n            });\n          }\n        } catch (waErr) {\n          // 404/error puede significar simplemente que esta empresa no tiene WhatsApp configurado todavía — no se alerta como error\n        }\n      }\n    } catch (empresaErr) {\n      hallazgos.push({\n        tipo: 'g54_error_empresa',\n        severidad: 'atencion',\n        clave: `g54_error_${empresaId}`,\n        mensaje: `No se pudo revisar la empresa \"${empresaNombre}\" en G54: ${empresaErr.message || empresaErr}`\n      });\n    }\n  }\n} catch (loginErr) {\n  hallazgos.push({\n    tipo: 'g54_login_fallo',\n    severidad: 'critico',\n    clave: 'g54_login_fallo',\n    mensaje: `No se pudo iniciar sesión en G54 para revisar posts/storage: ${loginErr.message || loginErr}`\n  });\n}\n\nreturn [{ json: { hallazgos } }];"
+      },
+      "id": "g54-check",
+      "name": "🔐 G54: Posts Atascados + Storage",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        90
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nif (!staticData.ultimaAlerta) staticData.ultimaAlerta = {};\nconst ahora = Date.now();\nconst COOLDOWN_MS = 6 * 60 * 60 * 1000;\n\nconst todos = $json.hallazgos || [];\nconst paraAlertar = [];\n\nfor (const h of todos) {\n  const ultima = staticData.ultimaAlerta[h.clave];\n  if (!ultima || (ahora - ultima) > COOLDOWN_MS) {\n    paraAlertar.push(h);\n    staticData.ultimaAlerta[h.clave] = ahora;\n  }\n}\n\n// Solo se manda correo si hay al menos un hallazgo real (severidad crítico) —\n// los de \"atención\" (ideas estancadas, storage 404 ya conocido, timezone sin\n// configurar, etc.) quedan registrados pero no generan correo por sí solos,\n// a pedido explícito de la usuaria para reducir el ruido de bandeja.\nconst hayCritico = paraAlertar.some(h => h.severidad === 'critico');\n\nreturn [{ json: { hallazgosParaAlertar: paraAlertar, totalCrudo: todos.length, hayCritico } }];"
+      },
+      "id": "cooldown",
+      "name": "🧮 Aplicar Cooldown 6h",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1640,
+        90
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.hayCritico }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-hallazgos",
+      "name": "🔀 ¿Hay Hallazgos Nuevos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1880,
+        90
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const hallazgos = $json.hallazgosParaAlertar;\nconst criticos = hallazgos.filter(h => h.severidad === 'critico');\nconst atencion = hallazgos.filter(h => h.severidad !== 'critico');\n\nconst fecha = new Date().toLocaleString('es-NI', { timeZone: 'America/Managua', dateStyle: 'medium', timeStyle: 'short' });\n\nfunction filaTexto(h) {\n  const label = h.severidad === 'critico' ? '[CRITICO]' : '[ATENCION]';\n  let tag = '';\n  if (h.autoCorregido === true) tag = ' (AUTO-CORREGIDO)';\n  else if (h.autoCorregido === false) tag = ' (AUTO-FIX FALLO)';\n  return `${label} ${h.tipo}${tag}\\n${h.mensaje}\\n`;\n}\n\nfunction filaHtml(h) {\n  const color = h.severidad === 'critico' ? '#dc3545' : '#ffc107';\n  const label = h.severidad === 'critico' ? 'CRITICO' : 'ATENCION';\n  let autoTag = '';\n  if (h.autoCorregido === true) autoTag = ' [AUTO-CORREGIDO]';\n  else if (h.autoCorregido === false) autoTag = ' [AUTO-FIX FALLO]';\n  return '<div style=\"border-left:4px solid ' + color + ';background:#f8f9fa;padding:12px 16px;margin:10px 0;border-radius:4px;\">' +\n    '<div style=\"font-size:11px;font-weight:bold;color:' + color + ';margin-bottom:4px;\">' + label + ' — ' + h.tipo + autoTag + '</div>' +\n    '<div style=\"font-size:14px;color:#333;\">' + h.mensaje + '</div></div>';\n}\n\nlet textoPlano = 'VIGIA G54 — Reporte de Hallazgos\\n' + fecha + ' (hora Nicaragua)\\n' + '='.repeat(50) + '\\n\\n';\nif (criticos.length) { textoPlano += 'CRITICOS:\\n\\n' + criticos.map(filaTexto).join('\\n'); }\nif (atencion.length) { textoPlano += '\\nATENCION:\\n\\n' + atencion.map(filaTexto).join('\\n'); }\ntextoPlano += '\\n' + '='.repeat(50) + '\\nChequeo automatico cada 2 horas. Los marcados AUTO-CORREGIDO ya se aplicaron solos. Este hallazgo no se repite antes de 6 horas si el problema persiste sin cambios.';\n\nconst html = '<div style=\"font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:20px;color:#333;\">' +\n  '<div style=\"background:#1a1a2e;color:white;padding:20px;border-radius:8px 8px 0 0;\">' +\n  '<h1 style=\"margin:0;font-size:20px;\">Vigia G54 — Reporte de Hallazgos</h1>' +\n  '<p style=\"margin:5px 0 0;opacity:0.8;font-size:13px;\">' + fecha + ' (hora Nicaragua)</p></div>' +\n  '<div style=\"border:1px solid #ddd;padding:20px;border-top:none;\">' +\n  (criticos.length ? '<h3 style=\"color:#dc3545;\">Criticos</h3>' + criticos.map(filaHtml).join('') : '') +\n  (atencion.length ? '<h3 style=\"color:#856404;margin-top:16px;\">Atencion</h3>' + atencion.map(filaHtml).join('') : '') +\n  '<p style=\"margin-top:20px;font-size:12px;color:#999;\">Chequeo automatico cada 2 horas. Los marcados AUTO-CORREGIDO ya se aplicaron solos. Este hallazgo no se repite antes de 6 horas si el problema persiste sin cambios.</p>' +\n  '</div></div>';\n\nconst emoji = criticos.length ? '[!]' : '[i]';\nconst subject = emoji + ' Vigia G54 — ' + hallazgos.length + ' hallazgo(s) — ' + fecha;\n\nreturn [{ json: { subject, html, textoPlano } }];\n"
+      },
+      "id": "armar-email",
+      "name": "📝 Armar Email de Alerta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2120,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "subject": "={{ $json.subject }}",
+        "toEmail": "risosadmi@gmail.com",
+        "fromEmail": "Vigía G54 <risosadmi@gmail.com>",
+        "text": "={{ $json.textoPlano }}",
+        "html": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "enviar-alerta",
+      "name": "📧 Enviar Alerta — Vigía G54",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        2360,
+        0
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "iWBBSSe5AWsCMo89",
+          "name": "Gmail SMTP — risosadmi"
+        }
+      },
+      "webhookId": "02f8c5d8-bda2-4cf6-ba8d-f1e780557c6d"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const N8N_BASE = \"https://n8n.mdarthurdigital.com/api/v1\";\nconst N8N_API_KEY = \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4MGQxYjQ2MS1kNGI3LTRjOGMtOGMwZi1kNTNkOWExMjRjNzMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiZjg3ZGY5NzMtOTgzOC00ZjFmLWI1ZjktM2E5MzlmY2U5OTljIiwiaWF0IjoxNzc3NzQyNDMxfQ.o8WeA87-KQjr3gbWSoqMqqNpjaQN9rjYzO4Xuer-P7E\";\nconst hallazgos = ($input.first().json.hallazgos || []).map(h => ({...h}));\nconst authHeader = { \"X-N8N-API-KEY\": N8N_API_KEY };\n\nfor (const h of hallazgos) {\n  if (h.tipo === \"workflow_inactivo\") {\n    const workflowId = h.clave.replace(\"inactivo_\", \"\");\n    try {\n      await this.helpers.httpRequest({\n        method: \"POST\",\n        url: `${N8N_BASE}/workflows/${workflowId}/activate`,\n        headers: authHeader,\n        json: true\n      });\n      h.mensaje += \" -> Se reactivo automaticamente (vigia).\";\n      h.autoCorregido = true;\n    } catch (e) {\n      h.mensaje += ` -> Intento de reactivacion automatica fallo: ${e.message || e}. Requiere revision manual.`;\n      h.autoCorregido = false;\n    }\n  }\n\n  if (h.tipo === \"volumen_anomalo\") {\n    const workflowId = h.clave.replace(\"loop_\", \"\");\n    try {\n      await this.helpers.httpRequest({\n        method: \"POST\",\n        url: `${N8N_BASE}/workflows/${workflowId}/deactivate`,\n        headers: authHeader,\n        json: true\n      });\n      h.mensaje += \" -> Se DESACTIVO automaticamente como freno de emergencia (vigia). Reactivar a mano una vez corregida la causa.\";\n      h.autoCorregido = true;\n      h.severidad = \"critico\";\n    } catch (e) {\n      h.mensaje += ` -> Intento de desactivacion automatica fallo: ${e.message || e}. Apagarlo a mano YA.`;\n      h.autoCorregido = false;\n    }\n  }\n}\n\nreturn [{ json: { hallazgos } }];"
+      },
+      "id": "auto-fix",
+      "name": "🔧 Ejecutar Auto-Correcciones",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        90
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GBLSmCbCbzRirBc7",
+          "name": "n8n API — Self (Vigía)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.groq.com/openai/v1/models",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "options": {},
+        "onError": "continueRegularOutput"
+      },
+      "id": "groq-health",
+      "name": "🤖 Groq: Chequeo de Salud",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        200
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const hallazgos = ($('🔧 Ejecutar Auto-Correcciones').item.json.hallazgos || []).slice();\nconst groqResp = $json;\nconst groqError = groqResp.error;\n\nif (groqError) {\n  const status = groqResp.statusCode || (groqResp.cause && groqResp.cause.statusCode) || (typeof groqError === 'object' && groqError.httpCode);\n  if (Number(status) === 429) {\n    hallazgos.push({\n      tipo: 'groq_cuota_agotada', severidad: 'atencion', clave: 'groq_cuota',\n      mensaje: 'Groq devolvió 429 (cuota agotada) en el chequeo de salud del vigía — Marco y los agentes de contenido pueden estar degradando a Modo Contingencia / fallback en cualquier momento. No se puede auto-corregir (límite de cuenta compartida), solo avisar.'\n    });\n  } else if (Number(status) === 401) {\n    hallazgos.push({\n      tipo: 'groq_credencial_invalida', severidad: 'critico', clave: 'groq_401',\n      mensaje: 'La credencial de Groq (jORffbRhRNohHT1B) parece inválida o revocada (401) — TODOS los agentes que dependen de Groq como IA primaria van a fallar. Revisar la API key cuanto antes.'\n    });\n  } else {\n    hallazgos.push({\n      tipo: 'groq_error_desconocido', severidad: 'atencion', clave: 'groq_error',\n      mensaje: `Chequeo de salud de Groq devolvió un error inesperado: ${JSON.stringify(groqError).slice(0, 200)}`\n    });\n  }\n}\n\nreturn [{ json: { hallazgos } }];"
+      },
+      "id": "groq-eval",
+      "name": "🩺 Evaluar Salud Groq",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1160,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "⏰ Vigía — Cada 2 Horas": {
+      "main": [
+        [
+          {
+            "node": "📋 Lista de Workflows RRSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔔 Webhook Manual": {
+      "main": [
+        [
+          {
+            "node": "📋 Lista de Workflows RRSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Lista de Workflows RRSS": {
+      "main": [
+        [
+          {
+            "node": "🔎 n8n: GET Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔎 n8n: GET Workflow": {
+      "main": [
+        [
+          {
+            "node": "🔎 n8n: GET Ejecuciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔎 n8n: GET Ejecuciones": {
+      "main": [
+        [
+          {
+            "node": "🩺 Evaluar Salud Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🩺 Evaluar Salud Workflow": {
+      "main": [
+        [
+          {
+            "node": "🔧 Ejecutar Auto-Correcciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔐 G54: Posts Atascados + Storage": {
+      "main": [
+        [
+          {
+            "node": "🧮 Aplicar Cooldown 6h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧮 Aplicar Cooldown 6h": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Hay Hallazgos Nuevos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Hay Hallazgos Nuevos?": {
+      "main": [
+        [
+          {
+            "node": "📝 Armar Email de Alerta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "📝 Armar Email de Alerta": {
+      "main": [
+        [
+          {
+            "node": "📧 Enviar Alerta — Vigía G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Ejecutar Auto-Correcciones": {
+      "main": [
+        [
+          {
+            "node": "🤖 Groq: Chequeo de Salud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Groq: Chequeo de Salud": {
+      "main": [
+        [
+          {
+            "node": "🩺 Evaluar Salud Groq",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🩺 Evaluar Salud Groq": {
+      "main": [
+        [
+          {
+            "node": "🔐 G54: Posts Atascados + Storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:⏰ Vigía — Cada 2 Horas": {
+      "recurrenceRules": [
+        null
+      ],
+      "recurrenceRuleSignatures": [
+        null
+      ]
+    },
+    "global": {
+      "ultimaAlerta": {
+        "inactivo_BrH8GNURlqynJK1H": 1784826638934,
+        "inactivo_1rsqmFabW5PjnlHy": 1784827462886,
+        "inactivo_62tIvF0snsrMj0sM": 1784835619930,
+        "inactivo_otycsrxrMEMuxuwD": 1784835784245,
+        "duplicados_empresa_1": 1784905251721,
+        "atascados_empresa_1": 1784912451827,
+        "wa_config_6": 1785844812798,
+        "fallas_62tIvF0snsrMj0sM": 1785157252268,
+        "ideas_estancadas_6": 1785844812798,
+        "ideas_sin_aprobar_1": 1785853099014,
+        "ideas_sin_aprobar_6": 1785853099014,
+        "pipeline_estancado_1": 1785853731825,
+        "pipeline_estancado_6": 1785853731825
+      }
+    }
+  },
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": null,
+  "versionId": "6b4e995d-891d-416a-888a-d51d2093fc0d",
+  "activeVersionId": "6b4e995d-891d-416a-888a-d51d2093fc0d",
+  "versionCounter": 26,
+  "triggerCount": 2,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-07-23T17:08:06.235Z",
+      "createdAt": "2026-07-23T17:08:06.235Z",
+      "role": "workflow:owner",
+      "workflowId": "zTm4tMOV9vMfUDnG",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "updatedAt": "2026-03-16T19:58:01.773Z",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-08-04T14:28:41.049Z",
+    "createdAt": "2026-08-04T14:28:41.049Z",
+    "versionId": "6b4e995d-891d-416a-888a-d51d2093fc0d",
+    "workflowId": "zTm4tMOV9vMfUDnG",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "cronExpression",
+                "expression": "0 */2 * * *"
+              }
+            ]
+          }
+        },
+        "id": "trg-schedule",
+        "name": "⏰ Vigía — Cada 2 Horas",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          -400,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "httpMethod": "GET",
+          "path": "vigia-g54",
+          "options": {}
+        },
+        "id": "trg-webhook",
+        "name": "🔔 Webhook Manual",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -400,
+          180
+        ],
+        "webhookId": "vigia-g54-manual"
+      },
+      {
+        "parameters": {
+          "jsCode": "const workflows = [\n  { id: 'S62o0wcXq8Wfj67S', nombre: 'Strategist AI v3.0', chequearLoop: false },\n  { id: 'nHawWPIIu51ABBgl', nombre: 'Ideas AI', chequearLoop: false },\n  { id: 'wyO1f93A66imn9qw', nombre: 'Content AI (RRSS v1.4)', chequearLoop: false },\n  { id: '1rsqmFabW5PjnlHy', nombre: 'Image Generator AI', chequearLoop: false },\n  { id: 'IRCoya91PKPjpT1T', nombre: 'Distribution AI', chequearLoop: false },\n  { id: 'aMCwIQ3eY1bzyMyt', nombre: 'Distribution AI — Puente Temporal (2min)', chequearLoop: true },\n  { id: 'sNNhTEH8IzJsOIm3', nombre: 'Distribution AI — Alarma Exacta', chequearLoop: false },\n  { id: '62tIvF0snsrMj0sM', nombre: 'Community AI', chequearLoop: true },\n  { id: 'otycsrxrMEMuxuwD', nombre: 'Sales AI Motor', chequearLoop: true },\n  { id: 'EX9K1AZwKeouSJ9G', nombre: 'Analytics AI Semanal', chequearLoop: false },\n  { id: 'YI9EfJYcWJN4bbM9', nombre: 'Analytics AI Mensual (V3 Meta Reporte)', chequearLoop: false },\n  { id: 'JN2vRUznkOXlej8q', nombre: 'CTA Click Tracker', chequearLoop: false }\n];\nreturn workflows.map(w => ({ json: w }));\n"
+        },
+        "id": "lista-workflows",
+        "name": "📋 Lista de Workflows RRSS",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -160,
+          90
+        ]
+      },
+      {
+        "parameters": {
+          "url": "=https://n8n.mdarthurdigital.com/api/v1/workflows/{{ $json.id }}",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "options": {}
+        },
+        "id": "get-workflow",
+        "name": "🔎 n8n: GET Workflow",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          80,
+          90
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "GBLSmCbCbzRirBc7",
+            "name": "n8n API — Self (Vigía)"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "url": "=https://n8n.mdarthurdigital.com/api/v1/executions?workflowId={{ $('📋 Lista de Workflows RRSS').item.json.id }}&limit=20",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "options": {}
+        },
+        "id": "get-executions",
+        "name": "🔎 n8n: GET Ejecuciones",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          320,
+          90
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "GBLSmCbCbzRirBc7",
+            "name": "n8n API — Self (Vigía)"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const listaItems = $('📋 Lista de Workflows RRSS').all();\nconst wfItems = $('🔎 n8n: GET Workflow').all();\nconst execItems = $('🔎 n8n: GET Ejecuciones').all();\nconst hallazgos = [];\nconst now = Date.now();\n\nfor (let i = 0; i < listaItems.length; i++) {\n  const info = listaItems[i].json;\n  const wf = wfItems[i].json;\n  const ejecuciones = (execItems[i].json.data) || [];\n\n  if (wf.active !== true) {\n    hallazgos.push({\n      tipo: 'workflow_inactivo',\n      severidad: 'critico',\n      clave: `inactivo_${info.id}`,\n      mensaje: `El workflow \"${info.nombre}\" está DESACTIVADO en n8n y debería estar activo.`\n    });\n  }\n\n  const recientes = ejecuciones.slice(0, 3);\n  const todasFallidas = recientes.length > 0 && recientes.every(e => e.status === 'error');\n  if (todasFallidas) {\n    // Antes de alertar: descartar el patron benigno conocido de Community AI\n    // (webhooks de Facebook sin texto real - likes, ediciones - que el workflow\n    // descarta correctamente pero que n8n cuenta como \"error\").\n    let esBenigno = false;\n    if (info.id === '62tIvF0snsrMj0sM') {\n      try {\n        const N8N_API_KEY = \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4MGQxYjQ2MS1kNGI3LTRjOGMtOGMwZi1kNTNkOWExMjRjNzMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiZjg3ZGY5NzMtOTgzOC00ZjFmLWI1ZjktM2E5MzlmY2U5OTljIiwiaWF0IjoxNzc3NzQyNDMxfQ.o8WeA87-KQjr3gbWSoqMqqNpjaQN9rjYzO4Xuer-P7E\";\n        const detalles = await Promise.all(recientes.map(e =>\n          this.helpers.httpRequest({\n            method: 'GET',\n            url: `https://n8n.mdarthurdigital.com/api/v1/executions/${e.id}?includeData=true`,\n            headers: { 'X-N8N-API-KEY': N8N_API_KEY },\n            json: true\n          }).catch(() => null)\n        ));\n        esBenigno = detalles.every(d => {\n          const msg = d?.data?.resultData?.error?.message || '';\n          return msg.includes('empty message');\n        });\n      } catch (e) {\n        esBenigno = false; // si la verificacion falla, tratar como hallazgo real por seguridad\n      }\n    }\n    if (!esBenigno) {\n      hallazgos.push({\n        tipo: 'ejecuciones_fallidas',\n        severidad: 'critico',\n        clave: `fallas_${info.id}`,\n        mensaje: `\"${info.nombre}\" — las últimas ${recientes.length} ejecuciones terminaron en error.`\n      });\n    }\n  }\n\n  if (info.chequearLoop) {\n    const quinceMinAtras = now - 15 * 60 * 1000;\n    const recientesVolumen = ejecuciones.filter(e => {\n      const t = new Date(e.startedAt).getTime();\n      return !isNaN(t) && t >= quinceMinAtras;\n    });\n    if (recientesVolumen.length > 15) {\n      hallazgos.push({\n        tipo: 'volumen_anomalo',\n        severidad: 'critico',\n        clave: `loop_${info.id}`,\n        mensaje: `\"${info.nombre}\" — ${recientesVolumen.length} ejecuciones en los últimos 15 minutos, posible loop (mismo patrón del incidente real del 14-jul en Community AI).`\n      });\n    }\n  }\n}\n\nreturn [{ json: { hallazgos } }];"
+        },
+        "id": "evaluar-salud",
+        "name": "🩺 Evaluar Salud Workflow",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          560,
+          90
+        ]
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const G54 = 'https://api.growth54.com';\nconst MASTER_EMAIL = 'master@growth54.local';\nconst MASTER_PASSWORD = 'REDACTED_MASTER_PASSWORD';\nconst hallazgos = ($input.first().json.hallazgos || []).slice();\n\ntry {\n  const loginResp = await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${G54}/api/auth/login`,\n    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },\n    body: { email: MASTER_EMAIL, password: MASTER_PASSWORD },\n    json: true\n  });\n  const token = loginResp.access_token;\n  const companiesFromLogin = loginResp.companies || [];\n\n  const companiesResp = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `${G54}/api/n8n/companies`,\n    headers: { Accept: 'application/json' },\n    json: true\n  });\n  const empresas = (companiesResp.data || companiesResp || []).filter(e => e.is_active !== false && e.activo !== false);\n  const ahora = Date.now();\n\n  for (const empresa of empresas) {\n    const empresaId = empresa.id || empresa.company_id;\n    const empresaNombre = empresa.name || empresa.nombre || String(empresaId);\n    try {\n      await this.helpers.httpRequest({\n        method: 'POST',\n        url: `${G54}/api/auth/switch-company`,\n        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },\n        body: { company_id: empresaId },\n        json: true\n      });\n\n      const infoLogin = companiesFromLogin.find(c => String(c.id) === String(empresaId));\n      if (!infoLogin || !infoLogin.timezone) {\n        hallazgos.push({\n          tipo: 'timezone_sin_configurar',\n          severidad: 'atencion',\n          clave: `timezone_sin_configurar_${empresaId}`,\n          mensaje: `Empresa \"${empresaNombre}\" no tiene zona horaria configurada en G54 — Sales AI Motor usa UTC como neutral en vez de asumir la de otra empresa, pero conviene configurar la real para que los saludos (buenos días/tardes/noches) salgan correctos.`\n        });\n      }\n\n      const postsResp = await this.helpers.httpRequest({\n        method: 'GET',\n        url: `${G54}/api/rrss/posts`,\n        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },\n        json: true\n      });\n      const posts = postsResp.data || postsResp || [];\n\n      const atascados = posts.filter(p => {\n        if (p.status !== 'programado' || !p.fecha_programada) return false;\n        const fechaProg = new Date(p.fecha_programada).getTime();\n        return !isNaN(fechaProg) && (ahora - fechaProg) > 15 * 60 * 1000;\n      });\n\n      if (atascados.length > 0) {\n        const revertidos = [];\n        const fallidos = [];\n        for (const p of atascados) {\n          try {\n            await this.helpers.httpRequest({\n              method: 'PUT',\n              url: `${G54}/api/rrss/posts/${p.id}/status`,\n              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },\n              body: { status: 'aprobado' },\n              json: true\n            });\n            revertidos.push(p.id);\n          } catch (revertErr) {\n            fallidos.push(p.id);\n          }\n        }\n        const detalle = revertidos.length ? ` Revertidos automáticamente a \"aprobado\" (vigía): ${revertidos.join(', ')}.` : '';\n        const detalleFallo = fallidos.length ? ` No se pudo revertir: ${fallidos.join(', ')} (requiere revisión manual).` : '';\n        hallazgos.push({\n          tipo: 'posts_atascados',\n          severidad: fallidos.length > 0 ? 'critico' : 'atencion',\n          clave: `atascados_empresa_${empresaId}`,\n          mensaje: `Empresa \"${empresaNombre}\" — ${atascados.length} post(s) en \"programado\" con fecha vencida hace más de 15 min (IDs: ${atascados.map(p => p.id).join(', ')}).${detalle}${detalleFallo}`,\n          autoCorregido: fallidos.length === 0\n        });\n      }\n\n      // Chequeo de contenido cruzado: ¿el copy de un post reciente menciona el nombre de OTRA empresa activa?\n      // Mismo tipo de bug ya encontrado a mano el 21-jul (ítem 157) — mezcla de datos entre empresas.\n      const recientes = posts.filter(p => {\n        const fechaRef = p.updated_at || p.created_at;\n        if (!fechaRef) return false;\n        const t = new Date(fechaRef).getTime();\n        return !isNaN(t) && (ahora - t) < 7 * 24 * 60 * 60 * 1000;\n      });\n      const otrasEmpresas = empresas.filter(e => String(e.id || e.company_id) !== String(empresaId) && (e.name || e.nombre));\n      for (const p of recientes) {\n        const textoPost = [p.copy_facebook, p.copy_instagram, p.copy_linkedin, p.tema, p.hook].filter(Boolean).join(' ').toLowerCase();\n        if (!textoPost) continue;\n        for (const otra of otrasEmpresas) {\n          const nombreOtra = (otra.name || otra.nombre || '').trim();\n          if (nombreOtra.length < 4) continue;\n          if (textoPost.includes(nombreOtra.toLowerCase())) {\n            hallazgos.push({\n              tipo: 'contenido_cruzado',\n              severidad: 'critico',\n              clave: `contenido_cruzado_${empresaId}_${p.id}`,\n              mensaje: `Empresa \"${empresaNombre}\" — el post ${p.id} menciona el nombre de otra empresa de la plataforma (\"${nombreOtra}\") en su copy. Posible mezcla de datos entre empresas (mismo tipo de bug del ítem 157) — revisar manualmente, no se corrige solo.`\n            });\n            break;\n          }\n        }\n      }\n\n      const porIdea = {};\n      for (const p of posts) {\n        if (!p.social_idea_id) continue;\n        if (!porIdea[p.social_idea_id]) porIdea[p.social_idea_id] = [];\n        porIdea[p.social_idea_id].push(p.id);\n      }\n      const duplicados = Object.entries(porIdea).filter(([, ids]) => ids.length > 1);\n      if (duplicados.length > 0) {\n        hallazgos.push({\n          tipo: 'posts_duplicados',\n          severidad: 'atencion',\n          clave: `duplicados_empresa_${empresaId}`,\n          mensaje: `Empresa \"${empresaNombre}\" — ${duplicados.length} idea(s) con más de un post generado (posible regresión del bug de duplicación de Content AI): ${duplicados.map(([ideaId, ids]) => `idea ${ideaId} → posts ${ids.join('/')}`).join('; ')}. Revisar manualmente cuál conservar — no se borra nada automáticamente.`\n        });\n      }\n\n      // Mismo embotellamiento humano que \"ideas sin aprobar\", un paso más adelante en el\n      // embudo — reusa el array `posts` ya traído arriba, sin ninguna llamada nueva.\n      // Confirmado con datos reales el 04-ago: Crating Express tiene un post aprobado desde\n      // el 01-jul (34 días) nunca programado, y Orison tiene sus 3 posts aprobados desde\n      // julio sin tocar (caso ya conocido, pausado a propósito en el puente por el ítem 120 —\n      // se reporta igual como hecho real, no se oculta ni se excluye).\n      const SIETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;\n      const postsSinRevisar = posts.filter(p => {\n        if (p.status !== 'borrador') return false;\n        const t = new Date(p.updated_at || p.created_at || 0).getTime();\n        return t > 0 && (ahora - t) > SIETE_DIAS_MS;\n      });\n      const postsSinProgramar = posts.filter(p => {\n        if (p.status !== 'aprobado') return false;\n        const t = new Date(p.updated_at || p.created_at || 0).getTime();\n        return t > 0 && (ahora - t) > SIETE_DIAS_MS;\n      });\n      if (postsSinRevisar.length > 0 || postsSinProgramar.length > 0) {\n        const partes = [];\n        if (postsSinRevisar.length) partes.push(`${postsSinRevisar.length} en borrador sin revisar (IDs: ${postsSinRevisar.map(p => p.id).join(', ')})`);\n        if (postsSinProgramar.length) partes.push(`${postsSinProgramar.length} aprobado(s) sin programar nunca (IDs: ${postsSinProgramar.map(p => p.id).join(', ')})`);\n        hallazgos.push({\n          tipo: 'pipeline_estancado',\n          severidad: 'atencion',\n          clave: `pipeline_estancado_${empresaId}`,\n          mensaje: `Empresa \"${empresaNombre}\" — contenido esperando revisión hace más de 7 días: ${partes.join(' · ')}. Mismo tipo de embotellamiento humano que el chequeo de ideas sin aprobar — revisar el panel.`\n        });\n      }\n\n      try {\n        const ideasResp = await this.helpers.httpRequest({\n          method: 'GET',\n          url: `${G54}/api/rrss/ideas`,\n          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },\n          json: true\n        });\n        const ideas = ideasResp.data || ideasResp || [];\n        if (ideas.length > 0) {\n          const masReciente = ideas.reduce((max, i) => {\n            const t = new Date(i.created_at || i.fecha_propuesta || 0).getTime();\n            return t > max ? t : max;\n          }, 0);\n          const diasSinIdeas = (ahora - masReciente) / (24 * 60 * 60 * 1000);\n          if (diasSinIdeas > 8) {\n            hallazgos.push({\n              tipo: 'ideas_estancadas',\n              severidad: 'atencion',\n              clave: `ideas_estancadas_${empresaId}`,\n              mensaje: `Empresa \"${empresaNombre}\" — la idea más reciente tiene ${Math.floor(diasSinIdeas)} días. El disparo semanal de Ideas AI puede estar roto para esta empresa.`\n            });\n          }\n\n          // Backlog de ideas sin aprobar — distinto del chequeo de arriba (que detecta si\n          // dejaron de GENERARSE ideas). Este detecta el caso opuesto, real y confirmado el\n          // 04-ago para Crating Express: las ideas se generan bien cada semana, pero se\n          // acumulan sin que nadie las revise/apruebe, así que nunca llegan a convertirse\n          // en post. Ideas con más de 7 días todavía en estado 'idea' (nunca tocadas).\n          const backlogSinAprobar = ideas.filter(i => {\n            if (i.status !== 'idea') return false;\n            const t = new Date(i.created_at || i.fecha_propuesta || 0).getTime();\n            if (!t) return false;\n            return (ahora - t) / (24 * 60 * 60 * 1000) > 7;\n          });\n          if (backlogSinAprobar.length >= 3) {\n            const porPlataforma = backlogSinAprobar.reduce((acc, i) => {\n              const pl = i.platform || 'sin_plataforma';\n              acc[pl] = (acc[pl] || 0) + 1;\n              return acc;\n            }, {});\n            const desglose = Object.entries(porPlataforma).map(([pl, n]) => `${pl}: ${n}`).join(', ');\n            hallazgos.push({\n              tipo: 'ideas_sin_aprobar',\n              severidad: 'atencion',\n              clave: `ideas_sin_aprobar_${empresaId}`,\n              mensaje: `Empresa \"${empresaNombre}\" — ${backlogSinAprobar.length} idea(s) generada(s) hace más de 7 días siguen sin aprobar (${desglose}). El pipeline de generación funciona bien, pero nadie las está revisando — revisar el panel de Ideas.`\n            });\n          }\n        }\n      } catch (ideasErr) {\n        // no bloquear el resto de chequeos por esto\n      }\n\n      {\n        const conImagen = posts.find(p => p.imagen_url);\n        if (conImagen) {\n          try {\n            await this.helpers.httpRequest({ method: 'GET', url: conImagen.imagen_url, json: false, returnFullResponse: true });\n          } catch (imgErr) {\n            const status = imgErr.statusCode || (imgErr.response && imgErr.response.statusCode) || (imgErr.cause && imgErr.cause.statusCode);\n            if (status === 404) {\n              hallazgos.push({\n                tipo: 'storage_404',\n                severidad: 'atencion',\n                clave: `storage_404_${empresaId}`,\n                mensaje: `Empresa \"${empresaNombre}\" — el storage de imágenes de G54 devuelve 404 (post ${conImagen.id}). Mismo tipo de bug ya visto antes en el storage de G54 (depende del servidor de Walter, no se puede auto-corregir).`\n              });\n            }\n          }\n        }\n\n        try {\n          const waResp = await this.helpers.httpRequest({\n            method: 'GET',\n            url: `${G54}/api/whatsapp/config`,\n            headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },\n            json: true\n          });\n          const waData = waResp.data || waResp;\n          const prompt = waData && waData.system_prompt;\n          if (!prompt) {\n            hallazgos.push({\n              tipo: 'wa_config_g54_invalido',\n              severidad: 'atencion',\n              clave: `wa_config_${empresaId}`,\n              mensaje: `Empresa \"${empresaNombre}\" — GET /api/whatsapp/config no trae ningún system_prompt configurado. Si esta empresa usa WhatsApp, el bot va a caer a su fallback genérico sin instrucciones reales de negocio.`\n            });\n          }\n        } catch (waErr) {\n          // 404/error puede significar simplemente que esta empresa no tiene WhatsApp configurado todavía — no se alerta como error\n        }\n      }\n    } catch (empresaErr) {\n      hallazgos.push({\n        tipo: 'g54_error_empresa',\n        severidad: 'atencion',\n        clave: `g54_error_${empresaId}`,\n        mensaje: `No se pudo revisar la empresa \"${empresaNombre}\" en G54: ${empresaErr.message || empresaErr}`\n      });\n    }\n  }\n} catch (loginErr) {\n  hallazgos.push({\n    tipo: 'g54_login_fallo',\n    severidad: 'critico',\n    clave: 'g54_login_fallo',\n    mensaje: `No se pudo iniciar sesión en G54 para revisar posts/storage: ${loginErr.message || loginErr}`\n  });\n}\n\nreturn [{ json: { hallazgos } }];"
+        },
+        "id": "g54-check",
+        "name": "🔐 G54: Posts Atascados + Storage",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1400,
+          90
+        ]
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const staticData = $getWorkflowStaticData('global');\nif (!staticData.ultimaAlerta) staticData.ultimaAlerta = {};\nconst ahora = Date.now();\nconst COOLDOWN_MS = 6 * 60 * 60 * 1000;\n\nconst todos = $json.hallazgos || [];\nconst paraAlertar = [];\n\nfor (const h of todos) {\n  const ultima = staticData.ultimaAlerta[h.clave];\n  if (!ultima || (ahora - ultima) > COOLDOWN_MS) {\n    paraAlertar.push(h);\n    staticData.ultimaAlerta[h.clave] = ahora;\n  }\n}\n\n// Solo se manda correo si hay al menos un hallazgo real (severidad crítico) —\n// los de \"atención\" (ideas estancadas, storage 404 ya conocido, timezone sin\n// configurar, etc.) quedan registrados pero no generan correo por sí solos,\n// a pedido explícito de la usuaria para reducir el ruido de bandeja.\nconst hayCritico = paraAlertar.some(h => h.severidad === 'critico');\n\nreturn [{ json: { hallazgosParaAlertar: paraAlertar, totalCrudo: todos.length, hayCritico } }];"
+        },
+        "id": "cooldown",
+        "name": "🧮 Aplicar Cooldown 6h",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1640,
+          90
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.hayCritico }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "if-hallazgos",
+        "name": "🔀 ¿Hay Hallazgos Nuevos?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1880,
+          90
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const hallazgos = $json.hallazgosParaAlertar;\nconst criticos = hallazgos.filter(h => h.severidad === 'critico');\nconst atencion = hallazgos.filter(h => h.severidad !== 'critico');\n\nconst fecha = new Date().toLocaleString('es-NI', { timeZone: 'America/Managua', dateStyle: 'medium', timeStyle: 'short' });\n\nfunction filaTexto(h) {\n  const label = h.severidad === 'critico' ? '[CRITICO]' : '[ATENCION]';\n  let tag = '';\n  if (h.autoCorregido === true) tag = ' (AUTO-CORREGIDO)';\n  else if (h.autoCorregido === false) tag = ' (AUTO-FIX FALLO)';\n  return `${label} ${h.tipo}${tag}\\n${h.mensaje}\\n`;\n}\n\nfunction filaHtml(h) {\n  const color = h.severidad === 'critico' ? '#dc3545' : '#ffc107';\n  const label = h.severidad === 'critico' ? 'CRITICO' : 'ATENCION';\n  let autoTag = '';\n  if (h.autoCorregido === true) autoTag = ' [AUTO-CORREGIDO]';\n  else if (h.autoCorregido === false) autoTag = ' [AUTO-FIX FALLO]';\n  return '<div style=\"border-left:4px solid ' + color + ';background:#f8f9fa;padding:12px 16px;margin:10px 0;border-radius:4px;\">' +\n    '<div style=\"font-size:11px;font-weight:bold;color:' + color + ';margin-bottom:4px;\">' + label + ' — ' + h.tipo + autoTag + '</div>' +\n    '<div style=\"font-size:14px;color:#333;\">' + h.mensaje + '</div></div>';\n}\n\nlet textoPlano = 'VIGIA G54 — Reporte de Hallazgos\\n' + fecha + ' (hora Nicaragua)\\n' + '='.repeat(50) + '\\n\\n';\nif (criticos.length) { textoPlano += 'CRITICOS:\\n\\n' + criticos.map(filaTexto).join('\\n'); }\nif (atencion.length) { textoPlano += '\\nATENCION:\\n\\n' + atencion.map(filaTexto).join('\\n'); }\ntextoPlano += '\\n' + '='.repeat(50) + '\\nChequeo automatico cada 2 horas. Los marcados AUTO-CORREGIDO ya se aplicaron solos. Este hallazgo no se repite antes de 6 horas si el problema persiste sin cambios.';\n\nconst html = '<div style=\"font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:20px;color:#333;\">' +\n  '<div style=\"background:#1a1a2e;color:white;padding:20px;border-radius:8px 8px 0 0;\">' +\n  '<h1 style=\"margin:0;font-size:20px;\">Vigia G54 — Reporte de Hallazgos</h1>' +\n  '<p style=\"margin:5px 0 0;opacity:0.8;font-size:13px;\">' + fecha + ' (hora Nicaragua)</p></div>' +\n  '<div style=\"border:1px solid #ddd;padding:20px;border-top:none;\">' +\n  (criticos.length ? '<h3 style=\"color:#dc3545;\">Criticos</h3>' + criticos.map(filaHtml).join('') : '') +\n  (atencion.length ? '<h3 style=\"color:#856404;margin-top:16px;\">Atencion</h3>' + atencion.map(filaHtml).join('') : '') +\n  '<p style=\"margin-top:20px;font-size:12px;color:#999;\">Chequeo automatico cada 2 horas. Los marcados AUTO-CORREGIDO ya se aplicaron solos. Este hallazgo no se repite antes de 6 horas si el problema persiste sin cambios.</p>' +\n  '</div></div>';\n\nconst emoji = criticos.length ? '[!]' : '[i]';\nconst subject = emoji + ' Vigia G54 — ' + hallazgos.length + ' hallazgo(s) — ' + fecha;\n\nreturn [{ json: { subject, html, textoPlano } }];\n"
+        },
+        "id": "armar-email",
+        "name": "📝 Armar Email de Alerta",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2120,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "subject": "={{ $json.subject }}",
+          "toEmail": "risosadmi@gmail.com",
+          "fromEmail": "Vigía G54 <risosadmi@gmail.com>",
+          "text": "={{ $json.textoPlano }}",
+          "html": "={{ $json.html }}",
+          "options": {
+            "appendAttribution": false
+          }
+        },
+        "id": "enviar-alerta",
+        "name": "📧 Enviar Alerta — Vigía G54",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 2,
+        "position": [
+          2360,
+          0
+        ],
+        "credentials": {
+          "smtp": {
+            "id": "iWBBSSe5AWsCMo89",
+            "name": "Gmail SMTP — risosadmi"
+          }
+        },
+        "webhookId": "02f8c5d8-bda2-4cf6-ba8d-f1e780557c6d"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const N8N_BASE = \"https://n8n.mdarthurdigital.com/api/v1\";\nconst N8N_API_KEY = \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4MGQxYjQ2MS1kNGI3LTRjOGMtOGMwZi1kNTNkOWExMjRjNzMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiZjg3ZGY5NzMtOTgzOC00ZjFmLWI1ZjktM2E5MzlmY2U5OTljIiwiaWF0IjoxNzc3NzQyNDMxfQ.o8WeA87-KQjr3gbWSoqMqqNpjaQN9rjYzO4Xuer-P7E\";\nconst hallazgos = ($input.first().json.hallazgos || []).map(h => ({...h}));\nconst authHeader = { \"X-N8N-API-KEY\": N8N_API_KEY };\n\nfor (const h of hallazgos) {\n  if (h.tipo === \"workflow_inactivo\") {\n    const workflowId = h.clave.replace(\"inactivo_\", \"\");\n    try {\n      await this.helpers.httpRequest({\n        method: \"POST\",\n        url: `${N8N_BASE}/workflows/${workflowId}/activate`,\n        headers: authHeader,\n        json: true\n      });\n      h.mensaje += \" -> Se reactivo automaticamente (vigia).\";\n      h.autoCorregido = true;\n    } catch (e) {\n      h.mensaje += ` -> Intento de reactivacion automatica fallo: ${e.message || e}. Requiere revision manual.`;\n      h.autoCorregido = false;\n    }\n  }\n\n  if (h.tipo === \"volumen_anomalo\") {\n    const workflowId = h.clave.replace(\"loop_\", \"\");\n    try {\n      await this.helpers.httpRequest({\n        method: \"POST\",\n        url: `${N8N_BASE}/workflows/${workflowId}/deactivate`,\n        headers: authHeader,\n        json: true\n      });\n      h.mensaje += \" -> Se DESACTIVO automaticamente como freno de emergencia (vigia). Reactivar a mano una vez corregida la causa.\";\n      h.autoCorregido = true;\n      h.severidad = \"critico\";\n    } catch (e) {\n      h.mensaje += ` -> Intento de desactivacion automatica fallo: ${e.message || e}. Apagarlo a mano YA.`;\n      h.autoCorregido = false;\n    }\n  }\n}\n\nreturn [{ json: { hallazgos } }];"
+        },
+        "id": "auto-fix",
+        "name": "🔧 Ejecutar Auto-Correcciones",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          800,
+          90
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "GBLSmCbCbzRirBc7",
+            "name": "n8n API — Self (Vigía)"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "url": "https://api.groq.com/openai/v1/models",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "groqApi",
+          "options": {},
+          "onError": "continueRegularOutput"
+        },
+        "id": "groq-health",
+        "name": "🤖 Groq: Chequeo de Salud",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1040,
+          200
+        ],
+        "credentials": {
+          "groqApi": {
+            "id": "jORffbRhRNohHT1B",
+            "name": "Groq API"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const hallazgos = ($('🔧 Ejecutar Auto-Correcciones').item.json.hallazgos || []).slice();\nconst groqResp = $json;\nconst groqError = groqResp.error;\n\nif (groqError) {\n  const status = groqResp.statusCode || (groqResp.cause && groqResp.cause.statusCode) || (typeof groqError === 'object' && groqError.httpCode);\n  if (Number(status) === 429) {\n    hallazgos.push({\n      tipo: 'groq_cuota_agotada', severidad: 'atencion', clave: 'groq_cuota',\n      mensaje: 'Groq devolvió 429 (cuota agotada) en el chequeo de salud del vigía — Marco y los agentes de contenido pueden estar degradando a Modo Contingencia / fallback en cualquier momento. No se puede auto-corregir (límite de cuenta compartida), solo avisar.'\n    });\n  } else if (Number(status) === 401) {\n    hallazgos.push({\n      tipo: 'groq_credencial_invalida', severidad: 'critico', clave: 'groq_401',\n      mensaje: 'La credencial de Groq (jORffbRhRNohHT1B) parece inválida o revocada (401) — TODOS los agentes que dependen de Groq como IA primaria van a fallar. Revisar la API key cuanto antes.'\n    });\n  } else {\n    hallazgos.push({\n      tipo: 'groq_error_desconocido', severidad: 'atencion', clave: 'groq_error',\n      mensaje: `Chequeo de salud de Groq devolvió un error inesperado: ${JSON.stringify(groqError).slice(0, 200)}`\n    });\n  }\n}\n\nreturn [{ json: { hallazgos } }];"
+        },
+        "id": "groq-eval",
+        "name": "🩺 Evaluar Salud Groq",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1160,
+          200
+        ]
+      }
+    ],
+    "connections": {
+      "⏰ Vigía — Cada 2 Horas": {
+        "main": [
+          [
+            {
+              "node": "📋 Lista de Workflows RRSS",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔔 Webhook Manual": {
+        "main": [
+          [
+            {
+              "node": "📋 Lista de Workflows RRSS",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📋 Lista de Workflows RRSS": {
+        "main": [
+          [
+            {
+              "node": "🔎 n8n: GET Workflow",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔎 n8n: GET Workflow": {
+        "main": [
+          [
+            {
+              "node": "🔎 n8n: GET Ejecuciones",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔎 n8n: GET Ejecuciones": {
+        "main": [
+          [
+            {
+              "node": "🩺 Evaluar Salud Workflow",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🩺 Evaluar Salud Workflow": {
+        "main": [
+          [
+            {
+              "node": "🔧 Ejecutar Auto-Correcciones",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔐 G54: Posts Atascados + Storage": {
+        "main": [
+          [
+            {
+              "node": "🧮 Aplicar Cooldown 6h",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧮 Aplicar Cooldown 6h": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Hay Hallazgos Nuevos?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Hay Hallazgos Nuevos?": {
+        "main": [
+          [
+            {
+              "node": "📝 Armar Email de Alerta",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          []
+        ]
+      },
+      "📝 Armar Email de Alerta": {
+        "main": [
+          [
+            {
+              "node": "📧 Enviar Alerta — Vigía G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Ejecutar Auto-Correcciones": {
+        "main": [
+          [
+            {
+              "node": "🤖 Groq: Chequeo de Salud",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 Groq: Chequeo de Salud": {
+        "main": [
+          [
+            {
+              "node": "🩺 Evaluar Salud Groq",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🩺 Evaluar Salud Groq": {
+        "main": [
+          [
+            {
+              "node": "🔐 G54: Posts Atascados + Storage",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-08-04T14:28:41.205Z",
+        "id": 2583,
+        "workflowId": "zTm4tMOV9vMfUDnG",
+        "versionId": "6b4e995d-891d-416a-888a-d51d2093fc0d",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      },
+      {
+        "createdAt": "2026-08-04T14:28:41.154Z",
+        "id": 2582,
+        "workflowId": "zTm4tMOV9vMfUDnG",
+        "versionId": "6b4e995d-891d-416a-888a-d51d2093fc0d",
+        "event": "deactivated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    ]
+  }
+}
