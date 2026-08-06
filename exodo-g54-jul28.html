@@ -132,7 +132,6 @@
     <div class="header-meta">
       <div class="meta-item"><div class="dot"></div> Última actualización: 6 de agosto 2026</div>
       <div class="meta-item"><div class="dot" style="background:var(--red)"></div> B-19 nuevo — colisión real entre empresas, reproducida en vivo. Walter dice que B-9 y C-2 ya están — probado en vivo, la API real todavía no lo refleja</div>
-      <div class="meta-item"><div class="dot" style="background:var(--yellow)"></div> B-20 nuevo — falta un lookup directo de página de Meta por empresa, con la data ya resuelta hoy en <code>to-publish</code></div>
     </div>
   </div>
 </div>
@@ -232,27 +231,6 @@
       <div class="dep-box"><strong>Qué pasaría en la práctica:</strong> un dato (idea, post, deal del CRM, config de WhatsApp) guardado o leído bajo la empresa equivocada — el tipo de bug más serio posible en una plataforma multiempresa, no solo un error visible.</div>
       <div class="note-box"><strong>Arreglo real, del lado de Walter:</strong> que <code>current_company_id</code> viva en el token/sesión (o se acepte como parámetro explícito por request en las rutas que hoy dependen de <code>switch-company</code>), no en la fila del usuario. Mitigación más chica y ya propuesta: cuentas de servicio separadas por agente en vez de una sola compartida — reduce mucho el choque entre agentes distintos, aunque no cierra el caso de un mismo agente disparado dos veces casi al mismo tiempo para dos empresas distintas.</div>
       <div class="note-box">De nuestro lado, revisado hoy: los únicos 2 workflows que iteran varias empresas dentro de una sola ejecución (Vigía y el puente de los 2 minutos) ya lo hacen en serie, uno por vez, nunca en paralelo — no agravan el problema. No existe ninguna forma segura de cerrar esto solo desde n8n sin una cuenta compartida entre agentes o sin cambios del lado de G54 — un candado propio en n8n es frágil (sin un almacén atómico real disponible, con riesgo de bloqueo permanente si una ejecución se cae mientras lo sostiene) y no se construyó por ese motivo.</div>
-    </div>
-  </div>
-
-  <!-- B-20 -->
-  <div class="item-card b-yellow">
-    <div class="item-header">
-      <div>
-        <div class="item-title">B-20. Falta un lookup directo "empresa → página de Meta" — la data ya existe y ya se resuelve bien, solo falta exponerla sin depender de un post en cola</div>
-        <div class="item-where">API Backend — Páginas / Meta (bloquea el reporte de Analytics automático)</div>
-      </div>
-      <div class="item-tags">
-        <span class="badge p1">🟡 P1</span>
-        <span class="badge nuevo">Nuevo — 06-ago, con evidencia concreta</span>
-      </div>
-    </div>
-    <div class="item-body">
-      <p class="item-why">
-        Queremos que el reporte de Analytics se genere solo, por calendario, para cualquier empresa activa de la plataforma — no solo Crating Express. Para eso necesitamos poder preguntar "¿cuál es la página de Meta conectada de la empresa N?" en cualquier momento, sin depender de nada más. Probamos exhaustivamente si ya existía algo así: <code>GET /api/social-channels</code> (trae <code>handle</code>/<code>connection_status</code>/<code>has_credentials</code>, pero nunca el <code>page_id</code> real), el perfil completo de la empresa (<code>GET /api/n8n/companies/{id}</code>, sin ningún campo de página), y 6 rutas candidatas más (<code>/api/social-tokens</code>, <code>/api/n8n/companies/{id}/social-tokens</code>, <code>/api/n8n/social-tokens</code>, <code>/api/n8n/companies/{id}/meta-tokens</code>, <code>/api/meta-tokens/{id}</code>, <code>/api/n8n/pages</code> sin ID) — las 6, <code>404</code>.
-      </p>
-      <div class="dep-box"><strong>La buena noticia — esto no es "construir algo nuevo", es exponer un dato que ya se calcula bien hoy:</strong> <code>GET /api/n8n/companies/{id}/rrss/posts/to-publish</code> (el mismo endpoint que ya usa Distribution AI en producción) sí devuelve <code>page_id</code>, <code>instagram_account_id</code> y <code>access_token</code> correctamente resueltos por empresa — confirmado hoy mismo con el JSON real de una publicación real de Crating Express. El join ya existe del lado de ustedes; solo falta un endpoint que devuelva esos 3 campos por <code>company_id</code>, sin exigir que haya un post pendiente de publicar en ese momento (hoy solo se resuelven como efecto secundario de traer la cola de publicación).</div>
-      <div class="note-box">Con esto resuelto podemos reactivar el disparo automático mensual del reporte de Analytics (hoy desactivado a propósito, ver historial) para cualquier empresa activa, no solo la nuestra — evaluamos primero un atajo con un mapa interno de página por empresa dentro de n8n y lo descartamos nosotros mismos: no escala a clientes nuevos y viola la regla de la propia plataforma de no tener nada hardcodeado de un cliente específico en un agente compartido.</div>
     </div>
   </div>
 

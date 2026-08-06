@@ -1,0 +1,84 @@
+{
+  "name": "📊 Analytics V3 — Disparo Automático Mensual (G54)",
+  "nodes": [
+    {
+      "id": "trigger-mensual",
+      "name": "⏰ Trigger — Día 28, 8am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 28 * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "config-empresas",
+      "name": "📋 Empresas con Página Conocida",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Empresas con página de Meta ya configurada y conocida — se extiende agregando una entrada\n// más a este mismo objeto cuando un cliente nuevo tenga su Facebook/Instagram real conectado.\nconst empresasConPagina = {\n  1: { fb_page_id: '1713965015486703', ig_user_id: '17841446392201293' } // Crating Express\n};\n\nreturn Object.entries(empresasConPagina).map(([company_id, ids]) => ({\n  json: {\n    company_id: parseInt(company_id, 10),\n    fb_page_id: ids.fb_page_id,\n    ig_user_id: ids.ig_user_id\n  }\n}));\n"
+      }
+    },
+    {
+      "id": "disparar-reporte",
+      "name": "📤 Disparar Reporte Mensual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.mdarthurdigital.com/webhook/analytics-meta-reporte",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: $json.company_id, fb_page_id: $json.fb_page_id, ig_user_id: $json.ig_user_id }) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "⏰ Trigger — Día 28, 8am": {
+      "main": [
+        [
+          {
+            "node": "📋 Empresas con Página Conocida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Empresas con Página Conocida": {
+      "main": [
+        [
+          {
+            "node": "📤 Disparar Reporte Mensual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
