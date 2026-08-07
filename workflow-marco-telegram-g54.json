@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-05T16:21:01.348Z",
+  "updatedAt": "2026-08-07T15:58:11.822Z",
   "createdAt": "2026-07-23T15:36:21.963Z",
   "id": "HaSG63Q9C2tGOLH3",
   "name": "CE Telegram Engine — Marco",
@@ -1142,6 +1142,65 @@
         "jsonBody": "={{ JSON.stringify({ tipo: 'sistema', contenido: $json.contenido }) }}",
         "options": {}
       }
+    },
+    {
+      "id": "if-crm-empresa-HaSG63Q9C2tGOLH3",
+      "name": "🔀 ¿Empresa CRM Correcta?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5660,
+        1500
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ String($json.company_id) }}",
+              "rightValue": "={{ String(1) }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "email-crm-alerta-HaSG63Q9C2tGOLH3",
+      "name": "📧 Alertar Colisión CRM",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        5920,
+        1500
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "smtp": {
+          "id": "iWBBSSe5AWsCMo89",
+          "name": "Gmail SMTP — risosadmi"
+        }
+      },
+      "parameters": {
+        "fromEmail": "Growth54 <risosadmi@gmail.com>",
+        "toEmail": "risosadmi@gmail.com",
+        "subject": "=🚨 CRM — posible cruce de empresa (Marco Telegram)",
+        "text": "=🚨 Posible colisión de empresa en el CRM (B-19)\n\nWorkflow: Marco Telegram\nDeal ID: {{ $json.id }}\nEmpresa esperada: {{ 1 }}\nEmpresa donde quedó guardado: {{ $json.company_id }}\nTeléfono: {{ $json.telefono || '—' }}\nNombre: {{ $json.nombre || '—' }}\nHora: {{ new Date().toISOString() }}\n\nUn trato pudo haber quedado guardado bajo la empresa equivocada por la colisión de sesión compartida documentada en el Éxodo (B-19). Revisar manualmente en el panel del CRM y mover/corregir si corresponde.",
+        "html": "=🚨 Posible colisión de empresa en el CRM (B-19)\n\nWorkflow: Marco Telegram\nDeal ID: {{ $json.id }}\nEmpresa esperada: {{ 1 }}\nEmpresa donde quedó guardado: {{ $json.company_id }}\nTeléfono: {{ $json.telefono || '—' }}\nNombre: {{ $json.nombre || '—' }}\nHora: {{ new Date().toISOString() }}\n\nUn trato pudo haber quedado guardado bajo la empresa equivocada por la colisión de sesión compartida documentada en el Éxodo (B-19). Revisar manualmente en el panel del CRM y mover/corregir si corresponde.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "webhookId": "537dc95d-9bce-4ca8-b352-a6f6f9aacb23"
     }
   ],
   "connections": {
@@ -1612,6 +1671,11 @@
             "node": "📝 Preparar Nota Actividad (CRM Telegram)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "🔀 ¿Empresa CRM Correcta?",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -1621,6 +1685,11 @@
         [
           {
             "node": "📝 Preparar Nota Actividad (CRM Telegram)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔀 ¿Empresa CRM Correcta?",
             "type": "main",
             "index": 0
           }
@@ -1649,6 +1718,18 @@
         ],
         []
       ]
+    },
+    "🔀 ¿Empresa CRM Correcta?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "📧 Alertar Colisión CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -1672,9 +1753,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": null,
-  "versionId": "b234ea3b-a4e6-4b3b-b88c-6906a74c8d94",
-  "activeVersionId": "b234ea3b-a4e6-4b3b-b88c-6906a74c8d94",
-  "versionCounter": 17,
+  "versionId": "d8371979-9084-4c6e-a7c8-9ca2aa0ce8e1",
+  "activeVersionId": "d8371979-9084-4c6e-a7c8-9ca2aa0ce8e1",
+  "versionCounter": 19,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "shared": [
@@ -1699,9 +1780,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-08-05T16:21:01.352Z",
-    "createdAt": "2026-08-05T16:21:01.352Z",
-    "versionId": "b234ea3b-a4e6-4b3b-b88c-6906a74c8d94",
+    "updatedAt": "2026-08-07T15:58:11.825Z",
+    "createdAt": "2026-08-07T15:58:11.825Z",
+    "versionId": "d8371979-9084-4c6e-a7c8-9ca2aa0ce8e1",
     "workflowId": "HaSG63Q9C2tGOLH3",
     "nodes": [
       {
@@ -2134,7 +2215,8 @@
           "subject": "={{ $('📝 Armar Mensaje Final').item.json.clasificacion === 'Consulta' ? '💬 Consulta sin respuesta — ' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.nombre_cliente || $('📝 Armar Mensaje Final').item.json.telefono) : '🔥 Lead Caliente WhatsApp — ' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.nombre_cliente || $('📝 Armar Mensaje Final').item.json.telefono) }}",
           "message": "={{ $('📝 Armar Mensaje Final').item.json.clasificacion === 'Consulta'\n  ? '<table style=\"font-family:Arial,sans-serif;font-size:14px;border-collapse:collapse;width:100%\"><tr><td colspan=2 style=\"background:#2196F3;color:white;padding:12px 16px;font-size:16px;font-weight:bold\">💬 Consulta sin respuesta — necesita agente</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Cliente</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.nombre_cliente || '(sin nombre)') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Teléfono</td><td style=\"padding:8px 16px\">+' + $('📝 Armar Mensaje Final').item.json.telefono + '</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Correo</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.correo_contacto || '(no proporcionado — contactar por WhatsApp)') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Consulta</td><td style=\"padding:8px 16px\">' + ($('📝 Armar Mensaje Final').item.json.temaConsulta || $('📝 Armar Mensaje Final').item.json.texto || '(ver historial)') + '</td></tr><tr><td colspan=2 style=\"padding:8px 16px;color:#888;font-size:12px\">Marco no pudo responder esta consulta. El cliente espera ser contactado por un agente.</td></tr></table>'\n  : '<table style=\"font-family:Arial,sans-serif;font-size:14px;border-collapse:collapse;width:100%\"><tr><td colspan=2 style=\"background:#ff4444;color:white;padding:12px 16px;font-size:16px;font-weight:bold\">🔥 Lead Caliente — cotización aceptada</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Cliente</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.nombre_cliente || '(sin nombre)') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Teléfono</td><td style=\"padding:8px 16px\">+' + $('📝 Armar Mensaje Final').item.json.telefono + '</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Correo</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.correo_contacto || '—') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Producto</td><td style=\"padding:8px 16px\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.producto || '—') + '</td></tr><tr><td style=\"padding:8px 16px;background:#f5f5f5;width:140px;font-weight:bold\">Medidas</td><td style=\"padding:8px 16px;background:#f5f5f5\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.medidas || '—') + '</td></tr><tr><td style=\"padding:8px 16px;width:140px;font-weight:bold\">Fecha</td><td style=\"padding:8px 16px\">' + ($('📝 Armar Mensaje Final').item.json.datosRecolectados?.fecha || '—') + '</td></tr></table>'\n}}",
           "options": {
-            "contentType": "html"
+            "contentType": "html",
+            "appendAttribution": false
           },
           "fromEmail": "Growth54 <risosadmi@gmail.com>"
         },
@@ -2838,6 +2920,65 @@
           "jsonBody": "={{ JSON.stringify({ tipo: 'sistema', contenido: $json.contenido }) }}",
           "options": {}
         }
+      },
+      {
+        "id": "if-crm-empresa-HaSG63Q9C2tGOLH3",
+        "name": "🔀 ¿Empresa CRM Correcta?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          5660,
+          1500
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": false,
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ String($json.company_id) }}",
+                "rightValue": "={{ String(1) }}",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "email-crm-alerta-HaSG63Q9C2tGOLH3",
+        "name": "📧 Alertar Colisión CRM",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 2.1,
+        "position": [
+          5920,
+          1500
+        ],
+        "onError": "continueRegularOutput",
+        "credentials": {
+          "smtp": {
+            "id": "iWBBSSe5AWsCMo89",
+            "name": "Gmail SMTP — risosadmi"
+          }
+        },
+        "parameters": {
+          "fromEmail": "Growth54 <risosadmi@gmail.com>",
+          "toEmail": "risosadmi@gmail.com",
+          "subject": "=🚨 CRM — posible cruce de empresa (Marco Telegram)",
+          "text": "=🚨 Posible colisión de empresa en el CRM (B-19)\n\nWorkflow: Marco Telegram\nDeal ID: {{ $json.id }}\nEmpresa esperada: {{ 1 }}\nEmpresa donde quedó guardado: {{ $json.company_id }}\nTeléfono: {{ $json.telefono || '—' }}\nNombre: {{ $json.nombre || '—' }}\nHora: {{ new Date().toISOString() }}\n\nUn trato pudo haber quedado guardado bajo la empresa equivocada por la colisión de sesión compartida documentada en el Éxodo (B-19). Revisar manualmente en el panel del CRM y mover/corregir si corresponde.",
+          "html": "=🚨 Posible colisión de empresa en el CRM (B-19)\n\nWorkflow: Marco Telegram\nDeal ID: {{ $json.id }}\nEmpresa esperada: {{ 1 }}\nEmpresa donde quedó guardado: {{ $json.company_id }}\nTeléfono: {{ $json.telefono || '—' }}\nNombre: {{ $json.nombre || '—' }}\nHora: {{ new Date().toISOString() }}\n\nUn trato pudo haber quedado guardado bajo la empresa equivocada por la colisión de sesión compartida documentada en el Éxodo (B-19). Revisar manualmente en el panel del CRM y mover/corregir si corresponde.",
+          "options": {
+            "appendAttribution": false
+          }
+        },
+        "webhookId": "537dc95d-9bce-4ca8-b352-a6f6f9aacb23"
       }
     ],
     "connections": {
@@ -3308,6 +3449,11 @@
               "node": "📝 Preparar Nota Actividad (CRM Telegram)",
               "type": "main",
               "index": 0
+            },
+            {
+              "node": "🔀 ¿Empresa CRM Correcta?",
+              "type": "main",
+              "index": 0
             }
           ]
         ]
@@ -3317,6 +3463,11 @@
           [
             {
               "node": "📝 Preparar Nota Actividad (CRM Telegram)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "🔀 ¿Empresa CRM Correcta?",
               "type": "main",
               "index": 0
             }
@@ -3345,6 +3496,18 @@
           ],
           []
         ]
+      },
+      "🔀 ¿Empresa CRM Correcta?": {
+        "main": [
+          [],
+          [
+            {
+              "node": "📧 Alertar Colisión CRM",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -3354,18 +3517,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-08-05T16:21:01.635Z",
-        "id": 2658,
+        "createdAt": "2026-08-07T15:58:11.927Z",
+        "id": 2705,
         "workflowId": "HaSG63Q9C2tGOLH3",
-        "versionId": "b234ea3b-a4e6-4b3b-b88c-6906a74c8d94",
+        "versionId": "d8371979-9084-4c6e-a7c8-9ca2aa0ce8e1",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-08-05T16:21:01.570Z",
-        "id": 2657,
+        "createdAt": "2026-08-07T15:58:11.904Z",
+        "id": 2704,
         "workflowId": "HaSG63Q9C2tGOLH3",
-        "versionId": "b234ea3b-a4e6-4b3b-b88c-6906a74c8d94",
+        "versionId": "d8371979-9084-4c6e-a7c8-9ca2aa0ce8e1",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
