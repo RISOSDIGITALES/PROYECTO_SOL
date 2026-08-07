@@ -1,0 +1,105 @@
+{
+  "name": "📲 Telegram Router — G54",
+  "nodes": [
+    {
+      "id": "sticky-router-info",
+      "name": "📋 INFO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        -220
+      ],
+      "parameters": {
+        "content": "## 📲 Telegram Router — G54\n\nÚnico punto de entrada registrado en G54 (`agent_endpoints.telegram_agent`) para TODOS los mensajes de Telegram de cualquier empresa — G54 solo permite una URL por key, así que este router decide a cuál motor real reenviar cada mensaje según `empresa_id`.\n\n- `empresa_id == 1` (Crating Express) → motor de Marco (`CE Telegram Engine`, exclusivo de CE, sin tocar)\n- cualquier otra empresa → Sales AI Motor (canal Telegram genérico, multi-tenant)\n\nNo procesa nada por su cuenta — solo reenvía el body tal cual al webhook interno correspondiente.",
+        "height": 300,
+        "width": 380
+      }
+    },
+    {
+      "id": "router-webhook",
+      "name": "🔔 Webhook G54 (Telegram Router)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        40
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-router-g54",
+        "options": {}
+      },
+      "webhookId": "telegram-router-g54"
+    },
+    {
+      "id": "router-decidir",
+      "name": "🔀 Decidir Destino",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        140,
+        40
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const body = $json.body || $json;\nconst empresaId = Number(body.empresa_id || 0);\nconst targetUrl = empresaId === 1\n  ? 'https://n8n.mdarthurdigital.com/webhook/telegram-marco-g54'\n  : 'https://n8n.mdarthurdigital.com/webhook/sales-telegram-g54';\nreturn [{ json: { targetUrl, body } }];\n"
+      }
+    },
+    {
+      "id": "router-reenviar",
+      "name": "📤 Reenviar a Motor Correspondiente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        360,
+        40
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.targetUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "🔔 Webhook G54 (Telegram Router)": {
+      "main": [
+        [
+          {
+            "node": "🔀 Decidir Destino",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Decidir Destino": {
+      "main": [
+        [
+          {
+            "node": "📤 Reenviar a Motor Correspondiente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
