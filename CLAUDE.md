@@ -1950,6 +1950,14 @@ La usuaria señaló que el correo de Lead Caliente rediseñado ayer (ítem 241) 
 
 Sincronizados al repo `workflow-sales-ai-motor-g54.json`, `workflow-community-ai-g54.json` y `workflow-distribution-ai-g54.json` con los 3 fixes reales del día, sin secretos en texto plano.
 
+250. **Correo de Lead Caliente centrado (Marco WhatsApp y Sales AI Motor) + hallazgo: el mismo correo de Marco Telegram nunca recibió el rediseño del ítem 241** (2026-08-08, misma tarde que el ítem 249, a pedido explícito de la usuaria): la tarjeta del reporte de lead caliente se veía pegada al margen izquierdo del correo en vez de centrada — causa real: la tabla interna de ancho fijo (`width="520"`) nunca estuvo envuelta en ningún contenedor que la centrara, así que quedaba alineada a la izquierda por comportamiento default de cualquier cliente de correo. Corregido en los dos correos reales que muestran esta tarjeta — Marco WhatsApp (`zAhV8gEsXD8dCrXq`, nodo Gmail nativo, campo `message`) y Sales AI Motor (`otycsrxrMEMuxuwD`, nodo SMTP, campo `html`) — envolviendo la tabla interna en el patrón estándar de centrado para email (`<table width="100%"><tr><td align="center">...</td></tr></table>`), verificado con `node --check` antes de aplicar en ambos casos.
+
+**Confirmado que Sales AI Motor sí fue adaptado al mismo diseño, tal como documenta el ítem 242** — no tiene datos de cotización (no aplica a un motor multiempresa genérico sin schema fijo), así que en vez de los campos fijos de Marco (producto/medidas/tipo de cajón/protección/precio) itera las claves reales de `datosRecolectados` que traiga cada cliente, mostrándolas humanizadas. Usa un badge de color en vez del header completo con degradado azul y logo "Growth54ai" de Marco — simplificación deliberada de esa sesión, no un olvido.
+
+**Hallazgo real, encontrado en el camino, no corregido todavía sin confirmar con la usuaria:** el correo equivalente de Marco Telegram (`HaSG63Q9C2tGOLH3`, mismo nodo `📧 Notificar Vendedor`) nunca recibió el rediseño del ítem 241 — sigue con el diseño viejo (banner azul/rojo plano, sin logo de G54, sin tipo de protección ni precio ni botón de WhatsApp). Es de ancho completo (`width:100%`), así que no tiene el mismo problema de centrado, pero queda visualmente desactualizado respecto a WhatsApp. No se tocó — queda pendiente de confirmar con la usuaria si se actualiza al mismo diseño nuevo.
+
+Sincronizados `workflow-marco-ce.json` y `workflow-sales-ai-motor-g54.json` al repo con el fix de centrado, sin secretos en texto plano.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
