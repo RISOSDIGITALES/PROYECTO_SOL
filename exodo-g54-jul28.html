@@ -132,8 +132,8 @@
     <div class="header-meta">
       <div class="meta-item"><div class="dot"></div> Última actualización: 11 de agosto 2026</div>
       <div class="meta-item"><div class="dot" style="background:var(--green)"></div> B-19 confirmado RESUELTO en vivo hoy (era el P0 más grave del documento)</div>
-      <div class="meta-item"><div class="dot" style="background:var(--green)"></div> B-21 — LinkedIn resuelto sin cambios de Walter (to-publish ya lo resolvía, solo faltaba leerlo); Analytics sigue bloqueado, es un caso genuinamente distinto</div>
-      <div class="meta-item"><div class="dot"></div> C-2 sigue sin reflejarse</div>
+      <div class="meta-item"><div class="dot" style="background:var(--green)"></div> B-21 resuelto de los dos lados sin cambios de Walter — LinkedIn (to-publish ya lo resolvía) y Analytics (respaldo con Google Sheets)</div>
+      <div class="meta-item"><div class="dot"></div> C-2 sigue sin reflejarse, y se sumó C-6 (mismo problema, en Orison, de nuestras propias pruebas de hoy)</div>
     </div>
   </div>
 </div>
@@ -233,15 +233,15 @@
   </div>
 
   <!-- B-21 -->
-  <div class="item-card b-orange">
+  <div class="item-card b-green">
     <div class="item-header">
       <div>
-        <div class="item-title">B-21. No existe ningún endpoint que resuelva empresa → página, independiente de un post en cola — LinkedIn ya se resolvió sin necesitar nada nuevo, Analytics sigue bloqueado</div>
+        <div class="item-title">B-21. No existe ningún endpoint que resuelva empresa → página, independiente de un post en cola — resuelto de los dos lados, sin cambios de Walter</div>
         <div class="item-where">API Backend — Conexión de Redes Sociales / Reportes</div>
       </div>
       <div class="item-tags">
-        <span class="badge resuelto">✅ LinkedIn resuelto — 11-ago, sin cambios de Walter</span>
-        <span class="badge blocker">🟧 Solo Analytics sigue bloqueado</span>
+        <span class="badge resuelto">✅ LinkedIn resuelto — 11-ago</span>
+        <span class="badge resuelto">✅ Analytics con respaldo — 11-ago</span>
       </div>
     </div>
     <div class="item-body">
@@ -249,7 +249,9 @@
         Primer hallazgo del día: no existe ningún endpoint con AGENT_TOKEN ni con sesión que resuelva "esta empresa → su page_id/ig_user_id/organization_id" de forma aislada, sin depender de un post real pendiente de publicar. <code>GET /api/social-channels</code> expone <code>connection_status</code>/<code>has_credentials</code>/<code>image_config</code> por canal, pero nunca el ID real.
       </p>
       <div class="note-box"><strong>LinkedIn ya no necesita nada de esto — encontrado leyendo la propia documentación con más cuidado, a pedido explícito de la usuaria.</strong> <code>GET /api/n8n/companies/{id}/rrss/posts/to-publish</code> (el mismo endpoint que ya usa Distribution AI para Facebook/Instagram) <strong>ya resuelve el organization_id y el token real de LinkedIn por post</strong>, en los mismos campos genéricos <code>page_id</code>/<code>access_token</code> que usa para Facebook — según la plataforma real de cada post. Confirmado en vivo con una publicación real (<code>urn:li:share:7493037971991003138</code>). El código de Distribution AI nunca leía esos campos para LinkedIn — se corrigió de nuestro lado, sin pedir nada nuevo a Walter.</div>
-      <div class="dep-box"><strong>Lo que sigue pendiente, acotado solo a Analytics — un dato de conexión, no de publicación:</strong> lo que Analytics necesita es simplemente leer qué página de Meta / organización de LinkedIn tiene conectada una empresa (el mismo dato que el panel ya muestra como "Facebook: conectada" en Ajustes). No tiene relación con publicar contenido ni debería depender de ningún mecanismo de Distribution AI. Dos formas limpias de resolverlo, cualquiera sirve: (1) un endpoint tipo <code>GET /api/n8n/companies/{id}/pages</code> que lea directo la tabla de conexión — o extender <code>GET /api/social-channels</code> con el <code>page_id</code>/<code>ig_user_id</code> real, ya que ese endpoint existe justamente para esto; (2) que el botón "Compartir"/"Generar reporte" del panel mande <code>fb_page_id</code>/<code>ig_user_id</code> en su propia llamada — el panel ya sabe que el canal está conectado, así que probablemente ya tiene el dato a mano del lado del cliente.</div>
+      <div class="note-box"><strong>Analytics resuelto con un respaldo, siguiendo el propio diseño que la documentación de G54 ya recomendaba como punto de partida ("mínimo viable, sin OAuth por empresa"):</strong> agregado un camino con Google Sheets — si el reporte no puede resolver la página de Meta, en vez de mostrar el banner de aviso ahora puede leer las métricas de una hoja que el cliente llena a mano (misma idea que ya documentaba G54 para el flujo de Analytics AI, nunca implementada de nuestro lado hasta hoy). Confirmado en vivo con Orison (sin ninguna conexión de Meta) — reporte real, datos reales, guardado correctamente en G54.
+      </div>
+      <div class="dep-box"><strong>Sigue quedando como mejora futura, no bloqueante:</strong> un endpoint tipo <code>GET /api/n8n/companies/{id}/pages</code> que lea directo la tabla de conexión — o extender <code>GET /api/social-channels</code> con el <code>page_id</code>/<code>ig_user_id</code> real — dejaría de depender del llenado manual y automatizaría el camino "a largo plazo" que la propia documentación ya prevé. No es urgente: el respaldo con Sheets ya cubre el caso real de hoy.</div>
     </div>
   </div>
 
@@ -372,6 +374,25 @@
     <div class="item-body">
       <p class="item-why">
         Walter confirmó que <code>alcance</code> es un entero sin signo (el valor negativo compensatorio que habíamos probado el 29-jul era imposible por diseño) y dijo que lo iba a borrar directo por base de datos. Reconfirmado hoy, único pendiente real que queda del lado de Walter: <code>GET /api/rrss/metricas</code> sigue mostrando <code>alcance_total: 130.301</code> en Facebook — el dato contaminado sigue sin limpiarse.
+      </p>
+    </div>
+  </div>
+
+  <!-- C-6 -->
+  <div class="item-card b-teal">
+    <div class="item-header">
+      <div>
+        <div class="item-title">C-6. Nuevo — mismo problema que C-2, esta vez en Orison: un dato de prueba real quedó como el primer registro de su cuenta</div>
+        <div class="item-where">Base de datos — Métricas RRSS, Orison Managua (empresa 6)</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge nuevo">Nuevo — 11-ago</span>
+        <span class="badge opcional">Opcional</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Al probar en vivo el respaldo de Google Sheets para Analytics (ver B-21) con un spreadsheet de prueba, las métricas de esa prueba (Facebook: alcance 8.500 / Instagram: alcance 4.200, entre otros campos) quedaron guardadas de verdad en <code>POST /api/agent/rrss/metricas</code> para la empresa 6. Se intentó revertir con el mismo mecanismo ya probado en C-2 (valores negativos compensatorios) y se confirmó el mismo rechazo (<code>"debe ser al menos 0"</code>). Como Orison no tenía ningún historial de métricas previo, este dato de prueba queda como el primer registro real de su cuenta — pendiente de que Walter lo borre por base de datos, mismo pedido que C-2.
       </p>
     </div>
   </div>

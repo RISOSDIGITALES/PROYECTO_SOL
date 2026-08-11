@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-11T19:57:05.583Z",
+  "updatedAt": "2026-08-11T20:38:30.451Z",
   "createdAt": "2026-07-06T17:45:34.443Z",
   "id": "YI9EfJYcWJN4bbM9",
   "name": "ANALYTICS MENSUAL V3-META REPORTE",
@@ -98,6 +98,12 @@
               "id": "post-platform",
               "name": "POST_PLATFORM",
               "value": "={{ $('🔔 Webhook G54').isExecuted ? ($('🔔 Webhook G54').item.json.body.platform || $('🔔 Webhook G54').item.json.query.platform || '') : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "sheet-id",
+              "name": "SHEET_ID",
+              "value": "={{ $('🔔 Webhook G54').isExecuted ? ($('🔔 Webhook G54').item.json.body.sheet_id || $('🔔 Webhook G54').item.json.query.sheet_id || '') : '' }}",
               "type": "string"
             }
           ]
@@ -1258,6 +1264,269 @@
         "jsonBody": "={{ JSON.stringify({ company_id: $json.company_id, fb_page_id: $json.fb_page_id, ig_user_id: $json.ig_user_id }) }}",
         "options": {}
       }
+    },
+    {
+      "id": "sheets-branch-if",
+      "name": "🔀 ¿Meta sin configurar y hay Sheet?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -880,
+        3400
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ !$json.FB_PAGE_ID && !$json.IG_USER_ID && !!$json.SHEET_ID }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "sheets-perfil-empresa",
+      "name": "📊 Obtener Perfil Empresa (Sheets)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -660,
+        3480
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "sheets-leer-metricas",
+      "name": "📄 Sheets: Leer Métricas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -440,
+        3480
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "QE2RlAxaMLoYefTD",
+          "name": "Google Sheets account"
+        }
+      },
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('⚙️ Config Growth54').item.json.SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Métricas",
+          "mode": "name"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "sheets-prep",
+      "name": "🔧 Preparar Métricas y Reporte (Sheets)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        3480
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst empresa = ($('📊 Obtener Perfil Empresa (Sheets)').first().json || {}).data || $('📊 Obtener Perfil Empresa (Sheets)').first().json || {};\nconst rows = $input.all().map(i => i.json);\n\nconst num = (v) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };\n\nconst metricas = rows\n  .filter(r => r.Plataforma)\n  .map(r => {\n    const alcance = num(r.Alcance);\n    const impresiones = num(r.Impresiones);\n    const engagement = num(r.Engagement);\n    const clics = num(r.Clics);\n    const leads = num(r.Leads);\n    return {\n      platform: String(r.Plataforma),\n      alcance_total: alcance,\n      impresiones_total: impresiones,\n      engagement_total: engagement,\n      engagement_rate_avg: alcance >= 10 ? Math.round((engagement / alcance) * 1000) / 10 : 0,\n      clics_total: clics,\n      leads_total: leads\n    };\n  });\n\nconst companyName = empresa.name || empresa.nombre || 'Empresa';\nconst now = new Date();\nconst periodoLabel = now.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });\nconst periodoInicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);\nconst periodoFin = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);\n\nfunction platformLogo(p) {\n  const pl = (p || '').toLowerCase();\n  if (pl.includes('face')) return '#1877F2';\n  if (pl.includes('insta')) return '#E4405F';\n  if (pl.includes('linked')) return '#0A66C2';\n  return '#6b7280';\n}\n\nfunction card(label, value, sub) {\n  return `<td width=\"33%\" style=\"padding:0 4px;vertical-align:top;\"><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#fff;border:1px solid #e5e7eb;border-radius:8px;\"><tr><td style=\"padding:14px 12px;\">\n    <div style=\"font-size:20px;font-weight:800;color:#111827;font-family:Arial,sans-serif;\">${value}</div>\n    <div style=\"font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-top:2px;\">${label}</div>\n    ${sub ? `<div style=\"font-size:9px;color:#9ca3af;margin-top:2px;\">${sub}</div>` : ''}\n  </td></tr></table></td>`;\n}\n\nfunction platformBlock(m) {\n  const color = platformLogo(m.platform);\n  return `<tr><td style=\"padding:18px 28px 4px;\"><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>\n    <td><span style=\"display:inline-block;width:10px;height:10px;background:${color};border-radius:3px;margin-right:6px;vertical-align:middle;\"></span><span style=\"font-size:13px;font-weight:700;color:#111827;font-family:Arial,sans-serif;vertical-align:middle;\">${m.platform}</span></td>\n  </tr></table></td></tr>\n  <tr><td style=\"padding:6px 24px 4px;\"><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>\n    ${card('Alcance', m.alcance_total.toLocaleString('es-ES'), '')}\n    ${card('Impresiones', m.impresiones_total.toLocaleString('es-ES'), '')}\n    ${card('Engagement', m.engagement_total.toLocaleString('es-ES'), m.engagement_rate_avg ? m.engagement_rate_avg + '% tasa' : '')}\n  </tr></table></td></tr>\n  <tr><td style=\"padding:6px 24px 4px;\"><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>\n    ${card('Clics', m.clics_total.toLocaleString('es-ES'), '')}\n    ${card('Leads', m.leads_total.toLocaleString('es-ES'), '')}\n    <td width=\"33%\"></td>\n  </tr></table></td></tr>`;\n}\n\nconst platformBlocks = metricas.length\n  ? metricas.map(platformBlock).join('')\n  : `<tr><td style=\"padding:24px 28px;\"><div style=\"font-size:12px;color:#991b1b;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:12px 16px;\">⚠️ La hoja de Google Sheets no tiene filas con datos — verificá que la pestaña se llame exactamente \"Métricas\" y tenga las columnas Plataforma / Alcance / Impresiones / Engagement / Clics / Leads.</div></td></tr>`;\n\nconst html = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>G54 Resultados Orgánicos — ${companyName}</title></head><body style=\"margin:0;padding:32px 16px;background:#eef0f4;font-family:Arial,'Helvetica Neue',sans-serif;\">\n<table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 auto;\">\n<tr><td style=\"background:linear-gradient(135deg,#2D5BFF 0%,#1E45D6 100%);border-radius:12px 12px 0 0;padding:26px 28px 24px;\">\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td>\n    <table cellpadding=\"0\" cellspacing=\"0\"><tr>\n      <td style=\"vertical-align:middle;\"><span style=\"font-size:20px;font-weight:600;color:#fff;letter-spacing:-0.3px;font-family:Arial,sans-serif;\">Growth</span></td>\n      <td style=\"vertical-align:middle;padding:0 1px;\"><div style=\"width:25px;height:25px;background:#fff;border-radius:50%;text-align:center;line-height:25px;color:#2D5BFF;font-size:18px;font-weight:800;letter-spacing:-0.8px;font-family:Arial,sans-serif;display:inline-block;\">54</div></td>\n      <td style=\"vertical-align:middle;\"><span style=\"font-size:20px;font-weight:600;color:#fff;letter-spacing:-0.3px;font-family:Arial,sans-serif;\">ai</span></td>\n    </tr></table>\n    <div style=\"margin-top:18px;font-size:11px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.06em;\">Reporte de Resultados Orgánicos</div>\n    <div style=\"margin-top:4px;font-size:19px;font-weight:700;color:#fff;font-family:Arial,sans-serif;\">${companyName}</div>\n    <div style=\"margin-top:6px;font-size:12px;color:rgba(255,255,255,.85);\">${periodoLabel}</div>\n  </td></tr></table>\n</td></tr>\n<tr><td style=\"background:#fff;padding:10px 28px;border-bottom:1px solid #e5e7eb;\">\n  <span style=\"display:inline-block;width:7px;height:7px;background:#0ea5e9;border-radius:50%;margin-right:6px;vertical-align:middle;\"></span>\n  <span style=\"font-size:11px;color:#374151;\">Fuente: datos ingresados manualmente vía Google Sheets — este cliente aún no tiene su conexión de Meta/LinkedIn resuelta en G54.</span>\n</td></tr>\n${platformBlocks}\n<tr><td style=\"background:#fff;border-radius:0 0 12px 12px;padding:16px 28px;border-top:1px solid #e5e7eb;\">\n  <div style=\"font-size:10px;color:#9ca3af;\">Generado por Growth54ai — ${new Date().toLocaleDateString('es-ES')}</div>\n</td></tr>\n</table>\n</body></html>`;\n\nconst emails = empresa.emails || [];\nconst emailDest = emails[0] || '';\nconst emailConfigurado = !!emailDest;\n\nconst metricasParaG54 = metricas.map(m => ({\n  platform: m.platform.toLowerCase(),\n  period_start: periodoInicio,\n  period_end: periodoFin,\n  alcance: m.alcance_total,\n  impresiones: m.impresiones_total,\n  engagement_count: m.engagement_total,\n  engagement_rate: m.engagement_rate_avg,\n  clics: m.clics_total,\n  leads: m.leads_total\n}));\n\nreturn [{\n  json: {\n    company_id: parseInt(config.G54_COMPANY_ID, 10) || 0,\n    companyName,\n    metricas,\n    metricasParaG54,\n    periodoLabel,\n    periodoInicio,\n    periodoFin,\n    emailTo: emailDest,\n    emailSubject: `Reporte de Resultados Orgánicos — ${companyName} — ${periodoLabel}`,\n    emailHtml: html,\n    emailConfigurado\n  }\n}];\n"
+      }
+    },
+    {
+      "id": "sheets-guardar-metricas",
+      "name": "💾 Guardar Métricas (Sheets) en G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        3380
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/agent/rrss/metricas' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: $json.company_id, metricas: $json.metricasParaG54 }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "sheets-guardar-reporte",
+      "name": "💾 G54: Guardar Reporte (Sheets)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        3480
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/agent/rrss/reportes' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: $json.company_id, titulo: $json.emailSubject, periodo_inicio: $json.periodoInicio, periodo_fin: $json.periodoFin, html: $json.emailHtml }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "sheets-responder",
+      "name": "📤 Responder con HTML (Sheets)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        3580
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.emailHtml }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "sheets-email-if",
+      "name": "🔀 ¿Email Configurado? (Sheets)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        220,
+        3380
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.emailConfigurado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "sheets-enviar-email",
+      "name": "📧 Enviar Reporte por Email (Sheets)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        440,
+        3380
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "iWBBSSe5AWsCMo89",
+          "name": "Gmail SMTP — risosadmi"
+        }
+      },
+      "parameters": {
+        "fromEmail": "Growth54 <risosadmi@gmail.com>",
+        "toEmail": "={{ $json.emailTo }}",
+        "subject": "={{ $json.emailSubject }}",
+        "html": "={{ $json.emailHtml }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "webhookId": "58edf155-5a04-478f-9071-a1f4e7f14d2e"
     }
   ],
   "connections": {
@@ -1276,7 +1545,7 @@
       "main": [
         [
           {
-            "node": "🔀 ¿Modo Post Individual?",
+            "node": "🔀 ¿Meta sin configurar y hay Sheet?",
             "type": "main",
             "index": 0
           }
@@ -1775,6 +2044,84 @@
           }
         ]
       ]
+    },
+    "🔀 ¿Meta sin configurar y hay Sheet?": {
+      "main": [
+        [
+          {
+            "node": "📊 Obtener Perfil Empresa (Sheets)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔀 ¿Modo Post Individual?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Obtener Perfil Empresa (Sheets)": {
+      "main": [
+        [
+          {
+            "node": "📄 Sheets: Leer Métricas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📄 Sheets: Leer Métricas": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Métricas y Reporte (Sheets)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Métricas y Reporte (Sheets)": {
+      "main": [
+        [
+          {
+            "node": "💾 Guardar Métricas (Sheets) en G54",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "💾 G54: Guardar Reporte (Sheets)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📤 Responder con HTML (Sheets)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔀 ¿Email Configurado? (Sheets)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Email Configurado? (Sheets)": {
+      "main": [
+        [
+          {
+            "node": "📧 Enviar Reporte por Email (Sheets)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
     }
   },
   "settings": {
@@ -1801,9 +2148,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "cbbfe06d-1dc8-48c1-ba24-1311dc62baaf",
-  "activeVersionId": "cbbfe06d-1dc8-48c1-ba24-1311dc62baaf",
-  "versionCounter": 80,
+  "versionId": "65eea71a-3e62-43d4-87f3-c5d48c80b791",
+  "activeVersionId": "65eea71a-3e62-43d4-87f3-c5d48c80b791",
+  "versionCounter": 83,
   "triggerCount": 2,
   "sourceWorkflowId": null,
   "shared": [
@@ -1828,9 +2175,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-08-11T19:57:05.587Z",
-    "createdAt": "2026-08-11T19:57:05.587Z",
-    "versionId": "cbbfe06d-1dc8-48c1-ba24-1311dc62baaf",
+    "updatedAt": "2026-08-11T20:38:30.457Z",
+    "createdAt": "2026-08-11T20:38:30.457Z",
+    "versionId": "65eea71a-3e62-43d4-87f3-c5d48c80b791",
     "workflowId": "YI9EfJYcWJN4bbM9",
     "nodes": [
       {
@@ -1924,6 +2271,12 @@
                 "id": "post-platform",
                 "name": "POST_PLATFORM",
                 "value": "={{ $('🔔 Webhook G54').isExecuted ? ($('🔔 Webhook G54').item.json.body.platform || $('🔔 Webhook G54').item.json.query.platform || '') : '' }}",
+                "type": "string"
+              },
+              {
+                "id": "sheet-id",
+                "name": "SHEET_ID",
+                "value": "={{ $('🔔 Webhook G54').isExecuted ? ($('🔔 Webhook G54').item.json.body.sheet_id || $('🔔 Webhook G54').item.json.query.sheet_id || '') : '' }}",
                 "type": "string"
               }
             ]
@@ -3084,6 +3437,269 @@
           "jsonBody": "={{ JSON.stringify({ company_id: $json.company_id, fb_page_id: $json.fb_page_id, ig_user_id: $json.ig_user_id }) }}",
           "options": {}
         }
+      },
+      {
+        "id": "sheets-branch-if",
+        "name": "🔀 ¿Meta sin configurar y hay Sheet?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          -880,
+          3400
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ !$json.FB_PAGE_ID && !$json.IG_USER_ID && !!$json.SHEET_ID }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "sheets-perfil-empresa",
+        "name": "📊 Obtener Perfil Empresa (Sheets)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -660,
+          3480
+        ],
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_N8N_TOKEN }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "sheets-leer-metricas",
+        "name": "📄 Sheets: Leer Métricas",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "position": [
+          -440,
+          3480
+        ],
+        "onError": "continueRegularOutput",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "QE2RlAxaMLoYefTD",
+            "name": "Google Sheets account"
+          }
+        },
+        "parameters": {
+          "operation": "read",
+          "documentId": {
+            "__rl": true,
+            "value": "={{ $('⚙️ Config Growth54').item.json.SHEET_ID }}",
+            "mode": "id"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "Métricas",
+            "mode": "name"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "sheets-prep",
+        "name": "🔧 Preparar Métricas y Reporte (Sheets)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -220,
+          3480
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst empresa = ($('📊 Obtener Perfil Empresa (Sheets)').first().json || {}).data || $('📊 Obtener Perfil Empresa (Sheets)').first().json || {};\nconst rows = $input.all().map(i => i.json);\n\nconst num = (v) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };\n\nconst metricas = rows\n  .filter(r => r.Plataforma)\n  .map(r => {\n    const alcance = num(r.Alcance);\n    const impresiones = num(r.Impresiones);\n    const engagement = num(r.Engagement);\n    const clics = num(r.Clics);\n    const leads = num(r.Leads);\n    return {\n      platform: String(r.Plataforma),\n      alcance_total: alcance,\n      impresiones_total: impresiones,\n      engagement_total: engagement,\n      engagement_rate_avg: alcance >= 10 ? Math.round((engagement / alcance) * 1000) / 10 : 0,\n      clics_total: clics,\n      leads_total: leads\n    };\n  });\n\nconst companyName = empresa.name || empresa.nombre || 'Empresa';\nconst now = new Date();\nconst periodoLabel = now.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });\nconst periodoInicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);\nconst periodoFin = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);\n\nfunction platformLogo(p) {\n  const pl = (p || '').toLowerCase();\n  if (pl.includes('face')) return '#1877F2';\n  if (pl.includes('insta')) return '#E4405F';\n  if (pl.includes('linked')) return '#0A66C2';\n  return '#6b7280';\n}\n\nfunction card(label, value, sub) {\n  return `<td width=\"33%\" style=\"padding:0 4px;vertical-align:top;\"><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#fff;border:1px solid #e5e7eb;border-radius:8px;\"><tr><td style=\"padding:14px 12px;\">\n    <div style=\"font-size:20px;font-weight:800;color:#111827;font-family:Arial,sans-serif;\">${value}</div>\n    <div style=\"font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-top:2px;\">${label}</div>\n    ${sub ? `<div style=\"font-size:9px;color:#9ca3af;margin-top:2px;\">${sub}</div>` : ''}\n  </td></tr></table></td>`;\n}\n\nfunction platformBlock(m) {\n  const color = platformLogo(m.platform);\n  return `<tr><td style=\"padding:18px 28px 4px;\"><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>\n    <td><span style=\"display:inline-block;width:10px;height:10px;background:${color};border-radius:3px;margin-right:6px;vertical-align:middle;\"></span><span style=\"font-size:13px;font-weight:700;color:#111827;font-family:Arial,sans-serif;vertical-align:middle;\">${m.platform}</span></td>\n  </tr></table></td></tr>\n  <tr><td style=\"padding:6px 24px 4px;\"><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>\n    ${card('Alcance', m.alcance_total.toLocaleString('es-ES'), '')}\n    ${card('Impresiones', m.impresiones_total.toLocaleString('es-ES'), '')}\n    ${card('Engagement', m.engagement_total.toLocaleString('es-ES'), m.engagement_rate_avg ? m.engagement_rate_avg + '% tasa' : '')}\n  </tr></table></td></tr>\n  <tr><td style=\"padding:6px 24px 4px;\"><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>\n    ${card('Clics', m.clics_total.toLocaleString('es-ES'), '')}\n    ${card('Leads', m.leads_total.toLocaleString('es-ES'), '')}\n    <td width=\"33%\"></td>\n  </tr></table></td></tr>`;\n}\n\nconst platformBlocks = metricas.length\n  ? metricas.map(platformBlock).join('')\n  : `<tr><td style=\"padding:24px 28px;\"><div style=\"font-size:12px;color:#991b1b;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:12px 16px;\">⚠️ La hoja de Google Sheets no tiene filas con datos — verificá que la pestaña se llame exactamente \"Métricas\" y tenga las columnas Plataforma / Alcance / Impresiones / Engagement / Clics / Leads.</div></td></tr>`;\n\nconst html = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>G54 Resultados Orgánicos — ${companyName}</title></head><body style=\"margin:0;padding:32px 16px;background:#eef0f4;font-family:Arial,'Helvetica Neue',sans-serif;\">\n<table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 auto;\">\n<tr><td style=\"background:linear-gradient(135deg,#2D5BFF 0%,#1E45D6 100%);border-radius:12px 12px 0 0;padding:26px 28px 24px;\">\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td>\n    <table cellpadding=\"0\" cellspacing=\"0\"><tr>\n      <td style=\"vertical-align:middle;\"><span style=\"font-size:20px;font-weight:600;color:#fff;letter-spacing:-0.3px;font-family:Arial,sans-serif;\">Growth</span></td>\n      <td style=\"vertical-align:middle;padding:0 1px;\"><div style=\"width:25px;height:25px;background:#fff;border-radius:50%;text-align:center;line-height:25px;color:#2D5BFF;font-size:18px;font-weight:800;letter-spacing:-0.8px;font-family:Arial,sans-serif;display:inline-block;\">54</div></td>\n      <td style=\"vertical-align:middle;\"><span style=\"font-size:20px;font-weight:600;color:#fff;letter-spacing:-0.3px;font-family:Arial,sans-serif;\">ai</span></td>\n    </tr></table>\n    <div style=\"margin-top:18px;font-size:11px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.06em;\">Reporte de Resultados Orgánicos</div>\n    <div style=\"margin-top:4px;font-size:19px;font-weight:700;color:#fff;font-family:Arial,sans-serif;\">${companyName}</div>\n    <div style=\"margin-top:6px;font-size:12px;color:rgba(255,255,255,.85);\">${periodoLabel}</div>\n  </td></tr></table>\n</td></tr>\n<tr><td style=\"background:#fff;padding:10px 28px;border-bottom:1px solid #e5e7eb;\">\n  <span style=\"display:inline-block;width:7px;height:7px;background:#0ea5e9;border-radius:50%;margin-right:6px;vertical-align:middle;\"></span>\n  <span style=\"font-size:11px;color:#374151;\">Fuente: datos ingresados manualmente vía Google Sheets — este cliente aún no tiene su conexión de Meta/LinkedIn resuelta en G54.</span>\n</td></tr>\n${platformBlocks}\n<tr><td style=\"background:#fff;border-radius:0 0 12px 12px;padding:16px 28px;border-top:1px solid #e5e7eb;\">\n  <div style=\"font-size:10px;color:#9ca3af;\">Generado por Growth54ai — ${new Date().toLocaleDateString('es-ES')}</div>\n</td></tr>\n</table>\n</body></html>`;\n\nconst emails = empresa.emails || [];\nconst emailDest = emails[0] || '';\nconst emailConfigurado = !!emailDest;\n\nconst metricasParaG54 = metricas.map(m => ({\n  platform: m.platform.toLowerCase(),\n  period_start: periodoInicio,\n  period_end: periodoFin,\n  alcance: m.alcance_total,\n  impresiones: m.impresiones_total,\n  engagement_count: m.engagement_total,\n  engagement_rate: m.engagement_rate_avg,\n  clics: m.clics_total,\n  leads: m.leads_total\n}));\n\nreturn [{\n  json: {\n    company_id: parseInt(config.G54_COMPANY_ID, 10) || 0,\n    companyName,\n    metricas,\n    metricasParaG54,\n    periodoLabel,\n    periodoInicio,\n    periodoFin,\n    emailTo: emailDest,\n    emailSubject: `Reporte de Resultados Orgánicos — ${companyName} — ${periodoLabel}`,\n    emailHtml: html,\n    emailConfigurado\n  }\n}];\n"
+        }
+      },
+      {
+        "id": "sheets-guardar-metricas",
+        "name": "💾 Guardar Métricas (Sheets) en G54",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          0,
+          3380
+        ],
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/agent/rrss/metricas' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_AGENT_TOKEN }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ company_id: $json.company_id, metricas: $json.metricasParaG54 }) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "sheets-guardar-reporte",
+        "name": "💾 G54: Guardar Reporte (Sheets)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          0,
+          3480
+        ],
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/agent/rrss/reportes' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_AGENT_TOKEN }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ company_id: $json.company_id, titulo: $json.emailSubject, periodo_inicio: $json.periodoInicio, periodo_fin: $json.periodoFin, html: $json.emailHtml }) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "sheets-responder",
+        "name": "📤 Responder con HTML (Sheets)",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          0,
+          3580
+        ],
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ $json.emailHtml }}",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "text/html; charset=utf-8"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "sheets-email-if",
+        "name": "🔀 ¿Email Configurado? (Sheets)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          220,
+          3380
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.emailConfigurado }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "sheets-enviar-email",
+        "name": "📧 Enviar Reporte por Email (Sheets)",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 2.1,
+        "position": [
+          440,
+          3380
+        ],
+        "credentials": {
+          "smtp": {
+            "id": "iWBBSSe5AWsCMo89",
+            "name": "Gmail SMTP — risosadmi"
+          }
+        },
+        "parameters": {
+          "fromEmail": "Growth54 <risosadmi@gmail.com>",
+          "toEmail": "={{ $json.emailTo }}",
+          "subject": "={{ $json.emailSubject }}",
+          "html": "={{ $json.emailHtml }}",
+          "options": {
+            "appendAttribution": false
+          }
+        },
+        "webhookId": "58edf155-5a04-478f-9071-a1f4e7f14d2e"
       }
     ],
     "connections": {
@@ -3102,7 +3718,7 @@
         "main": [
           [
             {
-              "node": "🔀 ¿Modo Post Individual?",
+              "node": "🔀 ¿Meta sin configurar y hay Sheet?",
               "type": "main",
               "index": 0
             }
@@ -3601,6 +4217,84 @@
             }
           ]
         ]
+      },
+      "🔀 ¿Meta sin configurar y hay Sheet?": {
+        "main": [
+          [
+            {
+              "node": "📊 Obtener Perfil Empresa (Sheets)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🔀 ¿Modo Post Individual?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📊 Obtener Perfil Empresa (Sheets)": {
+        "main": [
+          [
+            {
+              "node": "📄 Sheets: Leer Métricas",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📄 Sheets: Leer Métricas": {
+        "main": [
+          [
+            {
+              "node": "🔧 Preparar Métricas y Reporte (Sheets)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Preparar Métricas y Reporte (Sheets)": {
+        "main": [
+          [
+            {
+              "node": "💾 Guardar Métricas (Sheets) en G54",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "💾 G54: Guardar Reporte (Sheets)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "📤 Responder con HTML (Sheets)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "🔀 ¿Email Configurado? (Sheets)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Email Configurado? (Sheets)": {
+        "main": [
+          [
+            {
+              "node": "📧 Enviar Reporte por Email (Sheets)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          []
+        ]
       }
     },
     "nodeGroups": [],
@@ -3610,18 +4304,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-08-11T19:57:05.832Z",
-        "id": 2776,
+        "createdAt": "2026-08-11T20:38:30.655Z",
+        "id": 2791,
         "workflowId": "YI9EfJYcWJN4bbM9",
-        "versionId": "cbbfe06d-1dc8-48c1-ba24-1311dc62baaf",
+        "versionId": "65eea71a-3e62-43d4-87f3-c5d48c80b791",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-08-11T19:57:05.777Z",
-        "id": 2775,
+        "createdAt": "2026-08-11T20:38:30.601Z",
+        "id": 2790,
         "workflowId": "YI9EfJYcWJN4bbM9",
-        "versionId": "cbbfe06d-1dc8-48c1-ba24-1311dc62baaf",
+        "versionId": "65eea71a-3e62-43d4-87f3-c5d48c80b791",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
