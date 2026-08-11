@@ -132,7 +132,7 @@
     <div class="header-meta">
       <div class="meta-item"><div class="dot"></div> Última actualización: 11 de agosto 2026</div>
       <div class="meta-item"><div class="dot" style="background:var(--green)"></div> B-19 confirmado RESUELTO en vivo hoy (era el P0 más grave del documento)</div>
-      <div class="meta-item"><div class="dot" style="background:var(--orange)"></div> B-21 nuevo hoy — sin endpoint de empresa→página, el disparo mensual de Analytics y toda la publicación en LinkedIn quedan sin funcionar a propósito (no había forma sin hardcode)</div>
+      <div class="meta-item"><div class="dot" style="background:var(--green)"></div> B-21 — LinkedIn resuelto sin cambios de Walter (to-publish ya lo resolvía, solo faltaba leerlo); Analytics sigue bloqueado, es un caso genuinamente distinto</div>
       <div class="meta-item"><div class="dot"></div> C-2 sigue sin reflejarse</div>
     </div>
   </div>
@@ -236,21 +236,20 @@
   <div class="item-card b-orange">
     <div class="item-header">
       <div>
-        <div class="item-title">B-21. No existe ningún endpoint que resuelva empresa → página de Meta / organización de LinkedIn — bloquea el disparo automático mensual de Analytics y toda la publicación en LinkedIn</div>
-        <div class="item-where">API Backend — Conexión de Redes Sociales</div>
+        <div class="item-title">B-21. No existe ningún endpoint que resuelva empresa → página, independiente de un post en cola — LinkedIn ya se resolvió sin necesitar nada nuevo, Analytics sigue bloqueado</div>
+        <div class="item-where">API Backend — Conexión de Redes Sociales / Reportes</div>
       </div>
       <div class="item-tags">
-        <span class="badge blocker">🟧 Bloqueante real, aceptado a propósito</span>
-        <span class="badge p1">Nuevo — 11-ago</span>
+        <span class="badge resuelto">✅ LinkedIn resuelto — 11-ago, sin cambios de Walter</span>
+        <span class="badge blocker">🟧 Solo Analytics sigue bloqueado</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        Confirmado de nuevo hoy, probando 5 rutas candidatas más (todas <code>404</code>): no existe ningún endpoint con AGENT_TOKEN ni con sesión que resuelva "esta empresa → su page_id de Facebook / ig_user_id / organization_id de LinkedIn". <code>GET /api/social-channels</code> expone <code>connection_status</code>/<code>has_credentials</code>/<code>image_config</code> por canal, pero nunca el ID real de la página conectada.
+        Primer hallazgo del día: no existe ningún endpoint con AGENT_TOKEN ni con sesión que resuelva "esta empresa → su page_id/ig_user_id/organization_id" de forma aislada, sin depender de un post real pendiente de publicar. <code>GET /api/social-channels</code> expone <code>connection_status</code>/<code>has_credentials</code>/<code>image_config</code> por canal, pero nunca el ID real.
       </p>
-      <div class="warn-box"><strong>Encontrado hoy, no un descubrimiento nuevo del bloqueo en sí:</strong> dos agentes de plataforma (el disparo automático mensual de Analytics V3, y la resolución de organización de LinkedIn en Distribution AI) tenían este hueco tapado con un mapa de empresa→ID fijo en el código — a pedido explícito de la usuaria, se sacó por completo hoy mismo (viola la regla de cero-hardcode de cliente en agentes de plataforma, sin excepción). Como consecuencia real y aceptada: el disparo automático del reporte mensual de Analytics (día 28) ya no corre solo, y la publicación en LinkedIn (que sí llegó a publicar posts reales el 08-ago) queda sin ningún mecanismo funcional hasta que este endpoint exista.
-      </div>
-      <div class="dep-box"><strong>Lo que se necesita concretamente:</strong> un endpoint tipo <code>GET /api/n8n/companies/{id}/pages</code> (o extender <code>GET /api/social-channels</code> para incluir el <code>page_id</code>/<code>ig_user_id</code>/<code>organization_id</code> real, no solo el estado de conexión) — el dato ya existe en algún lado de G54, porque <code>GET /api/n8n/companies/{id}/rrss/posts/to-publish</code> ya lo resuelve correctamente por post cuando hay uno pendiente; falta exponerlo como un lookup directo por <code>company_id</code>, sin depender de que haya un post en cola.</div>
+      <div class="note-box"><strong>LinkedIn ya no necesita nada de esto — encontrado leyendo la propia documentación con más cuidado, a pedido explícito de la usuaria.</strong> <code>GET /api/n8n/companies/{id}/rrss/posts/to-publish</code> (el mismo endpoint que ya usa Distribution AI para Facebook/Instagram) <strong>ya resuelve el organization_id y el token real de LinkedIn por post</strong>, en los mismos campos genéricos <code>page_id</code>/<code>access_token</code> que usa para Facebook — según la plataforma real de cada post. Confirmado en vivo con una publicación real (<code>urn:li:share:7493037971991003138</code>). El código de Distribution AI nunca leía esos campos para LinkedIn — se corrigió de nuestro lado, sin pedir nada nuevo a Walter.</div>
+      <div class="dep-box"><strong>Lo que sigue pendiente, acotado solo a Analytics:</strong> el reporte de Analytics (tanto el botón on-demand del panel como el disparo automático del día 28) no tiene ningún post "en cola" del cual colgarse para que <code>to-publish</code> resuelva la página — necesita el ID de forma aislada, en cualquier momento. Un endpoint tipo <code>GET /api/n8n/companies/{id}/pages</code> (o extender <code>GET /api/social-channels</code> con el <code>page_id</code>/<code>ig_user_id</code> real) seguiría resolviendo esto — o, más simple, que el botón "Compartir"/"Generar reporte" del panel mande <code>fb_page_id</code>/<code>ig_user_id</code> en su llamada (el panel ya muestra "conectada" para esos canales, así que probablemente ya tiene el dato disponible del lado del cliente).</div>
     </div>
   </div>
 

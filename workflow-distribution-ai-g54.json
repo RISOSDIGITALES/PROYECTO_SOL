@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-11T20:01:02.966Z",
+  "updatedAt": "2026-08-11T20:16:22.632Z",
   "createdAt": "2026-06-25T16:00:34.918Z",
   "id": "IRCoya91PKPjpT1T",
   "name": "📢 Distribution AI — RRSS G54 v1.0",
@@ -615,7 +615,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst config = $('⚙️ Config Distribution').item.json;\nconst tokens = $('🏢 Aplicar Tokens Empresa').item.json;\nconst webhookBody = $('🌐 Webhook: Publicar Post').item?.json?.body || {};\n\nreturn items.map(item => {\n  const p = item.json;\n  const f = p.fields || p;\n\n  const post_id        = p.id || p.record_id || '';\n  const copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || '';\n  const copy_instagram = f.copy_instagram || f.Post_Instagram_EN || '';\n  const copy_linkedin  = f.copy_linkedin || '';\n  const imagen_url     = f.imagen_url     || f.imagen || '';\n  const video_url      = f.video_url      || p.video_url || '';\n  const platform       = f.platform || p.platform || 'Facebook';\n  const content_type   = webhookBody.content_type || f.content_type || p.content_type || 'post';\n\n  const FB_ACCESS_TOKEN = tokens.FB_ACCESS_TOKEN || p.access_token || '';\n  const FB_PAGE_ID = p.fb_page_id || p.page_id || config.FB_PAGE_ID || '';\n  const IG_USER_ID = p.instagram_account_id || tokens.IG_USER_ID || '';\n  const LINKEDIN_ACCESS_TOKEN = tokens.LINKEDIN_ACCESS_TOKEN || '';\n  const LINKEDIN_ORGANIZATION_ID = tokens.LINKEDIN_ORGANIZATION_ID || '';\n\n  return { json: {\n    post_id, copy_facebook, copy_instagram, copy_linkedin, imagen_url, video_url,\n    has_image: !!imagen_url, has_video: !!video_url, platform, content_type,\n    FB_ACCESS_TOKEN, FB_PAGE_ID, IG_USER_ID,\n    LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORGANIZATION_ID\n  } };\n});\n"
+        "jsCode": "const items = $input.all();\nconst config = $('⚙️ Config Distribution').item.json;\nconst tokens = $('🏢 Aplicar Tokens Empresa').item.json;\nconst webhookBody = $('🌐 Webhook: Publicar Post').item?.json?.body || {};\n\nreturn items.map(item => {\n  const p = item.json;\n  const f = p.fields || p;\n\n  const post_id        = p.id || p.record_id || '';\n  const copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || '';\n  const copy_instagram = f.copy_instagram || f.Post_Instagram_EN || '';\n  const copy_linkedin  = f.copy_linkedin || '';\n  const imagen_url     = f.imagen_url     || f.imagen || '';\n  const video_url      = f.video_url      || p.video_url || '';\n  const platform       = f.platform || p.platform || 'Facebook';\n  const content_type   = webhookBody.content_type || f.content_type || p.content_type || 'post';\n  const isLinkedIn     = platform === 'LinkedIn';\n\n  const FB_ACCESS_TOKEN = tokens.FB_ACCESS_TOKEN || p.access_token || '';\n  const FB_PAGE_ID = p.fb_page_id || p.page_id || config.FB_PAGE_ID || '';\n  const IG_USER_ID = p.instagram_account_id || tokens.IG_USER_ID || '';\n\n  // to-publish ya resuelve esto por post, en los mismos campos genéricos que usa para FB —\n  // page_id/access_token, según la plataforma del post — sin necesitar ningún mapa ni endpoint\n  // aparte. Confirmado en vivo el 11-ago con un post real de LinkedIn.\n  const LINKEDIN_ACCESS_TOKEN = isLinkedIn ? (p.access_token || '') : '';\n  const LINKEDIN_ORGANIZATION_ID = isLinkedIn ? (p.page_id || p.organization_id || '') : '';\n\n  return { json: {\n    post_id, copy_facebook, copy_instagram, copy_linkedin, imagen_url, video_url,\n    has_image: !!imagen_url, has_video: !!video_url, platform, content_type,\n    FB_ACCESS_TOKEN, FB_PAGE_ID, IG_USER_ID,\n    LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORGANIZATION_ID\n  } };\n});"
       },
       "id": "prep-post",
       "name": "🔧 Preparar Datos Post",
@@ -898,7 +898,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const config = $('⚙️ Config Distribution').item.json;\nconst pageData = $('🔑 Obtener Tokens Página (G54)').item.json;\nconst igData = $('📷 Obtener IG User ID (Meta)').item.json;\n\nconst ig_user_id = igData?.instagram_business_account?.id || pageData.ig_user_id || '';\n\nlet fb_access_token = pageData.fb_access_token || config.FB_ACCESS_TOKEN || '';\ntry {\n  const exchanged = $('🔑 Intercambiar Page Token (FB)').item.json;\n  if (exchanged && exchanged.access_token) fb_access_token = exchanged.access_token;\n} catch (e) {}\n\nlet linkedin_access_token = '';\nlet linkedin_organization_id = '';\ntry {\n  linkedin_organization_id = $('🔑 Resolver LinkedIn Org (Mapa)').item.json.linkedin_organization_id || '';\n  const liData = $('🔑 Obtener Token LinkedIn (G54)').item.json;\n  linkedin_access_token = liData?.fb_access_token || '';\n} catch (e) {}\n\nreturn [{json: {\n  ...config,\n  FB_ACCESS_TOKEN: fb_access_token,\n  IG_USER_ID: ig_user_id,\n  LINKEDIN_ACCESS_TOKEN: linkedin_access_token,\n  LINKEDIN_ORGANIZATION_ID: linkedin_organization_id\n}}];\n"
+        "jsCode": "const config = $('⚙️ Config Distribution').item.json;\nconst pageData = $('🔑 Obtener Tokens Página (G54)').item.json;\nconst igData = $('📷 Obtener IG User ID (Meta)').item.json;\n\nconst ig_user_id = igData?.instagram_business_account?.id || pageData.ig_user_id || '';\n\nlet fb_access_token = pageData.fb_access_token || config.FB_ACCESS_TOKEN || '';\ntry {\n  const exchanged = $('🔑 Intercambiar Page Token (FB)').item.json;\n  if (exchanged && exchanged.access_token) fb_access_token = exchanged.access_token;\n} catch (e) {}\n\nreturn [{json: {\n  ...config,\n  FB_ACCESS_TOKEN: fb_access_token,\n  IG_USER_ID: ig_user_id\n}}];"
       },
       "id": "dist-apply-tokens",
       "name": "🏢 Aplicar Tokens Empresa",
@@ -1981,7 +1981,7 @@
       "main": [
         [
           {
-            "node": "🔑 Resolver LinkedIn Org (Mapa)",
+            "node": "🏢 Aplicar Tokens Empresa",
             "type": "main",
             "index": 0
           }
@@ -2175,28 +2175,6 @@
         ]
       ]
     },
-    "🔑 Resolver LinkedIn Org (Mapa)": {
-      "main": [
-        [
-          {
-            "node": "🔑 Obtener Token LinkedIn (G54)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔑 Obtener Token LinkedIn (G54)": {
-      "main": [
-        [
-          {
-            "node": "🏢 Aplicar Tokens Empresa",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "💼 LinkedIn: Publicar": {
       "main": [
         [
@@ -2307,9 +2285,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "9685c824-4a25-47df-ba4b-b2d7208229bb",
-  "activeVersionId": "9685c824-4a25-47df-ba4b-b2d7208229bb",
-  "versionCounter": 85,
+  "versionId": "061d4f61-57d8-4465-b823-1b36af37ba68",
+  "activeVersionId": "061d4f61-57d8-4465-b823-1b36af37ba68",
+  "versionCounter": 86,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "shared": [
@@ -2334,9 +2312,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-08-11T20:01:02.969Z",
-    "createdAt": "2026-08-11T20:01:02.969Z",
-    "versionId": "9685c824-4a25-47df-ba4b-b2d7208229bb",
+    "updatedAt": "2026-08-11T20:16:22.638Z",
+    "createdAt": "2026-08-11T20:16:22.638Z",
+    "versionId": "061d4f61-57d8-4465-b823-1b36af37ba68",
     "workflowId": "IRCoya91PKPjpT1T",
     "nodes": [
       {
@@ -2947,7 +2925,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const items = $input.all();\nconst config = $('⚙️ Config Distribution').item.json;\nconst tokens = $('🏢 Aplicar Tokens Empresa').item.json;\nconst webhookBody = $('🌐 Webhook: Publicar Post').item?.json?.body || {};\n\nreturn items.map(item => {\n  const p = item.json;\n  const f = p.fields || p;\n\n  const post_id        = p.id || p.record_id || '';\n  const copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || '';\n  const copy_instagram = f.copy_instagram || f.Post_Instagram_EN || '';\n  const copy_linkedin  = f.copy_linkedin || '';\n  const imagen_url     = f.imagen_url     || f.imagen || '';\n  const video_url      = f.video_url      || p.video_url || '';\n  const platform       = f.platform || p.platform || 'Facebook';\n  const content_type   = webhookBody.content_type || f.content_type || p.content_type || 'post';\n\n  const FB_ACCESS_TOKEN = tokens.FB_ACCESS_TOKEN || p.access_token || '';\n  const FB_PAGE_ID = p.fb_page_id || p.page_id || config.FB_PAGE_ID || '';\n  const IG_USER_ID = p.instagram_account_id || tokens.IG_USER_ID || '';\n  const LINKEDIN_ACCESS_TOKEN = tokens.LINKEDIN_ACCESS_TOKEN || '';\n  const LINKEDIN_ORGANIZATION_ID = tokens.LINKEDIN_ORGANIZATION_ID || '';\n\n  return { json: {\n    post_id, copy_facebook, copy_instagram, copy_linkedin, imagen_url, video_url,\n    has_image: !!imagen_url, has_video: !!video_url, platform, content_type,\n    FB_ACCESS_TOKEN, FB_PAGE_ID, IG_USER_ID,\n    LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORGANIZATION_ID\n  } };\n});\n"
+          "jsCode": "const items = $input.all();\nconst config = $('⚙️ Config Distribution').item.json;\nconst tokens = $('🏢 Aplicar Tokens Empresa').item.json;\nconst webhookBody = $('🌐 Webhook: Publicar Post').item?.json?.body || {};\n\nreturn items.map(item => {\n  const p = item.json;\n  const f = p.fields || p;\n\n  const post_id        = p.id || p.record_id || '';\n  const copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || '';\n  const copy_instagram = f.copy_instagram || f.Post_Instagram_EN || '';\n  const copy_linkedin  = f.copy_linkedin || '';\n  const imagen_url     = f.imagen_url     || f.imagen || '';\n  const video_url      = f.video_url      || p.video_url || '';\n  const platform       = f.platform || p.platform || 'Facebook';\n  const content_type   = webhookBody.content_type || f.content_type || p.content_type || 'post';\n  const isLinkedIn     = platform === 'LinkedIn';\n\n  const FB_ACCESS_TOKEN = tokens.FB_ACCESS_TOKEN || p.access_token || '';\n  const FB_PAGE_ID = p.fb_page_id || p.page_id || config.FB_PAGE_ID || '';\n  const IG_USER_ID = p.instagram_account_id || tokens.IG_USER_ID || '';\n\n  // to-publish ya resuelve esto por post, en los mismos campos genéricos que usa para FB —\n  // page_id/access_token, según la plataforma del post — sin necesitar ningún mapa ni endpoint\n  // aparte. Confirmado en vivo el 11-ago con un post real de LinkedIn.\n  const LINKEDIN_ACCESS_TOKEN = isLinkedIn ? (p.access_token || '') : '';\n  const LINKEDIN_ORGANIZATION_ID = isLinkedIn ? (p.page_id || p.organization_id || '') : '';\n\n  return { json: {\n    post_id, copy_facebook, copy_instagram, copy_linkedin, imagen_url, video_url,\n    has_image: !!imagen_url, has_video: !!video_url, platform, content_type,\n    FB_ACCESS_TOKEN, FB_PAGE_ID, IG_USER_ID,\n    LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORGANIZATION_ID\n  } };\n});"
         },
         "id": "prep-post",
         "name": "🔧 Preparar Datos Post",
@@ -3230,7 +3208,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const config = $('⚙️ Config Distribution').item.json;\nconst pageData = $('🔑 Obtener Tokens Página (G54)').item.json;\nconst igData = $('📷 Obtener IG User ID (Meta)').item.json;\n\nconst ig_user_id = igData?.instagram_business_account?.id || pageData.ig_user_id || '';\n\nlet fb_access_token = pageData.fb_access_token || config.FB_ACCESS_TOKEN || '';\ntry {\n  const exchanged = $('🔑 Intercambiar Page Token (FB)').item.json;\n  if (exchanged && exchanged.access_token) fb_access_token = exchanged.access_token;\n} catch (e) {}\n\nlet linkedin_access_token = '';\nlet linkedin_organization_id = '';\ntry {\n  linkedin_organization_id = $('🔑 Resolver LinkedIn Org (Mapa)').item.json.linkedin_organization_id || '';\n  const liData = $('🔑 Obtener Token LinkedIn (G54)').item.json;\n  linkedin_access_token = liData?.fb_access_token || '';\n} catch (e) {}\n\nreturn [{json: {\n  ...config,\n  FB_ACCESS_TOKEN: fb_access_token,\n  IG_USER_ID: ig_user_id,\n  LINKEDIN_ACCESS_TOKEN: linkedin_access_token,\n  LINKEDIN_ORGANIZATION_ID: linkedin_organization_id\n}}];\n"
+          "jsCode": "const config = $('⚙️ Config Distribution').item.json;\nconst pageData = $('🔑 Obtener Tokens Página (G54)').item.json;\nconst igData = $('📷 Obtener IG User ID (Meta)').item.json;\n\nconst ig_user_id = igData?.instagram_business_account?.id || pageData.ig_user_id || '';\n\nlet fb_access_token = pageData.fb_access_token || config.FB_ACCESS_TOKEN || '';\ntry {\n  const exchanged = $('🔑 Intercambiar Page Token (FB)').item.json;\n  if (exchanged && exchanged.access_token) fb_access_token = exchanged.access_token;\n} catch (e) {}\n\nreturn [{json: {\n  ...config,\n  FB_ACCESS_TOKEN: fb_access_token,\n  IG_USER_ID: ig_user_id\n}}];"
         },
         "id": "dist-apply-tokens",
         "name": "🏢 Aplicar Tokens Empresa",
@@ -4313,7 +4291,7 @@
         "main": [
           [
             {
-              "node": "🔑 Resolver LinkedIn Org (Mapa)",
+              "node": "🏢 Aplicar Tokens Empresa",
               "type": "main",
               "index": 0
             }
@@ -4507,28 +4485,6 @@
           ]
         ]
       },
-      "🔑 Resolver LinkedIn Org (Mapa)": {
-        "main": [
-          [
-            {
-              "node": "🔑 Obtener Token LinkedIn (G54)",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔑 Obtener Token LinkedIn (G54)": {
-        "main": [
-          [
-            {
-              "node": "🏢 Aplicar Tokens Empresa",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
       "💼 LinkedIn: Publicar": {
         "main": [
           [
@@ -4627,18 +4583,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-08-11T20:01:03.204Z",
-        "id": 2778,
+        "createdAt": "2026-08-11T20:16:22.837Z",
+        "id": 2782,
         "workflowId": "IRCoya91PKPjpT1T",
-        "versionId": "9685c824-4a25-47df-ba4b-b2d7208229bb",
+        "versionId": "061d4f61-57d8-4465-b823-1b36af37ba68",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-08-11T20:01:03.144Z",
-        "id": 2777,
+        "createdAt": "2026-08-11T20:16:22.788Z",
+        "id": 2781,
         "workflowId": "IRCoya91PKPjpT1T",
-        "versionId": "9685c824-4a25-47df-ba4b-b2d7208229bb",
+        "versionId": "061d4f61-57d8-4465-b823-1b36af37ba68",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
