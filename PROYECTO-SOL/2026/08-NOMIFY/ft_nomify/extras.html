@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Extras — Nomify</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <style>
+    @media print {
+      .sidebar, .topbar, #btn-nuevo, #btn-print,
+      .tabs, #filtro-empleado, table td:last-child, table th:last-child { display: none !important; }
+      .main { margin-left: 0 !important; }
+      body { background: #fff !important; }
+      .table-wrap { box-shadow: none !important; border: 1px solid #ccc !important; }
+      table thead th { background: #eee !important; color: #000 !important; }
+      table tbody td { color: #333 !important; background: transparent !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>Nomify</h2></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+      <a href="/extras.html" class="active"><span class="icon">⭐</span> Extras</a>
+      <a href="/deducciones.html"><span class="icon">➖</span> Otras Deducciones</a>
+      <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
+      <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
+      <a href="/liquidacion.html"><span class="icon">📄</span> Liquidaciones</a>
+      <a href="/usuarios.html" id="link-usuarios"><span class="icon">👤</span> Usuarios</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Extras</h1><span class="sub">Bonos, feriados trabajados y turnos extra</span></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" id="btn-print" onclick="window.print()">🖨 Imprimir</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportXlsx('/api/export/extras','Extras')">📥 Excel</button>
+        <button class="btn btn-ghost btn-sm" id="btn-email">📧 Enviar historial</button>
+        <button class="btn btn-primary" id="btn-nuevo">+ Nuevo extra</button>
+      </div>
+    </div>
+    <div class="content">
+      <div id="alert-ext" class="alert"></div>
+
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <div class="tabs" style="margin-bottom:0">
+          <button class="tab active" data-tipo="todos">Todos</button>
+          <button class="tab" data-tipo="Bono">Bonos</button>
+          <button class="tab" data-tipo="Feriado trabajado">Feriados</button>
+          <button class="tab" data-tipo="Otro">Otros</button>
+        </div>
+        <select id="filtro-empleado" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--navy2);color:var(--text);font-size:13px">
+          <option value="">Todos los empleados</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Empleado</th>
+              <th>Tipo</th>
+              <th>Concepto</th>
+              <th>Monto (C$)</th>
+              <th>Pagar en quincena</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-extras">
+            <tr class="loading-row"><td colspan="6"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EXTRA -->
+<div class="overlay" id="modal-ext">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-titulo">Nuevo Extra</h3>
+      <button class="modal-close" id="close-modal">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-form" class="alert"></div>
+      <input type="hidden" id="ext-id" />
+      <div class="form-group">
+        <label>Empleado *</label>
+        <select id="ext-empleado"><option value="">Seleccionar...</option></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tipo *</label>
+          <select id="ext-tipo">
+            <option value="Bono">Bono</option>
+            <option value="Feriado trabajado">Feriado trabajado</option>
+            <option value="Otro">Otro / Turno extra</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Monto (C$) *</label>
+          <input type="number" id="ext-monto" placeholder="0.00" step="0.01" min="0" />
+        </div>
+      </div>
+      <div class="form-group" id="row-feriado" style="display:none">
+        <label>Feriado *</label>
+        <select id="ext-feriado">
+          <option value="">Seleccionar feriado...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Concepto / Descripción</label>
+        <input type="text" id="ext-concepto" placeholder="Ej: Turno extra sábado 15" />
+      </div>
+      <div class="form-group">
+        <label>Pagar en quincena (YYYY-MM-DD) *</label>
+        <input type="date" id="ext-quincena" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-ext">Cancelar</button>
+      <button class="btn btn-primary" id="save-ext">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMACIÓN ELIMINAR -->
+<div class="overlay" id="modal-confirm">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <h3>Confirmar eliminación</h3>
+      <button class="modal-close" id="close-confirm">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0;color:var(--muted)">¿Seguro que deseas eliminar este extra? Esta acción no se puede deshacer.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-confirm">Cancelar</button>
+      <button class="btn" id="ok-confirm" style="background:var(--red);color:#fff">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ENVIAR HISTORIAL -->
+<div class="overlay" id="modal-email-hist">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>📧 Enviar historial por correo</h3>
+      <button class="modal-close" id="close-email-hist">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-email-hist" class="alert"></div>
+      <p style="margin:0 0 14px;font-size:13px;color:var(--text-muted)">Se generará un PDF del historial y se enviará al correo indicado.</p>
+      <div class="form-group">
+        <label>Correo destinatario *</label>
+        <input type="email" id="inp-email-hist" placeholder="ejemplo@correo.com"
+          style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;" />
+      </div>
+      <div class="form-group">
+        <label>Empleado (opcional)</label>
+        <select id="sel-email-hist" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;">
+          <option value="">Todos los empleados</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-email-hist">Cancelar</button>
+      <button class="btn btn-primary" id="send-email-hist">Enviar PDF</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/feriados.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script>
+let allExtras = [];
+let filtroTipo = 'todos';
+let filtroEmpleado = '';
+let pendingDeleteId = null;
+let _esMaster = false;
+
+onReady(['Master', 'Planillero'], async () => {
+  _esMaster = (await getMyInfo()).rol === 'Master';
+  initLayout();
+  if (!_esMaster) document.getElementById('btn-nuevo').style.display = 'none';
+  loadAll();
+});
+
+async function loadAll() {
+  try {
+    const [extras, empleados] = await Promise.all([
+      apiFetch('/api/extras'),
+      apiFetch('/api/empleados'),
+    ]);
+    allExtras = extras;
+
+    const activos = empleados.filter(e => e.Activo);
+    const sel = document.getElementById('ext-empleado');
+    const filtroSel = document.getElementById('filtro-empleado');
+    activos.forEach(e => {
+      [sel, filtroSel, document.getElementById('sel-email-hist')].forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = e.Nombre;
+        opt.textContent = e.Nombre;
+        s.appendChild(opt);
+      });
+    });
+
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-ext', 'Error: ' + e.message, 'error');
+  }
+}
+
+function tipoLabel(tipo) {
+  if (tipo === 'Feriado trabajado') return 'Feriado';
+  if (tipo === 'Otro') return 'Turno/Otro';
+  return tipo || '—';
+}
+
+function tipoBadge(tipo) {
+  if (tipo === 'Bono') return 'badge-green';
+  if (tipo === 'Feriado trabajado') return 'badge-blue';
+  return 'badge-gray';
+}
+
+function renderTabla() {
+  let lista = allExtras;
+  if (filtroTipo !== 'todos') lista = lista.filter(x => (x.Tipo || '') === filtroTipo);
+  if (filtroEmpleado) lista = lista.filter(x => x.Empleado === filtroEmpleado);
+
+  const tbody = document.getElementById('tabla-extras');
+  if (lista.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">No hay extras registrados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(x => `<tr>
+    <td><strong>${x.Empleado || '—'}</strong></td>
+    <td><span class="badge ${tipoBadge(x.Tipo)}">${tipoLabel(x.Tipo)}</span></td>
+    <td>${x.Concepto || x.Descripcion || '—'}</td>
+    <td class="num">${fmt(x.Monto)}</td>
+    <td>${x['Pagar en quincena'] || '—'}</td>
+    <td style="display:flex;gap:6px">
+      ${_esMaster ? `<button class="btn btn-icon btn-sm" onclick="editar(${x.id})">✏️</button>` : ''}
+      ${_esMaster ? `<button class="btn btn-icon btn-sm" onclick="confirmarEliminar(${x.id})" style="color:var(--red)">🗑️</button>` : ''}
+    </td>
+  </tr>`).join('');
+}
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    filtroTipo = btn.dataset.tipo;
+    renderTabla();
+  });
+});
+
+document.getElementById('filtro-empleado').addEventListener('change', e => {
+  filtroEmpleado = e.target.value;
+  renderTabla();
+});
+
+function poblarFeriados() {
+  const hoy = new Date();
+  const desde = new Date(hoy); desde.setDate(hoy.getDate() - 60);
+  const hasta = new Date(hoy); hasta.setDate(hoy.getDate() + 120);
+  const desdeStr = desde.toISOString().split('T')[0];
+  const hastaStr = hasta.toISOString().split('T')[0];
+  const lista = feriadosEnRango(desdeStr, hastaStr);
+
+  const sel = document.getElementById('ext-feriado');
+  sel.innerHTML = '<option value="">Seleccionar feriado...</option>';
+  lista.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.fecha;
+    opt.dataset.nombre = f.nombre;
+    const dias = diasHasta(f.fecha);
+    const rel = dias === 0 ? 'Hoy' : dias > 0 ? `en ${dias}d` : `hace ${-dias}d`;
+    opt.textContent = `${f.nombre} — ${nomMes(f.fecha)} (${rel})`;
+    sel.appendChild(opt);
+  });
+}
+
+document.getElementById('ext-tipo').addEventListener('change', function() {
+  const esFeriado = this.value === 'Feriado trabajado';
+  document.getElementById('row-feriado').style.display = esFeriado ? '' : 'none';
+  if (esFeriado) poblarFeriados();
+});
+
+document.getElementById('ext-feriado').addEventListener('change', function() {
+  const opt = this.options[this.selectedIndex];
+  if (!opt.value) return;
+  const nombre = opt.dataset.nombre || '';
+  const concepto = document.getElementById('ext-concepto');
+  if (!concepto.value) concepto.value = nombre;
+});
+
+function abrirModalExt(x = null) {
+  document.getElementById('modal-titulo').textContent = x ? 'Editar Extra' : 'Nuevo Extra';
+  document.getElementById('ext-id').value = x?.id || '';
+  document.getElementById('ext-empleado').value = x?.Empleado || '';
+  const tipo = x?.Tipo || 'Bono';
+  document.getElementById('ext-tipo').value = tipo;
+  document.getElementById('ext-monto').value = x?.Monto || '';
+  document.getElementById('ext-concepto').value = x?.Concepto || x?.Descripcion || '';
+  document.getElementById('ext-quincena').value = x?.['Pagar en quincena'] || '';
+  document.getElementById('alert-form').className = 'alert';
+  const esFeriado = tipo === 'Feriado trabajado';
+  document.getElementById('row-feriado').style.display = esFeriado ? '' : 'none';
+  if (esFeriado) poblarFeriados();
+  document.getElementById('modal-ext').classList.add('open');
+}
+
+document.getElementById('btn-nuevo').addEventListener('click', () => abrirModalExt());
+function editar(id) { abrirModalExt(allExtras.find(e => e.id == id)); }
+
+['close-modal','cancel-ext'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-ext').classList.remove('open');
+  });
+});
+
+document.getElementById('save-ext').addEventListener('click', async () => {
+  const id        = document.getElementById('ext-id').value;
+  const empleado  = document.getElementById('ext-empleado').value;
+  const tipo      = document.getElementById('ext-tipo').value;
+  const monto     = parseFloat(document.getElementById('ext-monto').value);
+  const concepto  = document.getElementById('ext-concepto').value.trim();
+  const quincena  = document.getElementById('ext-quincena').value;
+
+  if (!empleado) { showAlert('alert-form', 'Selecciona un empleado', 'error'); return; }
+  if (!monto || monto <= 0) { showAlert('alert-form', 'Ingresa el monto', 'error'); return; }
+  if (!quincena) { showAlert('alert-form', 'Indica la quincena de pago', 'error'); return; }
+
+  const tipoAirtable = tipo === 'Otro / Turno extra' ? 'Otro' : tipo;
+
+  const fields = {
+    'Empleado': empleado,
+    'Tipo': tipoAirtable,
+    'Monto': monto,
+    'Descripcion': concepto,
+    'Pagar en quincena': quincena,
+  };
+
+  const btn = document.getElementById('save-ext');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    if (id) {
+      await apiFetch('/api/extras', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
+    } else {
+      await apiFetch('/api/extras', { method: 'POST', body: JSON.stringify(fields) });
+    }
+    document.getElementById('modal-ext').classList.remove('open');
+    showAlert('alert-ext', '✅ Extra guardado', 'success');
+    allExtras = await apiFetch('/api/extras');
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-form', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
+});
+
+function confirmarEliminar(id) {
+  pendingDeleteId = id;
+  document.getElementById('modal-confirm').classList.add('open');
+}
+
+['close-confirm','cancel-confirm'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-confirm').classList.remove('open');
+    pendingDeleteId = null;
+  });
+});
+
+document.getElementById('ok-confirm').addEventListener('click', async () => {
+  if (!pendingDeleteId) return;
+  document.getElementById('modal-confirm').classList.remove('open');
+  try {
+    await apiFetch('/api/extras', { method: 'DELETE', body: JSON.stringify({ id: pendingDeleteId }) });
+    showAlert('alert-ext', '✅ Extra eliminado', 'success');
+    allExtras = allExtras.filter(x => x.id !== pendingDeleteId);
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-ext', 'Error al eliminar: ' + e.message, 'error');
+  } finally {
+    pendingDeleteId = null;
+  }
+});
+
+// ── Email historial ──────────────────────────────────────────────────────────
+document.getElementById('btn-email').addEventListener('click', () => {
+  document.getElementById('alert-email-hist').className = 'alert';
+  document.getElementById('inp-email-hist').value = '';
+  document.getElementById('send-email-hist').disabled = false;
+  document.getElementById('send-email-hist').textContent = 'Enviar PDF';
+  document.getElementById('modal-email-hist').classList.add('open');
+});
+['close-email-hist','cancel-email-hist'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () =>
+    document.getElementById('modal-email-hist').classList.remove('open')
+  )
+);
+document.getElementById('send-email-hist').addEventListener('click', async () => {
+  const email    = document.getElementById('inp-email-hist').value.trim();
+  const empleado = document.getElementById('sel-email-hist').value;
+  const alertEl  = document.getElementById('alert-email-hist');
+  const btn      = document.getElementById('send-email-hist');
+  if (!email) { alertEl.className = 'alert alert-error show'; alertEl.textContent = 'Ingresa un correo destinatario'; return; }
+  btn.disabled = true; btn.textContent = 'Generando PDF...'; alertEl.className = 'alert';
+  try {
+    const data = await apiFetch('/api/reportes/enviar', {
+      method: 'POST',
+      body: JSON.stringify({ categoria: 'extras', email, empleado: empleado || undefined }),
+    });
+    alertEl.className = 'alert alert-success show';
+    alertEl.textContent = data.mensaje || '✅ Enviado correctamente';
+    btn.textContent = 'Enviado ✓';
+  } catch (e) {
+    alertEl.className = 'alert alert-error show'; alertEl.textContent = e.message;
+    btn.disabled = false; btn.textContent = 'Enviar PDF';
+  }
+});
+</script>
+</body>
+</html>

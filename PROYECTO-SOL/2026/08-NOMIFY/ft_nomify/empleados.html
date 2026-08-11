@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Empleados — Nomify</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>Nomify</h2></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html" class="active"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+      <a href="/extras.html"><span class="icon">⭐</span> Extras</a>
+      <a href="/deducciones.html"><span class="icon">➖</span> Otras Deducciones</a>
+      <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
+      <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
+      <a href="/liquidacion.html"><span class="icon">📄</span> Liquidaciones</a>
+      <a href="/usuarios.html" id="link-usuarios"><span class="icon">👤</span> Usuarios</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Empleados</h1><span class="sub">Gestión del personal activo</span></div>
+      <button class="btn btn-ghost" onclick="exportXlsx('/api/export/empleados','Empleados')">📥 Excel</button>
+      <button class="btn btn-primary" id="btn-nuevo">+ Nuevo empleado</button>
+    </div>
+    <div class="content">
+      <div id="alert-emp" class="alert"></div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <h3>Personal</h3>
+          <input type="text" id="buscador" placeholder="Buscar..." style="background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px 12px;font-size:13px;width:200px;outline:none;" />
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Cédula</th>
+              <th>Cargo</th>
+              <th>Salario mensual</th>
+              <th>Tipo planilla</th>
+              <th>Ingreso</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-empleados">
+            <tr class="loading-row"><td colspan="8"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMACIÓN EDITAR -->
+<div class="overlay" id="modal-confirm-edit">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <h3>¿Editar empleado?</h3>
+      <button class="modal-close" id="close-confirm-edit">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0;color:var(--text-muted)">Vas a editar a <strong id="confirm-nombre-emp"></strong>. Los cambios se guardan directamente en la base de datos.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-confirm-edit">Cancelar</button>
+      <button class="btn btn-primary" id="ok-confirm-edit">Continuar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EMPLEADO -->
+<div class="overlay" id="modal-emp">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-titulo">Nuevo Empleado</h3>
+      <button class="modal-close" id="close-modal">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-form" class="alert"></div>
+      <input type="hidden" id="emp-id" />
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nombre completo *</label>
+          <input type="text" id="emp-nombre" placeholder="Nombre Apellido" />
+        </div>
+        <div class="form-group">
+          <label>Cédula de identidad</label>
+          <input type="text" id="emp-cedula" placeholder="000-000000-0000A"
+            maxlength="16" autocomplete="off"
+            style="font-family:monospace;letter-spacing:.04em" />
+          <small style="color:var(--text-muted);font-size:11px">Formato: 000-000000-0000A</small>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cargo</label>
+          <input type="text" id="emp-cargo" placeholder="Ej: Auxiliar Contable" />
+        </div>
+        <div class="form-group">
+          <label>Fecha de ingreso</label>
+          <input type="date" id="emp-ingreso" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Salario bruto mensual (C$) *</label>
+          <input type="number" id="emp-salario" placeholder="0.00" step="0.01" />
+          <div id="motivo-salario-wrap" style="display:none;margin-top:6px">
+            <input type="text" id="emp-motivo-salario"
+              placeholder="Motivo del ajuste (ej: Aumento anual, Promoción…)"
+              style="width:100%;background:var(--input);border:1px solid rgba(230,126,34,.5);
+                     border-radius:6px;color:var(--text);padding:7px 10px;font-size:12px;box-sizing:border-box" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tipo de planilla *</label>
+          <select id="emp-tipo">
+            <option value="Con Seguro">Con Seguro (INSS 7%)</option>
+            <option value="Sin Seguro">Sin Seguro (salario neto)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Base cálculo INSS</label>
+          <select id="emp-inss-base">
+            <option value="Salario Completo">Salario Completo</option>
+            <option value="Salario Mínimo">Salario Mínimo</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tipo de IR</label>
+          <select id="emp-ir-tipo">
+            <option value="Sin IR">Sin IR</option>
+            <option value="Automático">Automático (DGI — tabla progresiva)</option>
+            <option value="Fijo">IR Fijo (mensual)</option>
+          </select>
+        </div>
+        <div class="form-group" id="emp-ir-fijo-group">
+          <label>IR fijo mensual (C$)</label>
+          <input type="number" id="emp-ir-fijo" placeholder="0.00" step="0.01" min="0" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Empresa</label>
+          <select id="emp-empresa">
+            <option value="">— Sin asignar —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="emp-activo">
+            <option value="true">Activo</option>
+            <option value="false">Inactivo</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Email (para acceso al sistema)</label>
+          <input type="email" id="emp-email" placeholder="correo@ejemplo.com" />
+        </div>
+        <div class="form-group">
+          <label>Rol en el sistema</label>
+          <select id="emp-rol">
+            <option value="">Sin acceso</option>
+            <option value="Master">Master (acceso total)</option>
+            <option value="Planillero">Planillero (genera planillas, no edita empleados)</option>
+            <option value="Empleado">Empleado (solo ve su propio recibo)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-emp">Cancelar</button>
+      <button class="btn btn-primary" id="save-emp">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HISTORIAL COMPLETO DEL EMPLEADO -->
+<div class="overlay" id="modal-historial-emp">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <h3>📋 Historial — <span id="hist-emp-titulo"></span></h3>
+      <button class="modal-close" id="close-historial-emp">×</button>
+    </div>
+    <div class="modal-body" style="padding:0;max-height:70vh;overflow-y:auto" id="hist-emp-body">
+      <div style="padding:20px;text-align:center;color:var(--text-muted)">Cargando...</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="close-historial-emp2">Cerrar</button>
+      <button class="btn btn-ghost" id="btn-imprimir-historial">🖨 Imprimir</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HISTORIAL DE SALARIOS -->
+<div class="overlay" id="modal-historial-sal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <h3>📋 Historial de salarios — <span id="hist-emp-nombre"></span></h3>
+      <button class="modal-close" id="close-historial-sal">×</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div id="hist-sal-content" style="padding:8px 0">
+        <div style="padding:20px;text-align:center;color:var(--text-muted)">Cargando...</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="close-historial-sal2">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/export.js"></script>
+<script>
+let allEmpleados = [];
+let _esMaster = false;
+let _allEmpresas = [];
+
+async function _init() {
+  initLayout();
+  const info = await getMyInfo();
+  _esMaster = info.rol === 'Master';
+  if (!_esMaster) {
+    document.getElementById('btn-nuevo').style.display = 'none';
+    ['emp-cedula','emp-salario','emp-tipo','emp-inss-base','emp-ir-tipo','emp-ir-fijo','emp-email','emp-rol','emp-empresa'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.disabled = true; el.style.opacity = '0.55'; }
+    });
+  }
+  // Cargar empresas y configurar el selector
+  try {
+    _allEmpresas = await apiFetch('/api/empresas');
+  } catch (_) { _allEmpresas = []; }
+
+  const btnNuevo = document.getElementById('btn-nuevo');
+  if (_allEmpresas.length === 0) {
+    // Sin empresas — bloquear creación y avisar
+    btnNuevo.disabled = true;
+    btnNuevo.style.opacity = '0.45';
+    btnNuevo.title = 'Crea una empresa primero';
+    showAlert('alert-emp',
+      '⚠️ No hay ninguna empresa registrada. Crea una en el menú lateral (Gestionar empresas) antes de agregar empleados.',
+      'error');
+  } else {
+    // Fijar la empresa activa en el select y bloquearlo
+    const empresaId = localStorage.getItem('planilla_empresa_id') || String(_allEmpresas[0].id);
+    const empresaNombre = (_allEmpresas.find(e => String(e.id) === empresaId) || _allEmpresas[0]).nombre;
+    const sel = document.getElementById('emp-empresa');
+    sel.innerHTML = `<option value="${empresaId}">${empresaNombre}</option>`;
+    sel.disabled = true;
+    sel.style.cursor = 'not-allowed';
+    // Actualizar label para aclarar que es automático
+    const lbl = sel.closest('.form-group')?.querySelector('label');
+    if (lbl) lbl.innerHTML = 'Empresa <span style="font-weight:400;font-size:11px;color:var(--text-muted)">(empresa activa)</span>';
+  }
+
+  loadEmpleados();
+}
+
+onReady(['Master', 'Planillero'], () => {
+  _init();
+});
+
+async function loadEmpleados() {
+  try {
+    allEmpleados = await apiFetch('/api/empleados');
+    renderTabla(allEmpleados);
+  } catch (e) {
+    showAlert('alert-emp', 'Error: ' + e.message, 'error');
+  }
+}
+
+function renderTabla(lista) {
+  const tbody = document.getElementById('tabla-empleados');
+  if (lista.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">No hay empleados registrados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(e => {
+    const tipo = e['Tipo_Planilla'] || 'Con Seguro';
+    const tipoBadge = tipo === 'Con Seguro' ? 'badge-blue' : 'badge-orange';
+    const activo = e.Activo;
+    return `<tr>
+      <td><strong>${e.Nombre || '—'}</strong></td>
+      <td style="font-family:monospace;font-size:12px">${e.Cedula || '—'}</td>
+      <td>${e.Cargo || '—'}</td>
+      <td class="num">${fmt(e['Salario bruto mensual'])}</td>
+      <td><span class="badge ${tipoBadge}">${tipo}</span></td>
+      <td>${e['Fecha de ingreso'] || '—'}</td>
+      <td><span class="badge ${activo ? 'badge-green' : 'badge-gray'}">${activo ? 'Activo' : 'Inactivo'}</span></td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-icon btn-sm" title="Ver historial completo"
+          onclick="verHistorialCompleto(${e.id}, '${(e.Nombre||'').replace(/'/g,"\\'")}')">🗂</button>
+        <button class="btn btn-icon btn-sm" title="Ver historial de salarios"
+          onclick="verHistorialSalario(${e.id}, '${(e.Nombre||'').replace(/'/g,"\\'")}')">📋</button>
+        ${_esMaster ? `<button class="btn btn-icon btn-sm" onclick="editarEmpleado(${e.id})">✏️</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('buscador').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase();
+  renderTabla(allEmpleados.filter(emp =>
+    (emp.Nombre  || '').toLowerCase().includes(q) ||
+    (emp.Cargo   || '').toLowerCase().includes(q) ||
+    (emp.Cedula  || '').toLowerCase().includes(q)
+  ));
+});
+
+document.getElementById('btn-nuevo').addEventListener('click', () => {
+  document.getElementById('modal-titulo').textContent = 'Nuevo Empleado';
+  document.getElementById('emp-id').value = '';
+  document.getElementById('emp-nombre').value = '';
+  document.getElementById('emp-cedula').value = '';
+  document.getElementById('emp-cargo').value = '';
+  document.getElementById('emp-salario').value = '';
+  document.getElementById('emp-ingreso').value = '';
+  document.getElementById('emp-tipo').value = 'Con Seguro';
+  document.getElementById('emp-inss-base').value = 'Salario Completo';
+  document.getElementById('emp-ir-tipo').value = 'Sin IR';
+  document.getElementById('emp-ir-fijo').value = '';
+  // La empresa ya está fijada y bloqueada desde _init(), no se toca aquí
+  _salarioOriginal = null;
+  document.getElementById('motivo-salario-wrap').style.display = 'none';
+  document.getElementById('emp-motivo-salario').value = '';
+  document.getElementById('emp-activo').value = 'true';
+  document.getElementById('emp-email').value = '';
+  document.getElementById('emp-rol').value = '';
+  document.getElementById('alert-form').className = 'alert';
+  toggleInssBase();
+  toggleIRFijo();
+  actualizarIRDisponible();
+  document.getElementById('modal-emp').classList.add('open');
+});
+
+let pendingEditId = null;
+
+function editarEmpleado(id) {
+  const e = allEmpleados.find(x => x.id == id);
+  if (!e) return;
+  pendingEditId = id;
+  document.getElementById('confirm-nombre-emp').textContent = e.Nombre || 'este empleado';
+  document.getElementById('modal-confirm-edit').classList.add('open');
+}
+
+function abrirFormEditar(id) {
+  const e = allEmpleados.find(x => x.id == id);
+  if (!e) return;
+  document.getElementById('modal-titulo').textContent = 'Editar Empleado';
+  document.getElementById('emp-id').value = e.id;
+  document.getElementById('emp-nombre').value = e.Nombre || '';
+  document.getElementById('emp-cedula').value = e.Cedula || '';
+  document.getElementById('emp-cargo').value = e.Cargo || '';
+  document.getElementById('emp-salario').value = e['Salario bruto mensual'] || '';
+  _salarioOriginal = parseFloat(e['Salario bruto mensual'] || 0);
+  document.getElementById('motivo-salario-wrap').style.display = 'none';
+  document.getElementById('emp-motivo-salario').value = '';
+  document.getElementById('emp-ingreso').value = e['Fecha de ingreso'] || '';
+  document.getElementById('emp-tipo').value = e['Tipo_Planilla'] || 'Con Seguro';
+  document.getElementById('emp-inss-base').value = e['INSS_Base'] || 'Salario Completo';
+  document.getElementById('emp-ir-tipo').value = e['IR_Tipo'] || 'Sin IR';
+  document.getElementById('emp-ir-fijo').value = e['IR'] ?? '';
+  document.getElementById('emp-empresa').value = e['Empresa_ID'] || '';
+  document.getElementById('emp-activo').value = e.Activo ? 'true' : 'false';
+  document.getElementById('emp-email').value = e['Email'] || '';
+  document.getElementById('emp-rol').value = e['Rol'] || '';
+  document.getElementById('alert-form').className = 'alert';
+  toggleInssBase();
+  toggleIRFijo();
+  actualizarIRDisponible();
+  document.getElementById('modal-emp').classList.add('open');
+}
+
+['close-confirm-edit','cancel-confirm-edit'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-confirm-edit').classList.remove('open');
+    pendingEditId = null;
+  });
+});
+
+document.getElementById('ok-confirm-edit').addEventListener('click', () => {
+  document.getElementById('modal-confirm-edit').classList.remove('open');
+  if (pendingEditId) abrirFormEditar(pendingEditId);
+  pendingEditId = null;
+});
+
+const SALARIO_MINIMO_IR = 10913.54;
+const UMBRAL_IR_ANUAL   = 100000;
+
+function toggleInssBase() {
+  const tipo = document.getElementById('emp-tipo').value;
+  const sinSeguro = tipo === 'Sin Seguro';
+  const rowInss = document.getElementById('emp-inss-base').closest('.form-group');
+  rowInss.style.opacity = sinSeguro ? '0.35' : '1';
+  rowInss.style.pointerEvents = sinSeguro ? 'none' : '';
+  // IR no aplica a Sin Seguro
+  const rowIrTipo = document.getElementById('emp-ir-tipo').closest('.form-group');
+  rowIrTipo.style.opacity = sinSeguro ? '0.35' : '1';
+  rowIrTipo.style.pointerEvents = sinSeguro ? 'none' : '';
+  if (sinSeguro) {
+    document.getElementById('emp-ir-tipo').value = 'Sin IR';
+    toggleIRFijo();
+  }
+  actualizarIRDisponible();
+}
+function toggleIRFijo() {
+  const irTipo = document.getElementById('emp-ir-tipo').value;
+  const group = document.getElementById('emp-ir-fijo-group');
+  group.style.display = irTipo === 'Fijo' ? '' : 'none';
+}
+function actualizarIRDisponible() {
+  const tipo = document.getElementById('emp-tipo').value;
+  if (tipo === 'Sin Seguro') return;
+  const salario  = parseFloat(document.getElementById('emp-salario').value) || 0;
+  const inssBase = document.getElementById('emp-inss-base').value;
+  const base     = inssBase === 'Salario Mínimo' ? SALARIO_MINIMO_IR : salario;
+  const anual    = (salario - base * 0.07) * 12;
+  const aplicaIR = salario > 0 && anual > UMBRAL_IR_ANUAL;
+
+  const selIR = document.getElementById('emp-ir-tipo');
+  const rowIR = selIR.closest('.form-group');
+  const msgId = 'ir-no-aplica-msg';
+  const msgExistente = document.getElementById(msgId);
+
+  if (!aplicaIR) {
+    [...selIR.options].forEach(opt => { if (opt.value !== 'Sin IR') opt.disabled = true; });
+    selIR.value = 'Sin IR';
+    toggleIRFijo();
+    if (!msgExistente && salario > 0) {
+      const msg = document.createElement('small');
+      msg.id = msgId;
+      msg.style.cssText = 'color:var(--text-muted);font-size:11px;margin-top:4px;display:block';
+      msg.textContent = 'Salario por debajo del mínimo gravable (C$100,000 anuales netos de INSS)';
+      rowIR.appendChild(msg);
+    }
+  } else {
+    [...selIR.options].forEach(opt => { opt.disabled = false; });
+    if (msgExistente) msgExistente.remove();
+  }
+}
+document.getElementById('emp-tipo').addEventListener('change', toggleInssBase);
+document.getElementById('emp-ir-tipo').addEventListener('change', toggleIRFijo);
+document.getElementById('emp-salario').addEventListener('input', actualizarIRDisponible);
+document.getElementById('emp-inss-base').addEventListener('change', actualizarIRDisponible);
+
+// ── Mostrar campo motivo si el salario cambia respecto al original ────────────
+let _salarioOriginal = null;
+document.getElementById('emp-salario').addEventListener('input', function () {
+  const nuevo = parseFloat(this.value) || 0;
+  const wrap  = document.getElementById('motivo-salario-wrap');
+  wrap.style.display = (_salarioOriginal !== null && nuevo !== _salarioOriginal) ? '' : 'none';
+});
+
+// ── Historial completo del empleado ──────────────────────────────────────────
+document.getElementById('close-historial-emp').addEventListener('click', () =>
+  document.getElementById('modal-historial-emp').classList.remove('open'));
+document.getElementById('close-historial-emp2').addEventListener('click', () =>
+  document.getElementById('modal-historial-emp').classList.remove('open'));
+document.getElementById('btn-imprimir-historial').addEventListener('click', () => {
+  const titulo = document.getElementById('hist-emp-titulo').textContent;
+  const cuerpo = document.getElementById('hist-emp-body').innerHTML;
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Historial — ${titulo}</title>
+    <style>
+      body{font-family:sans-serif;padding:24px;font-size:12px;color:#111}
+      h2{margin:0 0 4px}p{margin:0 0 16px;color:#555}
+      .hist-item{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid #eee}
+      .hist-badge{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;
+        white-space:nowrap;flex-shrink:0;align-self:flex-start;margin-top:2px}
+      .hist-desc{flex:1;font-size:12px;line-height:1.5}
+      .hist-monto{font-weight:700;white-space:nowrap;text-align:right;min-width:90px}
+      .hist-fecha{font-size:11px;color:#888;white-space:nowrap}
+      @media print{body{padding:8px}}
+    </style></head><body>
+    <h2>Historial completo — ${titulo}</h2>
+    <p>Generado el ${new Date().toLocaleDateString('es-NI')}</p>
+    ${cuerpo}
+  </body></html>`);
+  win.document.close();
+  win.print();
+});
+
+const TIPO_COLORES = {
+  'Quincena':   { bg:'rgba(46,204,113,.15)',  color:'#2ecc71'  },
+  'Préstamo':   { bg:'rgba(52,152,219,.15)',  color:'#3498db'  },
+  'Adelanto':   { bg:'rgba(230,126,34,.15)',  color:'#e67e22'  },
+  'Extra':      { bg:'rgba(155,89,182,.15)',  color:'#9b59b6'  },
+  'Deducción':  { bg:'rgba(231,76,60,.15)',   color:'#e74c3c'  },
+  'Vacaciones': { bg:'rgba(26,188,156,.15)',  color:'#1abc9c'  },
+  'Liquidación':{ bg:'rgba(241,196,15,.15)',  color:'#f1c40f'  },
+};
+
+async function verHistorialCompleto(empId, nombre) {
+  document.getElementById('hist-emp-titulo').textContent = nombre;
+  document.getElementById('hist-emp-body').innerHTML =
+    '<div style="padding:20px;text-align:center;color:var(--text-muted)">Cargando...</div>';
+  document.getElementById('modal-historial-emp').classList.add('open');
+
+  try {
+    const rows = await apiFetch(`/api/empleados/${empId}/historial`);
+
+    if (!rows.length) {
+      document.getElementById('hist-emp-body').innerHTML =
+        '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px">Sin transacciones registradas</div>';
+      return;
+    }
+
+    // Agrupar por año-mes para separadores
+    let mesActual = '';
+    const items = rows.map(r => {
+      const fecha   = String(r.fecha || '').substring(0, 10);
+      const [y, m]  = fecha.split('-');
+      const mesKey  = `${y}-${m}`;
+      const meses   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                       'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      const mesLabel = (y && m) ? `${meses[parseInt(m)-1]} ${y}` : '';
+      const separador = mesKey !== mesActual
+        ? `<div style="padding:8px 16px 4px;font-size:10px;text-transform:uppercase;
+               letter-spacing:.07em;color:var(--text-muted);border-bottom:1px solid var(--border);
+               margin-top:4px">${mesLabel}</div>`
+        : '';
+      mesActual = mesKey;
+
+      // Corte visual especial para Liquidación por Renovación
+      const cortePeriodo = (r.tipo === 'Liquidación' && (r.descripcion || '').includes('Renovación'))
+        ? `<div style="margin:8px 0;padding:10px 16px;
+               background:linear-gradient(90deg,rgba(46,204,113,.12),rgba(46,204,113,.04));
+               border-left:3px solid #2ecc71;border-right:3px solid #2ecc71;
+               display:flex;align-items:center;gap:10px">
+             <span style="font-size:16px">🔄</span>
+             <div>
+               <div style="font-size:12px;font-weight:700;color:#2ecc71">— Corte por Renovación —</div>
+               <div style="font-size:11px;color:var(--text-muted);margin-top:1px">
+                 Las transacciones anteriores a esta línea corresponden al período anterior
+               </div>
+             </div>
+           </div>`
+        : '';
+
+      const col    = TIPO_COLORES[r.tipo] || { bg:'rgba(255,255,255,.05)', color:'var(--text-muted)' };
+      const esGasto = ['Deducción','Adelanto'].includes(r.tipo);
+      const esMonto = !['Vacaciones'].includes(r.tipo);
+      const montoStr = esMonto
+        ? `<span style="color:${esGasto ? 'var(--red)' : 'var(--green2)'};font-weight:700">
+             ${esGasto ? '-' : ''}${fmt(r.monto)}</span>`
+        : `<span style="color:var(--text-muted);font-size:12px">${r.monto} días</span>`;
+
+      return `${separador}${cortePeriodo}
+        <div class="hist-item" style="display:flex;gap:12px;padding:10px 16px;
+             border-bottom:1px solid rgba(255,255,255,.04);align-items:flex-start">
+          <span class="hist-badge" style="background:${col.bg};color:${col.color};
+            padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;
+            white-space:nowrap;flex-shrink:0;margin-top:2px">${r.tipo}</span>
+          <div style="flex:1;min-width:0">
+            <div class="hist-desc" style="font-size:12px;color:var(--text-muted);line-height:1.5;
+                 word-break:break-word">${r.descripcion || '—'}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            ${montoStr}
+            <div class="hist-fecha" style="font-size:11px;color:var(--text-muted);margin-top:2px">${fecha}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('hist-emp-body').innerHTML =
+      `<div style="padding:8px 16px 4px;display:flex;justify-content:space-between;
+            align-items:center;font-size:12px;color:var(--text-muted);border-bottom:1px solid var(--border)">
+         <span>${rows.length} transacción${rows.length !== 1 ? 'es' : ''}</span>
+       </div>${items}`;
+  } catch (e) {
+    document.getElementById('hist-emp-body').innerHTML =
+      `<div style="padding:20px;color:var(--red);font-size:13px">Error: ${e.message}</div>`;
+  }
+}
+
+// ── Historial de salarios ─────────────────────────────────────────────────────
+document.getElementById('close-historial-sal').addEventListener('click', () =>
+  document.getElementById('modal-historial-sal').classList.remove('open'));
+document.getElementById('close-historial-sal2').addEventListener('click', () =>
+  document.getElementById('modal-historial-sal').classList.remove('open'));
+
+async function verHistorialSalario(empId, nombre) {
+  document.getElementById('hist-emp-nombre').textContent = nombre;
+  document.getElementById('hist-sal-content').innerHTML =
+    '<div style="padding:20px;text-align:center;color:var(--text-muted)">Cargando...</div>';
+  document.getElementById('modal-historial-sal').classList.add('open');
+
+  try {
+    const rows = await apiFetch(`/api/empleados/${empId}/historial-salarios`);
+    // Obtener salario actual del empleado
+    const emp = allEmpleados.find(e => e.id == empId);
+    const salActual = emp ? parseFloat(emp['Salario bruto mensual'] || 0) : null;
+
+    if (!rows.length) {
+      document.getElementById('hist-sal-content').innerHTML = `
+        <div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px">
+          Sin cambios registrados.<br>
+          <small style="font-size:11px">Los cambios se registran automáticamente a partir de ahora.</small>
+        </div>
+        ${salActual !== null ? `<div style="padding:0 20px 16px;font-size:13px;color:var(--text-muted)">
+          Salario actual: <strong style="color:var(--text)">${fmt(salActual)}</strong>
+        </div>` : ''}`;
+      return;
+    }
+
+    document.getElementById('hist-sal-content').innerHTML = `
+      <div style="padding:12px 20px 4px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:var(--text-muted)">${rows.length} cambio${rows.length!==1?'s':''} registrado${rows.length!==1?'s':''}</span>
+        ${salActual !== null ? `<span style="font-size:12px">Salario actual: <strong style="color:var(--green2)">${fmt(salActual)}</strong></span>` : ''}
+      </div>
+      <div style="padding:0 4px">
+        ${rows.map((r, i) => {
+          const subio  = parseFloat(r.salario_nuevo) > parseFloat(r.salario_anterior);
+          const igual  = parseFloat(r.salario_nuevo) === parseFloat(r.salario_anterior);
+          const icono  = igual ? '↔️' : subio ? '📈' : '📉';
+          const color  = igual ? 'var(--text-muted)' : subio ? 'var(--green2)' : 'var(--red)';
+          const diff   = parseFloat(r.salario_nuevo) - parseFloat(r.salario_anterior);
+          const pct    = r.salario_anterior > 0
+            ? ((diff / parseFloat(r.salario_anterior)) * 100).toFixed(1) : '0.0';
+          return `
+          <div style="display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);
+                      ${i === 0 ? 'background:rgba(255,255,255,.03)' : ''}">
+            <div style="display:flex;flex-direction:column;align-items:center;width:40px;flex-shrink:0">
+              <span style="font-size:18px">${icono}</span>
+              ${i < rows.length-1 ? '<div style="flex:1;width:2px;background:var(--border);margin-top:4px"></div>' : ''}
+            </div>
+            <div style="flex:1">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+                <div>
+                  <span style="font-size:13px;color:var(--text-muted)">De</span>
+                  <strong style="font-size:13px;margin:0 6px">${fmt(r.salario_anterior)}</strong>
+                  <span style="font-size:13px;color:var(--text-muted)">→</span>
+                  <strong style="font-size:14px;color:${color};margin-left:6px">${fmt(r.salario_nuevo)}</strong>
+                  <span style="font-size:11px;color:${color};margin-left:8px">(${diff>=0?'+':''}${fmt(Math.abs(diff))} · ${diff>=0?'+':''}${pct}%)</span>
+                </div>
+                <span style="font-size:11px;color:var(--text-muted)">${r.fecha_fmt || r.fecha}</span>
+              </div>
+              ${r.motivo ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px">💬 ${r.motivo}</div>` : ''}
+              ${r.usuario ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">por ${r.usuario}</div>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  } catch (e) {
+    document.getElementById('hist-sal-content').innerHTML =
+      `<div style="padding:20px;color:var(--red);font-size:13px">Error: ${e.message}</div>`;
+  }
+}
+
+// ── Máscara de cédula: ###-######-####L ──────────────────────────────────
+document.getElementById('emp-cedula').addEventListener('input', function () {
+  // Extraer solo dígitos y letras, luego reconstruir con guiones
+  const raw = this.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+  let out = '';
+  for (let i = 0; i < raw.length && i < 14; i++) {
+    // Posiciones 0-2: dígitos, pos 3: guion, 3-8: dígitos, pos 9: guion, 9-12: dígitos, pos 13: letra
+    if (i === 3 || i === 9) out += '-';
+    const ch = raw[i];
+    if (i < 3 || (i >= 3 && i < 9) || (i >= 9 && i < 13)) {
+      // Solo dígitos en estas posiciones
+      if (/\d/.test(ch)) out += ch;
+    } else if (i === 13) {
+      // Solo letra en la última posición
+      if (/[A-Z]/.test(ch)) out += ch;
+    }
+  }
+  this.value = out;
+});
+
+['close-modal','cancel-emp'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-emp').classList.remove('open');
+  });
+});
+
+document.getElementById('save-emp').addEventListener('click', async () => {
+  const id = document.getElementById('emp-id').value;
+  const nombre  = document.getElementById('emp-nombre').value.trim();
+  const cedula  = document.getElementById('emp-cedula').value.trim().toUpperCase();
+  const salario = parseFloat(document.getElementById('emp-salario').value);
+
+  if (!nombre) { showAlert('alert-form', 'El nombre es obligatorio', 'error'); return; }
+  if (!salario || salario <= 0) { showAlert('alert-form', 'Ingresa un salario válido', 'error'); return; }
+  if (cedula && !/^\d{3}-\d{6}-\d{4}[A-Z]$/.test(cedula)) {
+    showAlert('alert-form', 'Formato de cédula inválido. Debe ser: 000-000000-0000A', 'error');
+    document.getElementById('emp-cedula').focus();
+    return;
+  }
+
+  const emailVal = document.getElementById('emp-email').value.trim();
+  const rolVal   = document.getElementById('emp-rol').value;
+  const irTipo   = document.getElementById('emp-ir-tipo').value;
+  const irFijoEl = document.getElementById('emp-ir-fijo');
+  const empresaEl = document.getElementById('emp-empresa');
+  const fields = {
+    'Nombre': nombre,
+    'Cedula': cedula || undefined,
+    'Cargo': document.getElementById('emp-cargo').value.trim(),
+    'Salario bruto mensual': salario,
+    'Fecha de ingreso': document.getElementById('emp-ingreso').value || undefined,
+    'Tipo_Planilla': document.getElementById('emp-tipo').value,
+    'INSS_Base': document.getElementById('emp-inss-base').value,
+    'IR_Tipo': irTipo,
+    'IR': (irTipo === 'Fijo' && irFijoEl.value !== '') ? parseFloat(irFijoEl.value) : null,
+    'Empresa_ID': empresaEl.value ? parseInt(empresaEl.value) : null,
+    'Activo': document.getElementById('emp-activo').value === 'true',
+    'Email': emailVal || undefined,
+    'Rol': rolVal || undefined,
+    // Motivo del cambio de salario (solo si cambió)
+    ...(document.getElementById('motivo-salario-wrap').style.display !== 'none'
+      ? { motivo_cambio: document.getElementById('emp-motivo-salario').value.trim() || null }
+      : {}),
+  };
+
+  const btn = document.getElementById('save-emp');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  try {
+    let result;
+    if (id) {
+      result = await apiFetch('/api/empleados', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
+    } else {
+      result = await apiFetch('/api/empleados', { method: 'POST', body: JSON.stringify(fields) });
+    }
+    document.getElementById('modal-emp').classList.remove('open');
+    const msg = result?.usuario_creado
+      ? `✅ Empleado guardado. Usuario creado con contraseña temporal: Nomify2026 (pídele que la cambie en Ajustes)`
+      : '✅ Empleado guardado correctamente';
+    showAlert('alert-emp', msg, 'success');
+    loadEmpleados();
+  } catch (e) {
+    showAlert('alert-form', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Guardar';
+  }
+});
+</script>
+</body>
+</html>
