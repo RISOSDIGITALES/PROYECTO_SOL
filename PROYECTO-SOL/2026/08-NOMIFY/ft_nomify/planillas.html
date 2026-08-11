@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Planillas — Nomify</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>Nomify</h2></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html" class="active"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+      <a href="/extras.html"><span class="icon">⭐</span> Extras</a>
+      <a href="/deducciones.html"><span class="icon">➖</span> Otras Deducciones</a>
+      <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
+      <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
+      <a href="/liquidacion.html"><span class="icon">📄</span> Liquidaciones</a>
+      <a href="/usuarios.html" id="link-usuarios"><span class="icon">👤</span> Usuarios</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Planillas</h1><span class="sub">Historial de quincenas</span></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" id="btn-email-pl">📧 Enviar historial</button>
+        <button class="btn btn-ghost" onclick="exportXlsx('/api/export/planillas','Planillas')">📥 Excel</button>
+        <button class="btn btn-ghost" id="btn-aguinaldo" style="border-color:rgba(46,204,113,.4);color:#2ecc71">🎄 Aguinaldo</button>
+        <button class="btn btn-primary" id="btn-generar">⚡ Generar planilla</button>
+      </div>
+    </div>
+    <div class="content">
+      <div id="alert-pl" class="alert"></div>
+
+      <div class="tabs">
+        <button class="tab active" data-tipo="todas">Todas</button>
+        <button class="tab" data-tipo="Con Seguro">Con Seguro</button>
+        <button class="tab" data-tipo="Sin Seguro">Sin Seguro</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:48px;text-align:center">#</th>
+              <th>Período</th>
+              <th>Tipo</th>
+              <th>Fecha de pago</th>
+              <th>Empleados</th>
+              <th>Total bruto</th>
+              <th>Deducciones</th>
+              <th>Total neto</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-planillas">
+            <tr class="loading-row"><td colspan="10"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ENVIAR HISTORIAL POR CORREO -->
+<div class="overlay" id="modal-email-pl">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>📧 Enviar historial de planillas</h3>
+      <button class="modal-close" id="close-email-pl">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-email-pl" class="alert"></div>
+      <p style="margin:0 0 14px;font-size:13px;color:var(--text-muted)">Se generará un PDF con el historial de planillas y se enviará al correo indicado.</p>
+      <div class="form-group">
+        <label>Correo destinatario *</label>
+        <input type="email" id="inp-email-pl" placeholder="ejemplo@correo.com" />
+      </div>
+      <div class="form-group">
+        <label>Tipo de planilla</label>
+        <select id="sel-tipo-email-pl">
+          <option value="">Todas</option>
+          <option value="Con Seguro">Con Seguro</option>
+          <option value="Sin Seguro">Sin Seguro</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-email-pl">Cancelar</button>
+      <button class="btn btn-primary" id="send-email-pl">Enviar PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AGUINALDO -->
+<div class="overlay" id="modal-aguinaldo">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3>🎄 Generar Aguinaldo (13° mes)</h3>
+      <button class="modal-close" id="close-aguinaldo">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-aguinaldo" class="alert"></div>
+      <p style="margin:0 0 16px;color:var(--text-muted);font-size:13px">
+        Se calculará el aguinaldo proporcional de cada empleado activo según su
+        fecha de ingreso. <strong>Exento de INSS e IR</strong> según la ley laboral nicaragüense.
+      </p>
+      <div class="form-group">
+        <label>Año del aguinaldo *</label>
+        <select id="aguinaldo-anio" style="background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 12px;font-size:13px;width:100%"></select>
+      </div>
+      <div id="aguinaldo-preview" style="display:none;margin-top:12px;padding:12px;background:var(--surface);
+           border-radius:8px;border:1px solid rgba(46,204,113,.3);font-size:13px;color:var(--text-muted)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-aguinaldo">Cancelar</button>
+      <button class="btn btn-primary" id="save-aguinaldo" style="background:#2ecc71;border-color:#2ecc71">Calcular y generar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAR PAGADA -->
+<div class="overlay" id="modal-confirm-pagada">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3>⚠️ Marcar como Pagada</h3>
+      <button class="modal-close" id="close-confirm-pagada">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0 0 12px;font-size:14px;color:var(--text)">Estás a punto de marcar esta planilla como <strong>Pagada</strong>.</p>
+      <div style="background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--text-muted);line-height:1.6">
+        🔒 <strong style="color:var(--text)">Esta acción no se puede deshacer.</strong><br>
+        Se aplicarán todos los descuentos: préstamos, adelantos y deducciones.<br><br>
+        Una vez pagada, la planilla <strong>no podrá editarse ni eliminarse</strong>. Asegurate de que los datos sean correctos antes de continuar.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-confirm-pagada">Cancelar</button>
+      <button class="btn btn-primary" id="ok-confirm-pagada" style="background:var(--red);border-color:var(--red)">Sí, marcar como Pagada</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAR GENERAR -->
+<div class="overlay" id="modal-confirm-gen">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3>⚠️ Confirmar generación</h3>
+      <button class="modal-close" id="close-confirm-gen">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0 0 12px;font-size:14px;color:var(--text)">La planilla se generará en estado <strong>Borrador</strong>.</p>
+      <div style="background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--text-muted);line-height:1.6">
+        🔒 <strong style="color:var(--text)">Los descuentos NO se aplicarán aún.</strong><br>
+        Préstamos, adelantos y deducciones se ejecutarán únicamente cuando marques la planilla como <strong>Pagada</strong>.<br><br>
+        Podés revisar y editar los montos mientras esté en Borrador.
+      </div>
+      <p style="margin:12px 0 0;font-size:13px;color:var(--text-muted)">¿Los datos del período y tipo de planilla son correctos?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-confirm-gen">Cancelar</button>
+      <button class="btn btn-primary" id="ok-confirm-gen">Generar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GENERAR PLANILLA -->
+<div class="overlay" id="modal-gen">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>Generar planilla</h3>
+      <button class="modal-close" id="close-gen">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-gen" class="alert"></div>
+      <p style="margin:0 0 16px;color:var(--text-muted);font-size:13px">Se calculará la quincena para todos los empleados activos del tipo seleccionado.</p>
+      <!-- Modo: Quincenal / Mensual -->
+      <div class="form-group" style="margin-bottom:14px">
+        <label>Modo de planilla</label>
+        <div style="display:flex;gap:8px">
+          <button type="button" id="btn-modo-quincenal"
+            class="btn btn-primary btn-sm" style="flex:1;font-size:12px">📅 Quincenal</button>
+          <button type="button" id="btn-modo-mensual"
+            class="btn btn-ghost btn-sm" style="flex:1;font-size:12px">📆 Mensual</button>
+        </div>
+      </div>
+
+      <!-- Período quincenal -->
+      <div id="wrap-periodo-quincenal">
+        <div class="form-group">
+          <label>Período *</label>
+          <input type="date" id="gen-periodo" />
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <button type="button" id="btn-q15" class="btn btn-ghost btn-sm" style="font-size:12px">📅 Día 15</button>
+            <button type="button" id="btn-qfin" class="btn btn-ghost btn-sm" style="font-size:12px">📅 Fin de mes</button>
+          </div>
+          <div id="periodo-label" style="margin-top:6px;font-size:12px;color:var(--text-muted);display:none">
+            <span id="periodo-label-text"></span>
+          </div>
+          <div id="aviso-fecha" style="display:none;margin-top:6px;font-size:11px;color:var(--orange)"></div>
+        </div>
+      </div>
+
+      <!-- Período mensual -->
+      <div id="wrap-periodo-mensual" style="display:none">
+        <div class="form-group">
+          <label>Mes *</label>
+          <input type="month" id="gen-mes"
+            style="background:var(--input);border:1px solid var(--border);border-radius:6px;
+                   color:var(--text);padding:8px 12px;font-size:14px;width:100%;box-sizing:border-box" />
+          <div id="aviso-mensual" style="display:none;margin-top:6px;padding:8px 10px;
+               background:rgba(46,204,113,.07);border:1px solid rgba(46,204,113,.3);
+               border-radius:6px;font-size:11px;color:#2ecc71"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Tipo de planilla</label>
+        <select id="gen-tipo">
+          <option value="">Todos (Con Seguro + Sin Seguro)</option>
+          <option value="Con Seguro">Con Seguro</option>
+          <option value="Sin Seguro">Sin Seguro</option>
+        </select>
+      </div>
+      <div id="gen-preview" style="display:none;margin-top:12px;padding:12px;background:var(--surface);border-radius:8px;border:1px solid var(--border);font-size:13px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-gen">Cancelar</button>
+      <button class="btn btn-primary" id="save-gen">Calcular y generar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/export.js"></script>
+<script>
+let allPlanillas = [];
+let filtroActivo = 'todas';
+
+// Usa fmtPeriodo global de auth.js: "1-15 de Mayo 2026"
+function formatPeriodo(isoDate) { return fmtPeriodo(isoDate); }
+
+// Devuelve YYYY-MM-15 o YYYY-MM-DD (último del mes) según qué quincena es más cercana
+function quincena15(y, m) { return `${y}-${String(m).padStart(2,'0')}-15`; }
+function quincenaFin(y, m) {
+  const last = new Date(y, m, 0).getDate();
+  return `${y}-${String(m).padStart(2,'0')}-${String(last).padStart(2,'0')}`;
+}
+
+// Siguiente quincena que aún no ha pasado (o que es hoy)
+function nextQuincena() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  if (day <= 15) return quincena15(y, m);           // aún no llega el 15 de este mes
+  const lastDay = new Date(y, m, 0).getDate();
+  if (day <= lastDay) return quincenaFin(y, m);      // entre 16 y fin de mes → fin de este mes
+  // ya pasó el fin (no debería ocurrir, pero por si acaso)
+  const nm = m === 12 ? 1 : m + 1;
+  const ny = m === 12 ? y + 1 : y;
+  return quincena15(ny, nm);
+}
+
+// Próximo "día 15" que aún no ha pasado
+function next15() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  if (d.getDate() <= 15) return quincena15(y, m);   // este mes
+  const nm = m === 12 ? 1 : m + 1;                  // ya pasó → siguiente mes
+  const ny = m === 12 ? y + 1 : y;
+  return quincena15(ny, nm);
+}
+
+// Próximo "fin de mes" que aún no ha pasado
+function nextFin() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  const lastDay = new Date(y, m, 0).getDate();
+  if (d.getDate() < lastDay) return quincenaFin(y, m);  // este mes aún no termina
+  const nm = m === 12 ? 1 : m + 1;                      // ya pasó → siguiente mes
+  const ny = m === 12 ? y + 1 : y;
+  return quincenaFin(ny, nm);
+}
+
+let _esMaster = false;
+onReady(['Master', 'Planillero'], async () => {
+  initLayout();
+  const info = await getMyInfo();
+  _esMaster = info.rol === 'Master';
+  loadPlanillas();
+});
+
+let _pendingPagadaId = null;
+
+async function _ejecutarPagada() {
+  try {
+    await apiFetch(`/api/planillas/${_pendingPagadaId}/estado`, {
+      method: 'PATCH',
+      body: JSON.stringify({ estado: 'Pagada' }),
+    });
+    allPlanillas = await apiFetch('/api/planillas');
+    renderTabla();
+    showAlert('alert-pl', '✅ Planilla marcada como Pagada y descuentos aplicados', 'success');
+  } catch (e) {
+    showAlert('alert-pl', 'Error: ' + e.message, 'error');
+  }
+}
+
+async function cambiarEstado(planillaId, nuevoEstado) {
+  if (nuevoEstado === 'Pagada') {
+    _pendingPagadaId = planillaId;
+    document.getElementById('modal-confirm-pagada').classList.add('open');
+    return;
+  }
+  if (!confirm(`¿Marcar esta planilla como "${nuevoEstado}"?`)) return;
+  try {
+    await apiFetch(`/api/planillas/${planillaId}/estado`, {
+      method: 'PATCH',
+      body: JSON.stringify({ estado: nuevoEstado }),
+    });
+    allPlanillas = await apiFetch('/api/planillas');
+    renderTabla();
+    showAlert('alert-pl', `✅ Estado actualizado a "${nuevoEstado}"`, 'success');
+  } catch (e) {
+    showAlert('alert-pl', 'Error: ' + e.message, 'error');
+  }
+}
+
+['close-confirm-pagada','cancel-confirm-pagada'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-confirm-pagada').classList.remove('open');
+    _pendingPagadaId = null;
+  })
+);
+document.getElementById('ok-confirm-pagada').addEventListener('click', async () => {
+  document.getElementById('modal-confirm-pagada').classList.remove('open');
+  await _ejecutarPagada();
+});
+
+async function borrarPlanilla(id, folio) {
+  if (!confirm(`¿Está seguro que desea borrar la planilla #${folio}?`)) return;
+  try {
+    await apiFetch(`/api/planillas/${id}`, { method: 'DELETE' });
+    allPlanillas = await apiFetch('/api/planillas');
+    renderTabla();
+    showAlert('alert-pl', `🗑️ Planilla #${folio} enviada a la papelera`, 'success');
+  } catch (e) {
+    showAlert('alert-pl', 'Error: ' + e.message, 'error');
+  }
+}
+
+async function loadPlanillas() {
+  try {
+    allPlanillas = await apiFetch('/api/planillas');
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-pl', 'Error: ' + e.message, 'error');
+  }
+}
+
+function renderTabla() {
+  const lista = filtroActivo === 'todas'
+    ? allPlanillas
+    : allPlanillas.filter(p => (p.Tipo || '').startsWith(filtroActivo));
+
+  const tbody = document.getElementById('tabla-planillas');
+  if (lista.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" class="empty">No hay planillas registradas</td></tr>';
+    return;
+  }
+
+  // DD/MM/YYYY para fecha de pago
+  function fmtFecha(val) {
+    if (!val) return '—';
+    const s = String(val).substring(0, 10);
+    const [y, m, d] = s.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  tbody.innerHTML = lista.map(p => {
+    const tipo = p.Tipo || '';
+    const tipoBadge = tipo.includes('Mensual') ? 'badge-purple'
+      : tipo.startsWith('Con Seguro') ? 'badge-blue'
+      : tipo.startsWith('Sin Seguro') ? 'badge-orange'
+      : tipo === 'Aguinaldo'          ? 'badge-green'
+      : 'badge-gray';
+    const estado = p.Estado || 'Borrador';
+    const estadoBadge = estado === 'Pagada' ? 'badge-green' : estado === 'Anulada' ? 'badge-red' : 'badge-gray';
+    const periodoVal = String(p['Período'] || '').substring(0, 10);
+    const periodo = encodeURIComponent(periodoVal);
+    const fechaPago = fmtFecha(p['Fecha de pago'] || periodoVal);
+    const folio = p.folio ?? p.id; // folio siempre asignado; id solo como último recurso
+    // Botón para cambiar estado (solo Master)
+    const btnEstado = _esMaster ? (() => {
+      if (estado === 'Borrador')
+        return `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:rgba(46,204,113,.15);border:1px solid rgba(46,204,113,.4);color:#2ecc71;border-radius:4px;cursor:pointer" onclick="cambiarEstado(${p.id},'Pagada')">✓ Marcar pagada</button>`;
+      return '';
+    })() : '';
+    const btnBorrar = (_esMaster && estado === 'Borrador')
+      ? `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:rgba(231,76,60,.12);border:1px solid rgba(231,76,60,.4);color:var(--red);border-radius:4px;cursor:pointer;margin-left:4px" onclick="borrarPlanilla(${p.id},${folio})">🗑 Borrar</button>`
+      : '';
+    return `<tr>
+      <td style="text-align:center;color:var(--text-muted);font-size:12px;font-weight:600">#${folio}</td>
+      <td><strong>${formatPeriodo(periodoVal)}</strong></td>
+      <td><span class="badge ${tipoBadge}">${tipo || 'Todos'}</span></td>
+      <td>${fechaPago}</td>
+      <td style="text-align:center">${p['Total empleados'] || '—'}</td>
+      <td class="num">${fmt(p['Total bruto'])}</td>
+      <td class="num" style="color:var(--red)">${fmt(p['Total deducciones'])}</td>
+      <td class="num"><strong>${fmt(p['Total neto'])}</strong></td>
+      <td style="white-space:nowrap">
+        <span class="badge ${estadoBadge}">${estado}</span>
+        ${btnEstado}${btnBorrar}
+      </td>
+      <td><a href="/planilla-detalle.html?id=${p.id}&periodo=${periodo}&folio=${folio}" class="btn btn-ghost btn-sm">Ver detalle</a></td>
+    </tr>`;
+  }).join('');
+}
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    filtroActivo = btn.dataset.tipo;
+    renderTabla();
+  });
+});
+
+let _modoMensual = false;
+
+function setModoGenerar(mensual) {
+  _modoMensual = mensual;
+  document.getElementById('wrap-periodo-quincenal').style.display = mensual ? 'none' : '';
+  document.getElementById('wrap-periodo-mensual').style.display   = mensual ? '' : 'none';
+  const btnQ = document.getElementById('btn-modo-quincenal');
+  const btnM = document.getElementById('btn-modo-mensual');
+  btnQ.className = mensual ? 'btn btn-ghost btn-sm'   : 'btn btn-primary btn-sm';
+  btnM.className = mensual ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+  btnQ.style.flex = '1'; btnQ.style.fontSize = '12px';
+  btnM.style.flex = '1'; btnM.style.fontSize = '12px';
+  document.getElementById('aviso-mensual').style.display = 'none';
+  if (mensual) {
+    // Preseleccionar mes actual
+    const hoy = new Date();
+    const mm  = String(hoy.getMonth() + 1).padStart(2, '0');
+    document.getElementById('gen-mes').value = `${hoy.getFullYear()}-${mm}`;
+    verificarQuincenalesMes();
+  }
+}
+
+async function verificarQuincenalesMes() {
+  const mes = document.getElementById('gen-mes').value;
+  if (!mes) return;
+  const avisoEl = document.getElementById('aviso-mensual');
+  try {
+    const planillas = await apiFetch('/api/planillas');
+    const [y, m] = mes.split('-');
+    const quincenales = planillas.filter(p => {
+      const pm = String(p['Período'] || '').substring(0, 7);
+      return pm === `${y}-${m}` && !(p.Tipo || '').includes('Mensual') && p.Tipo !== 'Aguinaldo';
+    });
+    if (quincenales.length > 0) {
+      avisoEl.style.display = '';
+      avisoEl.textContent = `ℹ️ Ya hay ${quincenales.length} planilla(s) quincenal(es) para este mes. La mensual se calculará independientemente — las deducciones ya procesadas en quincenales no se duplicarán.`;
+    } else {
+      avisoEl.style.display = '';
+      avisoEl.style.color = 'var(--text-muted)';
+      avisoEl.style.background = 'transparent';
+      avisoEl.style.border = 'none';
+      avisoEl.textContent = 'Sin quincenales para este mes — se calculará como planilla mensual completa.';
+    }
+  } catch (_) {}
+}
+
+document.getElementById('btn-modo-quincenal').addEventListener('click', () => setModoGenerar(false));
+document.getElementById('btn-modo-mensual').addEventListener('click',   () => setModoGenerar(true));
+document.getElementById('gen-mes').addEventListener('change', verificarQuincenalesMes);
+
+document.getElementById('btn-generar').addEventListener('click', () => {
+  if (!localStorage.getItem('planilla_empresa_id')) {
+    showAlert('alert-pl', '⚠️ Debes crear y seleccionar una empresa antes de generar planillas.', 'error');
+    return;
+  }
+  _modoMensual = false;
+  setModoGenerar(false);
+  document.getElementById('gen-periodo').value = nextQuincena();
+  document.getElementById('gen-tipo').value = '';
+  document.getElementById('alert-gen').className = 'alert';
+  document.getElementById('gen-preview').style.display = 'none';
+  document.getElementById('aviso-fecha').style.display = 'none';
+  actualizarPeriodoLabel();
+  document.getElementById('modal-gen').classList.add('open');
+});
+
+['close-gen','cancel-gen'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-gen').classList.remove('open');
+  });
+});
+
+// Botones de quincena rápida
+document.getElementById('btn-q15').addEventListener('click', () => {
+  document.getElementById('gen-periodo').value = next15();
+  actualizarPeriodoLabel();
+});
+document.getElementById('btn-qfin').addEventListener('click', () => {
+  document.getElementById('gen-periodo').value = nextFin();
+  actualizarPeriodoLabel();
+});
+
+function actualizarPeriodoLabel() {
+  const val = document.getElementById('gen-periodo').value;
+  const labelWrap = document.getElementById('periodo-label');
+  const labelText = document.getElementById('periodo-label-text');
+  if (!val) { labelWrap.style.display = 'none'; return; }
+  labelText.textContent = formatPeriodo(val);
+  labelWrap.style.display = '';
+  const [y, m, d] = val.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  const aviso = document.getElementById('aviso-fecha');
+  if (d !== 15 && d !== lastDay) {
+    aviso.style.display = '';
+    aviso.textContent = `⚠️ Fecha inusual — las quincenas normalmente son el día 15 o el ${lastDay} del mes`;
+  } else {
+    aviso.style.display = 'none';
+  }
+}
+document.getElementById('gen-periodo').addEventListener('change', actualizarPeriodoLabel);
+
+// ── Modal enviar historial por correo ─────────────────────────────────────────
+document.getElementById('btn-email-pl').addEventListener('click', () => {
+  document.getElementById('alert-email-pl').className = 'alert';
+  document.getElementById('send-email-pl').disabled = false;
+  document.getElementById('send-email-pl').textContent = 'Enviar PDF';
+  document.getElementById('inp-email-pl').value = '';
+  document.getElementById('sel-tipo-email-pl').value = '';
+  document.getElementById('modal-email-pl').classList.add('open');
+  document.getElementById('inp-email-pl').focus();
+});
+['close-email-pl','cancel-email-pl'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () =>
+    document.getElementById('modal-email-pl').classList.remove('open')
+  )
+);
+document.getElementById('send-email-pl').addEventListener('click', async () => {
+  const email   = document.getElementById('inp-email-pl').value.trim();
+  const tipo    = document.getElementById('sel-tipo-email-pl').value;
+  const alertEl = document.getElementById('alert-email-pl');
+  const btn     = document.getElementById('send-email-pl');
+  if (!email) {
+    alertEl.className = 'alert alert-error show';
+    alertEl.textContent = 'Ingresa un correo destinatario';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Generando...'; alertEl.className = 'alert';
+  try {
+    const data = await apiFetch('/api/reportes/enviar', {
+      method: 'POST',
+      body: JSON.stringify({ email, categoria: 'planillas', tipo: tipo || undefined }),
+    });
+    alertEl.className = 'alert alert-success show';
+    alertEl.textContent = data.mensaje || '✅ Enviado correctamente';
+    btn.textContent = 'Enviado ✓';
+  } catch (e) {
+    alertEl.className = 'alert alert-error show';
+    alertEl.textContent = e.message;
+    btn.disabled = false; btn.textContent = 'Enviar PDF';
+  }
+});
+
+// ── Aguinaldo ─────────────────────────────────────────────────────────────────
+document.getElementById('btn-aguinaldo').addEventListener('click', () => {
+  if (!localStorage.getItem('planilla_empresa_id')) {
+    showAlert('alert-pl', '⚠️ Debes crear y seleccionar una empresa antes de generar el aguinaldo.', 'error');
+    return;
+  }
+  // Poblar selector de año: año actual y los 2 anteriores
+  const anioActual = new Date().getFullYear();
+  const sel = document.getElementById('aguinaldo-anio');
+  sel.innerHTML = [anioActual, anioActual-1, anioActual-2]
+    .map(y => `<option value="${y}">${y}</option>`).join('');
+  document.getElementById('alert-aguinaldo').className = 'alert';
+  document.getElementById('aguinaldo-preview').style.display = 'none';
+  document.getElementById('save-aguinaldo').disabled = false;
+  document.getElementById('save-aguinaldo').textContent = 'Calcular y generar';
+  document.getElementById('modal-aguinaldo').classList.add('open');
+});
+
+['close-aguinaldo','cancel-aguinaldo'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () =>
+    document.getElementById('modal-aguinaldo').classList.remove('open'))
+);
+
+document.getElementById('save-aguinaldo').addEventListener('click', async () => {
+  const anio = document.getElementById('aguinaldo-anio').value;
+  const periodo = `${anio}-12-01`;
+  const btn = document.getElementById('save-aguinaldo');
+  btn.disabled = true; btn.textContent = 'Calculando...';
+  document.getElementById('alert-aguinaldo').className = 'alert';
+
+  try {
+    const result = await apiFetch('/api/planillas/calcular', {
+      method: 'POST',
+      body: JSON.stringify({ periodo, tipo: 'Aguinaldo' }),
+    });
+    allPlanillas = await apiFetch('/api/planillas');
+    renderTabla();
+    document.getElementById('modal-aguinaldo').classList.remove('open');
+    showAlert('alert-pl',
+      `🎄 Aguinaldo ${anio} generado — ${result.empleados} empleado(s) · Total: ${fmt(result.totalAguinaldo)}`,
+      'success');
+  } catch (e) {
+    if (e.message && e.message.includes('Ya existe')) {
+      const alertEl = document.getElementById('alert-aguinaldo');
+      alertEl.className = 'alert alert-error show';
+      alertEl.innerHTML = `⚠️ ${e.message.split('.')[0]}.<br><br>
+        <button id="btn-forzar-agui" class="btn btn-sm"
+          style="background:rgba(46,204,113,.15);border:1px solid rgba(46,204,113,.4);
+                 color:#2ecc71;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">
+          Regenerar de todas formas
+        </button>`;
+      document.getElementById('btn-forzar-agui').addEventListener('click', async () => {
+        alertEl.className = 'alert';
+        btn.disabled = true; btn.textContent = 'Calculando...';
+        try {
+          const r2 = await apiFetch('/api/planillas/calcular', {
+            method: 'POST',
+            body: JSON.stringify({ periodo, tipo: 'Aguinaldo', forzar: true }),
+          });
+          allPlanillas = await apiFetch('/api/planillas');
+          renderTabla();
+          document.getElementById('modal-aguinaldo').classList.remove('open');
+          showAlert('alert-pl', `🎄 Aguinaldo ${anio} regenerado — ${r2.empleados} empleado(s) · ${fmt(r2.totalAguinaldo)}`, 'success');
+        } catch (e2) {
+          showAlert('alert-aguinaldo', 'Error: ' + e2.message, 'error');
+        } finally { btn.disabled = false; btn.textContent = 'Calcular y generar'; }
+      });
+    } else {
+      showAlert('alert-aguinaldo', 'Error: ' + e.message, 'error');
+    }
+    btn.disabled = false; btn.textContent = 'Calcular y generar';
+  }
+});
+
+async function ejecutarGenerar(forzar = false) {
+  const tipoBase = document.getElementById('gen-tipo').value;
+  const btn      = document.getElementById('save-gen');
+
+  let periodo, tipoEnviar, labelTipo;
+
+  if (_modoMensual) {
+    const mes = document.getElementById('gen-mes').value;
+    if (!mes) { showAlert('alert-gen', 'Selecciona el mes', 'error'); return; }
+    periodo    = mes + '-01';
+    tipoEnviar = tipoBase ? `${tipoBase} Mensual` : 'Mensual';
+    labelTipo  = '📆 mensual';
+  } else {
+    periodo    = document.getElementById('gen-periodo').value;
+    if (!periodo) { showAlert('alert-gen', 'Selecciona el período', 'error'); return; }
+    tipoEnviar = tipoBase || undefined;
+    labelTipo  = '📅 quincenal';
+  }
+
+  btn.disabled = true; btn.textContent = 'Calculando...';
+  document.getElementById('gen-preview').style.display = 'none';
+  document.getElementById('alert-gen').className = 'alert';
+
+  try {
+    const result = await apiFetch('/api/planillas/calcular', {
+      method: 'POST',
+      body: JSON.stringify({ periodo, tipo: tipoEnviar, forzar: forzar || undefined }),
+    });
+    allPlanillas = await apiFetch('/api/planillas');
+    renderTabla();
+    document.getElementById('modal-gen').classList.remove('open');
+    showAlert('alert-pl',
+      `✅ Planilla ${labelTipo} generada — ${result.empleados} empleado(s) · neto ${fmt(result.totalNeto)}`,
+      'success');
+  } catch (e) {
+    if (e.message && e.message.includes('Ya existe')) {
+      const alertEl = document.getElementById('alert-gen');
+      alertEl.className = 'alert alert-error show';
+      alertEl.innerHTML = `⚠️ ${e.message.split('.')[0]}.<br><br>
+        <button id="btn-forzar-gen" class="btn btn-sm"
+          style="background:rgba(231,76,60,.2);border:1px solid var(--red);color:var(--red);
+                 padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">
+          Generar de todas formas
+        </button>`;
+      document.getElementById('btn-forzar-gen').addEventListener('click', async () => {
+        alertEl.className = 'alert';
+        await ejecutarGenerar(true);
+      });
+    } else {
+      showAlert('alert-gen', 'Error: ' + e.message, 'error');
+    }
+  } finally {
+    btn.disabled = false; btn.textContent = 'Calcular y generar';
+  }
+}
+
+document.getElementById('save-gen').addEventListener('click', () => {
+  if (!localStorage.getItem('planilla_empresa_id')) {
+    showAlert('alert-gen', '⚠️ Sin empresa seleccionada. Crea una empresa primero.', 'error');
+    return;
+  }
+  // Validar que hay período seleccionado antes de mostrar confirmación
+  if (_modoMensual) {
+    if (!document.getElementById('gen-mes').value) { showAlert('alert-gen', 'Selecciona el mes', 'error'); return; }
+  } else {
+    if (!document.getElementById('gen-periodo').value) { showAlert('alert-gen', 'Selecciona el período', 'error'); return; }
+  }
+  document.getElementById('modal-gen').classList.remove('open');
+  document.getElementById('modal-confirm-gen').classList.add('open');
+});
+
+['close-confirm-gen','cancel-confirm-gen'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-confirm-gen').classList.remove('open');
+    document.getElementById('modal-gen').classList.add('open');
+  })
+);
+
+document.getElementById('ok-confirm-gen').addEventListener('click', () => {
+  document.getElementById('modal-confirm-gen').classList.remove('open');
+  ejecutarGenerar();
+});
+</script>
+</body>
+</html>

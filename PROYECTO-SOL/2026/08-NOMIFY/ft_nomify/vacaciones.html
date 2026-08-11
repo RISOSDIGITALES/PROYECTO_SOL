@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vacaciones — Nomify</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>Nomify</h2></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+      <a href="/extras.html"><span class="icon">⭐</span> Extras</a>
+      <a href="/deducciones.html"><span class="icon">➖</span> Otras Deducciones</a>
+      <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
+      <a href="/vacaciones.html" class="active"><span class="icon">🏖</span> Vacaciones</a>
+      <a href="/usuarios.html" id="link-usuarios"><span class="icon">👤</span> Usuarios</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Vacaciones</h1><span class="sub">Días acumulados y registros por empleado</span></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" id="btn-print" onclick="window.print()">🖨 Imprimir</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportXlsx('/api/export/vacaciones','Vacaciones')">📥 Excel</button>
+        <button class="btn btn-ghost btn-sm" id="btn-email">📧 Enviar historial</button>
+        <button class="btn btn-ghost" id="btn-pagar" style="border-color:var(--orange);color:var(--orange)">💵 Pagar vacaciones</button>
+        <button class="btn btn-primary" id="btn-nuevo">+ Registrar días</button>
+      </div>
+    </div>
+    <div class="content">
+      <div id="alert-vac" class="alert"></div>
+
+      <div class="table-wrap" style="margin-bottom:20px">
+        <div class="table-header">
+          <h3>Saldo de vacaciones</h3>
+          <span style="font-size:11px;color:var(--muted)">Nicaragua: 30 días/año · 2.5 días/mes</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Empleado</th>
+              <th>Ingreso</th>
+              <th>Antigüedad</th>
+              <th>Días acumulados</th>
+              <th>Días tomados</th>
+              <th>Saldo</th>
+              <th>Valor saldo (neto)</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-resumen">
+            <tr class="loading-row"><td colspan="7"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-header">
+          <h3>Historial de vacaciones</h3>
+          <select id="filtro-empleado" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--navy2);color:var(--text);font-size:12px">
+            <option value="">Todos los empleados</option>
+          </select>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Empleado</th>
+              <th>Desde</th>
+              <th>Hasta</th>
+              <th>Días</th>
+              <th>Tipo</th>
+              <th>Forma pago</th>
+              <th>Monto</th>
+              <th>Estado</th>
+              <th>Notas</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-historial">
+            <tr class="loading-row"><td colspan="9"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL REGISTRAR VACACIONES -->
+<div class="overlay" id="modal-vac">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-titulo">Registrar Vacaciones</h3>
+      <button class="modal-close" id="close-modal">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-form" class="alert"></div>
+      <input type="hidden" id="vac-id" />
+      <div class="form-group">
+        <label>Empleado *</label>
+        <select id="vac-empleado"><option value="">Seleccionar...</option></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tipo *</label>
+          <select id="vac-tipo">
+            <option value="Descanso">Descanso (días libres)</option>
+            <option value="Pagadas">Pagadas (liquidación)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="vac-estado">
+            <option value="Aprobada">Aprobada</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Completada">Completada</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fecha inicio *</label>
+          <input type="date" id="vac-inicio" />
+        </div>
+        <div class="form-group">
+          <label>Fecha fin *</label>
+          <input type="date" id="vac-fin" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Días <span style="font-size:11px;color:var(--muted)">(se calcula automáticamente)</span></label>
+        <input type="number" id="vac-dias" placeholder="0" min="0.5" step="0.5" readonly style="opacity:0.7" />
+      </div>
+      <div id="preview-pago" style="display:none;background:var(--navy2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px">
+        <div style="font-weight:600;margin-bottom:6px;color:var(--green2)">Cálculo del pago</div>
+        <div style="display:flex;justify-content:space-between"><span>Salario diario</span><span id="prev-diario">—</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Días a pagar</span><span id="prev-dias2">—</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Monto bruto</span><span id="prev-bruto">—</span></div>
+        <div style="display:flex;justify-content:space-between;color:var(--muted)"><span>INSS (7%)</span><span id="prev-inss">—</span></div>
+        <div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px solid var(--border);margin-top:6px;padding-top:6px"><span>Neto a pagar</span><span id="prev-neto" style="color:var(--green2)">—</span></div>
+      </div>
+      <div class="form-group">
+        <label>Forma de pago</label>
+        <select id="vac-pago-tipo">
+          <option value="Independiente">Pago independiente</option>
+          <option value="En planilla">Incluir en planilla</option>
+        </select>
+      </div>
+      <div class="form-group" id="grupo-periodo-planilla" style="display:none">
+        <label>Período de planilla <span style="color:var(--red)">*</span></label>
+        <input type="date" id="vac-periodo-planilla" style="background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 12px;font-size:14px;width:100%;box-sizing:border-box" />
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button type="button" id="btn-vac-q1" class="btn btn-ghost btn-sm" style="font-size:12px">📅 Día 1</button>
+          <button type="button" id="btn-vac-q16" class="btn btn-ghost btn-sm" style="font-size:12px">📅 Día 16</button>
+        </div>
+        <div id="vac-periodo-label" style="margin-top:6px;font-size:12px;color:var(--text-muted)"></div>
+      </div>
+      <div class="form-group">
+        <label>Notas</label>
+        <input type="text" id="vac-notas" placeholder="Observaciones..." />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-vac">Cancelar</button>
+      <button class="btn btn-primary" id="save-vac">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ENVIAR HISTORIAL -->
+<div class="overlay" id="modal-email-hist">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>📧 Enviar historial por correo</h3>
+      <button class="modal-close" id="close-email-hist">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-email-hist" class="alert"></div>
+      <p style="margin:0 0 14px;font-size:13px;color:var(--text-muted)">Se generará un PDF del historial y se enviará al correo indicado.</p>
+      <div class="form-group">
+        <label>Correo destinatario *</label>
+        <input type="email" id="inp-email-hist" placeholder="ejemplo@correo.com"
+          style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;" />
+      </div>
+      <div class="form-group">
+        <label>Empleado (opcional)</label>
+        <select id="sel-email-hist" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;">
+          <option value="">Todos los empleados</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-email-hist">Cancelar</button>
+      <button class="btn btn-primary" id="send-email-hist">Enviar PDF</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/export.js"></script>
+<script>
+let allVac = [];
+let allEmpleados = [];
+let filtroEmp = '';
+let _esMaster = false;
+
+function fd(s) {
+  if (!s) return '—';
+  const clean = String(s).substring(0, 10); // YYYY-MM-DD
+  const [y, m, d] = clean.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+onReady(['Master', 'Planillero'], async () => {
+  _esMaster = (await getMyInfo()).rol === 'Master';
+  initLayout();
+  if (!_esMaster) {
+    document.getElementById('btn-nuevo').style.display = 'none';
+    document.getElementById('btn-pagar').style.display = 'none';
+  }
+  loadAll();
+});
+
+function calcAntiguedad(fechaIngreso) {
+  if (!fechaIngreso) return { meses: 0, label: '—', cumple6: null, falta6Label: null };
+  const ingreso = new Date(fechaIngreso + 'T00:00:00');
+  const hoy     = new Date();
+
+  let meses = (hoy.getFullYear() - ingreso.getFullYear()) * 12 + (hoy.getMonth() - ingreso.getMonth());
+  if (hoy.getDate() < ingreso.getDate()) meses--;
+  if (meses < 0) meses = 0;
+
+  const anios     = Math.floor(meses / 12);
+  const mesesRest = meses % 12;
+  const label     = anios > 0
+    ? `${anios} año${anios > 1 ? 's' : ''}${mesesRest > 0 ? ` ${mesesRest}m` : ''}`
+    : `${meses} mes${meses !== 1 ? 'es' : ''}`;
+
+  const cumple6 = new Date(ingreso);
+  cumple6.setMonth(cumple6.getMonth() + 6);
+
+  let falta6Label = null;
+  if (meses < 6) {
+    const msRest = Math.ceil((cumple6 - hoy) / (1000 * 60 * 60 * 24));
+    const mFalta = Math.floor(msRest / 30);
+    const dFalta = msRest % 30;
+    falta6Label = mFalta > 0
+      ? `Faltan ${mFalta} mes${mFalta > 1 ? 'es' : ''}${dFalta > 0 ? ` y ${dFalta} día${dFalta > 1 ? 's' : ''}` : ''}`
+      : `Faltan ${msRest} día${msRest !== 1 ? 's' : ''}`;
+  }
+
+  return { meses, label, cumple6, falta6Label };
+}
+
+function diasLaborales(inicio, fin) {
+  let count = 0;
+  const d = new Date(inicio + 'T00:00:00');
+  const f = new Date(fin   + 'T00:00:00');
+  while (d <= f) {
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
+
+async function loadAll() {
+  try {
+    const [empleados, vacaciones] = await Promise.all([
+      apiFetch('/api/empleados'),
+      apiFetch('/api/vacaciones'),
+    ]);
+    allEmpleados = empleados.filter(e => e.Activo);
+    allVac = vacaciones;
+
+    const selEmp  = document.getElementById('vac-empleado');
+    const selFilt = document.getElementById('filtro-empleado');
+    allEmpleados.forEach(e => {
+      [selEmp, selFilt, document.getElementById('sel-email-hist')].forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = e.Nombre;
+        opt.textContent = e.Nombre;
+        s.appendChild(opt);
+      });
+    });
+
+    renderResumen();
+    renderHistorial();
+  } catch (e) {
+    showAlert('alert-vac', 'Error: ' + e.message, 'error');
+  }
+}
+
+function renderResumen() {
+  const tbody = document.getElementById('tabla-resumen');
+  if (!allEmpleados.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">No hay empleados activos</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = allEmpleados.map(e => {
+    const { meses, label, falta6Label } = calcAntiguedad(e['Fecha de ingreso']);
+    const acumulados = Math.floor(meses * 2.5 * 10) / 10;
+    const tomados    = allVac
+      .filter(v => v.Empleado === e.Nombre && (v.Estado === 'Aprobada' || v.Estado === 'Completada'))
+      .reduce((s, v) => s + (parseFloat(v.Dias) || 0), 0);
+    const saldo      = Math.round((acumulados - tomados) * 10) / 10;
+    const salario    = parseFloat(e['Salario bruto mensual'] || 0);
+    const montoBruto = Math.round(saldo * (salario / 30) * 100) / 100;
+    const inssVac    = Math.round(montoBruto * 0.07 * 100) / 100;
+    const montoNeto  = Math.round((montoBruto - inssVac) * 100) / 100;
+
+    let estadoBadge = '';
+    let estadoLabel = '';
+    if (!e['Fecha de ingreso']) {
+      estadoBadge = 'badge-gray'; estadoLabel = 'Sin fecha ingreso';
+    } else if (meses < 6) {
+      estadoBadge = 'badge-gray'; estadoLabel = falta6Label || `Faltan ${6 - meses} meses`;
+    } else if (saldo > 15) {
+      estadoBadge = 'badge-orange'; estadoLabel = '⚠ Exceso — debe tomar';
+    } else if (saldo > 7) {
+      estadoBadge = 'badge-blue'; estadoLabel = 'Acumulado';
+    } else if (saldo >= 0) {
+      estadoBadge = 'badge-green'; estadoLabel = 'Al día';
+    } else {
+      estadoBadge = 'badge-gray'; estadoLabel = 'Avanzadas';
+    }
+
+    return `<tr>
+      <td><strong>${e.Nombre}</strong></td>
+      <td>${e['Fecha de ingreso'] || '—'}</td>
+      <td>${label}</td>
+      <td style="font-weight:600">${acumulados}</td>
+      <td>${tomados}</td>
+      <td style="font-weight:700;color:${saldo < 0 ? 'var(--orange)' : 'var(--green2)'}">${saldo}</td>
+      <td style="font-size:12px;color:var(--muted)">${salario > 0 && saldo > 0 ? fmt(montoNeto) : '—'}<br><span style="font-size:10px;opacity:0.6">${salario > 0 && saldo > 0 ? 'bruto ' + fmt(montoBruto) + ' − INSS ' + fmt(inssVac) : ''}</span></td>
+      <td><span class="badge ${estadoBadge}">${estadoLabel}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderHistorial() {
+  let lista = allVac;
+  if (filtroEmp) lista = lista.filter(v => v.Empleado === filtroEmp);
+
+  const tbody = document.getElementById('tabla-historial');
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">No hay registros de vacaciones</td></tr>';
+    return;
+  }
+
+  const tipoBadge = t => t === 'Pagadas' ? 'badge-orange' : 'badge-blue';
+  const estBadge  = s => s === 'Completada' ? 'badge-green' : s === 'Pendiente' ? 'badge-gray' : 'badge-blue';
+
+  tbody.innerHTML = lista.map(v => `<tr>
+    <td><strong>${v.Empleado || '—'}</strong></td>
+    <td>${fd(v.Fecha_Inicio)}</td>
+    <td>${fd(v.Fecha_Fin)}</td>
+    <td style="font-weight:600">${v.Dias || '—'}</td>
+    <td><span class="badge ${tipoBadge(v.Tipo)}">${v.Tipo || '—'}</span></td>
+    <td style="font-size:12px">${v.Tipo === 'Pagadas' ? (v.Pago_Tipo === 'En planilla' ? `<span style="color:var(--green2)">📋 ${v.Periodo_Planilla ? fd(v.Periodo_Planilla) : 'En planilla'}</span>` : '💵 Independiente') : '<span style="color:var(--text-muted)">—</span>'}</td>
+    <td style="font-weight:600;color:var(--green2)">${v.Tipo === 'Pagadas' && v.Monto ? fmt(v.Monto) : '<span style="color:var(--text-muted)">—</span>'}</td>
+    <td><span class="badge ${estBadge(v.Estado)}">${v.Estado || '—'}</span></td>
+    <td style="font-size:12px;color:var(--muted)">${v.Notas || ''}</td>
+    <td>
+      ${v.Estado !== 'Completada' && _esMaster ? `<button class="btn btn-icon btn-sm" onclick="eliminar(${v.id})" style="color:var(--red)">🗑️</button>` : ''}
+    </td>
+  </tr>`).join('');
+}
+
+document.getElementById('filtro-empleado').addEventListener('change', e => {
+  filtroEmp = e.target.value;
+  renderHistorial();
+});
+
+function actualizarPreviewPago() {
+  const tipo = document.getElementById('vac-tipo').value;
+  const preview = document.getElementById('preview-pago');
+  if (tipo !== 'Pagadas') { preview.style.display = 'none'; return; }
+
+  const dias = parseFloat(document.getElementById('vac-dias').value) || 0;
+  const empNombre = document.getElementById('vac-empleado').value;
+  const emp = allEmpleados.find(e => e.Nombre === empNombre);
+  const salario = parseFloat(emp?.['Salario bruto mensual'] || 0);
+
+  if (!dias || !salario) { preview.style.display = 'none'; return; }
+
+  const diario = salario / 30;
+  const bruto  = Math.round(dias * diario * 100) / 100;
+  const inss   = Math.round(bruto * 0.07 * 100) / 100;
+  const neto   = Math.round((bruto - inss) * 100) / 100;
+
+  document.getElementById('prev-diario').textContent = fmt(diario);
+  document.getElementById('prev-dias2').textContent  = dias;
+  document.getElementById('prev-bruto').textContent  = fmt(bruto);
+  document.getElementById('prev-inss').textContent   = '− ' + fmt(inss);
+  document.getElementById('prev-neto').textContent   = fmt(neto);
+  preview.style.display = 'block';
+}
+
+document.getElementById('vac-tipo').addEventListener('change', function() {
+  actualizarPreviewPago();
+  const esPagada = this.value === 'Pagadas';
+  document.getElementById('vac-pago-tipo').closest('.form-group').style.display = esPagada ? '' : 'none';
+  if (!esPagada) document.getElementById('grupo-periodo-planilla').style.display = 'none';
+});
+
+document.getElementById('vac-pago-tipo').addEventListener('change', function() {
+  document.getElementById('grupo-periodo-planilla').style.display = this.value === 'En planilla' ? '' : 'none';
+});
+
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function actualizarLabelPeriodoVac() {
+  const val = document.getElementById('vac-periodo-planilla').value;
+  const lbl = document.getElementById('vac-periodo-label');
+  if (!val) { lbl.textContent = ''; return; }
+  const [y, m, d] = val.split('-').map(Number);
+  const dia = d;
+  const nombreMes = MESES[m - 1];
+  lbl.textContent = dia <= 15 ? `1–15 de ${nombreMes} ${y}` : `16–${new Date(y, m, 0).getDate()} de ${nombreMes} ${y}`;
+}
+document.getElementById('vac-periodo-planilla').addEventListener('change', actualizarLabelPeriodoVac);
+
+document.getElementById('btn-vac-q1').addEventListener('click', () => {
+  const hoy = new Date();
+  const y = hoy.getFullYear(), m = String(hoy.getMonth() + 1).padStart(2, '0');
+  document.getElementById('vac-periodo-planilla').value = `${y}-${m}-01`;
+  actualizarLabelPeriodoVac();
+});
+document.getElementById('btn-vac-q16').addEventListener('click', () => {
+  const hoy = new Date();
+  const y = hoy.getFullYear(), m = String(hoy.getMonth() + 1).padStart(2, '0');
+  document.getElementById('vac-periodo-planilla').value = `${y}-${m}-16`;
+  actualizarLabelPeriodoVac();
+});
+document.getElementById('vac-empleado').addEventListener('change', actualizarPreviewPago);
+
+['vac-inicio', 'vac-fin'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => {
+    const inicio = document.getElementById('vac-inicio').value;
+    const fin    = document.getElementById('vac-fin').value;
+    if (inicio && fin && fin >= inicio) {
+      document.getElementById('vac-dias').value = diasLaborales(inicio, fin);
+      actualizarPreviewPago();
+    }
+  });
+});
+
+function abrirModal(tipo = 'Descanso') {
+  document.getElementById('vac-id').value = '';
+  document.getElementById('vac-empleado').value = '';
+  document.getElementById('vac-tipo').value = tipo;
+  document.getElementById('vac-estado').value = 'Aprobada';
+  document.getElementById('vac-inicio').value = '';
+  document.getElementById('vac-fin').value = '';
+  document.getElementById('vac-dias').value = '';
+  document.getElementById('vac-notas').value = '';
+  document.getElementById('vac-pago-tipo').value = 'Independiente';
+  document.getElementById('vac-pago-tipo').closest('.form-group').style.display = tipo === 'Pagadas' ? '' : 'none';
+  document.getElementById('grupo-periodo-planilla').style.display = 'none';
+  document.getElementById('vac-periodo-planilla').value = '';
+  document.getElementById('alert-form').className = 'alert';
+  document.getElementById('preview-pago').style.display = 'none';
+  document.getElementById('modal-titulo').textContent = tipo === 'Pagadas' ? '💵 Pagar Vacaciones' : 'Registrar Vacaciones';
+  document.getElementById('modal-vac').classList.add('open');
+}
+
+document.getElementById('btn-nuevo').addEventListener('click', () => abrirModal('Descanso'));
+document.getElementById('btn-pagar').addEventListener('click', () => abrirModal('Pagadas'));
+['close-modal', 'cancel-vac'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-vac').classList.remove('open');
+  });
+});
+
+document.getElementById('save-vac').addEventListener('click', async () => {
+  const empleado = document.getElementById('vac-empleado').value;
+  const tipo     = document.getElementById('vac-tipo').value;
+  const estado   = document.getElementById('vac-estado').value;
+  const inicio   = document.getElementById('vac-inicio').value;
+  const fin      = document.getElementById('vac-fin').value;
+  const dias     = parseFloat(document.getElementById('vac-dias').value);
+  const notas    = document.getElementById('vac-notas').value.trim();
+
+  if (!empleado) { showAlert('alert-form', 'Selecciona un empleado', 'error'); return; }
+  if (!inicio)   { showAlert('alert-form', 'Selecciona la fecha de inicio', 'error'); return; }
+  if (!fin)      { showAlert('alert-form', 'Selecciona la fecha de fin', 'error'); return; }
+  if (fin < inicio) { showAlert('alert-form', 'La fecha fin debe ser posterior al inicio', 'error'); return; }
+
+  const diasFinal = dias || diasLaborales(inicio, fin);
+  let montoNeto = null;
+  if (tipo === 'Pagadas') {
+    const emp = allEmpleados.find(e => e.Nombre === empleado);
+    const sal = parseFloat(emp?.['Salario bruto mensual'] || 0);
+    if (sal) {
+      const bruto = diasFinal * (sal / 30);
+      montoNeto = Math.round((bruto - bruto * 0.07) * 100) / 100;
+    }
+  }
+
+  const pagoTipo = document.getElementById('vac-pago-tipo').value;
+  const periodoPlanilla = document.getElementById('vac-periodo-planilla').value;
+  if (pagoTipo === 'En planilla' && !periodoPlanilla) {
+    showAlert('alert-form', 'Seleccioná el período de planilla', 'error'); return;
+  }
+  const fields = {
+    Empleado: empleado,
+    Tipo: tipo,
+    Estado: estado,
+    Fecha_Inicio: inicio,
+    Fecha_Fin: fin,
+    Dias: diasFinal,
+    pago_tipo: pagoTipo,
+    ...(pagoTipo === 'En planilla' ? { periodo_planilla: periodoPlanilla } : {}),
+    ...(montoNeto !== null ? { Monto: montoNeto } : {}),
+    ...(notas ? { Notas: notas } : {}),
+  };
+
+  const btn = document.getElementById('save-vac');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    await apiFetch('/api/vacaciones', { method: 'POST', body: JSON.stringify(fields) });
+    document.getElementById('modal-vac').classList.remove('open');
+    showAlert('alert-vac', '✅ Vacaciones registradas', 'success');
+    allVac = await apiFetch('/api/vacaciones');
+    renderResumen();
+    renderHistorial();
+  } catch (e) {
+    showAlert('alert-form', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
+});
+
+async function eliminar(id) {
+  if (!confirm('¿Eliminar este registro de vacaciones?')) return;
+  try {
+    await apiFetch('/api/vacaciones', { method: 'DELETE', body: JSON.stringify({ id }) });
+    showAlert('alert-vac', '✅ Registro eliminado', 'success');
+    allVac = allVac.filter(v => v.id != id);
+    renderResumen();
+    renderHistorial();
+  } catch (e) {
+    showAlert('alert-vac', 'Error: ' + e.message, 'error');
+  }
+}
+
+// ── Email historial ──────────────────────────────────────────────────────────
+document.getElementById('btn-email').addEventListener('click', () => {
+  document.getElementById('alert-email-hist').className = 'alert';
+  document.getElementById('inp-email-hist').value = '';
+  document.getElementById('send-email-hist').disabled = false;
+  document.getElementById('send-email-hist').textContent = 'Enviar PDF';
+  document.getElementById('modal-email-hist').classList.add('open');
+});
+['close-email-hist','cancel-email-hist'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () =>
+    document.getElementById('modal-email-hist').classList.remove('open')
+  )
+);
+document.getElementById('send-email-hist').addEventListener('click', async () => {
+  const email    = document.getElementById('inp-email-hist').value.trim();
+  const empleado = document.getElementById('sel-email-hist').value;
+  const alertEl  = document.getElementById('alert-email-hist');
+  const btn      = document.getElementById('send-email-hist');
+  if (!email) { alertEl.className = 'alert alert-error show'; alertEl.textContent = 'Ingresa un correo destinatario'; return; }
+  btn.disabled = true; btn.textContent = 'Generando PDF...'; alertEl.className = 'alert';
+  try {
+    const data = await apiFetch('/api/reportes/enviar', {
+      method: 'POST',
+      body: JSON.stringify({ categoria: 'vacaciones', email, empleado: empleado || undefined }),
+    });
+    alertEl.className = 'alert alert-success show';
+    alertEl.textContent = data.mensaje || '✅ Enviado correctamente';
+    btn.textContent = 'Enviado ✓';
+  } catch (e) {
+    alertEl.className = 'alert alert-error show'; alertEl.textContent = e.message;
+    btn.disabled = false; btn.textContent = 'Enviar PDF';
+  }
+});
+</script>
+</body>
+</html>

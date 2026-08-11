@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Adelantos — Nomify</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <style>
+    @media print {
+      .sidebar, .topbar, #btn-nuevo, #btn-print,
+      .tabs, #filtro-empleado, table td:last-child, table th:last-child { display: none !important; }
+      .main { margin-left: 0 !important; }
+      body { background: #fff !important; }
+      .table-wrap { box-shadow: none !important; border: 1px solid #ccc !important; }
+      table thead th { background: #eee !important; color: #000 !important; }
+      table tbody td { color: #333 !important; background: transparent !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>Nomify</h2></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html" class="active"><span class="icon">⚡</span> Adelantos</a>
+      <a href="/extras.html"><span class="icon">⭐</span> Extras</a>
+      <a href="/deducciones.html"><span class="icon">➖</span> Otras Deducciones</a>
+      <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
+      <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
+      <a href="/liquidacion.html"><span class="icon">📄</span> Liquidaciones</a>
+      <a href="/usuarios.html" id="link-usuarios"><span class="icon">👤</span> Usuarios</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Adelantos</h1><span class="sub">Límite C$ 2,000 por quincena</span></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" id="btn-print" onclick="window.print()">🖨 Imprimir</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportXlsx('/api/export/adelantos','Adelantos')">📥 Excel</button>
+        <button class="btn btn-ghost btn-sm" id="btn-email">📧 Enviar historial</button>
+        <button class="btn btn-primary" id="btn-nuevo">+ Nuevo adelanto</button>
+      </div>
+    </div>
+    <div class="content">
+      <div id="alert-adel" class="alert"></div>
+
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <div class="tabs" style="margin-bottom:0">
+          <button class="tab active" data-filtro="pendiente">Pendientes</button>
+          <button class="tab" data-filtro="pausado">Pausados</button>
+          <button class="tab" data-filtro="Descontado">Descontados</button>
+          <button class="tab" data-filtro="todos">Todos</button>
+        </div>
+        <select id="filtro-empleado" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
+          <option value="">Todos los empleados</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Empleado</th>
+              <th>Monto</th>
+              <th>Quincena descuento</th>
+              <th>Registrado</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-adelantos">
+            <tr class="loading-row"><td colspan="6"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ADELANTO -->
+<div class="overlay" id="modal-adel">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-titulo-adel">Nuevo Adelanto</h3>
+      <button class="modal-close" id="close-modal-adel">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-form-adel" class="alert"></div>
+      <input type="hidden" id="adel-id" />
+      <div class="form-group">
+        <label>Empleado *</label>
+        <select id="adel-empleado"><option value="">Seleccionar...</option></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Monto (C$) * — máx. C$2,000</label>
+          <input type="number" id="adel-monto" placeholder="0.00" step="0.01" max="2000" />
+        </div>
+        <div class="form-group">
+          <label>Descontar en quincena *</label>
+          <input type="date" id="adel-fecha" />
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted)">La fecha debe ser el día 15 o el último día del mes.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-adel">Cancelar</button>
+      <button class="btn btn-primary" id="save-adel">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ENVIAR HISTORIAL -->
+<div class="overlay" id="modal-email-hist">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>📧 Enviar historial por correo</h3>
+      <button class="modal-close" id="close-email-hist">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-email-hist" class="alert"></div>
+      <p style="margin:0 0 14px;font-size:13px;color:var(--text-muted)">Se generará un PDF del historial y se enviará al correo indicado.</p>
+      <div class="form-group">
+        <label>Correo destinatario *</label>
+        <input type="email" id="inp-email-hist" placeholder="ejemplo@correo.com"
+          style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;" />
+      </div>
+      <div class="form-group">
+        <label>Empleado (opcional)</label>
+        <select id="sel-email-hist" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;">
+          <option value="">Todos los empleados</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-email-hist">Cancelar</button>
+      <button class="btn btn-primary" id="send-email-hist">Enviar PDF</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/export.js"></script>
+<script>
+let allAdelantos = [];
+let filtroEstado = 'pendiente';
+let filtroEmpleado = '';
+let _esMaster = false;
+
+function esQuincenaValida(fecha) {
+  if (!fecha) return false;
+  const [y, m, d] = fecha.split('-').map(Number);
+  const ultimoDia = new Date(y, m, 0).getDate();
+  return d === 15 || d === ultimoDia;
+}
+
+onReady(['Master', 'Planillero'], async () => {
+  _esMaster = (await getMyInfo()).rol === 'Master';
+  initLayout();
+  if (!_esMaster) document.getElementById('btn-nuevo').style.display = 'none';
+  loadAll();
+});
+
+async function loadAll() {
+  try {
+    const [adelantos, empleados] = await Promise.all([
+      apiFetch('/api/adelantos'),
+      apiFetch('/api/empleados'),
+    ]);
+    allAdelantos = adelantos;
+
+    const activos = empleados.filter(e => e.Activo);
+    const sel = document.getElementById('adel-empleado');
+    const filtroSel = document.getElementById('filtro-empleado');
+    activos.forEach(e => {
+      [sel, filtroSel, document.getElementById('sel-email-hist')].forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = e.Nombre;
+        opt.textContent = e.Nombre;
+        s.appendChild(opt);
+      });
+    });
+
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-adel', 'Error: ' + e.message, 'error');
+  }
+}
+
+function fmtFecha(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d) ? iso : d.toLocaleDateString('es-NI', { day:'2-digit', month:'2-digit', year:'2-digit' });
+}
+
+function renderTabla() {
+  let lista = allAdelantos;
+  if (filtroEstado === 'pendiente') lista = lista.filter(a => (a.Estado || 'Pendiente') === 'Pendiente' && !a.Pausado);
+  else if (filtroEstado === 'pausado') lista = lista.filter(a => !!a.Pausado);
+  else if (filtroEstado !== 'todos') lista = lista.filter(a => (a.Estado || 'Pendiente') === filtroEstado);
+  if (filtroEmpleado) lista = lista.filter(a => a.Empleado === filtroEmpleado);
+
+  const tbody = document.getElementById('tabla-adelantos');
+  if (lista.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">No hay adelantos en esta categoría</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = lista.map(a => {
+    const estado = a.Estado || 'Pendiente';
+    const pausado = !!a.Pausado;
+    const badge = estado === 'Descontado' ? 'badge-green'
+                : pausado ? 'badge-gray'
+                : 'badge-orange';
+    const badgeLabel = estado === 'Descontado' ? 'Descontado' : pausado ? 'Pausado' : 'Pendiente';
+    const creado = fmtFecha(a._createdTime);
+    const acciones = [];
+    if (estado === 'Pendiente' && !pausado) {
+      if (_esMaster) acciones.push(`<button class="btn btn-icon btn-sm" title="Editar" onclick="editarAdelanto(${a.id})">✏️</button>`);
+      if (_esMaster) acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text)" onclick="pausar(${a.id})">⏸ Pausar</button>`);
+    } else if (pausado) {
+      if (_esMaster) acciones.push(`<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text)" onclick="reactivar(${a.id})">▶ Reactivar</button>`);
+    }
+    return `<tr>
+      <td><strong>${a.Empleado || '—'}</strong></td>
+      <td class="num">${fmt(a.Monto)}</td>
+      <td>${a['Descontar en quincena'] || '—'}</td>
+      <td style="color:var(--text-muted);font-size:12px">${creado}</td>
+      <td><span class="badge ${badge}">${badgeLabel}</span></td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap">${acciones.join('')}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    filtroEstado = btn.dataset.filtro;
+    renderTabla();
+  });
+});
+
+document.getElementById('filtro-empleado').addEventListener('change', e => {
+  filtroEmpleado = e.target.value;
+  renderTabla();
+});
+
+async function pausar(id) {
+  try {
+    await apiFetch('/api/adelantos', {
+      method: 'PATCH',
+      body: JSON.stringify({ id, Pausado: true }),
+    });
+    const idx = allAdelantos.findIndex(x => x.id == id);
+    if (idx >= 0) allAdelantos[idx].Pausado = true;
+    renderTabla();
+    showAlert('alert-adel', 'Adelanto pausado — no se descontará aunque coincida la quincena', 'success');
+  } catch (e) {
+    showAlert('alert-adel', 'Error: ' + e.message, 'error');
+  }
+}
+
+async function reactivar(id) {
+  try {
+    await apiFetch('/api/adelantos', {
+      method: 'PATCH',
+      body: JSON.stringify({ id, Pausado: false }),
+    });
+    const idx = allAdelantos.findIndex(x => x.id == id);
+    if (idx >= 0) allAdelantos[idx].Pausado = false;
+    renderTabla();
+    showAlert('alert-adel', 'Adelanto reactivado — se descontará en la quincena indicada', 'success');
+  } catch (e) {
+    showAlert('alert-adel', 'Error: ' + e.message, 'error');
+  }
+}
+
+document.getElementById('btn-nuevo').addEventListener('click', () => {
+  document.getElementById('modal-titulo-adel').textContent = 'Nuevo Adelanto';
+  document.getElementById('adel-id').value = '';
+  document.getElementById('adel-empleado').value = '';
+  document.getElementById('adel-monto').value = '';
+  document.getElementById('adel-fecha').value = '';
+  document.getElementById('alert-form-adel').className = 'alert';
+  document.getElementById('modal-adel').classList.add('open');
+});
+
+function editarAdelanto(id) {
+  const a = allAdelantos.find(x => x.id == id);
+  if (!a) return;
+  document.getElementById('modal-titulo-adel').textContent = 'Editar Adelanto';
+  document.getElementById('adel-id').value = a.id;
+  document.getElementById('adel-empleado').value = a.Empleado || '';
+  document.getElementById('adel-monto').value = a.Monto || '';
+  document.getElementById('adel-fecha').value = a['Descontar en quincena'] || '';
+  document.getElementById('alert-form-adel').className = 'alert';
+  document.getElementById('modal-adel').classList.add('open');
+}
+
+['close-modal-adel','cancel-adel'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-adel').classList.remove('open');
+  });
+});
+
+document.getElementById('save-adel').addEventListener('click', async () => {
+  const id       = document.getElementById('adel-id').value;
+  const empleado = document.getElementById('adel-empleado').value;
+  const monto    = parseFloat(document.getElementById('adel-monto').value);
+  const fecha    = document.getElementById('adel-fecha').value;
+
+  if (!empleado) { showAlert('alert-form-adel', 'Selecciona un empleado', 'error'); return; }
+  if (!monto || monto <= 0) { showAlert('alert-form-adel', 'Ingresa un monto válido', 'error'); return; }
+  if (monto > 2000) { showAlert('alert-form-adel', 'El límite de adelanto es C$ 2,000', 'error'); return; }
+  if (!fecha) { showAlert('alert-form-adel', 'Selecciona la quincena de descuento', 'error'); return; }
+  if (!esQuincenaValida(fecha)) {
+    const [y, m] = fecha.split('-').map(Number);
+    const ult = new Date(y, m, 0).getDate();
+    showAlert('alert-form-adel', `La fecha debe ser el día 15 o el último día del mes (${ult}/${String(m).padStart(2,'0')}/${y})`, 'error');
+    return;
+  }
+
+  const fields = { 'Empleado': empleado, 'Monto': monto, 'Descontar en quincena': fecha };
+  const btn = document.getElementById('save-adel');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    if (id) {
+      await apiFetch('/api/adelantos', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
+    } else {
+      await apiFetch('/api/adelantos', { method: 'POST', body: JSON.stringify(fields) });
+    }
+    document.getElementById('modal-adel').classList.remove('open');
+    showAlert('alert-adel', '✅ Adelanto guardado', 'success');
+    allAdelantos = await apiFetch('/api/adelantos');
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-form-adel', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
+});
+
+// ── Email historial ──────────────────────────────────────────────────────────
+document.getElementById('btn-email').addEventListener('click', () => {
+  document.getElementById('alert-email-hist').className = 'alert';
+  document.getElementById('inp-email-hist').value = '';
+  document.getElementById('send-email-hist').disabled = false;
+  document.getElementById('send-email-hist').textContent = 'Enviar PDF';
+  document.getElementById('modal-email-hist').classList.add('open');
+});
+['close-email-hist','cancel-email-hist'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () =>
+    document.getElementById('modal-email-hist').classList.remove('open')
+  )
+);
+document.getElementById('send-email-hist').addEventListener('click', async () => {
+  const email    = document.getElementById('inp-email-hist').value.trim();
+  const empleado = document.getElementById('sel-email-hist').value;
+  const alertEl  = document.getElementById('alert-email-hist');
+  const btn      = document.getElementById('send-email-hist');
+  if (!email) { alertEl.className = 'alert alert-error show'; alertEl.textContent = 'Ingresa un correo destinatario'; return; }
+  btn.disabled = true; btn.textContent = 'Generando PDF...'; alertEl.className = 'alert';
+  try {
+    const data = await apiFetch('/api/reportes/enviar', {
+      method: 'POST',
+      body: JSON.stringify({ categoria: 'adelantos', email, empleado: empleado || undefined }),
+    });
+    alertEl.className = 'alert alert-success show';
+    alertEl.textContent = data.mensaje || '✅ Enviado correctamente';
+    btn.textContent = 'Enviado ✓';
+  } catch (e) {
+    alertEl.className = 'alert alert-error show'; alertEl.textContent = e.message;
+    btn.disabled = false; btn.textContent = 'Enviar PDF';
+  }
+});
+</script>
+</body>
+</html>

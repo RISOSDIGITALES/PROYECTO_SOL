@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mi Portal — Nomify</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <style>
+    /* ── Calendario del empleado ── */
+    .cal-emp-toolbar { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px; }
+    .cal-emp-nav     { display:flex;align-items:center;gap:10px; }
+    .cal-emp-nav h2  { font-size:18px;font-weight:700;text-transform:capitalize;min-width:160px;text-align:center; }
+    .cal-btn { background:var(--navy2);border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:14px; }
+    .cal-btn:hover { background:var(--border); }
+    .cal-grid-emp { display:grid;grid-template-columns:repeat(7,1fr);gap:3px; }
+    .cal-dow-emp  { text-align:center;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:3px; }
+    .cal-cell-emp { min-height:80px;background:var(--navy2);border:1px solid var(--border);border-radius:5px;padding:5px;position:relative;cursor:default; }
+    .cal-cell-emp.vacio   { background:transparent;border-color:transparent; }
+    .cal-cell-emp.hoy     { border-color:var(--green2);border-width:2px; }
+    .cal-cell-emp.quincena{ background:rgba(46,204,113,.08);border-color:rgba(46,204,113,.4); }
+    .cal-cell-emp.feriado { background:rgba(155,89,182,.12);border-color:rgba(155,89,182,.4); }
+    .cal-num-emp  { font-size:13px;font-weight:700;line-height:1;color:var(--text); }
+    .cal-cell-emp.hoy       .cal-num-emp { color:var(--green2); }
+    .cal-cell-emp.quincena  .cal-num-emp { color:#2ecc71; }
+    .cal-cell-emp.feriado   .cal-num-emp { color:#c39bd3; }
+    .cal-tags-emp { margin-top:3px;display:flex;flex-direction:column;gap:2px; }
+    .cal-tag-emp  { font-size:9px;padding:1px 4px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4; }
+    .tag-e-qui   { background:rgba(46,204,113,.2);  color:#2ecc71; }
+    .tag-e-fer   { background:rgba(155,89,182,.2);  color:#c39bd3; }
+    .tag-e-vac   { background:rgba(52,152,219,.25); color:#5dade2; }
+    .tag-e-adel  { background:rgba(231,76,60,.2);   color:#f1948a; }
+    .tag-e-ext   { background:rgba(241,196,15,.2);  color:#f4d03f; }
+    .tag-e-cumple{ background:rgba(236,72,153,.22); color:#f472b6; }
+    .cal-legend-emp { display:flex;gap:14px;margin-top:12px;flex-wrap:wrap;padding:10px 0 0;border-top:1px solid var(--border); }
+    .leg-item-emp { display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted); }
+    .leg-dot-emp  { width:10px;height:10px;border-radius:2px;flex-shrink:0; }
+    @media print {
+      /* ── Ocultar todo lo que no es el calendario ── */
+      .sidebar, .topbar, .cal-emp-toolbar,
+      #section-quincenas, #section-prestamos, #section-adelantos,
+      #section-extras, #section-deducciones,
+      .cal-legend-emp, #btn-cal-emp-pdf, #btn-cal-emp-email,
+      #alert-main { display:none !important; }
+
+      /* ── Layout limpio ── */
+      body { background:#fff !important; color:#000 !important; margin:0 !important; }
+      .layout { display:block !important; }
+      .main   { margin-left:0 !important; padding:0 !important; }
+      .content { padding:8px 12px !important; }
+
+      /* ── Tabla/contenedor sin decoración ── */
+      .table-wrap { border:none !important; background:transparent !important;
+                    padding:8px !important; box-shadow:none !important; }
+
+      /* ── Grid: celdas más compactas ── */
+      .cal-grid-emp { gap:2px !important; }
+      .cal-dow-emp  { color:#000 !important; font-weight:700 !important;
+                      border-bottom:1px solid #bbb !important; }
+
+      /* ── Celdas blancas con bordes de color ── */
+      .cal-cell-emp {
+        background:#fff !important;
+        border:1px solid #ccc !important;
+        border-radius:6px !important;
+        min-height:68px !important;
+      }
+      .cal-cell-emp.vacio   { border:none !important; background:transparent !important; }
+      .cal-cell-emp.hoy     { border:2px solid #000 !important; }
+      .cal-cell-emp.quincena{ background:#f0faf4 !important; border-color:#9dd3b7 !important; }
+      .cal-cell-emp.feriado { background:#f5f0fa !important; border-color:#c4a8e4 !important; }
+
+      /* ── Números de día ── */
+      .cal-num-emp { color:#000 !important; }
+      .cal-cell-emp.hoy      .cal-num-emp { color:#000 !important; font-weight:900 !important; }
+      .cal-cell-emp.quincena .cal-num-emp { color:#166534 !important; }
+      .cal-cell-emp.feriado  .cal-num-emp { color:#5b21b6 !important; }
+
+      /* ── Tags dentro de cada celda ── */
+      .cal-tag-emp  { background:rgba(0,0,0,.08) !important; color:#222 !important;
+                      font-size:8px !important; }
+      .tag-e-qui  { background:rgba(22,101,52,.14)  !important; color:#166534 !important; }
+      .tag-e-fer  { background:rgba(91,33,182,.14)  !important; color:#5b21b6 !important; }
+      .tag-e-vac   { background:rgba(29,78,216,.14)  !important; color:#1d4ed8 !important; }
+      .tag-e-adel  { background:rgba(185,28,28,.14)  !important; color:#b91c1c !important; }
+      .tag-e-ext   { background:rgba(161,98,7,.14)   !important; color:#a16207 !important; }
+      .tag-e-cumple{ background:rgba(131,24,67,.14)  !important; color:#831843 !important; }
+
+      /* ── Lista de actividades del mes ── */
+      #cal-eventos-lista-emp { display:block !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>Nomify</h2><p id="sub-nombre" style="font-size:11px;color:var(--muted);margin-top:2px"></p></div>
+    <nav>
+      <a href="#" class="active" data-section="quincenas"><span class="icon">📋</span> Mis Quincenas</a>
+      <a href="#" data-section="prestamos"><span class="icon">💰</span> Mis Préstamos</a>
+      <a href="#" data-section="adelantos"><span class="icon">⚡</span> Mis Adelantos</a>
+      <a href="#" data-section="extras"><span class="icon">⭐</span> Mis Extras</a>
+      <a href="#" data-section="deducciones"><span class="icon">➖</span> Mis Deducciones</a>
+      <a href="#" data-section="calendario"><span class="icon">📅</span> Mi Calendario</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1 id="section-title">Mis Quincenas</h1><span class="sub">Mi portal de empleado</span></div>
+    </div>
+    <div class="content">
+      <div id="alert-main" class="alert"></div>
+
+      <!-- SECCIÓN QUINCENAS -->
+      <div id="section-quincenas" class="portal-section">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Período</th>
+                <th>Tipo</th>
+                <th>Salario quincenal</th>
+                <th>Neto a recibir</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tabla-quincenas">
+              <tr class="loading-row"><td colspan="5"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECCIÓN PRÉSTAMOS -->
+      <div id="section-prestamos" class="portal-section" style="display:none">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Monto original</th>
+                <th>Cuota quincenal</th>
+                <th>Cuotas rest.</th>
+                <th>Saldo pendiente</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tabla-prestamos">
+              <tr class="loading-row"><td colspan="6"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECCIÓN ADELANTOS -->
+      <div id="section-adelantos" class="portal-section" style="display:none">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Monto</th>
+                <th>Quincena descuento</th>
+                <th>Fecha registrado</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-adelantos">
+              <tr class="loading-row"><td colspan="4"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECCIÓN EXTRAS -->
+      <div id="section-extras" class="portal-section" style="display:none">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Concepto</th>
+                <th>Monto</th>
+                <th>Quincena pago</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-extras">
+              <tr class="loading-row"><td colspan="4"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECCIÓN DEDUCCIONES -->
+      <div id="section-deducciones" class="portal-section" style="display:none">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Concepto</th>
+                <th>Monto</th>
+                <th>Quincena descuento</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-deducciones">
+              <tr class="loading-row"><td colspan="4"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECCIÓN CALENDARIO -->
+      <div id="section-calendario" class="portal-section" style="display:none">
+        <div class="cal-emp-toolbar">
+          <div class="cal-emp-nav">
+            <button class="cal-btn" id="cal-emp-prev">◄</button>
+            <h2 id="cal-emp-titulo">—</h2>
+            <button class="cal-btn" id="cal-emp-next">►</button>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 Imprimir</button>
+            <button class="btn btn-ghost btn-sm" id="btn-cal-emp-pdf">📥 Descargar PDF</button>
+            <button class="btn btn-ghost btn-sm" id="btn-cal-emp-email">📧 Enviar</button>
+          </div>
+        </div>
+        <div class="table-wrap" style="padding:16px">
+          <div class="cal-grid-emp" id="cal-grid-emp">
+            <div style="grid-column:1/-1;text-align:center;padding:40px"><div class="spinner"></div></div>
+          </div>
+          <div class="cal-legend-emp" id="cal-legend-emp"></div>
+          <div id="cal-eventos-lista-emp"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EMAIL CALENDARIO EMPLEADO -->
+<div class="overlay" id="modal-email-cal-emp">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>📧 Enviar calendario por correo</h3>
+      <button class="modal-close" id="close-email-cal-emp">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-email-cal-emp" class="alert"></div>
+      <p style="margin:0 0 14px;font-size:13px;color:var(--text-muted)">Se generará un PDF del calendario del mes actual y se enviará al correo indicado.</p>
+      <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:6px">Correo destinatario *</label>
+      <input type="email" id="inp-email-cal-emp" placeholder="ejemplo@correo.com"
+        style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-email-cal-emp">Cancelar</button>
+      <button class="btn btn-primary" id="send-email-cal-emp">Enviar PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HISTORIAL PRÉSTAMO -->
+<div class="overlay" id="modal-historial-pr">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <h3 id="historial-pr-titulo">Historial de abonos</h3>
+      <button class="modal-close" id="close-historial-pr">×</button>
+    </div>
+    <div class="modal-body" id="historial-pr-body" style="max-height:420px;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-historial-pr">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/feriados.js"></script>
+<script>
+let _empleadoId = null;
+const _loaded = {};
+
+function cs(n) {
+  return 'C$ ' + Number(n || 0).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fd(s) {
+  if (!s) return '—';
+  return String(s).substring(0, 10);
+}
+
+const sectionTitles = {
+  quincenas:   'Mis Quincenas',
+  prestamos:   'Mis Préstamos',
+  adelantos:   'Mis Adelantos',
+  extras:      'Mis Extras',
+  deducciones: 'Mis Deducciones',
+  calendario:  'Mi Calendario',
+};
+
+async function initPage() {
+  initLayout();
+  const info = await getMyInfo();
+
+  if (info.rol !== 'Empleado') {
+    window.location.href = '/index.html';
+    return;
+  }
+
+  if (info.nombre) {
+    document.getElementById('sub-nombre').textContent = info.nombre;
+  }
+
+  if (!info.empleado_id) {
+    showAlert('alert-main', 'No se encontró tu registro de empleado. Contacta al administrador.', 'error');
+    document.getElementById('tabla-quincenas').innerHTML = '<tr><td colspan="5" class="empty">Sin datos</td></tr>';
+    return;
+  }
+
+  _empleadoId = info.empleado_id;
+  cargarQuincenas();
+}
+
+// ── NAVEGACIÓN LATERAL ─────────────────────────────────────────────────────
+document.querySelectorAll('.sidebar nav a[data-section]').forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    const section = link.dataset.section;
+    // Actualizar clases activas
+    document.querySelectorAll('.sidebar nav a[data-section]').forEach(a => a.classList.remove('active'));
+    link.classList.add('active');
+    // Mostrar sección correcta
+    document.querySelectorAll('.portal-section').forEach(s => s.style.display = 'none');
+    document.getElementById('section-' + section).style.display = '';
+    // Actualizar título
+    document.getElementById('section-title').textContent = sectionTitles[section] || '';
+    // Cargar datos si no se han cargado aún
+    if (_empleadoId && loaders[section]) loaders[section]();
+  });
+});
+
+// ── QUINCENAS ──────────────────────────────────────────────────────────────
+async function cargarQuincenas() {
+  try {
+    const detalles = await apiFetch(`/api/detalle?empleado_id=${_empleadoId}`);
+    const tbody = document.getElementById('tabla-quincenas');
+    if (!detalles.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty">No hay quincenas registradas</td></tr>';
+      return;
+    }
+    tbody.innerHTML = detalles.map(d => `<tr>
+      <td><strong>${fd(d.periodo)}</strong></td>
+      <td>${d.tipo_planilla || '—'}</td>
+      <td class="num">${cs(d.salario_quincenal)}</td>
+      <td class="num"><strong>${cs(d.neto)}</strong></td>
+      <td>
+        <a class="btn btn-icon btn-sm" href="/recibo.html?empleado_id=${_empleadoId}&periodo=${encodeURIComponent(fd(d.periodo))}" title="Ver recibo">👁</a>
+      </td>
+    </tr>`).join('');
+  } catch (e) {
+    showAlert('alert-main', 'Error: ' + e.message, 'error');
+    document.getElementById('tabla-quincenas').innerHTML = '<tr><td colspan="5" class="empty">Error cargando datos</td></tr>';
+  }
+}
+
+// ── PRÉSTAMOS ──────────────────────────────────────────────────────────────
+async function cargarPrestamos() {
+  if (_loaded.prestamos) return;
+  _loaded.prestamos = true;
+  try {
+    const rows = await apiFetch(`/api/prestamos?empleado_id=${_empleadoId}`);
+    const tbody = document.getElementById('tabla-prestamos');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">No tienes préstamos registrados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(p => {
+      const estado = p.Estado || 'Activo';
+      const badge = estado === 'Activo' ? 'badge-blue' : estado === 'Pagado' ? 'badge-green' : 'badge-gray';
+      const saldo = parseFloat(p['Saldo pendiente'] || 0);
+      const cuotas = p['Cuotas restantes'] || 0;
+      const cuota = parseFloat(p['Cuota quincenal'] || 0);
+      const frecuencia = p.Frecuencia || 'Quincenal';
+      return `<tr>
+        <td class="num">${cs(p['Monto total'])}</td>
+        <td class="num">${cs(cuota)} <span style="font-size:11px;color:var(--text-muted)">${frecuencia}</span></td>
+        <td style="text-align:center">${cuotas}</td>
+        <td class="num" style="color:${saldo > 0 ? 'var(--orange)' : 'var(--green2)'}">${cs(saldo)}</td>
+        <td><span class="badge ${badge}">${estado}</span></td>
+        <td><button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text)" onclick="verHistorialPrestamo(${p.id})">📋 Historial</button></td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    document.getElementById('tabla-prestamos').innerHTML = `<tr><td colspan="6" class="empty">Error: ${e.message}</td></tr>`;
+  }
+}
+
+// ── ADELANTOS ──────────────────────────────────────────────────────────────
+async function cargarAdelantos() {
+  if (_loaded.adelantos) return;
+  _loaded.adelantos = true;
+  try {
+    const rows = await apiFetch(`/api/adelantos?empleado_id=${_empleadoId}`);
+    const tbody = document.getElementById('tabla-adelantos');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty">No tienes adelantos registrados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(a => {
+      const estado = a.Estado || 'Pendiente';
+      const pausado = !!a.Pausado;
+      const badge = estado === 'Descontado' ? 'badge-green' : pausado ? 'badge-gray' : 'badge-orange';
+      const label = estado === 'Descontado' ? 'Descontado' : pausado ? 'Pausado' : 'Pendiente';
+      return `<tr>
+        <td class="num">${cs(a.Monto)}</td>
+        <td>${a['Descontar en quincena'] || '—'}</td>
+        <td style="font-size:12px;color:var(--text-muted)">${fd(a._createdTime)}</td>
+        <td><span class="badge ${badge}">${label}</span></td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    document.getElementById('tabla-adelantos').innerHTML = `<tr><td colspan="4" class="empty">Error: ${e.message}</td></tr>`;
+  }
+}
+
+// ── EXTRAS ─────────────────────────────────────────────────────────────────
+async function cargarExtras() {
+  if (_loaded.extras) return;
+  _loaded.extras = true;
+  try {
+    const rows = await apiFetch(`/api/extras?empleado_id=${_empleadoId}`);
+    const tbody = document.getElementById('tabla-extras');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty">No tienes extras registrados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(x => `<tr>
+      <td><span class="badge badge-blue" style="font-size:11px">${x.Tipo || '—'}</span></td>
+      <td>${x.Concepto || '—'}</td>
+      <td class="num">${cs(x.Monto)}</td>
+      <td style="font-size:13px">${x['Pagar en quincena'] || '—'}</td>
+    </tr>`).join('');
+  } catch (e) {
+    document.getElementById('tabla-extras').innerHTML = `<tr><td colspan="4" class="empty">Error: ${e.message}</td></tr>`;
+  }
+}
+
+// ── DEDUCCIONES ────────────────────────────────────────────────────────────
+async function cargarDeducciones() {
+  if (_loaded.deducciones) return;
+  _loaded.deducciones = true;
+  try {
+    const rows = await apiFetch(`/api/deducciones?empleado_id=${_empleadoId}`);
+    const tbody = document.getElementById('tabla-deducciones');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty">No tienes deducciones registradas</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(d => {
+      const estado = d.Estado || 'Pendiente';
+      const badge = estado === 'Descontado' ? 'badge-green' : 'badge-orange';
+      return `<tr>
+        <td><strong>${d.Concepto || '—'}</strong></td>
+        <td class="num">${cs(d.Monto)}</td>
+        <td style="font-size:13px">${d['Descontar en quincena'] || '—'}</td>
+        <td><span class="badge ${badge}">${estado}</span></td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    document.getElementById('tabla-deducciones').innerHTML = `<tr><td colspan="4" class="empty">Error: ${e.message}</td></tr>`;
+  }
+}
+
+const loaders = {
+  quincenas:   () => {},
+  prestamos:   cargarPrestamos,
+  adelantos:   cargarAdelantos,
+  extras:      cargarExtras,
+  deducciones: cargarDeducciones,
+  calendario:  cargarCalendario,
+};
+
+// ══════════════════════════════════════════════════════════════════
+// ── MI CALENDARIO ─────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+const MESES_CAL  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                    'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DIAS_CAL   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const normD = s => s ? String(s).substring(0, 10) : '';
+
+let _calYear, _calMonth;
+let _calVac = [], _calAdel = [], _calExt = [], _calCumple = [];
+let _calLoaded = false;
+
+async function cargarCalendario() {
+  if (_calLoaded) { renderCalEmp(); return; }
+  _calLoaded = true;
+  const hoy = new Date();
+  _calYear  = hoy.getFullYear();
+  _calMonth = hoy.getMonth();
+
+  try {
+    const [vac, adel, ext, emps] = await Promise.all([
+      apiFetch(`/api/vacaciones?empleado_id=${_empleadoId}`),
+      apiFetch(`/api/adelantos?empleado_id=${_empleadoId}`),
+      apiFetch(`/api/extras?empleado_id=${_empleadoId}`),
+      apiFetch('/api/empleados'),
+    ]);
+    _calVac    = (vac  || []).filter(v => v.Estado !== 'Pendiente');
+    _calAdel   = (adel || []).filter(a => a.Estado !== 'Descontado');
+    _calExt    = ext  || [];
+    _calCumple = (emps || [])
+      .filter(e => e.Activo && e.Fecha_Nacimiento)
+      .map(e => ({ nombre: e.Nombre, mmdd: e.Fecha_Nacimiento.substring(5) }));
+  } catch (_) {}
+
+  // Controles de navegación
+  document.getElementById('cal-emp-prev').addEventListener('click', () => {
+    _calMonth--; if (_calMonth < 0) { _calMonth = 11; _calYear--; }
+    renderCalEmp();
+  });
+  document.getElementById('cal-emp-next').addEventListener('click', () => {
+    _calMonth++; if (_calMonth > 11) { _calMonth = 0; _calYear++; }
+    renderCalEmp();
+  });
+
+  renderCalEmp();
+}
+
+function renderCalEmp() {
+  const hoy      = new Date();
+  const todayStr = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+  const mesStr   = `${_calYear}-${String(_calMonth+1).padStart(2,'0')}`;
+  const ultimoDia = new Date(_calYear, _calMonth+1, 0).getDate();
+  const primerDia = new Date(_calYear, _calMonth, 1).getDay();
+
+  document.getElementById('cal-emp-titulo').textContent = `${MESES_CAL[_calMonth]} ${_calYear}`;
+
+  // Feriados del mes
+  let ferMap = {};
+  try {
+    feriadosEnRango(`${mesStr}-01`, `${mesStr}-${String(ultimoDia).padStart(2,'0')}`)
+      .forEach(f => { ferMap[f.fecha] = f.nombre; });
+  } catch(_) {}
+
+  const q15  = `${mesStr}-15`;
+  const qFin = `${mesStr}-${String(ultimoDia).padStart(2,'0')}`;
+
+  let html = DIAS_CAL.map(d => `<div class="cal-dow-emp">${d}</div>`).join('');
+  for (let i = 0; i < primerDia; i++) html += `<div class="cal-cell-emp vacio"></div>`;
+
+  for (let dia = 1; dia <= ultimoDia; dia++) {
+    const dStr    = `${mesStr}-${String(dia).padStart(2,'0')}`;
+    const esFer   = !!ferMap[dStr];
+    const esQui   = (dStr === q15 || dStr === qFin);
+    const esHoy   = dStr === todayStr;
+    const vacsHoy = _calVac.filter(v => {
+      const ini = normD(v.Fecha_Inicio), fin = normD(v.Fecha_Fin);
+      return ini && fin && dStr >= ini && dStr <= fin;
+    });
+    const adelHoy   = _calAdel.filter(a => normD(a['Descontar en quincena']) === dStr);
+    const extHoy    = _calExt.filter(x => normD(x['Pagar en quincena']) === dStr);
+    const cumpleHoy = _calCumple.filter(c => c.mmdd === dStr.substring(5));
+
+    let cls = 'cal-cell-emp';
+    if (esHoy) cls += ' hoy';
+    if (esQui) cls += ' quincena';
+    if (esFer) cls += ' feriado';
+
+    let tags = '';
+    if (esQui) tags += `<div class="cal-tag-emp tag-e-qui">📋 Quincena</div>`;
+    if (esFer) tags += `<div class="cal-tag-emp tag-e-fer" title="${ferMap[dStr]}">🎌 ${ferMap[dStr]}</div>`;
+    vacsHoy.forEach(() => { tags += `<div class="cal-tag-emp tag-e-vac">🏖 Vacaciones</div>`; });
+    adelHoy.forEach(a => { tags += `<div class="cal-tag-emp tag-e-adel">⚡ ${fmt(a.Monto)}</div>`; });
+    extHoy.forEach(x  => { tags += `<div class="cal-tag-emp tag-e-ext">⭐ ${x.Tipo||'Extra'}</div>`; });
+    cumpleHoy.forEach(c => { tags += `<div class="cal-tag-emp tag-e-cumple" title="Cumpleaños de ${c.nombre}">🎂 ${c.nombre.split(' ')[0]}</div>`; });
+
+    html += `<div class="${cls}">
+      <div class="cal-num-emp">${dia}</div>
+      <div class="cal-tags-emp">${tags}</div>
+    </div>`;
+  }
+
+  document.getElementById('cal-grid-emp').innerHTML = html;
+
+  // Leyenda
+  document.getElementById('cal-legend-emp').innerHTML = [
+    { style:'border:2px solid var(--green2)',                            label:'Hoy' },
+    { style:'background:rgba(46,204,113,.2);border:1px solid rgba(46,204,113,.4)', label:'Quincena' },
+    { style:'background:rgba(155,89,182,.2);border:1px solid rgba(155,89,182,.4)', label:'Feriado' },
+    { style:'background:rgba(52,152,219,.3)',                            label:'Vacaciones' },
+    { style:'background:rgba(231,76,60,.2)',                             label:'Adelanto' },
+    { style:'background:rgba(241,196,15,.2)',                            label:'Extra' },
+    ...(_calCumple.some(c => c.mmdd.startsWith(String(_calMonth+1).padStart(2,'0')+'-'))
+      ? [{ style:'background:rgba(236,72,153,.22)', label:'🎂 Cumpleaños' }] : []),
+  ].map(it => `<div class="leg-item-emp"><div class="leg-dot-emp" style="${it.style}"></div>${it.label}</div>`).join('');
+
+  // Actividades del mes
+  renderActividadesEmp(mesStr, ultimoDia, ferMap, q15, qFin);
+}
+
+function renderActividadesEmp(mesStr, ultimoDia, ferMap, q15, qFin) {
+  const items = [];
+  const COLOR = { quincena:'var(--green2)', feriado:'#c39bd3', vacacion:'#5dade2', adelanto:'#f1948a', extra:'#f4d03f', cumple:'#f472b6' };
+
+  // Quincenas
+  items.push({ tipo:'quincena', icon:'📋', fecha:q15,  label:fmtPeriodo(q15),  nombre:'Pago de planilla' });
+  items.push({ tipo:'quincena', icon:'📋', fecha:qFin, label:fmtPeriodo(qFin), nombre:'Pago de planilla' });
+
+  // Feriados
+  Object.entries(ferMap).sort().forEach(([f, n]) => {
+    items.push({ tipo:'feriado', icon:'🎌', fecha:f,
+      label: parseInt(f.substring(8,10)) + ' de ' + MESES_CAL[_calMonth], nombre: n });
+  });
+
+  // Vacaciones (rangos del mes)
+  const mesStart = `${mesStr}-01`;
+  const mesEnd   = `${mesStr}-${String(ultimoDia).padStart(2,'0')}`;
+  _calVac.forEach(v => {
+    const ini = normD(v.Fecha_Inicio), fin = normD(v.Fecha_Fin);
+    if (!ini || !fin || fin < mesStart || ini > mesEnd) return;
+    const d1 = parseInt((ini < mesStart ? mesStart : ini).substring(8,10));
+    const d2 = parseInt((fin > mesEnd   ? mesEnd   : fin).substring(8,10));
+    const label = d1 === d2 ? `${d1} de ${MESES_CAL[_calMonth]}` : `${d1}–${d2} de ${MESES_CAL[_calMonth]}`;
+    items.push({ tipo:'vacacion', icon:'🏖', fecha:ini, label, nombre:'Mis vacaciones',
+      sub:`${v.Dias} días · ${v.Tipo||''}` });
+  });
+
+  // Adelantos
+  _calAdel.forEach(a => {
+    const f = normD(a['Descontar en quincena']);
+    if (!f || !f.startsWith(mesStr)) return;
+    items.push({ tipo:'adelanto', icon:'⚡', fecha:f, label:fmtPeriodo(f),
+      nombre:'Adelanto', sub:fmt(a.Monto) });
+  });
+
+  // Extras
+  _calExt.forEach(x => {
+    const f = normD(x['Pagar en quincena']);
+    if (!f || !f.startsWith(mesStr)) return;
+    items.push({ tipo:'extra', icon:'⭐', fecha:f, label:fmtPeriodo(f),
+      nombre: x.Tipo||'Extra', sub:fmt(x.Monto) });
+  });
+
+  // Cumpleaños del mes
+  const mm6 = String(_calMonth + 1).padStart(2, '0');
+  _calCumple.forEach(c => {
+    if (!c.mmdd.startsWith(mm6 + '-')) return;
+    const dia   = parseInt(c.mmdd.substring(3));
+    const fecha = `${_calYear}-${mm6}-${String(dia).padStart(2,'0')}`;
+    items.push({ tipo:'cumple', icon:'🎂', fecha,
+      label: `${dia} de ${MESES_CAL[_calMonth]}`,
+      nombre: c.nombre, sub: 'Cumpleaños' });
+  });
+
+  items.sort((a, b) => a.fecha < b.fecha ? -1 : 1);
+
+  const el = document.getElementById('cal-eventos-lista-emp');
+  if (!items.length) { el.innerHTML = ''; return; }
+
+  el.innerHTML = `
+    <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:12px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:10px">Actividades del mes</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px">
+        ${items.map(it => `
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;
+                      background:var(--navy2);border:1px solid var(--border);border-radius:6px">
+            <span style="font-size:14px;line-height:1.5">${it.icon}</span>
+            <div style="min-width:0;flex:1">
+              <div style="font-size:12px;font-weight:600;color:${COLOR[it.tipo]||'var(--text)'};
+                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.nombre}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${it.label}${it.sub ? ' · ' + it.sub : ''}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+// ── Construir eventos para PDF (igual que admin pero filtrado a este empleado) ─
+function _buildEventosEmp() {
+  const mm      = String(_calMonth + 1).padStart(2, '0');
+  const lastDay = new Date(_calYear, _calMonth + 1, 0).getDate();
+  const mesStart = `${_calYear}-${mm}-01`;
+  const mesEnd   = `${_calYear}-${mm}-${String(lastDay).padStart(2,'0')}`;
+  const eventos  = [];
+
+  eventos.push({ fecha:`${_calYear}-${mm}-15`,  tipo:'quincena' });
+  eventos.push({ fecha:mesEnd,                  tipo:'quincena' });
+
+  try {
+    feriadosEnRango(mesStart, mesEnd)
+      .forEach(f => eventos.push({ fecha:f.fecha, tipo:'feriado', texto:f.nombre }));
+  } catch(_) {}
+
+  _calVac.forEach(v => {
+    const ini = normD(v.Fecha_Inicio), fin = normD(v.Fecha_Fin);
+    if (!ini || !fin || fin < mesStart || ini > mesEnd) return;
+    eventos.push({
+      fecha:    ini < mesStart ? mesStart : ini,
+      fechaFin: fin > mesEnd   ? mesEnd   : fin,
+      tipo:     'vacacion', texto: 'Mis vacaciones',
+    });
+  });
+
+  _calAdel.forEach(a => {
+    const f = normD(a['Descontar en quincena']);
+    if (f && f.startsWith(`${_calYear}-${mm}`))
+      eventos.push({ fecha:f, tipo:'adelanto', texto:'Adelanto' });
+  });
+
+  _calExt.forEach(x => {
+    const f = normD(x['Pagar en quincena']);
+    if (f && f.startsWith(`${_calYear}-${mm}`))
+      eventos.push({ fecha:f, tipo:'extra', texto: x.Tipo||'Extra' });
+  });
+
+  // Cumpleaños del mes
+  _calCumple.forEach(c => {
+    if (!c.mmdd.startsWith(mm + '-')) return;
+    eventos.push({ fecha:`${_calYear}-${mm}-${c.mmdd.substring(3)}`, tipo:'cumple', texto:c.nombre });
+  });
+
+  return eventos;
+}
+
+// ── Descargar PDF ──────────────────────────────────────────────────────────────
+document.getElementById('btn-cal-emp-pdf').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-cal-emp-pdf');
+  const mm  = String(_calMonth + 1).padStart(2, '0');
+  btn.disabled = true; btn.textContent = 'Generando...';
+  try {
+    const token     = getToken();
+    const empresaId = localStorage.getItem('planilla_empresa_id');
+    const resp = await fetch('/api/reportes/calendario', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token     ? { Authorization: `Bearer ${token}` }  : {}),
+        ...(empresaId ? { 'X-Empresa-ID': empresaId }         : {}),
+      },
+      body: JSON.stringify({ mes: _calMonth + 1, anio: _calYear, eventos: _buildEventosEmp() }),
+    });
+    if (!resp.ok) { const e = await resp.json().catch(()=>({error:resp.statusText})); throw new Error(e.error); }
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `mi-calendario-${_calYear}-${mm}.pdf`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    btn.textContent = 'Descargado ✓';
+    setTimeout(() => { btn.disabled = false; btn.textContent = '📥 Descargar PDF'; }, 2000);
+  } catch (e) {
+    alert('Error: ' + e.message);
+    btn.disabled = false; btn.textContent = '📥 Descargar PDF';
+  }
+});
+
+// ── Modal email ────────────────────────────────────────────────────────────────
+document.getElementById('btn-cal-emp-email').addEventListener('click', () => {
+  document.getElementById('alert-email-cal-emp').className = 'alert';
+  document.getElementById('send-email-cal-emp').disabled = false;
+  document.getElementById('send-email-cal-emp').textContent = 'Enviar PDF';
+  document.getElementById('modal-email-cal-emp').classList.add('open');
+  document.getElementById('inp-email-cal-emp').focus();
+});
+['close-email-cal-emp','cancel-email-cal-emp'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () =>
+    document.getElementById('modal-email-cal-emp').classList.remove('open')
+  )
+);
+document.getElementById('send-email-cal-emp').addEventListener('click', async () => {
+  const email   = document.getElementById('inp-email-cal-emp').value.trim();
+  const alertEl = document.getElementById('alert-email-cal-emp');
+  const btn     = document.getElementById('send-email-cal-emp');
+  if (!email) { alertEl.className='alert alert-error show'; alertEl.textContent='Ingresa un correo'; return; }
+  btn.disabled = true; btn.textContent = 'Generando...'; alertEl.className = 'alert';
+  try {
+    const data = await apiFetch('/api/reportes/calendario/enviar', {
+      method: 'POST',
+      body: JSON.stringify({ email, mes: _calMonth + 1, anio: _calYear, eventos: _buildEventosEmp() }),
+    });
+    alertEl.className = 'alert alert-success show';
+    alertEl.textContent = data.mensaje || '✅ Enviado correctamente';
+    btn.textContent = 'Enviado ✓';
+  } catch (e) {
+    alertEl.className = 'alert alert-error show'; alertEl.textContent = e.message;
+    btn.disabled = false; btn.textContent = 'Enviar PDF';
+  }
+});
+
+// ── HISTORIAL DE ABONOS (PRÉSTAMOS) ────────────────────────────────────────
+async function verHistorialPrestamo(id) {
+  document.getElementById('historial-pr-titulo').textContent = 'Historial de abonos';
+  document.getElementById('historial-pr-body').innerHTML =
+    '<div style="text-align:center;padding:24px"><div class="spinner"></div></div>';
+  document.getElementById('modal-historial-pr').classList.add('open');
+  try {
+    const pagos = await apiFetch(`/api/prestamos/${id}/pagos`);
+    if (!pagos.length) {
+      document.getElementById('historial-pr-body').innerHTML =
+        '<p style="color:var(--text-muted);text-align:center;padding:20px 0">No hay abonos registrados aún.</p>';
+      return;
+    }
+    const total = pagos.reduce((s, pg) => s + parseFloat(pg.monto || 0), 0);
+    const rows = pagos.map(pg => {
+      const esDirecto = (pg.tipo || '').toLowerCase().includes('directo');
+      return `<div style="display:grid;grid-template-columns:90px 1fr auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--text-muted)">${pg.fecha || '—'}</div>
+        <div>
+          <div style="font-weight:600">${cs(pg.monto)}</div>
+          ${pg.concepto ? `<div style="font-size:12px;color:var(--text-muted)">${pg.concepto}</div>` : ''}
+        </div>
+        <span class="badge ${esDirecto ? 'badge-blue' : 'badge-gray'}">${esDirecto ? 'Directo' : 'Quincena'}</span>
+      </div>`;
+    }).join('');
+    document.getElementById('historial-pr-body').innerHTML =
+      rows +
+      `<div style="display:flex;justify-content:space-between;padding:10px 0;font-weight:700;border-top:2px solid var(--border);margin-top:4px">
+        <span>Total abonado</span>
+        <span style="color:var(--green2)">${cs(total)}</span>
+      </div>`;
+  } catch (e) {
+    document.getElementById('historial-pr-body').innerHTML =
+      `<p style="color:var(--red);padding:16px">Error: ${e.message}</p>`;
+  }
+}
+
+['close-historial-pr', 'cancel-historial-pr'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-historial-pr').classList.remove('open');
+  });
+});
+
+onReady(null, () => { initPage(); });
+</script>
+</body>
+</html>

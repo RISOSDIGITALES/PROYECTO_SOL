@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Préstamos — Nomify</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <style>
+    @media print {
+      .sidebar, .topbar, #btn-nuevo, #btn-print,
+      .tabs, #filtro-empleado, table td:last-child, table th:last-child { display: none !important; }
+      .main { margin-left: 0 !important; }
+      body { background: #fff !important; }
+      .table-wrap { box-shadow: none !important; border: 1px solid #ccc !important; }
+      table thead th { background: #eee !important; color: #000 !important; }
+      table tbody td { color: #333 !important; background: transparent !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>Nomify</h2></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html" class="active"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+      <a href="/extras.html"><span class="icon">⭐</span> Extras</a>
+      <a href="/deducciones.html"><span class="icon">➖</span> Otras Deducciones</a>
+      <a href="/calendario.html"><span class="icon">📅</span> Calendario</a>
+      <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
+      <a href="/liquidacion.html"><span class="icon">📄</span> Liquidaciones</a>
+      <a href="/usuarios.html" id="link-usuarios"><span class="icon">👤</span> Usuarios</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Préstamos</h1><span class="sub">Autorizados por Don Marc · cuota quincenal</span></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" id="btn-print" onclick="window.print()">🖨 Imprimir</button>
+        <button class="btn btn-ghost btn-sm" id="btn-email">📧 Enviar historial</button>
+        <button class="btn btn-ghost" onclick="exportXlsx('/api/export/prestamos','Prestamos')">📥 Excel</button>
+        <button class="btn btn-primary" id="btn-nuevo">+ Nuevo préstamo</button>
+      </div>
+    </div>
+    <div class="content">
+      <div id="alert-pr" class="alert"></div>
+
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <div class="tabs" style="margin-bottom:0">
+          <button class="tab active" data-estado="todos">Todos</button>
+          <button class="tab" data-estado="Activo">Activos</button>
+          <button class="tab" data-estado="Pagado">Pagados</button>
+          <button class="tab" data-estado="Suspendido">Suspendidos</button>
+        </div>
+        <select id="filtro-empleado" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
+          <option value="">Todos los empleados</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Empleado</th>
+              <th>Monto total</th>
+              <th>Cuota quincenal</th>
+              <th>Cuotas rest.</th>
+              <th>Pendiente</th>
+              <th>Pagos</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-prestamos">
+            <tr class="loading-row"><td colspan="8"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PRÉSTAMO -->
+<div class="overlay" id="modal-pr">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-titulo">Nuevo Préstamo</h3>
+      <button class="modal-close" id="close-modal">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-form" class="alert"></div>
+      <input type="hidden" id="pr-id" />
+      <div class="form-group">
+        <label>Empleado *</label>
+        <select id="pr-empleado"><option value="">Seleccionar...</option></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Monto total (C$) *</label>
+          <input type="number" id="pr-monto" placeholder="0.00" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>Monto de la cuota (C$) *</label>
+          <input type="number" id="pr-cuota" placeholder="0.00" step="0.01" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Frecuencia de pago</label>
+          <select id="pr-frecuencia">
+            <option value="Quincenal">Quincenal (cada 15 días)</option>
+            <option value="Mensual">Mensual (1 vez al mes)</option>
+          </select>
+          <div id="pr-frecuencia-dia-wrap" style="display:none;margin-top:8px">
+            <label style="font-size:12px;color:var(--text-muted)">Descontar el</label>
+            <select id="pr-frecuencia-dia" style="margin-top:4px;width:100%;background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px">
+              <option value="15">Día 15 del mes</option>
+              <option value="Fin">Último día del mes</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="pr-estado">
+            <option value="Activo">Activo</option>
+            <option value="Pagado">Pagado</option>
+            <option value="Suspendido">Suspendido</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cuotas restantes <span style="font-weight:400;color:var(--muted);font-size:11px">(se calcula automático)</span></label>
+          <input type="number" id="pr-cuotas" placeholder="Auto" min="1" />
+          <div id="pr-ultima-cuota" style="display:none;margin-top:6px;padding:7px 10px;background:var(--navy2);border:1px solid var(--orange);border-radius:6px;font-size:12px;color:var(--orange)"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Concepto / Comentario <span style="font-weight:400;font-size:11px;color:var(--text-muted)">(opcional)</span></label>
+        <input type="text" id="pr-notas" placeholder="Ej: Préstamo para motocicleta, gastos médicos, emergencia familiar…" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-pr">Cancelar</button>
+      <button class="btn btn-primary" id="save-pr">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PAGO DIRECTO -->
+<div class="overlay" id="modal-pago">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3>Registrar pago directo</h3>
+      <button class="modal-close" id="close-pago">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-pago" class="alert"></div>
+      <input type="hidden" id="pago-prestamo-id" />
+      <p id="pago-prestamo-info" style="margin:0 0 12px;font-size:13px;color:var(--text-muted)"></p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fecha del pago *</label>
+          <input type="date" id="pago-fecha" />
+        </div>
+        <div class="form-group">
+          <label>Monto (C$) *</label>
+          <input type="number" id="pago-monto" placeholder="0.00" step="0.01" />
+        </div>
+      </div>
+      <div id="pago-saldo-info" style="background:var(--navy2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:10px;font-size:13px;display:none">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="color:var(--text-muted)">Saldo pendiente</span>
+          <strong id="pago-saldo-val" style="color:var(--orange)">—</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:var(--text-muted)">Cuota habitual</span>
+          <span id="pago-cuota-val">—</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notas (opcional)</label>
+        <input type="text" id="pago-notas" placeholder="Ej: Efectivo entregado a caja" />
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin-top:6px">El saldo pendiente y las cuotas se recalculan automáticamente al registrar el pago.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-pago">Cancelar</button>
+      <button class="btn btn-primary" id="save-pago">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ENVIAR HISTORIAL POR CORREO -->
+<div class="overlay" id="modal-email-pr">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>📧 Enviar historial por correo</h3>
+      <button class="modal-close" id="close-email-pr">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-email-pr" class="alert"></div>
+      <p style="margin:0 0 14px;font-size:13px;color:var(--text-muted)">Se generará un PDF del historial y se enviará al correo indicado.</p>
+      <div class="form-group">
+        <label>Correo destinatario *</label>
+        <input type="email" id="inp-email-pr" placeholder="ejemplo@correo.com"
+          style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;" />
+      </div>
+      <div class="form-group">
+        <label>Empleado (opcional)</label>
+        <select id="sel-email-pr" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;">
+          <option value="">Todos los empleados</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-email-pr">Cancelar</button>
+      <button class="btn btn-primary" id="send-email-pr">Enviar PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HISTORIAL -->
+<div class="overlay" id="modal-historial">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3 id="historial-titulo">Detalle del préstamo</h3>
+      <button class="modal-close" id="close-historial">×</button>
+    </div>
+    <div class="modal-body" id="historial-body" style="max-height:400px;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-historial">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/export.js"></script>
+<script>
+let allPrestamos = [];
+let filtroEstado = 'todos';
+let filtroEmpleado = '';
+let _esMaster = false;
+
+onReady(['Master', 'Planillero'], async () => {
+  _esMaster = (await getMyInfo()).rol === 'Master';
+  initLayout();
+  if (!_esMaster) document.getElementById('btn-nuevo').style.display = 'none';
+  loadAll();
+});
+
+async function loadAll() {
+  try {
+    const [prestamos, empleados] = await Promise.all([
+      apiFetch('/api/prestamos'),
+      apiFetch('/api/empleados'),
+    ]);
+    allPrestamos = prestamos;
+
+    const activos = empleados.filter(e => e.Activo);
+    const sel = document.getElementById('pr-empleado');
+    const filtroSel = document.getElementById('filtro-empleado');
+    const emailSel = document.getElementById('sel-email-pr');
+    activos.forEach(e => {
+      [sel, filtroSel, emailSel].forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = e.Nombre;
+        opt.textContent = e.Nombre;
+        s.appendChild(opt);
+      });
+    });
+
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-pr', 'Error: ' + e.message, 'error');
+  }
+}
+
+// Num pagos viene directo de la DB (COUNT de pagos_prestamos)
+function contarPagos(p) {
+  return p['Num pagos'] ?? 0;
+}
+
+function renderTabla() {
+  let lista = allPrestamos;
+  if (filtroEstado !== 'todos') lista = lista.filter(p => (p.Estado || 'Activo') === filtroEstado);
+  if (filtroEmpleado) lista = lista.filter(p => p.Empleado === filtroEmpleado);
+
+  const tbody = document.getElementById('tabla-prestamos');
+  if (lista.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">No hay préstamos registrados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(p => {
+    const cuotasRest = p['Cuotas restantes'] || 0;
+    const saldo = p['Saldo pendiente'] ?? p['Monto total'] ?? 0;
+    const frecuencia = p.Frecuencia || 'Quincenal';
+    const frecBadge = frecuencia === 'Mensual' ? '<span class="badge badge-orange" style="font-size:10px">Mensual</span>' : '';
+    const estado = p.Estado || 'Activo';
+    const badge = estado === 'Activo' ? 'badge-blue' : estado === 'Pagado' ? 'badge-green' : 'badge-gray';
+    const nPagos = contarPagos(p);
+    return `<tr>
+      <td>
+        <strong>${p.Empleado || '—'}</strong>
+        ${p.notas ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px" title="${p.notas}">${p.notas}</div>` : ''}
+      </td>
+      <td class="num">${fmt(p['Monto total'])}</td>
+      <td class="num">${fmt(p['Cuota quincenal'])} ${frecBadge}</td>
+      <td style="text-align:center">${cuotasRest}</td>
+      <td class="num" style="color:var(--orange)">${fmt(saldo)}</td>
+      <td style="text-align:center;color:var(--text-muted);font-size:12px">
+        ${nPagos} pago${nPagos !== 1 ? 's' : ''}
+      </td>
+      <td><span class="badge ${badge}">${estado}</span></td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text)" onclick="window.open('/prestamo-detalle.html?id=${p.id}','_blank')">📋 Detalle</button>
+        ${_esMaster ? `<button class="btn btn-icon btn-sm" title="Editar" onclick="editarPrestamo(${p.id})">&#9999;&#65039;</button>` : ''}
+        ${_esMaster && estado === 'Activo' ? `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text)" onclick="abrirPago(${p.id})">+ Pago</button>` : ''}
+        ${_esMaster && estado === 'Activo' ? `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text-muted)" onclick="cambiarEstadoPrestamo(${p.id},'Suspendido')">⏸ Pausar</button>` : ''}
+        ${_esMaster && estado === 'Suspendido' ? `<button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text)" onclick="cambiarEstadoPrestamo(${p.id},'Activo')">▶ Reactivar</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    filtroEstado = btn.dataset.estado;
+    renderTabla();
+  });
+});
+
+document.getElementById('filtro-empleado').addEventListener('change', e => {
+  filtroEmpleado = e.target.value;
+  renderTabla();
+});
+
+async function verHistorial(id) {
+  const p = allPrestamos.find(x => x.id == id);
+  if (!p) return;
+  document.getElementById('historial-titulo').textContent = `Préstamo — ${p.Empleado}`;
+  document.getElementById('historial-body').innerHTML = '<div style="text-align:center;padding:24px"><div class="spinner"></div></div>';
+  document.getElementById('modal-historial').classList.add('open');
+  try {
+    const pagos = await apiFetch(`/api/prestamos/${id}/pagos`);
+
+    const montoTotal   = parseFloat(p['Monto total'] || 0);
+    const saldo        = parseFloat(p['Saldo pendiente'] || 0);
+    const totalPagado  = Math.round((montoTotal - saldo) * 100) / 100;
+    const pct          = montoTotal > 0 ? Math.min(100, Math.round(totalPagado / montoTotal * 100)) : 0;
+    const cuota        = parseFloat(p['Cuota quincenal'] || 0);
+    const cuotasRest   = p['Cuotas restantes'] || 0;
+    const frecuencia   = p.Frecuencia || 'Quincenal';
+    const freDia       = frecuencia === 'Mensual' ? ` (día ${p.Frecuencia_Dia === 'Fin' ? 'último' : p.Frecuencia_Dia})` : '';
+
+    const resumen = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:var(--navy2);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:2px">Monto original</div>
+          <div style="font-size:16px;font-weight:700">${fmt(montoTotal)}</div>
+        </div>
+        <div style="background:var(--navy2);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:2px">Saldo pendiente</div>
+          <div style="font-size:16px;font-weight:700;color:${saldo > 0 ? 'var(--orange)' : 'var(--green2)'}">${fmt(saldo)}</div>
+        </div>
+        <div style="background:var(--navy2);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:2px">Total pagado</div>
+          <div style="font-size:16px;font-weight:700;color:var(--green2)">${fmt(totalPagado)}</div>
+        </div>
+        <div style="background:var(--navy2);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:2px">Cuotas restantes</div>
+          <div style="font-size:16px;font-weight:700">${cuotasRest}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Cuota habitual ${fmt(cuota)} · ${frecuencia}${freDia}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+          <span style="color:var(--text-muted)">Progreso del pago</span>
+          <span style="font-weight:600">${pct}%</span>
+        </div>
+        <div style="background:var(--navy2);border-radius:4px;height:8px;overflow:hidden">
+          <div style="width:${pct}%;background:var(--green2);height:100%;border-radius:4px;transition:width .3s"></div>
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;border-top:1px solid var(--border);padding-top:12px">
+        Historial de pagos (${pagos.length})
+      </div>`;
+
+    if (pagos.length === 0) {
+      document.getElementById('historial-body').innerHTML = resumen +
+        '<p style="color:var(--text-muted);text-align:center;padding:16px 0">No hay pagos registrados aún.</p>';
+    } else {
+      const rows = pagos.map(pg => {
+        const esDirecto = (pg.tipo || '').toLowerCase().includes('directo');
+        return `<div style="display:grid;grid-template-columns:90px 1fr auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:12px;color:var(--text-muted)">${pg.fecha || '—'}</div>
+          <div>
+            <div style="font-weight:600">${fmt(pg.monto)}</div>
+            ${pg.concepto ? `<div style="font-size:12px;color:var(--text-muted)">${pg.concepto}</div>` : ''}
+          </div>
+          <span class="badge ${esDirecto ? 'badge-blue' : 'badge-gray'}">${esDirecto ? 'Pago directo' : 'Quincena'}</span>
+        </div>`;
+      }).join('');
+      document.getElementById('historial-body').innerHTML = resumen + rows;
+    }
+  } catch (e) {
+    document.getElementById('historial-body').innerHTML =
+      `<p style="color:var(--red);padding:16px">Error: ${e.message}</p>`;
+  }
+}
+
+['close-historial','cancel-historial'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-historial').classList.remove('open');
+  });
+});
+
+function abrirPago(id) {
+  const p = allPrestamos.find(x => x.id == id);
+  if (!p) return;
+  document.getElementById('pago-prestamo-id').value = id;
+  document.getElementById('pago-prestamo-info').textContent = `${p.Empleado} — ingresa el monto que abonará`;
+  const saldo = p['Saldo pendiente'] ?? p['Monto total'] ?? 0;
+  const cuota = p['Cuota quincenal'] || 0;
+  document.getElementById('pago-saldo-val').textContent = fmt(saldo);
+  document.getElementById('pago-cuota-val').textContent = fmt(cuota);
+  document.getElementById('pago-saldo-info').style.display = '';
+  document.getElementById('pago-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('pago-monto').value = Math.min(cuota, saldo); // sugerir la cuota o el saldo si es menor
+  document.getElementById('pago-notas').value = '';
+  document.getElementById('alert-pago').className = 'alert';
+  document.getElementById('modal-pago').classList.add('open');
+}
+
+['close-pago','cancel-pago'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-pago').classList.remove('open');
+  });
+});
+
+document.getElementById('save-pago').addEventListener('click', async () => {
+  const prestamoId  = document.getElementById('pago-prestamo-id').value;
+  const fecha       = document.getElementById('pago-fecha').value;
+  const monto       = parseFloat(document.getElementById('pago-monto').value);
+  const notas       = document.getElementById('pago-notas').value.trim();
+  if (!fecha) { showAlert('alert-pago', 'Indica la fecha del pago', 'error'); return; }
+  if (!monto || monto <= 0) { showAlert('alert-pago', 'Ingresa el monto', 'error'); return; }
+
+  // El backend inserta en pagos_prestamos y recalcula saldo automáticamente
+  const fields = {
+    monto_pagado: monto,
+    fecha,
+    concepto: notas,
+  };
+
+  const btn = document.getElementById('save-pago');
+  btn.disabled = true; btn.textContent = 'Registrando...';
+  try {
+    await apiFetch('/api/prestamos', {
+      method: 'PATCH',
+      body: JSON.stringify({ id: prestamoId, ...fields }),
+    });
+    document.getElementById('modal-pago').classList.remove('open');
+    showAlert('alert-pr', '✅ Pago directo registrado', 'success');
+    allPrestamos = await apiFetch('/api/prestamos');
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-pago', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Registrar';
+  }
+});
+
+// ── Email historial préstamos ────────────────────────────────────────────────
+document.getElementById('btn-email').addEventListener('click', () => {
+  document.getElementById('alert-email-pr').className = 'alert';
+  document.getElementById('inp-email-pr').value = '';
+  document.getElementById('send-email-pr').disabled = false;
+  document.getElementById('send-email-pr').textContent = 'Enviar PDF';
+  document.getElementById('modal-email-pr').classList.add('open');
+});
+['close-email-pr','cancel-email-pr'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () =>
+    document.getElementById('modal-email-pr').classList.remove('open')
+  )
+);
+document.getElementById('send-email-pr').addEventListener('click', async () => {
+  const email    = document.getElementById('inp-email-pr').value.trim();
+  const empleado = document.getElementById('sel-email-pr').value;
+  const alertEl  = document.getElementById('alert-email-pr');
+  const btn      = document.getElementById('send-email-pr');
+  if (!email) { alertEl.className = 'alert alert-error show'; alertEl.textContent = 'Ingresa un correo destinatario'; return; }
+  btn.disabled = true; btn.textContent = 'Generando PDF...';
+  alertEl.className = 'alert';
+  try {
+    const data = await apiFetch('/api/reportes/enviar', {
+      method: 'POST',
+      body: JSON.stringify({ categoria: 'prestamos', email, empleado: empleado || undefined }),
+    });
+    alertEl.className = 'alert alert-success show';
+    alertEl.textContent = data.mensaje || '✅ Enviado correctamente';
+    btn.textContent = 'Enviado ✓';
+  } catch (e) {
+    alertEl.className = 'alert alert-error show';
+    alertEl.textContent = e.message;
+    btn.disabled = false; btn.textContent = 'Enviar PDF';
+  }
+});
+
+document.getElementById('btn-nuevo').addEventListener('click', () => {
+  document.getElementById('modal-titulo').textContent = 'Nuevo Préstamo';
+  document.getElementById('pr-id').value = '';
+  document.getElementById('pr-empleado').value = '';
+  document.getElementById('pr-monto').value = '';
+  document.getElementById('pr-cuota').value = '';
+  document.getElementById('pr-cuotas').value = '';
+  document.getElementById('pr-cuotas')._editadoManual = false;
+  document.getElementById('pr-frecuencia').value = 'Quincenal';
+  document.getElementById('pr-frecuencia-dia').value = '15';
+  document.getElementById('pr-frecuencia-dia-wrap').style.display = 'none';
+  document.getElementById('pr-estado').value = 'Activo';
+  document.getElementById('pr-notas').value = '';
+  document.getElementById('pr-ultima-cuota').style.display = 'none';
+  document.getElementById('alert-form').className = 'alert';
+  document.getElementById('modal-pr').classList.add('open');
+});
+
+function editarPrestamo(id) {
+  const p = allPrestamos.find(x => x.id == id);
+  if (!p) return;
+  document.getElementById('modal-titulo').textContent = 'Editar Préstamo';
+  document.getElementById('pr-id').value = p.id;
+  document.getElementById('pr-empleado').value = p.Empleado || '';
+  document.getElementById('pr-monto').value = p['Monto total'] || '';
+  document.getElementById('pr-cuota').value = p['Cuota quincenal'] || '';
+  document.getElementById('pr-cuotas').value = p['Cuotas restantes'] || '';
+  document.getElementById('pr-frecuencia').value = p.Frecuencia || 'Quincenal';
+  document.getElementById('pr-frecuencia-dia').value = p.Frecuencia_Dia || '15';
+  document.getElementById('pr-frecuencia-dia-wrap').style.display = p.Frecuencia === 'Mensual' ? '' : 'none';
+  document.getElementById('pr-estado').value = p.Estado || 'Activo';
+  document.getElementById('pr-notas').value = p.notas || '';
+  document.getElementById('alert-form').className = 'alert';
+  document.getElementById('pr-cuotas')._editadoManual = false;
+  recalcularCuotas();
+  document.getElementById('pr-cuotas')._editadoManual = true;
+  document.getElementById('modal-pr').classList.add('open');
+}
+
+['close-modal','cancel-pr'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById('modal-pr').classList.remove('open');
+  });
+});
+
+// Mostrar/ocultar selector de día según frecuencia
+document.getElementById('pr-frecuencia').addEventListener('change', () => {
+  const esMensual = document.getElementById('pr-frecuencia').value === 'Mensual';
+  document.getElementById('pr-frecuencia-dia-wrap').style.display = esMensual ? '' : 'none';
+});
+
+// Cálculo automático de cuotas y aviso de última cuota
+function recalcularCuotas() {
+  const monto = parseFloat(document.getElementById('pr-monto').value);
+  const cuota = parseFloat(document.getElementById('pr-cuota').value);
+  const avisoEl = document.getElementById('pr-ultima-cuota');
+
+  if (!monto || !cuota || monto <= 0 || cuota <= 0) {
+    avisoEl.style.display = 'none';
+    return;
+  }
+
+  const cuotasCompletas = Math.floor(monto / cuota);
+  const resto = Math.round((monto - cuotasCompletas * cuota) * 100) / 100;
+  const totalCuotas = resto > 0 ? cuotasCompletas + 1 : cuotasCompletas;
+
+  // Solo sobreescribir si el campo está vacío o fue calculado antes (no si lo editó el usuario)
+  if (!document.getElementById('pr-cuotas')._editadoManual) {
+    document.getElementById('pr-cuotas').value = totalCuotas;
+  }
+
+  if (resto > 0 && resto < cuota) {
+    avisoEl.style.display = '';
+    avisoEl.textContent = `⚠️ La última cuota será de C$ ${resto.toLocaleString('es-NI', { minimumFractionDigits: 2 })} (cuota incompleta)`;
+  } else {
+    avisoEl.style.display = 'none';
+  }
+}
+
+['pr-monto', 'pr-cuota'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    document.getElementById('pr-cuotas')._editadoManual = false;
+    recalcularCuotas();
+  });
+});
+
+document.getElementById('pr-cuotas').addEventListener('input', () => {
+  document.getElementById('pr-cuotas')._editadoManual = true;
+  // Mostrar aviso si el monto no cierra exacto con las cuotas manuales
+  const monto = parseFloat(document.getElementById('pr-monto').value);
+  const cuota = parseFloat(document.getElementById('pr-cuota').value);
+  const cuotasManual = parseInt(document.getElementById('pr-cuotas').value);
+  const avisoEl = document.getElementById('pr-ultima-cuota');
+  if (!monto || !cuota || !cuotasManual) { avisoEl.style.display = 'none'; return; }
+  const cuotasCompletas = Math.floor(monto / cuota);
+  const resto = Math.round((monto - cuotasCompletas * cuota) * 100) / 100;
+  if (resto > 0 && cuotasManual === cuotasCompletas + 1) {
+    avisoEl.style.display = '';
+    avisoEl.textContent = `⚠️ La última cuota será de C$ ${resto.toLocaleString('es-NI', { minimumFractionDigits: 2 })} (cuota incompleta)`;
+  } else {
+    avisoEl.style.display = 'none';
+  }
+});
+
+async function cambiarEstadoPrestamo(id, nuevoEstado) {
+  try {
+    await apiFetch('/api/prestamos', { method: 'PATCH', body: JSON.stringify({ id, Estado: nuevoEstado }) });
+    showAlert('alert-pr', nuevoEstado === 'Suspendido' ? '⏸ Préstamo pausado — no se descontará en planilla' : '✅ Préstamo reactivado', 'success');
+    allPrestamos = await apiFetch('/api/prestamos');
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-pr', 'Error: ' + e.message, 'error');
+  }
+}
+
+document.getElementById('save-pr').addEventListener('click', async () => {
+  const id       = document.getElementById('pr-id').value;
+  const empleado = document.getElementById('pr-empleado').value;
+  const monto    = parseFloat(document.getElementById('pr-monto').value);
+  const cuota    = parseFloat(document.getElementById('pr-cuota').value);
+  const cuotas   = parseInt(document.getElementById('pr-cuotas').value);
+
+  if (!empleado) { showAlert('alert-form', 'Selecciona un empleado', 'error'); return; }
+  if (!monto || monto <= 0) { showAlert('alert-form', 'Ingresa el monto total', 'error'); return; }
+  if (!cuota || cuota <= 0) { showAlert('alert-form', 'Ingresa la cuota quincenal', 'error'); return; }
+
+  const notasVal = document.getElementById('pr-notas').value.trim();
+  const fields = {
+    'Empleado': empleado,
+    'Monto total': monto,
+    'Cuota quincenal': cuota,
+    'Cuotas restantes': cuotas || Math.ceil(monto / cuota),
+    'Frecuencia': document.getElementById('pr-frecuencia').value,
+    'Frecuencia_Dia': document.getElementById('pr-frecuencia-dia').value,
+    'Estado': document.getElementById('pr-estado').value,
+    ...(notasVal ? { 'Concepto': notasVal } : {}),
+  };
+
+  const btn = document.getElementById('save-pr');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    if (id) {
+      await apiFetch('/api/prestamos', { method: 'PATCH', body: JSON.stringify({ id, ...fields }) });
+    } else {
+      await apiFetch('/api/prestamos', { method: 'POST', body: JSON.stringify(fields) });
+    }
+    document.getElementById('modal-pr').classList.remove('open');
+    showAlert('alert-pr', '✅ Préstamo guardado', 'success');
+    allPrestamos = await apiFetch('/api/prestamos');
+    renderTabla();
+  } catch (e) {
+    showAlert('alert-form', 'Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
+});
+</script>
+</body>
+</html>

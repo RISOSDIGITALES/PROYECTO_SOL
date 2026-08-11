@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calendario — Nomify</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
+  <style>
+    .cal-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .cal-mes {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .cal-mes h2 { font-size: 18px; font-weight: 700; text-transform: capitalize; min-width: 160px; text-align: center; }
+    .cal-btn {
+      background: var(--navy2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .cal-btn:hover { background: var(--border); }
+
+    .cal-filtros {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .cal-filtros label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: var(--navy2);
+    }
+    .cal-filtros label:has(input:checked) { border-color: var(--green); background: rgba(39,174,96,.15); }
+    .cal-filtros input[type=checkbox] { accent-color: var(--green); }
+    #filtro-emp-cal {
+      padding: 4px 8px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: var(--navy2);
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 3px;
+    }
+    .cal-dow {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 3px;
+    }
+    .cal-cell {
+      min-height: 84px;
+      background: var(--navy2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 5px;
+      position: relative;
+    }
+    .cal-cell.vacio { background: transparent; border-color: transparent; cursor: default; }
+    .cal-cell.hoy { border-color: var(--green2); border-width: 2px; }
+    .cal-cell.quincena { background: rgba(46,204,113,.08); border-color: rgba(46,204,113,.4); }
+    .cal-cell.feriado  { background: rgba(155,89,182,.12); border-color: rgba(155,89,182,.4); }
+
+    .cal-num {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--text);
+    }
+    .cal-cell.hoy      .cal-num { color: var(--green2); }
+    .cal-cell.quincena .cal-num { color: #2ecc71; }
+    .cal-cell.feriado  .cal-num { color: #c39bd3; }
+
+    .cal-tags { margin-top: 3px; display: flex; flex-direction: column; gap: 2px; }
+    .cal-tag {
+      font-size: 9px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.4;
+    }
+    .tag-quincena { background: rgba(46,204,113,.2);  color: #2ecc71; }
+    .tag-feriado  { background: rgba(155,89,182,.2);  color: #c39bd3; }
+    .tag-adelanto { background: rgba(231,76,60,.2);   color: #f1948a; }
+    .tag-extra    { background: rgba(241,196,15,.2);  color: #f4d03f; }
+    .tag-cumple   { background: rgba(236,72,153,.22); color: #f472b6; }
+    .tag-vac-0    { background: rgba(52,152,219,.25); color: #5dade2; }
+    .tag-vac-1    { background: rgba(230,126,34,.25); color: #f0a347; }
+    .tag-vac-2    { background: rgba(231,76,60,.25);  color: #f1948a; }
+    .tag-vac-3    { background: rgba(26,188,156,.25); color: #76d7c4; }
+    .tag-vac-4    { background: rgba(241,196,15,.25); color: #f4d03f; }
+
+    .cal-legend {
+      display: flex;
+      gap: 14px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+      padding: 10px 0 0;
+      border-top: 1px solid var(--border);
+    }
+    .leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+    .leg-dot  { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+    /* Encabezado visible solo al imprimir */
+    #cal-print-header { display: none; }
+
+    @media print {
+      .sidebar, .topbar, .cal-toolbar, .cal-legend, #modal-dia,
+      #btn-export-pdf { display: none !important; }
+
+      body  { background: #fff !important; color: #000 !important; }
+      .layout { display: block !important; }
+      .main { margin-left: 0 !important; padding: 0 !important; }
+      .content { padding: 8px 12px !important; }
+      .table-wrap { border: none !important; background: transparent !important;
+                    padding: 8px !important; box-shadow: none !important; }
+
+      #cal-print-header {
+        display: flex !important;
+        justify-content: space-between;
+        align-items: flex-end;
+        padding: 0 0 12px;
+        border-bottom: 2px solid #000;
+        margin-bottom: 10px;
+      }
+      #cal-print-mes  { font-size: 38px; font-weight: 900; color: #000; line-height: 1; }
+      #cal-print-anio { font-size: 38px; font-weight: 900; color: #000; line-height: 1; }
+      #cal-print-sub  { font-size: 12px; color: #555; margin-top: 3px; }
+
+      .cal-grid { gap: 2px !important; }
+      .cal-dow  { color: #000 !important; font-weight: 700 !important;
+                  border-bottom: 1px solid #bbb !important; }
+      .cal-cell {
+        background: #fff !important;
+        border: 1px solid #ccc !important;
+        border-radius: 6px !important;
+        min-height: 68px !important;
+      }
+      .cal-cell.vacio  { border: none !important; background: transparent !important; }
+      .cal-cell.hoy    { border: 2px solid #000 !important; }
+      .cal-cell.quincena { background: #f0faf4 !important; border-color: #9dd3b7 !important; }
+      .cal-cell.feriado  { background: #f5f0fa !important; border-color: #c4a8e4 !important; }
+      .cal-num { color: #000 !important; }
+      .cal-cell.hoy      .cal-num { color: #000 !important; font-weight: 900 !important; }
+      .cal-cell.quincena .cal-num { color: #166534 !important; }
+      .cal-cell.feriado  .cal-num { color: #5b21b6 !important; }
+      .cal-tag {
+        background: rgba(0,0,0,.08) !important;
+        color: #222 !important;
+        font-size: 8px !important;
+      }
+      .tag-quincena { background: rgba(22,101,52,.14)  !important; color: #166534 !important; }
+      .tag-feriado  { background: rgba(91,33,182,.14)  !important; color: #5b21b6 !important; }
+      .tag-adelanto { background: rgba(185,28,28,.14)  !important; color: #b91c1c !important; }
+      .tag-extra    { background: rgba(161,98,7,.14)   !important; color: #a16207 !important; }
+      .tag-vac-0, .tag-vac-1, .tag-vac-2, .tag-vac-3, .tag-vac-4 {
+        background: rgba(29,78,216,.14) !important; color: #1d4ed8 !important;
+      }
+      .tag-cumple { background: rgba(131,24,67,.14) !important; color: #831843 !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h2>Nomify</h2></div>
+    <nav>
+      <a href="/index.html"><span class="icon">📊</span> Dashboard</a>
+      <a href="/empleados.html"><span class="icon">👥</span> Empleados</a>
+      <a href="/planillas.html"><span class="icon">📋</span> Planillas</a>
+      <a href="/prestamos.html"><span class="icon">💰</span> Préstamos</a>
+      <a href="/adelantos.html"><span class="icon">⚡</span> Adelantos</a>
+      <a href="/extras.html"><span class="icon">⭐</span> Extras</a>
+      <a href="/deducciones.html"><span class="icon">➖</span> Otras Deducciones</a>
+      <a href="/calendario.html" class="active"><span class="icon">📅</span> Calendario</a>
+      <a href="/vacaciones.html"><span class="icon">🏖</span> Vacaciones</a>
+      <a href="/liquidacion.html"><span class="icon">📄</span> Liquidaciones</a>
+      <a href="/usuarios.html" id="link-usuarios"><span class="icon">👤</span> Usuarios</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Calendario</h1><span class="sub">Todos los movimientos de planilla</span></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 Imprimir</button>
+        <button class="btn btn-ghost btn-sm" id="btn-export-pdf">📥 Descargar PDF</button>
+        <button class="btn btn-ghost btn-sm" id="btn-email-cal">📧 Enviar</button>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- Solo visible al imprimir -->
+      <div id="cal-print-header">
+        <div>
+          <div id="cal-print-mes"></div>
+          <div id="cal-print-sub" style="font-size:12px;color:#555;margin-top:3px">Nomify · Sistema de planilla</div>
+        </div>
+        <div id="cal-print-anio"></div>
+      </div>
+
+      <div class="cal-toolbar">
+        <div class="cal-mes">
+          <button class="cal-btn" id="btn-prev">◄</button>
+          <h2 id="cal-titulo">Cargando...</h2>
+          <button class="cal-btn" id="btn-next">►</button>
+        </div>
+        <div class="cal-filtros">
+          <label><input type="checkbox" id="chk-feriados" checked /> 🎌 Feriados</label>
+          <label><input type="checkbox" id="chk-quincenas" checked /> 📋 Quincenas</label>
+          <label><input type="checkbox" id="chk-vacaciones" checked /> 🏖 Vacaciones</label>
+          <label><input type="checkbox" id="chk-adelantos" checked /> ⚡ Adelantos</label>
+          <label><input type="checkbox" id="chk-extras" checked /> ⭐ Extras</label>
+          <select id="filtro-emp-cal" style="display:none">
+            <option value="">Todos los empleados</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-wrap" style="padding:16px">
+        <div class="cal-grid" id="cal-grid">
+          <div style="grid-column:1/-1;text-align:center;padding:40px"><div class="spinner"></div></div>
+        </div>
+        <div class="cal-legend" id="cal-legend"></div>
+        <div id="cal-eventos-lista"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE DEL DÍA -->
+<div class="overlay" id="modal-dia">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h3 id="modal-dia-titulo" style="text-transform:capitalize">—</h3>
+      <button class="modal-close" id="close-modal-dia">×</button>
+    </div>
+    <div class="modal-body" id="modal-dia-body" style="max-height:420px;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-modal-dia">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal enviar calendario por correo -->
+<div class="overlay" id="modal-email-cal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>📧 Enviar calendario por correo</h3>
+      <button class="modal-close" id="close-email-cal">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="alert-email-cal" class="alert"></div>
+      <p style="margin:0 0 14px;font-size:13px;color:var(--text-muted)">Se generará un PDF del calendario del mes actual y se enviará al correo indicado.</p>
+      <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:6px">Correo destinatario *</label>
+      <input type="email" id="inp-email-cal" placeholder="ejemplo@correo.com"
+        style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancel-email-cal">Cancelar</button>
+      <button class="btn btn-primary" id="send-email-cal">Enviar PDF</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/feriados.js"></script>
+<script>
+const MESES    = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DIAS_SEM = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const VAC_COLORS = ['tag-vac-0','tag-vac-1','tag-vac-2','tag-vac-3','tag-vac-4'];
+
+let viewYear, viewMonth;
+let allVacaciones  = [];
+let allAdelantos   = [];
+let allExtras      = [];
+let allCumpleanos  = []; // { nombre, mmdd:'MM-DD' }
+let empColorMap    = {};
+let empColorIdx    = 0;
+let filtroEmpCal   = '';
+let calDayCache    = {}; // eventos por dStr, se llena en renderCal()
+
+// Normaliza fecha a YYYY-MM-DD (primeros 10 chars)
+const norm = s => s ? String(s).substring(0, 10) : '';
+
+// ── MODAL DETALLE DÍA ──────────────────────────────────────────────────────
+['close-modal-dia','cancel-modal-dia'].forEach(id => {
+  document.getElementById(id)?.addEventListener('click', () => {
+    document.getElementById('modal-dia').classList.remove('open');
+  });
+});
+
+function mostrarDia(dStr) {
+  const ev = calDayCache[dStr];
+  if (!ev) return;
+  const [y, m, d] = dStr.split('-').map(Number);
+  const fechaObj = new Date(y, m - 1, d);
+  const titulo = fechaObj.toLocaleDateString('es-NI', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  document.getElementById('modal-dia-titulo').textContent = titulo;
+
+  const items = [];
+
+  if (ev.esQui) {
+    items.push(`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:20px">📋</span>
+      <div><div style="font-weight:600;color:var(--green2)">Día de quincena</div>
+      <div style="font-size:12px;color:var(--text-muted)">Se procesa la planilla de este período</div></div>
+    </div>`);
+  }
+
+  if (ev.esFeriado) {
+    items.push(`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:20px">🎌</span>
+      <div><div style="font-weight:600;color:#c39bd3">Feriado nacional</div>
+      <div style="font-size:12px;color:var(--text-muted)">${ev.ferNombre}</div></div>
+    </div>`);
+  }
+
+  ev.vacsHoy.forEach(v => {
+    items.push(`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:20px">🏖</span>
+      <div><div style="font-weight:600">${v.Empleado}</div>
+      <div style="font-size:12px;color:var(--text-muted)">Vacaciones — ${v.Tipo} · ${v.Dias} días (${norm(v.Fecha_Inicio)} → ${norm(v.Fecha_Fin)})</div></div>
+    </div>`);
+  });
+
+  ev.adelHoy.forEach(a => {
+    items.push(`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:20px">⚡</span>
+      <div><div style="font-weight:600">${a.Empleado}</div>
+      <div style="font-size:12px;color:var(--text-muted)">Adelanto a descontar · <strong style="color:var(--orange)">${fmt(a.Monto)}</strong> · Estado: ${a.Estado || 'Pendiente'}</div></div>
+    </div>`);
+  });
+
+  ev.extHoy.forEach(x => {
+    items.push(`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:20px">⭐</span>
+      <div><div style="font-weight:600">${x.Empleado}</div>
+      <div style="font-size:12px;color:var(--text-muted)">${x.Tipo}${x.Concepto ? ' — ' + x.Concepto : ''} · <strong style="color:var(--green2)">${fmt(x.Monto)}</strong></div></div>
+    </div>`);
+  });
+
+  if (!items.length) {
+    items.push(`<p style="color:var(--text-muted);text-align:center;padding:20px 0">Sin movimientos registrados este día</p>`);
+  }
+
+  document.getElementById('modal-dia-body').innerHTML = items.join('');
+  document.getElementById('modal-dia').classList.add('open');
+}
+
+onReady(['Master', 'Planillero'], () => {
+  initLayout();
+  const hoy = new Date();
+  viewYear  = hoy.getFullYear();
+  viewMonth = hoy.getMonth();
+  initControls();
+  loadDatos();
+});
+
+function initControls() {
+  document.getElementById('btn-prev').addEventListener('click', () => {
+    viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+    renderCal();
+  });
+  document.getElementById('btn-next').addEventListener('click', () => {
+    viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+    renderCal();
+  });
+  ['chk-feriados','chk-quincenas','chk-vacaciones','chk-adelantos','chk-extras'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+      const showVac = document.getElementById('chk-vacaciones').checked;
+      document.getElementById('filtro-emp-cal').style.display = showVac ? '' : 'none';
+      renderCal();
+    });
+  });
+  document.getElementById('filtro-emp-cal').addEventListener('change', e => {
+    filtroEmpCal = e.target.value;
+    renderCal();
+  });
+}
+
+async function loadDatos() {
+  try {
+    const [vac, empleados, adelantos, extras] = await Promise.all([
+      apiFetch('/api/vacaciones'),
+      apiFetch('/api/empleados'),
+      apiFetch('/api/adelantos'),
+      apiFetch('/api/extras'),
+    ]);
+    allVacaciones = vac.filter(v => v.Estado !== 'Pendiente');
+    // Solo adelantos pendientes (no descontados aún)
+    allAdelantos  = adelantos.filter(a => a.Estado !== 'Descontado');
+    allExtras     = extras;
+
+    // Cumpleaños: extraer MM-DD de fecha_nacimiento
+    allCumpleanos = empleados
+      .filter(e => e.Activo && e.Fecha_Nacimiento)
+      .map(e => ({ nombre: e.Nombre, mmdd: e.Fecha_Nacimiento.substring(5) })); // 'MM-DD'
+
+    const activos = empleados.filter(e => e.Activo);
+    activos.forEach(e => {
+      empColorMap[e.Nombre] = VAC_COLORS[empColorIdx % VAC_COLORS.length];
+      empColorIdx++;
+    });
+
+    const sel = document.getElementById('filtro-emp-cal');
+    activos.forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.Nombre; opt.textContent = e.Nombre;
+      sel.appendChild(opt);
+    });
+  } catch (_) {}
+  renderCal();
+}
+
+function vacEnDia(dStr) {
+  return allVacaciones.filter(v => {
+    if (!v.Fecha_Inicio || !v.Fecha_Fin) return false;
+    if (filtroEmpCal && v.Empleado !== filtroEmpCal) return false;
+    return dStr >= norm(v.Fecha_Inicio) && dStr <= norm(v.Fecha_Fin);
+  });
+}
+
+function adelantosEnDia(dStr) {
+  return allAdelantos.filter(a => norm(a['Descontar en quincena']) === dStr);
+}
+
+function extrasEnDia(dStr) {
+  return allExtras.filter(x => norm(x['Pagar en quincena']) === dStr);
+}
+
+function cumpleEnDia(dStr) {
+  const mmdd = dStr.substring(5); // 'MM-DD'
+  return allCumpleanos.filter(c => c.mmdd === mmdd);
+}
+
+function renderCal() {
+  const hoy     = new Date();
+  const todayStr = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+
+  const showFer  = document.getElementById('chk-feriados').checked;
+  const showQui  = document.getElementById('chk-quincenas').checked;
+  const showVac  = document.getElementById('chk-vacaciones').checked;
+  const showAdel = document.getElementById('chk-adelantos').checked;
+  const showExt  = document.getElementById('chk-extras').checked;
+
+  document.getElementById('cal-titulo').textContent = `${MESES[viewMonth]} ${viewYear}`;
+  // Actualizar encabezado para impresión
+  const _pm = document.getElementById('cal-print-mes');
+  const _pa = document.getElementById('cal-print-anio');
+  if (_pm) _pm.textContent = MESES[viewMonth].toUpperCase();
+  if (_pa) _pa.textContent = viewYear;
+
+  const primerDia = new Date(viewYear, viewMonth, 1).getDay();
+  const ultimoDia = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const mesStr    = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}`;
+
+  let ferMap = {};
+  if (showFer) {
+    try {
+      const lista = feriadosEnRango(`${mesStr}-01`, `${mesStr}-${String(ultimoDia).padStart(2,'0')}`);
+      lista.forEach(f => { ferMap[f.fecha] = f.nombre; });
+    } catch (_) {}
+  }
+
+  const quincena15  = `${mesStr}-15`;
+  const quincenaFin = `${mesStr}-${String(ultimoDia).padStart(2,'0')}`;
+
+  calDayCache = {}; // limpiar caché del mes anterior
+
+  let html = DIAS_SEM.map(d => `<div class="cal-dow">${d}</div>`).join('');
+  for (let i = 0; i < primerDia; i++) html += `<div class="cal-cell vacio"></div>`;
+
+  for (let dia = 1; dia <= ultimoDia; dia++) {
+    const dStr      = `${mesStr}-${String(dia).padStart(2,'0')}`;
+    const esFeriado = !!ferMap[dStr]; // siempre calcular para el caché (independiente del filtro visual)
+    const esQui     = (dStr === quincena15 || dStr === quincenaFin);
+    const esHoy     = dStr === todayStr;
+    const vacsHoy    = vacEnDia(dStr);       // siempre para el caché
+    const adelHoy    = adelantosEnDia(dStr); // siempre para el caché
+    const extHoy     = extrasEnDia(dStr);    // siempre para el caché
+    const cumpleHoy  = cumpleEnDia(dStr);    // siempre para el caché
+
+    // Guardar en caché para el popup (independiente de los filtros visuales)
+    calDayCache[dStr] = { esFeriado, ferNombre: ferMap[dStr] || '', esQui, vacsHoy, adelHoy, extHoy, cumpleHoy };
+
+    let cls = 'cal-cell';
+    if (esHoy)              cls += ' hoy';
+    if (esQui && showQui)   cls += ' quincena';
+    if (esFeriado && showFer) cls += ' feriado';
+
+    // El cursor pointer indica que se puede hacer clic
+    const tieneEventos = esQui || esFeriado || vacsHoy.length || adelHoy.length || extHoy.length || cumpleHoy.length;
+    const cursorStyle  = tieneEventos ? 'cursor:pointer' : '';
+
+    let tags = '';
+    if (esQui && showQui)     tags += `<div class="cal-tag tag-quincena">📋 Quincena</div>`;
+    if (esFeriado && showFer) tags += `<div class="cal-tag tag-feriado" title="${ferMap[dStr]}">🎌 ${ferMap[dStr]}</div>`;
+    if (showVac) vacsHoy.forEach(v => {
+      const color = empColorMap[v.Empleado] || 'tag-vac-0';
+      tags += `<div class="cal-tag ${color}" title="${v.Empleado} — ${v.Tipo}">🏖 ${v.Empleado.split(' ')[0]}</div>`;
+    });
+    if (showAdel) {
+      if (adelHoy.length === 1) {
+        const a = adelHoy[0];
+        tags += `<div class="cal-tag tag-adelanto" title="Adelanto ${a.Empleado} C$${a.Monto}">⚡ ${(a.Empleado||'').split(' ')[0]}</div>`;
+      } else if (adelHoy.length > 1) {
+        tags += `<div class="cal-tag tag-adelanto">⚡ ${adelHoy.length} adelantos</div>`;
+      }
+    }
+    if (showExt) {
+      if (extHoy.length === 1) {
+        const x = extHoy[0];
+        tags += `<div class="cal-tag tag-extra" title="${x.Tipo} ${x.Empleado} C$${x.Monto}">⭐ ${(x.Empleado||'').split(' ')[0]}</div>`;
+      } else if (extHoy.length > 1) {
+        tags += `<div class="cal-tag tag-extra">⭐ ${extHoy.length} extras</div>`;
+      }
+    }
+    cumpleHoy.forEach(c => {
+      tags += `<div class="cal-tag tag-cumple" title="Cumpleaños de ${c.nombre}">🎂 ${c.nombre.split(' ')[0]}</div>`;
+    });
+
+    html += `<div class="${cls}" style="${cursorStyle}" onclick="mostrarDia('${dStr}')">
+      <div class="cal-num">${dia}</div>
+      <div class="cal-tags">${tags}</div>
+    </div>`;
+  }
+
+  document.getElementById('cal-grid').innerHTML = html;
+  renderEventosList();
+
+  const mm4leg = String(viewMonth + 1).padStart(2, '0');
+  const hayCumpleMes = allCumpleanos.some(c => c.mmdd.startsWith(mm4leg + '-'));
+  const legendItems = [
+    { color: 'border:2px solid var(--green2)', label: 'Hoy' },
+    ...(showQui  ? [{ color: 'background:rgba(46,204,113,.2);border:1px solid rgba(46,204,113,.4)', label: 'Quincena' }] : []),
+    ...(showFer  ? [{ color: 'background:rgba(155,89,182,.2);border:1px solid rgba(155,89,182,.4)', label: 'Feriado' }] : []),
+    ...(showAdel ? [{ color: 'background:rgba(231,76,60,.2)', label: 'Adelanto' }] : []),
+    ...(showExt  ? [{ color: 'background:rgba(241,196,15,.2)', label: 'Extra' }] : []),
+    ...(hayCumpleMes ? [{ color: 'background:rgba(236,72,153,.22)', label: '🎂 Cumpleaños' }] : []),
+  ];
+  if (showVac) {
+    Object.keys(empColorMap).forEach(nombre => {
+      const cls = empColorMap[nombre];
+      const bgMap = { 'tag-vac-0':'rgba(52,152,219,.4)','tag-vac-1':'rgba(230,126,34,.4)','tag-vac-2':'rgba(231,76,60,.4)','tag-vac-3':'rgba(26,188,156,.4)','tag-vac-4':'rgba(241,196,15,.4)' };
+      legendItems.push({ color: `background:${bgMap[cls]||'#888'}`, label: nombre.split(' ')[0] + ' (vac.)' });
+    });
+  }
+  document.getElementById('cal-legend').innerHTML = legendItems.map(it =>
+    `<div class="leg-item"><div class="leg-dot" style="${it.color}"></div>${it.label}</div>`
+  ).join('');
+}
+
+// ── Lista de actividades del mes (debajo de la cuadrícula) ───────────────────
+function renderEventosList() {
+  const mm       = String(viewMonth + 1).padStart(2, '0');
+  const lastDay  = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const mesStart = `${viewYear}-${mm}-01`;
+  const mesEnd   = `${viewYear}-${mm}-${String(lastDay).padStart(2,'0')}`;
+  const items    = [];
+
+  // Quincenas
+  const showQui = document.getElementById('chk-quincenas').checked;
+  if (showQui) {
+    items.push({ tipo:'quincena', icon:'📋', fecha:`${viewYear}-${mm}-15`,
+      label: fmtPeriodo(`${viewYear}-${mm}-15`), nombre:'Pago de planilla' });
+    items.push({ tipo:'quincena', icon:'📋', fecha:mesEnd,
+      label: fmtPeriodo(mesEnd), nombre:'Pago de planilla' });
+  }
+
+  // Feriados
+  const showFer = document.getElementById('chk-feriados').checked;
+  if (showFer) {
+    try {
+      const fers = feriadosEnRango(mesStart, mesEnd);
+      fers.forEach(f => items.push({ tipo:'feriado', icon:'🎌', fecha:f.fecha,
+        label: parseInt(f.fecha.substring(8,10)) + ' de ' + MESES[viewMonth],
+        nombre: f.nombre }));
+    } catch(_) {}
+  }
+
+  // Vacaciones
+  const showVac = document.getElementById('chk-vacaciones').checked;
+  if (showVac) {
+    allVacaciones.forEach(v => {
+      const ini = norm(v.Fecha_Inicio);
+      const fin = norm(v.Fecha_Fin);
+      if (!ini || !fin || fin < mesStart || ini > mesEnd) return;
+      if (filtroEmpCal && v.Empleado !== filtroEmpCal) return;
+      const d1 = parseInt((ini < mesStart ? mesStart : ini).substring(8,10));
+      const d2 = parseInt((fin > mesEnd   ? mesEnd   : fin).substring(8,10));
+      const label = d1 === d2
+        ? `${d1} de ${MESES[viewMonth]}`
+        : `${d1}–${d2} de ${MESES[viewMonth]}`;
+      items.push({ tipo:'vacacion', icon:'🏖', fecha:ini, label,
+        nombre: v.Empleado || '—', sub: `${v.Dias} días · ${v.Tipo || ''}` });
+    });
+  }
+
+  // Adelantos
+  const showAdel = document.getElementById('chk-adelantos').checked;
+  if (showAdel) {
+    allAdelantos.forEach(a => {
+      const fecha = norm(a['Descontar en quincena']);
+      if (!fecha || !fecha.startsWith(`${viewYear}-${mm}`)) return;
+      items.push({ tipo:'adelanto', icon:'⚡', fecha, label: fmtPeriodo(fecha),
+        nombre: a.Empleado || '—', sub: fmt(a.Monto) });
+    });
+  }
+
+  // Extras
+  const showExt = document.getElementById('chk-extras').checked;
+  if (showExt) {
+    allExtras.forEach(x => {
+      const fecha = norm(x['Pagar en quincena']);
+      if (!fecha || !fecha.startsWith(`${viewYear}-${mm}`)) return;
+      items.push({ tipo:'extra', icon:'⭐', fecha, label: fmtPeriodo(fecha),
+        nombre: x.Empleado || '—', sub: `${x.Tipo || ''} · ${fmt(x.Monto)}` });
+    });
+  }
+
+  // Cumpleaños del mes
+  const mm5 = String(viewMonth + 1).padStart(2, '0');
+  allCumpleanos.forEach(c => {
+    if (!c.mmdd.startsWith(mm5 + '-')) return;
+    const dia   = parseInt(c.mmdd.substring(3));
+    const fecha = `${viewYear}-${mm5}-${String(dia).padStart(2,'0')}`;
+    items.push({ tipo:'cumple', icon:'🎂', fecha,
+      label: `${dia} de ${MESES[viewMonth]}`,
+      nombre: c.nombre, sub: 'Cumpleaños' });
+  });
+
+  items.sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
+
+  const el = document.getElementById('cal-eventos-lista');
+  if (!items.length) { el.innerHTML = ''; return; }
+
+  const COLOR = { quincena:'var(--green2)', feriado:'#c39bd3', vacacion:'#5dade2', adelanto:'#f1948a', extra:'#f4d03f', cumple:'#f472b6' };
+
+  el.innerHTML = `
+    <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:12px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+                  color:var(--text-muted);margin-bottom:10px">Actividades del mes</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px">
+        ${items.map(it => `
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;
+                      background:var(--navy2);border:1px solid var(--border);border-radius:6px">
+            <span style="font-size:14px;line-height:1.5">${it.icon}</span>
+            <div style="min-width:0;flex:1">
+              <div style="font-size:12px;font-weight:600;color:${COLOR[it.tipo]||'var(--text)'};
+                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.nombre}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${it.label}${it.sub ? ' · ' + it.sub : ''}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+// ── Modal email calendario ────────────────────────────────────────────────────
+document.getElementById('btn-email-cal').addEventListener('click', () => {
+  document.getElementById('alert-email-cal').className = 'alert';
+  document.getElementById('send-email-cal').disabled = false;
+  document.getElementById('send-email-cal').textContent = 'Enviar PDF';
+  document.getElementById('modal-email-cal').classList.add('open');
+  document.getElementById('inp-email-cal').focus();
+});
+['close-email-cal','cancel-email-cal'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () =>
+    document.getElementById('modal-email-cal').classList.remove('open')
+  )
+);
+document.getElementById('send-email-cal').addEventListener('click', async () => {
+  const email  = document.getElementById('inp-email-cal').value.trim();
+  const alertEl = document.getElementById('alert-email-cal');
+  const btn    = document.getElementById('send-email-cal');
+  if (!email) {
+    alertEl.className = 'alert alert-error show';
+    alertEl.textContent = 'Ingresa un correo destinatario';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Generando...'; alertEl.className = 'alert';
+  try {
+    const eventos = _buildEventos();
+    const data = await apiFetch('/api/reportes/calendario/enviar', {
+      method: 'POST',
+      body: JSON.stringify({ email, mes: viewMonth + 1, anio: viewYear, eventos }),
+    });
+    alertEl.className = 'alert alert-success show';
+    alertEl.textContent = data.mensaje || '✅ Enviado correctamente';
+    btn.textContent = 'Enviado ✓';
+  } catch (e) {
+    alertEl.className = 'alert alert-error show'; alertEl.textContent = e.message;
+    btn.disabled = false; btn.textContent = 'Enviar PDF';
+  }
+});
+
+// ── Descargar PDF del calendario ─────────────────────────────────────────────
+// Construye el array de eventos del mes actual (usado por descarga y email)
+function _buildEventos() {
+  const mm       = String(viewMonth + 1).padStart(2, '0');
+  const lastDay  = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const mesStart = `${viewYear}-${mm}-01`;
+  const mesEnd   = `${viewYear}-${mm}-${String(lastDay).padStart(2,'0')}`;
+  const eventos  = [];
+
+  // Quincenas (puntuales)
+  eventos.push({ fecha: `${viewYear}-${mm}-15`,                              tipo: 'quincena' });
+  eventos.push({ fecha: `${viewYear}-${mm}-${String(lastDay).padStart(2,'0')}`, tipo: 'quincena' });
+
+  // Feriados (puntuales)
+  try {
+    const fers = feriadosEnRango(mesStart, mesEnd);
+    fers.forEach(f => eventos.push({ fecha: f.fecha, tipo: 'feriado', texto: f.nombre }));
+  } catch(_) {}
+
+  // Vacaciones — como rangos recortados al mes (1 evento por empleado, no por día)
+  allVacaciones.forEach(v => {
+    const ini = norm(v.Fecha_Inicio);
+    const fin = norm(v.Fecha_Fin);
+    if (!ini || !fin || fin < mesStart || ini > mesEnd) return;
+    eventos.push({
+      fecha:    ini < mesStart ? mesStart : ini,
+      fechaFin: fin > mesEnd   ? mesEnd   : fin,
+      tipo:     'vacacion',
+      texto:    v.Empleado || '',
+    });
+  });
+
+  // Adelantos (puntuales)
+  allAdelantos.forEach(a => {
+    const fecha = norm(a['Descontar en quincena']);
+    if (fecha && fecha.startsWith(`${viewYear}-${mm}`))
+      eventos.push({ fecha, tipo: 'adelanto', texto: a.Empleado || '' });
+  });
+
+  // Extras (puntuales)
+  allExtras.forEach(x => {
+    const fecha = norm(x['Pagar en quincena']);
+    if (fecha && fecha.startsWith(`${viewYear}-${mm}`))
+      eventos.push({ fecha, tipo: 'extra', texto: x.Empleado || '' });
+  });
+
+  // Cumpleaños (puntuales — día del mes actual)
+  allCumpleanos.forEach(c => {
+    if (!c.mmdd.startsWith(mm + '-')) return;
+    eventos.push({ fecha: `${viewYear}-${mm}-${c.mmdd.substring(3)}`, tipo: 'cumple', texto: c.nombre });
+  });
+
+  return eventos;
+}
+
+document.getElementById('btn-export-pdf').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-export-pdf');
+  const mm  = String(viewMonth + 1).padStart(2, '0');
+  btn.disabled = true; btn.textContent = 'Generando...';
+  try {
+    const token     = getToken();
+    const empresaId = localStorage.getItem('planilla_empresa_id');
+    const resp = await fetch('/api/reportes/calendario', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token     ? { Authorization: `Bearer ${token}` }  : {}),
+        ...(empresaId ? { 'X-Empresa-ID': empresaId }         : {}),
+      },
+      body: JSON.stringify({ mes: viewMonth + 1, anio: viewYear, eventos: _buildEventos() }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ error: resp.statusText }));
+      throw new Error(err.error || 'Error al generar PDF');
+    }
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `calendario-${viewYear}-${mm}.pdf`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    btn.textContent = 'Descargado ✓';
+    setTimeout(() => { btn.disabled = false; btn.textContent = '📥 Descargar PDF'; }, 2000);
+  } catch (e) {
+    alert('Error: ' + e.message);
+    btn.disabled = false; btn.textContent = '📥 Descargar PDF';
+  }
+});
+</script>
+</body>
+</html>
