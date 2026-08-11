@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-11T16:31:08.381Z",
+  "updatedAt": "2026-08-11T20:01:02.966Z",
   "createdAt": "2026-06-25T16:00:34.918Z",
   "id": "IRCoya91PKPjpT1T",
   "name": "📢 Distribution AI — RRSS G54 v1.0",
@@ -1503,7 +1503,7 @@
       "onError": "continueRegularOutput",
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Mapa explícito company_id -> LinkedIn organization ID, mismo criterio ya usado\n// en el despachador de Analytics (item 240) — se extiende agregando una línea\n// por cliente nuevo cuando tenga su propia página de LinkedIn conectada.\nconst LINKEDIN_ORGS = {\n  '1': '112205115' // Crating Express\n};\nconst companyId = String($('⚙️ Config Distribution').item.json.G54_COMPANY_ID || '');\nreturn [{ json: { linkedin_organization_id: LINKEDIN_ORGS[companyId] || '' } }];\n"
+        "jsCode": "// Sin ningún endpoint real de G54 para resolver empresa->organización de LinkedIn, y por\n// regla de plataforma (nada específico de un cliente hardcodeado en un agente de G54), este\n// mapa queda vacío — la publicación en LinkedIn falla limpio (revierte a \"aprobado\" con motivo\n// real, mismo mecanismo que el resto de las ramas de Distribution AI) hasta que exista una\n// forma real y sin hardcode de resolver esto. Reactivar cuando G54 tenga un endpoint que\n// devuelva la organización de LinkedIn conectada por company_id.\nconst LINKEDIN_ORGS = {};\nconst companyId = String($('⚙️ Config Distribution').item.json.G54_COMPANY_ID || '');\nreturn [{ json: { linkedin_organization_id: LINKEDIN_ORGS[companyId] || '' } }];"
       }
     },
     {
@@ -2307,9 +2307,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "29c070bf-84e9-4aea-becd-02a1bf4f6d9e",
-  "activeVersionId": "ee4f642b-de52-4ca9-bbb2-db5c664c26aa",
-  "versionCounter": 82,
+  "versionId": "9685c824-4a25-47df-ba4b-b2d7208229bb",
+  "activeVersionId": "9685c824-4a25-47df-ba4b-b2d7208229bb",
+  "versionCounter": 85,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "shared": [
@@ -2334,9 +2334,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-08-08T20:05:52.930Z",
-    "createdAt": "2026-08-08T20:05:52.930Z",
-    "versionId": "ee4f642b-de52-4ca9-bbb2-db5c664c26aa",
+    "updatedAt": "2026-08-11T20:01:02.969Z",
+    "createdAt": "2026-08-11T20:01:02.969Z",
+    "versionId": "9685c824-4a25-47df-ba4b-b2d7208229bb",
     "workflowId": "IRCoya91PKPjpT1T",
     "nodes": [
       {
@@ -2947,7 +2947,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const items = $input.all();\nconst config = $('⚙️ Config Distribution').item.json;\nconst tokens = $('🏢 Aplicar Tokens Empresa').item.json;\nconst webhookBody = $('🌐 Webhook: Publicar Post').item?.json?.body || {};\n\nreturn items.map(item => {\n  const p = item.json;\n  const f = p.fields || p;\n\n  const post_id        = p.id || p.record_id || '';\n  const copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || '';\n  const copy_instagram = f.copy_instagram || f.Post_Instagram_EN || '';\n  const imagen_url     = f.imagen_url     || f.imagen || '';\n  const video_url      = f.video_url      || p.video_url || '';\n  const platform       = f.platform || p.platform || 'Facebook';\n  const content_type   = webhookBody.content_type || f.content_type || p.content_type || 'post';\n\n  const FB_ACCESS_TOKEN = tokens.FB_ACCESS_TOKEN || p.access_token || '';\n  const FB_PAGE_ID = p.fb_page_id || p.page_id || config.FB_PAGE_ID || '';\n  const IG_USER_ID = p.instagram_account_id || tokens.IG_USER_ID || '';\n  const LINKEDIN_ACCESS_TOKEN = tokens.LINKEDIN_ACCESS_TOKEN || '';\n  const LINKEDIN_ORGANIZATION_ID = tokens.LINKEDIN_ORGANIZATION_ID || '';\n\n  return { json: {\n    post_id, copy_facebook, copy_instagram, imagen_url, video_url,\n    has_image: !!imagen_url, has_video: !!video_url, platform, content_type,\n    FB_ACCESS_TOKEN, FB_PAGE_ID, IG_USER_ID,\n    LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORGANIZATION_ID\n  } };\n});\n"
+          "jsCode": "const items = $input.all();\nconst config = $('⚙️ Config Distribution').item.json;\nconst tokens = $('🏢 Aplicar Tokens Empresa').item.json;\nconst webhookBody = $('🌐 Webhook: Publicar Post').item?.json?.body || {};\n\nreturn items.map(item => {\n  const p = item.json;\n  const f = p.fields || p;\n\n  const post_id        = p.id || p.record_id || '';\n  const copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || '';\n  const copy_instagram = f.copy_instagram || f.Post_Instagram_EN || '';\n  const copy_linkedin  = f.copy_linkedin || '';\n  const imagen_url     = f.imagen_url     || f.imagen || '';\n  const video_url      = f.video_url      || p.video_url || '';\n  const platform       = f.platform || p.platform || 'Facebook';\n  const content_type   = webhookBody.content_type || f.content_type || p.content_type || 'post';\n\n  const FB_ACCESS_TOKEN = tokens.FB_ACCESS_TOKEN || p.access_token || '';\n  const FB_PAGE_ID = p.fb_page_id || p.page_id || config.FB_PAGE_ID || '';\n  const IG_USER_ID = p.instagram_account_id || tokens.IG_USER_ID || '';\n  const LINKEDIN_ACCESS_TOKEN = tokens.LINKEDIN_ACCESS_TOKEN || '';\n  const LINKEDIN_ORGANIZATION_ID = tokens.LINKEDIN_ORGANIZATION_ID || '';\n\n  return { json: {\n    post_id, copy_facebook, copy_instagram, copy_linkedin, imagen_url, video_url,\n    has_image: !!imagen_url, has_video: !!video_url, platform, content_type,\n    FB_ACCESS_TOKEN, FB_PAGE_ID, IG_USER_ID,\n    LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORGANIZATION_ID\n  } };\n});\n"
         },
         "id": "prep-post",
         "name": "🔧 Preparar Datos Post",
@@ -3835,7 +3835,7 @@
         "onError": "continueRegularOutput",
         "parameters": {
           "mode": "runOnceForAllItems",
-          "jsCode": "// Mapa explícito company_id -> LinkedIn organization ID, mismo criterio ya usado\n// en el despachador de Analytics (item 240) — se extiende agregando una línea\n// por cliente nuevo cuando tenga su propia página de LinkedIn conectada.\nconst LINKEDIN_ORGS = {\n  '1': '112205115' // Crating Express\n};\nconst companyId = String($('⚙️ Config Distribution').item.json.G54_COMPANY_ID || '');\nreturn [{ json: { linkedin_organization_id: LINKEDIN_ORGS[companyId] || '' } }];\n"
+          "jsCode": "// Sin ningún endpoint real de G54 para resolver empresa->organización de LinkedIn, y por\n// regla de plataforma (nada específico de un cliente hardcodeado en un agente de G54), este\n// mapa queda vacío — la publicación en LinkedIn falla limpio (revierte a \"aprobado\" con motivo\n// real, mismo mecanismo que el resto de las ramas de Distribution AI) hasta que exista una\n// forma real y sin hardcode de resolver esto. Reactivar cuando G54 tenga un endpoint que\n// devuelva la organización de LinkedIn conectada por company_id.\nconst LINKEDIN_ORGS = {};\nconst companyId = String($('⚙️ Config Distribution').item.json.G54_COMPANY_ID || '');\nreturn [{ json: { linkedin_organization_id: LINKEDIN_ORGS[companyId] || '' } }];"
         }
       },
       {
@@ -3898,7 +3898,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ author: 'urn:li:organization:' + $json.LINKEDIN_ORGANIZATION_ID, lifecycleState: 'PUBLISHED', specificContent: { 'com.linkedin.ugc.ShareContent': { shareCommentary: { text: $json.copy_facebook || $json.copy_instagram }, shareMediaCategory: 'NONE' } }, visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' } }) }}",
+          "jsonBody": "={{ JSON.stringify({ author: 'urn:li:organization:' + $json.LINKEDIN_ORGANIZATION_ID, lifecycleState: 'PUBLISHED', specificContent: { 'com.linkedin.ugc.ShareContent': { shareCommentary: { text: $json.copy_linkedin || $json.copy_facebook || $json.copy_instagram }, shareMediaCategory: 'NONE' } }, visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' } }) }}",
           "options": {
             "response": {
               "response": {
@@ -4026,7 +4026,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ author: 'urn:li:organization:' + $('🔧 Preparar Datos Post').item.json.LINKEDIN_ORGANIZATION_ID, lifecycleState: 'PUBLISHED', specificContent: { 'com.linkedin.ugc.ShareContent': { shareCommentary: { text: $('🔧 Preparar Datos Post').item.json.copy_facebook || $('🔧 Preparar Datos Post').item.json.copy_instagram }, shareMediaCategory: 'IMAGE', media: [ { status: 'READY', media: $('🖼️ LinkedIn: Registrar Upload').item.json.value.asset } ] } }, visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' } }) }}",
+          "jsonBody": "={{ JSON.stringify({ author: 'urn:li:organization:' + $('🔧 Preparar Datos Post').item.json.LINKEDIN_ORGANIZATION_ID, lifecycleState: 'PUBLISHED', specificContent: { 'com.linkedin.ugc.ShareContent': { shareCommentary: { text: $('🔧 Preparar Datos Post').item.json.copy_linkedin || $('🔧 Preparar Datos Post').item.json.copy_facebook || $('🔧 Preparar Datos Post').item.json.copy_instagram }, shareMediaCategory: 'IMAGE', media: [ { status: 'READY', media: $('🖼️ LinkedIn: Registrar Upload').item.json.value.asset } ] } }, visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' } }) }}",
           "options": {
             "response": {
               "response": {
@@ -4627,18 +4627,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-08-08T20:05:53.065Z",
-        "id": 2752,
+        "createdAt": "2026-08-11T20:01:03.204Z",
+        "id": 2778,
         "workflowId": "IRCoya91PKPjpT1T",
-        "versionId": "ee4f642b-de52-4ca9-bbb2-db5c664c26aa",
+        "versionId": "9685c824-4a25-47df-ba4b-b2d7208229bb",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-08-08T20:05:53.025Z",
-        "id": 2751,
+        "createdAt": "2026-08-11T20:01:03.144Z",
+        "id": 2777,
         "workflowId": "IRCoya91PKPjpT1T",
-        "versionId": "ee4f642b-de52-4ca9-bbb2-db5c664c26aa",
+        "versionId": "9685c824-4a25-47df-ba4b-b2d7208229bb",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }

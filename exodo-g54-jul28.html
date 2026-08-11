@@ -131,7 +131,9 @@
     <h1>Éxodo — Pendientes ordenados por área · <span>29 Jul 2026</span></h1>
     <div class="header-meta">
       <div class="meta-item"><div class="dot"></div> Última actualización: 11 de agosto 2026</div>
-      <div class="meta-item"><div class="dot" style="background:var(--green)"></div> B-19 confirmado RESUELTO en vivo hoy (era el P0 más grave del documento). Solo C-2 sigue sin reflejarse</div>
+      <div class="meta-item"><div class="dot" style="background:var(--green)"></div> B-19 confirmado RESUELTO en vivo hoy (era el P0 más grave del documento)</div>
+      <div class="meta-item"><div class="dot" style="background:var(--orange)"></div> B-21 nuevo hoy — sin endpoint de empresa→página, el disparo mensual de Analytics y toda la publicación en LinkedIn quedan sin funcionar a propósito (no había forma sin hardcode)</div>
+      <div class="meta-item"><div class="dot"></div> C-2 sigue sin reflejarse</div>
     </div>
   </div>
 </div>
@@ -227,6 +229,28 @@
         La documentación de la API confirma el fix: <b>"New · 6-ago (B-19) — Antes vivía en la fila del usuario, así que dos sesiones de la misma cuenta se pisaban... Ahora vive en el token: cada sesión (pestaña, dispositivo, script) mantiene su propia empresa activa y switch-company solo afecta al token con el que se llamó."</b> Reprobado hoy con la misma prueba exacta que confirmó el bug el 05-ago, esta vez con el resultado invertido: dos logins reales (dos tokens distintos, mismo usuario <code>master@growth54.local</code>), token A cambiado a empresa 1, token B cambiado a empresa 6 — <code>GET /api/auth/me</code> con el token A siguió mostrando <code>current_company_id: 1</code>, y con el token B siguió mostrando <code>current_company_id: 6</code>, sin ninguna colisión.
       </p>
       <div class="note-box">Nota de impacto para nuestros agentes, tal como la documenta la propia API: "un script que hacía login una vez y esperaba que otro proceso le cambiara la empresa ya no funciona — cada token debe llamar a su propio switch-company." Los 8 agentes con sesión (Content AI, Ideas AI, Generador de Imágenes, Community AI, Sales AI Motor, Analytics, Vigía, Distribution AI) ya hacían login + switch-company propios dentro de cada ejecución — nunca dependieron de que otro proceso les cambiara la empresa — así que no requieren ningún cambio de nuestro lado, el fix los beneficia automáticamente.</div>
+    </div>
+  </div>
+
+  <!-- B-21 -->
+  <div class="item-card b-orange">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-21. No existe ningún endpoint que resuelva empresa → página de Meta / organización de LinkedIn — bloquea el disparo automático mensual de Analytics y toda la publicación en LinkedIn</div>
+        <div class="item-where">API Backend — Conexión de Redes Sociales</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge blocker">🟧 Bloqueante real, aceptado a propósito</span>
+        <span class="badge p1">Nuevo — 11-ago</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Confirmado de nuevo hoy, probando 5 rutas candidatas más (todas <code>404</code>): no existe ningún endpoint con AGENT_TOKEN ni con sesión que resuelva "esta empresa → su page_id de Facebook / ig_user_id / organization_id de LinkedIn". <code>GET /api/social-channels</code> expone <code>connection_status</code>/<code>has_credentials</code>/<code>image_config</code> por canal, pero nunca el ID real de la página conectada.
+      </p>
+      <div class="warn-box"><strong>Encontrado hoy, no un descubrimiento nuevo del bloqueo en sí:</strong> dos agentes de plataforma (el disparo automático mensual de Analytics V3, y la resolución de organización de LinkedIn en Distribution AI) tenían este hueco tapado con un mapa de empresa→ID fijo en el código — a pedido explícito de la usuaria, se sacó por completo hoy mismo (viola la regla de cero-hardcode de cliente en agentes de plataforma, sin excepción). Como consecuencia real y aceptada: el disparo automático del reporte mensual de Analytics (día 28) ya no corre solo, y la publicación en LinkedIn (que sí llegó a publicar posts reales el 08-ago) queda sin ningún mecanismo funcional hasta que este endpoint exista.
+      </div>
+      <div class="dep-box"><strong>Lo que se necesita concretamente:</strong> un endpoint tipo <code>GET /api/n8n/companies/{id}/pages</code> (o extender <code>GET /api/social-channels</code> para incluir el <code>page_id</code>/<code>ig_user_id</code>/<code>organization_id</code> real, no solo el estado de conexión) — el dato ya existe en algún lado de G54, porque <code>GET /api/n8n/companies/{id}/rrss/posts/to-publish</code> ya lo resuelve correctamente por post cuando hay uno pendiente; falta exponerlo como un lookup directo por <code>company_id</code>, sin depender de que haya un post en cola.</div>
     </div>
   </div>
 
