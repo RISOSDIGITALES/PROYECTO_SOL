@@ -130,8 +130,8 @@
     <div class="header-label">G54 Platform — Documento maestro para Walter</div>
     <h1>Éxodo — Pendientes ordenados por área · <span>29 Jul 2026</span></h1>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> Última actualización: 7 de agosto 2026</div>
-      <div class="meta-item"><div class="dot" style="background:var(--red)"></div> B-19 sigue abierto (P0) — colisión real entre empresas, reproducida en vivo. B-9 ya se confirmó resuelto en vivo hoy. Solo C-2 sigue sin reflejarse</div>
+      <div class="meta-item"><div class="dot"></div> Última actualización: 11 de agosto 2026</div>
+      <div class="meta-item"><div class="dot" style="background:var(--green)"></div> B-19 confirmado RESUELTO en vivo hoy (era el P0 más grave del documento). Solo C-2 sigue sin reflejarse</div>
     </div>
   </div>
 </div>
@@ -146,21 +146,21 @@
   </div>
 
   <!-- I-1 -->
-  <div class="item-card b-yellow">
+  <div class="item-card b-green">
     <div class="item-header">
       <div>
-        <div class="item-title">I-1. Horizonte + dirección deseada — existen, pero solo en la edición manual, no en el botón que genera la estrategia con IA</div>
-        <div class="item-where">Panel › Estrategia RRSS → botón "Strategist AI" (generación) vs. botón "Crear/Editar estrategia" (edición manual)</div>
+        <div class="item-title">I-1. Horizonte + dirección deseada en el botón de generación — resuelto de los dos lados, confirmado en vivo hoy de nuestro lado, falta solo que la usuaria confirme visualmente el modal</div>
+        <div class="item-where">Panel › Estrategia RRSS → botón "Strategist AI" + <code>POST /api/rrss/run-strategist</code></div>
       </div>
       <div class="item-tags">
-        <span class="badge carry">Reconfirmado abierto — 04-ago, corrige un hallazgo anterior equivocado</span>
+        <span class="badge resuelto">✅ Backend + n8n confirmados — 11-ago</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        Corrección a lo reportado el 03-ago: el selector de <code>Horizonte</code> (<code>1 mes</code>/<code>3 meses</code>/<code>6 meses</code>/<code>8 meses</code>) y el <code>&lt;textarea&gt;</code> de <code>direccion_deseada</code> sí existen en el bundle — pero viven en un modal de edición manual (<code>saveEstrategia</code>, guarda directo, sin IA de por medio), abierto por el mismo botón que dice "Crear estrategia" o "Editar estrategia" según si ya existe un registro. La usuaria buscó estos campos en el lugar correcto — el flujo real de <strong>generación</strong> — y confirmó que ahí no están: el botón "Strategist AI" (el que de verdad dispara nuestro agente de n8n) llama a <code>runStrategist()</code> en un solo clic, sin ningún formulario ni paso intermedio que pida horizonte o dirección antes de generar.
+        La documentación de la API confirma <b>"New · 6-ago (I-1)"</b>: <code>POST /api/rrss/run-strategist</code> ya acepta un brief real (<code>horizonte_meses</code>, solo 1/3/6/8, otro valor da 422; y <code>direccion_deseada</code>, texto libre) — "el panel los pide en un modal antes de disparar el agente". El backend calcula además <code>periodo.fecha_inicio</code>/<code>fecha_fin</code> ya resueltas, para que el agente no tenga que hacer la aritmética. Confirmado que nuestro Strategist AI (<code>S62o0wcXq8Wfj67S</code>) nunca leía este brief — se corrigió hoy para darle máxima prioridad sobre cualquier fallback, y se confirmó en vivo con una corrida real: <code>{"horizonte_meses":6,"direccion_deseada":"..."}</code> mandado directo al webhook resultó en una estrategia real con <code>fecha_inicio</code>/<code>fecha_fin</code> calculadas sobre 6 meses exactos y <code>direccion_deseada</code> reflejada tal cual en el <code>objetivo</code> generado.
       </p>
-      <div class="note-box">Workaround manual posible hoy, aunque no es una experiencia guiada: como nuestro Strategist AI ya lee <code>direccion_deseada</code>/fechas desde la estrategia guardada en G54 al momento de generar (confirmado desde el ítem 121), un cliente podría abrir "Crear/Editar estrategia", completar y guardar esos 2 campos primero, y recién después apretar "Strategist AI" — pero son dos pasos separados y no obvios, no un flujo único de creación. Pedido real a Walter: que el botón "Strategist AI" (o un paso previo a él) pida horizonte y dirección antes de disparar la generación, en vez de asumir lo que ya esté guardado.</div>
+      <div class="note-box">Pendiente real: no se pudo confirmar visualmente que el modal del botón "Strategist AI" ya esté desplegado en el panel (sin acceso a navegador desde este entorno) — la usuaria puede confirmarlo con un vistazo. El código de n8n ya está listo para recibirlo apenas ella lo confirme o lo use por primera vez.</div>
     </div>
   </div>
 
@@ -212,25 +212,21 @@
   </div>
 
   <!-- B-19 -->
-  <div class="item-card b-red">
+  <div class="item-card b-green">
     <div class="item-header">
       <div>
-        <div class="item-title">B-19. "Empresa activa" vive en el usuario de G54, no en el token de sesión — colisión real entre empresas, confirmada con evidencia, no teórica</div>
+        <div class="item-title">B-19. "Empresa activa" — RESUELTO, confirmado en vivo hoy con la misma reproducción exacta que destapó el bug</div>
         <div class="item-where">API Backend — Modelo de sesión (<code>POST /api/auth/switch-company</code>)</div>
       </div>
       <div class="item-tags">
-        <span class="badge p0">🔴 P0</span>
-        <span class="badge carry">Nuevo — 05-ago, con reproducción en vivo</span>
+        <span class="badge resuelto">✅ Confirmado en vivo — 11-ago</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        Confirmado hoy con una prueba controlada: se hizo login dos veces (dos tokens de sesión distintos, mismo usuario <code>master@growth54.local</code>). Con el token A se cambió la empresa activa a la 1 y se leyó — 12 ideas, correcto. Sin volver a tocar el token A para nada, se usó el token B para cambiar la empresa activa a la 6. Al releer con el token A (sin ningún cambio propio de por medio), ya mostraba las 7 ideas de la empresa 6, no las 12 de la empresa 1. La respuesta de <code>switch-company</code> lo confirma explícito: <code>current_company_id</code> es un campo del objeto <code>user</code> (<code>id:1</code>, "Master User"), no del token — es decir, <b>cualquier</b> sesión que use esa misma cuenta cambia lo que ven <b>todas</b> las demás sesiones de esa cuenta, sin importar qué token tengan.
+        La documentación de la API confirma el fix: <b>"New · 6-ago (B-19) — Antes vivía en la fila del usuario, así que dos sesiones de la misma cuenta se pisaban... Ahora vive en el token: cada sesión (pestaña, dispositivo, script) mantiene su propia empresa activa y switch-company solo afecta al token con el que se llamó."</b> Reprobado hoy con la misma prueba exacta que confirmó el bug el 05-ago, esta vez con el resultado invertido: dos logins reales (dos tokens distintos, mismo usuario <code>master@growth54.local</code>), token A cambiado a empresa 1, token B cambiado a empresa 6 — <code>GET /api/auth/me</code> con el token A siguió mostrando <code>current_company_id: 1</code>, y con el token B siguió mostrando <code>current_company_id: 6</code>, sin ninguna colisión.
       </p>
-      <div class="note-box"><strong>Por qué esto no es "un problema de que estamos en pruebas":</strong> el panel real de un cliente usa su propio usuario, aislado — eso nunca estuvo en riesgo. El problema es que ninguno de nuestros 8 agentes que necesitan sesión (Content AI, Ideas AI, Generador de Imágenes, Community AI, Sales AI Motor, Analytics, Vigía, Distribution AI) actúa como el cliente — todos actúan con <b>una sola cuenta de servicio compartida</b> para poder operar sobre cualquier empresa. Ese mecanismo es el mismo en pruebas que en producción real; lo único que cambia con más tráfico real de más clientes es que la probabilidad de que dos de esas 8 operaciones caigan cerca en el tiempo, para empresas distintas, deja de ser baja.</div>
-      <div class="dep-box"><strong>Qué pasaría en la práctica:</strong> un dato (idea, post, deal del CRM, config de WhatsApp) guardado o leído bajo la empresa equivocada — el tipo de bug más serio posible en una plataforma multiempresa, no solo un error visible.</div>
-      <div class="note-box"><strong>Arreglo real, del lado de Walter:</strong> que <code>current_company_id</code> viva en el token/sesión (o se acepte como parámetro explícito por request en las rutas que hoy dependen de <code>switch-company</code>), no en la fila del usuario. Mitigación más chica y ya propuesta: cuentas de servicio separadas por agente en vez de una sola compartida — reduce mucho el choque entre agentes distintos, aunque no cierra el caso de un mismo agente disparado dos veces casi al mismo tiempo para dos empresas distintas.</div>
-      <div class="note-box">De nuestro lado, revisado hoy: los únicos 2 workflows que iteran varias empresas dentro de una sola ejecución (Vigía y el puente de los 2 minutos) ya lo hacen en serie, uno por vez, nunca en paralelo — no agravan el problema. No existe ninguna forma segura de cerrar esto solo desde n8n sin una cuenta compartida entre agentes o sin cambios del lado de G54 — un candado propio en n8n es frágil (sin un almacén atómico real disponible, con riesgo de bloqueo permanente si una ejecución se cae mientras lo sostiene) y no se construyó por ese motivo.</div>
+      <div class="note-box">Nota de impacto para nuestros agentes, tal como la documenta la propia API: "un script que hacía login una vez y esperaba que otro proceso le cambiara la empresa ya no funciona — cada token debe llamar a su propio switch-company." Los 8 agentes con sesión (Content AI, Ideas AI, Generador de Imágenes, Community AI, Sales AI Motor, Analytics, Vigía, Distribution AI) ya hacían login + switch-company propios dentro de cada ejecución — nunca dependieron de que otro proceso les cambiara la empresa — así que no requieren ningún cambio de nuestro lado, el fix los beneficia automáticamente.</div>
     </div>
   </div>
 
