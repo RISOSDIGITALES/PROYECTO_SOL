@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Éxodo G54 — Pendientes ordenados · 12 Ago 2026</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0d16;
+      --surface: #111520;
+      --border: #1a2035;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --subtle: #8b98b8;
+
+      --green: #4ade80; --green-bg: #052e16; --green-border: #166534;
+      --yellow: #fbbf24; --yellow-bg: #1c1200; --yellow-border: #78350f;
+      --red: #f87171; --red-bg: #2d0a0a; --red-border: #7f1d1d;
+      --blue: #60a5fa; --blue-bg: #0c1a3a; --blue-border: #1e3a6e;
+      --purple: #c084fc; --purple-bg: #1e0840; --purple-border: #4c1d95;
+      --orange: #fb923c; --orange-bg: #1a0a00; --orange-border: #7c2d12;
+      --gray: #9ca3af; --gray-bg: #17191f; --gray-border: #374151;
+      --teal: #2dd4bf; --teal-bg: #042f2c; --teal-border: #115e59;
+      --accent: #7c3aed; --accent-light: #a78bfa;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #0d1020 0%, #140a2e 50%, #0a1030 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 40px;
+    }
+    .header-inner { max-width: 960px; margin: 0 auto; }
+    .header-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-light); margin-bottom: 12px; }
+    h1 { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+    h1 span { color: var(--accent-light); }
+    .header p { font-size: 14px; color: var(--subtle); max-width: 680px; margin-bottom: 20px; }
+    .header-meta { display: flex; gap: 24px; flex-wrap: wrap; }
+    .meta-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-light); }
+
+    .container { max-width: 960px; margin: 0 auto; padding: 40px; display: grid; gap: 20px; }
+
+    .cat-header {
+      display: flex; align-items: center; gap: 12px;
+      margin: 28px 0 -2px 0; padding-bottom: 10px; border-bottom: 2px solid var(--border);
+    }
+    .cat-header:first-child { margin-top: 0; }
+    .cat-icon { font-size: 20px; }
+    .cat-title { font-size: 18px; font-weight: 800; color: #fff; }
+    .cat-sub { font-size: 12px; color: var(--muted); margin-left: auto; }
+    .cat-propuesta .cat-title { color: var(--accent-light); }
+    .cat-backend .cat-title { color: var(--purple); }
+
+    .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+    .badge.p0 { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+    .badge.p1 { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-border); }
+    .badge.blocker { background: var(--orange-bg); color: var(--orange); border: 1px solid var(--orange-border); }
+    .badge.nuevo { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+    .badge.nuestro { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
+    .badge.walter { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border); }
+
+    .item-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+    .item-card.b-red { border-left: 3px solid var(--red); }
+    .item-card.b-orange { border-left: 3px solid var(--orange); }
+    .item-card.b-purple { border-left: 3px solid var(--purple); }
+    .item-card.b-green { border-left: 3px solid var(--green); }
+    .item-card.b-blue { border-left: 3px solid var(--blue); }
+
+    .item-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 16px; padding: 16px 20px;
+      background: #0d1120; border-bottom: 1px solid var(--border); flex-wrap: wrap;
+    }
+    .item-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .item-where { font-size: 12px; color: var(--muted); }
+    .item-tags { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+    .item-body { padding: 20px; display: grid; gap: 14px; }
+    .item-why { color: var(--subtle); font-size: 13px; line-height: 1.65; }
+    code {
+      font-family: 'Courier New', monospace; background: #141825;
+      border: 1px solid var(--border); color: var(--blue);
+      padding: 1px 5px; border-radius: 3px; font-size: 11px;
+    }
+
+    .dep-box { background: #141825; border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-size: 12px; color: var(--muted); }
+    .dep-box strong { color: var(--subtle); }
+
+    .split-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    @media (max-width: 820px) { .split-grid { grid-template-columns: 1fr; } }
+    .split-col { border-radius: 8px; padding: 14px 16px; border: 1px solid var(--border); }
+    .split-col.ok { background: var(--green-bg); border-color: var(--green-border); }
+    .split-col.us { background: var(--blue-bg); border-color: var(--blue-border); }
+    .split-col.walter { background: var(--purple-bg); border-color: var(--purple-border); }
+    .split-col h4 { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+    .split-col.ok h4 { color: var(--green); }
+    .split-col.us h4 { color: var(--blue); }
+    .split-col.walter h4 { color: var(--purple); }
+    .split-col ul { padding-left: 16px; font-size: 12.5px; color: var(--subtle); display: grid; gap: 6px; }
+
+    /* ---- embedded static preview of the panel proposal (light theme, mirrors the real G54 panel look) ---- */
+    .preview-frame { background: #f9f9f7; border-radius: 12px; padding: 24px; border: 1px solid #2a2f42; }
+    .preview-tag { font-size: 11px; font-weight: 700; color: var(--accent-light); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; }
+    .pv-section-title { font-size: 12px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: #0b0b0b; margin-bottom: 4px; }
+    .pv-live { display: inline-flex; align-items: center; gap: 5px; background: #eefbf1; color: #0ca30c; font-size: 10px; font-weight: 800; letter-spacing: 0.03em; padding: 3px 8px; border-radius: 999px; margin-left: 8px; }
+    .pv-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 10px 0 16px; }
+    @media (max-width: 700px) { .pv-tiles { grid-template-columns: 1fr; } }
+    .pv-tile { background: #fff; border: 1px solid #e8e8e9; border-left: 3px solid #2a78d6; border-radius: 12px; padding: 14px 14px 10px; }
+    .pv-tile-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .pv-tile-val { font-size: 22px; font-weight: 800; color: #0b0b0b; letter-spacing: -0.01em; }
+    .pv-tile-delta { font-size: 11px; font-weight: 800; color: #0ca30c; background: #eefbf1; padding: 2px 6px; border-radius: 6px; }
+    .pv-tile-label { font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: #0b0b0b; margin: 5px 0 8px; }
+    .pv-tile svg { display: block; width: 100%; height: 26px; }
+
+    .pv-panel { background: #fff; border: 1px solid #e8e8e9; border-radius: 12px; padding: 14px 16px 16px; margin-bottom: 12px; }
+    .pv-panel-title { font-size: 12px; font-weight: 800; color: #0b0b0b; margin-bottom: 10px; }
+    .pv-funnel-row { margin-bottom: 10px; }
+    .pv-funnel-top { display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 700; color: #0b0b0b; margin-bottom: 4px; }
+    .pv-funnel-track { height: 18px; background: #f1f2f3; border-radius: 5px; overflow: hidden; }
+    .pv-funnel-fill { height: 100%; border-radius: 5px; }
+
+    .pv-dgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    @media (max-width: 700px) { .pv-dgrid { grid-template-columns: repeat(2, 1fr); } }
+    .pv-dcard { background: #fff; border: 1px solid #e8e8e9; border-left: 2px solid #1baf7a; border-radius: 12px; padding: 12px 12px 10px; }
+    .pv-dcard-val { font-size: 18px; font-weight: 800; color: #0b0b0b; }
+    .pv-dcard-label { font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #0b0b0b; margin-top: 3px; }
+
+    .pv-real { background: #fff; border: 1px solid #cdeccd; border-left: 3px solid #0ca30c; border-radius: 12px; padding: 14px 16px; }
+    .pv-real-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; }
+    @media (max-width: 700px) { .pv-real-row { grid-template-columns: 1fr; } }
+    .pv-real-val { font-size: 24px; font-weight: 800; color: #0b0b0b; }
+    .pv-real-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #0b0b0b; margin: 3px 0 2px; }
+    .pv-real-sub { font-size: 11px; color: #898781; }
+
+    footer { background: #070a12; border-top: 1px solid var(--border); padding: 22px 40px; text-align: center; color: var(--muted); font-size: 12px; margin-top: 40px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-label">G54 Platform — Documento maestro para Walter</div>
+    <h1>Éxodo — Pendientes ordenados por área · <span>12 Ago 2026</span></h1>
+    <p>Reemplaza a <code style="color:#a78bfa;background:transparent;border:none;">exodo-g54-jul28.html</code>. Trae un solo pendiente vivo de ese documento (B-22) y agrega algo nuevo: una propuesta de rediseño para la sección de Métricas del panel, con un ejemplo visual armado y probado.</p>
+    <div class="header-meta">
+      <div class="meta-item"><div class="dot"></div> 12 de agosto 2026</div>
+      <div class="meta-item"><div class="dot" style="background:var(--accent-light)"></div> Nueva propuesta: rediseño de Métricas RRSS</div>
+      <div class="meta-item"><div class="dot" style="background:var(--orange)"></div> B-22 sigue abierto — falta un DELETE en /api/rrss/metricas</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ============ PROPUESTA MÉTRICAS RRSS ============ -->
+  <div class="cat-header cat-propuesta">
+    <span class="cat-icon">🎯</span>
+    <span class="cat-title">Propuesta — Rediseño de Métricas RRSS</span>
+    <span class="cat-sub">No es un bug, es una idea para la sección del panel</span>
+  </div>
+
+  <div class="item-card b-blue">
+    <div class="item-header">
+      <div>
+        <div class="item-title">Por qué</div>
+        <div class="item-where">Panel › Métricas RRSS</div>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Hoy esa sección mezcla todo en un solo nivel: alcance, tasa de participación, clics y leads aparecen como 4 tarjetas iguales, sin jerarquía. El pedido real es que lo primero que se vea sea lo que se traduce en ventas — leads, calificados, negocios en el CRM — y que el alcance, la tasa de participación y los seguidores queden de referencia, no arriba. Esto coincide con cómo lo hacen Metricool, HubSpot, Sprout Social y Agorapulse: todos separan "resultados" de "métricas de vanidad" en dos bloques con jerarquía visual distinta, nunca mezclados. También coincide con la prueba clásica de Eric Ries (<em>Lean Startup</em>) para saber si una métrica sirve: <strong>accionable, accesible, auditable</strong> — leads/calificados/deals pasan los 3 filtros; alcance solo no.
+      </p>
+    </div>
+  </div>
+
+  <div class="item-card b-blue">
+    <div class="item-header">
+      <div>
+        <div class="item-title">Cómo se vería — ejemplo armado y probado</div>
+      </div>
+      <div class="item-tags"><span class="badge nuevo">Vista previa, no el panel real</span></div>
+    </div>
+    <div class="item-body">
+      <div class="preview-frame">
+        <div class="preview-tag">Vista previa — mismos colores y componentes del panel real</div>
+
+        <div class="pv-section-title">Resultados<span class="pv-live">● EN VIVO</span></div>
+        <div class="pv-tiles">
+          <div class="pv-tile">
+            <div class="pv-tile-top"><span class="pv-tile-val">141</span><span class="pv-tile-delta">+18%</span></div>
+            <div class="pv-tile-label">Leads generados</div>
+            <svg viewBox="0 0 240 34" preserveAspectRatio="none">
+              <path d="M3.0 31.0 L24.3 28.9 L45.5 27.8 L66.8 24.6 L88.1 25.7 L109.4 21.1 L130.6 19.3 L151.9 17.2 L173.2 14.0 L194.5 11.2 L215.7 6.9 L237.0 3.0" fill="none" stroke="#e1e0d9" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+              <path d="M215.7 6.9 L237.0 3.0" fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+              <circle cx="237.0" cy="3.0" r="4.5" fill="#fff"/><circle cx="237.0" cy="3.0" r="3.2" fill="#2a78d6"/>
+            </svg>
+          </div>
+          <div class="pv-tile">
+            <div class="pv-tile-top"><span class="pv-tile-val">38</span><span class="pv-tile-delta">+9%</span></div>
+            <div class="pv-tile-label">Leads calificados / calientes</div>
+            <svg viewBox="0 0 240 34" preserveAspectRatio="none">
+              <path d="M3.0 31.0 L24.3 28.1 L45.5 29.5 L66.8 23.6 L88.1 20.7 L109.4 22.2 L130.6 16.3 L151.9 13.3 L173.2 14.8 L194.5 8.9 L215.7 5.9 L237.0 3.0" fill="none" stroke="#e1e0d9" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+              <path d="M215.7 5.9 L237.0 3.0" fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+              <circle cx="237.0" cy="3.0" r="4.5" fill="#fff"/><circle cx="237.0" cy="3.0" r="3.2" fill="#2a78d6"/>
+            </svg>
+          </div>
+          <div class="pv-tile">
+            <div class="pv-tile-top"><span class="pv-tile-val">24</span><span class="pv-tile-delta">+5</span></div>
+            <div class="pv-tile-label">Deals en el CRM</div>
+            <svg viewBox="0 0 240 34" preserveAspectRatio="none">
+              <path d="M3.0 31.0 L24.3 29.1 L45.5 25.4 L66.8 27.3 L88.1 21.7 L109.4 19.8 L130.6 17.9 L151.9 14.2 L173.2 16.1 L194.5 10.5 L215.7 6.7 L237.0 3.0" fill="none" stroke="#e1e0d9" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+              <path d="M215.7 6.7 L237.0 3.0" fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+              <circle cx="237.0" cy="3.0" r="4.5" fill="#fff"/><circle cx="237.0" cy="3.0" r="3.2" fill="#2a78d6"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="pv-panel">
+          <div class="pv-panel-title">Embudo real: de un clic a una venta (MOFU → BOFU)</div>
+          <div class="pv-funnel-row">
+            <div class="pv-funnel-top"><span>Clics al link</span><span>187</span></div>
+            <div class="pv-funnel-track"><div class="pv-funnel-fill" style="width:100%;background:#5598e7;"></div></div>
+          </div>
+          <div class="pv-funnel-row">
+            <div class="pv-funnel-top"><span>Leads generados</span><span>141</span></div>
+            <div class="pv-funnel-track"><div class="pv-funnel-fill" style="width:75%;background:#2a78d6;"></div></div>
+          </div>
+          <div class="pv-funnel-row">
+            <div class="pv-funnel-top"><span>Leads calificados</span><span>38</span></div>
+            <div class="pv-funnel-track"><div class="pv-funnel-fill" style="width:20%;background:#1c5cab;"></div></div>
+          </div>
+          <div class="pv-funnel-row" style="margin-bottom:0;">
+            <div class="pv-funnel-top"><span>Deals en el CRM</span><span>24</span></div>
+            <div class="pv-funnel-track"><div class="pv-funnel-fill" style="width:13%;background:#104281;"></div></div>
+          </div>
+        </div>
+
+        <div class="pv-section-title" style="margin-top:16px;">Demanda <span style="font-weight:600;text-transform:none;letter-spacing:0;color:#898781;">— interés real, todavía no es un lead</span></div>
+        <div class="pv-dgrid" style="margin-top:8px;">
+          <div class="pv-dcard"><div class="pv-dcard-val">64</div><div class="pv-dcard-label">Guardados</div></div>
+          <div class="pv-dcard"><div class="pv-dcard-val">29</div><div class="pv-dcard-label">Compartidos</div></div>
+          <div class="pv-dcard"><div class="pv-dcard-val">218</div><div class="pv-dcard-label">Visitas al perfil</div></div>
+          <div class="pv-dcard"><div class="pv-dcard-val">187</div><div class="pv-dcard-label">Clics al link</div></div>
+        </div>
+
+        <div class="pv-real" style="margin-top:16px;">
+          <div class="pv-panel-title" style="margin-bottom:0;">Ingresos reales y retención</div>
+          <div class="pv-real-row">
+            <div>
+              <div class="pv-real-val">$0</div>
+              <div class="pv-real-label">Ingresos reales (ventas cerradas)</div>
+              <div class="pv-real-sub">0 de 42 negocios en la etapa "cerrado"</div>
+            </div>
+            <div>
+              <div class="pv-real-val">—</div>
+              <div class="pv-real-label">Clientes recurrentes</div>
+              <div class="pv-real-sub">sin ventas cerradas todavía para comparar</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dep-box" style="margin-top:12px;"><strong>Nota:</strong> Alcance, tasa de participación y seguidores nuevos siguen existiendo — se quedan en un bloque de "Métricas de referencia" más abajo, sin desaparecer, solo sin ser lo primero que se ve.</div>
+    </div>
+  </div>
+
+  <div class="item-card b-blue">
+    <div class="item-header">
+      <div>
+        <div class="item-title">División de trabajo</div>
+      </div>
+    </div>
+    <div class="item-body">
+      <div class="split-grid">
+        <div class="split-col ok">
+          <h4>✅ Ya funciona hoy</h4>
+          <ul>
+            <li>Leads, calificados y deals — ya se escriben en tiempo real por nuestros agentes.</li>
+            <li>Ingresos reales y clientes recurrentes — el mecanismo ya existe de los dos lados (campo <code style="color:#4ade80;background:transparent;border:none;">valor_estimado</code> + etapa <code style="color:#4ade80;background:transparent;border:none;">cerrado</code>), confirmado en vivo. Solo falta que se use al cerrar una venta.</li>
+          </ul>
+        </div>
+        <div class="split-col us">
+          <h4>🔧 Nos toca a nosotros</h4>
+          <ul>
+            <li>Confirmar que el clic combinado (tracker propio de Facebook + clic nativo de Instagram) esté sumado en un solo total.</li>
+            <li>Confirmar que el conteo de leads viaje dentro del guardado semanal de métricas.</li>
+            <li>Exponer guardados, compartidos, visitas al perfil y consistencia de contenido a algo que el panel pueda leer directo.</li>
+          </ul>
+        </div>
+        <div class="split-col walter">
+          <h4>🖥️ Le toca a Walter</h4>
+          <ul>
+            <li>Construir la sección visual del panel — tarjetas, embudo, gráficas.</li>
+            <li>La lógica de agrupar por semana para los sparklines y el gráfico de leads.</li>
+            <li>Conectar el botón "Refrescar" y el refresh automático a esta nueva vista.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ BACKEND ============ -->
+  <div class="cat-header cat-backend">
+    <span class="cat-icon">🔧</span>
+    <span class="cat-title">Backend</span>
+    <span class="cat-sub">Pendiente que ya arrastrábamos del documento anterior</span>
+  </div>
+
+  <!-- B-22 -->
+  <div class="item-card b-orange">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-22. Causa real de por qué esto siguió pasando dos veces (C-2, C-6): a las métricas les falta el DELETE que tiene todo lo demás en RRSS</div>
+        <div class="item-where">API Backend — Métricas RRSS</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge blocker">🟧 Causa de fondo encontrada — 12-ago</span>
+        <span class="badge p1">Pedido real, no solo limpieza</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Nos preguntamos por qué el mismo problema (un dato de prueba real quedando pegado para siempre) ya nos pasó dos veces — primero en Crating Express (alcance de Facebook contaminado en <code>130.301</code>, sin poder revertir) y de nuevo el 11-ago en Orison, probando en vivo el respaldo de Sheets del ítem B-21. No es que sigamos probando con descuido: es que <strong><code>/api/rrss/metricas</code> es el único recurso de todo el módulo RRSS sin ningún <code>DELETE</code></strong>. Comparando la documentación completa: <code>DELETE /api/rrss/ideas/{id}</code>, <code>DELETE /api/rrss/posts/{id}</code>, <code>DELETE /api/agent/rrss/posts/{id}</code>, <code>DELETE /api/rrss/reportes/{id}</code>, <code>DELETE /api/whatsapp/leads/{id}</code> — cada recurso escribible de la plataforma tiene una forma real de deshacer una prueba, menos este. Y probar que el guardado de métricas funciona de verdad no es opcional — así se encontró el bug real del ítem 184 (meses sin guardar nada, siempre devolviendo <code>ok:true</code>) — cualquier verificación futura de este endpoint va a volver a dejar un rastro permanente mientras no exista una forma de borrarlo.
+      </p>
+      <div class="dep-box"><strong>Lo que se necesita:</strong> un <code>DELETE /api/rrss/metricas/{id}</code> (o equivalente por <code>company_id</code>+<code>platform</code>+<code>period</code>) igual que ya existe para ideas, posts, reportes y leads — cierra el hueco de fondo, no solo los 2 casos puntuales. Mientras tanto, quedan pendientes de limpieza manual por base de datos: Crating Express (<code>alcance_total: 130.301</code> en Facebook) y Orison Managua (Facebook alcance 8.500 / Instagram alcance 4.200, su primer registro real de métricas).</div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  PROYECTO SOL · G54 Platform — Documento vivo, se actualiza a medida que se resuelve cada punto.<br>
+  Reemplaza a exodo-g54-jul28.html (queda como registro histórico, ya no es el documento vigente).
+</footer>
+
+</body>
+</html>
