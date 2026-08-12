@@ -130,10 +130,10 @@
     <div class="header-label">G54 Platform — Documento maestro para Walter</div>
     <h1>Éxodo — Pendientes ordenados por área · <span>29 Jul 2026</span></h1>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> Última actualización: 11 de agosto 2026</div>
-      <div class="meta-item"><div class="dot" style="background:var(--green)"></div> B-19 confirmado RESUELTO en vivo hoy (era el P0 más grave del documento)</div>
+      <div class="meta-item"><div class="dot"></div> Última actualización: 12 de agosto 2026</div>
+      <div class="meta-item"><div class="dot" style="background:var(--green)"></div> B-19 confirmado RESUELTO en vivo (era el P0 más grave del documento)</div>
       <div class="meta-item"><div class="dot" style="background:var(--green)"></div> B-21 resuelto de los dos lados sin cambios de Walter — LinkedIn (to-publish ya lo resolvía) y Analytics (respaldo con Google Sheets)</div>
-      <div class="meta-item"><div class="dot"></div> C-2 sigue sin reflejarse, y se sumó C-6 (mismo problema, en Orison, de nuestras propias pruebas de hoy)</div>
+      <div class="meta-item"><div class="dot" style="background:var(--orange)"></div> B-22 — causa real encontrada de por qué las métricas contaminadas (C-2, ahora también en Orison) no se pueden limpiar: falta el único DELETE que no tiene ese recurso</div>
     </div>
   </div>
 </div>
@@ -166,24 +166,6 @@
     </div>
   </div>
 
-  <!-- I-2 -->
-  <div class="item-card b-yellow">
-    <div class="item-header">
-      <div>
-        <div class="item-title">I-2. Mostrar el progreso de tiempo de la estrategia activa (inicio, fin, semana actual)</div>
-        <div class="item-where">Panel › Estrategia RRSS</div>
-      </div>
-      <div class="item-tags">
-        <span class="badge resuelto">✅ Ya se ve parcial — confirmado 29-jul</span>
-        <span class="badge panel">Falta solo la semana actual</span>
-        <span class="badge p2">⚪ Bajamos la prioridad</span>
-      </div>
-    </div>
-    <div class="item-body">
-      <p class="item-why">Widget tipo "Semana 4 de 13" con inicio/fin de la estrategia activa.</p>
-      <div class="dep-box"><strong>¡Buena noticia, confirmada el 29-jul!</strong> El panel ya muestra "Estrategia vigente hasta el 26/10/2026" en la tarjeta de IA Estrategia — verificado contra la API real: coincide exacto con <code>fecha_fin</code> de la estrategia de Crating Express. El panel ya está leyendo esta fecha. Solo falta el detalle de "semana actual" (ej. "Semana 4 de 13") — <code>GET /api/rrss/metricas/weekly</code> ya devuelve el desglose real por semana si se quiere aprovechar para eso.</div>
-    </div>
-  </div>
 
   <!-- I-5 -->
   <div class="item-card b-green">
@@ -359,41 +341,23 @@
     <span class="cat-sub">Preguntas que necesitan respuesta de Walter, o mejoras que no bloquean nada</span>
   </div>
 
-  <!-- C-2 -->
-  <div class="item-card b-teal">
+  <!-- B-22 -->
+  <div class="item-card b-orange">
     <div class="item-header">
       <div>
-        <div class="item-title">C-2. Walter dice que lo borra por base de datos — el número real sigue igual de contaminado</div>
-        <div class="item-where">Base de datos — Métricas RRSS, Crating Express</div>
+        <div class="item-title">B-22. Causa real de por qué esto siguió pasando dos veces (C-2, C-6): a las métricas les falta el DELETE que tiene todo lo demás en RRSS</div>
+        <div class="item-where">API Backend — Métricas RRSS</div>
       </div>
       <div class="item-tags">
-        <span class="badge carry">Sigue sin borrarse — reconfirmado 07-ago</span>
-        <span class="badge opcional">Opcional</span>
+        <span class="badge blocker">🟧 Causa de fondo encontrada — 12-ago</span>
+        <span class="badge p1">Pedido real, no solo limpieza</span>
       </div>
     </div>
     <div class="item-body">
       <p class="item-why">
-        Walter confirmó que <code>alcance</code> es un entero sin signo (el valor negativo compensatorio que habíamos probado el 29-jul era imposible por diseño) y dijo que lo iba a borrar directo por base de datos. Reconfirmado hoy, único pendiente real que queda del lado de Walter: <code>GET /api/rrss/metricas</code> sigue mostrando <code>alcance_total: 130.301</code> en Facebook — el dato contaminado sigue sin limpiarse.
+        Nos preguntamos por qué el mismo problema (un dato de prueba real quedando pegado para siempre) ya nos pasó dos veces — primero en Crating Express (alcance de Facebook contaminado en <code>130.301</code>, sin poder revertir) y de nuevo el 11-ago en Orison, probando en vivo el respaldo de Sheets del ítem B-21. No es que sigamos probando con descuido: es que <strong><code>/api/rrss/metricas</code> es el único recurso de todo el módulo RRSS sin ningún <code>DELETE</code></strong>. Comparando la documentación completa: <code>DELETE /api/rrss/ideas/{id}</code>, <code>DELETE /api/rrss/posts/{id}</code>, <code>DELETE /api/agent/rrss/posts/{id}</code>, <code>DELETE /api/rrss/reportes/{id}</code>, <code>DELETE /api/whatsapp/leads/{id}</code> — cada recurso escribible de la plataforma tiene una forma real de deshacer una prueba, menos este. Y probar que el guardado de métricas funciona de verdad no es opcional — así se encontró el bug real del ítem 184 (meses sin guardar nada, siempre devolviendo <code>ok:true</code>) — cualquier verificación futura de este endpoint va a volver a dejar un rastro permanente mientras no exista una forma de borrarlo.
       </p>
-    </div>
-  </div>
-
-  <!-- C-6 -->
-  <div class="item-card b-teal">
-    <div class="item-header">
-      <div>
-        <div class="item-title">C-6. Nuevo — mismo problema que C-2, esta vez en Orison: un dato de prueba real quedó como el primer registro de su cuenta</div>
-        <div class="item-where">Base de datos — Métricas RRSS, Orison Managua (empresa 6)</div>
-      </div>
-      <div class="item-tags">
-        <span class="badge nuevo">Nuevo — 11-ago</span>
-        <span class="badge opcional">Opcional</span>
-      </div>
-    </div>
-    <div class="item-body">
-      <p class="item-why">
-        Al probar en vivo el respaldo de Google Sheets para Analytics (ver B-21) con un spreadsheet de prueba, las métricas de esa prueba (Facebook: alcance 8.500 / Instagram: alcance 4.200, entre otros campos) quedaron guardadas de verdad en <code>POST /api/agent/rrss/metricas</code> para la empresa 6. Se intentó revertir con el mismo mecanismo ya probado en C-2 (valores negativos compensatorios) y se confirmó el mismo rechazo (<code>"debe ser al menos 0"</code>). Como Orison no tenía ningún historial de métricas previo, este dato de prueba queda como el primer registro real de su cuenta — pendiente de que Walter lo borre por base de datos, mismo pedido que C-2.
-      </p>
+      <div class="dep-box"><strong>Lo que se necesita:</strong> un <code>DELETE /api/rrss/metricas/{id}</code> (o equivalente por <code>company_id</code>+<code>platform</code>+<code>period</code>) igual que ya existe para ideas, posts, reportes y leads — cierra el hueco de fondo, no solo los 2 casos puntuales. Mientras tanto, quedan pendientes de limpieza manual por base de datos: Crating Express (<code>alcance_total: 130.301</code> en Facebook) y Orison Managua (Facebook alcance 8.500 / Instagram alcance 4.200, su primer registro real de métricas).</div>
     </div>
   </div>
 
