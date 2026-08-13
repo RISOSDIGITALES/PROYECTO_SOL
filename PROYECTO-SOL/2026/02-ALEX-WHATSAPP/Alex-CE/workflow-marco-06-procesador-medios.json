@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-04T15:55:18.546Z",
+  "updatedAt": "2026-08-04T18:10:55.813Z",
   "createdAt": "2026-07-04T15:12:32.233Z",
   "id": "5GU89AeWsBZ86FWa",
   "name": "Marco CE — 06 Procesador de Medios",
@@ -29,9 +29,7 @@
       ],
       "parameters": {
         "method": "GET",
-        "url": "=https://graph.facebook.com/v18.0/{{ $json.media_id }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "=https://graph.facebook.com/v18.0/{{ $('📥 Recibir Datos Medio').first().json.media_id }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -42,7 +40,8 @@
           ]
         },
         "options": {}
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "sw06-download",
@@ -72,7 +71,8 @@
             }
           }
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "sw06-prepare-binary",
@@ -84,7 +84,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "const inp = $('📥 Recibir Datos Medio').first().json;\nconst binary = $input.first().binary;\n\n// Get base64 from binary data\nconst binaryKey = Object.keys(binary || {})[0] || 'data';\nconst fileData = binary?.[binaryKey];\nconst base64 = fileData?.data || '';\nconst mimeType = inp.mime_type || fileData?.mimeType || 'application/octet-stream';\nconst filename = inp.filename || fileData?.fileName || 'archivo';\nconst caption = inp.caption || '';\nconst geminiKey = inp.gemini_api_key || $vars.GEMINI_API_KEY || '';\nconst convertApiKey = inp.convert_api_key || '';\n\n// Classify type\nlet mediaCategory;\nif (mimeType.startsWith('image/')) {\n  mediaCategory = 'image';\n} else if (mimeType.startsWith('audio/') || mimeType.startsWith('video/ogg')) {\n  mediaCategory = 'audio';\n} else if (mimeType === 'application/pdf') {\n  mediaCategory = 'pdf';\n} else if (['application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n            'application/msword',\n            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',\n            'application/vnd.ms-excel',\n            'application/vnd.openxmlformats-officedocument.presentationml.presentation'\n           ].includes(mimeType)) {\n  mediaCategory = 'office';\n} else if (mimeType.startsWith('video/')) {\n  mediaCategory = 'video';\n} else {\n  mediaCategory = 'unknown';\n}\n\nreturn [{ json: { base64, mimeType, filename, caption, mediaCategory, geminiKey, convertApiKey }, binary }];"
+        "jsCode": "const inp = $('📥 Recibir Datos Medio').first().json;\nconst binary = $input.first().binary;\n\n// Get base64 from binary data\nconst binaryKey = Object.keys(binary || {})[0] || 'data';\nconst fileData = binary?.[binaryKey];\nconst base64 = fileData?.data || '';\nconst mimeType = inp.mime_type || fileData?.mimeType || 'application/octet-stream';\nconst filename = inp.filename || fileData?.fileName || 'archivo';\nconst caption = inp.caption || '';\nconst geminiKey = inp.gemini_api_key || $vars.GEMINI_API_KEY || '';\nconst convertApiKey = inp.convert_api_key || '';\n\n// Classify type\nlet mediaCategory;\nif (mimeType.startsWith('image/')) {\n  mediaCategory = 'image';\n} else if (mimeType.startsWith('audio/') || mimeType.startsWith('video/ogg')) {\n  mediaCategory = 'audio';\n} else if (mimeType === 'application/pdf') {\n  mediaCategory = 'pdf';\n} else if (['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',\n            'application/vnd.ms-excel'].includes(mimeType)) {\n  // Excel se procesa localmente en n8n (extractFromFile), sin API externa —\n  // separado de 'office' (Word/PowerPoint), que sigue necesitando ConvertAPI.\n  mediaCategory = 'excel';\n} else if (['application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n            'application/msword',\n            'application/vnd.openxmlformats-officedocument.presentationml.presentation'\n           ].includes(mimeType)) {\n  mediaCategory = 'office';\n} else if (mimeType.startsWith('video/')) {\n  mediaCategory = 'video';\n} else {\n  mediaCategory = 'unknown';\n}\n\nconst media_id = inp.media_id || '';\nconst phone_number_id = inp.phone_number_id || '';\n\nreturn [{ json: { base64, mimeType, filename, caption, mediaCategory, geminiKey, convertApiKey, media_id, phone_number_id }, binary }];"
       }
     },
     {
@@ -97,15 +97,14 @@
         300
       ],
       "parameters": {
-        "mode": "rules",
         "rules": {
-          "rules": [
+          "values": [
             {
               "conditions": {
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict"
+                  "typeValidation": "loose"
                 },
                 "conditions": [
                   {
@@ -126,7 +125,7 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict"
+                  "typeValidation": "loose"
                 },
                 "conditions": [
                   {
@@ -147,7 +146,7 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict"
+                  "typeValidation": "loose"
                 },
                 "conditions": [
                   {
@@ -168,7 +167,7 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict"
+                  "typeValidation": "loose"
                 },
                 "conditions": [
                   {
@@ -183,10 +182,33 @@
               },
               "renameOutput": true,
               "outputKey": "office"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.mediaCategory }}",
+                    "rightValue": "excel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "excel"
             }
           ]
         },
-        "fallbackOutput": "extra"
+        "options": {
+          "fallbackOutput": "extra"
+        }
       }
     },
     {
@@ -230,7 +252,8 @@
         "sendBinaryData": true,
         "binaryPropertyName": "data",
         "options": {}
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "sw06-audio-result",
@@ -255,12 +278,12 @@
         260
       ],
       "parameters": {
-        "jsCode": "const d = $input.first().json;\nconst caption = d.caption ? `El cliente adjuntó este texto con la imagen: \"${d.caption}\". ` : '';\nconst prompt = `${caption}Eres el asistente de ventas Marco de Crating Express (empresa de embalaje industrial en Miami). Analiza esta imagen enviada por un cliente y extrae toda la información relevante para una cotización de embalaje: describe el objeto/artículo visible, sus dimensiones aproximadas si son visibles, materiales, estado, cualquier texto o etiqueta relevante, y cualquier detalle que ayude a cotizar un cajón o embalaje de madera. Sé específico y práctico.`;\n\nconst body = {\n  contents: [{\n    parts: [\n      { inlineData: { mimeType: d.mimeType, data: d.base64 } },\n      { text: prompt }\n    ]\n  }],\n  generationConfig: { temperature: 0.2, maxOutputTokens: 800 }\n};\n\nreturn [{ json: { body: JSON.stringify(body), geminiKey: d.geminiKey, mimeType: d.mimeType, caption: d.caption } }];"
+        "jsCode": "const d = $input.first().json;\nconst caption = d.caption ? `El cliente adjuntó este texto con la imagen: \"${d.caption}\". ` : '';\nconst prompt = `${caption}Eres el asistente de ventas Marco de Crating Express (empresa de embalaje industrial en Miami). Analiza esta imagen enviada por un cliente y extrae toda la información relevante para una cotización de embalaje: describe el objeto/artículo visible, sus dimensiones aproximadas si son visibles, materiales, estado, cualquier texto o etiqueta relevante, y cualquier detalle que ayude a cotizar un cajón o embalaje de madera. Sé específico y práctico.`;\n\nlet proxyUrl;\ntry {\n  const tgUrl = $('🔧 TG: Construir URL Descarga').first().json.file_url;\n  proxyUrl = tgUrl || `https://n8n.mdarthurdigital.com/webhook/media-proxy-g54?media_id=${encodeURIComponent(d.media_id)}&phone_number_id=${encodeURIComponent(d.phone_number_id)}&secret=REDACTED_AGENT_TOKEN`;\n} catch (e) {\n  proxyUrl = `https://n8n.mdarthurdigital.com/webhook/media-proxy-g54?media_id=${encodeURIComponent(d.media_id)}&phone_number_id=${encodeURIComponent(d.phone_number_id)}&secret=REDACTED_AGENT_TOKEN`;\n}\n\nconst body = {\n  model: 'google/gemma-4-26b-a4b-it:free',\n  messages: [{\n    role: 'user',\n    content: [\n      { type: 'text', text: prompt },\n      { type: 'image_url', image_url: { url: proxyUrl } }\n    ]\n  }],\n  temperature: 0.2,\n  max_tokens: 800\n};\n\nreturn [{ json: { body: JSON.stringify(body), mimeType: d.mimeType, caption: d.caption } }];"
       }
     },
     {
       "id": "sw06-gemini-image",
-      "name": "🖼️ Gemini Vision: Imagen",
+      "name": "🖼️ OpenRouter Vision: Imagen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -269,7 +292,8 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={{ $json.geminiKey }}",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
         "sendBody": true,
         "specifyBody": "string",
         "body": "={{ $json.body }}",
@@ -282,7 +306,17 @@
             }
           ]
         },
-        "options": {}
+        "options": {},
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "oF2q2kTZEjoDmwA2",
+          "name": "OpenRouter — Marco Vision (G54)"
+        }
       }
     },
     {
@@ -295,47 +329,7 @@
         260
       ],
       "parameters": {
-        "jsCode": "const resp = $input.first().json;\nconst descripcion = resp.candidates?.[0]?.content?.parts?.[0]?.text || 'No se pudo analizar la imagen.';\nconst caption = $('🔧 Preparar Body Imagen').first().json.caption || '';\nconst captionExtra = caption ? ` El cliente escribió: \"${caption}\".` : '';\nconst texto = `[Imagen recibida]:${captionExtra} ${descripcion}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'image', descripcion },\n  media_type: 'image'\n}}];"
-      }
-    },
-    {
-      "id": "sw06-gemini-pdf-body",
-      "name": "🔧 Preparar Body PDF",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1540,
-        420
-      ],
-      "parameters": {
-        "jsCode": "const d = $input.first().json;\nconst filename = d.filename || 'documento.pdf';\nconst prompt = `Eres el asistente Marco de Crating Express. Este PDF fue enviado por un cliente. Extrae y resume toda la información relevante para un servicio de embalaje industrial: dimensiones, pesos, tipo de artículo, especificaciones técnicas, fechas de envío, destino, y cualquier requerimiento especial. Presenta la información de forma clara y estructurada.`;\n\nconst body = {\n  contents: [{\n    parts: [\n      { inlineData: { mimeType: 'application/pdf', data: d.base64 } },\n      { text: prompt }\n    ]\n  }],\n  generationConfig: { temperature: 0.1, maxOutputTokens: 1200 }\n};\n\nreturn [{ json: { body: JSON.stringify(body), geminiKey: d.geminiKey, filename } }];"
-      }
-    },
-    {
-      "id": "sw06-gemini-pdf",
-      "name": "📄 Gemini: Leer PDF",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1760,
-        420
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={{ $json.geminiKey }}",
-        "sendBody": true,
-        "specifyBody": "string",
-        "body": "={{ $json.body }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "options": {}
+        "jsCode": "const resp = $input.first().json;\nconst descripcion = resp.choices?.[0]?.message?.content || 'No se pudo analizar la imagen.';\nconst caption = $('🔧 Preparar Body Imagen').first().json.caption || '';\nconst captionExtra = caption ? ` El cliente escribió: \"${caption}\".` : '';\nconst texto = `[Imagen recibida]:${captionExtra} ${descripcion}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'image', descripcion },\n  media_type: 'image'\n}}];"
       }
     },
     {
@@ -348,7 +342,7 @@
         420
       ],
       "parameters": {
-        "jsCode": "const resp = $input.first().json;\nconst filename = $('🔧 Preparar Body PDF').first().json.filename;\nconst contenido = resp.candidates?.[0]?.content?.parts?.[0]?.text || 'No se pudo leer el documento.';\nconst texto = `[Documento PDF recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
+        "jsCode": "const resp = $input.first().json;\nconst inp = $('🔧 Leer Binario y Tipo').first().json;\nconst filename = inp.filename || 'documento.pdf';\n\nlet contenido = (resp.text || '').trim().slice(0, 3000);\nif (!contenido) {\n  contenido = 'No se pudo extraer el contenido del documento.';\n}\n\nconst texto = `[Documento PDF recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
       }
     },
     {
@@ -369,7 +363,8 @@
         "binaryPropertyName": "data",
         "options": {},
         "continueOnFail": true
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "sw06-office-result",
@@ -441,11 +436,184 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer g54_agent_produccion_2026"
+              "value": "Bearer REDACTED_AGENT_TOKEN"
             }
           ]
         },
         "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "data",
+        "options": {}
+      },
+      "id": "sw06-pdf-convertapi",
+      "name": "📄 ConvertAPI: PDF → Texto",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1520,
+        200
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "plat-tg",
+              "leftValue": "={{ $json.platform }}",
+              "rightValue": "telegram",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "sw06-plat-tg",
+      "name": "🔀 ¿Plataforma Telegram?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -160,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.telegram.org/bot8821887883:AAGdWLtXtfaGDq3vSTrvd2p-zlu3NilK6CE/getFile?file_id={{ $json.media_id }}",
+        "options": {},
+        "onError": "continueRegularOutput"
+      },
+      "id": "sw06-tg-getfile",
+      "name": "📁 TG: getFile",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        80,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $input.first().json;\nconst filePath = resp?.result?.file_path;\nconst BOT_TOKEN = '8821887883:AAGdWLtXtfaGDq3vSTrvd2p-zlu3NilK6CE';\nconst fileUrl = filePath ? `https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}` : '';\nreturn [{ json: { file_url: fileUrl } }];"
+      },
+      "id": "sw06-tg-construir-url",
+      "name": "🔧 TG: Construir URL Descarga",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.file_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      "id": "sw06-tg-descargar",
+      "name": "📦 TG: Descargar Archivo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        260
+      ]
+    },
+    {
+      "id": "sw06-excel-extract",
+      "name": "📊 n8n: Extraer Excel",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        420
+      ],
+      "parameters": {
+        "operation": "xlsx",
+        "binaryPropertyName": "data",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "sw06-excel-resultado",
+      "name": "🔧 Resultado Excel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        420
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const rows = $input.all().map(i => i.json);\nconst inp = $('🔧 Leer Binario y Tipo').first().json;\nconst filename = inp.filename || 'documento.xlsx';\n\nlet contenido = '';\nif (rows.length > 0) {\n  contenido = rows.slice(0, 30).map(r => Object.entries(r).map(([k,v]) => `${k}: ${v}`).join(', ')).join('\\n');\n} else {\n  contenido = 'No se pudo extraer el contenido de la hoja de cálculo.';\n}\ncontenido = contenido.slice(0, 3000);\n\nconst texto = `[Documento Excel recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
+      }
+    },
+    {
+      "id": "sw06-office-rename-zip",
+      "name": "🔧 Renombrar a ZIP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        580
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const b = $input.first().binary.data;\nconst buf = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst renamed = await this.helpers.prepareBinaryData(buf, 'archivo.zip', 'application/zip');\nreturn [{ json: $input.first().json, binary: { data: renamed } }];"
+      }
+    },
+    {
+      "id": "sw06-office-decompress",
+      "name": "📦 n8n: Descomprimir Office",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        1980,
+        580
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "sw06-office-resultado-nuevo",
+      "name": "🔧 Resultado Office (n8n)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        580
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const inp = $('🔧 Leer Binario y Tipo').first().json;\nconst filename = inp.filename || 'documento';\nconst binary = $input.first().binary || {};\nconst keys = Object.keys(binary);\n\nlet contenido = '';\ntry {\n  const docKey = keys.find(k => (binary[k].fileName || '') === 'document.xml');\n  const slideKeys = keys.filter(k => /^slide\\d+\\.xml$/.test(binary[k].fileName || ''))\n    .sort((a, b) => parseInt(binary[a].fileName.match(/\\d+/)[0]) - parseInt(binary[b].fileName.match(/\\d+/)[0]));\n\n  if (docKey) {\n    // Word: texto en <w:t>\n    const buf = await this.helpers.getBinaryDataBuffer(0, docKey);\n    const xml = buf.toString('utf8');\n    const matches = [...xml.matchAll(/<w:t[^>]*>([\\s\\S]*?)<\\/w:t>/g)];\n    contenido = matches.map(m => m[1]).join(' ');\n  } else if (slideKeys.length > 0) {\n    // PowerPoint: texto en <a:t>, una diapositiva por archivo\n    const partes = [];\n    for (const key of slideKeys) {\n      const buf = await this.helpers.getBinaryDataBuffer(0, key);\n      const xml = buf.toString('utf8');\n      const matches = [...xml.matchAll(/<a:t>([\\s\\S]*?)<\\/a:t>/g)];\n      partes.push(matches.map(m => m[1]).join(' '));\n    }\n    contenido = partes.join('\\n');\n  }\n  contenido = contenido\n    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"').replace(/&apos;/g, \"'\")\n    .trim().slice(0, 3000);\n} catch (e) {}\n\nif (!contenido) {\n  contenido = 'No se pudo extraer el contenido del documento.';\n}\n\nconst texto = `[Documento Office recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
       }
     }
   ],
@@ -454,7 +622,7 @@
       "main": [
         [
           {
-            "node": "🔑 Obtener Config WA (G54)",
+            "node": "🔀 ¿Plataforma Telegram?",
             "type": "main",
             "index": 0
           }
@@ -512,14 +680,14 @@
         ],
         [
           {
-            "node": "🔧 Preparar Body PDF",
+            "node": "📄 ConvertAPI: PDF → Texto",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "🔄 ConvertAPI: Office → Texto",
+            "node": "🔧 Renombrar a ZIP",
             "type": "main",
             "index": 0
           }
@@ -527,6 +695,13 @@
         [
           {
             "node": "🎬 Fallback Video/Desconocido",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📊 n8n: Extraer Excel",
             "type": "main",
             "index": 0
           }
@@ -548,7 +723,7 @@
       "main": [
         [
           {
-            "node": "🔀 Unir Resultados",
+            "node": "📤 Devolver Resultado",
             "type": "main",
             "index": 0
           }
@@ -559,18 +734,7 @@
       "main": [
         [
           {
-            "node": "🖼️ Gemini Vision: Imagen",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🖼️ Gemini Vision: Imagen": {
-      "main": [
-        [
-          {
-            "node": "🔧 Resultado Imagen",
+            "node": "🖼️ OpenRouter Vision: Imagen",
             "type": "main",
             "index": 0
           }
@@ -581,29 +745,7 @@
       "main": [
         [
           {
-            "node": "🔀 Unir Resultados",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔧 Preparar Body PDF": {
-      "main": [
-        [
-          {
-            "node": "📄 Gemini: Leer PDF",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📄 Gemini: Leer PDF": {
-      "main": [
-        [
-          {
-            "node": "🔧 Resultado PDF",
+            "node": "📤 Devolver Resultado",
             "type": "main",
             "index": 0
           }
@@ -614,7 +756,7 @@
       "main": [
         [
           {
-            "node": "🔀 Unir Resultados",
+            "node": "📤 Devolver Resultado",
             "type": "main",
             "index": 0
           }
@@ -636,7 +778,7 @@
       "main": [
         [
           {
-            "node": "🔀 Unir Resultados",
+            "node": "📤 Devolver Resultado",
             "type": "main",
             "index": 0
           }
@@ -644,17 +786,6 @@
       ]
     },
     "🎬 Fallback Video/Desconocido": {
-      "main": [
-        [
-          {
-            "node": "🔀 Unir Resultados",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔀 Unir Resultados": {
       "main": [
         [
           {
@@ -675,6 +806,134 @@
           }
         ]
       ]
+    },
+    "📄 ConvertAPI: PDF → Texto": {
+      "main": [
+        [
+          {
+            "node": "🔧 Resultado PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Plataforma Telegram?": {
+      "main": [
+        [
+          {
+            "node": "📁 TG: getFile",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔑 Obtener Config WA (G54)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📁 TG: getFile": {
+      "main": [
+        [
+          {
+            "node": "🔧 TG: Construir URL Descarga",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 TG: Construir URL Descarga": {
+      "main": [
+        [
+          {
+            "node": "📦 TG: Descargar Archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 TG: Descargar Archivo": {
+      "main": [
+        [
+          {
+            "node": "🔧 Leer Binario y Tipo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 n8n: Extraer Excel": {
+      "main": [
+        [
+          {
+            "node": "🔧 Resultado Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Resultado Excel": {
+      "main": [
+        [
+          {
+            "node": "📤 Devolver Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Renombrar a ZIP": {
+      "main": [
+        [
+          {
+            "node": "📦 n8n: Descomprimir Office",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 n8n: Descomprimir Office": {
+      "main": [
+        [
+          {
+            "node": "🔧 Resultado Office (n8n)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Resultado Office (n8n)": {
+      "main": [
+        [
+          {
+            "node": "📤 Devolver Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🖼️ OpenRouter Vision: Imagen": {
+      "main": [
+        [
+          {
+            "node": "🔧 Resultado Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -684,9 +943,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": null,
-  "versionId": "15e13495-deeb-4a63-8aa0-f045d446131a",
-  "activeVersionId": "15e13495-deeb-4a63-8aa0-f045d446131a",
-  "versionCounter": 2,
+  "versionId": "b122931e-6598-4a47-858e-638b5374ddcf",
+  "activeVersionId": "b122931e-6598-4a47-858e-638b5374ddcf",
+  "versionCounter": 15,
   "triggerCount": 0,
   "sourceWorkflowId": null,
   "shared": [
@@ -711,9 +970,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-07-04T15:55:18.549Z",
-    "createdAt": "2026-07-04T15:55:18.549Z",
-    "versionId": "15e13495-deeb-4a63-8aa0-f045d446131a",
+    "updatedAt": "2026-08-04T18:10:55.816Z",
+    "createdAt": "2026-08-04T18:10:55.816Z",
+    "versionId": "b122931e-6598-4a47-858e-638b5374ddcf",
     "workflowId": "5GU89AeWsBZ86FWa",
     "nodes": [
       {
@@ -738,9 +997,7 @@
         ],
         "parameters": {
           "method": "GET",
-          "url": "=https://graph.facebook.com/v18.0/{{ $json.media_id }}",
-          "authentication": "genericCredentialType",
-          "genericAuthType": "httpHeaderAuth",
+          "url": "=https://graph.facebook.com/v18.0/{{ $('📥 Recibir Datos Medio').first().json.media_id }}",
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
@@ -751,7 +1008,8 @@
             ]
           },
           "options": {}
-        }
+        },
+        "onError": "continueRegularOutput"
       },
       {
         "id": "sw06-download",
@@ -781,7 +1039,8 @@
               }
             }
           }
-        }
+        },
+        "onError": "continueRegularOutput"
       },
       {
         "id": "sw06-prepare-binary",
@@ -793,7 +1052,7 @@
           300
         ],
         "parameters": {
-          "jsCode": "const inp = $('📥 Recibir Datos Medio').first().json;\nconst binary = $input.first().binary;\n\n// Get base64 from binary data\nconst binaryKey = Object.keys(binary || {})[0] || 'data';\nconst fileData = binary?.[binaryKey];\nconst base64 = fileData?.data || '';\nconst mimeType = inp.mime_type || fileData?.mimeType || 'application/octet-stream';\nconst filename = inp.filename || fileData?.fileName || 'archivo';\nconst caption = inp.caption || '';\nconst geminiKey = inp.gemini_api_key || $vars.GEMINI_API_KEY || '';\nconst convertApiKey = inp.convert_api_key || '';\n\n// Classify type\nlet mediaCategory;\nif (mimeType.startsWith('image/')) {\n  mediaCategory = 'image';\n} else if (mimeType.startsWith('audio/') || mimeType.startsWith('video/ogg')) {\n  mediaCategory = 'audio';\n} else if (mimeType === 'application/pdf') {\n  mediaCategory = 'pdf';\n} else if (['application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n            'application/msword',\n            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',\n            'application/vnd.ms-excel',\n            'application/vnd.openxmlformats-officedocument.presentationml.presentation'\n           ].includes(mimeType)) {\n  mediaCategory = 'office';\n} else if (mimeType.startsWith('video/')) {\n  mediaCategory = 'video';\n} else {\n  mediaCategory = 'unknown';\n}\n\nreturn [{ json: { base64, mimeType, filename, caption, mediaCategory, geminiKey, convertApiKey }, binary }];"
+          "jsCode": "const inp = $('📥 Recibir Datos Medio').first().json;\nconst binary = $input.first().binary;\n\n// Get base64 from binary data\nconst binaryKey = Object.keys(binary || {})[0] || 'data';\nconst fileData = binary?.[binaryKey];\nconst base64 = fileData?.data || '';\nconst mimeType = inp.mime_type || fileData?.mimeType || 'application/octet-stream';\nconst filename = inp.filename || fileData?.fileName || 'archivo';\nconst caption = inp.caption || '';\nconst geminiKey = inp.gemini_api_key || $vars.GEMINI_API_KEY || '';\nconst convertApiKey = inp.convert_api_key || '';\n\n// Classify type\nlet mediaCategory;\nif (mimeType.startsWith('image/')) {\n  mediaCategory = 'image';\n} else if (mimeType.startsWith('audio/') || mimeType.startsWith('video/ogg')) {\n  mediaCategory = 'audio';\n} else if (mimeType === 'application/pdf') {\n  mediaCategory = 'pdf';\n} else if (['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',\n            'application/vnd.ms-excel'].includes(mimeType)) {\n  // Excel se procesa localmente en n8n (extractFromFile), sin API externa —\n  // separado de 'office' (Word/PowerPoint), que sigue necesitando ConvertAPI.\n  mediaCategory = 'excel';\n} else if (['application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n            'application/msword',\n            'application/vnd.openxmlformats-officedocument.presentationml.presentation'\n           ].includes(mimeType)) {\n  mediaCategory = 'office';\n} else if (mimeType.startsWith('video/')) {\n  mediaCategory = 'video';\n} else {\n  mediaCategory = 'unknown';\n}\n\nconst media_id = inp.media_id || '';\nconst phone_number_id = inp.phone_number_id || '';\n\nreturn [{ json: { base64, mimeType, filename, caption, mediaCategory, geminiKey, convertApiKey, media_id, phone_number_id }, binary }];"
         }
       },
       {
@@ -806,15 +1065,14 @@
           300
         ],
         "parameters": {
-          "mode": "rules",
           "rules": {
-            "rules": [
+            "values": [
               {
                 "conditions": {
                   "options": {
                     "caseSensitive": true,
                     "leftValue": "",
-                    "typeValidation": "strict"
+                    "typeValidation": "loose"
                   },
                   "conditions": [
                     {
@@ -835,7 +1093,7 @@
                   "options": {
                     "caseSensitive": true,
                     "leftValue": "",
-                    "typeValidation": "strict"
+                    "typeValidation": "loose"
                   },
                   "conditions": [
                     {
@@ -856,7 +1114,7 @@
                   "options": {
                     "caseSensitive": true,
                     "leftValue": "",
-                    "typeValidation": "strict"
+                    "typeValidation": "loose"
                   },
                   "conditions": [
                     {
@@ -877,7 +1135,7 @@
                   "options": {
                     "caseSensitive": true,
                     "leftValue": "",
-                    "typeValidation": "strict"
+                    "typeValidation": "loose"
                   },
                   "conditions": [
                     {
@@ -892,10 +1150,33 @@
                 },
                 "renameOutput": true,
                 "outputKey": "office"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "loose"
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.mediaCategory }}",
+                      "rightValue": "excel",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ]
+                },
+                "renameOutput": true,
+                "outputKey": "excel"
               }
             ]
           },
-          "fallbackOutput": "extra"
+          "options": {
+            "fallbackOutput": "extra"
+          }
         }
       },
       {
@@ -939,7 +1220,8 @@
           "sendBinaryData": true,
           "binaryPropertyName": "data",
           "options": {}
-        }
+        },
+        "onError": "continueRegularOutput"
       },
       {
         "id": "sw06-audio-result",
@@ -964,12 +1246,12 @@
           260
         ],
         "parameters": {
-          "jsCode": "const d = $input.first().json;\nconst caption = d.caption ? `El cliente adjuntó este texto con la imagen: \"${d.caption}\". ` : '';\nconst prompt = `${caption}Eres el asistente de ventas Marco de Crating Express (empresa de embalaje industrial en Miami). Analiza esta imagen enviada por un cliente y extrae toda la información relevante para una cotización de embalaje: describe el objeto/artículo visible, sus dimensiones aproximadas si son visibles, materiales, estado, cualquier texto o etiqueta relevante, y cualquier detalle que ayude a cotizar un cajón o embalaje de madera. Sé específico y práctico.`;\n\nconst body = {\n  contents: [{\n    parts: [\n      { inlineData: { mimeType: d.mimeType, data: d.base64 } },\n      { text: prompt }\n    ]\n  }],\n  generationConfig: { temperature: 0.2, maxOutputTokens: 800 }\n};\n\nreturn [{ json: { body: JSON.stringify(body), geminiKey: d.geminiKey, mimeType: d.mimeType, caption: d.caption } }];"
+          "jsCode": "const d = $input.first().json;\nconst caption = d.caption ? `El cliente adjuntó este texto con la imagen: \"${d.caption}\". ` : '';\nconst prompt = `${caption}Eres el asistente de ventas Marco de Crating Express (empresa de embalaje industrial en Miami). Analiza esta imagen enviada por un cliente y extrae toda la información relevante para una cotización de embalaje: describe el objeto/artículo visible, sus dimensiones aproximadas si son visibles, materiales, estado, cualquier texto o etiqueta relevante, y cualquier detalle que ayude a cotizar un cajón o embalaje de madera. Sé específico y práctico.`;\n\nlet proxyUrl;\ntry {\n  const tgUrl = $('🔧 TG: Construir URL Descarga').first().json.file_url;\n  proxyUrl = tgUrl || `https://n8n.mdarthurdigital.com/webhook/media-proxy-g54?media_id=${encodeURIComponent(d.media_id)}&phone_number_id=${encodeURIComponent(d.phone_number_id)}&secret=REDACTED_AGENT_TOKEN`;\n} catch (e) {\n  proxyUrl = `https://n8n.mdarthurdigital.com/webhook/media-proxy-g54?media_id=${encodeURIComponent(d.media_id)}&phone_number_id=${encodeURIComponent(d.phone_number_id)}&secret=REDACTED_AGENT_TOKEN`;\n}\n\nconst body = {\n  model: 'google/gemma-4-26b-a4b-it:free',\n  messages: [{\n    role: 'user',\n    content: [\n      { type: 'text', text: prompt },\n      { type: 'image_url', image_url: { url: proxyUrl } }\n    ]\n  }],\n  temperature: 0.2,\n  max_tokens: 800\n};\n\nreturn [{ json: { body: JSON.stringify(body), mimeType: d.mimeType, caption: d.caption } }];"
         }
       },
       {
         "id": "sw06-gemini-image",
-        "name": "🖼️ Gemini Vision: Imagen",
+        "name": "🖼️ OpenRouter Vision: Imagen",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
@@ -978,7 +1260,8 @@
         ],
         "parameters": {
           "method": "POST",
-          "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={{ $json.geminiKey }}",
+          "url": "https://openrouter.ai/api/v1/chat/completions",
+          "authentication": "genericCredentialType",
           "sendBody": true,
           "specifyBody": "string",
           "body": "={{ $json.body }}",
@@ -991,7 +1274,17 @@
               }
             ]
           },
-          "options": {}
+          "options": {},
+          "contentType": "raw",
+          "rawContentType": "application/json",
+          "genericAuthType": "httpHeaderAuth"
+        },
+        "onError": "continueRegularOutput",
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "oF2q2kTZEjoDmwA2",
+            "name": "OpenRouter — Marco Vision (G54)"
+          }
         }
       },
       {
@@ -1004,47 +1297,7 @@
           260
         ],
         "parameters": {
-          "jsCode": "const resp = $input.first().json;\nconst descripcion = resp.candidates?.[0]?.content?.parts?.[0]?.text || 'No se pudo analizar la imagen.';\nconst caption = $('🔧 Preparar Body Imagen').first().json.caption || '';\nconst captionExtra = caption ? ` El cliente escribió: \"${caption}\".` : '';\nconst texto = `[Imagen recibida]:${captionExtra} ${descripcion}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'image', descripcion },\n  media_type: 'image'\n}}];"
-        }
-      },
-      {
-        "id": "sw06-gemini-pdf-body",
-        "name": "🔧 Preparar Body PDF",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          1540,
-          420
-        ],
-        "parameters": {
-          "jsCode": "const d = $input.first().json;\nconst filename = d.filename || 'documento.pdf';\nconst prompt = `Eres el asistente Marco de Crating Express. Este PDF fue enviado por un cliente. Extrae y resume toda la información relevante para un servicio de embalaje industrial: dimensiones, pesos, tipo de artículo, especificaciones técnicas, fechas de envío, destino, y cualquier requerimiento especial. Presenta la información de forma clara y estructurada.`;\n\nconst body = {\n  contents: [{\n    parts: [\n      { inlineData: { mimeType: 'application/pdf', data: d.base64 } },\n      { text: prompt }\n    ]\n  }],\n  generationConfig: { temperature: 0.1, maxOutputTokens: 1200 }\n};\n\nreturn [{ json: { body: JSON.stringify(body), geminiKey: d.geminiKey, filename } }];"
-        }
-      },
-      {
-        "id": "sw06-gemini-pdf",
-        "name": "📄 Gemini: Leer PDF",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          1760,
-          420
-        ],
-        "parameters": {
-          "method": "POST",
-          "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={{ $json.geminiKey }}",
-          "sendBody": true,
-          "specifyBody": "string",
-          "body": "={{ $json.body }}",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          },
-          "options": {}
+          "jsCode": "const resp = $input.first().json;\nconst descripcion = resp.choices?.[0]?.message?.content || 'No se pudo analizar la imagen.';\nconst caption = $('🔧 Preparar Body Imagen').first().json.caption || '';\nconst captionExtra = caption ? ` El cliente escribió: \"${caption}\".` : '';\nconst texto = `[Imagen recibida]:${captionExtra} ${descripcion}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'image', descripcion },\n  media_type: 'image'\n}}];"
         }
       },
       {
@@ -1057,7 +1310,7 @@
           420
         ],
         "parameters": {
-          "jsCode": "const resp = $input.first().json;\nconst filename = $('🔧 Preparar Body PDF').first().json.filename;\nconst contenido = resp.candidates?.[0]?.content?.parts?.[0]?.text || 'No se pudo leer el documento.';\nconst texto = `[Documento PDF recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
+          "jsCode": "const resp = $input.first().json;\nconst inp = $('🔧 Leer Binario y Tipo').first().json;\nconst filename = inp.filename || 'documento.pdf';\n\nlet contenido = (resp.text || '').trim().slice(0, 3000);\nif (!contenido) {\n  contenido = 'No se pudo extraer el contenido del documento.';\n}\n\nconst texto = `[Documento PDF recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
         }
       },
       {
@@ -1078,7 +1331,8 @@
           "binaryPropertyName": "data",
           "options": {},
           "continueOnFail": true
-        }
+        },
+        "onError": "continueRegularOutput"
       },
       {
         "id": "sw06-office-result",
@@ -1150,11 +1404,184 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer g54_agent_produccion_2026"
+                "value": "Bearer REDACTED_AGENT_TOKEN"
               }
             ]
           },
           "options": {}
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "operation": "pdf",
+          "binaryPropertyName": "data",
+          "options": {}
+        },
+        "id": "sw06-pdf-convertapi",
+        "name": "📄 ConvertAPI: PDF → Texto",
+        "type": "n8n-nodes-base.extractFromFile",
+        "typeVersion": 1,
+        "position": [
+          1520,
+          200
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "plat-tg",
+                "leftValue": "={{ $json.platform }}",
+                "rightValue": "telegram",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        },
+        "id": "sw06-plat-tg",
+        "name": "🔀 ¿Plataforma Telegram?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          -160,
+          260
+        ]
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "=https://api.telegram.org/bot8821887883:AAGdWLtXtfaGDq3vSTrvd2p-zlu3NilK6CE/getFile?file_id={{ $json.media_id }}",
+          "options": {},
+          "onError": "continueRegularOutput"
+        },
+        "id": "sw06-tg-getfile",
+        "name": "📁 TG: getFile",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          80,
+          260
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const resp = $input.first().json;\nconst filePath = resp?.result?.file_path;\nconst BOT_TOKEN = '8821887883:AAGdWLtXtfaGDq3vSTrvd2p-zlu3NilK6CE';\nconst fileUrl = filePath ? `https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}` : '';\nreturn [{ json: { file_url: fileUrl } }];"
+        },
+        "id": "sw06-tg-construir-url",
+        "name": "🔧 TG: Construir URL Descarga",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          320,
+          260
+        ]
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "={{ $json.file_url }}",
+          "options": {
+            "response": {
+              "response": {
+                "responseFormat": "file"
+              }
+            }
+          },
+          "onError": "continueRegularOutput"
+        },
+        "id": "sw06-tg-descargar",
+        "name": "📦 TG: Descargar Archivo",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          560,
+          260
+        ]
+      },
+      {
+        "id": "sw06-excel-extract",
+        "name": "📊 n8n: Extraer Excel",
+        "type": "n8n-nodes-base.extractFromFile",
+        "typeVersion": 1,
+        "position": [
+          1760,
+          420
+        ],
+        "parameters": {
+          "operation": "xlsx",
+          "binaryPropertyName": "data",
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "sw06-excel-resultado",
+        "name": "🔧 Resultado Excel",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1980,
+          420
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const rows = $input.all().map(i => i.json);\nconst inp = $('🔧 Leer Binario y Tipo').first().json;\nconst filename = inp.filename || 'documento.xlsx';\n\nlet contenido = '';\nif (rows.length > 0) {\n  contenido = rows.slice(0, 30).map(r => Object.entries(r).map(([k,v]) => `${k}: ${v}`).join(', ')).join('\\n');\n} else {\n  contenido = 'No se pudo extraer el contenido de la hoja de cálculo.';\n}\ncontenido = contenido.slice(0, 3000);\n\nconst texto = `[Documento Excel recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
+        }
+      },
+      {
+        "id": "sw06-office-rename-zip",
+        "name": "🔧 Renombrar a ZIP",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1760,
+          580
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const b = $input.first().binary.data;\nconst buf = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst renamed = await this.helpers.prepareBinaryData(buf, 'archivo.zip', 'application/zip');\nreturn [{ json: $input.first().json, binary: { data: renamed } }];"
+        }
+      },
+      {
+        "id": "sw06-office-decompress",
+        "name": "📦 n8n: Descomprimir Office",
+        "type": "n8n-nodes-base.compression",
+        "typeVersion": 1.1,
+        "position": [
+          1980,
+          580
+        ],
+        "parameters": {
+          "operation": "decompress",
+          "binaryPropertyName": "data",
+          "outputPrefix": "file_"
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "sw06-office-resultado-nuevo",
+        "name": "🔧 Resultado Office (n8n)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2200,
+          580
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const inp = $('🔧 Leer Binario y Tipo').first().json;\nconst filename = inp.filename || 'documento';\nconst binary = $input.first().binary || {};\nconst keys = Object.keys(binary);\n\nlet contenido = '';\ntry {\n  const docKey = keys.find(k => (binary[k].fileName || '') === 'document.xml');\n  const slideKeys = keys.filter(k => /^slide\\d+\\.xml$/.test(binary[k].fileName || ''))\n    .sort((a, b) => parseInt(binary[a].fileName.match(/\\d+/)[0]) - parseInt(binary[b].fileName.match(/\\d+/)[0]));\n\n  if (docKey) {\n    // Word: texto en <w:t>\n    const buf = await this.helpers.getBinaryDataBuffer(0, docKey);\n    const xml = buf.toString('utf8');\n    const matches = [...xml.matchAll(/<w:t[^>]*>([\\s\\S]*?)<\\/w:t>/g)];\n    contenido = matches.map(m => m[1]).join(' ');\n  } else if (slideKeys.length > 0) {\n    // PowerPoint: texto en <a:t>, una diapositiva por archivo\n    const partes = [];\n    for (const key of slideKeys) {\n      const buf = await this.helpers.getBinaryDataBuffer(0, key);\n      const xml = buf.toString('utf8');\n      const matches = [...xml.matchAll(/<a:t>([\\s\\S]*?)<\\/a:t>/g)];\n      partes.push(matches.map(m => m[1]).join(' '));\n    }\n    contenido = partes.join('\\n');\n  }\n  contenido = contenido\n    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"').replace(/&apos;/g, \"'\")\n    .trim().slice(0, 3000);\n} catch (e) {}\n\nif (!contenido) {\n  contenido = 'No se pudo extraer el contenido del documento.';\n}\n\nconst texto = `[Documento Office recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
         }
       }
     ],
@@ -1163,7 +1590,7 @@
         "main": [
           [
             {
-              "node": "🔑 Obtener Config WA (G54)",
+              "node": "🔀 ¿Plataforma Telegram?",
               "type": "main",
               "index": 0
             }
@@ -1221,14 +1648,14 @@
           ],
           [
             {
-              "node": "🔧 Preparar Body PDF",
+              "node": "📄 ConvertAPI: PDF → Texto",
               "type": "main",
               "index": 0
             }
           ],
           [
             {
-              "node": "🔄 ConvertAPI: Office → Texto",
+              "node": "🔧 Renombrar a ZIP",
               "type": "main",
               "index": 0
             }
@@ -1236,6 +1663,13 @@
           [
             {
               "node": "🎬 Fallback Video/Desconocido",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📊 n8n: Extraer Excel",
               "type": "main",
               "index": 0
             }
@@ -1257,7 +1691,7 @@
         "main": [
           [
             {
-              "node": "🔀 Unir Resultados",
+              "node": "📤 Devolver Resultado",
               "type": "main",
               "index": 0
             }
@@ -1268,18 +1702,7 @@
         "main": [
           [
             {
-              "node": "🖼️ Gemini Vision: Imagen",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🖼️ Gemini Vision: Imagen": {
-        "main": [
-          [
-            {
-              "node": "🔧 Resultado Imagen",
+              "node": "🖼️ OpenRouter Vision: Imagen",
               "type": "main",
               "index": 0
             }
@@ -1290,29 +1713,7 @@
         "main": [
           [
             {
-              "node": "🔀 Unir Resultados",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔧 Preparar Body PDF": {
-        "main": [
-          [
-            {
-              "node": "📄 Gemini: Leer PDF",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "📄 Gemini: Leer PDF": {
-        "main": [
-          [
-            {
-              "node": "🔧 Resultado PDF",
+              "node": "📤 Devolver Resultado",
               "type": "main",
               "index": 0
             }
@@ -1323,7 +1724,7 @@
         "main": [
           [
             {
-              "node": "🔀 Unir Resultados",
+              "node": "📤 Devolver Resultado",
               "type": "main",
               "index": 0
             }
@@ -1345,7 +1746,7 @@
         "main": [
           [
             {
-              "node": "🔀 Unir Resultados",
+              "node": "📤 Devolver Resultado",
               "type": "main",
               "index": 0
             }
@@ -1353,17 +1754,6 @@
         ]
       },
       "🎬 Fallback Video/Desconocido": {
-        "main": [
-          [
-            {
-              "node": "🔀 Unir Resultados",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔀 Unir Resultados": {
         "main": [
           [
             {
@@ -1384,6 +1774,134 @@
             }
           ]
         ]
+      },
+      "📄 ConvertAPI: PDF → Texto": {
+        "main": [
+          [
+            {
+              "node": "🔧 Resultado PDF",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Plataforma Telegram?": {
+        "main": [
+          [
+            {
+              "node": "📁 TG: getFile",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🔑 Obtener Config WA (G54)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📁 TG: getFile": {
+        "main": [
+          [
+            {
+              "node": "🔧 TG: Construir URL Descarga",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 TG: Construir URL Descarga": {
+        "main": [
+          [
+            {
+              "node": "📦 TG: Descargar Archivo",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📦 TG: Descargar Archivo": {
+        "main": [
+          [
+            {
+              "node": "🔧 Leer Binario y Tipo",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📊 n8n: Extraer Excel": {
+        "main": [
+          [
+            {
+              "node": "🔧 Resultado Excel",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Resultado Excel": {
+        "main": [
+          [
+            {
+              "node": "📤 Devolver Resultado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Renombrar a ZIP": {
+        "main": [
+          [
+            {
+              "node": "📦 n8n: Descomprimir Office",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📦 n8n: Descomprimir Office": {
+        "main": [
+          [
+            {
+              "node": "🔧 Resultado Office (n8n)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Resultado Office (n8n)": {
+        "main": [
+          [
+            {
+              "node": "📤 Devolver Resultado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🖼️ OpenRouter Vision: Imagen": {
+        "main": [
+          [
+            {
+              "node": "🔧 Resultado Imagen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -1393,18 +1911,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-07-04T15:55:18.894Z",
-        "id": 1813,
+        "createdAt": "2026-08-04T18:10:56.199Z",
+        "id": 2622,
         "workflowId": "5GU89AeWsBZ86FWa",
-        "versionId": "15e13495-deeb-4a63-8aa0-f045d446131a",
+        "versionId": "b122931e-6598-4a47-858e-638b5374ddcf",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-07-04T15:55:18.855Z",
-        "id": 1812,
+        "createdAt": "2026-08-04T18:10:56.130Z",
+        "id": 2621,
         "workflowId": "5GU89AeWsBZ86FWa",
-        "versionId": "15e13495-deeb-4a63-8aa0-f045d446131a",
+        "versionId": "b122931e-6598-4a47-858e-638b5374ddcf",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
