@@ -1,0 +1,759 @@
+{
+  "updatedAt": "2026-08-13T20:25:08.819Z",
+  "createdAt": "2026-08-13T20:19:30.631Z",
+  "id": "wXj4RRlc780mHkgv",
+  "name": "📝 Registro Manual de Leads (G54)",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "lead-manual-g54",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        200,
+        300
+      ],
+      "id": "form-get-webhook",
+      "name": "🔔 GET: Formulario",
+      "webhookId": "5a1f332a-7d04-4219-9c0c-6c92c76611d0"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>Registro manual de lead — G54</title>\n<style>\n  *{box-sizing:border-box;margin:0;padding:0;}\n  body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#0a0d16;color:#e2e8f0;min-height:100vh;display:flex;justify-content:center;padding:32px 16px;}\n  .card{background:#111520;border:1px solid #1a2035;border-radius:14px;padding:28px 26px;max-width:480px;width:100%;}\n  h1{font-size:19px;color:#fff;margin-bottom:6px;}\n  p.sub{font-size:13px;color:#8b98b8;margin-bottom:22px;line-height:1.5;}\n  label{display:block;font-size:12px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;margin-top:16px;}\n  input,select,textarea{width:100%;background:#0d1120;border:1px solid #1a2035;border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:14px;font-family:inherit;}\n  textarea{min-height:90px;resize:vertical;}\n  input:focus,select:focus,textarea:focus{outline:none;border-color:#7c3aed;}\n  button{margin-top:22px;width:100%;background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;}\n  button:hover{background:#6d28d9;}\n  button:disabled{opacity:0.6;cursor:default;}\n  #msg{margin-top:14px;font-size:13px;padding:10px 12px;border-radius:8px;display:none;}\n  #msg.ok{display:block;background:#052e16;border:1px solid #166534;color:#4ade80;}\n  #msg.err{display:block;background:#2d0a0a;border:1px solid #7f1d1d;color:#f87171;}\n</style>\n</head>\n<body>\n<div class=\"card\">\n  <h1>📝 Registro manual de lead</h1>\n  <p class=\"sub\">Para cuando atendiste una conversación real a mano (por la app de Meta, una llamada, un correo) y necesitás que quede igual visible en el CRM.</p>\n  <form id=\"f\">\n    <label>Empresa (company_id)</label>\n    <input type=\"number\" name=\"company_id\" value=\"1\" required>\n\n    <label>Nombre del contacto</label>\n    <input type=\"text\" name=\"nombre\" placeholder=\"Ej. Neurys Idrogo\" required>\n\n    <label>Canal</label>\n    <select name=\"canal\" required>\n      <option value=\"whatsapp\">WhatsApp</option>\n      <option value=\"facebook\" selected>Facebook (DM o comentario)</option>\n      <option value=\"instagram\">Instagram (DM o comentario)</option>\n      <option value=\"telegram\">Telegram</option>\n      <option value=\"llamada\">Llamada</option>\n      <option value=\"correo\">Correo</option>\n      <option value=\"otro\">Otro</option>\n    </select>\n\n    <label>Contacto (teléfono, correo o usuario)</label>\n    <input type=\"text\" name=\"contacto\" placeholder=\"Ej. Neuidrogo@gmail.com\" required>\n\n    <label>Resumen de la conversación</label>\n    <textarea name=\"resumen\" placeholder=\"Ej. Pidió cotización para caja de TV 50 pulgadas, medidas 49.5x30.2x6.1, correo dado, se le mandó cotización formal por correo.\" required></textarea>\n\n    <label>Clasificación</label>\n    <select name=\"clasificacion\" required>\n      <option value=\"frio\">Frío</option>\n      <option value=\"tibio\" selected>Tibio</option>\n      <option value=\"caliente\">Caliente</option>\n    </select>\n\n    <button type=\"submit\" id=\"btn\">Registrar</button>\n    <div id=\"msg\"></div>\n  </form>\n</div>\n<script>\ndocument.getElementById('f').addEventListener('submit', async (e) => {\n  e.preventDefault();\n  const btn = document.getElementById('btn');\n  const msg = document.getElementById('msg');\n  msg.className = ''; msg.style.display = 'none';\n  btn.disabled = true; btn.textContent = 'Registrando...';\n  const data = Object.fromEntries(new FormData(e.target).entries());\n  try {\n    const res = await fetch('https://n8n.mdarthurdigital.com/webhook/lead-manual-g54', {\n      method: 'POST',\n      headers: {'Content-Type':'application/json'},\n      body: JSON.stringify(data)\n    });\n    const json = await res.json();\n    if (json.ok) {\n      msg.className = 'ok';\n      msg.textContent = '✅ Registrado — contacto #' + json.contact_id + ', negocio #' + json.deal_id + ' en el CRM.';\n      e.target.reset();\n      document.querySelector('[name=company_id]').value = '1';\n    } else {\n      throw new Error(json.error || 'Error desconocido');\n    }\n  } catch (err) {\n    msg.className = 'err';\n    msg.textContent = '❌ No se pudo registrar: ' + err.message;\n  } finally {\n    msg.style.display = 'block';\n    btn.disabled = false; btn.textContent = 'Registrar';\n  }\n});\n</script>\n</body>\n</html>",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        440,
+        300
+      ],
+      "id": "form-respond",
+      "name": "📤 Responder HTML Formulario"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-manual-g54",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        200,
+        560
+      ],
+      "id": "form-post-webhook",
+      "name": "🔔 POST: Registrar Lead",
+      "webhookId": "1f792024-b8e9-4e8d-8705-70a9d6511917"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || {};\n\nconst companyId = String(body.company_id || '1');\nconst nombre = String(body.nombre || '').trim();\nconst canal = String(body.canal || 'otro').toLowerCase();\nconst contacto = String(body.contacto || '').trim();\nconst resumen = String(body.resumen || '').trim();\nconst clasificacionRaw = String(body.clasificacion || 'tibio').toLowerCase();\n\n// canal -> origen valido del enum de crm_deals (whatsapp/web/manual/facebook/instagram)\nconst origenMap = { whatsapp: 'whatsapp', facebook: 'facebook', instagram: 'instagram', telegram: 'manual', llamada: 'manual', correo: 'manual', otro: 'manual' };\nconst origen = origenMap[canal] || 'manual';\n\n// clasificacion -> temperatura valida del CRM (bajo/medio/alto)\nconst temperaturaMap = { frio: 'bajo', tibio: 'medio', caliente: 'alto' };\nconst temperatura = temperaturaMap[clasificacionRaw] || 'medio';\n\n// clave de contacto: si \"contacto\" ya parece un telefono real (solo digitos, 8+), se usa tal cual;\n// si no (email, usuario, texto libre) se prefija para no confundirlo con un telefono real,\n// mismo criterio ya usado en Community AI para IDs de Facebook (item 152 del proyecto)\nconst soloDigitos = contacto.replace(/[^0-9]/g, '');\nconst esTelefonoReal = soloDigitos.length >= 8 && soloDigitos.length === contacto.replace(/[\\s()+-]/g,'').length;\nconst phone = esTelefonoReal ? soloDigitos : ('manual_' + canal + '_' + Date.now());\n\nreturn [{ json: { companyId, nombre, canal, contacto, resumen, origen, temperatura, phone } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        560
+      ],
+      "id": "form-prepare-data",
+      "name": "🔧 Preparar Datos"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/agent/whatsapp/inbound",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED_AGENT_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ empresa_id: Number($json.companyId), phone: $json.phone, canal: $json.canal, nombre_contacto: $json.nombre, origen: 'web', messages: [{ rol: 'user', contenido: $json.resumen }] }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        560
+      ],
+      "id": "form-crear-contacto",
+      "name": "💾 G54: Guardar Contacto",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/auth/login",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_MASTER_PASSWORD' }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        560
+      ],
+      "id": "form-login",
+      "name": "🔐 G54: Login (Manual)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/auth/switch-company",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Manual)').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: Number($('🔧 Preparar Datos').item.json.companyId) }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1160,
+        560
+      ],
+      "id": "form-switch-company",
+      "name": "🏢 G54: Cambiar Empresa (Manual)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/crm/deals",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Manual)').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ nombre: $('🔧 Preparar Datos').item.json.nombre, telefono: null, origen: $('🔧 Preparar Datos').item.json.origen, temperatura: $('🔧 Preparar Datos').item.json.temperatura, wa_contact_id: ($('🔍 Buscar Contact ID Creado').item.json.data || [])[0]?.id || null, notas: 'Registrado manualmente (' + $('🔧 Preparar Datos').item.json.canal + ', contacto: ' + $('🔧 Preparar Datos').item.json.contacto + ')\\n\\n' + $('🔧 Preparar Datos').item.json.resumen }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1400,
+        560
+      ],
+      "id": "form-crear-deal",
+      "name": "💾 G54: Crear Deal CRM (Manual)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, contact_id: (($('🔍 Buscar Contact ID Creado').item.json.data || [])[0]?.id) || null, deal_id: $('💾 G54: Crear Deal CRM (Manual)').item.json.id || $('💾 G54: Crear Deal CRM (Manual)').item.json.deal?.id || null } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1640,
+        560
+      ],
+      "id": "form-respond-success",
+      "name": "📤 Responder Éxito"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/n8n/companies/' + $('🔧 Preparar Datos').item.json.companyId + '/wa/leads' }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $('🔧 Preparar Datos').item.json.phone }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED_AGENT_TOKEN"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        560
+      ],
+      "id": "form-buscar-contact-id",
+      "name": "🔍 Buscar Contact ID Creado",
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "🔔 GET: Formulario": {
+      "main": [
+        [
+          {
+            "node": "📤 Responder HTML Formulario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔔 POST: Registrar Lead": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Datos": {
+      "main": [
+        [
+          {
+            "node": "💾 G54: Guardar Contacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 G54: Guardar Contacto": {
+      "main": [
+        [
+          {
+            "node": "🔍 Buscar Contact ID Creado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔐 G54: Login (Manual)": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa (Manual)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 G54: Cambiar Empresa (Manual)": {
+      "main": [
+        [
+          {
+            "node": "💾 G54: Crear Deal CRM (Manual)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 G54: Crear Deal CRM (Manual)": {
+      "main": [
+        [
+          {
+            "node": "📤 Responder Éxito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Buscar Contact ID Creado": {
+      "main": [
+        [
+          {
+            "node": "🔐 G54: Login (Manual)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": null,
+  "versionId": "78aa7db7-ffb9-4d16-bfee-be486b5e820c",
+  "activeVersionId": "78aa7db7-ffb9-4d16-bfee-be486b5e820c",
+  "versionCounter": 4,
+  "triggerCount": 2,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-08-13T20:19:30.636Z",
+      "createdAt": "2026-08-13T20:19:30.636Z",
+      "role": "workflow:owner",
+      "workflowId": "wXj4RRlc780mHkgv",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "updatedAt": "2026-03-16T19:58:01.773Z",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-08-13T20:25:08.821Z",
+    "createdAt": "2026-08-13T20:25:08.821Z",
+    "versionId": "78aa7db7-ffb9-4d16-bfee-be486b5e820c",
+    "workflowId": "wXj4RRlc780mHkgv",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "GET",
+          "path": "lead-manual-g54",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          200,
+          300
+        ],
+        "id": "form-get-webhook",
+        "name": "🔔 GET: Formulario",
+        "webhookId": "5a1f332a-7d04-4219-9c0c-6c92c76611d0"
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>Registro manual de lead — G54</title>\n<style>\n  *{box-sizing:border-box;margin:0;padding:0;}\n  body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#0a0d16;color:#e2e8f0;min-height:100vh;display:flex;justify-content:center;padding:32px 16px;}\n  .card{background:#111520;border:1px solid #1a2035;border-radius:14px;padding:28px 26px;max-width:480px;width:100%;}\n  h1{font-size:19px;color:#fff;margin-bottom:6px;}\n  p.sub{font-size:13px;color:#8b98b8;margin-bottom:22px;line-height:1.5;}\n  label{display:block;font-size:12px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;margin-top:16px;}\n  input,select,textarea{width:100%;background:#0d1120;border:1px solid #1a2035;border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:14px;font-family:inherit;}\n  textarea{min-height:90px;resize:vertical;}\n  input:focus,select:focus,textarea:focus{outline:none;border-color:#7c3aed;}\n  button{margin-top:22px;width:100%;background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;}\n  button:hover{background:#6d28d9;}\n  button:disabled{opacity:0.6;cursor:default;}\n  #msg{margin-top:14px;font-size:13px;padding:10px 12px;border-radius:8px;display:none;}\n  #msg.ok{display:block;background:#052e16;border:1px solid #166534;color:#4ade80;}\n  #msg.err{display:block;background:#2d0a0a;border:1px solid #7f1d1d;color:#f87171;}\n</style>\n</head>\n<body>\n<div class=\"card\">\n  <h1>📝 Registro manual de lead</h1>\n  <p class=\"sub\">Para cuando atendiste una conversación real a mano (por la app de Meta, una llamada, un correo) y necesitás que quede igual visible en el CRM.</p>\n  <form id=\"f\">\n    <label>Empresa (company_id)</label>\n    <input type=\"number\" name=\"company_id\" value=\"1\" required>\n\n    <label>Nombre del contacto</label>\n    <input type=\"text\" name=\"nombre\" placeholder=\"Ej. Neurys Idrogo\" required>\n\n    <label>Canal</label>\n    <select name=\"canal\" required>\n      <option value=\"whatsapp\">WhatsApp</option>\n      <option value=\"facebook\" selected>Facebook (DM o comentario)</option>\n      <option value=\"instagram\">Instagram (DM o comentario)</option>\n      <option value=\"telegram\">Telegram</option>\n      <option value=\"llamada\">Llamada</option>\n      <option value=\"correo\">Correo</option>\n      <option value=\"otro\">Otro</option>\n    </select>\n\n    <label>Contacto (teléfono, correo o usuario)</label>\n    <input type=\"text\" name=\"contacto\" placeholder=\"Ej. Neuidrogo@gmail.com\" required>\n\n    <label>Resumen de la conversación</label>\n    <textarea name=\"resumen\" placeholder=\"Ej. Pidió cotización para caja de TV 50 pulgadas, medidas 49.5x30.2x6.1, correo dado, se le mandó cotización formal por correo.\" required></textarea>\n\n    <label>Clasificación</label>\n    <select name=\"clasificacion\" required>\n      <option value=\"frio\">Frío</option>\n      <option value=\"tibio\" selected>Tibio</option>\n      <option value=\"caliente\">Caliente</option>\n    </select>\n\n    <button type=\"submit\" id=\"btn\">Registrar</button>\n    <div id=\"msg\"></div>\n  </form>\n</div>\n<script>\ndocument.getElementById('f').addEventListener('submit', async (e) => {\n  e.preventDefault();\n  const btn = document.getElementById('btn');\n  const msg = document.getElementById('msg');\n  msg.className = ''; msg.style.display = 'none';\n  btn.disabled = true; btn.textContent = 'Registrando...';\n  const data = Object.fromEntries(new FormData(e.target).entries());\n  try {\n    const res = await fetch('https://n8n.mdarthurdigital.com/webhook/lead-manual-g54', {\n      method: 'POST',\n      headers: {'Content-Type':'application/json'},\n      body: JSON.stringify(data)\n    });\n    const json = await res.json();\n    if (json.ok) {\n      msg.className = 'ok';\n      msg.textContent = '✅ Registrado — contacto #' + json.contact_id + ', negocio #' + json.deal_id + ' en el CRM.';\n      e.target.reset();\n      document.querySelector('[name=company_id]').value = '1';\n    } else {\n      throw new Error(json.error || 'Error desconocido');\n    }\n  } catch (err) {\n    msg.className = 'err';\n    msg.textContent = '❌ No se pudo registrar: ' + err.message;\n  } finally {\n    msg.style.display = 'block';\n    btn.disabled = false; btn.textContent = 'Registrar';\n  }\n});\n</script>\n</body>\n</html>",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "text/html; charset=utf-8"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [
+          440,
+          300
+        ],
+        "id": "form-respond",
+        "name": "📤 Responder HTML Formulario"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "lead-manual-g54",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          200,
+          560
+        ],
+        "id": "form-post-webhook",
+        "name": "🔔 POST: Registrar Lead",
+        "webhookId": "1f792024-b8e9-4e8d-8705-70a9d6511917"
+      },
+      {
+        "parameters": {
+          "jsCode": "const body = $input.item.json.body || {};\n\nconst companyId = String(body.company_id || '1');\nconst nombre = String(body.nombre || '').trim();\nconst canal = String(body.canal || 'otro').toLowerCase();\nconst contacto = String(body.contacto || '').trim();\nconst resumen = String(body.resumen || '').trim();\nconst clasificacionRaw = String(body.clasificacion || 'tibio').toLowerCase();\n\n// canal -> origen valido del enum de crm_deals (whatsapp/web/manual/facebook/instagram)\nconst origenMap = { whatsapp: 'whatsapp', facebook: 'facebook', instagram: 'instagram', telegram: 'manual', llamada: 'manual', correo: 'manual', otro: 'manual' };\nconst origen = origenMap[canal] || 'manual';\n\n// clasificacion -> temperatura valida del CRM (bajo/medio/alto)\nconst temperaturaMap = { frio: 'bajo', tibio: 'medio', caliente: 'alto' };\nconst temperatura = temperaturaMap[clasificacionRaw] || 'medio';\n\n// clave de contacto: si \"contacto\" ya parece un telefono real (solo digitos, 8+), se usa tal cual;\n// si no (email, usuario, texto libre) se prefija para no confundirlo con un telefono real,\n// mismo criterio ya usado en Community AI para IDs de Facebook (item 152 del proyecto)\nconst soloDigitos = contacto.replace(/[^0-9]/g, '');\nconst esTelefonoReal = soloDigitos.length >= 8 && soloDigitos.length === contacto.replace(/[\\s()+-]/g,'').length;\nconst phone = esTelefonoReal ? soloDigitos : ('manual_' + canal + '_' + Date.now());\n\nreturn [{ json: { companyId, nombre, canal, contacto, resumen, origen, temperatura, phone } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          440,
+          560
+        ],
+        "id": "form-prepare-data",
+        "name": "🔧 Preparar Datos"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://apigrowth.mdarthurdigital.com/api/agent/whatsapp/inbound",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer REDACTED_AGENT_TOKEN"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ empresa_id: Number($json.companyId), phone: $json.phone, canal: $json.canal, nombre_contacto: $json.nombre, origen: 'web', messages: [{ rol: 'user', contenido: $json.resumen }] }) }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          680,
+          560
+        ],
+        "id": "form-crear-contacto",
+        "name": "💾 G54: Guardar Contacto",
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://apigrowth.mdarthurdigital.com/api/auth/login",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_MASTER_PASSWORD' }) }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          920,
+          560
+        ],
+        "id": "form-login",
+        "name": "🔐 G54: Login (Manual)",
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://apigrowth.mdarthurdigital.com/api/auth/switch-company",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login (Manual)').item.json.access_token }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ company_id: Number($('🔧 Preparar Datos').item.json.companyId) }) }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1160,
+          560
+        ],
+        "id": "form-switch-company",
+        "name": "🏢 G54: Cambiar Empresa (Manual)",
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://apigrowth.mdarthurdigital.com/api/crm/deals",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login (Manual)').item.json.access_token }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ nombre: $('🔧 Preparar Datos').item.json.nombre, telefono: null, origen: $('🔧 Preparar Datos').item.json.origen, temperatura: $('🔧 Preparar Datos').item.json.temperatura, wa_contact_id: ($('🔍 Buscar Contact ID Creado').item.json.data || [])[0]?.id || null, notas: 'Registrado manualmente (' + $('🔧 Preparar Datos').item.json.canal + ', contacto: ' + $('🔧 Preparar Datos').item.json.contacto + ')\\n\\n' + $('🔧 Preparar Datos').item.json.resumen }) }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1400,
+          560
+        ],
+        "id": "form-crear-deal",
+        "name": "💾 G54: Crear Deal CRM (Manual)",
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ { ok: true, contact_id: (($('🔍 Buscar Contact ID Creado').item.json.data || [])[0]?.id) || null, deal_id: $('💾 G54: Crear Deal CRM (Manual)').item.json.id || $('💾 G54: Crear Deal CRM (Manual)').item.json.deal?.id || null } }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [
+          1640,
+          560
+        ],
+        "id": "form-respond-success",
+        "name": "📤 Responder Éxito"
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/n8n/companies/' + $('🔧 Preparar Datos').item.json.companyId + '/wa/leads' }}",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "phone",
+                "value": "={{ $('🔧 Preparar Datos').item.json.phone }}"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer REDACTED_AGENT_TOKEN"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          800,
+          560
+        ],
+        "id": "form-buscar-contact-id",
+        "name": "🔍 Buscar Contact ID Creado",
+        "onError": "continueRegularOutput"
+      }
+    ],
+    "connections": {
+      "🔔 GET: Formulario": {
+        "main": [
+          [
+            {
+              "node": "📤 Responder HTML Formulario",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔔 POST: Registrar Lead": {
+        "main": [
+          [
+            {
+              "node": "🔧 Preparar Datos",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Preparar Datos": {
+        "main": [
+          [
+            {
+              "node": "💾 G54: Guardar Contacto",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "💾 G54: Guardar Contacto": {
+        "main": [
+          [
+            {
+              "node": "🔍 Buscar Contact ID Creado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔐 G54: Login (Manual)": {
+        "main": [
+          [
+            {
+              "node": "🏢 G54: Cambiar Empresa (Manual)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🏢 G54: Cambiar Empresa (Manual)": {
+        "main": [
+          [
+            {
+              "node": "💾 G54: Crear Deal CRM (Manual)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "💾 G54: Crear Deal CRM (Manual)": {
+        "main": [
+          [
+            {
+              "node": "📤 Responder Éxito",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔍 Buscar Contact ID Creado": {
+        "main": [
+          [
+            {
+              "node": "🔐 G54: Login (Manual)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-08-13T20:25:08.951Z",
+        "id": 2808,
+        "workflowId": "wXj4RRlc780mHkgv",
+        "versionId": "78aa7db7-ffb9-4d16-bfee-be486b5e820c",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      },
+      {
+        "createdAt": "2026-08-13T20:25:08.916Z",
+        "id": 2807,
+        "workflowId": "wXj4RRlc780mHkgv",
+        "versionId": "78aa7db7-ffb9-4d16-bfee-be486b5e820c",
+        "event": "deactivated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    ]
+  }
+}
