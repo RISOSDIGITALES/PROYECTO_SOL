@@ -544,8 +544,8 @@
   <div class="item-card b-orange">
     <div class="item-header">
       <div>
-        <div class="item-title">B-26. No hay ningún campo en G54 para guardar el token de la Instagram API nueva (Instagram Login) — bloquea que Community AI pueda responder DMs de Instagram</div>
-        <div class="item-where">API Backend — Conexiones de Meta</div>
+        <div class="item-title">B-26. El token nuevo de Instagram (Instagram Login API) se puede guardar por empresa, pero ningún endpoint lo devuelve — bloquea que Community AI responda DMs de Instagram</div>
+        <div class="item-where">API Backend — <code>/api/rrss/tokens</code></div>
       </div>
       <div class="item-tags">
         <span class="badge blocker">🟧 Encontrado el 14-ago</span>
@@ -553,9 +553,12 @@
     </div>
     <div class="item-body">
       <p class="item-why">
-        Un cliente real de Instagram (@neurys.idrogo) mandó un DM pidiendo cotización y nunca se procesó — investigando encontramos que Crating Express tenía suscrita la app vieja de Facebook Login, no la nueva "Instagram API with Instagram Login" que Meta exige hoy para mensajería de Instagram. Ya se hizo la migración del lado de Meta (permisos nuevos, token generado, app publicada) — la usuaria nos pasó el token real generado. Pero al intentar guardarlo en G54 para que nuestro agente lo lea dinámicamente (nunca lo hardcodeamos en el código, por la regla de plataforma), no encontramos ningún lugar: <code>GET /api/n8n/pages/{page_id}</code> solo tiene <code>fb_access_token</code> e <code>ig_user_id</code> — no hay un campo separado para este token nuevo, y escribir ahí encima de <code>fb_access_token</code> rompería Facebook. Probamos también <code>PUT /api/social-channels</code> mandando un campo <code>access_token</code> extra en el canal de Instagram: acepta el request (200) pero lo descarta en silencio — el <code>updated_at</code> del canal no cambia, confirmado con una prueba directa.
+        Un cliente real de Instagram (@neurys.idrogo) mandó un DM pidiendo cotización y nunca se procesó — Crating Express tenía suscrita la app vieja de Facebook Login, no la nueva "Instagram API with Instagram Login" que Meta exige hoy para mensajería de Instagram. Ya se hizo la migración del lado de Meta (permisos nuevos, token generado, app publicada) — la usuaria nos pasó el token real generado, confirmado con la Graph API real que cubre lectura, mensajería y publicación.
       </p>
-      <div class="dep-box"><strong>Lo que necesitamos:</strong> un campo nuevo y separado (ej. <code>ig_login_access_token</code>) en <code>GET/PUT /api/n8n/pages/{page_id}</code> — mismo patrón que <code>fb_access_token</code>, pero para el token de la Instagram API con Instagram Login (distinto sistema, token distinto). Mientras no exista, Community AI no puede responder DMs reales de Instagram sin violar la regla de no hardcodear datos de cliente en un agente de plataforma.</div>
+      <p class="item-why">
+        La parte buena: sí existe un lugar correcto para guardarlo, separado del token de Facebook — <code>PUT /api/rrss/tokens</code> con <code>{"id":3,"platform":"Instagram","access_token":"..."}</code> lo persiste de verdad (confirmado con <code>updated_at</code> actualizado) sin tocar en nada la fila de Facebook. La parte que falta: <strong>ningún endpoint lo devuelve de vuelta.</strong> <code>GET /api/rrss/tokens</code> (con sesión) trae <code>id, platform, page_id, instagram_account_id, is_active</code> pero nunca <code>access_token</code> — ni enmascarado. Probamos también con AGENT_TOKEN sobre <code>/api/n8n/pages/{page_id}</code> (que sí expone <code>fb_access_token</code> en texto plano para Facebook) con parámetros <code>?full=1</code>/<code>?include=tokens</code>: no cambia nada, sigue devolviendo solo <code>fb_access_token</code> e <code>ig_user_id</code>. El dato está guardado y correcto, pero no hay ningún camino de lectura para un agente.
+      </p>
+      <div class="dep-box"><strong>Lo que necesitamos:</strong> que <code>GET /api/n8n/pages/{page_id}</code> (con AGENT_TOKEN, mismo patrón ya usado para <code>fb_access_token</code>) también devuelva el <code>access_token</code> real de la fila de Instagram en <code>rrss_tokens</code> — como un campo nuevo, ej. <code>ig_access_token</code>, sin tocar <code>fb_access_token</code>. Mientras no exista, Community AI no puede responder DMs reales de Instagram sin hardcodear el token en el código del agente, algo que la regla de plataforma no permite.</div>
     </div>
   </div>
 
