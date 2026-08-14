@@ -1,8 +1,8 @@
 {
-  "updatedAt": "2026-06-15T16:37:26.162Z",
+  "updatedAt": "2026-07-02T19:38:48.232Z",
   "createdAt": "2026-06-15T15:49:48.903Z",
   "id": "jDEYno22WuE0QVwJ",
-  "name": "Alex CE — 04 Cotizador",
+  "name": "Marco CE — 04 Cotizador",
   "description": null,
   "active": true,
   "isArchived": false,
@@ -74,7 +74,8 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ tipo_caja: $('Recibir Datos').item.json.tipoCajaApi || 'cajones_cerrados', cant: 1, largo: $('Recibir Datos').item.json.dimensiones?.largo || 100, ancho: $('Recibir Datos').item.json.dimensiones?.ancho || 50, alto: $('Recibir Datos').item.json.dimensiones?.alto || 50 }) }}",
         "options": {}
-      }
+      },
+      "continueOnFail": true
     },
     {
       "id": "enrich",
@@ -86,7 +87,7 @@
         200
       ],
       "parameters": {
-        "jsCode": "const cotizacion = $input.item.json;\nconst ctx = $('Recibir Datos').item.json;\nconst precio = cotizacion?.data?.precio_total || cotizacion?.precio_total;\nlet mensajeFinal = ctx.mensaje;\n\nif (precio) {\n  const idioma = ctx.idiomaConversacion || 'español';\n  if (idioma === 'inglés') {\n    mensajeFinal += `\\n\\n💵 *Estimated price: $${precio} USD*\\n_This is an estimate based on the dimensions provided. The final price may vary depending on additional details._\\n\\nWould you like a Crating Express specialist to contact you for a formal quote?`;\n  } else {\n    mensajeFinal += `\\n\\n💵 *Precio estimado: $${precio} USD*\\n_Este es un estimado basado en las dimensiones indicadas. El precio final puede variar según detalles adicionales._\\n\\n¿Le gustaría que un especialista de Crating Express lo contacte para una cotización formal?`;\n  }\n}\n\nreturn [{ json: { ...ctx, mensaje: mensajeFinal, mensajeRespuesta: mensajeFinal, cotizadorEnviado: !!precio } }];"
+        "jsCode": "const cotizacion = $input.item.json;\nconst ctx = $('Recibir Datos').item.json;\nconst precio = cotizacion?.data?.precio_total || cotizacion?.precio_total;\nconst d = ctx.datosRecolectados || {};\nconst idioma = ctx.idiomaConversacion || 'español';\nconst nombre = d.nombre_cliente ? `, ${d.nombre_cliente.split(' ')[0]}` : '';\n\nlet mensajeFinal;\n\nif (precio) {\n  // Build a complete standalone price message (do NOT rely on the AI message)\n  if (idioma === 'inglés') {\n    mensajeFinal = `Here is your estimate${nombre}! 🎉\n\n📦 *${d.producto || 'Crate'}*\n📐 Dimensions: ${d.medidas || '—'}\"\n🗓 Needed by: ${d.fecha || '—'}\n🛡 Extra protection: ${d.proteccion_extra ? 'Yes' : 'No'}\n\n💵 *Estimated price: $${precio} USD*\n_This is an estimate based on the dimensions provided. The final price may vary depending on additional details._\n\nWould you like a formal quote sent to your email?`;\n  } else {\n    mensajeFinal = `¡Aquí está tu estimado${nombre}! 🎉\n\n📦 *${d.producto || 'Cajón'}*\n📐 Medidas: ${d.medidas || '—'}\"\n🗓 Para: ${d.fecha || '—'}\n🛡 Protección extra: ${d.proteccion_extra ? 'Sí' : 'No'}\n\n💵 *Precio estimado: $${precio} USD*\n_Este es un estimado basado en las dimensiones indicadas. El precio final puede variar según detalles adicionales._\n\n¿Le gustaría que le enviemos la cotización formal a su correo?`;\n  }\n} else {\n  // API failed to return price — use the AI message as fallback\n  mensajeFinal = ctx.mensaje || (idioma === 'inglés'\n    ? 'I have all your details. A specialist will send you the quote shortly.'\n    : 'Ya tengo todos tus datos. Un especialista te enviará la cotización pronto.');\n}\n\nreturn [{ json: { ...ctx, mensaje: mensajeFinal, mensajeRespuesta: mensajeFinal, cotizadorEnviado: !!precio } }];"
       }
     },
     {
@@ -152,11 +153,13 @@
   },
   "staticData": null,
   "meta": null,
+  "nodeGroups": [],
   "pinData": null,
-  "versionId": "5e716cca-044b-40b3-ab23-83cf84095971",
-  "activeVersionId": "5e716cca-044b-40b3-ab23-83cf84095971",
-  "versionCounter": 6,
+  "versionId": "37df6009-2fff-4464-9d0a-967b63876335",
+  "activeVersionId": "37df6009-2fff-4464-9d0a-967b63876335",
+  "versionCounter": 10,
   "triggerCount": 0,
+  "sourceWorkflowId": null,
   "shared": [
     {
       "updatedAt": "2026-06-15T15:49:48.908Z",
@@ -172,15 +175,16 @@
         "type": "personal",
         "icon": null,
         "description": null,
+        "customTelemetryTags": [],
         "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
     }
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-06-15T16:37:26.164Z",
-    "createdAt": "2026-06-15T16:37:26.164Z",
-    "versionId": "5e716cca-044b-40b3-ab23-83cf84095971",
+    "updatedAt": "2026-06-18T22:07:16.394Z",
+    "createdAt": "2026-06-18T22:07:16.394Z",
+    "versionId": "37df6009-2fff-4464-9d0a-967b63876335",
     "workflowId": "jDEYno22WuE0QVwJ",
     "nodes": [
       {
@@ -250,7 +254,8 @@
           "specifyBody": "json",
           "jsonBody": "={{ JSON.stringify({ tipo_caja: $('Recibir Datos').item.json.tipoCajaApi || 'cajones_cerrados', cant: 1, largo: $('Recibir Datos').item.json.dimensiones?.largo || 100, ancho: $('Recibir Datos').item.json.dimensiones?.ancho || 50, alto: $('Recibir Datos').item.json.dimensiones?.alto || 50 }) }}",
           "options": {}
-        }
+        },
+        "continueOnFail": true
       },
       {
         "id": "enrich",
@@ -262,7 +267,7 @@
           200
         ],
         "parameters": {
-          "jsCode": "\nconst cotizacion = $input.item.json;\nconst ctx = $('Recibir Datos').item.json;\nconst precio = cotizacion?.data?.precio_total || cotizacion?.precio_total;\nlet mensajeFinal = ctx.mensaje;\nif (precio) {\n  mensajeFinal += `\\n\\n💵 *Precio estimado: $${precio} USD*\\n_Este es un estimado basado en las dimensiones indicadas. El precio final puede variar según detalles adicionales._\\n\\n¿Le gustaría que un especialista de Crating Express lo contacte para una cotización formal?`;\n}\nreturn [{ json: { ...ctx, mensaje: mensajeFinal, mensajeRespuesta: mensajeFinal, cotizadorEnviado: !!precio } }];\n"
+          "jsCode": "const cotizacion = $input.item.json;\nconst ctx = $('Recibir Datos').item.json;\nconst precio = cotizacion?.data?.precio_total || cotizacion?.precio_total;\nconst d = ctx.datosRecolectados || {};\nconst idioma = ctx.idiomaConversacion || 'español';\nconst nombre = d.nombre_cliente ? `, ${d.nombre_cliente.split(' ')[0]}` : '';\n\nlet mensajeFinal;\n\nif (precio) {\n  // Build a complete standalone price message (do NOT rely on the AI message)\n  if (idioma === 'inglés') {\n    mensajeFinal = `Here is your estimate${nombre}! 🎉\n\n📦 *${d.producto || 'Crate'}*\n📐 Dimensions: ${d.medidas || '—'}\"\n🗓 Needed by: ${d.fecha || '—'}\n🛡 Extra protection: ${d.proteccion_extra ? 'Yes' : 'No'}\n\n💵 *Estimated price: $${precio} USD*\n_This is an estimate based on the dimensions provided. The final price may vary depending on additional details._\n\nWould you like a formal quote sent to your email?`;\n  } else {\n    mensajeFinal = `¡Aquí está tu estimado${nombre}! 🎉\n\n📦 *${d.producto || 'Cajón'}*\n📐 Medidas: ${d.medidas || '—'}\"\n🗓 Para: ${d.fecha || '—'}\n🛡 Protección extra: ${d.proteccion_extra ? 'Sí' : 'No'}\n\n💵 *Precio estimado: $${precio} USD*\n_Este es un estimado basado en las dimensiones indicadas. El precio final puede variar según detalles adicionales._\n\n¿Le gustaría que le enviemos la cotización formal a su correo?`;\n  }\n} else {\n  // API failed to return price — use the AI message as fallback\n  mensajeFinal = ctx.mensaje || (idioma === 'inglés'\n    ? 'I have all your details. A specialist will send you the quote shortly.'\n    : 'Ya tengo todos tus datos. Un especialista te enviará la cotización pronto.');\n}\n\nreturn [{ json: { ...ctx, mensaje: mensajeFinal, mensajeRespuesta: mensajeFinal, cotizadorEnviado: !!precio } }];"
         }
       },
       {
@@ -321,24 +326,57 @@
         ]
       }
     },
+    "nodeGroups": [],
     "authors": "Solange  Torrez",
     "name": null,
     "description": null,
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-06-15T16:37:26.252Z",
-        "id": 1142,
+        "createdAt": "2026-06-18T22:07:16.719Z",
+        "id": 1301,
         "workflowId": "jDEYno22WuE0QVwJ",
-        "versionId": "5e716cca-044b-40b3-ab23-83cf84095971",
+        "versionId": "37df6009-2fff-4464-9d0a-967b63876335",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-06-15T16:37:26.220Z",
-        "id": 1141,
+        "createdAt": "2026-06-26T20:07:19.587Z",
+        "id": 1678,
         "workflowId": "jDEYno22WuE0QVwJ",
-        "versionId": "5e716cca-044b-40b3-ab23-83cf84095971",
+        "versionId": "37df6009-2fff-4464-9d0a-967b63876335",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      },
+      {
+        "createdAt": "2026-07-02T19:38:48.296Z",
+        "id": 1756,
+        "workflowId": "jDEYno22WuE0QVwJ",
+        "versionId": "37df6009-2fff-4464-9d0a-967b63876335",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      },
+      {
+        "createdAt": "2026-06-18T22:07:16.670Z",
+        "id": 1300,
+        "workflowId": "jDEYno22WuE0QVwJ",
+        "versionId": "37df6009-2fff-4464-9d0a-967b63876335",
+        "event": "deactivated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      },
+      {
+        "createdAt": "2026-06-26T19:53:23.513Z",
+        "id": 1673,
+        "workflowId": "jDEYno22WuE0QVwJ",
+        "versionId": "37df6009-2fff-4464-9d0a-967b63876335",
+        "event": "deactivated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      },
+      {
+        "createdAt": "2026-07-02T19:38:48.276Z",
+        "id": 1755,
+        "workflowId": "jDEYno22WuE0QVwJ",
+        "versionId": "37df6009-2fff-4464-9d0a-967b63876335",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }
