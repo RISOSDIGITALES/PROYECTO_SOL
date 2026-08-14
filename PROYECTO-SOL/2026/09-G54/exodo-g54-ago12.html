@@ -540,6 +540,25 @@
     </div>
   </div>
 
+  <!-- B-26 -->
+  <div class="item-card b-orange">
+    <div class="item-header">
+      <div>
+        <div class="item-title">B-26. No hay ningún campo en G54 para guardar el token de la Instagram API nueva (Instagram Login) — bloquea que Community AI pueda responder DMs de Instagram</div>
+        <div class="item-where">API Backend — Conexiones de Meta</div>
+      </div>
+      <div class="item-tags">
+        <span class="badge blocker">🟧 Encontrado el 14-ago</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">
+        Un cliente real de Instagram (@neurys.idrogo) mandó un DM pidiendo cotización y nunca se procesó — investigando encontramos que Crating Express tenía suscrita la app vieja de Facebook Login, no la nueva "Instagram API with Instagram Login" que Meta exige hoy para mensajería de Instagram. Ya se hizo la migración del lado de Meta (permisos nuevos, token generado, app publicada) — la usuaria nos pasó el token real generado. Pero al intentar guardarlo en G54 para que nuestro agente lo lea dinámicamente (nunca lo hardcodeamos en el código, por la regla de plataforma), no encontramos ningún lugar: <code>GET /api/n8n/pages/{page_id}</code> solo tiene <code>fb_access_token</code> e <code>ig_user_id</code> — no hay un campo separado para este token nuevo, y escribir ahí encima de <code>fb_access_token</code> rompería Facebook. Probamos también <code>PUT /api/social-channels</code> mandando un campo <code>access_token</code> extra en el canal de Instagram: acepta el request (200) pero lo descarta en silencio — el <code>updated_at</code> del canal no cambia, confirmado con una prueba directa.
+      </p>
+      <div class="dep-box"><strong>Lo que necesitamos:</strong> un campo nuevo y separado (ej. <code>ig_login_access_token</code>) en <code>GET/PUT /api/n8n/pages/{page_id}</code> — mismo patrón que <code>fb_access_token</code>, pero para el token de la Instagram API con Instagram Login (distinto sistema, token distinto). Mientras no exista, Community AI no puede responder DMs reales de Instagram sin violar la regla de no hardcodear datos de cliente en un agente de plataforma.</div>
+    </div>
+  </div>
+
 </div>
 
 <footer>
