@@ -1,0 +1,157 @@
+{
+  "updatedAt": "2026-07-13T13:42:14.069Z",
+  "createdAt": "2026-07-11T15:31:05.325Z",
+  "id": "aMCwIQ3eY1bzyMyt",
+  "name": "⏰ Distribution AI — Trigger Programado TEMPORAL (G54)",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "trg1",
+      "name": "⏰ Cada 2 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "cmp1",
+      "name": "🏢 Obtener Empresas Activas (G54)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "url": "https://apigrowth.mdarthurdigital.com/api/n8n/companies",
+        "options": {}
+      }
+    },
+    {
+      "id": "flt1",
+      "name": "🔧 Filtrar Empresas Activas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const companies = $input.first().json.data || [];\nconst PAUSADAS = [6]; // Orison — pausado 2026-07-13: loop de reintentos fallidos por credenciales FB/IG cruzadas con CE, ver CLAUDE.md item 113\nreturn companies.filter(c => c.is_active && !PAUSADAS.includes(c.id)).map(c => ({ json: { company_id: c.id, name: c.name } }));"
+      }
+    },
+    {
+      "id": "trg2",
+      "name": "📢 Disparar Distribution AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.mdarthurdigital.com/webhook/distribution-publish-g54",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"company_id\": $json.company_id } }}",
+        "options": {
+          "timeout": 20000
+        }
+      }
+    }
+  ],
+  "connections": {
+    "⏰ Cada 2 minutos": {
+      "main": [
+        [
+          {
+            "node": "🏢 Obtener Empresas Activas (G54)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 Obtener Empresas Activas (G54)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Filtrar Empresas Activas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Filtrar Empresas Activas": {
+      "main": [
+        [
+          {
+            "node": "📢 Disparar Distribution AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:⏰ Cada 2 minutos": {
+      "recurrenceRules": [
+        null
+      ],
+      "recurrenceRuleSignatures": [
+        null
+      ]
+    }
+  },
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": null,
+  "versionId": "7f04018a-2262-4fe0-bfad-9fdf70aea967",
+  "activeVersionId": null,
+  "versionCounter": 2,
+  "triggerCount": 1,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-07-11T15:31:05.333Z",
+      "createdAt": "2026-07-11T15:31:05.333Z",
+      "role": "workflow:owner",
+      "workflowId": "aMCwIQ3eY1bzyMyt",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "updatedAt": "2026-03-16T19:58:01.773Z",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

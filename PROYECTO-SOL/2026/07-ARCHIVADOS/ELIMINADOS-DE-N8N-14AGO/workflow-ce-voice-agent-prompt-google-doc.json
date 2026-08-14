@@ -1,0 +1,249 @@
+{
+  "updatedAt": "2026-05-14T20:03:32.000Z",
+  "createdAt": "2026-05-14T14:02:05.849Z",
+  "id": "dRZr4Wfle0kMWv1r",
+  "name": "📄 CE Voice Agent — Prompt desde Google Doc",
+  "description": null,
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vapi-ce-prompt",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "4987f08f-0af2-4133-85b8-58445b517a52",
+      "name": "🔔 Webhook VAPI",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        160
+      ],
+      "webhookId": "vapi-ce-prompt"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst msg = body.message || body;\nconst eventType = msg.type || msg.event || '';\n\n// VAPI llama con 'assistant-request' al inicio de cada llamada\nconst esInicio = eventType === 'assistant-request';\n\nreturn [{ json: { esInicio, eventType, rawBody: body } }];"
+      },
+      "id": "eca7eec4-93ae-4f24-b0d9-ef9d8c0a8c3f",
+      "name": "🔍 Detectar Tipo de Evento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "cond-inicio",
+              "leftValue": "={{ $json.esInicio }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e2518177-4c53-4cc6-b2cc-0cd177aaf45d",
+      "name": "❓ ¿Es inicio de llamada?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "https://docs.google.com/document/d/1TCQis3T6FIMp5vcNnPLSCxoggsPrd0EkRiMa84yYbnw/edit"
+      },
+      "id": "4411447b-c5a6-4dbd-9fb1-731db1e8910f",
+      "name": "📄 Leer Google Doc",
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        32,
+        48
+      ],
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "F7zXp5HLbw5kGcN3",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const docContent = $input.first().json.body?.content || '';\n\n// Extraer texto plano del documento\nlet textoDoc = '';\nif (Array.isArray(docContent)) {\n  for (const elemento of docContent) {\n    const parrafo = elemento.paragraph;\n    if (parrafo?.elements) {\n      for (const el of parrafo.elements) {\n        if (el.textRun?.content) {\n          textoDoc += el.textRun.content;\n        }\n      }\n    }\n  }\n} else if (typeof docContent === 'string') {\n  textoDoc = docContent;\n}\n\ntextoDoc = textoDoc.trim();\n\n// Armar el prompt completo para VAPI\n// El prompt del doc se inyecta como contexto de conocimiento\n// La personalidad de Alex sigue en el prompt interno de VAPI\nconst promptContexto = `A continuación tienes toda la información actualizada de Crating Express. Úsala como tu base de conocimiento para responder preguntas de clientes con precisión:\\n\\n${textoDoc}\\n\\nRecuerda: si no sabes algo con certeza, ofrece conectar al cliente con el equipo por WhatsApp o email.`;\n\nreturn [{ json: { promptContexto } }];"
+      },
+      "id": "faa12b2e-fe0d-4f01-b129-37d98b45a220",
+      "name": "🔧 Formatear Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        256,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ assistant: { model: { messages: [ { role: 'system', content: $json.promptContexto } ] } } }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "59e6bea0-c019-425d-84e5-bbc1d85264e9",
+      "name": "✅ Enviar Prompt a VAPI",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ received: true }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "46b5b111-53ba-4107-8d90-a33b73226e0d",
+      "name": "⏭️ Ignorar Evento",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        32,
+        272
+      ]
+    }
+  ],
+  "connections": {
+    "🔔 Webhook VAPI": {
+      "main": [
+        [
+          {
+            "node": "🔍 Detectar Tipo de Evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Detectar Tipo de Evento": {
+      "main": [
+        [
+          {
+            "node": "❓ ¿Es inicio de llamada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ ¿Es inicio de llamada?": {
+      "main": [
+        [
+          {
+            "node": "📄 Leer Google Doc",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⏭️ Ignorar Evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📄 Leer Google Doc": {
+      "main": [
+        [
+          {
+            "node": "🔧 Formatear Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Formatear Prompt": {
+      "main": [
+        [
+          {
+            "node": "✅ Enviar Prompt a VAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "fd6aa54e-5fea-4269-993c-2cf4529e438c",
+  "activeVersionId": null,
+  "versionCounter": 7,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-05-14T14:02:05.861Z",
+      "createdAt": "2026-05-14T14:02:05.861Z",
+      "role": "workflow:owner",
+      "workflowId": "dRZr4Wfle0kMWv1r",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "updatedAt": "2026-03-16T19:58:01.773Z",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-05-04T16:04:54.762Z",
+      "createdAt": "2026-05-04T16:04:54.762Z",
+      "id": "2CrVJWitAB77MgTJ",
+      "name": "Alex"
+    }
+  ],
+  "activeVersion": null
+}

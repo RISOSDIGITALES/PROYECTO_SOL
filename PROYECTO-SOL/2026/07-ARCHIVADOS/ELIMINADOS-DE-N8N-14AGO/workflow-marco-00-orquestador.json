@@ -1,0 +1,830 @@
+{
+  "updatedAt": "2026-08-08T13:56:18.223Z",
+  "createdAt": "2026-06-15T15:51:24.435Z",
+  "id": "vQUztiEMB8dXfNwo",
+  "name": "Marco CE — 00 Orquestador",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "wh",
+      "name": "📲 Webhook WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        300
+      ],
+      "parameters": {
+        "path": "whatsapp-ce",
+        "responseMode": "responseNode",
+        "httpMethod": "POST"
+      },
+      "webhookId": "09fc9978-b1e1-4e55-be35-53d1a863cfc2"
+    },
+    {
+      "id": "resp200",
+      "name": "✅ Responder a Meta (200)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        60,
+        160
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "EVENT_RECEIVED",
+        "responseCode": 200
+      }
+    },
+    {
+      "id": "if-verify",
+      "name": "🔀 ¿Verificación o Mensaje?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        60,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.query?.['hub.mode'] }}",
+              "rightValue": "subscribe",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "resp-verify",
+      "name": "✅ Responder Verificación Meta",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        320,
+        160
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query?.['hub.challenge'] }}",
+        "responseCode": 200
+      }
+    },
+    {
+      "id": "wait-race",
+      "name": "⏱️ Esperar (anti-race)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        320,
+        400
+      ],
+      "parameters": {
+        "unit": "seconds",
+        "amount": 2,
+        "resume": "timeInterval"
+      },
+      "webhookId": "8c7ca486-f3b7-4c04-a2b5-5059d95b2dd7"
+    },
+    {
+      "id": "extract",
+      "name": "🔧 Extraer Mensaje",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\nconst entry = body.entry?.[0];\nconst changes = entry?.changes?.[0];\nconst value = changes?.value;\nconst message = value?.messages?.[0];\nif (!message) return [{ json: { skip: true } }];\nconst telefono = message.from;\nconst texto = message.text?.body || '';\nconst messageId = message.id;\nconst nombreContacto = value?.contacts?.[0]?.profile?.name || '';\nconst seen = $getWorkflowStaticData('global');\nif (!seen.msgIds) seen.msgIds = {};\nif (seen.msgIds[messageId]) return [{ json: { skip: true } }];\nseen.msgIds[messageId] = Date.now();\nObject.keys(seen.msgIds).forEach(k => { if (Date.now() - seen.msgIds[k] > 3600000) delete seen.msgIds[k]; });\nreturn [{ json: { telefono, texto, messageId, nombreContacto, skip: false } }];"
+      }
+    },
+    {
+      "id": "if-msg",
+      "name": "🔀 ¿Hay mensaje?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        800,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mark-read",
+      "name": "✅ Marcar como Leído",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        200
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer "
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: \"whatsapp\", status: \"read\", message_id: $json.messageId }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "typing-send",
+      "name": "⌛ Enviar Typing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        380
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer "
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: \"whatsapp\", recipient_type: \"individual\", to: $('🔧 Extraer Mensaje').item.json.telefono, type: \"reaction\", reaction: { message_id: $('🔧 Extraer Mensaje').item.json.messageId, emoji: \"⏳\" } }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "exec02",
+      "name": "▶️ 02 Contexto y Lead",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        300
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": "s1Z7jKoFzy5x7XvC",
+        "mode": "once",
+        "inputData": "={{ [{ json: { telefono: $('🔧 Extraer Mensaje').item.json.telefono, texto: $('🔧 Extraer Mensaje').item.json.texto, nombreContacto: $('🔧 Extraer Mensaje').item.json.nombreContacto } }] }}"
+      }
+    },
+    {
+      "id": "merge",
+      "name": "🔀 Fusionar Datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        300
+      ],
+      "parameters": {
+        "jsCode": "\nconst extract = $('🔧 Extraer Mensaje').item.json;\nconst ctx02   = $('▶️ 02 Contexto y Lead').item.json;\nreturn [{ json: { ...extract, ...ctx02 } }];\n"
+      }
+    },
+    {
+      "id": "exec01",
+      "name": "▶️ 01 Clasificador",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        300
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": "1PXcg3dOQBt8hrrT",
+        "mode": "once",
+        "inputData": "={{ [{ json: $json }] }}"
+      }
+    },
+    {
+      "id": "exec03",
+      "name": "▶️ 03 Generador IA",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        300
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": "J8qbKOF7t4GnhRDT",
+        "mode": "once",
+        "inputData": "={{ [{ json: $json }] }}"
+      }
+    },
+    {
+      "id": "exec04",
+      "name": "▶️ 04 Cotizador",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        2240,
+        300
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": "jDEYno22WuE0QVwJ",
+        "mode": "once",
+        "inputData": "={{ [{ json: $json }] }}"
+      }
+    },
+    {
+      "id": "send-wa",
+      "name": "📤 Enviar Mensaje WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2480,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer "
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  messaging_product: \"whatsapp\",\n  to: $json.telefono,\n  type: \"text\",\n  text: { body: $json.mensaje || $json.mensajeRespuesta }\n}) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "exec05",
+      "name": "▶️ 05 Guardar Lead",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        2720,
+        300
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": "PqbfMghL0E7xKflC",
+        "mode": "once",
+        "inputData": "={{ [{ json: $('▶️ 04 Cotizador').item.json }] }}"
+      }
+    },
+    {
+      "id": "if-hot",
+      "name": "🔀 ¿Lead Caliente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2960,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $('▶️ 04 Cotizador').item.json.clasificacion }}",
+              "rightValue": "Caliente",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "email-hot",
+      "name": "📧 Notificar Vendedor",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        3200,
+        200
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "iWBBSSe5AWsCMo89",
+          "name": "Gmail SMTP — risosadmi"
+        }
+      },
+      "parameters": {
+        "subject": "={{ '🔥 Lead Caliente WhatsApp — ' + ($('▶️ 04 Cotizador').item.json.nombreContacto || $('▶️ 04 Cotizador').item.json.telefono) }}",
+        "message": "={{ '📱 Teléfono: +' + $('▶️ 04 Cotizador').item.json.telefono + '\\n\\n📦 Producto: ' + ($('▶️ 04 Cotizador').item.json.datosRecolectados?.producto || 'N/D') + '\\n📐 Medidas: ' + ($('▶️ 04 Cotizador').item.json.datosRecolectados?.medidas || 'N/D') + '\\n\\n💬 Historial reciente:\\n' + ($('▶️ 04 Cotizador').item.json.nuevoHistorial || '').split('\\n').slice(-10).join('\\n') }}",
+        "options": {},
+        "toEmail": "={{ $('▶️ 04 Cotizador').item.json.emailVendedor?.split('\\n').join(',') || 'risosadmi@gmail.com' }}",
+        "fromEmail": "risosadmi@gmail.com"
+      },
+      "webhookId": "3e08e5f0-c367-4b7e-bbed-9d7178658095"
+    },
+    {
+      "id": "sched-fu",
+      "name": "⏰ Trigger Follow-up",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -200,
+        600
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "http-fu",
+      "name": "📋 Obtener Leads Sin Respuesta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        60,
+        600
+      ],
+      "parameters": {
+        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filterByFormula",
+              "value": "AND({Estado}='En calificación', {Ultima_Actividad}<DATEADD(NOW(),-20,'hours'))"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": []
+        },
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ZyqxmqBJAc8692Bx",
+          "name": "Airtable Token — Crating Express"
+        }
+      }
+    },
+    {
+      "id": "code-fu",
+      "name": "🔧 Procesar Follow-ups",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        600
+      ],
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst records = data.records || [];\nconst now = new Date();\nconst results = [];\n\nfor (const record of records) {\n  const fields = record.fields;\n  const ultimaInteraccion = new Date(fields.Ultima_Actividad);\n  const horasDiff = (now - ultimaInteraccion) / (1000 * 60 * 60);\n  \n  let tipoFollowup = null;\n  if (horasDiff >= 72) tipoFollowup = '72h';\n  else if (horasDiff >= 24) tipoFollowup = '24h';\n  \n  if (tipoFollowup) {\n    results.push({\n      json: {\n        recordId: record.id,\n        telefono: fields.Telefono,\n        nombre: fields.Nombre,\n        tipoFollowup,\n        estado: fields.Estado\n      }\n    });\n  }\n}\n\nreturn results;"
+      }
+    },
+    {
+      "id": "cfg-fu",
+      "name": "📊 Config para Follow-up",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        600
+      ],
+      "parameters": {
+        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/tblj4radGXHN7HBJi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "maxRecords",
+              "value": "1"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": []
+        },
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ZyqxmqBJAc8692Bx",
+          "name": "Airtable Token — Crating Express"
+        }
+      }
+    },
+    {
+      "id": "send-fu",
+      "name": "📤 Enviar Follow-up WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        600
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer "
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: \"whatsapp\", to: $json.telefono, type: \"text\", text: { body: $json.mensajeFu } }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "upd-fu",
+      "name": "🔄 Actualizar Estado Follow-up",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        600
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads/{{ $json.leadId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: { Estado: 'En calificación', Ultima_Actividad: new Date().toISOString() } }) }}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ZyqxmqBJAc8692Bx",
+          "name": "Airtable Token — Crating Express"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "📲 Webhook WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Verificación o Mensaje?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Verificación o Mensaje?": {
+      "main": [
+        [
+          {
+            "node": "✅ Responder Verificación Meta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "✅ Responder a Meta (200)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Responder a Meta (200)": {
+      "main": [
+        [
+          {
+            "node": "⏱️ Esperar (anti-race)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏱️ Esperar (anti-race)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Extraer Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Extraer Mensaje": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Hay mensaje?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Hay mensaje?": {
+      "main": [
+        [
+          {
+            "node": "✅ Marcar como Leído",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "✅ Marcar como Leído": {
+      "main": [
+        [
+          {
+            "node": "⌛ Enviar Typing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⌛ Enviar Typing": {
+      "main": [
+        [
+          {
+            "node": "▶️ 02 Contexto y Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ 02 Contexto y Lead": {
+      "main": [
+        [
+          {
+            "node": "🔀 Fusionar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Fusionar Datos": {
+      "main": [
+        [
+          {
+            "node": "▶️ 01 Clasificador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ 01 Clasificador": {
+      "main": [
+        [
+          {
+            "node": "▶️ 03 Generador IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ 03 Generador IA": {
+      "main": [
+        [
+          {
+            "node": "▶️ 04 Cotizador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ 04 Cotizador": {
+      "main": [
+        [
+          {
+            "node": "📤 Enviar Mensaje WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Enviar Mensaje WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "▶️ 05 Guardar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ 05 Guardar Lead": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Lead Caliente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Lead Caliente?": {
+      "main": [
+        [
+          {
+            "node": "📧 Notificar Vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "⏰ Trigger Follow-up": {
+      "main": [
+        [
+          {
+            "node": "📋 Obtener Leads Sin Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Obtener Leads Sin Respuesta": {
+      "main": [
+        [
+          {
+            "node": "🔧 Procesar Follow-ups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Procesar Follow-ups": {
+      "main": [
+        [
+          {
+            "node": "📊 Config para Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Config para Follow-up": {
+      "main": [
+        [
+          {
+            "node": "📤 Enviar Follow-up WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Enviar Follow-up WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "🔄 Actualizar Estado Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:⏰ Trigger Follow-up": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": null,
+  "versionId": "716727bd-2c51-4795-8ce9-c068860f604c",
+  "activeVersionId": null,
+  "versionCounter": 11,
+  "triggerCount": 2,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-06-15T15:51:24.442Z",
+      "createdAt": "2026-06-15T15:51:24.442Z",
+      "role": "workflow:owner",
+      "workflowId": "vQUztiEMB8dXfNwo",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "updatedAt": "2026-03-16T19:58:01.773Z",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}
