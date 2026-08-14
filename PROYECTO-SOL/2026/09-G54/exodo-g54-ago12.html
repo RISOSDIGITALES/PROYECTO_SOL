@@ -369,19 +369,19 @@
       <p class="item-why">Repasamos elemento por elemento de dónde saldría cada dato real de esta propuesta contra la documentación de la API. La mayoría ya existe — <code>leads_total</code> ya viene en <code>GET /api/rrss/metricas</code> y en <code>/weekly</code>, así que "Leads por semana" no necesita nada nuevo. Pero al revisarlo a fondo aparecieron 5 huecos reales que si necesitan algo de tu lado:</p>
 
       <div class="dep-box">
-        <strong>1. Guardados, compartidos y visitas al perfil no tienen dónde guardarse.</strong> Ni <code>POST /api/agent/rrss/metricas</code> (escritura) ni <code>GET /api/rrss/metricas</code> / <code>/weekly</code> (lectura) tienen estos 3 campos hoy — solo <code>alcance, impresiones, engagement, clics, leads</code>. Necesitamos que se agreguen con el mismo tratamiento que los demás.
+        <strong>1. Guardados, compartidos y visitas al perfil no tienen dónde guardarse.</strong> Ni <code>POST /api/agent/rrss/metricas</code> (escritura) ni <code>GET /api/rrss/metricas</code> / <code>/weekly</code> (lectura) tienen estos 3 campos hoy — solo <code>alcance, impresiones, engagement, clics, leads</code>. Necesitamos que se agreguen con el mismo tratamiento que los demás. <span class="badge blocker">Reconfirmado sin cambios — 14-ago</span>
       </div>
       <div class="dep-box">
-        <strong>2. Seguidores nuevos tampoco tiene campo.</strong> Mismo esquema, mismo problema — no existe ningún <code>seguidores_nuevos</code> (ni parecido) en <code>rrss_metricas</code> hoy.
+        <strong>2. Seguidores nuevos tampoco tiene campo.</strong> Mismo esquema, mismo problema — no existe ningún <code>seguidores_nuevos</code> (ni parecido) en <code>rrss_metricas</code> hoy. <span class="badge blocker">Reconfirmado sin cambios — 14-ago</span>
       </div>
       <div class="dep-box">
-        <strong>3. "Leads calificados" y "Deals" no se pueden desglosar por semana.</strong> <code>leads_total</code> en <code>/weekly</code> es un solo número combinado, sin distinguir calificados de deals creados. ¿Los agregan a ese mismo endpoint, o preferís que los calculemos nosotros filtrando por fecha desde <code>/api/whatsapp/conversations</code> y <code>/api/crm/board</code>?
+        <strong>3. "Leads calificados" y "Deals" no se pueden desglosar por semana.</strong> <code>leads_total</code> en <code>/weekly</code> es un solo número combinado, sin distinguir calificados de deals creados. ¿Los agregan a ese mismo endpoint, o preferís que los calculemos nosotros filtrando por fecha desde <code>/api/whatsapp/conversations</code> y <code>/api/crm/board</code>? <span class="badge blocker">Reconfirmado sin cambios — 14-ago</span>
       </div>
       <div class="dep-box">
-        <strong>4. Confirmar la forma real de <code>/api/crm/board</code> con volumen y con etapas vacías.</strong> Hoy, con 0 deals en "cerrado", la respuesta solo trae las claves <code>new</code> y <code>lost</code> — ni <code>proposal</code> ni <code>closed</code> aparecen en absoluto. Necesitamos saber si eso es a propósito (omite claves vacías) o si conviene que siempre devuelva las 4, para no asumir mal la forma del dato. También confirmar si este endpoint pagina o devuelve todos los deals sin límite.
+        <strong>4. Confirmar la forma real de <code>/api/crm/board</code> con volumen y con etapas vacías.</strong> Hoy, con 0 deals en "cerrado", la respuesta solo trae las claves <code>new</code> y <code>lost</code> — ni <code>proposal</code> ni <code>closed</code> aparecen en absoluto. Necesitamos saber si eso es a propósito (omite claves vacías) o si conviene que siempre devuelva las 4, para no asumir mal la forma del dato. También confirmar si este endpoint pagina o devuelve todos los deals sin límite. <span class="badge blocker">Reconfirmado 14-ago — hoy devuelve solo <code>['lost']</code>, sigue sin cambios</span>
       </div>
       <div class="dep-box">
-        <strong>5. La frecuencia de la estrategia es texto libre, no estructurado.</strong> <code>estrategia.frecuencia</code> guarda algo como <code>"Facebook 2x/sem, Instagram 1x/sem"</code>, que hoy solo nosotros sabemos parsear con una expresión regular. Si se guardara estructurado (ej. <code>{"Facebook":2,"Instagram":1}</code>) cualquiera —incluido el panel— podría calcular "Consistencia de contenido" sin duplicar esa lógica.
+        <strong>5. La frecuencia de la estrategia es texto libre, no estructurado.</strong> <code>estrategia.frecuencia</code> guarda algo como <code>"Facebook 2x/sem, Instagram 1x/sem"</code>, que hoy solo nosotros sabemos parsear con una expresión regular. Si se guardara estructurado (ej. <code>{"Facebook":2,"Instagram":1}</code>) cualquiera —incluido el panel— podría calcular "Consistencia de contenido" sin duplicar esa lógica. <span class="badge nuevo">✅ Resuelto — 14-ago: apareció <code>frecuencia_estructurada</code> con dato real (<code>{"Facebook":2,"Instagram":1,"LinkedIn":1}</code>), el campo de texto libre se conserva sin cambios</span>
       </div>
     </div>
   </div>
@@ -406,6 +406,7 @@
       </p>
       <div class="dep-box"><strong>Lo que necesitamos:</strong> un campo "Link principal para tus publicaciones" en el mismo modal donde el cliente ya configura horizonte y dirección deseada antes de generar su estrategia — mismo momento, mismo lugar, sin pantalla nueva.</div>
       <div class="dep-box"><strong>Regla explícita para cuando el cliente lo deja vacío:</strong> nada en la plataforma puede inventarse — todo tiene que salir de un dato real y verificable. Si el cliente no llena este campo, el sistema tiene que caer siempre al sitio web real que ya tiene cargado en su perfil de empresa. Nunca un valor generado, sugerido o adivinado por IA — ni de nuestro lado ni del de ustedes.</div>
+      <div class="dep-box"><span class="badge nuevo">⚠️ Parcial — 14-ago</span> El campo <code>estrategia.link_principal</code> ya existe en el backend, pero hoy está en <code>null</code> para Crating Express — falta confirmar si el modal del panel ya lo muestra para que el cliente lo llene. De nuestro lado ya está listo: Content AI ahora prioriza <code>link_principal</code> sobre <code>cta_principal</code>/sitio web, sin tocar nada más el día que se llene.</div>
     </div>
   </div>
 
@@ -476,7 +477,7 @@
       <p class="item-why">
         Y probar que el guardado de métricas funciona de verdad no es opcional — así se encontró el bug real hace unas semanas (llevaba meses sin guardar nada, siempre devolviendo <code>ok:true</code> aunque no guardara nada real). Cualquier verificación futura de este endpoint va a volver a dejar un rastro permanente mientras no exista una forma de borrarlo.
       </p>
-      <div class="dep-box"><strong>Lo que necesitamos:</strong> un <code>DELETE /api/rrss/metricas/{id}</code> (o algo equivalente por empresa+plataforma+período) igual que ya existe para ideas, posts, reportes y leads.</div>
+      <div class="dep-box"><strong>Lo que necesitamos:</strong> un <code>DELETE /api/rrss/metricas/{id}</code> (o algo equivalente por empresa+plataforma+período) igual que ya existe para ideas, posts, reportes y leads. <span class="badge blocker">Reconfirmado 14-ago — <code>OPTIONS</code> sigue devolviendo solo <code>GET,HEAD,POST</code></span></div>
       <div class="dep-box">Casos reales esperando esta limpieza mientras tanto: Crating Express (<code>alcance_total: 130.301</code> en Facebook) y Orison Managua (Facebook alcance 8.500 / Instagram alcance 4.200, su primer registro real de métricas).</div>
     </div>
   </div>
