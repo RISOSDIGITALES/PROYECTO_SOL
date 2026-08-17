@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-14T20:35:31.574Z",
+  "updatedAt": "2026-08-17T16:33:17.973Z",
   "createdAt": "2026-06-20T20:02:45.377Z",
   "id": "62tIvF0snsrMj0sM",
   "name": "Community AI — G54",
@@ -266,7 +266,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const config = $('🏢 Aplicar Config Empresa').item.json;\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\nconst empresa = empresaRaw.data || empresaRaw || {};\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\nconst postRaw = $('📄 Obtener Contenido del Post').item?.json || {};\nconst contenidoPost = postRaw.message || postRaw.story || '';\n\nconst nombre_empresa = empresa.name || empresa.nombre || '';\nconst descripcion = empresa.description || empresa.descripcion || '';\nconst tono = estrategia.tono || 'profesional, cercano y directo';\nconst wa_link = config.WA_LINK || '';\n\n// Canal de escalada: WhatsApp si la empresa tiene link configurado, si no, DM en la misma plataforma — nunca un canal fijo\nconst canalEscalada = wa_link ? `WhatsApp (link EXACTO: ${wa_link})` : 'mensaje privado (DM) en esta misma plataforma';\nconst siguientePasoValor = wa_link ? 'whatsapp' : 'dm';\n\nconst seccionPost = contenidoPost\n  ? `\\nCONTEXTO DEL POST COMENTADO:\\n${contenidoPost}\\n`\n  : '';\n\nconst promptSistema = `Actúa como un Community Manager experto en conversión, integrando SEO, AEO y GEO.\n\nEmpresa: ${nombre_empresa}\nDescripción: ${descripcion}\nTono de marca: ${tono}\nCanal de escalada: ${canalEscalada}\n\nTu función es:\n- responder con claridad (AEO)\n- detectar intención del usuario\n- calificar el lead\n- llevar la conversación FUERA del comentario público, hacia ${canalEscalada}, lo antes posible\n\nDebes:\n1. Identificar la intención: informacional, comercial o transaccional\n2. Dar una micro-respuesta útil y breve (máximo 1 oración) que demuestre que entendiste lo que pidió — sin resolverlo por completo en el comentario\n3. Invitar a continuar por ${canalEscalada} — esto va SIEMPRE, en cada respuesta, sin excepción, incluso en el primer mensaje\n4. NO hagas preguntas de calificación (medidas, tipo de servicio, etc.) dentro del comentario público — esas se resuelven por ${canalEscalada}, no aquí\n\nIMPORTANTE:\n- La RESPUESTA debe ser corta (máximo 2 oraciones), apta para publicar directamente en el comentario/DM\n- NO uses markdown, bullets ni emojis excesivos en la respuesta pública\n${wa_link ? `- SIEMPRE incluye el link de WhatsApp tal cual: ${wa_link}` : '- Invita a escribir por mensaje privado, sin inventar ningún link ni número'}\n- Sé cálido pero directo — el objetivo es mover la conversación a ${canalEscalada}, no resolverla en público\n- Si hay CONTEXTO DEL POST COMENTADO, úsalo para que la micro-respuesta sea más relevante y específica\n\nEntrega EXACTAMENTE en este formato:\nINTENCIÓN: [informacional|comercial|transaccional]\nRESPUESTA: [texto listo para publicar en redes${wa_link ? ', SIEMPRE con el link de WhatsApp incluido' : ''}]\nLEAD: [frío|tibio|caliente]\nPREGUNTA: [pregunta de calificación, se usará por ${canalEscalada}, no en el comentario]\nSIGUIENTE PASO: [${siguientePasoValor}]`;\n\nconst mensajeUsuario = `Plataforma: ${evento.plataforma}\nTipo: ${evento.tipo}${seccionPost}\nMensaje del usuario: ${evento.mensaje}`;\n\nreturn [{ json: {\n  promptSistema,\n  mensajeUsuario,\n  evento,\n  wa_link,\n  empresa_nombre: nombre_empresa\n}}];"
+        "jsCode": "const config = $('🏢 Aplicar Config Empresa').item.json;\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\nconst empresa = empresaRaw.data || empresaRaw || {};\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\nconst postRaw = $('📄 Obtener Contenido del Post').item?.json || {};\nconst contenidoPost = postRaw.message || postRaw.story || '';\n\nconst nombre_empresa = empresa.name || empresa.nombre || '';\nconst descripcion = empresa.description || empresa.descripcion || '';\nconst tono = estrategia.tono || 'profesional, cercano y directo';\nconst wa_link = config.WA_LINK || '';\n\n// Canal de escalada: WhatsApp si la empresa tiene link configurado, si no, DM en la misma plataforma — nunca un canal fijo\nconst canalEscalada = wa_link ? `WhatsApp (link EXACTO: ${wa_link})` : 'mensaje privado (DM) en esta misma plataforma';\nconst siguientePasoValor = wa_link ? 'whatsapp' : 'dm';\n\nconst seccionPost = contenidoPost\n  ? `\\nCONTEXTO DEL POST COMENTADO:\\n${contenidoPost}\\n`\n  : '';\n\n// Personalidad y conocimiento real del negocio (system_prompt configurado por el cliente en\n// Ventas › Bot / Asistente) — mismo dato que ya usan WhatsApp y Telegram. Se antepone como base\n// de tono/datos reales; las reglas de comportamiento en público (no calificar, invitar a DM/WA)\n// se mantienen siempre, sin importar si hay o no un prompt real configurado.\nlet seccionPersonalidad = '';\ntry {\n  const botConfigRaw = $('⚙️ G54: Bot Config').first().json;\n  const bc = botConfigRaw?.data || botConfigRaw;\n  if (bc && bc.system_prompt) {\n    seccionPersonalidad = `PERSONALIDAD Y CONOCIMIENTO DEL NEGOCIO (tono real y datos reales de la empresa — úsalo como base):\n${bc.system_prompt}\n\n---\n\n`;\n  }\n} catch (e) { /* sin bot-config disponible, se sigue con el prompt genérico de siempre */ }\n\nconst promptSistema = `${seccionPersonalidad}Actúa como un Community Manager experto en conversión, integrando SEO, AEO y GEO.\n\nEmpresa: ${nombre_empresa}\nDescripción: ${descripcion}\nTono de marca: ${tono}\nCanal de escalada: ${canalEscalada}\n\nTu función es:\n- responder con claridad (AEO)\n- detectar intención del usuario\n- calificar el lead\n- llevar la conversación FUERA del comentario público, hacia ${canalEscalada}, lo antes posible\n\nDebes:\n1. Identificar la intención: informacional, comercial o transaccional\n2. Dar una micro-respuesta útil y breve (máximo 1 oración) que demuestre que entendiste lo que pidió — sin resolverlo por completo en el comentario\n3. Invitar a continuar por ${canalEscalada} — esto va SIEMPRE, en cada respuesta, sin excepción, incluso en el primer mensaje\n4. NO hagas preguntas de calificación (medidas, tipo de servicio, etc.) dentro del comentario público — esas se resuelven por ${canalEscalada}, no aquí\n\nIMPORTANTE:\n- La RESPUESTA debe ser corta (máximo 2 oraciones), apta para publicar directamente en el comentario/DM\n- NO uses markdown, bullets ni emojis excesivos en la respuesta pública\n${wa_link ? `- SIEMPRE incluye el link de WhatsApp tal cual: ${wa_link}` : '- Invita a escribir por mensaje privado, sin inventar ningún link ni número'}\n- Sé cálido pero directo — el objetivo es mover la conversación a ${canalEscalada}, no resolverla en público\n- Si hay CONTEXTO DEL POST COMENTADO, úsalo para que la micro-respuesta sea más relevante y específica\n\nEntrega EXACTAMENTE en este formato:\nINTENCIÓN: [informacional|comercial|transaccional]\nRESPUESTA: [texto listo para publicar en redes${wa_link ? ', SIEMPRE con el link de WhatsApp incluido' : ''}]\nLEAD: [frío|tibio|caliente]\nPREGUNTA: [pregunta de calificación, se usará por ${canalEscalada}, no en el comentario]\nSIGUIENTE PASO: [${siguientePasoValor}]`;\n\nconst mensajeUsuario = `Plataforma: ${evento.plataforma}\nTipo: ${evento.tipo}${seccionPost}\nMensaje del usuario: ${evento.mensaje}`;\n\nreturn [{ json: {\n  promptSistema,\n  mensajeUsuario,\n  evento,\n  wa_link,\n  empresa_nombre: nombre_empresa\n}}];"
       },
       "id": "preparar-contexto",
       "name": "🔧 Preparar Contexto Community AI",
@@ -292,7 +292,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    { \"role\": \"system\", \"content\": $('🔧 Preparar Contexto Community AI').item.json.promptSistema },\n    { \"role\": \"user\", \"content\": $('🔧 Preparar Contexto Community AI').item.json.mensajeUsuario }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 600\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  \"model\": \"openai/gpt-oss-120b\",\n  \"messages\": [\n    { \"role\": \"system\", \"content\": $('🔧 Preparar Contexto Community AI').item.json.promptSistema },\n    { \"role\": \"user\", \"content\": $('🔧 Preparar Contexto Community AI').item.json.mensajeUsuario }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 600\n}) }}",
         "options": {},
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "groqApi"
@@ -1762,6 +1762,35 @@
         3710,
         520
       ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/n8n/companies/' + Number($('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID || 1) + '/bot-config' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED_AGENT_TOKEN"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bot-config-community",
+      "name": "⚙️ G54: Bot Config",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        720
+      ],
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -2321,7 +2350,7 @@
       "main": [
         [
           {
-            "node": "📊 Obtener Perfil Empresa",
+            "node": "⚙️ G54: Bot Config",
             "type": "main",
             "index": 0
           }
@@ -2437,6 +2466,17 @@
           }
         ]
       ]
+    },
+    "⚙️ G54: Bot Config": {
+      "main": [
+        [
+          {
+            "node": "📊 Obtener Perfil Empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -2448,9 +2488,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": null,
-  "versionId": "b50cb8af-3d8e-460b-b1d5-731028469459",
-  "activeVersionId": "b50cb8af-3d8e-460b-b1d5-731028469459",
-  "versionCounter": 33,
+  "versionId": "72e4ea12-1385-41a7-aae6-e1044cca78af",
+  "activeVersionId": "72e4ea12-1385-41a7-aae6-e1044cca78af",
+  "versionCounter": 40,
   "triggerCount": 3,
   "sourceWorkflowId": null,
   "shared": [
@@ -2475,9 +2515,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-08-14T20:35:31.578Z",
-    "createdAt": "2026-08-14T20:35:31.578Z",
-    "versionId": "b50cb8af-3d8e-460b-b1d5-731028469459",
+    "updatedAt": "2026-08-17T16:33:17.977Z",
+    "createdAt": "2026-08-17T16:33:17.977Z",
+    "versionId": "72e4ea12-1385-41a7-aae6-e1044cca78af",
     "workflowId": "62tIvF0snsrMj0sM",
     "nodes": [
       {
@@ -2739,7 +2779,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const config = $('🏢 Aplicar Config Empresa').item.json;\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\nconst empresa = empresaRaw.data || empresaRaw || {};\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\nconst postRaw = $('📄 Obtener Contenido del Post').item?.json || {};\nconst contenidoPost = postRaw.message || postRaw.story || '';\n\nconst nombre_empresa = empresa.name || empresa.nombre || '';\nconst descripcion = empresa.description || empresa.descripcion || '';\nconst tono = estrategia.tono || 'profesional, cercano y directo';\nconst wa_link = config.WA_LINK || '';\n\n// Canal de escalada: WhatsApp si la empresa tiene link configurado, si no, DM en la misma plataforma — nunca un canal fijo\nconst canalEscalada = wa_link ? `WhatsApp (link EXACTO: ${wa_link})` : 'mensaje privado (DM) en esta misma plataforma';\nconst siguientePasoValor = wa_link ? 'whatsapp' : 'dm';\n\nconst seccionPost = contenidoPost\n  ? `\\nCONTEXTO DEL POST COMENTADO:\\n${contenidoPost}\\n`\n  : '';\n\nconst promptSistema = `Actúa como un Community Manager experto en conversión, integrando SEO, AEO y GEO.\n\nEmpresa: ${nombre_empresa}\nDescripción: ${descripcion}\nTono de marca: ${tono}\nCanal de escalada: ${canalEscalada}\n\nTu función es:\n- responder con claridad (AEO)\n- detectar intención del usuario\n- calificar el lead\n- llevar la conversación FUERA del comentario público, hacia ${canalEscalada}, lo antes posible\n\nDebes:\n1. Identificar la intención: informacional, comercial o transaccional\n2. Dar una micro-respuesta útil y breve (máximo 1 oración) que demuestre que entendiste lo que pidió — sin resolverlo por completo en el comentario\n3. Invitar a continuar por ${canalEscalada} — esto va SIEMPRE, en cada respuesta, sin excepción, incluso en el primer mensaje\n4. NO hagas preguntas de calificación (medidas, tipo de servicio, etc.) dentro del comentario público — esas se resuelven por ${canalEscalada}, no aquí\n\nIMPORTANTE:\n- La RESPUESTA debe ser corta (máximo 2 oraciones), apta para publicar directamente en el comentario/DM\n- NO uses markdown, bullets ni emojis excesivos en la respuesta pública\n${wa_link ? `- SIEMPRE incluye el link de WhatsApp tal cual: ${wa_link}` : '- Invita a escribir por mensaje privado, sin inventar ningún link ni número'}\n- Sé cálido pero directo — el objetivo es mover la conversación a ${canalEscalada}, no resolverla en público\n- Si hay CONTEXTO DEL POST COMENTADO, úsalo para que la micro-respuesta sea más relevante y específica\n\nEntrega EXACTAMENTE en este formato:\nINTENCIÓN: [informacional|comercial|transaccional]\nRESPUESTA: [texto listo para publicar en redes${wa_link ? ', SIEMPRE con el link de WhatsApp incluido' : ''}]\nLEAD: [frío|tibio|caliente]\nPREGUNTA: [pregunta de calificación, se usará por ${canalEscalada}, no en el comentario]\nSIGUIENTE PASO: [${siguientePasoValor}]`;\n\nconst mensajeUsuario = `Plataforma: ${evento.plataforma}\nTipo: ${evento.tipo}${seccionPost}\nMensaje del usuario: ${evento.mensaje}`;\n\nreturn [{ json: {\n  promptSistema,\n  mensajeUsuario,\n  evento,\n  wa_link,\n  empresa_nombre: nombre_empresa\n}}];"
+          "jsCode": "const config = $('🏢 Aplicar Config Empresa').item.json;\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\nconst empresa = empresaRaw.data || empresaRaw || {};\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\nconst postRaw = $('📄 Obtener Contenido del Post').item?.json || {};\nconst contenidoPost = postRaw.message || postRaw.story || '';\n\nconst nombre_empresa = empresa.name || empresa.nombre || '';\nconst descripcion = empresa.description || empresa.descripcion || '';\nconst tono = estrategia.tono || 'profesional, cercano y directo';\nconst wa_link = config.WA_LINK || '';\n\n// Canal de escalada: WhatsApp si la empresa tiene link configurado, si no, DM en la misma plataforma — nunca un canal fijo\nconst canalEscalada = wa_link ? `WhatsApp (link EXACTO: ${wa_link})` : 'mensaje privado (DM) en esta misma plataforma';\nconst siguientePasoValor = wa_link ? 'whatsapp' : 'dm';\n\nconst seccionPost = contenidoPost\n  ? `\\nCONTEXTO DEL POST COMENTADO:\\n${contenidoPost}\\n`\n  : '';\n\n// Personalidad y conocimiento real del negocio (system_prompt configurado por el cliente en\n// Ventas › Bot / Asistente) — mismo dato que ya usan WhatsApp y Telegram. Se antepone como base\n// de tono/datos reales; las reglas de comportamiento en público (no calificar, invitar a DM/WA)\n// se mantienen siempre, sin importar si hay o no un prompt real configurado.\nlet seccionPersonalidad = '';\ntry {\n  const botConfigRaw = $('⚙️ G54: Bot Config').first().json;\n  const bc = botConfigRaw?.data || botConfigRaw;\n  if (bc && bc.system_prompt) {\n    seccionPersonalidad = `PERSONALIDAD Y CONOCIMIENTO DEL NEGOCIO (tono real y datos reales de la empresa — úsalo como base):\n${bc.system_prompt}\n\n---\n\n`;\n  }\n} catch (e) { /* sin bot-config disponible, se sigue con el prompt genérico de siempre */ }\n\nconst promptSistema = `${seccionPersonalidad}Actúa como un Community Manager experto en conversión, integrando SEO, AEO y GEO.\n\nEmpresa: ${nombre_empresa}\nDescripción: ${descripcion}\nTono de marca: ${tono}\nCanal de escalada: ${canalEscalada}\n\nTu función es:\n- responder con claridad (AEO)\n- detectar intención del usuario\n- calificar el lead\n- llevar la conversación FUERA del comentario público, hacia ${canalEscalada}, lo antes posible\n\nDebes:\n1. Identificar la intención: informacional, comercial o transaccional\n2. Dar una micro-respuesta útil y breve (máximo 1 oración) que demuestre que entendiste lo que pidió — sin resolverlo por completo en el comentario\n3. Invitar a continuar por ${canalEscalada} — esto va SIEMPRE, en cada respuesta, sin excepción, incluso en el primer mensaje\n4. NO hagas preguntas de calificación (medidas, tipo de servicio, etc.) dentro del comentario público — esas se resuelven por ${canalEscalada}, no aquí\n\nIMPORTANTE:\n- La RESPUESTA debe ser corta (máximo 2 oraciones), apta para publicar directamente en el comentario/DM\n- NO uses markdown, bullets ni emojis excesivos en la respuesta pública\n${wa_link ? `- SIEMPRE incluye el link de WhatsApp tal cual: ${wa_link}` : '- Invita a escribir por mensaje privado, sin inventar ningún link ni número'}\n- Sé cálido pero directo — el objetivo es mover la conversación a ${canalEscalada}, no resolverla en público\n- Si hay CONTEXTO DEL POST COMENTADO, úsalo para que la micro-respuesta sea más relevante y específica\n\nEntrega EXACTAMENTE en este formato:\nINTENCIÓN: [informacional|comercial|transaccional]\nRESPUESTA: [texto listo para publicar en redes${wa_link ? ', SIEMPRE con el link de WhatsApp incluido' : ''}]\nLEAD: [frío|tibio|caliente]\nPREGUNTA: [pregunta de calificación, se usará por ${canalEscalada}, no en el comentario]\nSIGUIENTE PASO: [${siguientePasoValor}]`;\n\nconst mensajeUsuario = `Plataforma: ${evento.plataforma}\nTipo: ${evento.tipo}${seccionPost}\nMensaje del usuario: ${evento.mensaje}`;\n\nreturn [{ json: {\n  promptSistema,\n  mensajeUsuario,\n  evento,\n  wa_link,\n  empresa_nombre: nombre_empresa\n}}];"
         },
         "id": "preparar-contexto",
         "name": "🔧 Preparar Contexto Community AI",
@@ -2765,7 +2805,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    { \"role\": \"system\", \"content\": $('🔧 Preparar Contexto Community AI').item.json.promptSistema },\n    { \"role\": \"user\", \"content\": $('🔧 Preparar Contexto Community AI').item.json.mensajeUsuario }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 600\n}) }}",
+          "jsonBody": "={{ JSON.stringify({\n  \"model\": \"openai/gpt-oss-120b\",\n  \"messages\": [\n    { \"role\": \"system\", \"content\": $('🔧 Preparar Contexto Community AI').item.json.promptSistema },\n    { \"role\": \"user\", \"content\": $('🔧 Preparar Contexto Community AI').item.json.mensajeUsuario }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 600\n}) }}",
           "options": {},
           "authentication": "predefinedCredentialType",
           "nodeCredentialType": "groqApi"
@@ -4235,6 +4275,35 @@
           3710,
           520
         ]
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/n8n/companies/' + Number($('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID || 1) + '/bot-config' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer REDACTED_AGENT_TOKEN"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "bot-config-community",
+        "name": "⚙️ G54: Bot Config",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1560,
+          720
+        ],
+        "onError": "continueRegularOutput"
       }
     ],
     "connections": {
@@ -4794,7 +4863,7 @@
         "main": [
           [
             {
-              "node": "📊 Obtener Perfil Empresa",
+              "node": "⚙️ G54: Bot Config",
               "type": "main",
               "index": 0
             }
@@ -4910,6 +4979,17 @@
             }
           ]
         ]
+      },
+      "⚙️ G54: Bot Config": {
+        "main": [
+          [
+            {
+              "node": "📊 Obtener Perfil Empresa",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -4919,18 +4999,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-08-14T20:35:31.739Z",
-        "id": 2836,
+        "createdAt": "2026-08-17T16:33:18.159Z",
+        "id": 2872,
         "workflowId": "62tIvF0snsrMj0sM",
-        "versionId": "b50cb8af-3d8e-460b-b1d5-731028469459",
+        "versionId": "72e4ea12-1385-41a7-aae6-e1044cca78af",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       },
       {
-        "createdAt": "2026-08-14T20:35:31.691Z",
-        "id": 2835,
+        "createdAt": "2026-08-17T16:33:18.112Z",
+        "id": 2871,
         "workflowId": "62tIvF0snsrMj0sM",
-        "versionId": "b50cb8af-3d8e-460b-b1d5-731028469459",
+        "versionId": "72e4ea12-1385-41a7-aae6-e1044cca78af",
         "event": "deactivated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
       }

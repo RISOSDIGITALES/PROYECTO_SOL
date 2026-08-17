@@ -1,5 +1,11 @@
 {
+  "updatedAt": "2026-08-17T17:01:30.315Z",
+  "createdAt": "2026-06-15T15:49:48.824Z",
+  "id": "J8qbKOF7t4GnhRDT",
   "name": "Marco CE — 03 Generador IA",
+  "description": null,
+  "active": true,
+  "isArchived": false,
   "nodes": [
     {
       "id": "trigger",
@@ -35,7 +41,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: $json.sistemaIA }, { role: 'user', content: $json.usuarioIA }], temperature: 0.3, max_tokens: 500, response_format: { type: \"json_object\" } }) }}",
+        "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', messages: [{ role: 'system', content: $json.sistemaIA }, { role: 'user', content: $json.usuarioIA }], temperature: 0.3, max_tokens: 2500, response_format: { type: \"json_object\" } }) }}",
         "options": {},
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "groqApi"
@@ -258,8 +264,316 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "updatedAt": "2026-08-11T16:23:10.542Z",
-  "active": true,
-  "versionId": "33488dc3-8b48-45fe-9706-19aa91ff1788",
-  "triggerCount": 0
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": null,
+  "versionId": "d4e3228d-09c3-40af-a236-47c26bb784c3",
+  "activeVersionId": "d4e3228d-09c3-40af-a236-47c26bb784c3",
+  "versionCounter": 67,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "shared": [
+    {
+      "updatedAt": "2026-06-15T15:49:48.828Z",
+      "createdAt": "2026-06-15T15:49:48.828Z",
+      "role": "workflow:owner",
+      "workflowId": "J8qbKOF7t4GnhRDT",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "updatedAt": "2026-03-16T19:58:01.773Z",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-08-17T17:01:30.318Z",
+    "createdAt": "2026-08-17T17:01:30.318Z",
+    "versionId": "d4e3228d-09c3-40af-a236-47c26bb784c3",
+    "workflowId": "J8qbKOF7t4GnhRDT",
+    "nodes": [
+      {
+        "id": "trigger",
+        "name": "Recibir Datos",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "parameters": {}
+      },
+      {
+        "id": "groq",
+        "name": "🤖 Groq: Conversación IA",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          300,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.groq.com/openai/v1/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', messages: [{ role: 'system', content: $json.sistemaIA }, { role: 'user', content: $json.usuarioIA }], temperature: 0.3, max_tokens: 2500, response_format: { type: \"json_object\" } }) }}",
+          "options": {},
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "groqApi"
+        },
+        "credentials": {
+          "groqApi": {
+            "id": "jORffbRhRNohHT1B",
+            "name": "Groq API"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "if-groq",
+        "name": "🔀 ¿Groq OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          560,
+          300
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "1",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty"
+                }
+              }
+            ]
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "gemini",
+        "name": "🤖 Gemini: Fallback IA",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          820,
+          460
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Authorization",
+                "value": "=Bearer "
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ model: 'gemini-1.5-flash', messages: [{ role: 'system', content: $('Recibir Datos').item.json.sistemaIA }, { role: 'user', content: $('Recibir Datos').item.json.usuarioIA }], temperature: 0.3, max_tokens: 500 }) }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "parsear",
+        "name": "🔍 Parsear Respuesta IA",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1080,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const raw = $input.item.json;\nconst ctx = $('Recibir Datos').item.json;\n\n// Parse AI JSON response\nlet aiData = {};\nlet mensaje = '';\n\ntry {\n  const rawText = (raw.choices?.[0]?.message?.content || raw.mensaje || '').trim();\n  // Remove markdown code fences if present\n  const jsonText = rawText.replace(/^```json\\s*/i, '').replace(/^```\\s*/i, '').replace(/\\s*```$/,'').trim();\n  aiData = JSON.parse(jsonText);\n  // Soporta formato viejo (respuesta/nombre/producto) y nuevo (mensaje/datos_actualizados)\n  mensaje = (aiData.respuesta || aiData.mensaje || '').trim();\n} catch(e) {\n  // Try to extract mensaje/respuesta field with regex as last resort\n  const rawText = (raw.choices?.[0]?.message?.content || raw.mensaje || '').trim();\n  const match = rawText.match(/\"(?:respuesta|mensaje)\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"/);\n  mensaje = match ? match[1].replace(/\\\\n/g,'\\n').replace(/\\\\\"/g,'\"') : '';\n}\n\n// Fallback messages if AI failed completely\nif (!mensaje) {\n  const n = ctx.datosRecolectados?.nombre_cliente || '';\n  const h = (new Date().getUTCHours() - 4 + 24) % 24;\n  const idioma = ctx.idiomaConversacion || 'español';\n  const isEN = idioma === 'inglés';\n  const gr = isEN\n    ? (h < 12 ? 'Good morning' : h < 19 ? 'Good afternoon' : 'Good evening')\n    : (h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches');\n  const fallbacks = isEN ? {\n    PRIMER_CONTACTO:       `${gr}, I'm Marco from Crating Express. Who am I speaking with?`,\n    PEDIR_NOMBRE:          'Who am I speaking with?',\n    IDENTIFICAR_NECESIDAD: n ? `How can I help you today, ${n}?` : 'How can I help you today?',\n    FLUJO_CONSULTA:        'What else can I help you with?',\n    PEDIR_PRODUCTO:        'What item do you need to crate?',\n    PEDIR_MEDIDAS:         'What are the measurements in inches? (Length × Width × Height)',\n    PEDIR_TIPO_CAJON:      'What type of crate do you prefer? Closed crate (max protection + ISPM-15), open cage, or pallet.',\n    PEDIR_PROTECCION:      'Do you need interior protection like foam, bubble wrap, or corner guards? It has an additional cost.',\n    PEDIR_CORREO:          'What is your email for follow-up?',\n    PEDIR_FECHA:           'When do you need the crating done?',\n    LISTO_PARA_COTIZAR:    'Give me a moment to calculate the price... 🔄',\n    POST_COTIZACION:       'What else can I help you with?'\n  } : {\n    PRIMER_CONTACTO:       `${gr}, soy Marco de Crating Express. ¿Con quién tengo el gusto?`,\n    PEDIR_NOMBRE:          '¿Con quién tengo el gusto?',\n    IDENTIFICAR_NECESIDAD: n ? `¿En qué puedo ayudarte hoy, ${n}?` : '¿En qué puedo ayudarte hoy?',\n    FLUJO_CONSULTA:        '¿En qué más puedo ayudarte?',\n    PEDIR_PRODUCTO:        '¿Qué artículo necesitas embalar?',\n    PEDIR_MEDIDAS:         '¿Cuáles son las medidas en pulgadas? (Largo × Ancho × Alto)',\n    PEDIR_TIPO_CAJON:      '¿Qué tipo de embalaje prefieres? Cajón cerrado (máxima protección + ISPM-15), jaula (más liviana) o paleta.',\n    PEDIR_PROTECCION:      '¿Necesitas protección interior como foam, burbuja o esquineras? Tiene costo adicional.',\n    PEDIR_CORREO:          '¿Cuál es tu correo para darte seguimiento?',\n    PEDIR_FECHA:           '¿Para cuándo necesitas el embalaje?',\n    LISTO_PARA_COTIZAR:    'Dame un momento para calcular el precio... 🔄',\n    POST_COTIZACION:       '¿En qué más puedo ayudarte?'\n  };\n  mensaje = fallbacks[ctx.proximoPaso] || (isEN ? 'What else can I help you with?' : '¿En qué más puedo ayudarte?');\n}\n\n// Recorte de re-saludo redundante: si ya hay historial (no es el primer mensaje) pero la IA\n// volvió a presentarse (\"Buenos días/tardes, soy Marco de Crating Express...\") ignorando la\n// instrucción de no re-saludar, se recorta esa apertura y se deja solo la pregunta/contenido real.\nif (ctx.historial && ctx.historial.trim().length > 0) {\n  const saludoRegex = /^(buenos d[ií]as|buenas tardes|buenas noches|good morning|good afternoon|good evening|hola|hi)[,.!]?\\s*((soy marco|i'?m marco)[,.]?\\s*(asesor(\\s+de\\s+ventas)?\\s+de\\s+|de\\s+|from\\s+)?crating express[,.]?\\s*)?/i;\n  if (saludoRegex.test(mensaje)) {\n    const recortado = mensaje.replace(saludoRegex, '').trim();\n    if (recortado.length > 3) {\n      mensaje = recortado.charAt(0).toUpperCase() + recortado.slice(1);\n    }\n  }\n}\n\n// Merge AI-extracted data into datosRecolectados\nconst datosRecolectados = { ...(ctx.datosRecolectados || {}) };\n\n// Soporta formato viejo (raíz: nombre/producto/...) y nuevo (datos_actualizados.nombre_cliente/...)\nconst da = aiData.datos_actualizados || {};\nfunction limpiarNombre(s) {\n  if (!s) return null;\n  let t = String(s).trim();\n  t = t.replace(/^(disculpa|perdona|perd[oó]n|hola|oye|es que|bueno|ah)[,.!]?\\s*/i, '');\n  t = t.replace(/^(me llamo|mi nombre es|soy|my name is|i'?m|this is|it'?s)\\s*/i, '');\n  return t.trim();\n}\nfunction esNombrePlausible(s) {\n  if (!s) return false;\n  const t = String(s).trim();\n  if (t.length < 2 || t.length > 40) return false;\n  const palabras = t.split(/\\s+/);\n  if (palabras.length > 4) return false;\n  if (/\\d/.test(t)) return false;\n  if (/\\b(sin|no|si|s[íi]|necesito|quiero|para|cotiza|cotizaci[oó]n|protecci[oó]n|correo|email|caj[oó]n|jaula|jaulas|cuna|cunas|medida|medidas|pulgada|pulgadas|fecha|precio|gracias|hola|ok|dale|disculpa|perdon|perd[oó]n|llamo)\\b/i.test(t)) return false;\n  return true;\n}\nconst nombreCandidatoRaw = da.nombre_cliente || aiData.nombre;\nconst nombreCandidato = limpiarNombre(nombreCandidatoRaw);\nif (nombreCandidato && !datosRecolectados.nombre_cliente && esNombrePlausible(nombreCandidato)) datosRecolectados.nombre_cliente = nombreCandidato;\nfunction esProductoPlausible(s) {\n  if (!s) return false;\n  const t = String(s).trim();\n  if (t.length > 50) return false;\n  if (/@/.test(t)) return false;\n  if ((t.match(/,/g) || []).length > 1) return false;\n  if (/\\bmiden?\\b|\\bpulgadas?\\b|\\bcorreo\\b|\\bcaj[oó]n(es)?\\s+cerrad[oa]s?\\b/i.test(t)) return false;\n  return true;\n}\nconst productoCandidato = da.producto || aiData.producto;\nif (productoCandidato && !datosRecolectados.producto && esProductoPlausible(productoCandidato)) datosRecolectados.producto = productoCandidato;\nif ((da.medidas || aiData.medidas) && !datosRecolectados.medidas) datosRecolectados.medidas = da.medidas || aiData.medidas;\n// Fallback: extraer medidas por patrón LxAxH si la IA no las capturó en el JSON\nif (!datosRecolectados.medidas) {\n  const medidasMatch = (ctx.texto || '').match(/(\\d+(?:\\.\\d+)?)\\s*[x×]\\s*(\\d+(?:\\.\\d+)?)\\s*[x×]\\s*(\\d+(?:\\.\\d+)?)\\s*(pulgadas?|in(?:ches)?|\"|)/i);\n  if (medidasMatch) datosRecolectados.medidas = medidasMatch[0].trim();\n}\n// Permite que el cliente cambie de opinión: si la IA extrajo un tipo_cajon en este turno, sobreescribe el guardado (la IA solo lo manda cuando detecta una preferencia real en el mensaje actual)\nif (da.tipo_cajon || aiData.tipo_cajon) datosRecolectados.tipo_cajon = da.tipo_cajon || aiData.tipo_cajon;\n// Fallback: extract tipo_cajon from historial/text if the AI missed the client's stated preference\nif (!datosRecolectados.tipo_cajon) {\n  const textoTipoCajon = ((ctx.historial || '') + ' ' + (ctx.texto || '')).toLowerCase();\n  if (/\\bcaj[o\\u00f3]n(es)?[ _]?cerrad[oa]s?\\b|\\bclosed crate\\b|\\bclosed box\\b|\\bcerrad[oa]\\b/i.test(textoTipoCajon)) {\n    datosRecolectados.tipo_cajon = 'cajones_cerrados';\n  } else if (/\\bplataforma[ _]?contenedor\\b|\\bcontainer platform\\b/i.test(textoTipoCajon)) {\n    datosRecolectados.tipo_cajon = 'plataformas_contenedor';\n  } else if (/\\bjaulas?\\b|\\bcage\\b|\\babiert[ao]\\b|\\bopen crate\\b/i.test(textoTipoCajon)) {\n    datosRecolectados.tipo_cajon = 'jaulas';\n  } else if (/\\bcunas?\\b|\\bamarres?\\b|\\bcrib\\b/i.test(textoTipoCajon)) {\n    datosRecolectados.tipo_cajon = 'cunas';\n  } else if (/\\bpalet(a|s)?( a medida)?\\b|\\bpallet\\b/i.test(textoTipoCajon)) {\n    datosRecolectados.tipo_cajon = 'palets_medida';\n  } else if (/\\bferias?\\b|\\btrade[ _]?show\\b|\\bexhibition\\b/i.test(textoTipoCajon)) {\n    datosRecolectados.tipo_cajon = 'embalaje_ferias';\n  } else if (/\\bal por mayor\\b|\\bmayoreo\\b|\\bwholesale\\b|\\bbulk\\b/i.test(textoTipoCajon)) {\n    datosRecolectados.tipo_cajon = 'mayor';\n  }\n}\n// Normalize whatever ended up in tipo_cajon (from AI free text or the fallback above) to the canonical API value\nif (datosRecolectados.tipo_cajon) {\n  const tcNorm = String(datosRecolectados.tipo_cajon).toLowerCase().trim();\n  const tipoCajonMap = [\n    [/caj[o\\u00f3]n(es)?[ _]?cerrad[oa]s?|closed/, 'cajones_cerrados'],\n    [/plataforma[ _]?contenedor|container[ _]?platform/, 'plataformas_contenedor'],\n    [/jaulas?|cage|abiert[ao]/, 'jaulas'],\n    [/cunas?|amarres?|crib/, 'cunas'],\n    [/palet(a|s)?|pallet/, 'palets_medida'],\n    [/feria|trade[ _]?show|exhibition/, 'embalaje_ferias'],\n    [/mayor|mayoreo|wholesale|bulk/, 'mayor'],\n  ];\n  const tcMatch = tipoCajonMap.find(([rx]) => rx.test(tcNorm));\n  if (tcMatch) datosRecolectados.tipo_cajon = tcMatch[1];\n}\nfunction esFechaPlausible(s) {\n  if (!s) return false;\n  const t = String(s).trim();\n  if (t.length > 35) return false;\n  if ((t.match(/,/g) || []).length > 0) return false;\n  if (/\\bmiden?\\b|\\bpulgadas?\\b|\\bcorreo\\b|\\bproteccion\\b|\\bprotecci\\u00f3n\\b|\\bcaj[o\\u00f3]n\\b|\\bjaula\\b/i.test(t)) return false;\n  return true;\n}\nconst fechaCandidato = da.fecha || aiData.fecha;\nif (fechaCandidato && !datosRecolectados.fecha && esFechaPlausible(fechaCandidato)) datosRecolectados.fecha = fechaCandidato;\n// Fallback: extract fecha from historial/text if AI missed it in JSON, or gave an implausible value (whole sentence instead of just the date)\nif (!datosRecolectados.fecha) {\n  const textoBuscar = ((ctx.historial || '') + ' ' + (ctx.texto || '')).toLowerCase();\n  const fechaMatch = textoBuscar.match(/\\b(ma[ñn]ana|hoy|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|este (lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)|pr[oó]xim[ao] \\w+|next \\w+|tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\\d{1,2}[\\/-]\\d{1,2}|\\d{1,2} de [a-záéíóú]+|en \\d+ d[ií]as?|esta semana|next week)\\b/i);\n  if (fechaMatch) datosRecolectados.fecha = fechaMatch[0];\n}\nif ((da.correo_contacto || da.correo || aiData.correo) && !datosRecolectados.correo_contacto) datosRecolectados.correo_contacto = da.correo_contacto || da.correo || aiData.correo;\n// Fallback: extraer correo por regex si la IA no lo capturó en el JSON\nif (!datosRecolectados.correo_contacto) {\n  const emailMatch = (ctx.texto || '').match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/);\n  if (emailMatch) datosRecolectados.correo_contacto = emailMatch[0];\n}\nif ((da.cantidad || aiData.cantidad) && !datosRecolectados.cantidad) datosRecolectados.cantidad = da.cantidad || aiData.cantidad;\nconst peVal = da.proteccion_extra !== undefined ? da.proteccion_extra : aiData.proteccion_extra;\nif (peVal !== null && peVal !== undefined\n    && (datosRecolectados.proteccion_extra === null || datosRecolectados.proteccion_extra === undefined)) {\n  datosRecolectados.proteccion_extra = peVal;\n}\n// Fallback: extraer proteccion_extra por keywords si la IA no la capturó y el mensaje actual la menciona explícitamente\nif (datosRecolectados.proteccion_extra === null || datosRecolectados.proteccion_extra === undefined) {\n  const textoProteccion = (ctx.texto || '').toLowerCase();\n  if (/protecci[oó]n|foam|burbuja|esquinera/i.test(textoProteccion)) {\n    datosRecolectados.proteccion_extra = /\\bsin\\b|\\bno\\b|\\bninguna\\b/.test(textoProteccion) ? false : true;\n  }\n}\nfunction esTipoProteccionPlausible(s) {\n  if (!s) return false;\n  const t = String(s).trim();\n  if (t.length > 40) return false;\n  if (/@/.test(t)) return false;\n  if ((t.match(/,/g) || []).length > 1) return false;\n  return true;\n}\nconst tipoProteccionCandidato = da.tipo_proteccion || aiData.tipo_proteccion;\nif (tipoProteccionCandidato && !datosRecolectados.tipo_proteccion && esTipoProteccionPlausible(tipoProteccionCandidato)) {\n  datosRecolectados.tipo_proteccion = tipoProteccionCandidato;\n}\n// Fallback: extraer tipo de protección por keywords si el cliente ya la quiere y la menciona explícitamente\nif (!datosRecolectados.tipo_proteccion && datosRecolectados.proteccion_extra === true) {\n  const textoTipoProteccion = (ctx.texto || '').toLowerCase();\n  if (/\\bfoam\\b|\\bespuma\\b/.test(textoTipoProteccion)) datosRecolectados.tipo_proteccion = 'Foam / espuma';\n  else if (/burbuja/.test(textoTipoProteccion)) datosRecolectados.tipo_proteccion = 'Papel burbuja';\n  else if (/esquinera/.test(textoTipoProteccion)) datosRecolectados.tipo_proteccion = 'Esquineras';\n}\n\n// Update tipo_flujo: se confia primero en el juicio propio de la IA en este turno (holistico,\n// evalua todo el contexto cada vez) - simetrico en ambas direcciones, no solo consulta->cotizacion.\nconst tipoFlujoIA = da.tipo_flujo;\nif (tipoFlujoIA === 'cotizacion' || tipoFlujoIA === 'consulta') {\n  datosRecolectados.tipo_flujo = tipoFlujoIA;\n} else {\n  // Fallback: schema viejo (campo intento), por si el prompt en uso todavia no manda tipo_flujo\n  const intento = da.intento || aiData.intento;\n  if (!datosRecolectados.tipo_flujo) {\n    if (intento === 'cotizacion') datosRecolectados.tipo_flujo = 'cotizacion';\n    else if (intento === 'consulta') datosRecolectados.tipo_flujo = 'consulta';\n  }\n  if (intento === 'cotizacion' && datosRecolectados.tipo_flujo === 'consulta') {\n    datosRecolectados.tipo_flujo = 'cotizacion';\n  }\n}\n\n// Red de seguridad: si el mensaje ACTUAL trae una señal inequívoca de querer cotizar\n// (ej. \"cotízame\", \"cuánto cuesta\") pero tipo_flujo quedó en consulta/null — confirmado en vivo\n// que la IA no siempre reevalúa esto cuando su foco está en otra cosa (ej. el nombre faltante) —\n// se fuerza el cambio por código en vez de depender solo de la instrucción del prompt.\nif (datosRecolectados.tipo_flujo !== 'cotizacion') {\n  const textoActualFlujo = (ctx.texto || '').toLowerCase();\n  if (/\\b(quiero|necesito)\\s+(una\\s+)?cotizaci[oó]n\\b|cot[íi]zame\\b|cotizarme\\b|quiero\\s+cotizar\\b|dame\\s+(un\\s+)?precio\\b|cu[aá]nto\\s+(cuesta|sale|vale|cobran)\\b/i.test(textoActualFlujo)) {\n    datosRecolectados.tipo_flujo = 'cotizacion';\n  }\n}\n\n// Recalculate todosRecolectados with updated data\nconst cleanCheck = v => {\n  if (typeof v === 'boolean') return v;\n  if (!v || ['desconocido','null','undefined'].includes(String(v).toLowerCase().trim())) return null;\n  return v;\n};\n\nconst todosRecolectados = !ctx.cotizacionEnviada  // no re-trigger if already sent\n  && datosRecolectados.tipo_flujo === 'cotizacion'\n  && !!cleanCheck(datosRecolectados.producto)\n  && !!cleanCheck(datosRecolectados.medidas)\n  && !!cleanCheck(datosRecolectados.correo_contacto)\n  && !!cleanCheck(datosRecolectados.tipo_cajon)\n  && datosRecolectados.proteccion_extra !== null && datosRecolectados.proteccion_extra !== undefined\n  && !!cleanCheck(datosRecolectados.fecha);\n\n// Recalculate dimensions from updated medidas\nlet dimensiones = ctx.dimensiones || null;\nif (datosRecolectados.medidas && !dimensiones) {\n  const nums = datosRecolectados.medidas.match(/(\\d+(?:\\.\\d+)?)/g);\n  if (nums && nums.length >= 3) {\n    dimensiones = { largo: parseFloat(nums[0]), ancho: parseFloat(nums[1]), alto: parseFloat(nums[2]) };\n  }\n}\n\nconst tipoCajaApi = datosRecolectados.tipo_cajon || ctx.tipoCajaApi || null;\nconst proximoPaso = ctx.proximoPaso;\n\n// Lead classification — solo cuando el cliente acepta cotización formal en POST_COTIZACION\nlet clasificacion = null;\nconst isPostCotizacion = ctx.proximoPaso === 'POST_COTIZACION';\nconst clienteAcepta = isPostCotizacion && /\\b(si+|yes|yep|yeah|yup|sure|ok|claro|por favor|dale|env[íi]ame|quiero|manda|m[áa]ndame|send|please|confirm|adelante|go ahead|sounds good|let's do it|let me have it|absolutely|definitely|of course|por supuesto|s[íi] por favor|s[íi] gracias)\\b/i.test(ctx.texto || '');\nif (clienteAcepta) {\n  clasificacion = 'Caliente';\n}\n\n// Escalada — cuando Marco no puede responder (consulta O sin medidas disponibles)\n// Red de seguridad — la instrucción sola no bastó (probado en vivo dos veces): la IA a veces\n// niega con confianza algo específico que no está en el catálogo (ej. \"no tenemos ISO 9001\")\n// en vez de escalar. Se detecta ese patrón exacto y se reemplaza la respuesta por la misma\n// lógica de escalación de dos fases que ya usa el resto del prompt, en vez de dejar pasar\n// una afirmación que nunca se verificó.\nconst CERT_KEYWORD = /certificaci[oó]n(es)?|\\biso\\s*\\d{3,5}\\b|\\bnorma\\s+\\w|licencia|acreditaci[oó]n/i;\nconst DENIAL_PATTERN = /\\bno\\s+(tenemos|contamos con|poseemos|manejamos|disponemos de|ofrecemos)\\b/i;\nif (CERT_KEYWORD.test(mensaje) && DENIAL_PATTERN.test(mensaje)) {\n  const isEN = (ctx.idiomaConversacion || 'español') === 'inglés';\n  if (!datosRecolectados.correo_contacto) {\n    mensaje = isEN\n      ? \"That's a specific detail I'd rather confirm with a specialist to be accurate. Could you share your email so they can reach out?\"\n      : 'Eso es algo puntual que prefiero confirmar con un especialista para no darte un dato incorrecto. ¿Me compartís tu correo para que te contacte?';\n  } else {\n    mensaje = isEN\n      ? 'A specialist will confirm that with you shortly.'\n      : 'Un especialista te va a confirmar eso en breve.';\n    aiData.escalada = true;\n  }\n}\n\nconst consultaEscalada = aiData.escalada === true && !ctx.escaladaEnviada;\nif (consultaEscalada && !clasificacion) {\n  clasificacion = 'Consulta';\n}\n\nlet nuevoEstado = ctx.estado;\nif (clasificacion === 'Caliente') nuevoEstado = 'Vendedor notificado';\nelse if (clasificacion === 'Consulta') nuevoEstado = 'En calificación';\nelse if (todosRecolectados && !ctx.cotizacionEnviada) nuevoEstado = 'Calificado';\nelse if (!ctx.leadId || nuevoEstado === 'Nuevo') nuevoEstado = 'En calificación';\n\nif (mensaje.length > 3800) mensaje = mensaje.slice(0, 3750) + '…';\n\nconst ts = new Date().toISOString();\nconst nuevoHistorial = (ctx.historial ? ctx.historial + '\\n' : '')\n  + `[${ts}] Cliente: ${ctx.texto}\\n[${ts}] Bot: ${mensaje}`;\n\n// temaConsulta: save first consulta message, preserve when switching to cotización\nlet temaConsulta = ctx.temaConsulta || datosRecolectados.temaConsulta || null;\nif (!temaConsulta && ctx.proximoPaso === 'FLUJO_CONSULTA') {\n  temaConsulta = ctx.texto || null;\n}\n// When escalating from any paso, capture context from historial (last 3 client messages)\nif (consultaEscalada && !temaConsulta) {\n  const clientLines = (ctx.historial || '').split('\\n')\n    .filter(l => l.includes('Cliente:'))\n    .map(l => l.replace(/^.*?Cliente:\\s*/, '').trim())\n    .slice(-3)\n    .join(' / ');\n  temaConsulta = clientLines || ctx.texto || null;\n}\n\n// Persist temaConsulta in datosRecolectados so it survives across turns\nif (temaConsulta) datosRecolectados.temaConsulta = temaConsulta;\n\nreturn [{ json: {\n  ...ctx,\n  mensaje,\n  mensajeRespuesta: mensaje,\n  datosRecolectados,\n  todos_recolectados: todosRecolectados,\n  todosRecolectados,\n  dimensiones,\n  tipo_caja_api: tipoCajaApi,\n  cotizador_enviado: false,\n  temaConsulta,\n  clasificacion,\n  escaladaEnviada: ctx.escaladaEnviada || (clasificacion === 'Consulta'),\n  nuevoEstado,\n  nuevoHistorial\n} }];\n"
+        }
+      },
+      {
+        "id": "if-gemini",
+        "name": "🔀 ¿Gemini OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          2160,
+          480
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "1",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty"
+                }
+              }
+            ]
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "modo-contingencia",
+        "name": "🆘 Modo Contingencia",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2400,
+          620
+        ],
+        "parameters": {
+          "jsCode": "const ctx = $('Recibir Datos').item.json;\nconst d = ctx.datosRecolectados || {};\nconst texto = (ctx.texto || '').trim();\nconst proximoPaso = ctx.proximoPaso || 'PRIMER_CONTACTO';\nconst isEN = ctx.idiomaConversacion === 'inglés';\n\nconst clean = v => {\n  if (typeof v === 'boolean') return v;\n  if (!v || ['null','undefined','desconocido'].includes(String(v).trim().toLowerCase())) return null;\n  return v;\n};\n\n// tipo_cajon normalizer — misma tabla que el fallback normal, para consistencia\nfunction normalizeTipoCajon(raw) {\n  const t = String(raw || '').toLowerCase().trim();\n  const map = [\n    [/caj[oó]n(es)?[ _]?cerrad[oa]s?|closed/, 'cajones_cerrados'],\n    [/plataforma[ _]?contenedor|container[ _]?platform/, 'plataformas_contenedor'],\n    [/jaulas?|cage|abiert[ao]/, 'jaulas'],\n    [/cunas?|amarres?|crib/, 'cunas'],\n    [/palet(a|s)?|pallet/, 'palets_medida'],\n    [/feria|trade[ _]?show|exhibition/, 'embalaje_ferias'],\n    [/mayor|mayoreo|wholesale|bulk/, 'mayor'],\n  ];\n  const m = map.find(([rx]) => rx.test(t));\n  return m ? m[1] : null;\n}\n\nlet intento = null;\nif (!clean(d.tipo_flujo)) {\n  const t = texto.toLowerCase();\n  if (/cotiz|presupuesto|quote|estimad|precio|price|embalar|empacar|crate|pack|caja|cajon|cajón|box/.test(t)) intento = 'cotizacion';\n  else if (/consulta|pregunta|informacion|información|info |question/.test(t)) intento = 'consulta';\n}\n\nconst datosActualizados = {\n  producto:         clean(d.producto),\n  medidas:          clean(d.medidas),\n  fecha:            clean(d.fecha),\n  tipo_cajon:       clean(d.tipo_cajon),\n  proteccion_extra: (d.proteccion_extra !== null && d.proteccion_extra !== undefined) ? d.proteccion_extra : null,\n  correo_contacto:  clean(d.correo_contacto),\n  nombre_cliente:   clean(d.nombre_cliente),\n  tipo_flujo:       clean(d.tipo_flujo),\n};\n\n// Extracción simple por reglas, según el paso pendiente — sin IA\nif ((proximoPaso === 'PRIMER_CONTACTO') && texto && (ctx.historial || '').trim().length > 0 && !datosActualizados.nombre_cliente) {\n  const nombre = texto.replace(/^(me llamo|mi nombre es|soy|my name is|i'?m|this is)\\s+/i, '').trim();\n  if (nombre && nombre.split(' ').length <= 4) datosActualizados.nombre_cliente = nombre;\n} else if (proximoPaso === 'PEDIR_PRODUCTO' && texto && !/^(hola|hi|buenas|hey|hello)/i.test(texto)) {\n  datosActualizados.producto = texto;\n} else if (proximoPaso === 'PEDIR_MEDIDAS' && /\\d/.test(texto)) {\n  datosActualizados.medidas = texto;\n} else if (proximoPaso === 'PEDIR_TIPO_CAJON') {\n  const norm = normalizeTipoCajon(texto);\n  datosActualizados.tipo_cajon = norm || 'cajones_cerrados';\n} else if (proximoPaso === 'PEDIR_PROTECCION') {\n  const acepta = /\\b(si+|yes|yep|claro|dale|foam|burbuja|esquinera|quiero|deseo)\\b/i.test(texto);\n  const rechaza = /\\b(no|nope|sin protecci[oó]n|no gracias|no quiero|not needed|no need)\\b/i.test(texto);\n  if (rechaza) datosActualizados.proteccion_extra = false;\n  else if (acepta) datosActualizados.proteccion_extra = true;\n} else if (proximoPaso === 'PEDIR_CORREO') {\n  const emailMatch = texto.match(/[\\w.+-]+@[\\w-]+\\.[a-zA-Z]{2,}/);\n  if (emailMatch) datosActualizados.correo_contacto = emailMatch[0];\n} else if (proximoPaso === 'PEDIR_FECHA' && texto) {\n  datosActualizados.fecha = texto;\n}\n\n// Mensaje según el paso — preguntas simples, sin IA, en el idioma detectado\nconst nombre = datosActualizados.nombre_cliente ? datosActualizados.nombre_cliente.split(' ')[0] : '';\nconst msgsES = {\n  PRIMER_CONTACTO:       (ctx.saludoHora || 'Hola') + ', soy Marco de Crating Express. ¿Con quién tengo el gusto?',\n  CONSULTA_ESTADO_PEDIDO: 'Para consultar el estado de tu pedido, por favor contacta directamente a nuestro equipo por correo o teléfono — en breve te atenderán.',\n  IDENTIFICAR_NECESIDAD: nombre ? `¿En qué puedo ayudarte hoy, ${nombre}?` : '¿En qué puedo ayudarte hoy?',\n  FLUJO_CONSULTA:        'En este momento no puedo responder tu consulta en detalle. Un especialista te contactará por correo — ¿me compartes tu email?',\n  PEDIR_PRODUCTO:        '¿Qué artículo necesitas embalar?',\n  PEDIR_MEDIDAS:         '¿Cuáles son las medidas en pulgadas? (Largo × Ancho × Alto)',\n  PEDIR_TIPO_CAJON:      `Para ${datosActualizados.producto || 'tu artículo'}, te recomiendo un cajón cerrado por la protección que ofrece. ¿Te parece bien?`,\n  PEDIR_PROTECCION:      '¿Necesitas protección interior como foam, burbuja o esquineras? Tiene un costo adicional.',\n  PEDIR_CORREO:          '¿A qué correo te contactamos?',\n  PEDIR_FECHA:           '¿Para cuándo necesitas el embalaje?',\n  LISTO_PARA_COTIZAR:    'Dame un momento para calcular el precio... 🔄',\n  POST_COTIZACION:       'En breve un especialista se pondrá en contacto contigo por correo con los detalles finales. ¡Gracias por contactar a Crating Express!',\n};\nconst msgsEN = {\n  PRIMER_CONTACTO:       (ctx.saludoHora || 'Hi') + \", I'm Marco from Crating Express. Who am I speaking with?\",\n  CONSULTA_ESTADO_PEDIDO: 'To check your order status, please contact our team directly by email or phone — they will assist you shortly.',\n  IDENTIFICAR_NECESIDAD: nombre ? `How can I help you today, ${nombre}?` : 'How can I help you today?',\n  FLUJO_CONSULTA:        \"I'm unable to answer that in detail right now. A specialist will reach out by email — could you share your email?\",\n  PEDIR_PRODUCTO:        'What item do you need to crate?',\n  PEDIR_MEDIDAS:         'What are the measurements in inches? (Length × Width × Height)',\n  PEDIR_TIPO_CAJON:      `For ${datosActualizados.producto || 'your item'}, I recommend a closed crate for maximum protection. Does that work for you?`,\n  PEDIR_PROTECCION:      'Do you need interior protection like foam, bubble wrap, or corner guards? It has an additional cost.',\n  PEDIR_CORREO:          'What email should we use to contact you?',\n  PEDIR_FECHA:           'When do you need the crating done?',\n  LISTO_PARA_COTIZAR:    'Give me a moment to calculate the price... 🔄',\n  POST_COTIZACION:       \"A specialist will follow up with you by email shortly with the final details. Thanks for reaching out to Crating Express!\",\n};\nconst msgs = isEN ? msgsEN : msgsES;\nconst mensaje = msgs[proximoPaso] || (isEN ? 'How else can I help you?' : '¿En qué más puedo ayudarte?');\n\n// Recalcular todosRecolectados igual que el flujo normal (sin depender de la IA)\nconst todosRecolectados = !ctx.cotizacionEnviada\n  && datosActualizados.tipo_flujo === 'cotizacion'\n  && !!datosActualizados.producto\n  && !!datosActualizados.medidas\n  && !!datosActualizados.correo_contacto\n  && !!datosActualizados.tipo_cajon\n  && datosActualizados.proteccion_extra !== null\n  && !!datosActualizados.fecha;\n\nlet dimensiones = ctx.dimensiones || null;\nif (datosActualizados.medidas && !dimensiones) {\n  const nums = datosActualizados.medidas.match(/(\\d+(?:\\.\\d+)?)/g);\n  if (nums && nums.length >= 3) {\n    dimensiones = { largo: parseFloat(nums[0]), ancho: parseFloat(nums[1]), alto: parseFloat(nums[2]) };\n  }\n}\n\n// Empaquetado en el mismo formato que Groq (choices[0].message.content) para que\n// 🔍 Parsear Respuesta IA lo procese exactamente igual, sin cambios ahí.\nconst payload = {\n  mensaje,\n  datos_actualizados: datosActualizados,\n  dimensiones: dimensiones || { largo: null, ancho: null, alto: null },\n  tipo_caja_api: datosActualizados.tipo_cajon,\n  todos_recolectados: todosRecolectados,\n  cotizador_enviado: false,\n  clasificacion: null,\n  intento,\n  resumen_lead: '',\n  escalada: false,\n  _contingencia: true,\n};\n\nreturn [{ json: {\n  choices: [{ message: { content: JSON.stringify(payload) } }]\n} }];\n"
+        }
+      }
+    ],
+    "connections": {
+      "Recibir Datos": {
+        "main": [
+          [
+            {
+              "node": "🤖 Groq: Conversación IA",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 Groq: Conversación IA": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Groq OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Groq OK?": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Respuesta IA",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🤖 Gemini: Fallback IA",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 Gemini: Fallback IA": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Gemini OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Gemini OK?": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Respuesta IA",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🆘 Modo Contingencia",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🆘 Modo Contingencia": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Respuesta IA",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-08-17T17:01:30.419Z",
+        "id": 2891,
+        "workflowId": "J8qbKOF7t4GnhRDT",
+        "versionId": "d4e3228d-09c3-40af-a236-47c26bb784c3",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      },
+      {
+        "createdAt": "2026-08-17T17:01:30.392Z",
+        "id": 2890,
+        "workflowId": "J8qbKOF7t4GnhRDT",
+        "versionId": "d4e3228d-09c3-40af-a236-47c26bb784c3",
+        "event": "deactivated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+      }
+    ]
+  }
 }
