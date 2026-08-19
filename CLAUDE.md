@@ -2106,6 +2106,12 @@ Sincronizado `workflow-analytics-v3-meta-reporte.json` al repo (60 nodos, 9 nuev
 
 **El Éxodo (`exodo-g54-ago19.html`) no se tocó — ninguno de los 4 hardcodes corregidos hoy correspondía a un pedido pendiente para Walter.** Son bugs de nuestro propio código en n8n, no de la API de G54.
 
+265. **Instagram → Community AI, bug real encontrado y corregido: el objeto `instagram` estaba suscrito y activo en la App de Meta, pero sin ningún campo real adjunto** (2026-08-19, misma tarde que el ítem 264): retomando el pendiente sobre confirmar la suscripción de webhooks de Instagram (bloqueado desde el 05-ago por falta del App Secret), la usuaria lo compartió explícitamente para esta verificación puntual — usado solo en memoria para generar un App Access Token (`client_credentials`) y consultar `GET /{app_id}/subscriptions`, nunca guardado en ningún archivo ni en el repo, tal como pidió.
+
+**Confirmado el hallazgo real:** la suscripción `object: "instagram"` ya existía con `active: true` y el `callback_url` correcto (`community-ai-g54`) — pero a diferencia de las suscripciones de `page` y `whatsapp_business_account` (que sí traen su array `fields`), la de `instagram` no tenía ningún campo real adjunto, ni `messages` ni `comments`. Explica de raíz por qué nunca llegó un webhook real de Instagram a Community AI pese a que la cuenta de IG está bien enlazada a la página (mismo síntoma ya diagnosticado el 18-jul, ítem 154, y guiado manualmente el 18-jul para suscribir `comments` vía el dashboard de Meta, ítem 155) — la suscripción manual del panel de Meta quedó "activa" en apariencia pero vacía por dentro.
+
+**Fix:** `POST /{app_id}/subscriptions` con `object=instagram`, mismo `callback_url` ya usado, `fields=messages,comments` — confirmado con una relectura real que ambos campos quedaron activos (`v25.0`). Con esto, tanto comentarios como DMs de Instagram ya deberían llegar de verdad a Community AI, que ya sabe procesar el formato de DM (`entry.messaging[]`, confirmado funcionando con un payload sintético desde el ítem 249) — la única confirmación que falta, y no se puede simular desde acá, es que un DM real de un cliente llegue solo.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
