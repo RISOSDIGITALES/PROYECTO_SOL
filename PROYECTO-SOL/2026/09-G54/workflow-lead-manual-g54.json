@@ -1,11 +1,16 @@
 {
-  "updatedAt": "2026-08-13T20:25:08.819Z",
-  "createdAt": "2026-08-13T20:19:30.631Z",
   "id": "wXj4RRlc780mHkgv",
   "name": "📝 Registro Manual de Leads (G54)",
   "description": null,
   "active": true,
+  "activeVersionId": "59181156-b37f-43a8-b4a6-f37afa2233c0",
+  "createdAt": "2026-08-13T20:19:30.631Z",
+  "updatedAt": "2026-08-19T17:16:02.894Z",
   "isArchived": false,
+  "versionId": "59181156-b37f-43a8-b4a6-f37afa2233c0",
+  "versionCounter": 6,
+  "sourceWorkflowId": null,
+  "triggerCount": 2,
   "nodes": [
     {
       "parameters": {
@@ -67,7 +72,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.item.json.body || {};\n\nconst companyId = String(body.company_id || '1');\nconst nombre = String(body.nombre || '').trim();\nconst canal = String(body.canal || 'otro').toLowerCase();\nconst contacto = String(body.contacto || '').trim();\nconst resumen = String(body.resumen || '').trim();\nconst clasificacionRaw = String(body.clasificacion || 'tibio').toLowerCase();\n\n// canal -> origen valido del enum de crm_deals (whatsapp/web/manual/facebook/instagram)\nconst origenMap = { whatsapp: 'whatsapp', facebook: 'facebook', instagram: 'instagram', telegram: 'manual', llamada: 'manual', correo: 'manual', otro: 'manual' };\nconst origen = origenMap[canal] || 'manual';\n\n// clasificacion -> temperatura valida del CRM (bajo/medio/alto)\nconst temperaturaMap = { frio: 'bajo', tibio: 'medio', caliente: 'alto' };\nconst temperatura = temperaturaMap[clasificacionRaw] || 'medio';\n\n// clave de contacto: si \"contacto\" ya parece un telefono real (solo digitos, 8+), se usa tal cual;\n// si no (email, usuario, texto libre) se prefija para no confundirlo con un telefono real,\n// mismo criterio ya usado en Community AI para IDs de Facebook (item 152 del proyecto)\nconst soloDigitos = contacto.replace(/[^0-9]/g, '');\nconst esTelefonoReal = soloDigitos.length >= 8 && soloDigitos.length === contacto.replace(/[\\s()+-]/g,'').length;\nconst phone = esTelefonoReal ? soloDigitos : ('manual_' + canal + '_' + Date.now());\n\nreturn [{ json: { companyId, nombre, canal, contacto, resumen, origen, temperatura, phone } }];"
+        "jsCode": "const body = $input.item.json.body || {};\n\nconst companyId = String(body.company_id || '');\n\nif (!companyId || !/^[0-9]+$/.test(companyId)) {\n  throw new Error('company_id es obligatorio y debe ser numerico — sin este dato no se puede saber a que empresa pertenece el lead, y no hay ningun fallback seguro posible (la sesion compartida podria tener activa cualquier empresa).');\n}\nconst nombre = String(body.nombre || '').trim();\nconst canal = String(body.canal || 'otro').toLowerCase();\nconst contacto = String(body.contacto || '').trim();\nconst resumen = String(body.resumen || '').trim();\nconst clasificacionRaw = String(body.clasificacion || 'tibio').toLowerCase();\n\n// canal -> origen valido del enum de crm_deals (whatsapp/web/manual/facebook/instagram)\nconst origenMap = { whatsapp: 'whatsapp', facebook: 'facebook', instagram: 'instagram', telegram: 'manual', llamada: 'manual', correo: 'manual', otro: 'manual' };\nconst origen = origenMap[canal] || 'manual';\n\n// clasificacion -> temperatura valida del CRM (bajo/medio/alto)\nconst temperaturaMap = { frio: 'bajo', tibio: 'medio', caliente: 'alto' };\nconst temperatura = temperaturaMap[clasificacionRaw] || 'medio';\n\n// clave de contacto: si \"contacto\" ya parece un telefono real (solo digitos, 8+), se usa tal cual;\n// si no (email, usuario, texto libre) se prefija para no confundirlo con un telefono real,\n// mismo criterio ya usado en Community AI para IDs de Facebook (item 152 del proyecto)\nconst soloDigitos = contacto.replace(/[^0-9]/g, '');\nconst esTelefonoReal = soloDigitos.length >= 8 && soloDigitos.length === contacto.replace(/[\\s()+-]/g,'').length;\nconst phone = esTelefonoReal ? soloDigitos : ('manual_' + canal + '_' + Date.now());\n\nreturn [{ json: { companyId, nombre, canal, contacto, resumen, origen, temperatura, phone } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -350,43 +355,36 @@
       ]
     }
   },
+  "nodeGroups": [],
   "settings": {
     "executionOrder": "v1"
   },
   "staticData": null,
-  "meta": null,
-  "nodeGroups": [],
   "pinData": null,
-  "versionId": "78aa7db7-ffb9-4d16-bfee-be486b5e820c",
-  "activeVersionId": "78aa7db7-ffb9-4d16-bfee-be486b5e820c",
-  "versionCounter": 4,
-  "triggerCount": 2,
-  "sourceWorkflowId": null,
+  "meta": null,
+  "tags": [],
   "shared": [
     {
-      "updatedAt": "2026-08-13T20:19:30.636Z",
-      "createdAt": "2026-08-13T20:19:30.636Z",
       "role": "workflow:owner",
       "workflowId": "wXj4RRlc780mHkgv",
       "projectId": "scK6yPpEmlkikl67",
       "project": {
-        "updatedAt": "2026-03-16T19:58:01.773Z",
-        "createdAt": "2026-03-16T19:56:18.866Z",
         "id": "scK6yPpEmlkikl67",
         "name": "Solange  Torrez <risosadmi@gmail.com>",
         "type": "personal",
         "icon": null,
         "description": null,
         "customTelemetryTags": [],
-        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      }
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-08-13T20:19:30.636Z",
+      "updatedAt": "2026-08-13T20:19:30.636Z"
     }
   ],
-  "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-08-13T20:25:08.821Z",
-    "createdAt": "2026-08-13T20:25:08.821Z",
-    "versionId": "78aa7db7-ffb9-4d16-bfee-be486b5e820c",
+    "versionId": "59181156-b37f-43a8-b4a6-f37afa2233c0",
     "workflowId": "wXj4RRlc780mHkgv",
     "nodes": [
       {
@@ -449,7 +447,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const body = $input.item.json.body || {};\n\nconst companyId = String(body.company_id || '1');\nconst nombre = String(body.nombre || '').trim();\nconst canal = String(body.canal || 'otro').toLowerCase();\nconst contacto = String(body.contacto || '').trim();\nconst resumen = String(body.resumen || '').trim();\nconst clasificacionRaw = String(body.clasificacion || 'tibio').toLowerCase();\n\n// canal -> origen valido del enum de crm_deals (whatsapp/web/manual/facebook/instagram)\nconst origenMap = { whatsapp: 'whatsapp', facebook: 'facebook', instagram: 'instagram', telegram: 'manual', llamada: 'manual', correo: 'manual', otro: 'manual' };\nconst origen = origenMap[canal] || 'manual';\n\n// clasificacion -> temperatura valida del CRM (bajo/medio/alto)\nconst temperaturaMap = { frio: 'bajo', tibio: 'medio', caliente: 'alto' };\nconst temperatura = temperaturaMap[clasificacionRaw] || 'medio';\n\n// clave de contacto: si \"contacto\" ya parece un telefono real (solo digitos, 8+), se usa tal cual;\n// si no (email, usuario, texto libre) se prefija para no confundirlo con un telefono real,\n// mismo criterio ya usado en Community AI para IDs de Facebook (item 152 del proyecto)\nconst soloDigitos = contacto.replace(/[^0-9]/g, '');\nconst esTelefonoReal = soloDigitos.length >= 8 && soloDigitos.length === contacto.replace(/[\\s()+-]/g,'').length;\nconst phone = esTelefonoReal ? soloDigitos : ('manual_' + canal + '_' + Date.now());\n\nreturn [{ json: { companyId, nombre, canal, contacto, resumen, origen, temperatura, phone } }];"
+          "jsCode": "const body = $input.item.json.body || {};\n\nconst companyId = String(body.company_id || '');\n\nif (!companyId || !/^[0-9]+$/.test(companyId)) {\n  throw new Error('company_id es obligatorio y debe ser numerico — sin este dato no se puede saber a que empresa pertenece el lead, y no hay ningun fallback seguro posible (la sesion compartida podria tener activa cualquier empresa).');\n}\nconst nombre = String(body.nombre || '').trim();\nconst canal = String(body.canal || 'otro').toLowerCase();\nconst contacto = String(body.contacto || '').trim();\nconst resumen = String(body.resumen || '').trim();\nconst clasificacionRaw = String(body.clasificacion || 'tibio').toLowerCase();\n\n// canal -> origen valido del enum de crm_deals (whatsapp/web/manual/facebook/instagram)\nconst origenMap = { whatsapp: 'whatsapp', facebook: 'facebook', instagram: 'instagram', telegram: 'manual', llamada: 'manual', correo: 'manual', otro: 'manual' };\nconst origen = origenMap[canal] || 'manual';\n\n// clasificacion -> temperatura valida del CRM (bajo/medio/alto)\nconst temperaturaMap = { frio: 'bajo', tibio: 'medio', caliente: 'alto' };\nconst temperatura = temperaturaMap[clasificacionRaw] || 'medio';\n\n// clave de contacto: si \"contacto\" ya parece un telefono real (solo digitos, 8+), se usa tal cual;\n// si no (email, usuario, texto libre) se prefija para no confundirlo con un telefono real,\n// mismo criterio ya usado en Community AI para IDs de Facebook (item 152 del proyecto)\nconst soloDigitos = contacto.replace(/[^0-9]/g, '');\nconst esTelefonoReal = soloDigitos.length >= 8 && soloDigitos.length === contacto.replace(/[\\s()+-]/g,'').length;\nconst phone = esTelefonoReal ? soloDigitos : ('manual_' + canal + '_' + Date.now());\n\nreturn [{ json: { companyId, nombre, canal, contacto, resumen, origen, temperatura, phone } }];"
         },
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -737,22 +735,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
+    "createdAt": "2026-08-19T17:16:02.916Z",
+    "updatedAt": "2026-08-19T17:16:02.916Z",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-08-13T20:25:08.951Z",
-        "id": 2808,
+        "id": 2909,
         "workflowId": "wXj4RRlc780mHkgv",
-        "versionId": "78aa7db7-ffb9-4d16-bfee-be486b5e820c",
+        "versionId": "59181156-b37f-43a8-b4a6-f37afa2233c0",
         "event": "activated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      },
-      {
-        "createdAt": "2026-08-13T20:25:08.916Z",
-        "id": 2807,
-        "workflowId": "wXj4RRlc780mHkgv",
-        "versionId": "78aa7db7-ffb9-4d16-bfee-be486b5e820c",
-        "event": "deactivated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-08-19T17:16:03.677Z"
       }
     ]
   }

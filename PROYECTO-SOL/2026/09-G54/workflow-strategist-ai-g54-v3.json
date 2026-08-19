@@ -1,11 +1,16 @@
 {
-  "updatedAt": "2026-08-17T16:33:04.647Z",
-  "createdAt": "2026-06-20T20:02:45.580Z",
   "id": "S62o0wcXq8Wfj67S",
   "name": "🧠 Strategist AI — RRSS G54 v3.0 (Tendencias)",
   "description": null,
   "active": true,
+  "activeVersionId": "24620ef1-b1f1-4dcf-b63e-890221d98986",
+  "createdAt": "2026-06-20T20:02:45.580Z",
+  "updatedAt": "2026-08-19T17:07:15.112Z",
   "isArchived": false,
+  "versionId": "24620ef1-b1f1-4dcf-b63e-890221d98986",
+  "versionCounter": 30,
+  "sourceWorkflowId": null,
+  "triggerCount": 1,
   "nodes": [
     {
       "parameters": {},
@@ -288,7 +293,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const raw = $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text\n  || $input.item.json.choices?.[0]?.message?.content || \"{}\";\n\nlet est;\ntry { est = JSON.parse(raw); }\ncatch(e) {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  try { est = m ? JSON.parse(m[0]) : {}; } catch(e2) { est = {}; }\n}\n\nconst ctx = $(\"🔧 Preparar Contexto\").item.json;\n\n// Helper: convierte string a array (separa por comas o pipes)\nconst toArray = (v) => {\n  if (Array.isArray(v)) return v;\n  if (!v) return [];\n  return v.split(/[,|]/).map(s => s.trim()).filter(Boolean);\n};\n\n// Helper: trunca a max 100 chars tomando solo la primera oración/frase\nconst truncate = (v, max = 100) => {\n  if (!v) return \"\";\n  const str = String(v);\n  if (str.length <= max) return str;\n  // Corta en el último espacio antes del límite\n  return str.substring(0, max).replace(/\\s+\\S*$/, \"\").trim();\n};\n\n\n// keyword_strategy — formato Walter: [{kw, volumen, intencion}]. Se arma con las\n// keywords REALES de G54 (ctx.allKeywords), no con lo que devuelva la IA — evita que\n// invente keywords que no existen. \"volumen\" es una estimación relativa por longitud\n// de frase (mientras no haya un dato real de volumen de búsqueda en ningún lado del\n// proyecto), documentado como estimación, no como dato real de Google.\nconst estimarVolumen = (kw) => {\n  const palabras = String(kw || \"\").trim().split(/\\s+/).filter(Boolean).length || 1;\n  return Math.max(80, Math.round(2200 / Math.pow(palabras, 1.6)));\n};\nconst keywordStrategy = (ctx.allKeywords || []).map(k => ({\n  kw: k.keyword,\n  volumen: estimarVolumen(k.keyword),\n  intencion: k.intencion || \"informacional\"\n}));\n\n// faqs — formato Walter: [{q, a}]. Viene de la IA (criterio genuino, no hay forma\n// determinística de armar buenas respuestas) — solo se sanea la forma.\nconst faqsOut = Array.isArray(est.faqs)\n  ? est.faqs.filter(f => f && f.q).map(f => ({ q: String(f.q).trim(), a: String(f.a || \"\").trim() }))\n  : [];\n\n// plan_publicacion — formato Walter: [{semana, posts, pilar}], una fila por CADA semana\n// del horizonte. Se arma en código repartiendo los pilares ya generados en round-robin\n// — pedirle esto a la IA en un horizonte de hasta 52 semanas es pedir que enumere 52\n// filas sin truncarse ni una vez, mismo tipo de riesgo ya visto con otros campos largos\n// en este proyecto (ver ítems de \"la IA no sigue el 100% de las instrucciones\").\nconst pilaresParaPlan = toArray(est.pilares);\nconst totalSemanasPlan = Number(ctx.semanas) || 1;\nconst postsPorSemana = Number(ctx.frecuencia_semanal) || 3;\nconst planPublicacion = [];\nfor (let s = 1; s <= totalSemanasPlan; s++) {\n  planPublicacion.push({\n    semana: s,\n    posts: postsPorSemana,\n    pilar: pilaresParaPlan.length ? pilaresParaPlan[(s - 1) % pilaresParaPlan.length] : \"\"\n  });\n}\n\nreturn [{ json: {\n  company_id:          Number(ctx.company_id) || 1,\n  objetivo:            est.objetivo             || ctx.objetivo  || \"\",\n  audiencia:           est.audiencia            || ctx.audiencia || \"\",\n  tono:                truncate(est.tono || \"profesional y directo\"),\n  frecuencia:          truncate(est.frecuencia  || \"\"),\n  cta_principal:        est.cta_principal         || ctx.web       || \"\",\n  embudo:              truncate(est.embudo      || \"\"),\n  plataformas:         toArray(est.plataformas),\n  pilares:             toArray(est.pilares),\n  kpis:                toArray(est.kpis),\n  resumen_estrategico: est.resumen_estrategico  || \"\",\n  keyword_strategy:    keywordStrategy,\n  mapa_preguntas_aeo:  toArray(est.mapa_preguntas_aeo),\n  faqs:                faqsOut,\n  clusters:            toArray(est.clusters),\n  plan_publicacion:    planPublicacion,\n  empresa_nombre:      ctx.empresa_nombre,\n  email:               ctx.email,\n  tiempo_horizonte:    ctx.tiempo_horizonte,\n  // Listos para el contador de tiempo del panel — G54 los descarta hoy si no tiene\n  // las columnas (mismo caso que resumen_estrategico, ítem 120), pero quedan mandados\n  // de una vez para que empiecen a guardarse solos apenas Walter agregue fecha_inicio/fecha_fin.\n  fecha_inicio:        ctx.fecha_inicio,\n  fecha_fin:           ctx.fecha_fin,\n  semanas_totales:     ctx.semanas,\n  direccion_deseada:   ctx.direccion_deseada || \"\"\n} }];"
+        "jsCode": "const raw = $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text\n  || $input.item.json.choices?.[0]?.message?.content || \"{}\";\n\nlet est;\ntry { est = JSON.parse(raw); }\ncatch(e) {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  try { est = m ? JSON.parse(m[0]) : {}; } catch(e2) { est = {}; }\n}\n\nconst ctx = $(\"🔧 Preparar Contexto\").item.json;\n\n// Helper: convierte string a array (separa por comas o pipes)\nconst toArray = (v) => {\n  if (Array.isArray(v)) return v;\n  if (!v) return [];\n  return v.split(/[,|]/).map(s => s.trim()).filter(Boolean);\n};\n\n// Helper: trunca a max 100 chars tomando solo la primera oración/frase\nconst truncate = (v, max = 100) => {\n  if (!v) return \"\";\n  const str = String(v);\n  if (str.length <= max) return str;\n  // Corta en el último espacio antes del límite\n  return str.substring(0, max).replace(/\\s+\\S*$/, \"\").trim();\n};\n\n\n// keyword_strategy — formato Walter: [{kw, volumen, intencion}]. Se arma con las\n// keywords REALES de G54 (ctx.allKeywords), no con lo que devuelva la IA — evita que\n// invente keywords que no existen. \"volumen\" es una estimación relativa por longitud\n// de frase (mientras no haya un dato real de volumen de búsqueda en ningún lado del\n// proyecto), documentado como estimación, no como dato real de Google.\nconst estimarVolumen = (kw) => {\n  const palabras = String(kw || \"\").trim().split(/\\s+/).filter(Boolean).length || 1;\n  return Math.max(80, Math.round(2200 / Math.pow(palabras, 1.6)));\n};\nconst keywordStrategy = (ctx.allKeywords || []).map(k => ({\n  kw: k.keyword,\n  volumen: estimarVolumen(k.keyword),\n  intencion: k.intencion || \"informacional\"\n}));\n\n// faqs — formato Walter: [{q, a}]. Viene de la IA (criterio genuino, no hay forma\n// determinística de armar buenas respuestas) — solo se sanea la forma.\nconst faqsOut = Array.isArray(est.faqs)\n  ? est.faqs.filter(f => f && f.q).map(f => ({ q: String(f.q).trim(), a: String(f.a || \"\").trim() }))\n  : [];\n\n// plan_publicacion — formato Walter: [{semana, posts, pilar}], una fila por CADA semana\n// del horizonte. Se arma en código repartiendo los pilares ya generados en round-robin\n// — pedirle esto a la IA en un horizonte de hasta 52 semanas es pedir que enumere 52\n// filas sin truncarse ni una vez, mismo tipo de riesgo ya visto con otros campos largos\n// en este proyecto (ver ítems de \"la IA no sigue el 100% de las instrucciones\").\nconst pilaresParaPlan = toArray(est.pilares);\nconst totalSemanasPlan = Number(ctx.semanas) || 1;\nconst postsPorSemana = Number(ctx.frecuencia_semanal) || 3;\nconst planPublicacion = [];\nfor (let s = 1; s <= totalSemanasPlan; s++) {\n  planPublicacion.push({\n    semana: s,\n    posts: postsPorSemana,\n    pilar: pilaresParaPlan.length ? pilaresParaPlan[(s - 1) % pilaresParaPlan.length] : \"\"\n  });\n}\n\nreturn [{ json: {\n  company_id:          Number(ctx.company_id),\n  objetivo:            est.objetivo             || ctx.objetivo  || \"\",\n  audiencia:           est.audiencia            || ctx.audiencia || \"\",\n  tono:                truncate(est.tono || \"profesional y directo\"),\n  frecuencia:          truncate(est.frecuencia  || \"\"),\n  cta_principal:        est.cta_principal         || ctx.web       || \"\",\n  embudo:              truncate(est.embudo      || \"\"),\n  plataformas:         toArray(est.plataformas),\n  pilares:             toArray(est.pilares),\n  kpis:                toArray(est.kpis),\n  resumen_estrategico: est.resumen_estrategico  || \"\",\n  keyword_strategy:    keywordStrategy,\n  mapa_preguntas_aeo:  toArray(est.mapa_preguntas_aeo),\n  faqs:                faqsOut,\n  clusters:            toArray(est.clusters),\n  plan_publicacion:    planPublicacion,\n  empresa_nombre:      ctx.empresa_nombre,\n  email:               ctx.email,\n  tiempo_horizonte:    ctx.tiempo_horizonte,\n  // Listos para el contador de tiempo del panel — G54 los descarta hoy si no tiene\n  // las columnas (mismo caso que resumen_estrategico, ítem 120), pero quedan mandados\n  // de una vez para que empiecen a guardarse solos apenas Walter agregue fecha_inicio/fecha_fin.\n  fecha_inicio:        ctx.fecha_inicio,\n  fecha_fin:           ctx.fecha_fin,\n  semanas_totales:     ctx.semanas,\n  direccion_deseada:   ctx.direccion_deseada || \"\"\n} }];"
       },
       "id": "parsear-strat",
       "name": "🔍 Parsear Estrategia",
@@ -726,6 +731,7 @@
       ]
     }
   },
+  "nodeGroups": [],
   "settings": {
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner",
@@ -733,39 +739,31 @@
     "binaryMode": "separate"
   },
   "staticData": null,
-  "meta": null,
-  "nodeGroups": [],
   "pinData": {},
-  "versionId": "3ba45bff-5713-4db3-ab91-6175657553fa",
-  "activeVersionId": "3ba45bff-5713-4db3-ab91-6175657553fa",
-  "versionCounter": 29,
-  "triggerCount": 1,
-  "sourceWorkflowId": null,
+  "meta": null,
+  "tags": [],
   "shared": [
     {
-      "updatedAt": "2026-06-20T20:02:45.583Z",
-      "createdAt": "2026-06-20T20:02:45.583Z",
       "role": "workflow:owner",
       "workflowId": "S62o0wcXq8Wfj67S",
       "projectId": "scK6yPpEmlkikl67",
       "project": {
-        "updatedAt": "2026-03-16T19:58:01.773Z",
-        "createdAt": "2026-03-16T19:56:18.866Z",
         "id": "scK6yPpEmlkikl67",
         "name": "Solange  Torrez <risosadmi@gmail.com>",
         "type": "personal",
         "icon": null,
         "description": null,
         "customTelemetryTags": [],
-        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      }
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-06-20T20:02:45.583Z",
+      "updatedAt": "2026-06-20T20:02:45.583Z"
     }
   ],
-  "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-08-17T16:33:04.650Z",
-    "createdAt": "2026-08-17T16:33:04.650Z",
-    "versionId": "3ba45bff-5713-4db3-ab91-6175657553fa",
+    "versionId": "24620ef1-b1f1-4dcf-b63e-890221d98986",
     "workflowId": "S62o0wcXq8Wfj67S",
     "nodes": [
       {
@@ -1049,7 +1047,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const raw = $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text\n  || $input.item.json.choices?.[0]?.message?.content || \"{}\";\n\nlet est;\ntry { est = JSON.parse(raw); }\ncatch(e) {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  try { est = m ? JSON.parse(m[0]) : {}; } catch(e2) { est = {}; }\n}\n\nconst ctx = $(\"🔧 Preparar Contexto\").item.json;\n\n// Helper: convierte string a array (separa por comas o pipes)\nconst toArray = (v) => {\n  if (Array.isArray(v)) return v;\n  if (!v) return [];\n  return v.split(/[,|]/).map(s => s.trim()).filter(Boolean);\n};\n\n// Helper: trunca a max 100 chars tomando solo la primera oración/frase\nconst truncate = (v, max = 100) => {\n  if (!v) return \"\";\n  const str = String(v);\n  if (str.length <= max) return str;\n  // Corta en el último espacio antes del límite\n  return str.substring(0, max).replace(/\\s+\\S*$/, \"\").trim();\n};\n\n\n// keyword_strategy — formato Walter: [{kw, volumen, intencion}]. Se arma con las\n// keywords REALES de G54 (ctx.allKeywords), no con lo que devuelva la IA — evita que\n// invente keywords que no existen. \"volumen\" es una estimación relativa por longitud\n// de frase (mientras no haya un dato real de volumen de búsqueda en ningún lado del\n// proyecto), documentado como estimación, no como dato real de Google.\nconst estimarVolumen = (kw) => {\n  const palabras = String(kw || \"\").trim().split(/\\s+/).filter(Boolean).length || 1;\n  return Math.max(80, Math.round(2200 / Math.pow(palabras, 1.6)));\n};\nconst keywordStrategy = (ctx.allKeywords || []).map(k => ({\n  kw: k.keyword,\n  volumen: estimarVolumen(k.keyword),\n  intencion: k.intencion || \"informacional\"\n}));\n\n// faqs — formato Walter: [{q, a}]. Viene de la IA (criterio genuino, no hay forma\n// determinística de armar buenas respuestas) — solo se sanea la forma.\nconst faqsOut = Array.isArray(est.faqs)\n  ? est.faqs.filter(f => f && f.q).map(f => ({ q: String(f.q).trim(), a: String(f.a || \"\").trim() }))\n  : [];\n\n// plan_publicacion — formato Walter: [{semana, posts, pilar}], una fila por CADA semana\n// del horizonte. Se arma en código repartiendo los pilares ya generados en round-robin\n// — pedirle esto a la IA en un horizonte de hasta 52 semanas es pedir que enumere 52\n// filas sin truncarse ni una vez, mismo tipo de riesgo ya visto con otros campos largos\n// en este proyecto (ver ítems de \"la IA no sigue el 100% de las instrucciones\").\nconst pilaresParaPlan = toArray(est.pilares);\nconst totalSemanasPlan = Number(ctx.semanas) || 1;\nconst postsPorSemana = Number(ctx.frecuencia_semanal) || 3;\nconst planPublicacion = [];\nfor (let s = 1; s <= totalSemanasPlan; s++) {\n  planPublicacion.push({\n    semana: s,\n    posts: postsPorSemana,\n    pilar: pilaresParaPlan.length ? pilaresParaPlan[(s - 1) % pilaresParaPlan.length] : \"\"\n  });\n}\n\nreturn [{ json: {\n  company_id:          Number(ctx.company_id) || 1,\n  objetivo:            est.objetivo             || ctx.objetivo  || \"\",\n  audiencia:           est.audiencia            || ctx.audiencia || \"\",\n  tono:                truncate(est.tono || \"profesional y directo\"),\n  frecuencia:          truncate(est.frecuencia  || \"\"),\n  cta_principal:        est.cta_principal         || ctx.web       || \"\",\n  embudo:              truncate(est.embudo      || \"\"),\n  plataformas:         toArray(est.plataformas),\n  pilares:             toArray(est.pilares),\n  kpis:                toArray(est.kpis),\n  resumen_estrategico: est.resumen_estrategico  || \"\",\n  keyword_strategy:    keywordStrategy,\n  mapa_preguntas_aeo:  toArray(est.mapa_preguntas_aeo),\n  faqs:                faqsOut,\n  clusters:            toArray(est.clusters),\n  plan_publicacion:    planPublicacion,\n  empresa_nombre:      ctx.empresa_nombre,\n  email:               ctx.email,\n  tiempo_horizonte:    ctx.tiempo_horizonte,\n  // Listos para el contador de tiempo del panel — G54 los descarta hoy si no tiene\n  // las columnas (mismo caso que resumen_estrategico, ítem 120), pero quedan mandados\n  // de una vez para que empiecen a guardarse solos apenas Walter agregue fecha_inicio/fecha_fin.\n  fecha_inicio:        ctx.fecha_inicio,\n  fecha_fin:           ctx.fecha_fin,\n  semanas_totales:     ctx.semanas,\n  direccion_deseada:   ctx.direccion_deseada || \"\"\n} }];"
+          "jsCode": "const raw = $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text\n  || $input.item.json.choices?.[0]?.message?.content || \"{}\";\n\nlet est;\ntry { est = JSON.parse(raw); }\ncatch(e) {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  try { est = m ? JSON.parse(m[0]) : {}; } catch(e2) { est = {}; }\n}\n\nconst ctx = $(\"🔧 Preparar Contexto\").item.json;\n\n// Helper: convierte string a array (separa por comas o pipes)\nconst toArray = (v) => {\n  if (Array.isArray(v)) return v;\n  if (!v) return [];\n  return v.split(/[,|]/).map(s => s.trim()).filter(Boolean);\n};\n\n// Helper: trunca a max 100 chars tomando solo la primera oración/frase\nconst truncate = (v, max = 100) => {\n  if (!v) return \"\";\n  const str = String(v);\n  if (str.length <= max) return str;\n  // Corta en el último espacio antes del límite\n  return str.substring(0, max).replace(/\\s+\\S*$/, \"\").trim();\n};\n\n\n// keyword_strategy — formato Walter: [{kw, volumen, intencion}]. Se arma con las\n// keywords REALES de G54 (ctx.allKeywords), no con lo que devuelva la IA — evita que\n// invente keywords que no existen. \"volumen\" es una estimación relativa por longitud\n// de frase (mientras no haya un dato real de volumen de búsqueda en ningún lado del\n// proyecto), documentado como estimación, no como dato real de Google.\nconst estimarVolumen = (kw) => {\n  const palabras = String(kw || \"\").trim().split(/\\s+/).filter(Boolean).length || 1;\n  return Math.max(80, Math.round(2200 / Math.pow(palabras, 1.6)));\n};\nconst keywordStrategy = (ctx.allKeywords || []).map(k => ({\n  kw: k.keyword,\n  volumen: estimarVolumen(k.keyword),\n  intencion: k.intencion || \"informacional\"\n}));\n\n// faqs — formato Walter: [{q, a}]. Viene de la IA (criterio genuino, no hay forma\n// determinística de armar buenas respuestas) — solo se sanea la forma.\nconst faqsOut = Array.isArray(est.faqs)\n  ? est.faqs.filter(f => f && f.q).map(f => ({ q: String(f.q).trim(), a: String(f.a || \"\").trim() }))\n  : [];\n\n// plan_publicacion — formato Walter: [{semana, posts, pilar}], una fila por CADA semana\n// del horizonte. Se arma en código repartiendo los pilares ya generados en round-robin\n// — pedirle esto a la IA en un horizonte de hasta 52 semanas es pedir que enumere 52\n// filas sin truncarse ni una vez, mismo tipo de riesgo ya visto con otros campos largos\n// en este proyecto (ver ítems de \"la IA no sigue el 100% de las instrucciones\").\nconst pilaresParaPlan = toArray(est.pilares);\nconst totalSemanasPlan = Number(ctx.semanas) || 1;\nconst postsPorSemana = Number(ctx.frecuencia_semanal) || 3;\nconst planPublicacion = [];\nfor (let s = 1; s <= totalSemanasPlan; s++) {\n  planPublicacion.push({\n    semana: s,\n    posts: postsPorSemana,\n    pilar: pilaresParaPlan.length ? pilaresParaPlan[(s - 1) % pilaresParaPlan.length] : \"\"\n  });\n}\n\nreturn [{ json: {\n  company_id:          Number(ctx.company_id),\n  objetivo:            est.objetivo             || ctx.objetivo  || \"\",\n  audiencia:           est.audiencia            || ctx.audiencia || \"\",\n  tono:                truncate(est.tono || \"profesional y directo\"),\n  frecuencia:          truncate(est.frecuencia  || \"\"),\n  cta_principal:        est.cta_principal         || ctx.web       || \"\",\n  embudo:              truncate(est.embudo      || \"\"),\n  plataformas:         toArray(est.plataformas),\n  pilares:             toArray(est.pilares),\n  kpis:                toArray(est.kpis),\n  resumen_estrategico: est.resumen_estrategico  || \"\",\n  keyword_strategy:    keywordStrategy,\n  mapa_preguntas_aeo:  toArray(est.mapa_preguntas_aeo),\n  faqs:                faqsOut,\n  clusters:            toArray(est.clusters),\n  plan_publicacion:    planPublicacion,\n  empresa_nombre:      ctx.empresa_nombre,\n  email:               ctx.email,\n  tiempo_horizonte:    ctx.tiempo_horizonte,\n  // Listos para el contador de tiempo del panel — G54 los descarta hoy si no tiene\n  // las columnas (mismo caso que resumen_estrategico, ítem 120), pero quedan mandados\n  // de una vez para que empiecen a guardarse solos apenas Walter agregue fecha_inicio/fecha_fin.\n  fecha_inicio:        ctx.fecha_inicio,\n  fecha_fin:           ctx.fecha_fin,\n  semanas_totales:     ctx.semanas,\n  direccion_deseada:   ctx.direccion_deseada || \"\"\n} }];"
         },
         "id": "parsear-strat",
         "name": "🔍 Parsear Estrategia",
@@ -1492,22 +1490,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
+    "createdAt": "2026-08-19T17:07:15.115Z",
+    "updatedAt": "2026-08-19T17:07:15.115Z",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-08-17T16:33:04.836Z",
-        "id": 2862,
+        "id": 2903,
         "workflowId": "S62o0wcXq8Wfj67S",
-        "versionId": "3ba45bff-5713-4db3-ab91-6175657553fa",
+        "versionId": "24620ef1-b1f1-4dcf-b63e-890221d98986",
         "event": "activated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      },
-      {
-        "createdAt": "2026-08-17T16:33:04.798Z",
-        "id": 2861,
-        "workflowId": "S62o0wcXq8Wfj67S",
-        "versionId": "3ba45bff-5713-4db3-ab91-6175657553fa",
-        "event": "deactivated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-08-19T17:07:15.510Z"
       }
     ]
   }
