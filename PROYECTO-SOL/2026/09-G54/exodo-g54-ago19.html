@@ -405,34 +405,32 @@
 
   <div class="item-card">
     <div class="item-header">
-      <div><div class="item-title">Falta un estado real para "idea ya usada"</div><div class="item-where">API Backend — <code>PUT /api/rrss/ideas/{id}/status</code></div></div>
+      <div><div class="item-title">Estado real para "idea ya usada"</div><div class="item-where">API Backend — <code>PUT /api/rrss/ideas/{id}/status</code></div></div>
+      <span class="badge nuevo">✅ Entregado 19-ago — falta que lo desplieguen</span>
     </div>
     <div class="item-body">
-      <p class="item-why">El enum de <code>status</code> solo acepta <code>idea</code>, <code>aprobado</code> y <code>descartado</code> — ninguno significa "ya generó un post". Necesitamos un cuarto estado real (ej. <code>usada</code>/<code>completada</code>) o un campo aparte <code>tiene_post:true/false</code> que el panel pueda mostrar distinto de un rechazo real.</p>
-    </div>
-  </div>
-
-  <div class="item-card p0">
-    <div class="item-header">
-      <div><div class="item-title">El token nuevo de Instagram (Instagram Login API) se puede guardar por empresa, pero ningún endpoint lo devuelve — bloquea que Community AI responda DMs de Instagram</div><div class="item-where">API Backend — <code>/api/rrss/tokens</code> y <code>GET /api/n8n/pages/{page_id}</code></div></div>
-      <span class="badge p0">P0</span>
-    </div>
-    <div class="item-body">
-      <p class="item-why">Encontrado el 14-ago: un cliente real de Instagram (@neurys.idrogo) mandó un DM pidiendo cotización y nunca se procesó — Crating Express tenía suscrita la app vieja de Facebook Login, no la nueva "Instagram API with Instagram Login" que Meta exige hoy para mensajería de Instagram. Se hizo la migración del lado de Meta (permisos nuevos, token generado, app publicada) y se guardó el token real en G54 vía <code>PUT /api/rrss/tokens</code> — confirmado hoy que sigue ahí: <code>GET /api/rrss/tokens</code> (con sesión) devuelve la fila real (<code>id:3, platform:Instagram, instagram_account_id:17841446392201293, is_active:true, updated_at:2026-08-14</code>), pero esa respuesta trae solo metadata — nunca el valor del token en sí.</p>
-      <p class="item-why"><strong>Es el mismo bug de fondo que B-9 (<code>ig_user_id</code> null), ya resuelto una vez — falta extenderlo a un tercer campo.</strong> La documentación del 6-ago explica la causa raíz de B-9: la tabla tiene una fila separada para Facebook y otra para Instagram, y <code>GET /api/n8n/pages/{page_id}</code> se corrigió para unir <code>fb_access_token</code> (fila de Facebook) + <code>ig_user_id</code> (fila de Instagram) en una sola respuesta. Falta un tercer dato que no existía cuando se hizo ese fix: el <strong>access_token</strong> de la fila de Instagram — hasta antes de esta migración, Instagram usaba el mismo token de Facebook; ahora es distinto y no se puede leer del lado de Facebook.</p>
-      <p class="item-why"><strong>Lo que necesitamos:</strong> extender el mismo armado de respuesta de B-9 con un tercer campo — que <code>GET /api/n8n/pages/{page_id}</code> también devuelva <code>ig_access_token</code>, tomado de la fila de Instagram (el mismo lugar de donde ya sale <code>ig_user_id</code>). No es un mecanismo nuevo, es el mismo join ya hecho el 6-ago, con un campo más.</p>
-      <p class="item-why"><strong>Confirmado en producción real, 19-ago, con evidencia nueva:</strong> con el webhook de Instagram ya bien suscrito, llegaron 2 DMs reales de un cliente ("Hola buenas tardes" y una consulta de catálogo) — Community AI los procesó y generó buenas respuestas, pero el envío falló los 2 con <code>400 — "An active access token must be used to query information about the current user" (code 2500)</code>: seguimos mandando el token de Facebook a <code>graph.facebook.com/v19.0/me/messages</code> porque no hay ninguna ruta que nos dé el real de Instagram. El cliente nunca vio ninguna respuesta.</p>
+      <p class="item-why">Walter respondió el 19-ago: agregó el valor <code>usada</code> al enum (<code>idea · aprobado · descartado · usada</code>), a marcar cuando un post ya se generó desde esa idea. Pide que nuestro lado deje la idea en <code>usada</code> justo después de generar el post. <strong>Reprobado en vivo hoy (20-ago):</strong> sigue rechazando <code>usada</code> con "The selected status is invalid" — tal como el propio Walter avisó, el backend no se auto-redespliega, así que todavía se ve el comportamiento viejo. No hay nada que hacer de nuestro lado hasta que avisen que ya está en producción; ahí se agrega el paso de marcar <code>usada</code> al terminar de generar cada post.</p>
     </div>
   </div>
 
   <div class="item-card">
     <div class="item-header">
-      <div><div class="item-title">3 endpoints para los botones de "acción sugerida" en la Ficha 360 del CRM</div><div class="item-where">Panel › CRM › Ficha 360 del lead</div></div>
+      <div><div class="item-title">Token de Instagram (Instagram Login API) — <code>ig_access_token</code></div><div class="item-where">API Backend — <code>GET /api/n8n/pages/{page_id}</code></div></div>
+      <span class="badge nuevo">✅ Entregado 19-ago — falta que lo desplieguen</span>
     </div>
     <div class="item-body">
-      <p class="item-why">Confirmado con el bundle real del panel: los 3 botones no tienen ningún <code>onClick</code> — no disparan nada hoy. Intención de cada uno ya confirmada; necesitamos el endpoint real para cada acción:</p>
+      <p class="item-why">Walter confirmó el 19-ago que agregó el tercer campo, tomado de la fila de Instagram igual que ya se hace con <code>ig_user_id</code>: <code>{"company_id":19,"fb_access_token":"EAA...","ig_user_id":"...","ig_access_token":"IGAA..."}</code>. Avisa explícitamente que hay que usar <code>ig_access_token</code> para responder DMs de Instagram — con el de Facebook, Meta rechaza la llamada — y que si la empresa no tiene Instagram conectado, ambos campos de Instagram vuelven <code>null</code>.</p>
+      <p class="item-why"><strong>Reprobado en vivo hoy (20-ago):</strong> <code>GET /api/n8n/pages/{page_id}</code> sigue devolviendo solo <code>company_id/fb_access_token/ig_user_id</code>, sin <code>ig_access_token</code> — consistente con que Walter avisó que todavía no está desplegado. Apenas confirme el despliegue, hay que migrar <code>💬 Responder: IG DM</code> de Community AI para leer <code>ig_access_token</code> en vez del token de Facebook — mismo bug real confirmado el 19-ago (<code>code 2500</code>) que motivó este pedido.</p>
+    </div>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">2 de los 3 endpoints de "acción sugerida" en la Ficha 360 del CRM</div><div class="item-where">Panel › CRM › Ficha 360 del lead</div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why"><strong>"Llamar por WhatsApp" queda cerrado</strong> — Walter aclaró que <code>POST /api/crm/deals/{id}/activities</code> ya existía (solo no estaba documentado) y reprobado en vivo hoy con sesión: crea una actividad real (<code>tipo:whatsapp</code>). El botón del panel ya usa sesión de usuario, no necesita AGENT_TOKEN, así que este ítem no tiene ningún trabajo pendiente de nuestro lado — se saca de la lista. Quedan 2 reales:</p>
       <ul class="item-why">
-        <li><strong>Llamar por WhatsApp</strong> — registra actividad, no abre nada. Necesitamos un endpoint que agregue una entrada al log de actividades del deal (ej. <code>POST /api/crm/deals/{id}/activities</code> con un tipo como <code>llamada_whatsapp</code>).</li>
         <li><strong>Generar cotización</strong> — necesitamos saber a qué debe llamar: ¿el webhook real de Marco / Sales AI Motor con el teléfono del lead (que ya cotiza solo con los datos que el lead dio), o algo que construyan ustedes?</li>
         <li><strong>Ejecutar seguimiento IA</strong> — necesitamos un endpoint que dispare el follow-up de 24h/72h para ese lead puntual ahora mismo, en vez de esperar el horario automático.</li>
       </ul>
