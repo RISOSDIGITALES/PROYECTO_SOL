@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Investigación — Módulo de Bots de Llamada (Voz) para G54</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0d16;
+      --surface: #111520;
+      --border: #1a2035;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --subtle: #8b98b8;
+
+      --green: #4ade80; --green-bg: #052e16; --green-border: #166534;
+      --yellow: #fbbf24; --yellow-bg: #1c1200; --yellow-border: #78350f;
+      --red: #f87171; --red-bg: #2d0a0a; --red-border: #7f1d1d;
+      --blue: #60a5fa; --blue-bg: #0c1a3a; --blue-border: #1e3a6e;
+      --purple: #c084fc; --purple-bg: #1e0840; --purple-border: #4c1d95;
+      --accent: #7c3aed; --accent-light: #a78bfa;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #0d1020 0%, #140a2e 50%, #0a1030 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 40px;
+    }
+    .header-inner { max-width: 980px; margin: 0 auto; }
+    .header-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-light); margin-bottom: 12px; }
+    h1 { font-size: 26px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+    h1 span { color: var(--accent-light); }
+    .header p { font-size: 14px; color: var(--subtle); max-width: 760px; margin-bottom: 20px; }
+    .header-meta { display: flex; gap: 24px; flex-wrap: wrap; }
+    .meta-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-light); }
+
+    .container { max-width: 980px; margin: 0 auto; padding: 40px; display: grid; gap: 16px; }
+
+    .cat-header {
+      display: flex; align-items: center; gap: 12px;
+      margin: 30px 0 -2px 0; padding-bottom: 10px; border-bottom: 2px solid var(--border);
+    }
+    .cat-header:first-child { margin-top: 0; }
+    .cat-icon { font-size: 20px; }
+    .cat-title { font-size: 17px; font-weight: 800; color: #fff; }
+    .cat-sub { font-size: 12px; color: var(--muted); margin-left: auto; }
+
+    .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+    .badge.ok { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+    .badge.warn { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-border); }
+    .badge.bad { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+    .badge.info { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
+    .badge.rec { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border); }
+
+    .item-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); border-left: 3px solid var(--blue); }
+    .item-card.ok { border-left-color: var(--green); }
+    .item-card.warn { border-left-color: var(--yellow); }
+    .item-card.bad { border-left-color: var(--red); }
+    .item-card.rec { border-left-color: var(--purple); }
+
+    .item-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 16px; padding: 14px 18px;
+      background: #0d1120; border-bottom: 1px solid var(--border); flex-wrap: wrap;
+    }
+    .item-title { font-size: 14.5px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .item-where { font-size: 11.5px; color: var(--muted); }
+
+    .item-body { padding: 16px 18px; display: grid; gap: 10px; }
+    .item-why { color: var(--subtle); font-size: 12.5px; line-height: 1.6; }
+    .item-why strong { color: var(--text); }
+    .item-why ul { margin-top: 6px; padding-left: 18px; display: grid; gap: 5px; }
+    .item-why ol { margin-top: 6px; padding-left: 18px; display: grid; gap: 5px; }
+    code {
+      font-family: 'Courier New', monospace; background: #141825;
+      border: 1px solid var(--border); color: var(--blue);
+      padding: 1px 5px; border-radius: 3px; font-size: 11px;
+    }
+    pre {
+      background: #0a0d16; border: 1px solid var(--border); border-radius: 8px;
+      padding: 12px 14px; overflow-x: auto; font-size: 11.5px; color: var(--green);
+      font-family: 'Courier New', monospace; line-height: 1.6;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { text-align: left; padding: 8px 10px; background: #0d1120; color: var(--muted); font-weight: 700; border-bottom: 1px solid var(--border); }
+    td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--subtle); }
+    td strong { color: var(--text); }
+    tr:last-child td { border-bottom: none; }
+    .num { text-align: right; font-family: 'Courier New', monospace; }
+
+    .flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; padding: 14px; background: #0d1120; border-radius: 8px; border: 1px solid var(--border); }
+    .flow .box { background: var(--blue-bg); border: 1px solid var(--blue-border); color: var(--blue); padding: 6px 10px; border-radius: 6px; font-weight: 700; white-space: nowrap; }
+    .flow .box.n8n { background: var(--purple-bg); border-color: var(--purple-border); color: var(--purple); }
+    .flow .arrow { color: var(--muted); }
+
+    footer { background: #070a12; border-top: 1px solid var(--border); padding: 22px 40px; text-align: center; color: var(--muted); font-size: 12px; margin-top: 40px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-label">PROYECTO SOL — G54 Platform</div>
+    <h1>Módulo de <span>Bots de Llamada</span> — investigación de arquitectura</h1>
+    <p>Cómo funciona VAPI de verdad por debajo, qué recursos reales usa, y qué necesitaríamos para construir algo propio — pensado desde el día uno como un módulo multiempresa de G54, donde el cliente solo configura (prompt, voz, número) desde nuestra interfaz, sin tocar código.</p>
+    <div class="header-meta">
+      <div class="meta-item"><div class="dot"></div> Investigación · 20 Ago 2026</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ============ QUE ES VAPI ============ -->
+  <div class="cat-header">
+    <span class="cat-icon">🧩</span>
+    <span class="cat-title">Qué es VAPI en realidad</span>
+  </div>
+
+  <div class="item-card info">
+    <div class="item-header">
+      <div><div class="item-title">No es "un bot" — es una capa de orquestación sobre 4 servicios de terceros</div><div class="item-where">Confirmado con el propio blog técnico de VAPI y comparativas del mercado</div></div>
+      <span class="badge info">Hallazgo central</span>
+    </div>
+    <div class="item-body">
+      <p class="item-why">VAPI no tiene su propia IA de voz — es el "pegamento" que conecta 4 piezas que ya existen en el mercado, todas intercambiables:</p>
+      <div class="flow">
+        <span class="box">☎️ Telefonía<br><span style="font-weight:400;font-size:10px">Twilio / Vonage / SIP</span></span>
+        <span class="arrow">→</span>
+        <span class="box">🎙️ STT (voz→texto)<br><span style="font-weight:400;font-size:10px">Deepgram / AssemblyAI</span></span>
+        <span class="arrow">→</span>
+        <span class="box">🧠 LLM<br><span style="font-weight:400;font-size:10px">OpenAI / Anthropic / Groq</span></span>
+        <span class="arrow">→</span>
+        <span class="box">🔊 TTS (texto→voz)<br><span style="font-weight:400;font-size:10px">ElevenLabs / Cartesia / PlayHT</span></span>
+      </div>
+      <p class="item-why" style="margin-top:6px;">Esto ya lo sabíamos parcialmente por nuestro propio uso de VAPI — Marco Voz usa Groq (<code>llama-3.3-70b-versatile</code>) como LLM y una voz de ElevenLabs, con VAPI en el medio orquestando y Twilio como la línea telefónica real. VAPI mismo lo dice explícito: su filosofía es "tratar la voz como un problema de ingeniería", dándole al que la construye el control de elegir cada pieza de la cadena.</p>
+      <p class="item-why"><strong>Lo que sí construyeron ellos, y es la parte difícil de verdad:</strong> el motor que coordina las 4 piezas en tiempo real sin que se note el empalme — streaming en paralelo en vez de esperar cada paso, detección de cuándo el cliente terminó de hablar, y cortar la respuesta del bot si el cliente vuelve a hablar. Eso es lo que hace que suene natural en vez de una máquina de "grabá tu mensaje después del tono".</p>
+    </div>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">Escala real, para tener una referencia de tamaño</div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">VAPI conecta 14+ proveedores por detrás de una sola capa, procesa unos 62 millones de llamadas por mes, con un SLA de 99.99%. Cobra $0.05–$0.13/min solo por su orquestación — sin incluir telefonía, STT, LLM ni TTS, que se pagan aparte a cada proveedor.</p>
+    </div>
+  </div>
+
+  <!-- ============ EL PROBLEMA DE FONDO ============ -->
+  <div class="cat-header">
+    <span class="cat-icon">⏱️</span>
+    <span class="cat-title">Por qué esto es genuinamente difícil (no es "conectar 4 APIs")</span>
+  </div>
+
+  <div class="item-card warn">
+    <div class="item-header">
+      <div><div class="item-title">El presupuesto de latencia — la conversación humana no perdona</div></div>
+      <span class="badge warn">El corazón del problema</span>
+    </div>
+    <div class="item-body">
+      <p class="item-why">En una charla real, la pausa entre que uno termina de hablar y el otro responde es de 200-300 milisegundos. Pasado el medio segundo, ya se siente lento; pasados los 3 segundos, la persona se desconecta de la llamada. Un pipeline bien afinado apunta a ~600ms totales entre "el cliente dejó de hablar" y "empieza a sonar la primera sílaba de la respuesta":</p>
+      <table>
+        <tr><th>Etapa</th><th class="num">Tiempo</th></tr>
+        <tr><td>Red (ida y vuelta del audio)</td><td class="num">30–80ms</td></tr>
+        <tr><td>Detectar que el cliente terminó de hablar (VAD + endpointing)</td><td class="num">150–300ms</td></tr>
+        <tr><td>El LLM empieza a generar (primer token)</td><td class="num">150–400ms</td></tr>
+        <tr><td>La voz sintética empieza a sonar (primer audio)</td><td class="num">100–200ms</td></tr>
+      </table>
+      <p class="item-why" style="margin-top:8px;">La forma clásica de armar esto — esperar la transcripción completa, después mandarla al LLM y esperar la respuesta completa, después mandarla a texto-a-voz y esperar el audio completo — sumaba más de <strong>4 segundos de silencio muerto</strong> entre cada turno. VAPI lo resuelve procesando todo en paralelo, por streaming: la transcripción llega en pedacitos ("necesito...", "necesito hacer...", "necesito hacer una cita..."), y el LLM ya empieza a razonar con esos pedacitos antes de que el cliente termine la frase.</p>
+    </div>
+  </div>
+
+  <div class="item-card warn">
+    <div class="item-header">
+      <div><div class="item-title">Detectar cuándo alguien terminó de hablar es más difícil de lo que parece</div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">No alcanza con "si hay silencio por X milisegundos, el cliente terminó" — la gente hace pausas naturales a mitad de una idea ("necesito cotizar... *pausa* ...una escultura de bronce"). Si el bot interrumpe ahí, se siente peor que si tarda un poco más en responder. VAPI usa un modelo entrenado para esto (no un simple temporizador) y reporta una reducción del 73% en interrupciones prematuras comparado con un timeout fijo — exactamente el mismo tipo de "adivinar la intención real detrás de una pausa" que ya resolvimos, en otro dominio, con las guardas de plausibilidad de Marco por WhatsApp (ítem 227).</p>
+      <p class="item-why"><strong>El "barge-in" (que el cliente pueda interrumpir al bot):</strong> mientras el bot está hablando, el sistema tiene que seguir escuchando y decidir en menos de 100ms si el cliente empezó a hablar de verdad (no solo un carraspeo o ruido de fondo) para cortar el audio del bot a mitad de frase. Mal calibrado, corta la voz del bot por cualquier ruido; bien calibrado, se siente como hablar con una persona.</p>
+    </div>
+  </div>
+
+  <!-- ============ POR QUE N8N NO ALCANZA ============ -->
+  <div class="cat-header">
+    <span class="cat-icon">🚫</span>
+    <span class="cat-title">Por qué esto NO puede vivir dentro de n8n</span>
+  </div>
+
+  <div class="item-card bad">
+    <div class="item-header">
+      <div><div class="item-title">n8n está construido para pedido→respuesta, no para streaming de audio en vivo</div></div>
+      <span class="badge bad">Restricción real, no de diseño</span>
+    </div>
+    <div class="item-body">
+      <p class="item-why">Esto es importante decirlo claro, porque toda la plataforma G54 hoy vive en n8n — pero un bot de llamada real no puede seguir ese mismo patrón, por 3 razones concretas:</p>
+      <ol class="item-why">
+        <li><strong>Volumen de mensajes:</strong> Twilio manda un paquete de audio cada 20 milisegundos — 50 por segundo, por cada llamada activa. Mandar eso como 50 webhooks por segundo a n8n agota memoria y conexiones casi de inmediato.</li>
+        <li><strong>n8n no sabe procesar streaming real:</strong> no tiene soporte nativo para APIs que devuelven datos en flujo continuo (SSE/WebSocket) — el propio foro de la comunidad de n8n lo confirma como una limitación conocida, la gente que necesita esto termina armando funciones aparte, fuera de n8n.</li>
+        <li><strong>Los datos binarios de audio no viajan bien por su motor:</strong> las versiones actuales de n8n tienen problemas serializando buffers de audio crudo dentro de un flujo de trabajo normal.</li>
+      </ol>
+      <p class="item-why"><strong>Esto no es un defecto de n8n — es que se está usando la herramienta correcta para lo que NO es.</strong> n8n sigue siendo perfecto para todo lo que ya hace bien en el resto de la plataforma: leer configuración de G54, guardar el lead en el CRM, mandar el correo de resumen post-llamada, disparar seguimientos — todo eso es petición→respuesta, exactamente su fuerte.</p>
+    </div>
+  </div>
+
+  <!-- ============ ARQUITECTURA RECOMENDADA ============ -->
+  <div class="cat-header">
+    <span class="cat-icon">🏗️</span>
+    <span class="cat-title">Qué necesitaríamos para armar algo propio</span>
+  </div>
+
+  <div class="item-card rec">
+    <div class="item-header">
+      <div><div class="item-title">Recomendación: no reconstruir el motor de streaming desde cero</div></div>
+      <span class="badge rec">Recomendación</span>
+    </div>
+    <div class="item-body">
+      <p class="item-why">La parte más difícil de todo esto — coordinar VAD, detección de fin de turno, streaming en paralelo, y la interrupción en menos de 100ms — es exactamente lo que a VAPI le tomó 3 artículos técnicos largos explicar, y ni así lo contaron completo. Reconstruir esa capa desde cero, a mano, es un proyecto de meses con un riesgo real de terminar con un bot que suena "robótico" (silencios largos, interrupciones raras) sin que sea obvio por qué.</p>
+      <p class="item-why"><strong>Existen frameworks open source, gratuitos y auto-hospedables, que ya resolvieron exactamente ese problema</strong> — no son productos cerrados como VAPI, son librerías que uno corre en su propio servidor, con control total y sin ningún costo de licencia:</p>
+      <table>
+        <tr><th>Framework</th><th>Lenguaje</th><th>Telefonía</th><th>Para qué sirve acá</th></tr>
+        <tr><td><strong>Pipecat</strong></td><td>Python</td><td>Twilio, Telnyx, Daily</td><td>El más simple de entender — un pipeline claro VAD→STT→LLM→TTS. Mejor documentación del grupo.</td></tr>
+        <tr><td><strong>LiveKit Agents</strong></td><td>Python/Node</td><td>SIP nativo + números propios</td><td>El más maduro para producción real, mayor calidad de tiempo real, más proveedores soportados.</td></tr>
+        <tr><td><strong>Vocode</strong></td><td>Python/TypeScript</td><td>Twilio, Vonage</td><td>Enfocado específicamente en telefonía — nace pensado para justo este caso de uso.</td></tr>
+      </table>
+      <p class="item-why" style="margin-top:8px;">Cualquiera de los tres ya trae resuelto: VAD, streaming en paralelo, detección de fin de turno, y barge-in — configurable, no hay que inventarlo. Nuestro trabajo pasaría a ser <strong>wiring</strong> (conectar el framework a Twilio, a Groq como LLM, y a un proveedor de voz), no construir un motor de audio en tiempo real desde cero.</p>
+    </div>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">Arquitectura de 2 capas — el servidor de voz separado de n8n, coordinados por G54</div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why"><strong>Capa 1 — el servidor de voz (nuevo, siempre corriendo):</strong> un proceso Python (Pipecat o LiveKit Agents) que escucha por WebSocket la llamada real de Twilio, corre el pipeline completo (VAD → STT → LLM → TTS) y le habla de vuelta al cliente en tiempo real. Este servidor necesita estar prendido todo el tiempo (no es algo que "se dispara" como un workflow de n8n), en un servidor propio con salida pública HTTPS — el mismo tipo de infraestructura que ya paga la usuaria para n8n/G54, un servicio más al lado.</p>
+      <pre>Llamada real → Twilio Media Streams (WebSocket, audio en crudo)
+             → Servidor de Voz (Pipecat/LiveKit) ← acá vive el VAD/STT/LLM/TTS
+                    ↓ (al empezar la llamada, y al terminarla)
+             → Webhook a n8n: "empezó/terminó la llamada de la empresa N"
+             → n8n: lee el prompt/voz configurados en G54 para esa empresa,
+               se los pasa al servidor de voz, y al terminar guarda el
+               resumen/lead en el CRM y dispara el correo de seguimiento
+               — exactamente el mismo patrón que ya usa Marco por WhatsApp</pre>
+      <p class="item-why"><strong>Capa 2 — n8n, sin cambios de rol:</strong> sigue siendo el que resuelve "qué configuración tiene esta empresa" (mismo patrón ya construido para WhatsApp/Telegram — <code>company_id</code>, sin nada hardcodeado), guarda el lead/deal en el CRM, y manda notificaciones — el servidor de voz nunca necesita saber nada de G54 directamente, solo le pregunta a n8n al empezar la llamada y le avisa a n8n al terminarla.</p>
+    </div>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">Piezas que ya tenemos y podemos reusar tal cual</div></div>
+    </div>
+    <div class="item-body">
+      <ul class="item-why">
+        <li><strong>LLM:</strong> Groq, ya en producción, ya barato, ya con la cadena de respaldo armada (Zhipu). No hace falta contratar nada nuevo para el "cerebro" del bot.</li>
+        <li><strong>Telefonía:</strong> Twilio, ya lo usamos para el número real de Marco Voz — mismo proveedor, solo se agrega el uso de Media Streams (bidireccional) en vez del flujo actual de VAPI.</li>
+        <li><strong>Voz (TTS):</strong> acá hay que decidir — ElevenLabs (la voz que ya usa Marco hoy, buena calidad, ~$0.05-0.08/min) o algo más barato como Cartesia/Deepgram Aura (~$0.02-0.04/min) o incluso probar Fish Audio, que justo se investigó hoy — igual de real como opción a evaluar, aunque hoy sin saldo de API cargado.</li>
+        <li><strong>STT:</strong> es la única pieza 100% nueva — no tenemos ningún proveedor de transcripción en tiempo real todavía. Deepgram es el más usado del mercado (~$0.0043-0.016/min), con buen soporte nativo en los 3 frameworks de arriba.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============ COSTO REAL ============ -->
+  <div class="cat-header">
+    <span class="cat-icon">💰</span>
+    <span class="cat-title">Costo real, propio vs. VAPI</span>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">El "$0.05/min" de VAPI nunca es el costo real — arman todo por debajo con los mismos proveedores</div></div>
+    </div>
+    <div class="item-body">
+      <table>
+        <tr><th>Componente</th><th class="num">Costo real / min</th></tr>
+        <tr><td>Telefonía (Twilio)</td><td class="num">$0.0085 – $0.014</td></tr>
+        <tr><td>STT (Deepgram)</td><td class="num">$0.0025 – $0.016</td></tr>
+        <tr><td>LLM (con Groq ya es de las más baratas del mercado)</td><td class="num">$0.003 – $0.015</td></tr>
+        <tr><td>TTS (ElevenLabs / Cartesia)</td><td class="num">$0.02 – $0.08</td></tr>
+        <tr><td><strong>Total, propio, sin ningún markup de orquestación</strong></td><td class="num"><strong>~$0.04 – $0.12</strong></td></tr>
+        <tr><td>VAPI (mismos proveedores + su capa de orquestación)</td><td class="num">$0.13 – $0.32</td></tr>
+      </table>
+      <p class="item-why" style="margin-top:8px;">La diferencia real no es "VAPI cobra $0.05" — ese número nunca incluye telefonía, STT, LLM ni TTS, que se pagan todos aparte igual. La diferencia real es que un servidor propio se ahorra esa capa de orquestación de $0.05-0.14/min <strong>por cada minuto de cada llamada de cada cliente, para siempre</strong> — a la escala de una plataforma multiempresa como G54, eso se acumula rápido y es un argumento de negocio real, no solo técnico.</p>
+    </div>
+  </div>
+
+  <!-- ============ LA INTERFAZ ============ -->
+  <div class="cat-header">
+    <span class="cat-icon">🖥️</span>
+    <span class="cat-title">Lo que necesitaría el panel de configuración del cliente</span>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">Referencia del mercado: ni Retell ni Bland (competidores directos de VAPI) son de verdad "sin código"</div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">Vale la pena saberlo antes de prometer "cero esfuerzo": ninguna plataforma seria del mercado logró que configurar un bot de voz sea tan simple como llenar un formulario y listo — siempre queda al menos un campo de texto libre (el prompt) que define el comportamiento real. Lo que sí lograron es que <strong>todo lo demás</strong> (voz, número, mensaje de saludo, reglas de escalación) sea un formulario simple — mismo criterio que ya usamos para el WhatsApp Config de cada empresa en G54.</p>
+      <p class="item-why"><strong>Campos mínimos reales para el panel, con el mismo criterio de "cero hardcode por cliente" del resto de la plataforma:</strong></p>
+      <ul class="item-why">
+        <li>Número de teléfono asignado a la empresa (o traer el propio vía Twilio BYOC)</li>
+        <li>System prompt / personalidad del bot (mismo campo que ya existe para WhatsApp — se puede reusar tal cual)</li>
+        <li>Selector de voz (lista de voces reales de ElevenLabs/Cartesia con muestra de audio para escuchar antes de elegir)</li>
+        <li>Mensaje de saludo inicial</li>
+        <li>Horario de atención / qué hacer fuera de horario (voicemail, transferir, o seguir con el bot)</li>
+        <li>A qué número/correo escalar cuando el bot no puede resolver algo (mismo patrón ya construido para WhatsApp/Community AI)</li>
+        <li>Botón de "llamada de prueba" antes de activar en producción</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============ RECOMENDACION FINAL ============ -->
+  <div class="cat-header">
+    <span class="cat-icon">✅</span>
+    <span class="cat-title">Veredicto</span>
+  </div>
+
+  <div class="item-card rec">
+    <div class="item-header">
+      <div><div class="item-title">Sí es viable construir esto propio — pero no arrancando desde cero, y no dentro de n8n</div></div>
+      <span class="badge rec">Recomendación final</span>
+    </div>
+    <div class="item-body">
+      <p class="item-why">Tres decisiones concretas, en orden de lo que hay que resolver primero:</p>
+      <ol class="item-why">
+        <li><strong>Elegir un framework open source (Pipecat o LiveKit Agents), no reinventar el motor de streaming.</strong> Es la parte que de verdad es difícil y ya está resuelta por gente que se dedica solo a eso.</li>
+        <li><strong>Levantar un servidor nuevo, separado de n8n, siempre encendido</strong> — n8n sigue siendo el orquestador de "todo lo demás" (config por empresa, CRM, notificaciones), igual que hoy con WhatsApp/Telegram.</li>
+        <li><strong>Contratar Deepgram (STT) — es la única pieza que hoy no tenemos</strong>; el resto (Twilio, Groq, y una decisión entre ElevenLabs/Cartesia/Fish Audio para la voz) ya está parcial o totalmente resuelto en la plataforma.</li>
+      </ol>
+      <p class="item-why" style="margin-top:6px;"><strong>Lo que esto no resuelve solo, y hay que decir con honestidad:</strong> aunque el framework trae el VAD/turn-detection ya armado, afinarlo para que se sienta natural con clientes reales (no interrumpir de más, no tardar de más) sigue necesitando pruebas reales con llamadas reales — el mismo tipo de trabajo iterativo que ya se hizo con Marco por WhatsApp, ahora en el dominio de voz. No es "conectar y listo" desde el primer día, pero tampoco es un proyecto de meses si se apoya en un framework ya maduro en vez de construir el motor de cero.</p>
+    </div>
+  </div>
+
+</div>
+
+<footer>PROYECTO SOL — Investigación de arquitectura, Módulo de Bots de Llamada · 20 Ago 2026</footer>
+
+</body>
+</html>
