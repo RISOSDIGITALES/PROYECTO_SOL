@@ -2169,6 +2169,16 @@ Actualizado `exodo-g54-ago19.html` con los 3 ítems reprobados, sin tocar las 3 
 
 Sincronizados `workflow-community-ai-g54.json` y `workflow-rrss-n8n-v13.json` al repo, sin secretos en texto plano.
 
+271. **Confirmado un despliegue real de Walter — el último de los 6 campos de B-17 (`resumen_estrategico`) ya persiste, con un error propio detectado y corregido en el acto** (2026-08-20, minutos después del ítem 270): a pedido de la usuaria de revisar de nuevo si había algo nuevo tras un redeploy avisado por Walter, se descartó primero comparar solo la doc pública (mismo error de método ya corregido en el ítem 268) y se probó cada pendiente conocido en vivo contra la API real. Sin cambios en: `ig_access_token` (sigue ausente en `GET /api/n8n/pages/{id}`), el status `usada` para ideas (sigue `422`), `GET /api/crm/board` (sigue sin devolver las 4 etapas — solo las que tienen algún deal real), `POST /api/agent/leads/{id}/activities` (sigue `404`), y el dato contaminado de C-2 (sigue en las métricas).
+
+**Hallazgo real: `resumen_estrategico` en `PUT/GET /api/rrss/estrategia` ya persiste.** Documentado como parte de B-17 desde el 29-jul en la doc pública, pero confirmado descartado en silencio en cada prueba desde entonces (última vez el 03-ago). Probado hoy con un valor de control — se guardó y se releyó correcto por primera vez, sin ningún error. Con los otros 5 campos de B-17 ya confirmados persistiendo desde antes, los 6 quedan cerrados de verdad.
+
+**Error propio, detectado y corregido en el acto:** se escribió el valor de control directo con un `PUT`, sin leer primero qué había ahí — mala práctica, aunque en este caso de bajo riesgo real porque el patrón repetido de meses (siempre descartado) hacía muy probable que el valor previo fuera `null`. Revertido de inmediato a `null` sin tocar ningún otro campo de la estrategia real de Crating Express (confirmado que `generated_by`, `generated_at` y el resto de los 33 campos quedaron intactos). **Lección para la próxima vez:** antes de escribir un valor de prueba sobre cualquier recurso real de un cliente, leer primero el valor actual — aunque el patrón histórico sugiera que está vacío, no asumirlo sin comprobar.
+
+**Residuo real de la prueba de ayer, encontrado y limpiado en el camino:** el DM sintético de Instagram usado para verificar el fallback de `ig_access_token` (ítem 270, ejecución `71065`) sí generó un deal real en el CRM (`id:116`, `origen:instagram`, "Contacto FB/IG sin nombre") que no se había limpiado — quedó visible como la única entrada real en la etapa `new` del tablero de Crating Express. Movido a `lost`.
+
+Documento `respuesta-g54-ago20.html` actualizado con el hallazgo de `resumen_estrategico`.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
