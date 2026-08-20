@@ -1,11 +1,16 @@
 {
-  "updatedAt": "2026-08-17T16:58:53.785Z",
-  "createdAt": "2026-06-20T00:45:39.368Z",
   "id": "otycsrxrMEMuxuwD",
   "name": "💬 Sales AI — Motor de Conversación G54",
   "description": null,
   "active": true,
+  "activeVersionId": "e639259a-6422-448f-b860-0517d917a93d",
+  "createdAt": "2026-06-20T00:45:39.368Z",
+  "updatedAt": "2026-08-20T14:44:31.916Z",
   "isArchived": false,
+  "versionId": "e639259a-6422-448f-b860-0517d917a93d",
+  "versionCounter": 62,
+  "sourceWorkflowId": null,
+  "triggerCount": 4,
   "nodes": [
     {
       "id": "sticky-info",
@@ -502,70 +507,6 @@
       "position": [
         2600,
         300
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": false,
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "id": "c1",
-              "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "gemini-fallback",
-      "name": "🤖 Gemini: Fallback IA",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2800,
-        460
-      ],
-      "continueOnFail": true,
-      "parameters": {
-        "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $vars.GEMINI_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: 'gemini-1.5-flash',\n  messages: [\n    {\n      role: 'system',\n      content: $('🔧 Preparar Contexto IA').item.json.promptSistema\n    },\n    {\n      role: 'user',\n      content:\n        'HISTORIAL:\\n' + ($('🔧 Preparar Contexto IA').item.json.historial || '(primer mensaje)') +\n        '\\n\\nDATOS RECOLECTADOS:\\n' +\n        JSON.stringify($('🔧 Preparar Contexto IA').item.json.datosRecolectados || {}) +\n        '\\n\\nMENSAJE ACTUAL: \"' + $('🔧 Preparar Contexto IA').item.json.texto + '\"' +\n        '\\nCliente nuevo: ' + ($('🔧 Preparar Contexto IA').item.json.esNuevo ? 'SÍ' : 'NO') +\n        '\\n\\nResponde SOLO con JSON válido:\\n' +\n        '{\"mensaje\":\"\",\"datos_actualizados\":{},\"clasificacion\":\"frio\",\"todos_recolectados\":false,\"resumen_lead\":\"\"}'\n    }\n  ],\n  temperature: 0.4,\n  max_tokens: 600,\n  response_format: { type: 'json_object' }\n}) }}",
-        "options": {}
-      }
-    },
-    {
-      "id": "if-gemini-ok",
-      "name": "🔀 ¿Gemini OK?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        3000,
-        460
       ],
       "parameters": {
         "conditions": {
@@ -2515,6 +2456,69 @@
         720
       ],
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'glm-4.5-flash',\n  messages: [\n    {\n      role: 'system',\n      content: $('🔧 Preparar Contexto IA').item.json.promptSistema\n    },\n    {\n      role: 'user',\n      content:\n        'HISTORIAL:\n' + ($('🔧 Preparar Contexto IA').item.json.historial || '(primer mensaje)') +\n        '\n\nDATOS RECOLECTADOS:\n' +\n        JSON.stringify($('🔧 Preparar Contexto IA').item.json.datosRecolectados || {}) +\n        '\n\nMENSAJE ACTUAL: \"' + $('🔧 Preparar Contexto IA').item.json.texto + '\"' +\n        '\nCliente nuevo: ' + ($('🔧 Preparar Contexto IA').item.json.esNuevo ? 'SÍ' : 'NO') +\n        '\n\nResponde SOLO con JSON válido:\n' +\n        '{\"mensaje\":\"\",\"datos_actualizados\":{},\"clasificacion\":\"frio\",\"todos_recolectados\":false,\"resumen_lead\":\"\"}'\n    }\n  ],\n  temperature: 0.4,\n  max_tokens: 600,\n  response_format: { type: 'json_object' }\n}) }}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2800,
+        460
+      ],
+      "id": "zhipu-fallback-salesai",
+      "name": "🤖 Zhipu: Fallback IA",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "rWF3VkYbayILPZTH",
+          "name": "Zhipu GLM � Fallback IA (G54)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3000,
+        460
+      ],
+      "id": "zhipu-if-salesai",
+      "name": "🔀 ¿Zhipu OK?"
     }
   ],
   "connections": {
@@ -2733,36 +2737,7 @@
         ],
         [
           {
-            "node": "🤖 Gemini: Fallback IA",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🤖 Gemini: Fallback IA": {
-      "main": [
-        [
-          {
-            "node": "🔀 ¿Gemini OK?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔀 ¿Gemini OK?": {
-      "main": [
-        [
-          {
-            "node": "🔍 Parsear Respuesta IA",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "🆘 Respuesta de Emergencia",
+            "node": "🤖 Zhipu: Fallback IA",
             "type": "main",
             "index": 0
           }
@@ -3530,8 +3505,38 @@
         ],
         []
       ]
+    },
+    "🤖 Zhipu: Fallback IA": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Zhipu OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Zhipu OK?": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Respuesta IA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🆘 Respuesta de Emergencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
+  "nodeGroups": [],
   "settings": {
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner",
@@ -3548,39 +3553,31 @@
       }
     }
   },
-  "meta": null,
-  "nodeGroups": [],
   "pinData": {},
-  "versionId": "a0111814-3ce9-4c88-bfea-0aee05292788",
-  "activeVersionId": "a0111814-3ce9-4c88-bfea-0aee05292788",
-  "versionCounter": 60,
-  "triggerCount": 4,
-  "sourceWorkflowId": null,
+  "meta": null,
+  "tags": [],
   "shared": [
     {
-      "updatedAt": "2026-06-20T00:45:39.375Z",
-      "createdAt": "2026-06-20T00:45:39.375Z",
       "role": "workflow:owner",
       "workflowId": "otycsrxrMEMuxuwD",
       "projectId": "scK6yPpEmlkikl67",
       "project": {
-        "updatedAt": "2026-03-16T19:58:01.773Z",
-        "createdAt": "2026-03-16T19:56:18.866Z",
         "id": "scK6yPpEmlkikl67",
         "name": "Solange  Torrez <risosadmi@gmail.com>",
         "type": "personal",
         "icon": null,
         "description": null,
         "customTelemetryTags": [],
-        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      }
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-06-20T00:45:39.375Z",
+      "updatedAt": "2026-06-20T00:45:39.375Z"
     }
   ],
-  "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-08-17T16:58:53.790Z",
-    "createdAt": "2026-08-17T16:58:53.790Z",
-    "versionId": "a0111814-3ce9-4c88-bfea-0aee05292788",
+    "versionId": "e639259a-6422-448f-b860-0517d917a93d",
     "workflowId": "otycsrxrMEMuxuwD",
     "nodes": [
       {
@@ -3835,7 +3832,7 @@
           300
         ],
         "parameters": {
-          "jsCode": "const config = $('⚙️ Config G54').item.json;\n\nlet resolveKey = '';\nlet resolveType = '';\nlet msgData = null;\n\ntry {\n  const waData = $('🔧 Extraer Mensaje WA').item.json;\n  if (waData && !waData.skip) { resolveKey = String(waData.resolveKey || ''); resolveType = 'wa'; msgData = waData; }\n} catch(e) {}\n\nif (!resolveKey) {\n  try {\n    const socialData = $('🔧 Extraer Mensaje FB/IG DM').item.json;\n    if (socialData && !socialData.skip) { resolveKey = String(socialData.resolveKey || ''); resolveType = 'page'; msgData = socialData; }\n  } catch(e) {}\n}\n\nlet queryCompanyId = '';\ntry { queryCompanyId = String($('📲 Webhook WhatsApp').item.json.query?.company || ''); } catch(e) {}\nif (!queryCompanyId) {\n  try { queryCompanyId = String($('📲 Webhook FB/IG DM').item.json.query?.company || ''); } catch(e) {}\n}\n\n// Telegram: G54 ya nos da el company_id real en el relevo (empresa_id) — no hace falta resolverlo por HTTP\nif (!queryCompanyId) {\n  try {\n    const tgData = $('🔧 Extraer Mensaje Telegram').item.json;\n    if (tgData && !tgData.skip && tgData.empresaId) { queryCompanyId = String(tgData.empresaId); resolveType = 'telegram'; msgData = tgData; }\n  } catch(e) {}\n}\n\nconst resolverUrl = (!queryCompanyId && resolveKey)\n  ? config.G54_BASE_URL + '/api/n8n/' + (resolveType === 'wa' ? 'wa-phones' : 'pages') + '/' + resolveKey\n  : '';\n\nreturn [{ json: { ...config, resolveKey, resolveType, resolverUrl, queryCompanyId, _msgData: msgData } }];\n"
+          "jsCode": "const config = $('⚙️ Config G54').item.json;\n\nlet resolveKey = '';\nlet resolveType = '';\nlet msgData = null;\n\ntry {\n  const waData = $('🔧 Extraer Mensaje WA').item.json;\n  if (waData && !waData.skip) { resolveKey = String(waData.resolveKey || ''); resolveType = 'wa'; msgData = waData; }\n} catch(e) {}\n\nif (!resolveKey) {\n  try {\n    const socialData = $('🔧 Extraer Mensaje FB/IG DM').item.json;\n    if (socialData && !socialData.skip) { resolveKey = String(socialData.resolveKey || ''); resolveType = 'page'; msgData = socialData; }\n  } catch(e) {}\n}\n\nlet queryCompanyId = '';\ntry { queryCompanyId = String($('📲 Webhook WhatsApp').item.json.query?.company || ''); } catch(e) {}\nif (!queryCompanyId) {\n  try { queryCompanyId = String($('📲 Webhook FB/IG DM').item.json.query?.company || ''); } catch(e) {}\n}\n\n// Telegram: G54 ya nos da el company_id real en el relevo (empresa_id) — no hace falta resolverlo por HTTP\nif (!queryCompanyId) {\n  try {\n    const tgData = $('🔧 Extraer Mensaje Telegram').item.json;\n    if (tgData && !tgData.skip && tgData.empresaId) { queryCompanyId = String(tgData.empresaId); resolveType = 'telegram'; msgData = tgData; }\n  } catch(e) {}\n}\n\n// wa: /api/agent/wa/empresa-by-phone/{phone_number_id} con AGENT_TOKEN — ruta real confirmada en vivo\n// (18-ago-2026: /api/n8n/wa-phones/{id} nunca existió, siempre dio 404, bloqueando cualquier mensaje\n// de WhatsApp sin ?company= explícito en la URL).\n// page: /api/n8n/pages/{page_id} con N8N_TOKEN — ya confirmada funcionando desde antes.\nlet resolverUrl = '';\nlet resolverToken = '';\nif (!queryCompanyId && resolveKey) {\n  if (resolveType === 'wa') {\n    resolverUrl = config.G54_BASE_URL + '/api/agent/wa/empresa-by-phone/' + resolveKey;\n    resolverToken = config.G54_AGENT_TOKEN;\n  } else if (resolveType === 'page') {\n    resolverUrl = config.G54_BASE_URL + '/api/n8n/pages/' + resolveKey;\n    resolverToken = config.G54_N8N_TOKEN;\n  }\n}\n\nreturn [{ json: { ...config, resolveKey, resolveType, resolverUrl, resolverToken, queryCompanyId, _msgData: msgData } }];"
         }
       },
       {
@@ -3855,7 +3852,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "={{ 'Bearer ' + $json.G54_N8N_TOKEN }}"
+                "value": "={{ 'Bearer ' + $json.resolverToken }}"
               },
               {
                 "name": "Accept",
@@ -4078,70 +4075,6 @@
         "position": [
           2600,
           300
-        ],
-        "parameters": {
-          "conditions": {
-            "options": {
-              "caseSensitive": false,
-              "typeValidation": "loose"
-            },
-            "conditions": [
-              {
-                "id": "c1",
-                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
-                "rightValue": "",
-                "operator": {
-                  "type": "string",
-                  "operation": "notEmpty",
-                  "singleValue": true
-                }
-              }
-            ],
-            "combinator": "and"
-          },
-          "options": {}
-        }
-      },
-      {
-        "id": "gemini-fallback",
-        "name": "🤖 Gemini: Fallback IA",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          2800,
-          460
-        ],
-        "continueOnFail": true,
-        "parameters": {
-          "method": "POST",
-          "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "name": "Authorization",
-                "value": "={{ 'Bearer ' + $vars.GEMINI_API_KEY }}"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({\n  model: 'gemini-1.5-flash',\n  messages: [\n    {\n      role: 'system',\n      content: $('🔧 Preparar Contexto IA').item.json.promptSistema\n    },\n    {\n      role: 'user',\n      content:\n        'HISTORIAL:\\n' + ($('🔧 Preparar Contexto IA').item.json.historial || '(primer mensaje)') +\n        '\\n\\nDATOS RECOLECTADOS:\\n' +\n        JSON.stringify($('🔧 Preparar Contexto IA').item.json.datosRecolectados || {}) +\n        '\\n\\nMENSAJE ACTUAL: \"' + $('🔧 Preparar Contexto IA').item.json.texto + '\"' +\n        '\\nCliente nuevo: ' + ($('🔧 Preparar Contexto IA').item.json.esNuevo ? 'SÍ' : 'NO') +\n        '\\n\\nResponde SOLO con JSON válido:\\n' +\n        '{\"mensaje\":\"\",\"datos_actualizados\":{},\"clasificacion\":\"frio\",\"todos_recolectados\":false,\"resumen_lead\":\"\"}'\n    }\n  ],\n  temperature: 0.4,\n  max_tokens: 600,\n  response_format: { type: 'json_object' }\n}) }}",
-          "options": {}
-        }
-      },
-      {
-        "id": "if-gemini-ok",
-        "name": "🔀 ¿Gemini OK?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2.2,
-        "position": [
-          3000,
-          460
         ],
         "parameters": {
           "conditions": {
@@ -6091,6 +6024,69 @@
           720
         ],
         "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({\n  model: 'glm-4.5-flash',\n  messages: [\n    {\n      role: 'system',\n      content: $('🔧 Preparar Contexto IA').item.json.promptSistema\n    },\n    {\n      role: 'user',\n      content:\n        'HISTORIAL:\n' + ($('🔧 Preparar Contexto IA').item.json.historial || '(primer mensaje)') +\n        '\n\nDATOS RECOLECTADOS:\n' +\n        JSON.stringify($('🔧 Preparar Contexto IA').item.json.datosRecolectados || {}) +\n        '\n\nMENSAJE ACTUAL: \"' + $('🔧 Preparar Contexto IA').item.json.texto + '\"' +\n        '\nCliente nuevo: ' + ($('🔧 Preparar Contexto IA').item.json.esNuevo ? 'SÍ' : 'NO') +\n        '\n\nResponde SOLO con JSON válido:\n' +\n        '{\"mensaje\":\"\",\"datos_actualizados\":{},\"clasificacion\":\"frio\",\"todos_recolectados\":false,\"resumen_lead\":\"\"}'\n    }\n  ],\n  temperature: 0.4,\n  max_tokens: 600,\n  response_format: { type: 'json_object' }\n}) }}",
+          "options": {},
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth"
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2800,
+          460
+        ],
+        "id": "zhipu-fallback-salesai",
+        "name": "🤖 Zhipu: Fallback IA",
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "rWF3VkYbayILPZTH",
+            "name": "Zhipu GLM � Fallback IA (G54)"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {},
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          3000,
+          460
+        ],
+        "id": "zhipu-if-salesai",
+        "name": "🔀 ¿Zhipu OK?"
       }
     ],
     "connections": {
@@ -6309,36 +6305,7 @@
           ],
           [
             {
-              "node": "🤖 Gemini: Fallback IA",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🤖 Gemini: Fallback IA": {
-        "main": [
-          [
-            {
-              "node": "🔀 ¿Gemini OK?",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔀 ¿Gemini OK?": {
-        "main": [
-          [
-            {
-              "node": "🔍 Parsear Respuesta IA",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "🆘 Respuesta de Emergencia",
+              "node": "🤖 Zhipu: Fallback IA",
               "type": "main",
               "index": 0
             }
@@ -7106,6 +7073,35 @@
           ],
           []
         ]
+      },
+      "🤖 Zhipu: Fallback IA": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Zhipu OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Zhipu OK?": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Respuesta IA",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🆘 Respuesta de Emergencia",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -7113,22 +7109,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
+    "createdAt": "2026-08-20T14:44:31.923Z",
+    "updatedAt": "2026-08-20T14:44:31.923Z",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-08-17T16:58:54.030Z",
-        "id": 2885,
+        "id": 2913,
         "workflowId": "otycsrxrMEMuxuwD",
-        "versionId": "a0111814-3ce9-4c88-bfea-0aee05292788",
+        "versionId": "e639259a-6422-448f-b860-0517d917a93d",
         "event": "activated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      },
-      {
-        "createdAt": "2026-08-17T16:58:53.962Z",
-        "id": 2884,
-        "workflowId": "otycsrxrMEMuxuwD",
-        "versionId": "a0111814-3ce9-4c88-bfea-0aee05292788",
-        "event": "deactivated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-08-20T14:44:32.399Z"
       }
     ]
   }

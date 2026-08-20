@@ -1,11 +1,16 @@
 {
-  "updatedAt": "2026-08-17T17:01:30.315Z",
-  "createdAt": "2026-06-15T15:49:48.824Z",
   "id": "J8qbKOF7t4GnhRDT",
   "name": "Marco CE — 03 Generador IA",
   "description": null,
   "active": true,
+  "activeVersionId": "4861d894-83a0-423a-a313-f519f4cc4cd6",
+  "createdAt": "2026-06-15T15:49:48.824Z",
+  "updatedAt": "2026-08-20T14:49:08.591Z",
   "isArchived": false,
+  "versionId": "4861d894-83a0-423a-a313-f519f4cc4cd6",
+  "versionCounter": 70,
+  "sourceWorkflowId": null,
+  "triggerCount": 0,
   "nodes": [
     {
       "id": "trigger",
@@ -87,38 +92,6 @@
       "continueOnFail": true
     },
     {
-      "id": "gemini",
-      "name": "🤖 Gemini: Fallback IA",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        820,
-        460
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer "
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'gemini-1.5-flash', messages: [{ role: 'system', content: $('Recibir Datos').item.json.sistemaIA }, { role: 'user', content: $('Recibir Datos').item.json.usuarioIA }], temperature: 0.3, max_tokens: 500 }) }}",
-        "options": {}
-      },
-      "continueOnFail": true
-    },
-    {
       "id": "parsear",
       "name": "🔍 Parsear Respuesta IA",
       "type": "n8n-nodes-base.code",
@@ -132,14 +105,54 @@
       }
     },
     {
-      "id": "if-gemini",
-      "name": "🔀 ¿Gemini OK?",
-      "type": "n8n-nodes-base.if",
+      "id": "modo-contingencia",
+      "name": "🆘 Modo Contingencia",
+      "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2160,
-        480
+        2400,
+        620
       ],
+      "parameters": {
+        "jsCode": "const ctx = $('Recibir Datos').item.json;\nconst d = ctx.datosRecolectados || {};\nconst texto = (ctx.texto || '').trim();\nconst proximoPaso = ctx.proximoPaso || 'PRIMER_CONTACTO';\nconst isEN = ctx.idiomaConversacion === 'inglés';\n\nconst clean = v => {\n  if (typeof v === 'boolean') return v;\n  if (!v || ['null','undefined','desconocido'].includes(String(v).trim().toLowerCase())) return null;\n  return v;\n};\n\n// tipo_cajon normalizer — misma tabla que el fallback normal, para consistencia\nfunction normalizeTipoCajon(raw) {\n  const t = String(raw || '').toLowerCase().trim();\n  const map = [\n    [/caj[oó]n(es)?[ _]?cerrad[oa]s?|closed/, 'cajones_cerrados'],\n    [/plataforma[ _]?contenedor|container[ _]?platform/, 'plataformas_contenedor'],\n    [/jaulas?|cage|abiert[ao]/, 'jaulas'],\n    [/cunas?|amarres?|crib/, 'cunas'],\n    [/palet(a|s)?|pallet/, 'palets_medida'],\n    [/feria|trade[ _]?show|exhibition/, 'embalaje_ferias'],\n    [/mayor|mayoreo|wholesale|bulk/, 'mayor'],\n  ];\n  const m = map.find(([rx]) => rx.test(t));\n  return m ? m[1] : null;\n}\n\nlet intento = null;\nif (!clean(d.tipo_flujo)) {\n  const t = texto.toLowerCase();\n  if (/cotiz|presupuesto|quote|estimad|precio|price|embalar|empacar|crate|pack|caja|cajon|cajón|box/.test(t)) intento = 'cotizacion';\n  else if (/consulta|pregunta|informacion|información|info |question/.test(t)) intento = 'consulta';\n}\n\nconst datosActualizados = {\n  producto:         clean(d.producto),\n  medidas:          clean(d.medidas),\n  fecha:            clean(d.fecha),\n  tipo_cajon:       clean(d.tipo_cajon),\n  proteccion_extra: (d.proteccion_extra !== null && d.proteccion_extra !== undefined) ? d.proteccion_extra : null,\n  correo_contacto:  clean(d.correo_contacto),\n  nombre_cliente:   clean(d.nombre_cliente),\n  tipo_flujo:       clean(d.tipo_flujo),\n};\n\n// Extracción simple por reglas, según el paso pendiente — sin IA\nif ((proximoPaso === 'PRIMER_CONTACTO') && texto && (ctx.historial || '').trim().length > 0 && !datosActualizados.nombre_cliente) {\n  const nombre = texto.replace(/^(me llamo|mi nombre es|soy|my name is|i'?m|this is)\\s+/i, '').trim();\n  if (nombre && nombre.split(' ').length <= 4) datosActualizados.nombre_cliente = nombre;\n} else if (proximoPaso === 'PEDIR_PRODUCTO' && texto && !/^(hola|hi|buenas|hey|hello)/i.test(texto)) {\n  datosActualizados.producto = texto;\n} else if (proximoPaso === 'PEDIR_MEDIDAS' && /\\d/.test(texto)) {\n  datosActualizados.medidas = texto;\n} else if (proximoPaso === 'PEDIR_TIPO_CAJON') {\n  const norm = normalizeTipoCajon(texto);\n  datosActualizados.tipo_cajon = norm || 'cajones_cerrados';\n} else if (proximoPaso === 'PEDIR_PROTECCION') {\n  const acepta = /\\b(si+|yes|yep|claro|dale|foam|burbuja|esquinera|quiero|deseo)\\b/i.test(texto);\n  const rechaza = /\\b(no|nope|sin protecci[oó]n|no gracias|no quiero|not needed|no need)\\b/i.test(texto);\n  if (rechaza) datosActualizados.proteccion_extra = false;\n  else if (acepta) datosActualizados.proteccion_extra = true;\n} else if (proximoPaso === 'PEDIR_CORREO') {\n  const emailMatch = texto.match(/[\\w.+-]+@[\\w-]+\\.[a-zA-Z]{2,}/);\n  if (emailMatch) datosActualizados.correo_contacto = emailMatch[0];\n} else if (proximoPaso === 'PEDIR_FECHA' && texto) {\n  datosActualizados.fecha = texto;\n}\n\n// Mensaje según el paso — preguntas simples, sin IA, en el idioma detectado\nconst nombre = datosActualizados.nombre_cliente ? datosActualizados.nombre_cliente.split(' ')[0] : '';\nconst msgsES = {\n  PRIMER_CONTACTO:       (ctx.saludoHora || 'Hola') + ', soy Marco de Crating Express. ¿Con quién tengo el gusto?',\n  CONSULTA_ESTADO_PEDIDO: 'Para consultar el estado de tu pedido, por favor contacta directamente a nuestro equipo por correo o teléfono — en breve te atenderán.',\n  IDENTIFICAR_NECESIDAD: nombre ? `¿En qué puedo ayudarte hoy, ${nombre}?` : '¿En qué puedo ayudarte hoy?',\n  FLUJO_CONSULTA:        'En este momento no puedo responder tu consulta en detalle. Un especialista te contactará por correo — ¿me compartes tu email?',\n  PEDIR_PRODUCTO:        '¿Qué artículo necesitas embalar?',\n  PEDIR_MEDIDAS:         '¿Cuáles son las medidas en pulgadas? (Largo × Ancho × Alto)',\n  PEDIR_TIPO_CAJON:      `Para ${datosActualizados.producto || 'tu artículo'}, te recomiendo un cajón cerrado por la protección que ofrece. ¿Te parece bien?`,\n  PEDIR_PROTECCION:      '¿Necesitas protección interior como foam, burbuja o esquineras? Tiene un costo adicional.',\n  PEDIR_CORREO:          '¿A qué correo te contactamos?',\n  PEDIR_FECHA:           '¿Para cuándo necesitas el embalaje?',\n  LISTO_PARA_COTIZAR:    'Dame un momento para calcular el precio... 🔄',\n  POST_COTIZACION:       'En breve un especialista se pondrá en contacto contigo por correo con los detalles finales. ¡Gracias por contactar a Crating Express!',\n};\nconst msgsEN = {\n  PRIMER_CONTACTO:       (ctx.saludoHora || 'Hi') + \", I'm Marco from Crating Express. Who am I speaking with?\",\n  CONSULTA_ESTADO_PEDIDO: 'To check your order status, please contact our team directly by email or phone — they will assist you shortly.',\n  IDENTIFICAR_NECESIDAD: nombre ? `How can I help you today, ${nombre}?` : 'How can I help you today?',\n  FLUJO_CONSULTA:        \"I'm unable to answer that in detail right now. A specialist will reach out by email — could you share your email?\",\n  PEDIR_PRODUCTO:        'What item do you need to crate?',\n  PEDIR_MEDIDAS:         'What are the measurements in inches? (Length × Width × Height)',\n  PEDIR_TIPO_CAJON:      `For ${datosActualizados.producto || 'your item'}, I recommend a closed crate for maximum protection. Does that work for you?`,\n  PEDIR_PROTECCION:      'Do you need interior protection like foam, bubble wrap, or corner guards? It has an additional cost.',\n  PEDIR_CORREO:          'What email should we use to contact you?',\n  PEDIR_FECHA:           'When do you need the crating done?',\n  LISTO_PARA_COTIZAR:    'Give me a moment to calculate the price... 🔄',\n  POST_COTIZACION:       \"A specialist will follow up with you by email shortly with the final details. Thanks for reaching out to Crating Express!\",\n};\nconst msgs = isEN ? msgsEN : msgsES;\nconst mensaje = msgs[proximoPaso] || (isEN ? 'How else can I help you?' : '¿En qué más puedo ayudarte?');\n\n// Recalcular todosRecolectados igual que el flujo normal (sin depender de la IA)\nconst todosRecolectados = !ctx.cotizacionEnviada\n  && datosActualizados.tipo_flujo === 'cotizacion'\n  && !!datosActualizados.producto\n  && !!datosActualizados.medidas\n  && !!datosActualizados.correo_contacto\n  && !!datosActualizados.tipo_cajon\n  && datosActualizados.proteccion_extra !== null\n  && !!datosActualizados.fecha;\n\nlet dimensiones = ctx.dimensiones || null;\nif (datosActualizados.medidas && !dimensiones) {\n  const nums = datosActualizados.medidas.match(/(\\d+(?:\\.\\d+)?)/g);\n  if (nums && nums.length >= 3) {\n    dimensiones = { largo: parseFloat(nums[0]), ancho: parseFloat(nums[1]), alto: parseFloat(nums[2]) };\n  }\n}\n\n// Empaquetado en el mismo formato que Groq (choices[0].message.content) para que\n// 🔍 Parsear Respuesta IA lo procese exactamente igual, sin cambios ahí.\nconst payload = {\n  mensaje,\n  datos_actualizados: datosActualizados,\n  dimensiones: dimensiones || { largo: null, ancho: null, alto: null },\n  tipo_caja_api: datosActualizados.tipo_cajon,\n  todos_recolectados: todosRecolectados,\n  cotizador_enviado: false,\n  clasificacion: null,\n  intento,\n  resumen_lead: '',\n  escalada: false,\n  _contingencia: true,\n};\n\nreturn [{ json: {\n  choices: [{ message: { content: JSON.stringify(payload) } }]\n} }];\n"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'glm-4.5-flash', messages: [{ role: 'system', content: $('Recibir Datos').item.json.sistemaIA }, { role: 'user', content: $('Recibir Datos').item.json.usuarioIA }], temperature: 0.3, max_tokens: 2500, response_format: { type: \"json_object\" } }) }}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        820,
+        460
+      ],
+      "id": "zhipu-fallback-node",
+      "name": "🤖 Zhipu: Fallback IA",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "rWF3VkYbayILPZTH",
+          "name": "Zhipu GLM � Fallback IA (G54)"
+        }
+      }
+    },
+    {
       "parameters": {
         "conditions": {
           "options": {
@@ -161,20 +174,14 @@
           ]
         }
       },
-      "continueOnFail": true
-    },
-    {
-      "id": "modo-contingencia",
-      "name": "🆘 Modo Contingencia",
-      "type": "n8n-nodes-base.code",
+      "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        2400,
-        620
+        1080,
+        460
       ],
-      "parameters": {
-        "jsCode": "const ctx = $('Recibir Datos').item.json;\nconst d = ctx.datosRecolectados || {};\nconst texto = (ctx.texto || '').trim();\nconst proximoPaso = ctx.proximoPaso || 'PRIMER_CONTACTO';\nconst isEN = ctx.idiomaConversacion === 'inglés';\n\nconst clean = v => {\n  if (typeof v === 'boolean') return v;\n  if (!v || ['null','undefined','desconocido'].includes(String(v).trim().toLowerCase())) return null;\n  return v;\n};\n\n// tipo_cajon normalizer — misma tabla que el fallback normal, para consistencia\nfunction normalizeTipoCajon(raw) {\n  const t = String(raw || '').toLowerCase().trim();\n  const map = [\n    [/caj[oó]n(es)?[ _]?cerrad[oa]s?|closed/, 'cajones_cerrados'],\n    [/plataforma[ _]?contenedor|container[ _]?platform/, 'plataformas_contenedor'],\n    [/jaulas?|cage|abiert[ao]/, 'jaulas'],\n    [/cunas?|amarres?|crib/, 'cunas'],\n    [/palet(a|s)?|pallet/, 'palets_medida'],\n    [/feria|trade[ _]?show|exhibition/, 'embalaje_ferias'],\n    [/mayor|mayoreo|wholesale|bulk/, 'mayor'],\n  ];\n  const m = map.find(([rx]) => rx.test(t));\n  return m ? m[1] : null;\n}\n\nlet intento = null;\nif (!clean(d.tipo_flujo)) {\n  const t = texto.toLowerCase();\n  if (/cotiz|presupuesto|quote|estimad|precio|price|embalar|empacar|crate|pack|caja|cajon|cajón|box/.test(t)) intento = 'cotizacion';\n  else if (/consulta|pregunta|informacion|información|info |question/.test(t)) intento = 'consulta';\n}\n\nconst datosActualizados = {\n  producto:         clean(d.producto),\n  medidas:          clean(d.medidas),\n  fecha:            clean(d.fecha),\n  tipo_cajon:       clean(d.tipo_cajon),\n  proteccion_extra: (d.proteccion_extra !== null && d.proteccion_extra !== undefined) ? d.proteccion_extra : null,\n  correo_contacto:  clean(d.correo_contacto),\n  nombre_cliente:   clean(d.nombre_cliente),\n  tipo_flujo:       clean(d.tipo_flujo),\n};\n\n// Extracción simple por reglas, según el paso pendiente — sin IA\nif ((proximoPaso === 'PRIMER_CONTACTO') && texto && (ctx.historial || '').trim().length > 0 && !datosActualizados.nombre_cliente) {\n  const nombre = texto.replace(/^(me llamo|mi nombre es|soy|my name is|i'?m|this is)\\s+/i, '').trim();\n  if (nombre && nombre.split(' ').length <= 4) datosActualizados.nombre_cliente = nombre;\n} else if (proximoPaso === 'PEDIR_PRODUCTO' && texto && !/^(hola|hi|buenas|hey|hello)/i.test(texto)) {\n  datosActualizados.producto = texto;\n} else if (proximoPaso === 'PEDIR_MEDIDAS' && /\\d/.test(texto)) {\n  datosActualizados.medidas = texto;\n} else if (proximoPaso === 'PEDIR_TIPO_CAJON') {\n  const norm = normalizeTipoCajon(texto);\n  datosActualizados.tipo_cajon = norm || 'cajones_cerrados';\n} else if (proximoPaso === 'PEDIR_PROTECCION') {\n  const acepta = /\\b(si+|yes|yep|claro|dale|foam|burbuja|esquinera|quiero|deseo)\\b/i.test(texto);\n  const rechaza = /\\b(no|nope|sin protecci[oó]n|no gracias|no quiero|not needed|no need)\\b/i.test(texto);\n  if (rechaza) datosActualizados.proteccion_extra = false;\n  else if (acepta) datosActualizados.proteccion_extra = true;\n} else if (proximoPaso === 'PEDIR_CORREO') {\n  const emailMatch = texto.match(/[\\w.+-]+@[\\w-]+\\.[a-zA-Z]{2,}/);\n  if (emailMatch) datosActualizados.correo_contacto = emailMatch[0];\n} else if (proximoPaso === 'PEDIR_FECHA' && texto) {\n  datosActualizados.fecha = texto;\n}\n\n// Mensaje según el paso — preguntas simples, sin IA, en el idioma detectado\nconst nombre = datosActualizados.nombre_cliente ? datosActualizados.nombre_cliente.split(' ')[0] : '';\nconst msgsES = {\n  PRIMER_CONTACTO:       (ctx.saludoHora || 'Hola') + ', soy Marco de Crating Express. ¿Con quién tengo el gusto?',\n  CONSULTA_ESTADO_PEDIDO: 'Para consultar el estado de tu pedido, por favor contacta directamente a nuestro equipo por correo o teléfono — en breve te atenderán.',\n  IDENTIFICAR_NECESIDAD: nombre ? `¿En qué puedo ayudarte hoy, ${nombre}?` : '¿En qué puedo ayudarte hoy?',\n  FLUJO_CONSULTA:        'En este momento no puedo responder tu consulta en detalle. Un especialista te contactará por correo — ¿me compartes tu email?',\n  PEDIR_PRODUCTO:        '¿Qué artículo necesitas embalar?',\n  PEDIR_MEDIDAS:         '¿Cuáles son las medidas en pulgadas? (Largo × Ancho × Alto)',\n  PEDIR_TIPO_CAJON:      `Para ${datosActualizados.producto || 'tu artículo'}, te recomiendo un cajón cerrado por la protección que ofrece. ¿Te parece bien?`,\n  PEDIR_PROTECCION:      '¿Necesitas protección interior como foam, burbuja o esquineras? Tiene un costo adicional.',\n  PEDIR_CORREO:          '¿A qué correo te contactamos?',\n  PEDIR_FECHA:           '¿Para cuándo necesitas el embalaje?',\n  LISTO_PARA_COTIZAR:    'Dame un momento para calcular el precio... 🔄',\n  POST_COTIZACION:       'En breve un especialista se pondrá en contacto contigo por correo con los detalles finales. ¡Gracias por contactar a Crating Express!',\n};\nconst msgsEN = {\n  PRIMER_CONTACTO:       (ctx.saludoHora || 'Hi') + \", I'm Marco from Crating Express. Who am I speaking with?\",\n  CONSULTA_ESTADO_PEDIDO: 'To check your order status, please contact our team directly by email or phone — they will assist you shortly.',\n  IDENTIFICAR_NECESIDAD: nombre ? `How can I help you today, ${nombre}?` : 'How can I help you today?',\n  FLUJO_CONSULTA:        \"I'm unable to answer that in detail right now. A specialist will reach out by email — could you share your email?\",\n  PEDIR_PRODUCTO:        'What item do you need to crate?',\n  PEDIR_MEDIDAS:         'What are the measurements in inches? (Length × Width × Height)',\n  PEDIR_TIPO_CAJON:      `For ${datosActualizados.producto || 'your item'}, I recommend a closed crate for maximum protection. Does that work for you?`,\n  PEDIR_PROTECCION:      'Do you need interior protection like foam, bubble wrap, or corner guards? It has an additional cost.',\n  PEDIR_CORREO:          'What email should we use to contact you?',\n  PEDIR_FECHA:           'When do you need the crating done?',\n  LISTO_PARA_COTIZAR:    'Give me a moment to calculate the price... 🔄',\n  POST_COTIZACION:       \"A specialist will follow up with you by email shortly with the final details. Thanks for reaching out to Crating Express!\",\n};\nconst msgs = isEN ? msgsEN : msgsES;\nconst mensaje = msgs[proximoPaso] || (isEN ? 'How else can I help you?' : '¿En qué más puedo ayudarte?');\n\n// Recalcular todosRecolectados igual que el flujo normal (sin depender de la IA)\nconst todosRecolectados = !ctx.cotizacionEnviada\n  && datosActualizados.tipo_flujo === 'cotizacion'\n  && !!datosActualizados.producto\n  && !!datosActualizados.medidas\n  && !!datosActualizados.correo_contacto\n  && !!datosActualizados.tipo_cajon\n  && datosActualizados.proteccion_extra !== null\n  && !!datosActualizados.fecha;\n\nlet dimensiones = ctx.dimensiones || null;\nif (datosActualizados.medidas && !dimensiones) {\n  const nums = datosActualizados.medidas.match(/(\\d+(?:\\.\\d+)?)/g);\n  if (nums && nums.length >= 3) {\n    dimensiones = { largo: parseFloat(nums[0]), ancho: parseFloat(nums[1]), alto: parseFloat(nums[2]) };\n  }\n}\n\n// Empaquetado en el mismo formato que Groq (choices[0].message.content) para que\n// 🔍 Parsear Respuesta IA lo procese exactamente igual, sin cambios ahí.\nconst payload = {\n  mensaje,\n  datos_actualizados: datosActualizados,\n  dimensiones: dimensiones || { largo: null, ancho: null, alto: null },\n  tipo_caja_api: datosActualizados.tipo_cajon,\n  todos_recolectados: todosRecolectados,\n  cotizador_enviado: false,\n  clasificacion: null,\n  intento,\n  resumen_lead: '',\n  escalada: false,\n  _contingencia: true,\n};\n\nreturn [{ json: {\n  choices: [{ message: { content: JSON.stringify(payload) } }]\n} }];\n"
-      }
+      "id": "zhipu-if-node",
+      "name": "🔀 ¿Zhipu OK?"
     }
   ],
   "connections": {
@@ -211,36 +218,7 @@
         ],
         [
           {
-            "node": "🤖 Gemini: Fallback IA",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🤖 Gemini: Fallback IA": {
-      "main": [
-        [
-          {
-            "node": "🔀 ¿Gemini OK?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔀 ¿Gemini OK?": {
-      "main": [
-        [
-          {
-            "node": "🔍 Parsear Respuesta IA",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "🆘 Modo Contingencia",
+            "node": "🤖 Zhipu: Fallback IA",
             "type": "main",
             "index": 0
           }
@@ -257,47 +235,69 @@
           }
         ]
       ]
+    },
+    "🤖 Zhipu: Fallback IA": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Zhipu OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Zhipu OK?": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Respuesta IA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🆘 Modo Contingencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
+  "nodeGroups": [],
   "settings": {
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
   "staticData": null,
-  "meta": null,
-  "nodeGroups": [],
   "pinData": null,
-  "versionId": "d4e3228d-09c3-40af-a236-47c26bb784c3",
-  "activeVersionId": "d4e3228d-09c3-40af-a236-47c26bb784c3",
-  "versionCounter": 67,
-  "triggerCount": 0,
-  "sourceWorkflowId": null,
+  "meta": null,
+  "tags": [],
   "shared": [
     {
-      "updatedAt": "2026-06-15T15:49:48.828Z",
-      "createdAt": "2026-06-15T15:49:48.828Z",
       "role": "workflow:owner",
       "workflowId": "J8qbKOF7t4GnhRDT",
       "projectId": "scK6yPpEmlkikl67",
       "project": {
-        "updatedAt": "2026-03-16T19:58:01.773Z",
-        "createdAt": "2026-03-16T19:56:18.866Z",
         "id": "scK6yPpEmlkikl67",
         "name": "Solange  Torrez <risosadmi@gmail.com>",
         "type": "personal",
         "icon": null,
         "description": null,
         "customTelemetryTags": [],
-        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      }
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-06-15T15:49:48.828Z",
+      "updatedAt": "2026-06-15T15:49:48.828Z"
     }
   ],
-  "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-08-17T17:01:30.318Z",
-    "createdAt": "2026-08-17T17:01:30.318Z",
-    "versionId": "d4e3228d-09c3-40af-a236-47c26bb784c3",
+    "versionId": "4861d894-83a0-423a-a313-f519f4cc4cd6",
     "workflowId": "J8qbKOF7t4GnhRDT",
     "nodes": [
       {
@@ -380,38 +380,6 @@
         "continueOnFail": true
       },
       {
-        "id": "gemini",
-        "name": "🤖 Gemini: Fallback IA",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          820,
-          460
-        ],
-        "parameters": {
-          "method": "POST",
-          "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "name": "Authorization",
-                "value": "=Bearer "
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ model: 'gemini-1.5-flash', messages: [{ role: 'system', content: $('Recibir Datos').item.json.sistemaIA }, { role: 'user', content: $('Recibir Datos').item.json.usuarioIA }], temperature: 0.3, max_tokens: 500 }) }}",
-          "options": {}
-        },
-        "continueOnFail": true
-      },
-      {
         "id": "parsear",
         "name": "🔍 Parsear Respuesta IA",
         "type": "n8n-nodes-base.code",
@@ -425,14 +393,54 @@
         }
       },
       {
-        "id": "if-gemini",
-        "name": "🔀 ¿Gemini OK?",
-        "type": "n8n-nodes-base.if",
+        "id": "modo-contingencia",
+        "name": "🆘 Modo Contingencia",
+        "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          2160,
-          480
+          2400,
+          620
         ],
+        "parameters": {
+          "jsCode": "const ctx = $('Recibir Datos').item.json;\nconst d = ctx.datosRecolectados || {};\nconst texto = (ctx.texto || '').trim();\nconst proximoPaso = ctx.proximoPaso || 'PRIMER_CONTACTO';\nconst isEN = ctx.idiomaConversacion === 'inglés';\n\nconst clean = v => {\n  if (typeof v === 'boolean') return v;\n  if (!v || ['null','undefined','desconocido'].includes(String(v).trim().toLowerCase())) return null;\n  return v;\n};\n\n// tipo_cajon normalizer — misma tabla que el fallback normal, para consistencia\nfunction normalizeTipoCajon(raw) {\n  const t = String(raw || '').toLowerCase().trim();\n  const map = [\n    [/caj[oó]n(es)?[ _]?cerrad[oa]s?|closed/, 'cajones_cerrados'],\n    [/plataforma[ _]?contenedor|container[ _]?platform/, 'plataformas_contenedor'],\n    [/jaulas?|cage|abiert[ao]/, 'jaulas'],\n    [/cunas?|amarres?|crib/, 'cunas'],\n    [/palet(a|s)?|pallet/, 'palets_medida'],\n    [/feria|trade[ _]?show|exhibition/, 'embalaje_ferias'],\n    [/mayor|mayoreo|wholesale|bulk/, 'mayor'],\n  ];\n  const m = map.find(([rx]) => rx.test(t));\n  return m ? m[1] : null;\n}\n\nlet intento = null;\nif (!clean(d.tipo_flujo)) {\n  const t = texto.toLowerCase();\n  if (/cotiz|presupuesto|quote|estimad|precio|price|embalar|empacar|crate|pack|caja|cajon|cajón|box/.test(t)) intento = 'cotizacion';\n  else if (/consulta|pregunta|informacion|información|info |question/.test(t)) intento = 'consulta';\n}\n\nconst datosActualizados = {\n  producto:         clean(d.producto),\n  medidas:          clean(d.medidas),\n  fecha:            clean(d.fecha),\n  tipo_cajon:       clean(d.tipo_cajon),\n  proteccion_extra: (d.proteccion_extra !== null && d.proteccion_extra !== undefined) ? d.proteccion_extra : null,\n  correo_contacto:  clean(d.correo_contacto),\n  nombre_cliente:   clean(d.nombre_cliente),\n  tipo_flujo:       clean(d.tipo_flujo),\n};\n\n// Extracción simple por reglas, según el paso pendiente — sin IA\nif ((proximoPaso === 'PRIMER_CONTACTO') && texto && (ctx.historial || '').trim().length > 0 && !datosActualizados.nombre_cliente) {\n  const nombre = texto.replace(/^(me llamo|mi nombre es|soy|my name is|i'?m|this is)\\s+/i, '').trim();\n  if (nombre && nombre.split(' ').length <= 4) datosActualizados.nombre_cliente = nombre;\n} else if (proximoPaso === 'PEDIR_PRODUCTO' && texto && !/^(hola|hi|buenas|hey|hello)/i.test(texto)) {\n  datosActualizados.producto = texto;\n} else if (proximoPaso === 'PEDIR_MEDIDAS' && /\\d/.test(texto)) {\n  datosActualizados.medidas = texto;\n} else if (proximoPaso === 'PEDIR_TIPO_CAJON') {\n  const norm = normalizeTipoCajon(texto);\n  datosActualizados.tipo_cajon = norm || 'cajones_cerrados';\n} else if (proximoPaso === 'PEDIR_PROTECCION') {\n  const acepta = /\\b(si+|yes|yep|claro|dale|foam|burbuja|esquinera|quiero|deseo)\\b/i.test(texto);\n  const rechaza = /\\b(no|nope|sin protecci[oó]n|no gracias|no quiero|not needed|no need)\\b/i.test(texto);\n  if (rechaza) datosActualizados.proteccion_extra = false;\n  else if (acepta) datosActualizados.proteccion_extra = true;\n} else if (proximoPaso === 'PEDIR_CORREO') {\n  const emailMatch = texto.match(/[\\w.+-]+@[\\w-]+\\.[a-zA-Z]{2,}/);\n  if (emailMatch) datosActualizados.correo_contacto = emailMatch[0];\n} else if (proximoPaso === 'PEDIR_FECHA' && texto) {\n  datosActualizados.fecha = texto;\n}\n\n// Mensaje según el paso — preguntas simples, sin IA, en el idioma detectado\nconst nombre = datosActualizados.nombre_cliente ? datosActualizados.nombre_cliente.split(' ')[0] : '';\nconst msgsES = {\n  PRIMER_CONTACTO:       (ctx.saludoHora || 'Hola') + ', soy Marco de Crating Express. ¿Con quién tengo el gusto?',\n  CONSULTA_ESTADO_PEDIDO: 'Para consultar el estado de tu pedido, por favor contacta directamente a nuestro equipo por correo o teléfono — en breve te atenderán.',\n  IDENTIFICAR_NECESIDAD: nombre ? `¿En qué puedo ayudarte hoy, ${nombre}?` : '¿En qué puedo ayudarte hoy?',\n  FLUJO_CONSULTA:        'En este momento no puedo responder tu consulta en detalle. Un especialista te contactará por correo — ¿me compartes tu email?',\n  PEDIR_PRODUCTO:        '¿Qué artículo necesitas embalar?',\n  PEDIR_MEDIDAS:         '¿Cuáles son las medidas en pulgadas? (Largo × Ancho × Alto)',\n  PEDIR_TIPO_CAJON:      `Para ${datosActualizados.producto || 'tu artículo'}, te recomiendo un cajón cerrado por la protección que ofrece. ¿Te parece bien?`,\n  PEDIR_PROTECCION:      '¿Necesitas protección interior como foam, burbuja o esquineras? Tiene un costo adicional.',\n  PEDIR_CORREO:          '¿A qué correo te contactamos?',\n  PEDIR_FECHA:           '¿Para cuándo necesitas el embalaje?',\n  LISTO_PARA_COTIZAR:    'Dame un momento para calcular el precio... 🔄',\n  POST_COTIZACION:       'En breve un especialista se pondrá en contacto contigo por correo con los detalles finales. ¡Gracias por contactar a Crating Express!',\n};\nconst msgsEN = {\n  PRIMER_CONTACTO:       (ctx.saludoHora || 'Hi') + \", I'm Marco from Crating Express. Who am I speaking with?\",\n  CONSULTA_ESTADO_PEDIDO: 'To check your order status, please contact our team directly by email or phone — they will assist you shortly.',\n  IDENTIFICAR_NECESIDAD: nombre ? `How can I help you today, ${nombre}?` : 'How can I help you today?',\n  FLUJO_CONSULTA:        \"I'm unable to answer that in detail right now. A specialist will reach out by email — could you share your email?\",\n  PEDIR_PRODUCTO:        'What item do you need to crate?',\n  PEDIR_MEDIDAS:         'What are the measurements in inches? (Length × Width × Height)',\n  PEDIR_TIPO_CAJON:      `For ${datosActualizados.producto || 'your item'}, I recommend a closed crate for maximum protection. Does that work for you?`,\n  PEDIR_PROTECCION:      'Do you need interior protection like foam, bubble wrap, or corner guards? It has an additional cost.',\n  PEDIR_CORREO:          'What email should we use to contact you?',\n  PEDIR_FECHA:           'When do you need the crating done?',\n  LISTO_PARA_COTIZAR:    'Give me a moment to calculate the price... 🔄',\n  POST_COTIZACION:       \"A specialist will follow up with you by email shortly with the final details. Thanks for reaching out to Crating Express!\",\n};\nconst msgs = isEN ? msgsEN : msgsES;\nconst mensaje = msgs[proximoPaso] || (isEN ? 'How else can I help you?' : '¿En qué más puedo ayudarte?');\n\n// Recalcular todosRecolectados igual que el flujo normal (sin depender de la IA)\nconst todosRecolectados = !ctx.cotizacionEnviada\n  && datosActualizados.tipo_flujo === 'cotizacion'\n  && !!datosActualizados.producto\n  && !!datosActualizados.medidas\n  && !!datosActualizados.correo_contacto\n  && !!datosActualizados.tipo_cajon\n  && datosActualizados.proteccion_extra !== null\n  && !!datosActualizados.fecha;\n\nlet dimensiones = ctx.dimensiones || null;\nif (datosActualizados.medidas && !dimensiones) {\n  const nums = datosActualizados.medidas.match(/(\\d+(?:\\.\\d+)?)/g);\n  if (nums && nums.length >= 3) {\n    dimensiones = { largo: parseFloat(nums[0]), ancho: parseFloat(nums[1]), alto: parseFloat(nums[2]) };\n  }\n}\n\n// Empaquetado en el mismo formato que Groq (choices[0].message.content) para que\n// 🔍 Parsear Respuesta IA lo procese exactamente igual, sin cambios ahí.\nconst payload = {\n  mensaje,\n  datos_actualizados: datosActualizados,\n  dimensiones: dimensiones || { largo: null, ancho: null, alto: null },\n  tipo_caja_api: datosActualizados.tipo_cajon,\n  todos_recolectados: todosRecolectados,\n  cotizador_enviado: false,\n  clasificacion: null,\n  intento,\n  resumen_lead: '',\n  escalada: false,\n  _contingencia: true,\n};\n\nreturn [{ json: {\n  choices: [{ message: { content: JSON.stringify(payload) } }]\n} }];\n"
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ model: 'glm-4.5-flash', messages: [{ role: 'system', content: $('Recibir Datos').item.json.sistemaIA }, { role: 'user', content: $('Recibir Datos').item.json.usuarioIA }], temperature: 0.3, max_tokens: 2500, response_format: { type: \"json_object\" } }) }}",
+          "options": {},
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth"
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          820,
+          460
+        ],
+        "id": "zhipu-fallback-node",
+        "name": "🤖 Zhipu: Fallback IA",
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "rWF3VkYbayILPZTH",
+            "name": "Zhipu GLM � Fallback IA (G54)"
+          }
+        }
+      },
+      {
         "parameters": {
           "conditions": {
             "options": {
@@ -454,20 +462,14 @@
             ]
           }
         },
-        "continueOnFail": true
-      },
-      {
-        "id": "modo-contingencia",
-        "name": "🆘 Modo Contingencia",
-        "type": "n8n-nodes-base.code",
+        "type": "n8n-nodes-base.if",
         "typeVersion": 2,
         "position": [
-          2400,
-          620
+          1080,
+          460
         ],
-        "parameters": {
-          "jsCode": "const ctx = $('Recibir Datos').item.json;\nconst d = ctx.datosRecolectados || {};\nconst texto = (ctx.texto || '').trim();\nconst proximoPaso = ctx.proximoPaso || 'PRIMER_CONTACTO';\nconst isEN = ctx.idiomaConversacion === 'inglés';\n\nconst clean = v => {\n  if (typeof v === 'boolean') return v;\n  if (!v || ['null','undefined','desconocido'].includes(String(v).trim().toLowerCase())) return null;\n  return v;\n};\n\n// tipo_cajon normalizer — misma tabla que el fallback normal, para consistencia\nfunction normalizeTipoCajon(raw) {\n  const t = String(raw || '').toLowerCase().trim();\n  const map = [\n    [/caj[oó]n(es)?[ _]?cerrad[oa]s?|closed/, 'cajones_cerrados'],\n    [/plataforma[ _]?contenedor|container[ _]?platform/, 'plataformas_contenedor'],\n    [/jaulas?|cage|abiert[ao]/, 'jaulas'],\n    [/cunas?|amarres?|crib/, 'cunas'],\n    [/palet(a|s)?|pallet/, 'palets_medida'],\n    [/feria|trade[ _]?show|exhibition/, 'embalaje_ferias'],\n    [/mayor|mayoreo|wholesale|bulk/, 'mayor'],\n  ];\n  const m = map.find(([rx]) => rx.test(t));\n  return m ? m[1] : null;\n}\n\nlet intento = null;\nif (!clean(d.tipo_flujo)) {\n  const t = texto.toLowerCase();\n  if (/cotiz|presupuesto|quote|estimad|precio|price|embalar|empacar|crate|pack|caja|cajon|cajón|box/.test(t)) intento = 'cotizacion';\n  else if (/consulta|pregunta|informacion|información|info |question/.test(t)) intento = 'consulta';\n}\n\nconst datosActualizados = {\n  producto:         clean(d.producto),\n  medidas:          clean(d.medidas),\n  fecha:            clean(d.fecha),\n  tipo_cajon:       clean(d.tipo_cajon),\n  proteccion_extra: (d.proteccion_extra !== null && d.proteccion_extra !== undefined) ? d.proteccion_extra : null,\n  correo_contacto:  clean(d.correo_contacto),\n  nombre_cliente:   clean(d.nombre_cliente),\n  tipo_flujo:       clean(d.tipo_flujo),\n};\n\n// Extracción simple por reglas, según el paso pendiente — sin IA\nif ((proximoPaso === 'PRIMER_CONTACTO') && texto && (ctx.historial || '').trim().length > 0 && !datosActualizados.nombre_cliente) {\n  const nombre = texto.replace(/^(me llamo|mi nombre es|soy|my name is|i'?m|this is)\\s+/i, '').trim();\n  if (nombre && nombre.split(' ').length <= 4) datosActualizados.nombre_cliente = nombre;\n} else if (proximoPaso === 'PEDIR_PRODUCTO' && texto && !/^(hola|hi|buenas|hey|hello)/i.test(texto)) {\n  datosActualizados.producto = texto;\n} else if (proximoPaso === 'PEDIR_MEDIDAS' && /\\d/.test(texto)) {\n  datosActualizados.medidas = texto;\n} else if (proximoPaso === 'PEDIR_TIPO_CAJON') {\n  const norm = normalizeTipoCajon(texto);\n  datosActualizados.tipo_cajon = norm || 'cajones_cerrados';\n} else if (proximoPaso === 'PEDIR_PROTECCION') {\n  const acepta = /\\b(si+|yes|yep|claro|dale|foam|burbuja|esquinera|quiero|deseo)\\b/i.test(texto);\n  const rechaza = /\\b(no|nope|sin protecci[oó]n|no gracias|no quiero|not needed|no need)\\b/i.test(texto);\n  if (rechaza) datosActualizados.proteccion_extra = false;\n  else if (acepta) datosActualizados.proteccion_extra = true;\n} else if (proximoPaso === 'PEDIR_CORREO') {\n  const emailMatch = texto.match(/[\\w.+-]+@[\\w-]+\\.[a-zA-Z]{2,}/);\n  if (emailMatch) datosActualizados.correo_contacto = emailMatch[0];\n} else if (proximoPaso === 'PEDIR_FECHA' && texto) {\n  datosActualizados.fecha = texto;\n}\n\n// Mensaje según el paso — preguntas simples, sin IA, en el idioma detectado\nconst nombre = datosActualizados.nombre_cliente ? datosActualizados.nombre_cliente.split(' ')[0] : '';\nconst msgsES = {\n  PRIMER_CONTACTO:       (ctx.saludoHora || 'Hola') + ', soy Marco de Crating Express. ¿Con quién tengo el gusto?',\n  CONSULTA_ESTADO_PEDIDO: 'Para consultar el estado de tu pedido, por favor contacta directamente a nuestro equipo por correo o teléfono — en breve te atenderán.',\n  IDENTIFICAR_NECESIDAD: nombre ? `¿En qué puedo ayudarte hoy, ${nombre}?` : '¿En qué puedo ayudarte hoy?',\n  FLUJO_CONSULTA:        'En este momento no puedo responder tu consulta en detalle. Un especialista te contactará por correo — ¿me compartes tu email?',\n  PEDIR_PRODUCTO:        '¿Qué artículo necesitas embalar?',\n  PEDIR_MEDIDAS:         '¿Cuáles son las medidas en pulgadas? (Largo × Ancho × Alto)',\n  PEDIR_TIPO_CAJON:      `Para ${datosActualizados.producto || 'tu artículo'}, te recomiendo un cajón cerrado por la protección que ofrece. ¿Te parece bien?`,\n  PEDIR_PROTECCION:      '¿Necesitas protección interior como foam, burbuja o esquineras? Tiene un costo adicional.',\n  PEDIR_CORREO:          '¿A qué correo te contactamos?',\n  PEDIR_FECHA:           '¿Para cuándo necesitas el embalaje?',\n  LISTO_PARA_COTIZAR:    'Dame un momento para calcular el precio... 🔄',\n  POST_COTIZACION:       'En breve un especialista se pondrá en contacto contigo por correo con los detalles finales. ¡Gracias por contactar a Crating Express!',\n};\nconst msgsEN = {\n  PRIMER_CONTACTO:       (ctx.saludoHora || 'Hi') + \", I'm Marco from Crating Express. Who am I speaking with?\",\n  CONSULTA_ESTADO_PEDIDO: 'To check your order status, please contact our team directly by email or phone — they will assist you shortly.',\n  IDENTIFICAR_NECESIDAD: nombre ? `How can I help you today, ${nombre}?` : 'How can I help you today?',\n  FLUJO_CONSULTA:        \"I'm unable to answer that in detail right now. A specialist will reach out by email — could you share your email?\",\n  PEDIR_PRODUCTO:        'What item do you need to crate?',\n  PEDIR_MEDIDAS:         'What are the measurements in inches? (Length × Width × Height)',\n  PEDIR_TIPO_CAJON:      `For ${datosActualizados.producto || 'your item'}, I recommend a closed crate for maximum protection. Does that work for you?`,\n  PEDIR_PROTECCION:      'Do you need interior protection like foam, bubble wrap, or corner guards? It has an additional cost.',\n  PEDIR_CORREO:          'What email should we use to contact you?',\n  PEDIR_FECHA:           'When do you need the crating done?',\n  LISTO_PARA_COTIZAR:    'Give me a moment to calculate the price... 🔄',\n  POST_COTIZACION:       \"A specialist will follow up with you by email shortly with the final details. Thanks for reaching out to Crating Express!\",\n};\nconst msgs = isEN ? msgsEN : msgsES;\nconst mensaje = msgs[proximoPaso] || (isEN ? 'How else can I help you?' : '¿En qué más puedo ayudarte?');\n\n// Recalcular todosRecolectados igual que el flujo normal (sin depender de la IA)\nconst todosRecolectados = !ctx.cotizacionEnviada\n  && datosActualizados.tipo_flujo === 'cotizacion'\n  && !!datosActualizados.producto\n  && !!datosActualizados.medidas\n  && !!datosActualizados.correo_contacto\n  && !!datosActualizados.tipo_cajon\n  && datosActualizados.proteccion_extra !== null\n  && !!datosActualizados.fecha;\n\nlet dimensiones = ctx.dimensiones || null;\nif (datosActualizados.medidas && !dimensiones) {\n  const nums = datosActualizados.medidas.match(/(\\d+(?:\\.\\d+)?)/g);\n  if (nums && nums.length >= 3) {\n    dimensiones = { largo: parseFloat(nums[0]), ancho: parseFloat(nums[1]), alto: parseFloat(nums[2]) };\n  }\n}\n\n// Empaquetado en el mismo formato que Groq (choices[0].message.content) para que\n// 🔍 Parsear Respuesta IA lo procese exactamente igual, sin cambios ahí.\nconst payload = {\n  mensaje,\n  datos_actualizados: datosActualizados,\n  dimensiones: dimensiones || { largo: null, ancho: null, alto: null },\n  tipo_caja_api: datosActualizados.tipo_cajon,\n  todos_recolectados: todosRecolectados,\n  cotizador_enviado: false,\n  clasificacion: null,\n  intento,\n  resumen_lead: '',\n  escalada: false,\n  _contingencia: true,\n};\n\nreturn [{ json: {\n  choices: [{ message: { content: JSON.stringify(payload) } }]\n} }];\n"
-        }
+        "id": "zhipu-if-node",
+        "name": "🔀 ¿Zhipu OK?"
       }
     ],
     "connections": {
@@ -504,36 +506,7 @@
           ],
           [
             {
-              "node": "🤖 Gemini: Fallback IA",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🤖 Gemini: Fallback IA": {
-        "main": [
-          [
-            {
-              "node": "🔀 ¿Gemini OK?",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔀 ¿Gemini OK?": {
-        "main": [
-          [
-            {
-              "node": "🔍 Parsear Respuesta IA",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "🆘 Modo Contingencia",
+              "node": "🤖 Zhipu: Fallback IA",
               "type": "main",
               "index": 0
             }
@@ -550,6 +523,35 @@
             }
           ]
         ]
+      },
+      "🤖 Zhipu: Fallback IA": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Zhipu OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Zhipu OK?": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Respuesta IA",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🆘 Modo Contingencia",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -557,22 +559,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
+    "createdAt": "2026-08-20T14:49:08.595Z",
+    "updatedAt": "2026-08-20T14:49:08.595Z",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-08-17T17:01:30.419Z",
-        "id": 2891,
+        "id": 2917,
         "workflowId": "J8qbKOF7t4GnhRDT",
-        "versionId": "d4e3228d-09c3-40af-a236-47c26bb784c3",
+        "versionId": "4861d894-83a0-423a-a313-f519f4cc4cd6",
         "event": "activated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      },
-      {
-        "createdAt": "2026-08-17T17:01:30.392Z",
-        "id": 2890,
-        "workflowId": "J8qbKOF7t4GnhRDT",
-        "versionId": "d4e3228d-09c3-40af-a236-47c26bb784c3",
-        "event": "deactivated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-08-20T14:49:08.845Z"
       }
     ]
   }
