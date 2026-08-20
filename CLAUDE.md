@@ -2193,6 +2193,16 @@ Documento `respuesta-g54-ago20.html` actualizado con el hallazgo de `resumen_est
 
 Documento `investigacion-modulo-voz-ago20.html` creado y enviado a la usuaria — sin ningún cambio de código todavía, es investigación pura para decidir el próximo paso.
 
+**Corrección de alcance, minutos después, a partir de una aclaración directa de la usuaria:** el pedido real no era construir el motor de voz completo — es replicar la **capa de configuración** de VAPI (el sistema que le permite armar/editar un asistente), seguir usando VAPI (u otra API de voces) como motor real, y construir arriba de eso nuestro propio panel multiempresa de G54. Esto cambia por completo la recomendación anterior.
+
+**Confirmado con la documentación real de la API de VAPI:** un Assistant es un objeto JSON simple (`name`, `firstMessage`, `model.provider/model/messages`, `voice.provider/voiceId`, `transcriber`), creado/editado por `POST/PATCH /assistant` — y VAPI acepta Groq como proveedor de LLM directo, el mismo que ya usa Marco Voz hoy, sin tener que contratar nada nuevo para el "cerebro" del bot.
+
+**El hallazgo que hace que esto encaje perfecto en n8n, sin ningún servidor nuevo:** VAPI tiene un mecanismo de `assistant-request` — si a un número de teléfono no se le asigna un `assistantId` fijo, cada llamada real dispara un webhook a un servidor nuestro (con un límite de 7.5 segundos) esperando que le devolvamos la configuración completa del asistente para esa llamada puntual. Esto es exactamente el mismo patrón que ya usan Sales AI Motor (resuelve `system_prompt` por `phone_number_id`) y Community AI (por `page_id`) — un solo webhook en n8n, sin crear ni mantener sincronizados N objetos `Assistant` guardados, y sin tocar audio en ningún momento (VAPI se encarga de eso, nosotros solo respondemos configuración). Con esto, editar el prompt/voz de un cliente en el panel de G54 no requiere ningún llamado a la API de VAPI — el cambio se aplica solo en la próxima llamada.
+
+**Único límite real encontrado, no bloqueante:** confirmado con comparativas de agencias que ya lo enfrentaron — la API de VAPI opera a nivel de una sola cuenta/organización, sin aislamiento nativo de costos/datos por cliente. Mismo tipo de responsabilidad que ya asumimos con Meta/Groq — el aislamiento real vive en G54 vía `company_id`, no en el proveedor. El webhook `assistant-request` ya resuelve esto de forma natural (cada número de teléfono es de un solo cliente real); si en algún momento se quiere medir cuánto gasta cada cliente en minutos, habría que guardarlo nosotros al terminar cada llamada.
+
+Documento actualizado en el lugar (no se creó uno nuevo) con la corrección de alcance, la API real de configuración, y el veredicto final revisado — reenviado a la usuaria.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.

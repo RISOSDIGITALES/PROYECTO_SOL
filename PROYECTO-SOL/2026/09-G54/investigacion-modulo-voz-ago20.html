@@ -117,17 +117,98 @@
     <h1>Módulo de <span>Bots de Llamada</span> — investigación de arquitectura</h1>
     <p>Cómo funciona VAPI de verdad por debajo, qué recursos reales usa, y qué necesitaríamos para construir algo propio — pensado desde el día uno como un módulo multiempresa de G54, donde el cliente solo configura (prompt, voz, número) desde nuestra interfaz, sin tocar código.</p>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> Investigación · 20 Ago 2026</div>
+      <div class="meta-item"><div class="dot"></div> Investigación · 20 Ago 2026 · actualizado con el alcance real</div>
     </div>
   </div>
 </div>
 
 <div class="container">
 
-  <!-- ============ QUE ES VAPI ============ -->
+  <!-- ============ CORRECCION DE ALCANCE ============ -->
+  <div class="item-card rec">
+    <div class="item-header">
+      <div><div class="item-title">Corrección de alcance — no reemplazamos el motor de voz, replicamos la capa de configuración</div></div>
+      <span class="badge rec">Alcance real del pedido</span>
+    </div>
+    <div class="item-body">
+      <p class="item-why">La primera versión de este documento investigaba cómo construir el motor completo (VAD, streaming, coordinación en tiempo real) — eso queda descartado. <strong>El pedido real es más chico y mucho más alcanzable:</strong> seguimos usando VAPI (o una API de voces) como motor real de la llamada, y lo que construimos es nuestra propia capa de configuración multiempresa arriba de eso — el mismo tipo de panel que ya existe para WhatsApp Config, pero para bots de llamada. El resto del documento original (presupuesto de latencia, por qué n8n no sirve para audio en vivo) sigue siendo información real y útil como contexto — simplemente no aplica a lo que vamos a construir, porque no vamos a tocar el audio en ningún momento, VAPI se encarga de eso.</p>
+    </div>
+  </div>
+
+  <!-- ============ LA API DE CONFIGURACION REAL ============ -->
+  <div class="cat-header">
+    <span class="cat-icon">⚙️</span>
+    <span class="cat-title">La API de configuración real de VAPI</span>
+  </div>
+
+  <div class="item-card ok">
+    <div class="item-header">
+      <div><div class="item-title">Un Assistant es solo un objeto JSON — se crea y edita por API, sin tocar su dashboard</div></div>
+      <span class="badge ok">Confirmado en la doc oficial</span>
+    </div>
+    <div class="item-body">
+      <p class="item-why"><code>POST https://api.vapi.ai/assistant</code> (y <code>PATCH /assistant/{id}</code> para editar), con <code>Authorization: Bearer $VAPI_API_KEY</code> — la forma real:</p>
+      <pre>{
+  "name": "Bot de [Empresa]",
+  "firstMessage": "Hola, gracias por llamar a [Empresa], ¿en qué te puedo ayudar?",
+  "model": {
+    "provider": "groq",              // ya lo usamos hoy en Marco Voz
+    "model": "llama-3.3-70b-versatile",
+    "messages": [{ "role": "system", "content": "...el system_prompt real de esa empresa..." }]
+  },
+  "voice": {
+    "provider": "11labs",            // o Cartesia, PlayHT, etc.
+    "voiceId": "onwK4e9ZLuTAKqWW03F9" // elegible desde un selector con muestra de audio
+  },
+  "transcriber": { "provider": "deepgram", "model": "nova-2", "language": "es" }
+}</pre>
+      <p class="item-why">Confirmado: VAPI acepta Groq como proveedor de modelo directo — no hace falta contratar OpenAI ni Anthropic para el LLM, seguimos con lo mismo que ya usa Marco Voz hoy.</p>
+    </div>
+  </div>
+
+  <div class="item-card ok">
+    <div class="item-header">
+      <div><div class="item-title">El patrón que de verdad conviene — un asistente "genérico" que VAPI configura al vuelo en cada llamada, no uno por cliente guardado a mano</div></div>
+      <span class="badge rec">Esto es lo que recomiendo construir</span>
+    </div>
+    <div class="item-body">
+      <p class="item-why">VAPI tiene un mecanismo pensado exactamente para esto: si a un número de teléfono <strong>no</strong> le asignás un <code>assistantId</code> fijo, cada llamada real dispara un webhook <code>assistant-request</code> a un servidor nuestro, con los datos de la llamada (número marcado, número del que llama) — y esperamos, con un límite de 7.5 segundos, que le devolvamos el objeto completo del asistente a usar para esa llamada puntual.</p>
+      <p class="item-why"><strong>Esto es exactamente el mismo patrón que ya usamos en toda la plataforma</strong> — Sales AI Motor resuelve el <code>system_prompt</code> real por <code>phone_number_id</code>, Community AI lo resuelve por <code>page_id</code>. Acá sería idéntico: número de teléfono real de la llamada → resolver <code>company_id</code> → leer su config de voz en G54 → devolvérsela a VAPI en la respuesta del webhook, armada al vuelo. <strong>Nunca hay que crear ni mantener sincronizados N objetos <code>Assistant</code> guardados</strong> — un solo webhook en n8n sirve a cualquier cantidad de clientes, cada uno con su propio número real.</p>
+      <pre>Llamada real entra a un número de un cliente
+  → VAPI dispara "assistant-request" a nuestro webhook n8n (HTTP normal, no streaming)
+  → n8n: resuelve company_id por el número marcado → lee la config de voz en G54
+    (mismo patrón exacto de WA Config: system_prompt, voz elegida, primer mensaje)
+  → n8n responde el JSON del assistant armado con esos datos (dentro de los 7.5s)
+  → VAPI toma esa config y recién ahí arranca la llamada real — el audio en sí
+    nunca pasa por n8n ni por nuestro servidor, solo la configuración</pre>
+      <p class="item-why">Con esto, editar el prompt o la voz de un cliente desde el panel de G54 <strong>no requiere ningún llamado a la API de VAPI</strong> — el cambio se aplica solo, porque cada llamada nueva vuelve a preguntar. Cero riesgo de que un cliente edite su config y quede desincronizada con lo que realmente tiene guardado VAPI.</p>
+    </div>
+  </div>
+
+  <div class="item-card warn">
+    <div class="item-header">
+      <div><div class="item-title">Único límite real encontrado — VAPI no es multiempresa de fábrica</div></div>
+      <span class="badge warn">A tener en cuenta, no bloqueante</span>
+    </div>
+    <div class="item-body">
+      <p class="item-why">Confirmado con comparativas de agencias que ya pasaron por esto: la API de VAPI opera a nivel de una sola cuenta/organización — no tiene un concepto nativo de "sub-cuenta por cliente" con aislamiento de costos o datos. Todos los números y toda la actividad de todos nuestros clientes conviven bajo nuestra misma cuenta de VAPI.</p>
+      <p class="item-why"><strong>Esto no es un problema nuevo para nosotros — es exactamente la misma responsabilidad que ya asumimos con Meta/Groq/todo lo demás:</strong> el aislamiento por empresa (que un cliente nunca vea ni toque los datos de otro) ya vive en G54 vía <code>company_id</code>, no en el proveedor de turno. El webhook <code>assistant-request</code> resuelve esto de forma nativa (cada número de teléfono es de un solo cliente real), así que el riesgo de mezcla es bajo — pero si en algún momento se quiere medir cuánto gasta cada cliente en llamadas, hay que construirlo nosotros (guardar el costo real de cada llamada en G54 al terminar, no confiar en que VAPI lo separe solo).</p>
+    </div>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">Números de teléfono — también por API, sin tocar el dashboard de VAPI</div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why"><code>POST /phone-number</code> — importa un número real de Twilio (o Vonage) a la cuenta de VAPI. Con el patrón de <code>assistant-request</code> de arriba, no hace falta asignarle ningún <code>assistantId</code> fijo al número — se deja "abierto" para que cada llamada resuelva su propia configuración. Esto significa que dar de alta a un cliente nuevo es: comprar/asignar un número real de Twilio → un llamado a la API de VAPI para importarlo → guardar en G54 qué <code>company_id</code> corresponde a ese número — 3 pasos, ningún código nuevo por cliente.</p>
+    </div>
+  </div>
+
+  <!-- ============ QUE ES VAPI (contexto) ============ -->
   <div class="cat-header">
     <span class="cat-icon">🧩</span>
-    <span class="cat-title">Qué es VAPI en realidad</span>
+    <span class="cat-title">Contexto — qué es VAPI por debajo (para entender por qué su API de config funciona así)</span>
   </div>
 
   <div class="item-card info">
@@ -196,103 +277,18 @@
 
   <!-- ============ POR QUE N8N NO ALCANZA ============ -->
   <div class="cat-header">
-    <span class="cat-icon">🚫</span>
-    <span class="cat-title">Por qué esto NO puede vivir dentro de n8n</span>
-  </div>
-
-  <div class="item-card bad">
-    <div class="item-header">
-      <div><div class="item-title">n8n está construido para pedido→respuesta, no para streaming de audio en vivo</div></div>
-      <span class="badge bad">Restricción real, no de diseño</span>
-    </div>
-    <div class="item-body">
-      <p class="item-why">Esto es importante decirlo claro, porque toda la plataforma G54 hoy vive en n8n — pero un bot de llamada real no puede seguir ese mismo patrón, por 3 razones concretas:</p>
-      <ol class="item-why">
-        <li><strong>Volumen de mensajes:</strong> Twilio manda un paquete de audio cada 20 milisegundos — 50 por segundo, por cada llamada activa. Mandar eso como 50 webhooks por segundo a n8n agota memoria y conexiones casi de inmediato.</li>
-        <li><strong>n8n no sabe procesar streaming real:</strong> no tiene soporte nativo para APIs que devuelven datos en flujo continuo (SSE/WebSocket) — el propio foro de la comunidad de n8n lo confirma como una limitación conocida, la gente que necesita esto termina armando funciones aparte, fuera de n8n.</li>
-        <li><strong>Los datos binarios de audio no viajan bien por su motor:</strong> las versiones actuales de n8n tienen problemas serializando buffers de audio crudo dentro de un flujo de trabajo normal.</li>
-      </ol>
-      <p class="item-why"><strong>Esto no es un defecto de n8n — es que se está usando la herramienta correcta para lo que NO es.</strong> n8n sigue siendo perfecto para todo lo que ya hace bien en el resto de la plataforma: leer configuración de G54, guardar el lead en el CRM, mandar el correo de resumen post-llamada, disparar seguimientos — todo eso es petición→respuesta, exactamente su fuerte.</p>
-    </div>
-  </div>
-
-  <!-- ============ ARQUITECTURA RECOMENDADA ============ -->
-  <div class="cat-header">
-    <span class="cat-icon">🏗️</span>
-    <span class="cat-title">Qué necesitaríamos para armar algo propio</span>
-  </div>
-
-  <div class="item-card rec">
-    <div class="item-header">
-      <div><div class="item-title">Recomendación: no reconstruir el motor de streaming desde cero</div></div>
-      <span class="badge rec">Recomendación</span>
-    </div>
-    <div class="item-body">
-      <p class="item-why">La parte más difícil de todo esto — coordinar VAD, detección de fin de turno, streaming en paralelo, y la interrupción en menos de 100ms — es exactamente lo que a VAPI le tomó 3 artículos técnicos largos explicar, y ni así lo contaron completo. Reconstruir esa capa desde cero, a mano, es un proyecto de meses con un riesgo real de terminar con un bot que suena "robótico" (silencios largos, interrupciones raras) sin que sea obvio por qué.</p>
-      <p class="item-why"><strong>Existen frameworks open source, gratuitos y auto-hospedables, que ya resolvieron exactamente ese problema</strong> — no son productos cerrados como VAPI, son librerías que uno corre en su propio servidor, con control total y sin ningún costo de licencia:</p>
-      <table>
-        <tr><th>Framework</th><th>Lenguaje</th><th>Telefonía</th><th>Para qué sirve acá</th></tr>
-        <tr><td><strong>Pipecat</strong></td><td>Python</td><td>Twilio, Telnyx, Daily</td><td>El más simple de entender — un pipeline claro VAD→STT→LLM→TTS. Mejor documentación del grupo.</td></tr>
-        <tr><td><strong>LiveKit Agents</strong></td><td>Python/Node</td><td>SIP nativo + números propios</td><td>El más maduro para producción real, mayor calidad de tiempo real, más proveedores soportados.</td></tr>
-        <tr><td><strong>Vocode</strong></td><td>Python/TypeScript</td><td>Twilio, Vonage</td><td>Enfocado específicamente en telefonía — nace pensado para justo este caso de uso.</td></tr>
-      </table>
-      <p class="item-why" style="margin-top:8px;">Cualquiera de los tres ya trae resuelto: VAD, streaming en paralelo, detección de fin de turno, y barge-in — configurable, no hay que inventarlo. Nuestro trabajo pasaría a ser <strong>wiring</strong> (conectar el framework a Twilio, a Groq como LLM, y a un proveedor de voz), no construir un motor de audio en tiempo real desde cero.</p>
-    </div>
+    <span class="cat-icon">📦</span>
+    <span class="cat-title">Contexto archivado — solo aplicaría si algún día se decide dejar de depender de VAPI</span>
+    <span class="cat-sub">no es el plan de hoy</span>
   </div>
 
   <div class="item-card">
     <div class="item-header">
-      <div><div class="item-title">Arquitectura de 2 capas — el servidor de voz separado de n8n, coordinados por G54</div></div>
+      <div><div class="item-title">Por qué el motor de audio en vivo no puede vivir en n8n (sigue siendo cierto, pero no aplica a lo que vamos a construir)</div></div>
+      <span class="badge info">Solo si el día de mañana se evalúa reemplazar a VAPI</span>
     </div>
     <div class="item-body">
-      <p class="item-why"><strong>Capa 1 — el servidor de voz (nuevo, siempre corriendo):</strong> un proceso Python (Pipecat o LiveKit Agents) que escucha por WebSocket la llamada real de Twilio, corre el pipeline completo (VAD → STT → LLM → TTS) y le habla de vuelta al cliente en tiempo real. Este servidor necesita estar prendido todo el tiempo (no es algo que "se dispara" como un workflow de n8n), en un servidor propio con salida pública HTTPS — el mismo tipo de infraestructura que ya paga la usuaria para n8n/G54, un servicio más al lado.</p>
-      <pre>Llamada real → Twilio Media Streams (WebSocket, audio en crudo)
-             → Servidor de Voz (Pipecat/LiveKit) ← acá vive el VAD/STT/LLM/TTS
-                    ↓ (al empezar la llamada, y al terminarla)
-             → Webhook a n8n: "empezó/terminó la llamada de la empresa N"
-             → n8n: lee el prompt/voz configurados en G54 para esa empresa,
-               se los pasa al servidor de voz, y al terminar guarda el
-               resumen/lead en el CRM y dispara el correo de seguimiento
-               — exactamente el mismo patrón que ya usa Marco por WhatsApp</pre>
-      <p class="item-why"><strong>Capa 2 — n8n, sin cambios de rol:</strong> sigue siendo el que resuelve "qué configuración tiene esta empresa" (mismo patrón ya construido para WhatsApp/Telegram — <code>company_id</code>, sin nada hardcodeado), guarda el lead/deal en el CRM, y manda notificaciones — el servidor de voz nunca necesita saber nada de G54 directamente, solo le pregunta a n8n al empezar la llamada y le avisa a n8n al terminarla.</p>
-    </div>
-  </div>
-
-  <div class="item-card">
-    <div class="item-header">
-      <div><div class="item-title">Piezas que ya tenemos y podemos reusar tal cual</div></div>
-    </div>
-    <div class="item-body">
-      <ul class="item-why">
-        <li><strong>LLM:</strong> Groq, ya en producción, ya barato, ya con la cadena de respaldo armada (Zhipu). No hace falta contratar nada nuevo para el "cerebro" del bot.</li>
-        <li><strong>Telefonía:</strong> Twilio, ya lo usamos para el número real de Marco Voz — mismo proveedor, solo se agrega el uso de Media Streams (bidireccional) en vez del flujo actual de VAPI.</li>
-        <li><strong>Voz (TTS):</strong> acá hay que decidir — ElevenLabs (la voz que ya usa Marco hoy, buena calidad, ~$0.05-0.08/min) o algo más barato como Cartesia/Deepgram Aura (~$0.02-0.04/min) o incluso probar Fish Audio, que justo se investigó hoy — igual de real como opción a evaluar, aunque hoy sin saldo de API cargado.</li>
-        <li><strong>STT:</strong> es la única pieza 100% nueva — no tenemos ningún proveedor de transcripción en tiempo real todavía. Deepgram es el más usado del mercado (~$0.0043-0.016/min), con buen soporte nativo en los 3 frameworks de arriba.</li>
-      </ul>
-    </div>
-  </div>
-
-  <!-- ============ COSTO REAL ============ -->
-  <div class="cat-header">
-    <span class="cat-icon">💰</span>
-    <span class="cat-title">Costo real, propio vs. VAPI</span>
-  </div>
-
-  <div class="item-card">
-    <div class="item-header">
-      <div><div class="item-title">El "$0.05/min" de VAPI nunca es el costo real — arman todo por debajo con los mismos proveedores</div></div>
-    </div>
-    <div class="item-body">
-      <table>
-        <tr><th>Componente</th><th class="num">Costo real / min</th></tr>
-        <tr><td>Telefonía (Twilio)</td><td class="num">$0.0085 – $0.014</td></tr>
-        <tr><td>STT (Deepgram)</td><td class="num">$0.0025 – $0.016</td></tr>
-        <tr><td>LLM (con Groq ya es de las más baratas del mercado)</td><td class="num">$0.003 – $0.015</td></tr>
-        <tr><td>TTS (ElevenLabs / Cartesia)</td><td class="num">$0.02 – $0.08</td></tr>
-        <tr><td><strong>Total, propio, sin ningún markup de orquestación</strong></td><td class="num"><strong>~$0.04 – $0.12</strong></td></tr>
-        <tr><td>VAPI (mismos proveedores + su capa de orquestación)</td><td class="num">$0.13 – $0.32</td></tr>
-      </table>
-      <p class="item-why" style="margin-top:8px;">La diferencia real no es "VAPI cobra $0.05" — ese número nunca incluye telefonía, STT, LLM ni TTS, que se pagan todos aparte igual. La diferencia real es que un servidor propio se ahorra esa capa de orquestación de $0.05-0.14/min <strong>por cada minuto de cada llamada de cada cliente, para siempre</strong> — a la escala de una plataforma multiempresa como G54, eso se acumula rápido y es un argumento de negocio real, no solo técnico.</p>
+      <p class="item-why">Con el plan real (VAPI sigue siendo el motor, nosotros solo armamos la configuración), n8n nunca toca un solo paquete de audio — así que esta limitación no nos afecta hoy. Queda documentada porque es información real y útil si en el futuro se evalúa independizarse de VAPI por completo: Twilio manda un paquete de audio cada 20ms (50/segundo por llamada), n8n no tiene soporte nativo para streaming real, y sus buffers binarios no serializan bien en ese escenario. Si ese día llega, la ruta sería un framework open source auto-hospedado (Pipecat, LiveKit Agents o Vocode) corriendo en un servidor propio, separado de n8n — pero es una decisión de mucho después, no algo que bloquee el plan de hoy.</p>
     </div>
   </div>
 
@@ -329,17 +325,18 @@
 
   <div class="item-card rec">
     <div class="item-header">
-      <div><div class="item-title">Sí es viable construir esto propio — pero no arrancando desde cero, y no dentro de n8n</div></div>
+      <div><div class="item-title">Viable, y mucho más chico de lo que parecía al principio — es un módulo de configuración, no un motor de voz</div></div>
       <span class="badge rec">Recomendación final</span>
     </div>
     <div class="item-body">
-      <p class="item-why">Tres decisiones concretas, en orden de lo que hay que resolver primero:</p>
+      <p class="item-why">Con el alcance corregido, esto se parece exactamente a los demás módulos que ya existen en G54 — no a un proyecto de infraestructura nuevo. Cuatro piezas concretas:</p>
       <ol class="item-why">
-        <li><strong>Elegir un framework open source (Pipecat o LiveKit Agents), no reinventar el motor de streaming.</strong> Es la parte que de verdad es difícil y ya está resuelta por gente que se dedica solo a eso.</li>
-        <li><strong>Levantar un servidor nuevo, separado de n8n, siempre encendido</strong> — n8n sigue siendo el orquestador de "todo lo demás" (config por empresa, CRM, notificaciones), igual que hoy con WhatsApp/Telegram.</li>
-        <li><strong>Contratar Deepgram (STT) — es la única pieza que hoy no tenemos</strong>; el resto (Twilio, Groq, y una decisión entre ElevenLabs/Cartesia/Fish Audio para la voz) ya está parcial o totalmente resuelto en la plataforma.</li>
+        <li><strong>Sección nueva en el panel de G54</strong> — "Configuración de Bot de Llamada" por empresa, mismos campos que el resto de este documento ya detalla (prompt, voz, saludo, escalación).</li>
+        <li><strong>Un solo webhook nuevo en n8n</strong> — responde al <code>assistant-request</code> de VAPI armando la config al vuelo desde G54, mismo patrón exacto que ya usan Sales AI Motor y Community AI para resolver su config por teléfono/página. Sin servidor nuevo, sin tocar audio, sin salir de lo que n8n ya hace bien.</li>
+        <li><strong>Un número real de Twilio por cliente</strong>, importado a VAPI por API (3 pasos, sin código nuevo por cliente) — dejado "abierto" (sin <code>assistantId</code> fijo) para que el webhook de arriba resuelva la config en cada llamada.</li>
+        <li><strong>Seguimos usando Groq (LLM) y ElevenLabs/Cartesia/Fish Audio (voz) directo desde la config de VAPI</strong> — no hay ningún proveedor nuevo que contratar para esto en particular, más allá de elegir la voz.</li>
       </ol>
-      <p class="item-why" style="margin-top:6px;"><strong>Lo que esto no resuelve solo, y hay que decir con honestidad:</strong> aunque el framework trae el VAD/turn-detection ya armado, afinarlo para que se sienta natural con clientes reales (no interrumpir de más, no tardar de más) sigue necesitando pruebas reales con llamadas reales — el mismo tipo de trabajo iterativo que ya se hizo con Marco por WhatsApp, ahora en el dominio de voz. No es "conectar y listo" desde el primer día, pero tampoco es un proyecto de meses si se apoya en un framework ya maduro en vez de construir el motor de cero.</p>
+      <p class="item-why" style="margin-top:6px;"><strong>El único punto a vigilar, con honestidad:</strong> VAPI no separa cuentas por cliente de forma nativa — todos nuestros clientes conviven bajo nuestra misma cuenta de VAPI. No es un bloqueante (el aislamiento real ya lo hacemos en G54 con <code>company_id</code>, igual que con Meta/Groq), pero si en algún momento se quiere facturarle a cada cliente su consumo real de minutos, hay que guardar ese dato nosotros al terminar cada llamada, no asumir que VAPI lo separa solo.</p>
     </div>
   </div>
 
