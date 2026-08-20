@@ -1,11 +1,16 @@
 {
-  "updatedAt": "2026-08-17T16:33:17.973Z",
-  "createdAt": "2026-06-20T20:02:45.377Z",
   "id": "62tIvF0snsrMj0sM",
   "name": "Community AI — G54",
   "description": null,
   "active": true,
+  "activeVersionId": "9e42c7ba-a199-440a-832d-eae3f8ca16a0",
+  "createdAt": "2026-06-20T20:02:45.377Z",
+  "updatedAt": "2026-08-20T15:54:12.457Z",
   "isArchived": false,
+  "versionId": "9e42c7ba-a199-440a-832d-eae3f8ca16a0",
+  "versionCounter": 41,
+  "sourceWorkflowId": null,
+  "triggerCount": 3,
   "nodes": [
     {
       "parameters": {
@@ -197,7 +202,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst resolver = $('🔍 Resolver Empresa').item.json;\nconst pageData = $('🔍 Obtener Config Página (G54)').item.json;\n\n// company_id: de la API de páginas > query param > fallback CE\nconst company_id = String(pageData.company_id || resolver.queryCompanyId || '');\n\n// Tokens: preferir el Page Access Token real (intercambiado desde el token de G54,\n// necesario porque el token guardado en G54 es de usuario, no de página — Meta rechaza\n// publicar comentarios/DMs con un token de usuario aunque sí sirva para otras acciones).\nlet fb_access_token = pageData.fb_access_token || '';\ntry {\n  const exchanged = $('🔑 Intercambiar Page Token (FB)').item.json;\n  if (exchanged && exchanged.access_token) fb_access_token = exchanged.access_token;\n} catch (e) { /* si falló el intercambio, seguimos con el token original de G54 */ }\n\nconst ig_user_id = pageData.ig_user_id || '';\n\nreturn [{ json: {\n  G54_BASE_URL: config.G54_BASE_URL,\n  G54_N8N_TOKEN: config.G54_N8N_TOKEN,\n  G54_AGENT_TOKEN: config.G54_AGENT_TOKEN,\n  G54_COMPANY_ID: company_id,\n  FB_PAGE_ID: resolver.pageId || '',\n  FB_ACCESS_TOKEN: fb_access_token,\n  IG_USER_ID: ig_user_id,\n  GROQ_API_KEY: config.GROQ_API_KEY,\n  WA_LINK: config.WA_LINK || ''\n}}];"
+        "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst resolver = $('🔍 Resolver Empresa').item.json;\nconst pageData = $('🔍 Obtener Config Página (G54)').item.json;\n\n// company_id: de la API de páginas > query param > fallback CE\nconst company_id = String(pageData.company_id || resolver.queryCompanyId || '');\n\n// Tokens: preferir el Page Access Token real (intercambiado desde el token de G54,\n// necesario porque el token guardado en G54 es de usuario, no de página — Meta rechaza\n// publicar comentarios/DMs con un token de usuario aunque sí sirva para otras acciones).\nlet fb_access_token = pageData.fb_access_token || '';\ntry {\n  const exchanged = $('🔑 Intercambiar Page Token (FB)').item.json;\n  if (exchanged && exchanged.access_token) fb_access_token = exchanged.access_token;\n} catch (e) { /* si falló el intercambio, seguimos con el token original de G54 */ }\n\nconst ig_user_id = pageData.ig_user_id || '';\nconst ig_access_token = pageData.ig_access_token || '';\n\nreturn [{ json: {\n  G54_BASE_URL: config.G54_BASE_URL,\n  G54_N8N_TOKEN: config.G54_N8N_TOKEN,\n  G54_AGENT_TOKEN: config.G54_AGENT_TOKEN,\n  G54_COMPANY_ID: company_id,\n  FB_PAGE_ID: resolver.pageId || '',\n  FB_ACCESS_TOKEN: fb_access_token,\n  IG_USER_ID: ig_user_id,\n  IG_ACCESS_TOKEN: ig_access_token,\n  GROQ_API_KEY: config.GROQ_API_KEY,\n  WA_LINK: config.WA_LINK || ''\n}}];"
       },
       "id": "aplicar-config",
       "name": "🏢 Aplicar Config Empresa",
@@ -515,7 +520,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  \"recipient\": { \"id\": $('🔍 Parsear Respuesta Community AI').item.json.usuarioId },\n  \"message\": { \"text\": $('🔍 Parsear Respuesta Community AI').item.json.respuestaPublica },\n  \"access_token\": $('🏢 Aplicar Config Empresa').item.json.FB_ACCESS_TOKEN\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  \"recipient\": { \"id\": $('🔍 Parsear Respuesta Community AI').item.json.usuarioId },\n  \"message\": { \"text\": $('🔍 Parsear Respuesta Community AI').item.json.respuestaPublica },\n  \"access_token\": ($('🏢 Aplicar Config Empresa').item.json.IG_ACCESS_TOKEN || $('🏢 Aplicar Config Empresa').item.json.FB_ACCESS_TOKEN)\n}) }}",
         "options": {}
       },
       "id": "reply-ig-dm",
@@ -639,7 +644,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ messaging_type: 'RESPONSE', recipient: { id: $('🔍 Parsear Respuesta Community AI').item.json.usuarioId }, message: { text: 'Hola ' + ($('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre ? $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre + ',' : '') + ' vi tu comentario y me gustaría ayudarte mejor. ¿Me cuentas un poco más sobre lo que necesitas?' }, access_token: $('🏢 Aplicar Config Empresa').item.json.FB_ACCESS_TOKEN }) }}",
+        "jsonBody": "={{ JSON.stringify({ messaging_type: 'RESPONSE', recipient: { id: $('🔍 Parsear Respuesta Community AI').item.json.usuarioId }, message: { text: 'Hola ' + ($('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre ? $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre + ',' : '') + ' vi tu comentario y me gustaría ayudarte mejor. ¿Me cuentas un poco más sobre lo que necesitas?' }, access_token: ($('🔍 Parsear Respuesta Community AI').item.json.plataforma === 'instagram' ? ($('🏢 Aplicar Config Empresa').item.json.IG_ACCESS_TOKEN || $('🏢 Aplicar Config Empresa').item.json.FB_ACCESS_TOKEN) : $('🏢 Aplicar Config Empresa').item.json.FB_ACCESS_TOKEN) }) }}",
         "options": {}
       },
       "id": "enviar-dm-lead",
@@ -2479,45 +2484,38 @@
       ]
     }
   },
+  "nodeGroups": [],
   "settings": {
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
   "staticData": null,
-  "meta": null,
-  "nodeGroups": [],
   "pinData": null,
-  "versionId": "72e4ea12-1385-41a7-aae6-e1044cca78af",
-  "activeVersionId": "72e4ea12-1385-41a7-aae6-e1044cca78af",
-  "versionCounter": 40,
-  "triggerCount": 3,
-  "sourceWorkflowId": null,
+  "meta": null,
+  "tags": [],
   "shared": [
     {
-      "updatedAt": "2026-06-20T20:02:45.382Z",
-      "createdAt": "2026-06-20T20:02:45.382Z",
       "role": "workflow:owner",
       "workflowId": "62tIvF0snsrMj0sM",
       "projectId": "scK6yPpEmlkikl67",
       "project": {
-        "updatedAt": "2026-03-16T19:58:01.773Z",
-        "createdAt": "2026-03-16T19:56:18.866Z",
         "id": "scK6yPpEmlkikl67",
         "name": "Solange  Torrez <risosadmi@gmail.com>",
         "type": "personal",
         "icon": null,
         "description": null,
         "customTelemetryTags": [],
-        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      }
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-06-20T20:02:45.382Z",
+      "updatedAt": "2026-06-20T20:02:45.382Z"
     }
   ],
-  "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-08-17T16:33:17.977Z",
-    "createdAt": "2026-08-17T16:33:17.977Z",
-    "versionId": "72e4ea12-1385-41a7-aae6-e1044cca78af",
+    "versionId": "9e42c7ba-a199-440a-832d-eae3f8ca16a0",
     "workflowId": "62tIvF0snsrMj0sM",
     "nodes": [
       {
@@ -2710,7 +2708,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst resolver = $('🔍 Resolver Empresa').item.json;\nconst pageData = $('🔍 Obtener Config Página (G54)').item.json;\n\n// company_id: de la API de páginas > query param > fallback CE\nconst company_id = String(pageData.company_id || resolver.queryCompanyId || '');\n\n// Tokens: preferir el Page Access Token real (intercambiado desde el token de G54,\n// necesario porque el token guardado en G54 es de usuario, no de página — Meta rechaza\n// publicar comentarios/DMs con un token de usuario aunque sí sirva para otras acciones).\nlet fb_access_token = pageData.fb_access_token || '';\ntry {\n  const exchanged = $('🔑 Intercambiar Page Token (FB)').item.json;\n  if (exchanged && exchanged.access_token) fb_access_token = exchanged.access_token;\n} catch (e) { /* si falló el intercambio, seguimos con el token original de G54 */ }\n\nconst ig_user_id = pageData.ig_user_id || '';\n\nreturn [{ json: {\n  G54_BASE_URL: config.G54_BASE_URL,\n  G54_N8N_TOKEN: config.G54_N8N_TOKEN,\n  G54_AGENT_TOKEN: config.G54_AGENT_TOKEN,\n  G54_COMPANY_ID: company_id,\n  FB_PAGE_ID: resolver.pageId || '',\n  FB_ACCESS_TOKEN: fb_access_token,\n  IG_USER_ID: ig_user_id,\n  GROQ_API_KEY: config.GROQ_API_KEY,\n  WA_LINK: config.WA_LINK || ''\n}}];"
+          "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst resolver = $('🔍 Resolver Empresa').item.json;\nconst pageData = $('🔍 Obtener Config Página (G54)').item.json;\n\n// company_id: de la API de páginas > query param > fallback CE\nconst company_id = String(pageData.company_id || resolver.queryCompanyId || '');\n\n// Tokens: preferir el Page Access Token real (intercambiado desde el token de G54,\n// necesario porque el token guardado en G54 es de usuario, no de página — Meta rechaza\n// publicar comentarios/DMs con un token de usuario aunque sí sirva para otras acciones).\nlet fb_access_token = pageData.fb_access_token || '';\ntry {\n  const exchanged = $('🔑 Intercambiar Page Token (FB)').item.json;\n  if (exchanged && exchanged.access_token) fb_access_token = exchanged.access_token;\n} catch (e) { /* si falló el intercambio, seguimos con el token original de G54 */ }\n\nconst ig_user_id = pageData.ig_user_id || '';\nconst ig_access_token = pageData.ig_access_token || '';\n\nreturn [{ json: {\n  G54_BASE_URL: config.G54_BASE_URL,\n  G54_N8N_TOKEN: config.G54_N8N_TOKEN,\n  G54_AGENT_TOKEN: config.G54_AGENT_TOKEN,\n  G54_COMPANY_ID: company_id,\n  FB_PAGE_ID: resolver.pageId || '',\n  FB_ACCESS_TOKEN: fb_access_token,\n  IG_USER_ID: ig_user_id,\n  IG_ACCESS_TOKEN: ig_access_token,\n  GROQ_API_KEY: config.GROQ_API_KEY,\n  WA_LINK: config.WA_LINK || ''\n}}];"
         },
         "id": "aplicar-config",
         "name": "🏢 Aplicar Config Empresa",
@@ -3028,7 +3026,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({\n  \"recipient\": { \"id\": $('🔍 Parsear Respuesta Community AI').item.json.usuarioId },\n  \"message\": { \"text\": $('🔍 Parsear Respuesta Community AI').item.json.respuestaPublica },\n  \"access_token\": $('🏢 Aplicar Config Empresa').item.json.FB_ACCESS_TOKEN\n}) }}",
+          "jsonBody": "={{ JSON.stringify({\n  \"recipient\": { \"id\": $('🔍 Parsear Respuesta Community AI').item.json.usuarioId },\n  \"message\": { \"text\": $('🔍 Parsear Respuesta Community AI').item.json.respuestaPublica },\n  \"access_token\": ($('🏢 Aplicar Config Empresa').item.json.IG_ACCESS_TOKEN || $('🏢 Aplicar Config Empresa').item.json.FB_ACCESS_TOKEN)\n}) }}",
           "options": {}
         },
         "id": "reply-ig-dm",
@@ -3152,7 +3150,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ messaging_type: 'RESPONSE', recipient: { id: $('🔍 Parsear Respuesta Community AI').item.json.usuarioId }, message: { text: 'Hola ' + ($('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre ? $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre + ',' : '') + ' vi tu comentario y me gustaría ayudarte mejor. ¿Me cuentas un poco más sobre lo que necesitas?' }, access_token: $('🏢 Aplicar Config Empresa').item.json.FB_ACCESS_TOKEN }) }}",
+          "jsonBody": "={{ JSON.stringify({ messaging_type: 'RESPONSE', recipient: { id: $('🔍 Parsear Respuesta Community AI').item.json.usuarioId }, message: { text: 'Hola ' + ($('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre ? $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre + ',' : '') + ' vi tu comentario y me gustaría ayudarte mejor. ¿Me cuentas un poco más sobre lo que necesitas?' }, access_token: ($('🔍 Parsear Respuesta Community AI').item.json.plataforma === 'instagram' ? ($('🏢 Aplicar Config Empresa').item.json.IG_ACCESS_TOKEN || $('🏢 Aplicar Config Empresa').item.json.FB_ACCESS_TOKEN) : $('🏢 Aplicar Config Empresa').item.json.FB_ACCESS_TOKEN) }) }}",
           "options": {}
         },
         "id": "enviar-dm-lead",
@@ -4997,22 +4995,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
+    "createdAt": "2026-08-20T15:54:12.467Z",
+    "updatedAt": "2026-08-20T15:54:12.467Z",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-08-17T16:33:18.159Z",
-        "id": 2872,
+        "id": 2919,
         "workflowId": "62tIvF0snsrMj0sM",
-        "versionId": "72e4ea12-1385-41a7-aae6-e1044cca78af",
+        "versionId": "9e42c7ba-a199-440a-832d-eae3f8ca16a0",
         "event": "activated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      },
-      {
-        "createdAt": "2026-08-17T16:33:18.112Z",
-        "id": 2871,
-        "workflowId": "62tIvF0snsrMj0sM",
-        "versionId": "72e4ea12-1385-41a7-aae6-e1044cca78af",
-        "event": "deactivated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-08-20T15:54:12.901Z"
       }
     ]
   }
