@@ -3,12 +3,12 @@
   "name": "Community AI — G54",
   "description": null,
   "active": true,
-  "activeVersionId": "9e42c7ba-a199-440a-832d-eae3f8ca16a0",
+  "activeVersionId": "d9d57447-c546-487d-9852-acdda8459614",
   "createdAt": "2026-06-20T20:02:45.377Z",
-  "updatedAt": "2026-08-20T15:54:12.457Z",
+  "updatedAt": "2026-08-21T17:12:19.263Z",
   "isArchived": false,
-  "versionId": "9e42c7ba-a199-440a-832d-eae3f8ca16a0",
-  "versionCounter": 41,
+  "versionId": "d9d57447-c546-487d-9852-acdda8459614",
+  "versionCounter": 44,
   "sourceWorkflowId": null,
   "triggerCount": 3,
   "nodes": [
@@ -320,7 +320,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const groqRaw = $('🤖 Groq: Community AI').item.json;\nconst texto = groqRaw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`${label}[:\\\\s]+([^\\\\n]+)`, 'i');\n  const match = texto.match(regex);\n  return (match?.[1] || '').trim();\n};\n\nconst intencion = get('INTENCI[OÓ]N');\nconst respuesta = get('RESPUESTA');\nconst lead = get('LEAD');\nconst pregunta = get('PREGUNTA');\nconst siguientePaso = get('SIGUIENTE PASO');\n\n// La respuesta pública ya viene completa del prompt (incluye el link de WhatsApp una sola vez) —\n// no se le agrega nada más aquí para evitar duplicar el link o repetir la pregunta de calificación.\nconst respuestaPublica = respuesta;\n\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\n\nreturn [{ json: {\n  intencion,\n  respuesta,\n  respuestaPublica,\n  lead,\n  pregunta,\n  siguientePaso,\n  plataforma: evento.plataforma,\n  tipo: evento.tipo,\n  comentarioId: evento.comentarioId,\n  postId: evento.postId,\n  mediaId: evento.mediaId,\n  usuarioId: evento.usuarioId,\n  usuarioNombre: evento.usuarioNombre,\n  texto_completo_groq: texto\n}}];"
+        "jsCode": "const usoZhipu = $('🤖 Zhipu: Fallback IA (Community AI)').isExecuted;\nconst raw = usoZhipu ? $('🤖 Zhipu: Fallback IA (Community AI)').first().json : $('🤖 Groq: Community AI').first().json;\nconst texto = raw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`${label}[:\\\\s]+([^\\\\n]+)`, 'i');\n  const match = texto.match(regex);\n  return (match?.[1] || '').trim();\n};\n\nconst intencion = get('INTENCI[OÓ]N');\nconst respuesta = get('RESPUESTA');\nconst lead = get('LEAD');\nconst pregunta = get('PREGUNTA');\nconst siguientePaso = get('SIGUIENTE PASO');\n\n// La respuesta pública ya viene completa del prompt (incluye el link de WhatsApp una sola vez) —\n// no se le agrega nada más aquí para evitar duplicar el link o repetir la pregunta de calificación.\nconst respuestaPublica = respuesta;\n\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\n\nreturn [{ json: {\n  intencion,\n  respuesta,\n  respuestaPublica,\n  lead,\n  pregunta,\n  siguientePaso,\n  plataforma: evento.plataforma,\n  tipo: evento.tipo,\n  comentarioId: evento.comentarioId,\n  postId: evento.postId,\n  mediaId: evento.mediaId,\n  usuarioId: evento.usuarioId,\n  usuarioNombre: evento.usuarioNombre,\n  texto_completo_groq: texto\n}}];"
       },
       "id": "parsear-community",
       "name": "🔍 Parsear Respuesta Community AI",
@@ -1796,6 +1796,73 @@
         720
       ],
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        }
+      },
+      "id": "if-groq-ok-community",
+      "name": "🔀 ¿Groq OK? (Community AI)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2360,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'glm-4.5-flash', messages: [ { role: 'system', content: $('🔧 Preparar Contexto Community AI').item.json.promptSistema }, { role: 'user', content: $('🔧 Preparar Contexto Community AI').item.json.mensajeUsuario } ], temperature: 0.7, max_tokens: 600 }) }}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "zhipu-fallback-community",
+      "name": "🤖 Zhipu: Fallback IA (Community AI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2360,
+        710
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "rWF3VkYbayILPZTH",
+          "name": "Zhipu GLM � Fallback IA (G54)"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -1909,7 +1976,7 @@
       "main": [
         [
           {
-            "node": "🔍 Parsear Respuesta Community AI",
+            "node": "🔀 ¿Groq OK? (Community AI)",
             "type": "main",
             "index": 0
           }
@@ -2482,6 +2549,35 @@
           }
         ]
       ]
+    },
+    "🔀 ¿Groq OK? (Community AI)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Respuesta Community AI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🤖 Zhipu: Fallback IA (Community AI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Zhipu: Fallback IA (Community AI)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Respuesta Community AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -2515,7 +2611,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "9e42c7ba-a199-440a-832d-eae3f8ca16a0",
+    "versionId": "d9d57447-c546-487d-9852-acdda8459614",
     "workflowId": "62tIvF0snsrMj0sM",
     "nodes": [
       {
@@ -2826,7 +2922,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const groqRaw = $('🤖 Groq: Community AI').item.json;\nconst texto = groqRaw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`${label}[:\\\\s]+([^\\\\n]+)`, 'i');\n  const match = texto.match(regex);\n  return (match?.[1] || '').trim();\n};\n\nconst intencion = get('INTENCI[OÓ]N');\nconst respuesta = get('RESPUESTA');\nconst lead = get('LEAD');\nconst pregunta = get('PREGUNTA');\nconst siguientePaso = get('SIGUIENTE PASO');\n\n// La respuesta pública ya viene completa del prompt (incluye el link de WhatsApp una sola vez) —\n// no se le agrega nada más aquí para evitar duplicar el link o repetir la pregunta de calificación.\nconst respuestaPublica = respuesta;\n\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\n\nreturn [{ json: {\n  intencion,\n  respuesta,\n  respuestaPublica,\n  lead,\n  pregunta,\n  siguientePaso,\n  plataforma: evento.plataforma,\n  tipo: evento.tipo,\n  comentarioId: evento.comentarioId,\n  postId: evento.postId,\n  mediaId: evento.mediaId,\n  usuarioId: evento.usuarioId,\n  usuarioNombre: evento.usuarioNombre,\n  texto_completo_groq: texto\n}}];"
+          "jsCode": "const usoZhipu = $('🤖 Zhipu: Fallback IA (Community AI)').isExecuted;\nconst raw = usoZhipu ? $('🤖 Zhipu: Fallback IA (Community AI)').first().json : $('🤖 Groq: Community AI').first().json;\nconst texto = raw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`${label}[:\\\\s]+([^\\\\n]+)`, 'i');\n  const match = texto.match(regex);\n  return (match?.[1] || '').trim();\n};\n\nconst intencion = get('INTENCI[OÓ]N');\nconst respuesta = get('RESPUESTA');\nconst lead = get('LEAD');\nconst pregunta = get('PREGUNTA');\nconst siguientePaso = get('SIGUIENTE PASO');\n\n// La respuesta pública ya viene completa del prompt (incluye el link de WhatsApp una sola vez) —\n// no se le agrega nada más aquí para evitar duplicar el link o repetir la pregunta de calificación.\nconst respuestaPublica = respuesta;\n\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\n\nreturn [{ json: {\n  intencion,\n  respuesta,\n  respuestaPublica,\n  lead,\n  pregunta,\n  siguientePaso,\n  plataforma: evento.plataforma,\n  tipo: evento.tipo,\n  comentarioId: evento.comentarioId,\n  postId: evento.postId,\n  mediaId: evento.mediaId,\n  usuarioId: evento.usuarioId,\n  usuarioNombre: evento.usuarioNombre,\n  texto_completo_groq: texto\n}}];"
         },
         "id": "parsear-community",
         "name": "🔍 Parsear Respuesta Community AI",
@@ -4302,6 +4398,73 @@
           720
         ],
         "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "1",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty"
+                }
+              }
+            ]
+          }
+        },
+        "id": "if-groq-ok-community",
+        "name": "🔀 ¿Groq OK? (Community AI)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          2360,
+          560
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ model: 'glm-4.5-flash', messages: [ { role: 'system', content: $('🔧 Preparar Contexto Community AI').item.json.promptSistema }, { role: 'user', content: $('🔧 Preparar Contexto Community AI').item.json.mensajeUsuario } ], temperature: 0.7, max_tokens: 600 }) }}",
+          "options": {},
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth"
+        },
+        "id": "zhipu-fallback-community",
+        "name": "🤖 Zhipu: Fallback IA (Community AI)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2360,
+          710
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "rWF3VkYbayILPZTH",
+            "name": "Zhipu GLM � Fallback IA (G54)"
+          }
+        },
+        "onError": "continueRegularOutput"
       }
     ],
     "connections": {
@@ -4415,7 +4578,7 @@
         "main": [
           [
             {
-              "node": "🔍 Parsear Respuesta Community AI",
+              "node": "🔀 ¿Groq OK? (Community AI)",
               "type": "main",
               "index": 0
             }
@@ -4988,6 +5151,35 @@
             }
           ]
         ]
+      },
+      "🔀 ¿Groq OK? (Community AI)": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Respuesta Community AI",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🤖 Zhipu: Fallback IA (Community AI)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 Zhipu: Fallback IA (Community AI)": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Respuesta Community AI",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -4995,16 +5187,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-08-20T15:54:12.467Z",
-    "updatedAt": "2026-08-20T15:54:12.467Z",
+    "createdAt": "2026-08-21T17:12:19.267Z",
+    "updatedAt": "2026-08-21T17:12:19.267Z",
     "workflowPublishHistory": [
       {
-        "id": 2919,
+        "id": 2927,
         "workflowId": "62tIvF0snsrMj0sM",
-        "versionId": "9e42c7ba-a199-440a-832d-eae3f8ca16a0",
+        "versionId": "d9d57447-c546-487d-9852-acdda8459614",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-08-20T15:54:12.901Z"
+        "createdAt": "2026-08-21T17:12:19.587Z"
       }
     ]
   }
