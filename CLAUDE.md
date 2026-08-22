@@ -511,19 +511,21 @@ LISTO_PARA_COTIZAR    → todos los datos presentes
 - **Voz ID:** `onwK4e9ZLuTAKqWW03F9` (ElevenLabs)
 - **Primer mensaje:** "Gracias por llamar a Crating Express, soy Marco. ¿Con quién tengo el gusto?"
 - **Comportamiento:** empieza en español, cambia a inglés si el cliente habla inglés; NO recopila datos por voz — redirige a WhatsApp para cotizaciones
-- **Workflow n8n:** `📞 CE Voice Agent — Vapi Webhook` (ID: `FYKfTJBfgwsMpJV7`) — guarda en WhatsApp_Leads
-- **Resumen diario:** `📞 CE Voice Agent — Resumen Diario de Llamadas` (ID: `FTa48iKiRIMW5BNB`)
+- **Workflow n8n:** `📞 CE Voice Agent — Marco (Fusionado)` (ID: `FYKfTJBfgwsMpJV7`) — guarda en WhatsApp_Leads. Nombre corregido 2026-08-22 — se llamaba "Vapi Webhook", renombrado en algún momento antes del 25-jul (ya notado como cambio de nombre en el ítem 175, nunca propagado a esta sección de referencia).
+- **Resumen diario:** `📞 CE Voice Agent — Resumen Diario de Llamadas` (ID: `FTa48iKiRIMW5BNB`) — **inactivo desde el 29-jul** (ítem 204, desactivado a propósito junto con otros 6 workflows que mandaban correos de reporte; no borrado, disponible para reactivar).
 - **Número:** +1 786-788-0417 (Twilio) — solo llamadas telefónicas reales, NO llamadas de WhatsApp (peer-to-peer cifradas, sin API)
 
 ## Otros workflows activos
 
+> **Nota 2026-08-22:** esta tabla se corrigió tras una auditoría completa contra el estado real de n8n — 2 IDs (puente temporal y WA Reply Manual) ya no existen (fueron borrados en alguna sesión sin que quedara documentado el borrado en sí), y `CE Mantenimiento Web` figuraba como activo pese a estar desactivado desde el 29-jul.
+
 | Workflow | ID | Trigger | Estado |
 |---|---|---|---|
-| CE Mantenimiento Web - Calendario Automático | `T9J845yE4sd8Dde5` | Diario 13:00 | ✅ |
+| ~~CE Mantenimiento Web - Calendario Automático~~ | `T9J845yE4sd8Dde5` | Diario 13:00 | ⛔ **inactivo desde 2026-07-29** (ítem 204) — no borrado |
 | 📬 CE Gmail Monitor — Detectar Respuestas de Leads | `cJZV7jcwlbFoW5qJ` | Cada hora | ✅ |
-| 🎙️ Marco CE — 06 Procesador de Medios | `5GU89AeWsBZ86FWa` | Sub-workflow (executeWorkflowTrigger) | ✅ conectado al engine principal desde 2026-07-11 (ítem 109) — funciona con degradación elegante; pendiente el bug del Switch de ruteo y una prueba con archivo real |
+| 🎙️ Marco CE — 06 Procesador de Medios | `5GU89AeWsBZ86FWa` | Sub-workflow (executeWorkflowTrigger) | ✅ 27 nodos — el bug del Switch de ruteo se corrigió el 16-jul (ítem 137); las 4 ramas (audio/imagen/PDF-Excel/Word-PowerPoint) están resueltas sin depender de ninguna API externa salvo la imagen (OpenRouter, key propia de la usuaria) — ver ítems 224-226. Único límite que sigue sin confirmarse: no se puede generar un `media_id` real de WhatsApp desde este entorno para una prueba 100% de punta a punta. |
 | 🌐 Analytics Semanal — Webhook Trigger | `ALchVw1UdgFHuDbm` | Webhook `analytics-semanal-g54` | ✅ existe, sin ejecuciones — wrapper que llama a `📊 Analytics AI Semanal — G54` |
-| 📤 WA Reply — Envío Manual desde G54 | `IzsQTrOI2SMUJ4xx` | Webhook `wa-reply-g54` | ✅ existe, sin ejecuciones — permite mandar una respuesta manual de WhatsApp desde el panel (bypass del bot) |
+| ~~WA Reply — Envío Manual desde G54~~ | `IzsQTrOI2SMUJ4xx` | Webhook `wa-reply-g54` | ❌ **ya no existe en n8n** (confirmado 404 el 22-ago) — borrado en algún momento sin que quede registro de cuándo ni por qué |
 | CE Cotizaciones - CF7 → Airtable + Leads | `FU8QG1BVmT4r5Kjw` | Webhook (Contact Form 7) | ✅ existe, sin ejecuciones nunca — ver nota abajo |
 | 👁️ Vigía G54 — Supervisor RRSS | `zTm4tMOV9vMfUDnG` | Cada 2 horas + webhook `vigia-g54` (manual) | ✅ activo desde 2026-07-23, ver ítem 162 |
 
@@ -553,9 +555,9 @@ Tag `Alex` (ID: `2CrVJWitAB77MgTJ`) — nombre del tag sin cambiar en n8n, pero 
 | Workflow | ID |
 |---|---|
 | CE WhatsApp Engine — Marco | `zAhV8gEsXD8dCrXq` |
-| 📞 CE Voice Agent — Vapi Webhook | `FYKfTJBfgwsMpJV7` |
-| 📞 CE Voice Agent — Resumen Diario de Llamadas | `FTa48iKiRIMW5BNB` |
-| 📞→💬 VAPI → WhatsApp Handoff | `jfoJDSidx1sJlOrr` |
+| 📞 CE Voice Agent — Marco (Fusionado) | `FYKfTJBfgwsMpJV7` |
+| 📞 CE Voice Agent — Resumen Diario de Llamadas | `FTa48iKiRIMW5BNB` (inactivo desde 29-jul) |
+| 📞→💬 VAPI → WhatsApp Handoff | `6UWT1GHKZVvCDcc6` (ID corregido 22-ago — `jfoJDSidx1sJlOrr`, documentado desde el ítem 141, ya no existe en n8n; el workflow real activo hoy con este mismo nombre tiene este otro ID, sin que quede registro de cuándo se recreó) |
 
 ### Pendiente / próximas mejoras
 - [x] ~~Integrar API del cotizador~~ ✅
@@ -564,7 +566,7 @@ Tag `Alex` (ID: `2CrVJWitAB77MgTJ`) — nombre del tag sin cambiar en n8n, pero 
 - [x] ~~Cierre de conversación (¡Hasta luego!)~~ ✅
 - [x] ~~Cierre prematuro con "no gracias" ante recomendación puntual (tipo de cajón, protección)~~ ✅ — corregido 2026-07-10 (ver ítem 108). Causa real: regla de cierre en el prompt aplicaba a cualquier negativa, no solo al rechazo de la cotización completa. Confirmado con conversación real de 8 turnos.
 - [x] ~~tipo_cajon no se actualiza al cambiar de opinión a mitad de conversación~~ ✅ — corregido 2026-07-15 (ver ítem 129). Causa real: la fusión de datos solo guardaba tipo_cajon si el campo estaba vacío, nunca lo dejaba sobreescribir. Confirmado con conversación real completa por el webhook.
-- [ ] Activar LinkedIn en workflow RRSS cuando se tenga token
+- [x] ~~Activar LinkedIn en workflow RRSS cuando se tenga token~~ ✅ — hecho desde el 08-ago (ítems 251-254/261/256): token real conectado, Distribution AI publica en LinkedIn con y sin imagen, y Content AI ya genera un `copy_linkedin` de tono profesional distinto al de Facebook. Casilla corregida el 22-ago tras la auditoría — llevaba semanas resuelta sin marcarse acá.
 - [x] ~~Recargar saldo DeepSeek o reemplazar fallback~~ ✅ — ya no aplica, confirmado 2026-07-15: DeepSeek no aparece en ningún workflow activo, el fallback de Marco es Groq → Gemini → Modo Contingencia desde el ítem 104 (09-jul). Pendiente obsoleto, se deja documentado por si queda saldo en la cuenta vieja para otro uso.
 - [ ] Probar VAPI → WhatsApp Handoff con llamada real
 - [ ] **Sugerencia futura — Módulo de audio:** Evaluar Text-to-Speech para convertir posts/artículos en audio (estilo podcast) similar a OpenClaw Voice AI. Complementaría el Módulo 1 RRSS sin reemplazar nada del stack actual. Integración posible: ElevenLabs (ya tenemos cuenta por VAPI) → generar MP3 desde el post aprobado → subir a Drive → opcional: publicar como Reel/Story con audio.
@@ -1963,7 +1965,7 @@ Sincronizados al repo `workflow-sales-ai-motor-g54.json`, `workflow-community-ai
 
 **Hallazgo real, encontrado en el camino:** el correo equivalente de Marco Telegram (`HaSG63Q9C2tGOLH3`, mismo nodo `📧 Notificar Vendedor`) nunca recibió el rediseño del ítem 241 — seguía con el diseño viejo (banner azul/rojo plano, sin logo de G54, sin tipo de protección ni precio ni botón de WhatsApp). A pedido explícito de la usuaria, se actualizó al mismo diseño ya centrado de WhatsApp — mismo código exacto, con la única diferencia real de contenido (verificado con `diff` línea por línea contra la versión de WhatsApp antes de subir) el subtítulo del header ("Marco Telegram" en vez de "Marco WhatsApp") y el asunto del correo (que decía literalmente "Lead Caliente WhatsApp" para un lead real de Telegram — resto de cuando este workflow se clonó del motor de WhatsApp antes del rediseño, corregido a "Lead Caliente Telegram"). No hizo falta ninguna adaptación de datos — el nodo local `📝 Armar Mensaje Final` de este motor ya produce exactamente la misma forma de datos que el de WhatsApp (mismo patrón compartido desde el ítem 176). Confirmado persistido en n8n tras el `PUT`.
 
-**Hallazgo de seguridad encontrado al sincronizar este archivo, corregido en el momento:** el token real del bot de Telegram (`8821887883:AAGdWLtXtfaGDq3vSTrvd2p-zlu3NilK6CE`) apareció sin redactar en 4 nodos del auto-heal de webhook (`⏰ Chequeo Webhook`, desconectado del canvas desde el ítem 174, código muerto pero igual expuesto en el archivo) — preexistente, no agregado hoy. Redactado en la copia del repo antes de commitear, real solo en n8n.
+**Hallazgo de seguridad encontrado al sincronizar este archivo, corregido en el momento:** el token real del bot de Telegram (`REDACTED_TELEGRAM_BOT_TOKEN`) apareció sin redactar en 4 nodos del auto-heal de webhook (`⏰ Chequeo Webhook`, desconectado del canvas desde el ítem 174, código muerto pero igual expuesto en el archivo) — preexistente, no agregado hoy. Redactado en la copia del repo antes de commitear, real solo en n8n.
 
 Sincronizados `workflow-marco-ce.json`, `workflow-sales-ai-motor-g54.json` y `workflow-marco-telegram-g54.json` al repo con los fixes de centrado y el rediseño de Telegram, sin secretos en texto plano.
 
@@ -2331,6 +2333,24 @@ Actualizado `exodo-g54-ago22.html` (reemplaza a `exodo-g54-ago19.html`) — saca
 **Hallazgo real — "Generar Post" ya manda el `idea_id` correcto, confirmado con ejecuciones reales de n8n, no con una llamada de prueba propia.** Revisando el body real recibido en las últimas 15 ejecuciones de Content AI (`wyO1f93A66imn9qw`) disparadas desde el panel (`trigger.source:"ui"`), las 3 más recientes — todas del 20-ago, `mode:"post"` — llegaron con `idea_id:422` real y consistente en las 3, contra `idea_id:null` en cada ejecución real de panel anterior desde el 14-ago (7 ejecuciones más, todas en `null`). El corte exacto entre "roto" y "resuelto" cae el 20-ago — coincide con el mismo despliegue de Walter que trajo los otros 4 fixes ya confirmados hoy y ayer (ítems 268-270, 279), aunque este puntual nunca se había vuelto a probar hasta ahora. Sacado del Éxodo — quedan 9 pedidos activos, todos con evidencia fresca de hoy de que siguen genuinamente abiertos.
 
 Actualizado `exodo-g54-ago22.html` con el nuevo hallazgo (header y contador corregidos), verificado el balance de HTML con el mismo script de siempre (183 divs abiertos / 183 cerrados, 10 `item-title` totales incluyendo el mockup = 9 pedidos reales).
+
+281. **Auditoría general a pedido explícito de la usuaria ("no tenemos mucho trabajo nuevo, centrarnos en que todo esté impecable") — hallazgo grave: el repositorio `PROYECTO_SOL` es público en GitHub, y 2 secretos reales y todavía vigentes estaban citados en texto plano en la propia documentación (no en ningún workflow), más una limpieza de deriva documental acumulada** (2026-08-22, misma tarde que el ítem 280): repaso en 3 frentes — secretos/hardcode en los 41 workflows de n8n, higiene de datos reales en las 2 empresas activas, y consistencia de la documentación de referencia contra el estado real de n8n.
+
+**Hallazgo más grave, sin relación con ningún workflow — confirmado que `RISOSDIGITALES/PROYECTO_SOL` es un repositorio PÚBLICO en GitHub** (`GET /repos/RISOSDIGITALES/PROYECTO_SOL` sin autenticación devuelve `200`, `private:false`). Esto no se había verificado explícitamente antes — cambia el cálculo de riesgo de cualquier secreto que alguna vez haya quedado en el historial de commits, sin importar si ya se redactó en la versión actual del archivo.
+
+**2 secretos reales y todavía vigentes hoy, citados en texto plano dentro de la propia documentación (no en ningún JSON de workflow) — corregidos:** (1) el token completo y real del bot de Telegram de Marco (`8821887883:AA...`, confirmado vivo hoy mismo en el barrido de n8n de este mismo ítem) aparecía citado tal cual en la prosa de `CLAUDE.md` documentando el hallazgo del ítem 250 — se redactó a `REDACTED_TELEGRAM_BOT_TOKEN`. (2) la contraseña maestra real de sesión de G54 (`wx2026_master`, confirmada vigente hoy, usada por al menos 9 workflows de producción) aparecía citada tal cual en `PROYECTO-SOL/reportes/conversacion-2026-08-21.md` (el respaldo de la transcripción del 21-ago, ítem del corte de ese día) — reemplazada por una descripción genérica sin el valor real. En ambos casos el problema no era que el secreto viviera en n8n (ahí es esperado y correcto, mismo patrón documentado desde siempre en este proyecto) — era que la propia documentación, al describir un hallazgo o una redacción ya hecha, terminó reproduciendo el valor real que se había redactado en otro lado.
+
+**3 carpetas/archivo scratch con secretos reales residuales, nunca trackeados por git pero sentados en el disco local sin ningún propósito — borrados:** `.tmpfetch/` y `sync_tmp/` (descargas crudas de workflows de sesiones anteriores, usadas como material de trabajo para redactar copias ya commiteadas — su función ya se cumplió) y `PROYECTO-SOL/repo_tmp_exec.json` (un dump viejo de ejecuciones de n8n, sin secretos pero sin ningún uso). Confirmado con `git ls-files` que ninguno estaba trackeado — el borrado no generó ningún cambio en el historial de git, solo redujo la superficie de exposición en esta máquina. `PROYECTO-SOL/.claude/settings.local.json` (el mismo hallazgo ya evaluado y aceptado en el ítem 273 — archivo local del propio harness, nunca commiteado, necesario para no perder el historial de permisos aprobados) se dejó intacto, sin cambios.
+
+**Barrido de hardcode en los 41 workflows (activos e inactivos) contra la regla absoluta de plataforma — confirmado limpio, sin ningún hallazgo nuevo:** cero ocurrencias de `company_id || '1'` (o variantes) en cualquier agente que no sea exclusivo de CE, y cero IDs reales de página de Facebook/Instagram/LinkedIn de Crating Express fuera de los workflows exclusivos de CE. Los 2 mapas vacíos a propósito (`LINKEDIN_ORGS = {}` en Distribution AI, el comentario explicativo en Analytics V3) siguen exactamente como se dejaron en los ítems 260/261 — sin ninguna reintroducción del hardcode.
+
+**Higiene de datos reales en las 2 empresas activas — confirmado limpio en ambas:** Crating Express con 8 posts reales (0 atascados en `programado`, 0 ideas duplicadas), 0 conversaciones de WhatsApp residuales, 0 ideas sin aprobar hace más de 7 días. Orison Managua con 0 posts, 0 conversaciones, solo los 2 tratos viejos ya conocidos en "lost" del CRM — sin ningún residuo nuevo de pruebas.
+
+**Deriva de documentación encontrada y corregida en las tablas de referencia de la sección VAPI/Marco Voz (no en el changelog numerado, que se deja intacto como registro histórico):** (1) el puente temporal de los 2 minutos (`aMCwIQ3eY1bzyMyt`) — el ítem 263 documenta que se dejó "desactivado, no borrado, por si hace falta reactivarlo" — confirmado hoy que **ya no existe en n8n** (`404 not found`), borrado en algún momento sin que quede registro de cuándo ni por qué; (2) `📞 CE Voice Agent — Vapi Webhook` se renombró a `📞 CE Voice Agent — Marco (Fusionado)` en algún momento antes del 25-jul (ya notado de pasada en el ítem 175, nunca corregido en esta tabla de referencia); (3) `CE Mantenimiento Web - Calendario Automático` seguía marcado `✅` en la tabla pese a estar inactivo desde el 29-jul (ítem 204); (4) `📤 WA Reply — Envío Manual desde G54` (`IzsQTrOI2SMUJ4xx`) ya no existe en n8n (`404`), mismo patrón que el puente temporal; (5) la tabla de Tags de Marco seguía con el ID viejo del VAPI → WhatsApp Handoff (`jfoJDSidx1sJlOrr`) — el ítem 141 (16-jul) ya documentaba ese ID, pero el ítem 222 (04-ago) ya había encontrado y usado el ID real correcto (`6UWT1GHKZVvCDcc6`) sin corregir nunca esta tabla; (6) el nodo `06 Procesador de Medios` seguía con la nota "pendiente el bug del Switch de ruteo" pese a que ese bug se cerró el 16-jul (ítem 137) y el resto de las ramas de medios se completaron sin depender de ninguna API externa (salvo imagen) en los ítems 224-226; (7) el checklist de Marco tenía "Activar LinkedIn en workflow RRSS cuando se tenga token" sin marcar, pese a que LinkedIn publica en producción real desde el 08-ago (ítems 251-254/256/261).
+
+**Sin tocar, evaluado y descartado como riesgo real:** rotar la contraseña maestra o el token de Telegram — ambos siguen siendo la misma credencial real de producción usada activamente por varios agentes; rotarlos es una decisión operativa (afecta ~9 workflows) que le corresponde decidir a la usuaria, no algo que se deba hacer sin avisar. Tampoco se tocó la visibilidad del repositorio en GitHub (pública/privada) — es una decisión de cuenta que requiere confirmación explícita, no algo para decidir unilateralmente.
+
+Sin tocar Nomify más allá de confirmar su estado — repo (`WX-MDA/Nomify`, rama `sol/feature-inicial`) con el working tree limpio (solo el mismo tipo de `.claude/` local ya aceptado) y sin ningún commit pendiente de push.
 
 ## Error conocido
 

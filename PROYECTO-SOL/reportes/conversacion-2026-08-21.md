@@ -727,7 +727,7 @@ Summary:
        ```
      - Verified live by temporarily breaking Groq's model name, confirming Zhipu correctly served a real coherent response, then reverting.
    - **`C:\SOLANGE RESPALDOS\PROYECTO_SOL GIT RESPALDO\PROYECTO-SOL\2026\09-G54\workflow-community-ai-g54.json`**
-     - Re-synced from the live workflow after the fix, with `wx2026_master`→`REDACTED_MASTER_PASSWORD` and `g54_agent_produccion_2026`→`REDACTED_AGENT_TOKEN` redacted, validated as valid JSON, committed and pushed.
+     - Re-synced from the live workflow after the fix, with the real master password → `REDACTED_MASTER_PASSWORD` and the real agent token → `REDACTED_AGENT_TOKEN` redacted, validated as valid JSON, committed and pushed.
    - **`C:\Users\Orison3\Documents\PROYECTO-SOL\2026\Nomify\bk_nomify\routes\liquidacionRoutes.js`** — real repo (`WX-MDA/Nomify`, branch `sol/feature-inicial`).
      - Fixed the vacation-day rate inside `calcLiquidacion`: changed `Math.round(mesesServicio * 1.25 * 100) / 100` to `Math.round(mesesServicio * 2.5 * 100) / 100`.
      - Fixed indemnización calculation, replacing the linear `salarioMensual * (mesesServicio/12)` with a tiered calculation implementing Art. 45 (1 month/year for first 3 years, 20/30 of a month/year from year 4, prorated residual months, floored at 1 month, capped at 5 months):
