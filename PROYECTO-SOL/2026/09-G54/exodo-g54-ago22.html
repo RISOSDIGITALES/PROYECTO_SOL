@@ -149,7 +149,7 @@
     <h1>Éxodo — Pendientes para el ingeniero · <span>22 Ago 2026</span></h1>
     <p>Reemplaza a <code style="color:#a78bfa;background:transparent;border:none;">exodo-g54-ago19.html</code>. 3 pedidos confirmados resueltos hoy con pruebas reales (no solo lectura de la doc): el tablero del CRM ya devuelve siempre las 6 etapas, el estado <code>usada</code> para ideas ya está desplegado, y el <code>ig_access_token</code> de Instagram ya lo devuelve <code>GET /api/n8n/pages/{page_id}</code>. Un cuarto pedido se confirmó resuelto en una segunda pasada, revisando el resto de los pendientes viejos: "Generar Post" ya manda el <code>idea_id</code> real desde el panel — confirmado con 3 ejecuciones reales del 20-ago (<code>trigger.source:"ui"</code>) mostrando <code>idea_id</code> poblado, contra <code>null</code> en cada ejecución real anterior desde el 14-ago. Los 4 se sacaron del documento.</p>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> 9 pedidos activos</div>
+      <div class="meta-item"><div class="dot"></div> 10 pedidos activos</div>
     </div>
   </div>
 </div>
@@ -412,6 +412,16 @@
     </div>
     <div class="item-body">
       <p class="item-why">Hoy solo <code>to-publish</code> (el endpoint de Distribution AI) trae <code>page_id</code>/<code>ig_user_id</code>/<code>access_token</code> resueltos, y únicamente cuando hay un post real pendiente de publicar — no sirve para Analytics, que necesita esos datos para generar un reporte aunque no haya ningún post en cola. Sin esto, el disparo automático mensual del reporte no puede correr solo para ninguna empresa nueva (hoy sigue desactivado por esta misma razón). Confirmado que no existe hoy: probadas <code>/api/n8n/social-tokens</code>, <code>/api/n8n/companies/{id}/meta-tokens</code> y variantes — todas <code>404</code>; <code>/api/n8n/companies/{id}/rrss/canales</code> existe pero no trae ningún ID ni token de Meta.</p>
+    </div>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">Endpoint de analytics históricos para retroalimentar la estrategia — construido de nuestro lado, sin ruta real del otro</div><div class="item-where"><code>GET /api/n8n/companies/{id}/rrss/analytics</code></div></div>
+      <span class="badge p0">P0</span>
+    </div>
+    <div class="item-body">
+      <p class="item-why">El Strategist AI (nodo <code>📈 Obtener Métricas Anteriores G54</code>) ya está diseñado y conectado para leer el rendimiento de las últimas 4 estrategias (posts publicados, leads generados, mejor plataforma, mejor tipo de contenido) antes de generar la estrategia siguiente — es justo el mecanismo de "la estrategia aprende de lo que funcionó" que la plataforma necesita. Confirmado en vivo hoy que la ruta que ese nodo llama, <code>GET /api/n8n/companies/{id}/rrss/analytics?limit=4</code>, devuelve <code>404 "could not be found"</code> — nunca existió del lado de G54. El código absorbe el error en silencio (<code>try/catch</code>), así que el Strategist lleva generando cada estrategia nueva sin ningún dato real de qué funcionó antes, sin que se vea ningún error en n8n. Con esta ruta agregada (mismo shape que ya usamos: <code>{"data":[{"periodo","tipo","metricas":{"posts_publicados","leads_generados","mejor_plataforma","mejor_tipo_contenido"}}]}</code>), el mecanismo empieza a funcionar solo, sin tocar nada de nuestro lado.</p>
     </div>
   </div>
 
