@@ -589,6 +589,128 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/rrss/metricas?company_id=' + $('⚙️ Config G54').item.json.G54_COMPANY_ID + '&from=' + $now.minus({days:30}).toFormat('yyyy-MM-dd') + '&to=' + $now.toFormat('yyyy-MM-dd') }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Plataformas)').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "lb-metricas",
+      "name": "📊 Línea Base: Métricas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2600,
+        464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/whatsapp/conversations?per_page=100' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Plataformas)').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "lb-leads",
+      "name": "📊 Línea Base: Leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2800,
+        464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/crm/board' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Plataformas)').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "lb-crm",
+      "name": "📊 Línea Base: CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3000,
+        464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const metricas = $('📊 Línea Base: Métricas').first().json;\nconst leads = $('📊 Línea Base: Leads').first().json;\nconst crm = $('📊 Línea Base: CRM').first().json;\n\nfunction sumMetric(rows, campo) {\n  if (!Array.isArray(rows)) return 0;\n  return rows.reduce((acc, r) => acc + (Number(r[campo]) || 0), 0);\n}\n\nconst metricasRows = (metricas && metricas.data) || [];\nconst alcance = sumMetric(metricasRows, 'alcance_total');\nconst engagement = sumMetric(metricasRows, 'engagement_total');\nconst leadsMetricas = sumMetric(metricasRows, 'leads_total');\n\nconst leadsArr = (leads && leads.data) || [];\nconst totalLeadsConversaciones = leadsArr.length;\n\nlet deals = 0;\nif (crm && typeof crm === 'object') {\n  for (const v of Object.values(crm)) {\n    if (Array.isArray(v)) deals += v.length;\n  }\n}\n\nconst companyId = Number($('⚙️ Config G54').item.json.G54_COMPANY_ID);\nconst fecha = new Date().toISOString().slice(0, 10);\n\nconst baseline = {\n  fecha,\n  company_id: companyId,\n  alcance_total: alcance,\n  engagement_total: engagement,\n  leads_total_metricas: leadsMetricas,\n  leads_total_conversaciones: totalLeadsConversaciones,\n  deals_total: deals,\n};\n\nconst html = '<div style=\"font-family:Arial,sans-serif;padding:16px;color:#1a2233\">'\n  + '<h2 style=\"margin:0 0 8px;font-size:16px\">Línea base — ' + fecha + '</h2>'\n  + '<p style=\"color:#64748b;font-size:12.5px;margin:0 0 12px\">Punto de partida capturado al iniciar o regenerar la estrategia. Se usa para medir el progreso real en los reportes periódicos — nunca se muestra tal cual al cliente.</p>'\n  + '<ul style=\"font-size:13.5px;line-height:1.7;margin:0 0 0 18px\">'\n  + '<li>Alcance total (últimos 30 días): ' + alcance + '</li>'\n  + '<li>Engagement total (últimos 30 días): ' + engagement + '</li>'\n  + '<li>Leads (métricas, 30 días): ' + leadsMetricas + '</li>'\n  + '<li>Conversaciones de WhatsApp totales: ' + totalLeadsConversaciones + '</li>'\n  + '<li>Negocios en el CRM: ' + deals + '</li>'\n  + '</ul>'\n  + '<!-- LINEA_BASE_JSON: ' + JSON.stringify(baseline) + ' -->'\n  + '</div>';\n\nreturn [{\n  json: {\n    company_id: companyId,\n    titulo: 'Línea base — ' + fecha,\n    periodo_inicio: fecha,\n    periodo_fin: fecha,\n    modo: 'linea_base',\n    html,\n  }\n}];\n"
+      },
+      "id": "lb-armar",
+      "name": "🔧 Armar Línea Base",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3200,
+        464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/agent/rrss/reportes' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "lb-guardar",
+      "name": "💾 G54: Guardar Línea Base",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3400,
+        464
+      ],
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -716,6 +838,11 @@
             "node": "📢 Llamar Ideas AI (Semana 1)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "📊 Línea Base: Métricas",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -809,6 +936,50 @@
         [
           {
             "node": "🔍 Parsear Estrategia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Línea Base: Métricas": {
+      "main": [
+        [
+          {
+            "node": "📊 Línea Base: Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Línea Base: Leads": {
+      "main": [
+        [
+          {
+            "node": "📊 Línea Base: CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Línea Base: CRM": {
+      "main": [
+        [
+          {
+            "node": "🔧 Armar Línea Base",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Armar Línea Base": {
+      "main": [
+        [
+          {
+            "node": "💾 G54: Guardar Línea Base",
             "type": "main",
             "index": 0
           }
