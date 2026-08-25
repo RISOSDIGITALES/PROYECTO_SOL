@@ -593,13 +593,13 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/rrss/metricas?company_id=' + $('⚙️ Config G54').item.json.G54_COMPANY_ID + '&from=' + $now.minus({days:30}).toFormat('yyyy-MM-dd') + '&to=' + $now.toFormat('yyyy-MM-dd') }}",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/rrss/metricas?company_id=' + ( $('⚙️ Config G54').isExecuted ? $('⚙️ Config G54').item.json.G54_COMPANY_ID : $('🔔 Webhook: Marcar Evento').item.json.body.company_id ) + '&from=' + $now.minus({days:30}).toFormat('yyyy-MM-dd') + '&to=' + $now.toFormat('yyyy-MM-dd') }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Plataformas)').item.json.access_token }}"
+              "value": "={{ 'Bearer ' + ( $('🔐 G54: Login (Plataformas)').isExecuted ? $('🔐 G54: Login (Plataformas)').item.json.access_token : $('🔐 G54: Login (Evento)').item.json.access_token ) }}"
             }
           ]
         },
@@ -618,13 +618,13 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/whatsapp/conversations?per_page=100' }}",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/whatsapp/conversations?per_page=100' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Plataformas)').item.json.access_token }}"
+              "value": "={{ 'Bearer ' + ( $('🔐 G54: Login (Plataformas)').isExecuted ? $('🔐 G54: Login (Plataformas)').item.json.access_token : $('🔐 G54: Login (Evento)').item.json.access_token ) }}"
             }
           ]
         },
@@ -643,13 +643,13 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/crm/board' }}",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/crm/board' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Plataformas)').item.json.access_token }}"
+              "value": "={{ 'Bearer ' + ( $('🔐 G54: Login (Plataformas)').isExecuted ? $('🔐 G54: Login (Plataformas)').item.json.access_token : $('🔐 G54: Login (Evento)').item.json.access_token ) }}"
             }
           ]
         },
@@ -668,7 +668,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const metricas = $('📊 Línea Base: Métricas').first().json;\nconst leads = $('📊 Línea Base: Leads').first().json;\nconst crm = $('📊 Línea Base: CRM').first().json;\n\nfunction sumMetric(rows, campo) {\n  if (!Array.isArray(rows)) return 0;\n  return rows.reduce((acc, r) => acc + (Number(r[campo]) || 0), 0);\n}\n\nconst metricasRows = (metricas && metricas.data) || [];\nconst alcance = sumMetric(metricasRows, 'alcance_total');\nconst engagement = sumMetric(metricasRows, 'engagement_total');\nconst leadsMetricas = sumMetric(metricasRows, 'leads_total');\n\nconst leadsArr = (leads && leads.data) || [];\nconst totalLeadsConversaciones = leadsArr.length;\n\nlet deals = 0;\nif (crm && typeof crm === 'object') {\n  for (const v of Object.values(crm)) {\n    if (Array.isArray(v)) deals += v.length;\n  }\n}\n\nconst companyId = Number($('⚙️ Config G54').item.json.G54_COMPANY_ID);\nconst fecha = new Date().toISOString().slice(0, 10);\n\nconst baseline = {\n  fecha,\n  company_id: companyId,\n  alcance_total: alcance,\n  engagement_total: engagement,\n  leads_total_metricas: leadsMetricas,\n  leads_total_conversaciones: totalLeadsConversaciones,\n  deals_total: deals,\n};\n\nconst html = '<div style=\"font-family:Arial,sans-serif;padding:16px;color:#1a2233\">'\n  + '<h2 style=\"margin:0 0 8px;font-size:16px\">Línea base — ' + fecha + '</h2>'\n  + '<p style=\"color:#64748b;font-size:12.5px;margin:0 0 12px\">Punto de partida capturado al iniciar o regenerar la estrategia. Se usa para medir el progreso real en los reportes periódicos — nunca se muestra tal cual al cliente.</p>'\n  + '<ul style=\"font-size:13.5px;line-height:1.7;margin:0 0 0 18px\">'\n  + '<li>Alcance total (últimos 30 días): ' + alcance + '</li>'\n  + '<li>Engagement total (últimos 30 días): ' + engagement + '</li>'\n  + '<li>Leads (métricas, 30 días): ' + leadsMetricas + '</li>'\n  + '<li>Conversaciones de WhatsApp totales: ' + totalLeadsConversaciones + '</li>'\n  + '<li>Negocios en el CRM: ' + deals + '</li>'\n  + '</ul>'\n  + '<!-- LINEA_BASE_JSON: ' + JSON.stringify(baseline) + ' -->'\n  + '</div>';\n\nreturn [{\n  json: {\n    company_id: companyId,\n    titulo: 'Línea base — ' + fecha,\n    periodo_inicio: fecha,\n    periodo_fin: fecha,\n    modo: 'linea_base',\n    html,\n  }\n}];\n"
+        "jsCode": "const esEvento = $('🔔 Webhook: Marcar Evento').isExecuted;\n\nlet companyId, modo, descripcion;\nif (esEvento) {\n  const body = $('🔔 Webhook: Marcar Evento').first().json.body || {};\n  companyId = Number(body.company_id);\n  descripcion = String(body.descripcion || 'Evento sin descripción').trim();\n  modo = 'linea_base_evento';\n} else {\n  companyId = Number($('⚙️ Config G54').item.json.G54_COMPANY_ID);\n  descripcion = '';\n  modo = 'linea_base';\n}\n\nconst metricas = $('📊 Línea Base: Métricas').first().json;\nconst leads = $('📊 Línea Base: Leads').first().json;\nconst crm = $('📊 Línea Base: CRM').first().json;\n\nfunction sumMetric(rows, campo) {\n  if (!Array.isArray(rows)) return 0;\n  return rows.reduce((acc, r) => acc + (Number(r[campo]) || 0), 0);\n}\n\nconst metricasRows = (metricas && metricas.data) || [];\nconst alcance = sumMetric(metricasRows, 'alcance_total');\nconst engagement = sumMetric(metricasRows, 'engagement_total');\nconst leadsMetricas = sumMetric(metricasRows, 'leads_total');\n\nconst leadsArr = (leads && leads.data) || [];\nconst totalLeadsConversaciones = leadsArr.length;\n\nlet deals = 0;\nif (crm && typeof crm === 'object') {\n  for (const v of Object.values(crm)) {\n    if (Array.isArray(v)) deals += v.length;\n  }\n}\n\nconst fecha = new Date().toISOString().slice(0, 10);\nconst titulo = modo === 'linea_base_evento'\n  ? ('Evento — ' + descripcion + ' — ' + fecha)\n  : ('Línea base — ' + fecha);\n\nconst baseline = {\n  fecha,\n  company_id: companyId,\n  descripcion,\n  alcance_total: alcance,\n  engagement_total: engagement,\n  leads_total_metricas: leadsMetricas,\n  leads_total_conversaciones: totalLeadsConversaciones,\n  deals_total: deals,\n};\n\nconst html = '<div style=\"font-family:Arial,sans-serif;padding:16px;color:#1a2233\">'\n  + '<h2 style=\"margin:0 0 8px;font-size:16px\">' + titulo + '</h2>'\n  + '<p style=\"color:#64748b;font-size:12.5px;margin:0 0 12px\">' + (modo === 'linea_base_evento'\n      ? 'Punto de referencia marcado a mano para medir el antes/después de un cambio puntual.'\n      : 'Punto de partida capturado al iniciar o regenerar la estrategia.') + ' Se usa para medir el progreso real en los reportes periódicos — nunca se muestra tal cual al cliente.</p>'\n  + '<ul style=\"font-size:13.5px;line-height:1.7;margin:0 0 0 18px\">'\n  + '<li>Alcance total (últimos 30 días): ' + alcance + '</li>'\n  + '<li>Engagement total (últimos 30 días): ' + engagement + '</li>'\n  + '<li>Leads (métricas, 30 días): ' + leadsMetricas + '</li>'\n  + '<li>Conversaciones de WhatsApp totales: ' + totalLeadsConversaciones + '</li>'\n  + '<li>Negocios en el CRM: ' + deals + '</li>'\n  + '</ul>'\n  + '<!-- LINEA_BASE_JSON: ' + JSON.stringify(baseline) + ' -->'\n  + '</div>';\n\nreturn [{\n  json: {\n    company_id: companyId,\n    titulo,\n    periodo_inicio: fecha,\n    periodo_fin: fecha,\n    modo,\n    html,\n  }\n}];\n"
       },
       "id": "lb-armar",
       "name": "🔧 Armar Línea Base",
@@ -683,13 +683,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/agent/rrss/reportes' }}",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/agent/rrss/reportes' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_AGENT_TOKEN }}"
+              "value": "={{ 'Bearer REDACTED_AGENT_TOKEN' }}"
             },
             {
               "name": "Content-Type",
@@ -709,6 +709,83 @@
       "position": [
         3400,
         464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "marcar-evento-g54",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "wh-evento",
+      "name": "🔔 Webhook: Marcar Evento",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        2800,
+        204
+      ],
+      "webhookId": "7d5c08a9-3071-48ac-8c4c-3eeb86541eb6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/auth/login",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_MASTER_PASSWORD' }) }}",
+        "options": {}
+      },
+      "id": "login-evento",
+      "name": "🔐 G54: Login (Evento)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3000,
+        204
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/auth/switch-company",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Evento)').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: Number($('🔔 Webhook: Marcar Evento').item.json.body.company_id) }) }}",
+        "options": {}
+      },
+      "id": "switch-evento",
+      "name": "🏢 G54: Cambiar Empresa (Evento)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3200,
+        204
       ],
       "onError": "continueRegularOutput"
     }
@@ -980,6 +1057,39 @@
         [
           {
             "node": "💾 G54: Guardar Línea Base",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔔 Webhook: Marcar Evento": {
+      "main": [
+        [
+          {
+            "node": "🔐 G54: Login (Evento)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔐 G54: Login (Evento)": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa (Evento)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 G54: Cambiar Empresa (Evento)": {
+      "main": [
+        [
+          {
+            "node": "📊 Línea Base: Métricas",
             "type": "main",
             "index": 0
           }
