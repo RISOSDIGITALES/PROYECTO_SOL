@@ -147,9 +147,9 @@
   <div class="header-inner">
     <div class="header-label">G54 Platform — Documento maestro para Walter</div>
     <h1>Éxodo — Pendientes para el ingeniero · <span>22 Ago 2026</span></h1>
-    <p>Reemplaza a <code style="color:#a78bfa;background:transparent;border:none;">exodo-g54-ago19.html</code>. 3 pedidos confirmados resueltos hoy con pruebas reales (no solo lectura de la doc): el tablero del CRM ya devuelve siempre las 6 etapas, el estado <code>usada</code> para ideas ya está desplegado, y el <code>ig_access_token</code> de Instagram ya lo devuelve <code>GET /api/n8n/pages/{page_id}</code>. Un cuarto pedido se confirmó resuelto en una segunda pasada, revisando el resto de los pendientes viejos: "Generar Post" ya manda el <code>idea_id</code> real desde el panel — confirmado con 3 ejecuciones reales del 20-ago (<code>trigger.source:"ui"</code>) mostrando <code>idea_id</code> poblado, contra <code>null</code> en cada ejecución real anterior desde el 14-ago. Los 4 se sacaron del documento. <strong style="color:#4ade80;">Actualización 25-ago:</strong> Walter agregó los 4 campos de demanda (<code>guardados_total</code>, <code>compartidos_total</code>, <code>visitas_perfil_total</code>, <code>seguidores_nuevos_total</code>) y el desglose semanal de <code>calificados_total</code>/<code>deals_total</code> — confirmados en vivo con datos reales, se sacaron los 3 pedidos correspondientes.</p>
+    <p>Reemplaza a <code style="color:#a78bfa;background:transparent;border:none;">exodo-g54-ago19.html</code>. 3 pedidos confirmados resueltos hoy con pruebas reales (no solo lectura de la doc): el tablero del CRM ya devuelve siempre las 6 etapas, el estado <code>usada</code> para ideas ya está desplegado, y el <code>ig_access_token</code> de Instagram ya lo devuelve <code>GET /api/n8n/pages/{page_id}</code>. Un cuarto pedido se confirmó resuelto en una segunda pasada, revisando el resto de los pendientes viejos: "Generar Post" ya manda el <code>idea_id</code> real desde el panel — confirmado con 3 ejecuciones reales del 20-ago (<code>trigger.source:"ui"</code>) mostrando <code>idea_id</code> poblado, contra <code>null</code> en cada ejecución real anterior desde el 14-ago. Los 4 se sacaron del documento. <strong style="color:#4ade80;">Actualización 25-ago:</strong> Walter agregó los 4 campos de demanda (<code>guardados_total</code>, <code>compartidos_total</code>, <code>visitas_perfil_total</code>, <code>seguidores_nuevos_total</code>) y el desglose semanal de <code>calificados_total</code>/<code>deals_total</code> — confirmados en vivo con datos reales, se sacaron los 3 pedidos correspondientes. <strong style="color:#4ade80;">Actualización 27-ago:</strong> Walter también desplegó <code>modos_respuesta</code> (interruptor por canal: bot activo vs. solo avisar) y <code>alertar_nueva_conversacion</code> en <code>GET/PUT /api/whatsapp/config</code> — confirmados en vivo y ya conectados en Sales AI Motor y Community AI, se sacaron los 2 pedidos correspondientes. Se agregó 1 pedido nuevo: el historial del Generador de Imágenes no responde a clics en ninguna miniatura salvo la primera.</p>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> 12 pedidos activos</div>
+      <div class="meta-item"><div class="dot"></div> 10 pedidos activos</div>
     </div>
   </div>
 </div>
@@ -322,24 +322,6 @@
     <span class="cat-title">CTA y canales</span>
   </div>
 
-  <div class="item-card">
-    <div class="item-header">
-      <div><div class="item-title">Campo de alerta por correo cuando entra una conversación nueva</div><div class="item-where">Sección "Bot / Asistente" del panel — mismo recurso donde vive <code>emails_vendedor</code></div></div>
-    </div>
-    <div class="item-body">
-      <p class="item-why">Necesitamos un campo booleano (ej. <code>alertar_nueva_conversacion</code>) con switch visible en el panel. De nuestro lado, Community AI y Sales AI Motor ya saben mandar el correo — solo falta el campo real para prenderlo/apagarlo, hoy queda apagado por diseño.</p>
-    </div>
-  </div>
-
-  <div class="item-card">
-    <div class="item-header">
-      <div><div class="item-title">4 casillas por canal: "bot activo" o "solo avisar por correo"</div><div class="item-where">Panel — Configuración del canal / Bot Asistente</div></div>
-    </div>
-    <div class="item-body">
-      <p class="item-why">Hoy el bot responde solo en todos los canales configurados, sin que el cliente pueda decidir lo contrario canal por canal. Necesitamos 4 interruptores independientes — WhatsApp, Telegram, Facebook e Instagram (mensajes + comentarios) — cada uno con 2 estados, y un endpoint simple que podamos leer desde n8n antes de decidir si el bot contesta (ej. extender <code>GET /api/whatsapp/config</code> con un campo <code>modo_respuesta: "auto"|"solo_avisar"</code> por canal).</p>
-    </div>
-  </div>
-
   <!-- ============ BANCO DE IDEAS ============ -->
   <div class="cat-header">
     <span class="cat-icon">🗂️</span>
@@ -450,6 +432,21 @@
     </div>
     <div class="item-body">
       <p class="item-why">El Strategist AI (nodo <code>📈 Obtener Métricas Anteriores G54</code>) ya está diseñado y conectado para leer el rendimiento de las últimas 4 estrategias (posts publicados, leads generados, mejor plataforma, mejor tipo de contenido) antes de generar la estrategia siguiente — es justo el mecanismo de "la estrategia aprende de lo que funcionó" que la plataforma necesita. Confirmado en vivo hoy que la ruta que ese nodo llama, <code>GET /api/n8n/companies/{id}/rrss/analytics?limit=4</code>, devuelve <code>404 "could not be found"</code> — nunca existió del lado de G54. El código absorbe el error en silencio (<code>try/catch</code>), así que el Strategist lleva generando cada estrategia nueva sin ningún dato real de qué funcionó antes, sin que se vea ningún error en n8n. Con esta ruta agregada (mismo shape que ya usamos: <code>{"data":[{"periodo","tipo","metricas":{"posts_publicados","leads_generados","mejor_plataforma","mejor_tipo_contenido"}}]}</code>), el mecanismo empieza a funcionar solo, sin tocar nada de nuestro lado.</p>
+    </div>
+  </div>
+
+  <!-- ============ GENERADOR DE IMÁGENES — PANEL ============ -->
+  <div class="cat-header">
+    <span class="cat-icon">🖼️</span>
+    <span class="cat-title">Generador de Imágenes — panel</span>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">El historial de imágenes no responde a clics — se queda congelado en la primera</div><div class="item-where">Panel › Generador de Imágenes (<code>/admin/agentes/imagen</code>)</div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">Con más de una imagen en el historial, hacer clic en cualquier miniatura que no sea la primera no hace nada — el panel de detalle (descripción, prompt real usado, link de la imagen) se queda siempre mostrando la primera imagen del historial. Reproducido y confirmado 3 veces con miniaturas de contenido claramente distinto entre sí, siempre el mismo resultado: el detalle nunca cambia. Cualquier cliente que quiera revisar una imagen anterior a la última generada ve el prompt/descripción equivocados. Es un bug de la interfaz (JavaScript del panel), no de ningún dato — no hay nada que podamos corregir de nuestro lado.</p>
     </div>
   </div>
 
