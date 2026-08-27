@@ -204,7 +204,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst data = $('📋 Obtener Leads Sin Respuesta').first().json;\n\nif (data.message || !data.data) return [];\n\nconst leads = data.data || [];\nconst now = new Date();\nconst results = [];\n\nconst clasificacionesBloqueadas = ['vendedor activo', 'cerrado', 'vendido', 'no interesado'];\n\nfor (const lead of leads) {\n  const clasificacion = (lead.clasificacion || lead.estado || '').toLowerCase();\n  if (clasificacionesBloqueadas.some(b => clasificacion.includes(b))) continue;\n\n  const ultimaInteraccion = new Date(lead.updated_at || lead.created_at);\n  const horasDiff = (now - ultimaInteraccion) / (1000 * 60 * 60);\n\n  let tipoFollowup = null;\n  if (horasDiff >= 72) tipoFollowup = '72h';\n  else if (horasDiff >= 24) tipoFollowup = '24h';\n\n  if (tipoFollowup) {\n    results.push({\n      json: {\n        leadId: lead.id,\n        telefono: lead.phone,\n        nombre: lead.contact_name || 'cliente',\n        tipoFollowup,\n        estado: lead.estado\n      }\n    });\n  }\n}\n\nreturn results;\n"
+        "jsCode": "// Reconstrucción de base (27-ago): el fetch original (GET /api/n8n/companies/{id}/wa/leads\n// con hours_inactive/status) nunca funcionó — ese endpoint exige un teléfono puntual, no\n// sirve para listar. Reemplazado por /api/whatsapp/conversations (confirmado funcionando).\n// El estado \"ya se mandó/ya se notificó\" tampoco se podía trackear por clasificacion (se\n// descarta en silencio) — ahora vive en datos_calificacion, con lectura-mezcla-escritura\n// para no borrar los datos reales que Marco ya recolectó del cliente.\nconst cData = $('📋 Obtener Conversaciones (Follow-up)').first().json;\nconst conversaciones = (cData && cData.data) || [];\n\nconst boardData = $('📋 Obtener CRM Board (Follow-up)').first().json;\n// Mapa wa_contact_id -> etapa real del negocio, para no auto-seguir leads que ya\n// gestiona una persona (negociación en curso, cerrado o perdido).\nconst etapaPorContacto = {};\nif (boardData && typeof boardData === 'object') {\n  for (const [etapa, deals] of Object.entries(boardData)) {\n    if (!Array.isArray(deals)) continue;\n    for (const d of deals) {\n      if (d.wa_contact_id) etapaPorContacto[d.wa_contact_id] = etapa;\n    }\n  }\n}\nconst etapasBloqueadas = ['closed', 'lost', 'negotiation', 'proposal'];\n\nconst now = new Date();\nconst results = [];\n\nfor (const conv of conversaciones) {\n  const contact = conv.contact || {};\n  const waContactId = conv.wa_contact_id || contact.id;\n  const etapa = etapaPorContacto[waContactId];\n  if (etapa && etapasBloqueadas.includes(etapa)) continue;\n\n  const dc = contact.datos_calificacion || {};\n  if (dc.followup_notificado) continue; // ya se hizo todo lo posible con este lead\n\n  const ultimaInteraccion = new Date(conv.updated_at || conv.created_at);\n  const horasDiff = (now - ultimaInteraccion) / (1000 * 60 * 60);\n\n  let tipoAccion = null;\n  if (!dc.followup_23h_enviado_en && horasDiff >= 23) {\n    tipoAccion = 'enviar_23h';\n  } else if (dc.followup_23h_enviado_en) {\n    const horasDesdeEnvio = (now - new Date(dc.followup_23h_enviado_en)) / (1000 * 60 * 60);\n    // ~49h desde el envío del primer follow-up ≈ 72h reales desde el silencio original.\n    if (!isNaN(horasDesdeEnvio) && horasDesdeEnvio >= 49) tipoAccion = 'notificar';\n  }\n\n  if (tipoAccion) {\n    results.push({ json: {\n      telefono: (contact.phone || '').replace(/^\\+/, ''),\n      nombre: contact.name || 'cliente',\n      tipoAccion,\n      datosCalificacionActuales: dc\n    } });\n  }\n}\nreturn results;\n"
       },
       "id": "2f08aeac-7fa5-48b5-9ad2-8a177e0ca547",
       "name": "🔧 Procesar Follow-ups",
@@ -258,7 +258,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  messaging_product: 'whatsapp',\n  to: $json.telefono,\n  type: 'text',\n  text: {\n    body: $json.tipoFollowup === '24h'\n      ? $('📊 Config para Follow-up').item.json.msg_followup_24h\n      : $('📊 Config para Follow-up').item.json.msg_followup_72h\n  }\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  messaging_product: 'whatsapp',\n  to: $('🔧 Procesar Follow-ups').item.json.telefono,\n  type: 'text',\n  text: {\n    body: $('📊 Config para Follow-up').item.json.msg_followup_24h\n  }\n}) }}",
         "options": {}
       },
       "id": "134619df-061e-4d5e-a594-3654a3b82703",
@@ -289,17 +289,18 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: $json.telefono, nombre: $json.nombre, canal: 'whatsapp', messages: [{ rol: 'agente', contenido: 'Follow-up ' + $json.tipoFollowup + ' enviado' }], clasificacion: 'Follow-up ' + $json.tipoFollowup }) }}",
+        "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: '+' + $('🔧 Procesar Follow-ups').item.json.telefono, nombre: $('🔧 Procesar Follow-ups').item.json.nombre, canal: 'whatsapp', datos_calificacion: { ...($('🔧 Procesar Follow-ups').item.json.datosCalificacionActuales || {}), followup_23h_enviado_en: new Date().toISOString() }, messages: [{ rol: 'bot', contenido: '[interno] follow-up de 23h enviado', sent_at: new Date().toISOString() }] }) }}",
         "options": {}
       },
       "id": "f5a8fd8c-aac2-434a-bff0-6318dc1d7e9f",
-      "name": "🔄 Actualizar Estado Follow-up",
+      "name": "🔄 Marcar 23h Enviado",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
         256,
         672
-      ]
+      ],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -1407,6 +1408,210 @@
         }
       },
       "webhookId": "8bb6797a-ef05-4aad-bd36-94702908627e"
+    },
+    {
+      "id": "5c3da96d-7184-48b7-96b6-8411f1956023",
+      "name": "🔀 ¿Enviar WhatsApp o Notificar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        8,
+        812
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "fc32a4ee-4fad-43da-8487-bf91924e2eef",
+              "leftValue": "={{ $('🔧 Procesar Follow-ups').item.json.tipoAccion }}",
+              "rightValue": "enviar_23h",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "1c90bef9-c2a3-4f27-acae-39e278fb05e6",
+      "name": "📧 Notificar Vendedor (Follow-up 72h)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        308,
+        932
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TESHSjzjMCpCxBBk",
+          "name": "Gmail account"
+        }
+      },
+      "parameters": {
+        "sendTo": "={{ $('📊 Config para Follow-up').item.json.emails_vendedor?.join(',') || 'risosadmi@gmail.com' }}",
+        "subject": "={{ '⏰ Lead sin respuesta 72h — ' + ($('🔧 Procesar Follow-ups').item.json.nombre || $('🔧 Procesar Follow-ups').item.json.telefono) }}",
+        "message": "={{ '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td align=\"center\" style=\"text-align:center;\"><table width=\"520\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#ffffff;border-radius:12px;overflow:hidden;width:520px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;\"><tr><td style=\"background:linear-gradient(135deg,#2D5BFF 0%,#1E45D6 100%);padding:26px 28px 24px;\"><table cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"vertical-align:middle;\"><span style=\"font-size:20px;font-weight:600;color:#fff;letter-spacing:-0.3px;font-family:Arial,sans-serif;\">Growth</span></td><td style=\"vertical-align:middle;padding:0 1px;\"><div style=\"width:25px;height:25px;background:#fff;border-radius:50%;text-align:center;line-height:25px;color:#2D5BFF;font-size:18px;font-weight:800;letter-spacing:-0.8px;font-family:Arial,sans-serif;display:inline-block;\">54</div></td><td style=\"vertical-align:middle;\"><span style=\"font-size:20px;font-weight:600;color:#fff;letter-spacing:-0.3px;font-family:Arial,sans-serif;\">ai</span></td></tr></table><div style=\"margin-top:18px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#CFE0FF;font-weight:700;font-family:Arial,sans-serif;\">Crating Express &middot; Marco WhatsApp</div><div style=\"font-size:21px;font-weight:600;color:#fff;margin-top:4px;font-family:Arial,sans-serif;\">Lead sin respuesta hace 72h+</div><table cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:16px;background:rgba(251,191,36,.24);border:1px solid rgba(255,255,255,.4);border-radius:8px;\"><tr><td style=\"padding:8px 14px;\"><span style=\"font-size:12.5px;color:#fff;font-weight:600;font-family:Arial,sans-serif;\">⏰ Ya se mandó el primer seguimiento (23h) — sigue sin responder</span></td></tr></table></td></tr><tr><td style=\"padding:20px 28px;\"><span style=\"font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#9ca3af;font-family:Arial,sans-serif;\">Contacto</span><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:8px;\"><tr><td style=\"padding:9px 0;border-bottom:1px solid #e5e7eb;width:26px;vertical-align:top;font-size:15px;\">👤</td><td style=\"padding:9px 0 9px 10px;border-bottom:1px solid #e5e7eb;\"><span style=\"font-size:14.5px;font-weight:700;color:#111827;font-family:Arial,sans-serif;\">' + ($('🔧 Procesar Follow-ups').item.json.nombre || '(sin nombre)') + '</span></td></tr><tr><td style=\"padding:9px 0;width:26px;vertical-align:top;font-size:15px;\">📞</td><td style=\"padding:9px 0 9px 10px;\"><span style=\"font-size:14.5px;font-weight:700;color:#111827;font-family:Arial,sans-serif;\">+' + ($('🔧 Procesar Follow-ups').item.json.telefono || '') + '</span></td></tr></table></td></tr><tr><td style=\"padding:8px 28px 24px;\"><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td align=\"center\" style=\"background:#25D366;border-radius:8px;\"><a href=\"https://wa.me/' + ($('🔧 Procesar Follow-ups').item.json.telefono || '') + '\" style=\"display:block;padding:14px 20px;font-size:14.5px;font-weight:700;color:#ffffff;text-decoration:none;font-family:Arial,sans-serif;\">💬 Escribirle por WhatsApp ahora</a></td></tr></table></td></tr><tr><td style=\"padding:14px 28px;background:#f9fafb;border-top:1px solid #e5e7eb;\"><span style=\"font-size:11px;color:#9ca3af;font-family:Arial,sans-serif;\">WhatsApp ya no permite que Marco mande texto libre pasadas las 24h de silencio — hace falta que alguien retome el contacto manualmente si vale la pena.</span></td></tr></table></td></tr></table>' }}",
+        "options": {
+          "contentType": "html",
+          "appendAttribution": false
+        },
+        "fromEmail": "Growth54 <risosadmi@gmail.com>"
+      },
+      "webhookId": "3643c6d5-e2b0-496d-a6fa-c74de80f8aec"
+    },
+    {
+      "id": "f3cdd8f1-6d0c-4363-bc61-ce567bd5f3c4",
+      "name": "🔄 Marcar Notificado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        308,
+        1072
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/agent/whatsapp/inbound",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED_AGENT_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: '+' + $('🔧 Procesar Follow-ups').item.json.telefono, nombre: $('🔧 Procesar Follow-ups').item.json.nombre, canal: 'whatsapp', datos_calificacion: { ...($('🔧 Procesar Follow-ups').item.json.datosCalificacionActuales || {}), followup_notificado: true }, messages: [{ rol: 'bot', contenido: '[interno] follow-up 72h notificado al vendedor', sent_at: new Date().toISOString() }] }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "258d09a4-171c-4c73-99a1-df7b7e660f09",
+      "name": "🔐 G54: Login (Follow-up)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1024,
+        672
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/auth/login",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_MASTER_PASSWORD' }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "3250cd9f-4f57-473a-99fc-543f060db766",
+      "name": "🏢 G54: Cambiar Empresa (Follow-up)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -824,
+        672
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/auth/switch-company",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Follow-up)').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: 1 }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "088b6fbe-a51d-4b89-8018-6f6a166146d2",
+      "name": "📋 Obtener Conversaciones (Follow-up)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -624,
+        672
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "https://apigrowth.mdarthurdigital.com/api/whatsapp/conversations",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Follow-up)').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "235297ea-f87b-4283-9fc5-66e66b831f8e",
+      "name": "📋 Obtener CRM Board (Follow-up)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -424,
+        672
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "https://apigrowth.mdarthurdigital.com/api/crm/board",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Follow-up)').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      }
     }
   ],
   "connections": {
@@ -1475,18 +1680,7 @@
       "main": [
         [
           {
-            "node": "📋 Obtener Leads Sin Respuesta",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📋 Obtener Leads Sin Respuesta": {
-      "main": [
-        [
-          {
-            "node": "🔧 Procesar Follow-ups",
+            "node": "🔐 G54: Login (Follow-up)",
             "type": "main",
             "index": 0
           }
@@ -1508,7 +1702,7 @@
       "main": [
         [
           {
-            "node": "📤 Enviar Follow-up WhatsApp",
+            "node": "🔀 ¿Enviar WhatsApp o Notificar?",
             "type": "main",
             "index": 0
           }
@@ -1519,7 +1713,7 @@
       "main": [
         [
           {
-            "node": "🔄 Actualizar Estado Follow-up",
+            "node": "🔄 Marcar 23h Enviado",
             "type": "main",
             "index": 0
           }
@@ -1991,6 +2185,89 @@
         [
           {
             "node": "📧 Alertar Colisión CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Enviar WhatsApp o Notificar?": {
+      "main": [
+        [
+          {
+            "node": "📤 Enviar Follow-up WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📧 Notificar Vendedor (Follow-up 72h)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Notificar Vendedor (Follow-up 72h)": {
+      "main": [
+        [
+          {
+            "node": "🔄 Marcar Notificado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Marcar 23h Enviado": {
+      "main": [
+        []
+      ]
+    },
+    "🔄 Marcar Notificado": {
+      "main": [
+        []
+      ]
+    },
+    "🔐 G54: Login (Follow-up)": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa (Follow-up)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 G54: Cambiar Empresa (Follow-up)": {
+      "main": [
+        [
+          {
+            "node": "📋 Obtener Conversaciones (Follow-up)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Obtener Conversaciones (Follow-up)": {
+      "main": [
+        [
+          {
+            "node": "📋 Obtener CRM Board (Follow-up)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Obtener CRM Board (Follow-up)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Procesar Follow-ups",
             "type": "main",
             "index": 0
           }
