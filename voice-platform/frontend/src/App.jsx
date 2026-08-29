@@ -1,0 +1,21 @@
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./AuthContext";
+import LoginPage from "./pages/LoginPage";
+import AgencyDashboard from "./pages/AgencyDashboard";
+import BusinessDashboard from "./pages/BusinessDashboard";
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Navigate to="/agencia/login" replace />} />
+          <Route path="/agencia/login" element={<LoginPage role="agency" />} />
+          <Route path="/negocio/login" element={<LoginPage role="business" />} />
+          <Route path="/agencia" element={<AgencyDashboard />} />
+          <Route path="/negocio" element={<BusinessDashboard />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}
