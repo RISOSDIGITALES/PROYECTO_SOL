@@ -4,6 +4,7 @@ import LoginPage from "./pages/LoginPage";
 import AgencyDashboard from "./pages/AgencyDashboard";
 import AgencyBusinessDetail from "./pages/AgencyBusinessDetail";
 import BusinessDashboard from "./pages/BusinessDashboard";
+import NotFoundPage from "./pages/NotFoundPage";
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
           <Route path="/agencia" element={<AgencyDashboard />} />
           <Route path="/agencia/negocios/:id" element={<AgencyBusinessDetail />} />
           <Route path="/negocio" element={<BusinessDashboard />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

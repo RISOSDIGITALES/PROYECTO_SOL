@@ -62,7 +62,7 @@ export default function AgencyDashboard() {
 
         <div style={{ display: "grid", gap: 12 }}>
           {businesses.map((b) => (
-            <Link key={b.id} to={`/agencia/negocios/${b.id}`} style={cardStyle}>
+            <Link key={b.id} to={`/agencia/negocios/${b.id}`} className="vox54-card" style={cardStyle}>
               <div style={{ fontWeight: 700, fontSize: 14.5 }}>{b.name}</div>
               <div style={{ fontSize: 12, color: "var(--ink-soft)" }}>ID {b.id} — ver / editar configuración →</div>
             </Link>

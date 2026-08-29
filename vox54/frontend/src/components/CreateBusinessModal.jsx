@@ -59,8 +59,10 @@ export default function CreateBusinessModal({ onClose, onCreate }) {
               value={form.contact_password}
               onChange={(e) => setForm({ ...form, contact_password: e.target.value })}
               required
+              minLength={8}
               style={inputStyle}
             />
+            <div style={hintStyle}>Mínimo 8 caracteres.</div>
           </div>
 
           {error && <div style={{ fontSize: 13, color: "var(--danger)" }}>{error}</div>}
@@ -102,6 +104,12 @@ const labelStyle = {
   fontWeight: 600,
   color: "var(--ink-soft)",
   marginBottom: 6,
+};
+
+const hintStyle = {
+  fontSize: 11.5,
+  color: "var(--ink-soft)",
+  marginTop: 4,
 };
 
 const inputStyle = {

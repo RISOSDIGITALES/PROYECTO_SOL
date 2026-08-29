@@ -14,8 +14,10 @@ async function request(path, { method = "GET", body, token } = {}) {
   if (!res.ok) {
     let message = "Ocurrió un error inesperado.";
     if (Array.isArray(data.detail)) {
-      // errores de validación de Pydantic (422 nativo)
-      message = data.detail.map((d) => d.msg).join(", ");
+      // errores de validación de Pydantic (422 nativo) — cuando el validador
+      // propio lanza un ValueError con nuestro texto, Pydantic le antepone
+      // "Value error, " automáticamente; se saca para que se vea limpio.
+      message = data.detail.map((d) => (d.msg || "").replace(/^Value error,\s*/i, "")).join(", ");
     } else if (data.detail && Array.isArray(data.detail.errors)) {
       // nuestra validación custom de negocio (validators.py): {"errors": [...]}
       message = data.detail.errors.join(" · ");

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useAuth } from "../AuthContext";
 import { api } from "../api";
@@ -102,12 +102,12 @@ export default function LoginPage({ role }) {
             {loading ? "Entrando…" : "Entrar"}
           </button>
 
-          <a
-            href={isAgency ? "/negocio/login" : "/agencia/login"}
+          <Link
+            to={isAgency ? "/negocio/login" : "/agencia/login"}
             style={{ fontSize: 12.5, color: "var(--ink-soft)", textAlign: "center", textDecoration: "none" }}
           >
             {isAgency ? "¿Sos un negocio? Entrar por acá" : "¿Sos parte de la agencia? Entrar por acá"}
-          </a>
+          </Link>
         </form>
       </div>
     </div>
