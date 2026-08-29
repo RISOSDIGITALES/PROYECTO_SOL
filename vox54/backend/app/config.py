@@ -10,8 +10,17 @@ class Settings(BaseSettings):
     # Agents (un servicio, no una persona) para leer BotConfig sin necesitar
     # una sesión de negocio/agencia. Ver vox54/worker/.
     worker_secret: str = "dev-worker-secret-change-me"
+    # Orígenes reales permitidos por CORS, separados por coma — el default
+    # solo cubre el dev server local de Vite. Al desplegar de verdad, hay
+    # que fijar CORS_ORIGINS en el .env real con el dominio real del panel,
+    # nunca dejar el default de localhost en un backend expuesto de verdad.
+    cors_origins: str = "http://localhost:5173"
 
     model_config = SettingsConfigDict(env_file=".env")
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
 settings = Settings()

@@ -1,4 +1,7 @@
-const API_BASE = "http://localhost:8000";
+// En dev, sin ningún .env, cae al backend local de siempre. Al desplegar
+// de verdad, VITE_API_BASE debe apuntar al dominio real del backend —
+// dejarlo en localhost rompería todo el panel fuera de esta máquina.
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
 async function request(path, { method = "GET", body, token } = {}) {
   const headers = { "Content-Type": "application/json" };
