@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..deps import get_current_agency_user
 from ..security import hash_password
-from ..schemas import AgencyMeResponse, BusinessOut, BusinessCreate
+from ..schemas import AgencyMeResponse, BusinessOut, BusinessCreate, BusinessDetailOut, BotConfigUpdate, BotConfigOut
 from .. import models
 
 router = APIRouter(prefix="/agency", tags=["agency"])
@@ -57,3 +57,39 @@ def create_business(
     db.commit()
     db.refresh(business)
     return business
+
+
+def _get_owned_business(db: Session, user: models.AgencyUser, business_id: int) -> models.Business:
+    business = (
+        db.query(models.Business)
+        .filter(models.Business.id == business_id, models.Business.agency_id == user.agency_id)
+        .first()
+    )
+    if not business:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Negocio no encontrado")
+    return business
+
+
+@router.get("/businesses/{business_id}", response_model=BusinessDetailOut)
+def get_business(
+    business_id: int,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    return _get_owned_business(db, user, business_id)
+
+
+@router.put("/businesses/{business_id}/bot-config", response_model=BotConfigOut)
+def update_business_bot_config(
+    business_id: int,
+    body: BotConfigUpdate,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    business = _get_owned_business(db, user, business_id)
+    config = business.bot_config
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(config, field, value)
+    db.commit()
+    db.refresh(config)
+    return config

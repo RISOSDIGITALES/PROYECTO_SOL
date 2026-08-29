@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import Logo from "../components/Logo";
 import BotConfigForm from "../components/BotConfigForm";
 import { useAuth } from "../AuthContext";
 import { api } from "../api";
 
-export default function BusinessDashboard() {
+export default function AgencyBusinessDetail() {
   const { session, logout } = useAuth();
   const navigate = useNavigate();
-  const [me, setMe] = useState(null);
+  const { id } = useParams();
+  const [business, setBusiness] = useState(null);
   const [config, setConfig] = useState(null);
   const [catalog, setCatalog] = useState(null);
   const [error, setError] = useState("");
@@ -17,13 +18,17 @@ export default function BusinessDashboard() {
 
   useEffect(() => {
     if (!session) {
-      navigate("/negocio/login");
+      navigate("/agencia/login");
       return;
     }
-    api.businessMe(session.access_token).then(setMe).catch((e) => setError(e.message));
-    api.getBotConfig(session.access_token).then(setConfig).catch((e) => setError(e.message));
+    api.getBusinessDetail(session.access_token, id)
+      .then((detail) => {
+        setBusiness(detail);
+        setConfig(detail.bot_config);
+      })
+      .catch((e) => setError(e.message));
     api.getCatalog().then(setCatalog).catch((e) => setError(e.message));
-  }, [session]);
+  }, [session, id]);
 
   function handleChange(patch) {
     setConfig((prev) => ({ ...prev, ...patch }));
@@ -36,7 +41,7 @@ export default function BusinessDashboard() {
     setSavedMessage("");
     setSaving(true);
     try {
-      const updated = await api.updateBotConfig(session.access_token, config);
+      const updated = await api.updateBusinessBotConfig(session.access_token, id, config);
       setConfig(updated);
       setSavedMessage("Guardado correctamente.");
     } catch (err) {
@@ -51,19 +56,20 @@ export default function BusinessDashboard() {
       <div className="g54-gradient" style={{ padding: "20px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <Logo size="small" />
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <span style={{ color: "#fff", fontSize: 13.5 }}>{me?.name}</span>
-          <button onClick={() => { logout(); navigate("/negocio/login"); }} style={logoutBtn}>
+          <span style={{ color: "#fff", fontSize: 13.5 }}>Agencia</span>
+          <button onClick={() => { logout(); navigate("/agencia/login"); }} style={logoutBtn}>
             Salir
           </button>
         </div>
       </div>
 
       <div style={{ maxWidth: 640, margin: "0 auto", padding: 32 }}>
-        <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>
-          {me?.business_name || "…"}
+        <Link to="/agencia" style={backLink}>← Volver a negocios</Link>
+        <h1 style={{ fontSize: 22, color: "var(--ink)", margin: "8px 0 4px" }}>
+          {business?.name || "…"}
         </h1>
         <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginBottom: 24 }}>
-          Configuración de tu agente de voz.
+          Configuración del agente de voz — vista de agencia.
         </p>
 
         {config && catalog ? (
@@ -79,10 +85,17 @@ export default function BusinessDashboard() {
         ) : (
           !error && <div style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>Cargando…</div>
         )}
+        {error && !config && <div style={{ color: "var(--danger)" }}>{error}</div>}
       </div>
     </div>
   );
 }
+
+const backLink = {
+  fontSize: 12.5,
+  color: "var(--ink-soft)",
+  textDecoration: "none",
+};
 
 const logoutBtn = {
   background: "rgba(255,255,255,0.14)",

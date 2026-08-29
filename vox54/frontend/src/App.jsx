@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./AuthContext";
 import LoginPage from "./pages/LoginPage";
 import AgencyDashboard from "./pages/AgencyDashboard";
+import AgencyBusinessDetail from "./pages/AgencyBusinessDetail";
 import BusinessDashboard from "./pages/BusinessDashboard";
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
           <Route path="/agencia/login" element={<LoginPage role="agency" />} />
           <Route path="/negocio/login" element={<LoginPage role="business" />} />
           <Route path="/agencia" element={<AgencyDashboard />} />
+          <Route path="/agencia/negocios/:id" element={<AgencyBusinessDetail />} />
           <Route path="/negocio" element={<BusinessDashboard />} />
         </Routes>
       </BrowserRouter>

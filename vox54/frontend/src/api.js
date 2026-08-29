@@ -29,6 +29,10 @@ export const api = {
   businessMe: (token) => request("/business/me", { token }),
   listBusinesses: (token) => request("/agency/businesses", { token }),
   createBusiness: (token, body) => request("/agency/businesses", { method: "POST", body, token }),
+  getBusinessDetail: (token, id) => request(`/agency/businesses/${id}`, { token }),
+  updateBusinessBotConfig: (token, id, body) =>
+    request(`/agency/businesses/${id}/bot-config`, { method: "PUT", body, token }),
   getBotConfig: (token) => request("/business/bot-config", { token }),
   updateBotConfig: (token, body) => request("/business/bot-config", { method: "PUT", body, token }),
+  getCatalog: () => request("/catalog"),
 };

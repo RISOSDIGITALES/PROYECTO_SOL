@@ -70,15 +70,23 @@ class BotConfig(Base):
     id = Column(Integer, primary_key=True)
     business_id = Column(Integer, ForeignKey("businesses.id"), unique=True, nullable=False)
 
+    # --- Voz ---
     voice_provider = Column(String(50), default="vapi")
-    voice_provider_config = Column(JSON, default=dict)  # ej: {"assistant_id": "...", "phone_number": "..."}
+    voice_id = Column(String(100), default="")
+    phone_number = Column(String(30), default="")  # número asignado por el proveedor de voz
+    voice_provider_config = Column(JSON, default=dict)  # datos avanzados específicos del proveedor
 
+    # --- IA ---
     ai_provider = Column(String(50), default="groq")
     ai_model = Column(String(100), default="llama-3.3-70b-versatile")
-    ai_provider_config = Column(JSON, default=dict)  # ej: {"api_key": "..."} si el negocio trae su propia key
+    ai_api_key = Column(String(255), default="")  # vacío = usa la key compartida de la plataforma
 
+    # --- Comportamiento del agente ---
     system_prompt = Column(Text, default="")
-    voice_id = Column(String(100), default="")
+    welcome_message = Column(Text, default="")
+    escalation_email = Column(String(255), default="")
+    language = Column(String(20), default="auto")  # es | en | auto
+    status = Column(String(20), default="paused")  # active | paused
 
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
