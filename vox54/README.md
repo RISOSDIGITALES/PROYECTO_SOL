@@ -1,4 +1,4 @@
-# Voice Platform (nombre provisorio)
+# Vox54 (nombre provisorio — pendiente de decidir el nombre real)
 
 Plataforma de gestión multiempresa para agentes de voz — panel de agencia (nosotros)
 y panel de negocio (cada cliente), con proveedor de voz y proveedor de IA

@@ -6,7 +6,7 @@ from .routers import auth, agency, business
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Voice Platform API")
+app = FastAPI(title="Vox54 API (nombre provisorio)")
 
 app.add_middleware(
     CORSMiddleware,

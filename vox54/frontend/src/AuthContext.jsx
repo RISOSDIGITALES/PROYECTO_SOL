@@ -2,7 +2,7 @@ import { createContext, useContext, useState } from "react";
 
 const AuthContext = createContext(null);
 
-const STORAGE_KEY = "voice_platform_session";
+const STORAGE_KEY = "vox54_session";
 
 function loadSession() {
   try {
