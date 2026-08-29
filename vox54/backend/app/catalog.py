@@ -1,10 +1,15 @@
-"""Catálogo de proveedores de IA y de voz que alimenta los desplegables del panel.
+"""Catálogo de proveedores (IA, telefonía, STT, TTS) que alimenta los
+desplegables del panel.
 
-Los modelos de IA son reales (nombres reales de cada proveedor). Las voces son de
-muestra — todavía no hay ninguna cuenta de proveedor de voz conectada de verdad,
-así que se etiquetan honestamente como "voz de muestra" en vez de simular un
-catálogo real de un proveedor. Cuando se conecte un proveedor real (VAPI u otro),
-esta lista se reemplaza por la que devuelva su API.
+No dependemos de VAPI ni de ningún otro orquestador todo-en-uno — cada pieza
+del pipeline de voz (telefonía, reconocimiento de voz, síntesis de voz) es un
+proveedor intercambiable propio, corrido por nuestro worker de LiveKit Agents
+(ver `vox54/worker/`). Los modelos de IA y de STT son reales (nombres reales
+de cada proveedor, confirmados en la investigación del 2026-08-29). Las voces
+de TTS son de muestra — todavía no hay ninguna cuenta de Cartesia/ElevenLabs
+conectada de verdad, así que se etiquetan honestamente como "voz de muestra"
+en vez de simular un catálogo real. Cuando se conecte una cuenta real, esta
+lista se reemplaza por la que devuelva su API.
 """
 
 AI_PROVIDERS = [
@@ -45,10 +50,34 @@ AI_PROVIDERS = [
     },
 ]
 
-VOICE_PROVIDERS = [
+TELEPHONY_PROVIDERS = [
+    {"id": "twilio", "name": "Twilio"},
+    {"id": "telnyx", "name": "Telnyx"},
+]
+
+STT_PROVIDERS = [
     {
-        "id": "vapi",
-        "name": "VAPI",
+        "id": "deepgram",
+        "name": "Deepgram",
+        "models": [
+            {"id": "nova-3", "name": "Nova-3 (recomendado, streaming)"},
+            {"id": "nova-2", "name": "Nova-2"},
+        ],
+    },
+    {
+        "id": "groq",
+        "name": "Groq (Whisper)",
+        "models": [
+            {"id": "whisper-large-v3-turbo", "name": "Whisper Large v3 Turbo (más barato)"},
+            {"id": "whisper-large-v3", "name": "Whisper Large v3 (más preciso)"},
+        ],
+    },
+]
+
+TTS_PROVIDERS = [
+    {
+        "id": "cartesia",
+        "name": "Cartesia",
         "voices": [
             {"id": "sample-female-warm", "name": "Voz femenina cálida (muestra)"},
             {"id": "sample-female-professional", "name": "Voz femenina profesional (muestra)"},
@@ -56,6 +85,21 @@ VOICE_PROVIDERS = [
             {"id": "sample-male-professional", "name": "Voz masculina profesional (muestra)"},
         ],
     },
+    {
+        "id": "elevenlabs",
+        "name": "ElevenLabs",
+        "voices": [
+            {"id": "sample-female-warm", "name": "Voz femenina cálida (muestra)"},
+            {"id": "sample-female-professional", "name": "Voz femenina profesional (muestra)"},
+            {"id": "sample-male-warm", "name": "Voz masculina cálida (muestra)"},
+            {"id": "sample-male-professional", "name": "Voz masculina profesional (muestra)"},
+        ],
+    },
+]
+
+RUNTIME_TARGETS = [
+    {"id": "livekit_cloud", "name": "LiveKit Cloud (recomendado para empezar)"},
+    {"id": "self_hosted", "name": "Self-hosted (solo si el volumen lo justifica)"},
 ]
 
 LANGUAGES = [

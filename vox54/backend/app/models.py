@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON, Text, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -61,20 +61,39 @@ class BusinessUser(Base):
 
 
 class BotConfig(Base):
-    """Configuración del bot de voz de un negocio — proveedor de voz + proveedor de IA,
-    cada uno intercambiable (VAPI/otro para voz; Groq/OpenAI/Anthropic/Gemini para el
-    modelo de IA que piensa las respuestas), sin acoplar el negocio a uno solo."""
+    """Configuración del bot de voz de un negocio.
+
+    NO dependemos de VAPI (ni de ningún otro orquestador todo-en-uno) — el
+    pipeline de la llamada en tiempo real lo corre nuestro propio worker de
+    LiveKit Agents (ver `vox54/worker/`), armado sobre 3 piezas intercambiables
+    e independientes: telefonía (Twilio/Telnyx), reconocimiento de voz/STT
+    (Deepgram/Groq Whisper), y síntesis de voz/TTS (Cartesia/ElevenLabs) — más
+    el proveedor de IA de siempre (Groq/OpenAI/Anthropic/Gemini) para el modelo
+    que piensa las respuestas. Investigado el 2026-08-29: ninguno de los
+    frameworks de código abierto (Pipecat, LiveKit Agents) tiene un objeto de
+    config declarativo — esta tabla ES esa capa, la seguimos necesitando
+    nosotros sea cual sea el motor de voz de abajo."""
 
     __tablename__ = "bot_configs"
 
     id = Column(Integer, primary_key=True)
     business_id = Column(Integer, ForeignKey("businesses.id"), unique=True, nullable=False)
 
-    # --- Voz ---
-    voice_provider = Column(String(50), default="vapi")
-    voice_id = Column(String(100), default="")
-    phone_number = Column(String(30), default="")  # número asignado por el proveedor de voz
-    voice_provider_config = Column(JSON, default=dict)  # datos avanzados específicos del proveedor
+    # --- Telefonía ---
+    telephony_provider = Column(String(50), default="twilio")
+    telephony_trunk_id = Column(String(150), default="")  # SIP trunk / número que enruta la llamada
+    phone_number = Column(String(30), default="")  # número real asignado al negocio
+
+    # --- Reconocimiento de voz (STT) ---
+    stt_provider = Column(String(50), default="deepgram")
+    stt_model = Column(String(100), default="nova-3")
+
+    # --- Síntesis de voz (TTS) ---
+    tts_provider = Column(String(50), default="cartesia")
+    tts_voice_id = Column(String(100), default="")
+
+    # --- Orquestación (dónde corre el worker de LiveKit Agents) ---
+    runtime_target = Column(String(30), default="livekit_cloud")  # livekit_cloud | self_hosted
 
     # --- IA ---
     ai_provider = Column(String(50), default="groq")
@@ -89,11 +108,14 @@ class BotConfig(Base):
     status = Column(String(20), default="paused")  # active | paused
 
     # --- Control de la llamada ---
-    # Campos reales de conversación que sí se pueden configurar hoy (aunque
-    # ningún proveedor de voz esté conectado todavía) — investigados contra
-    # VAPI/Retell/Bland: quién habla primero, cuándo cortar por silencio o por
-    # duración, qué dice el agente antes de colgar, y a qué humano transferir.
+    # Campos reales de conversación — investigados contra VAPI/Retell/Bland
+    # primero, y contra LiveKit Agents después: quién habla primero, cuándo
+    # cortar por silencio o por duración, si se puede interrumpir al agente,
+    # qué dice antes de colgar, y a qué humano transferir. `silence_timeout_seconds`
+    # mapea directo a `min_endpointing_delay` de LiveKit; el resto no tiene
+    # equivalente nativo en el framework — los implementa el worker como código.
     first_message_mode = Column(String(30), default="assistant_first")
+    allow_interruptions = Column(Boolean, default=True)
     silence_timeout_seconds = Column(Integer, default=30)
     max_duration_seconds = Column(Integer, default=600)
     end_call_message = Column(Text, default="")

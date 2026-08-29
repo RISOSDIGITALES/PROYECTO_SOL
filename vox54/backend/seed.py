@@ -35,8 +35,11 @@ if not db.query(models.Agency).first():
 
     db.add(models.BotConfig(
         business_id=business1.id,
-        voice_provider="vapi",
-        voice_id="sample-male-professional",
+        telephony_provider="twilio",
+        stt_provider="deepgram",
+        stt_model="nova-3",
+        tts_provider="cartesia",
+        tts_voice_id="sample-male-professional",
         ai_provider="groq",
         ai_model="llama-3.3-70b-versatile",
         system_prompt="Eres Marco, un asistente de voz para Crating Express, empresa de embalajes de madera a medida en Miami.",
@@ -60,8 +63,11 @@ if not db.query(models.Agency).first():
 
     db.add(models.BotConfig(
         business_id=business2.id,
-        voice_provider="vapi",
-        voice_id="sample-female-warm",
+        telephony_provider="twilio",
+        stt_provider="deepgram",
+        stt_model="nova-3",
+        tts_provider="cartesia",
+        tts_voice_id="sample-female-warm",
         ai_provider="groq",
         ai_model="llama-3.1-8b-instant",
         system_prompt="Eres el asistente de voz de Orison Managua, un hotel en Managua, Nicaragua.",

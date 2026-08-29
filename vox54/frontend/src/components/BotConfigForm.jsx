@@ -13,12 +13,17 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
     return provider ? provider.models : [];
   }, [catalog, config.ai_provider]);
 
-  const voices = useMemo(() => {
-    const provider = catalog.voice_providers.find((p) => p.id === config.voice_provider);
-    return provider ? provider.voices : [];
-  }, [catalog, config.voice_provider]);
+  const sttModels = useMemo(() => {
+    const provider = catalog.stt_providers.find((p) => p.id === config.stt_provider);
+    return provider ? provider.models : [];
+  }, [catalog, config.stt_provider]);
 
-  // Un negocio recién creado guarda voice_id/ai_model vacíos — un <select> con un
+  const ttsVoices = useMemo(() => {
+    const provider = catalog.tts_providers.find((p) => p.id === config.tts_provider);
+    return provider ? provider.voices : [];
+  }, [catalog, config.tts_provider]);
+
+  // Un negocio recién creado guarda estos campos vacíos — un <select> con un
   // value que no matchea NINGUNA <option> igual muestra la primera opción en
   // pantalla, sin que el estado real cambie. Sin esta corrección, el desplegable
   // parece tener algo elegido que en realidad nunca se guardó.
@@ -29,10 +34,16 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
   }, [aiModels, config.ai_model]);
 
   useEffect(() => {
-    if (voices.length > 0 && !voices.some((v) => v.id === config.voice_id)) {
-      onChange({ voice_id: voices[0].id });
+    if (sttModels.length > 0 && !sttModels.some((m) => m.id === config.stt_model)) {
+      onChange({ stt_model: sttModels[0].id });
     }
-  }, [voices, config.voice_id]);
+  }, [sttModels, config.stt_model]);
+
+  useEffect(() => {
+    if (ttsVoices.length > 0 && !ttsVoices.some((v) => v.id === config.tts_voice_id)) {
+      onChange({ tts_voice_id: ttsVoices[0].id });
+    }
+  }, [ttsVoices, config.tts_voice_id]);
 
   function handleAiProviderChange(newProviderId) {
     const provider = catalog.ai_providers.find((p) => p.id === newProviderId);
@@ -43,12 +54,21 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
     });
   }
 
-  function handleVoiceProviderChange(newProviderId) {
-    const provider = catalog.voice_providers.find((p) => p.id === newProviderId);
-    const stillValid = provider && provider.voices.some((v) => v.id === config.voice_id);
+  function handleSttProviderChange(newProviderId) {
+    const provider = catalog.stt_providers.find((p) => p.id === newProviderId);
+    const stillValid = provider && provider.models.some((m) => m.id === config.stt_model);
     onChange({
-      voice_provider: newProviderId,
-      voice_id: stillValid ? config.voice_id : provider?.voices[0]?.id || "",
+      stt_provider: newProviderId,
+      stt_model: stillValid ? config.stt_model : provider?.models[0]?.id || "",
+    });
+  }
+
+  function handleTtsProviderChange(newProviderId) {
+    const provider = catalog.tts_providers.find((p) => p.id === newProviderId);
+    const stillValid = provider && provider.voices.some((v) => v.id === config.tts_voice_id);
+    onChange({
+      tts_provider: newProviderId,
+      tts_voice_id: stillValid ? config.tts_voice_id : provider?.voices[0]?.id || "",
     });
   }
 
@@ -83,39 +103,101 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
         </div>
       </Section>
 
-      <Section title="Canal de voz">
+      <Section title="Telefonía">
         <Row>
-          <Field label="Proveedor de voz">
+          <Field label="Proveedor de telefonía">
             <select
-              value={config.voice_provider}
-              onChange={(e) => handleVoiceProviderChange(e.target.value)}
+              value={config.telephony_provider}
+              onChange={(e) => onChange({ telephony_provider: e.target.value })}
               style={inputStyle}
             >
-              {catalog.voice_providers.map((p) => (
+              {catalog.telephony_providers.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Número de teléfono asignado">
+            <input
+              value={config.phone_number}
+              onChange={(e) => onChange({ phone_number: e.target.value })}
+              placeholder="Sin asignar todavía"
+              style={inputStyle}
+            />
+          </Field>
+        </Row>
+        <Field label="SIP trunk / ID de configuración (opcional)">
+          <input
+            value={config.telephony_trunk_id}
+            onChange={(e) => onChange({ telephony_trunk_id: e.target.value })}
+            placeholder="Sin configurar todavía"
+            style={inputStyle}
+          />
+        </Field>
+        <Field label="Dónde corre el agente (worker de LiveKit Agents)">
+          <select
+            value={config.runtime_target}
+            onChange={(e) => onChange({ runtime_target: e.target.value })}
+            style={inputStyle}
+          >
+            {catalog.runtime_targets.map((r) => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
+          </select>
+        </Field>
+      </Section>
+
+      <Section title="Reconocimiento de voz (STT)">
+        <Row>
+          <Field label="Proveedor">
+            <select
+              value={config.stt_provider}
+              onChange={(e) => handleSttProviderChange(e.target.value)}
+              style={inputStyle}
+            >
+              {catalog.stt_providers.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Modelo">
+            <select
+              value={config.stt_model}
+              onChange={(e) => onChange({ stt_model: e.target.value })}
+              style={inputStyle}
+            >
+              {sttModels.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          </Field>
+        </Row>
+      </Section>
+
+      <Section title="Síntesis de voz (TTS)">
+        <Row>
+          <Field label="Proveedor">
+            <select
+              value={config.tts_provider}
+              onChange={(e) => handleTtsProviderChange(e.target.value)}
+              style={inputStyle}
+            >
+              {catalog.tts_providers.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
           </Field>
           <Field label="Voz">
             <select
-              value={config.voice_id}
-              onChange={(e) => onChange({ voice_id: e.target.value })}
+              value={config.tts_voice_id}
+              onChange={(e) => onChange({ tts_voice_id: e.target.value })}
               style={inputStyle}
             >
-              {voices.map((v) => (
+              {ttsVoices.map((v) => (
                 <option key={v.id} value={v.id}>{v.name}</option>
               ))}
             </select>
           </Field>
         </Row>
-        <Field label="Número de teléfono asignado">
-          <input
-            value={config.phone_number}
-            onChange={(e) => onChange({ phone_number: e.target.value })}
-            placeholder="Sin asignar todavía"
-            style={inputStyle}
-          />
-        </Field>
       </Section>
 
       <Section title="Modelo de IA">
@@ -215,6 +297,29 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
             />
           </Field>
         </Row>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <button
+            type="button"
+            onClick={() => onChange({ allow_interruptions: !config.allow_interruptions })}
+            style={{
+              ...toggleStyle,
+              flexShrink: 0,
+              background: config.allow_interruptions ? "var(--success)" : "var(--border)",
+            }}
+          >
+            <span
+              style={{
+                ...toggleKnobStyle,
+                transform: config.allow_interruptions ? "translateX(20px)" : "translateX(2px)",
+              }}
+            />
+          </button>
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>
+            El cliente puede interrumpir al agente mientras habla
+          </span>
+        </div>
+
         <Field label="Duración máxima de la llamada (segundos)">
           <input
             type="number"

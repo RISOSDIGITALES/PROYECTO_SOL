@@ -14,11 +14,15 @@ from fastapi import HTTPException, status
 from . import catalog as catalog_data
 
 BOT_CONFIG_FIELDS = [
-    "voice_provider", "voice_id", "phone_number",
+    "telephony_provider", "telephony_trunk_id", "phone_number",
+    "stt_provider", "stt_model",
+    "tts_provider", "tts_voice_id",
+    "runtime_target",
     "ai_provider", "ai_model", "ai_api_key",
     "system_prompt", "welcome_message", "escalation_email",
     "language", "status",
-    "first_message_mode", "silence_timeout_seconds", "max_duration_seconds",
+    "first_message_mode", "allow_interruptions",
+    "silence_timeout_seconds", "max_duration_seconds",
     "end_call_message", "transfer_phone_number",
     "voicemail_detection_enabled", "voicemail_message",
 ]
@@ -26,6 +30,8 @@ BOT_CONFIG_FIELDS = [
 VALID_LANGUAGES = {opt["id"] for opt in catalog_data.LANGUAGES}
 VALID_STATUSES = {opt["id"] for opt in catalog_data.STATUSES}
 VALID_FIRST_MESSAGE_MODES = {opt["id"] for opt in catalog_data.FIRST_MESSAGE_MODES}
+VALID_TELEPHONY_PROVIDERS = {opt["id"] for opt in catalog_data.TELEPHONY_PROVIDERS}
+VALID_RUNTIME_TARGETS = {opt["id"] for opt in catalog_data.RUNTIME_TARGETS}
 
 
 def bot_config_as_dict(config) -> dict:
@@ -48,11 +54,23 @@ def validate_bot_config(merged: dict) -> None:
     elif merged.get("ai_model") and not any(m["id"] == merged["ai_model"] for m in ai_provider["models"]):
         errors.append(f"el modelo '{merged.get('ai_model')}' no pertenece al proveedor de IA '{merged.get('ai_provider')}'")
 
-    voice_provider = next((p for p in catalog_data.VOICE_PROVIDERS if p["id"] == merged.get("voice_provider")), None)
-    if not voice_provider:
-        errors.append(f"voice_provider inválido: '{merged.get('voice_provider')}'")
-    elif merged.get("voice_id") and not any(v["id"] == merged["voice_id"] for v in voice_provider["voices"]):
-        errors.append(f"la voz '{merged.get('voice_id')}' no pertenece al proveedor de voz '{merged.get('voice_provider')}'")
+    stt_provider = next((p for p in catalog_data.STT_PROVIDERS if p["id"] == merged.get("stt_provider")), None)
+    if not stt_provider:
+        errors.append(f"stt_provider inválido: '{merged.get('stt_provider')}'")
+    elif merged.get("stt_model") and not any(m["id"] == merged["stt_model"] for m in stt_provider["models"]):
+        errors.append(f"el modelo '{merged.get('stt_model')}' no pertenece al proveedor de STT '{merged.get('stt_provider')}'")
+
+    tts_provider = next((p for p in catalog_data.TTS_PROVIDERS if p["id"] == merged.get("tts_provider")), None)
+    if not tts_provider:
+        errors.append(f"tts_provider inválido: '{merged.get('tts_provider')}'")
+    elif merged.get("tts_voice_id") and not any(v["id"] == merged["tts_voice_id"] for v in tts_provider["voices"]):
+        errors.append(f"la voz '{merged.get('tts_voice_id')}' no pertenece al proveedor de TTS '{merged.get('tts_provider')}'")
+
+    if merged.get("telephony_provider") not in VALID_TELEPHONY_PROVIDERS:
+        errors.append(f"telephony_provider debe ser uno de {sorted(VALID_TELEPHONY_PROVIDERS)}")
+
+    if merged.get("runtime_target") not in VALID_RUNTIME_TARGETS:
+        errors.append(f"runtime_target debe ser uno de {sorted(VALID_RUNTIME_TARGETS)}")
 
     if merged.get("language") not in VALID_LANGUAGES:
         errors.append(f"language debe ser uno de {sorted(VALID_LANGUAGES)}")

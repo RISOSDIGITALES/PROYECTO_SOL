@@ -1,12 +1,22 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
+from .config import settings
 from .database import get_db
 from .security import decode_access_token
 from . import models
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/agency/login", auto_error=False)
+
+
+def require_worker_secret(x_worker_secret: str | None = Header(default=None)) -> None:
+    """El worker de LiveKit Agents es un servicio, no una persona — no tiene
+    sesión de negocio/agencia, así que se autentica con un secreto compartido
+    fijo en vez de un JWT de usuario. Mismo criterio que el AGENT_TOKEN que ya
+    usa el resto de la plataforma G54 para llamadas agente-a-agente."""
+    if not x_worker_secret or x_worker_secret != settings.worker_secret:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Worker secret inválido o ausente")
 
 
 def _decode_or_401(token: str | None) -> dict:
