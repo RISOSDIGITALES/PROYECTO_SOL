@@ -248,6 +248,15 @@ cd vox54/backend
 # importa incluso sin poder probar audio real.
 cd vox54/worker
 WORKER_SECRET=test-secret ./venv/Scripts/python.exe -m unittest test_agent -v
+
+# Frontend — 20 tests con Vitest + React Testing Library: manejo de
+# errores del backend (api.js), la guardia de sesión cruzada montada
+# contra un Router real (no mockeado), y el formulario completo de
+# configuración (auto-corrección de desplegables huérfanos, cambio de
+# proveedor, toggles, campos condicionales, envío).
+cd vox54/frontend
+npm install
+npm run test
 ```
 
 ## Estado actual
@@ -273,10 +282,17 @@ WORKER_SECRET=test-secret ./venv/Scripts/python.exe -m unittest test_agent -v
 - [x] Suite de tests automatizados: 28 en el backend (auth, CRUD, validación,
       aislamiento multi-tenant real entre 2 negocios) + 13 en el worker (qué
       arma cada `build_stt`/`build_tts`/`build_llm` según el proveedor, sin
-      red) — los 41 corren limpios hoy
+      red) + 20 en el frontend (Vitest + React Testing Library) — los 61
+      corren limpios hoy
 - [x] Ruta 404 real (antes cualquier URL desconocida mostraba una página
       en blanco), navegación consistente con React Router en todos los
-      links, foco de teclado visible en todos los inputs/selects/botones
+      links, foco de teclado visible en todos los inputs/selects/botones,
+      cada campo del formulario con su `<label>` de verdad asociado (bug
+      real encontrado escribiendo el test del formulario: el label era un
+      hermano suelto del input, invisible para cualquier lector de pantalla)
+- [x] CORS y la URL del backend ya no están fijos en el código — se
+      configuran por variable de entorno (`CORS_ORIGINS`, `VITE_API_BASE`),
+      con el mismo default de localhost de siempre si no se toca nada
 - [x] Worker de LiveKit Agents (`vox54/worker/agent.py`) — arma el pipeline de
       voz (STT/TTS/LLM) dinámicamente desde `BotConfig`, sin depender de VAPI;
       verificado contra el SDK real instalado, sin poder probar una llamada

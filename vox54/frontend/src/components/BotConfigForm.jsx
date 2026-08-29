@@ -403,11 +403,14 @@ function Row({ children }) {
 }
 
 function Field({ label, children }) {
+  // El label envuelve el campo (en vez de ser un hermano suelto) para que
+  // quede asociado de verdad — sin esto, un lector de pantalla nunca anuncia
+  // qué campo es cuál, aunque se vea bien a simple vista.
   return (
-    <div>
-      <label style={labelStyle}>{label}</label>
+    <label style={{ display: "block" }}>
+      <span style={labelStyle}>{label}</span>
       {children}
-    </div>
+    </label>
   );
 }
 
