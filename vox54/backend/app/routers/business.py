@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..deps import get_current_business_user
 from ..schemas import BusinessMeResponse, BotConfigOut, BotConfigUpdate
+from ..validators import bot_config_as_dict, validate_bot_config
 from .. import models
 
 router = APIRouter(prefix="/business", tags=["business"])
@@ -35,7 +36,10 @@ def update_bot_config(
     user: models.BusinessUser = Depends(get_current_business_user),
 ):
     config = db.query(models.BotConfig).filter(models.BotConfig.business_id == user.business_id).first()
-    for field, value in body.model_dump(exclude_unset=True).items():
+    patch = body.model_dump(exclude_unset=True)
+    merged = {**bot_config_as_dict(config), **patch}
+    validate_bot_config(merged)  # 422 si algo no calza contra el catálogo — antes de tocar el objeto
+    for field, value in patch.items():
         setattr(config, field, value)
     db.commit()
     db.refresh(config)

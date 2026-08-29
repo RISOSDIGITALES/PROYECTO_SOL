@@ -5,6 +5,7 @@ from ..database import get_db
 from ..deps import get_current_agency_user
 from ..security import hash_password
 from ..schemas import AgencyMeResponse, BusinessOut, BusinessCreate, BusinessDetailOut, BotConfigUpdate, BotConfigOut
+from ..validators import bot_config_as_dict, validate_bot_config
 from .. import models
 
 router = APIRouter(prefix="/agency", tags=["agency"])
@@ -88,7 +89,10 @@ def update_business_bot_config(
 ):
     business = _get_owned_business(db, user, business_id)
     config = business.bot_config
-    for field, value in body.model_dump(exclude_unset=True).items():
+    patch = body.model_dump(exclude_unset=True)
+    merged = {**bot_config_as_dict(config), **patch}
+    validate_bot_config(merged)
+    for field, value in patch.items():
         setattr(config, field, value)
     db.commit()
     db.refresh(config)

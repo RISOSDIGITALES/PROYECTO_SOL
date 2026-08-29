@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 
 
 class LoginRequest(BaseModel):
@@ -41,6 +41,13 @@ class BotConfigOut(BaseModel):
     escalation_email: str
     language: str
     status: str
+    first_message_mode: str
+    silence_timeout_seconds: int
+    max_duration_seconds: int
+    end_call_message: str
+    transfer_phone_number: str
+    voicemail_detection_enabled: bool
+    voicemail_message: str
 
     class Config:
         from_attributes = True
@@ -58,6 +65,13 @@ class BotConfigUpdate(BaseModel):
     escalation_email: str | None = None
     language: str | None = None
     status: str | None = None
+    first_message_mode: str | None = None
+    silence_timeout_seconds: int | None = None
+    max_duration_seconds: int | None = None
+    end_call_message: str | None = None
+    transfer_phone_number: str | None = None
+    voicemail_detection_enabled: bool | None = None
+    voicemail_message: str | None = None
 
 
 class BusinessOut(BaseModel):
@@ -82,6 +96,21 @@ class BusinessCreate(BaseModel):
     contact_name: str
     contact_email: EmailStr
     contact_password: str
+
+    @field_validator("name", "contact_name")
+    @classmethod
+    def not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("no puede estar vacío")
+        return v
+
+    @field_validator("contact_password")
+    @classmethod
+    def min_length(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("la contraseña debe tener al menos 8 caracteres")
+        return v
 
 
 class ModelOut(BaseModel):
@@ -116,3 +145,4 @@ class CatalogOut(BaseModel):
     voice_providers: list[VoiceProviderOut]
     languages: list[OptionOut]
     statuses: list[OptionOut]
+    first_message_modes: list[OptionOut]

@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON, Text
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON, Text, Boolean
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -87,6 +87,19 @@ class BotConfig(Base):
     escalation_email = Column(String(255), default="")
     language = Column(String(20), default="auto")  # es | en | auto
     status = Column(String(20), default="paused")  # active | paused
+
+    # --- Control de la llamada ---
+    # Campos reales de conversación que sí se pueden configurar hoy (aunque
+    # ningún proveedor de voz esté conectado todavía) — investigados contra
+    # VAPI/Retell/Bland: quién habla primero, cuándo cortar por silencio o por
+    # duración, qué dice el agente antes de colgar, y a qué humano transferir.
+    first_message_mode = Column(String(30), default="assistant_first")
+    silence_timeout_seconds = Column(Integer, default=30)
+    max_duration_seconds = Column(Integer, default=600)
+    end_call_message = Column(Text, default="")
+    transfer_phone_number = Column(String(30), default="")  # a dónde transferir con un humano
+    voicemail_detection_enabled = Column(Boolean, default=False)
+    voicemail_message = Column(Text, default="")
 
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)

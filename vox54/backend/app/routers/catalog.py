@@ -13,4 +13,5 @@ def get_catalog():
         voice_providers=catalog_data.VOICE_PROVIDERS,
         languages=catalog_data.LANGUAGES,
         statuses=catalog_data.STATUSES,
+        first_message_modes=catalog_data.FIRST_MESSAGE_MODES,
     )

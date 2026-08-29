@@ -68,3 +68,11 @@ STATUSES = [
     {"id": "paused", "name": "Pausado"},
     {"id": "active", "name": "Activo"},
 ]
+
+# Quién habla primero al conectar la llamada — mismo campo real que exponen
+# VAPI/Retell (first_message_mode / first_message plan). No es cosmético: cambia
+# el comportamiento real del agente en la primera fracción de segundo de la llamada.
+FIRST_MESSAGE_MODES = [
+    {"id": "assistant_first", "name": "El agente saluda primero"},
+    {"id": "user_first", "name": "Espera a que hable el cliente"},
+]

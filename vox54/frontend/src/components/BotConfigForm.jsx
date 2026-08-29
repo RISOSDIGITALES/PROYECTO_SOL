@@ -191,6 +191,90 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
         </Field>
       </Section>
 
+      <Section title="Control de la llamada">
+        <Row>
+          <Field label="Quién habla primero">
+            <select
+              value={config.first_message_mode}
+              onChange={(e) => onChange({ first_message_mode: e.target.value })}
+              style={inputStyle}
+            >
+              {catalog.first_message_modes.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Corte por silencio (segundos)">
+            <input
+              type="number"
+              min={5}
+              max={600}
+              value={config.silence_timeout_seconds}
+              onChange={(e) => onChange({ silence_timeout_seconds: Number(e.target.value) })}
+              style={inputStyle}
+            />
+          </Field>
+        </Row>
+        <Field label="Duración máxima de la llamada (segundos)">
+          <input
+            type="number"
+            min={30}
+            max={7200}
+            value={config.max_duration_seconds}
+            onChange={(e) => onChange({ max_duration_seconds: Number(e.target.value) })}
+            style={inputStyle}
+          />
+        </Field>
+        <Field label="Mensaje antes de colgar (opcional)">
+          <input
+            value={config.end_call_message}
+            onChange={(e) => onChange({ end_call_message: e.target.value })}
+            placeholder="Ej: Gracias por llamar, que tengas un buen día."
+            style={inputStyle}
+          />
+        </Field>
+        <Field label="Transferir a un humano (número, opcional)">
+          <input
+            value={config.transfer_phone_number}
+            onChange={(e) => onChange({ transfer_phone_number: e.target.value })}
+            placeholder="Sin transferencia configurada"
+            style={inputStyle}
+          />
+        </Field>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <button
+            type="button"
+            onClick={() => onChange({ voicemail_detection_enabled: !config.voicemail_detection_enabled })}
+            style={{
+              ...toggleStyle,
+              flexShrink: 0,
+              background: config.voicemail_detection_enabled ? "var(--success)" : "var(--border)",
+            }}
+          >
+            <span
+              style={{
+                ...toggleKnobStyle,
+                transform: config.voicemail_detection_enabled ? "translateX(20px)" : "translateX(2px)",
+              }}
+            />
+          </button>
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>
+            Detectar buzón de voz
+          </span>
+        </div>
+        {config.voicemail_detection_enabled && (
+          <Field label="Mensaje a dejar en el buzón">
+            <input
+              value={config.voicemail_message}
+              onChange={(e) => onChange({ voicemail_message: e.target.value })}
+              placeholder="Ej: Te llamamos de Crating Express, te devolvemos la llamada pronto."
+              style={inputStyle}
+            />
+          </Field>
+        )}
+      </Section>
+
       <button type="submit" disabled={saving} style={buttonStyle}>
         {saving ? "Guardando…" : "Guardar cambios"}
       </button>

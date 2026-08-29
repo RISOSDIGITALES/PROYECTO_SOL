@@ -12,9 +12,16 @@ async function request(path, { method = "GET", body, token } = {}) {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const message = Array.isArray(data.detail)
-      ? data.detail.map((d) => d.msg).join(", ")
-      : data.detail || "Ocurrió un error inesperado.";
+    let message = "Ocurrió un error inesperado.";
+    if (Array.isArray(data.detail)) {
+      // errores de validación de Pydantic (422 nativo)
+      message = data.detail.map((d) => d.msg).join(", ");
+    } else if (data.detail && Array.isArray(data.detail.errors)) {
+      // nuestra validación custom de negocio (validators.py): {"errors": [...]}
+      message = data.detail.errors.join(" · ");
+    } else if (typeof data.detail === "string") {
+      message = data.detail;
+    }
     throw new Error(message);
   }
   return data;
