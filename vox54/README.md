@@ -231,6 +231,25 @@ cp .env.example .env   # WORKER_SECRET debe coincidir con el del backend (.env),
 ./venv/Scripts/python.exe agent.py console  # prueba local por consola (mic/altavoz), sin telefonía real
 ```
 
+### Tests
+
+```bash
+# Backend — 28 tests reales contra una base SQLite en memoria (aislada de
+# vox54.db), cubren auth, CRUD de negocios, validación de BotConfig
+# (incluyendo el caso crítico de PATCH parcial validado contra lo ya
+# guardado), y el endpoint del worker con su guardia de secreto.
+cd vox54/backend
+./venv/Scripts/python.exe -m pip install -r requirements-dev.txt
+./venv/Scripts/python.exe -m pytest tests/ -v
+
+# Worker — 13 tests de la lógica de armado del pipeline (qué argumento
+# real le pasamos a cada plugin según el proveedor elegido), sin ninguna
+# llamada de red — ver el docstring de test_agent.py para por qué esto
+# importa incluso sin poder probar audio real.
+cd vox54/worker
+WORKER_SECRET=test-secret ./venv/Scripts/python.exe -m unittest test_agent -v
+```
+
 ## Estado actual
 
 - [x] Login de agencia y de negocio, con JWT y roles separados
@@ -251,6 +270,13 @@ cp .env.example .env   # WORKER_SECRET debe coincidir con el del backend (.env),
       9 casos reales contra el servidor corriendo (válidos e inválidos)
 - [x] Guardia de sesión cruzada en el frontend (`useRequireRole`) — visitar la
       ruta del rol equivocado redirige, en vez de quedarse cargando para siempre
+- [x] Suite de tests automatizados: 28 en el backend (auth, CRUD, validación,
+      aislamiento multi-tenant real entre 2 negocios) + 13 en el worker (qué
+      arma cada `build_stt`/`build_tts`/`build_llm` según el proveedor, sin
+      red) — los 41 corren limpios hoy
+- [x] Ruta 404 real (antes cualquier URL desconocida mostraba una página
+      en blanco), navegación consistente con React Router en todos los
+      links, foco de teclado visible en todos los inputs/selects/botones
 - [x] Worker de LiveKit Agents (`vox54/worker/agent.py`) — arma el pipeline de
       voz (STT/TTS/LLM) dinámicamente desde `BotConfig`, sin depender de VAPI;
       verificado contra el SDK real instalado, sin poder probar una llamada

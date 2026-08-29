@@ -117,4 +117,4 @@ def validate_bot_config(merged: dict) -> None:
         errors.append("voicemail_message es demasiado largo (máx. 500 caracteres)")
 
     if errors:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, {"errors": errors})
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, {"errors": errors})

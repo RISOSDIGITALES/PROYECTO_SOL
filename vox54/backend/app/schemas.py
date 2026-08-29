@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
 
 class LoginRequest(BaseModel):
@@ -55,8 +55,7 @@ class BotConfigOut(BaseModel):
     voicemail_detection_enabled: bool
     voicemail_message: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BotConfigUpdate(BaseModel):
@@ -90,8 +89,7 @@ class BusinessOut(BaseModel):
     id: int
     name: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BusinessDetailOut(BaseModel):
@@ -99,8 +97,7 @@ class BusinessDetailOut(BaseModel):
     name: str
     bot_config: BotConfigOut
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BusinessCreate(BaseModel):
