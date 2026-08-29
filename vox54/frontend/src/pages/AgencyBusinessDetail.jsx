@@ -3,10 +3,12 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import Logo from "../components/Logo";
 import BotConfigForm from "../components/BotConfigForm";
 import { useAuth } from "../AuthContext";
+import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 
 export default function AgencyBusinessDetail() {
-  const { session, logout } = useAuth();
+  const { logout } = useAuth();
+  const session = useRequireRole("agency");
   const navigate = useNavigate();
   const { id } = useParams();
   const [business, setBusiness] = useState(null);
@@ -17,10 +19,7 @@ export default function AgencyBusinessDetail() {
   const [savedMessage, setSavedMessage] = useState("");
 
   useEffect(() => {
-    if (!session) {
-      navigate("/agencia/login");
-      return;
-    }
+    if (!session) return;
     api.getBusinessDetail(session.access_token, id)
       .then((detail) => {
         setBusiness(detail);
@@ -50,6 +49,8 @@ export default function AgencyBusinessDetail() {
       setSaving(false);
     }
   }
+
+  if (!session) return null;
 
   return (
     <div style={{ minHeight: "100vh" }}>

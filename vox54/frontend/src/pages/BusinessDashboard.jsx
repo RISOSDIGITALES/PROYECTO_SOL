@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import BotConfigForm from "../components/BotConfigForm";
 import { useAuth } from "../AuthContext";
+import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 
 export default function BusinessDashboard() {
-  const { session, logout } = useAuth();
+  const { logout } = useAuth();
+  const session = useRequireRole("business");
   const navigate = useNavigate();
   const [me, setMe] = useState(null);
   const [config, setConfig] = useState(null);
@@ -16,10 +18,7 @@ export default function BusinessDashboard() {
   const [savedMessage, setSavedMessage] = useState("");
 
   useEffect(() => {
-    if (!session) {
-      navigate("/negocio/login");
-      return;
-    }
+    if (!session) return;
     api.businessMe(session.access_token).then(setMe).catch((e) => setError(e.message));
     api.getBotConfig(session.access_token).then(setConfig).catch((e) => setError(e.message));
     api.getCatalog().then(setCatalog).catch((e) => setError(e.message));
@@ -45,6 +44,8 @@ export default function BusinessDashboard() {
       setSaving(false);
     }
   }
+
+  if (!session) return null;
 
   return (
     <div style={{ minHeight: "100vh" }}>

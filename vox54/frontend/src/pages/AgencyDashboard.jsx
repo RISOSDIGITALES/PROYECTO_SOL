@@ -3,10 +3,12 @@ import { useNavigate, Link } from "react-router-dom";
 import Logo from "../components/Logo";
 import CreateBusinessModal from "../components/CreateBusinessModal";
 import { useAuth } from "../AuthContext";
+import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 
 export default function AgencyDashboard() {
-  const { session, logout } = useAuth();
+  const { logout } = useAuth();
+  const session = useRequireRole("agency");
   const navigate = useNavigate();
   const [me, setMe] = useState(null);
   const [businesses, setBusinesses] = useState([]);
@@ -18,10 +20,7 @@ export default function AgencyDashboard() {
   }
 
   useEffect(() => {
-    if (!session) {
-      navigate("/agencia/login");
-      return;
-    }
+    if (!session) return;
     api.agencyMe(session.access_token).then(setMe).catch((e) => setError(e.message));
     refreshBusinesses();
   }, [session]);
@@ -31,6 +30,8 @@ export default function AgencyDashboard() {
     setShowCreate(false);
     refreshBusinesses();
   }
+
+  if (!session) return null;
 
   return (
     <div style={{ minHeight: "100vh" }}>
