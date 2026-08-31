@@ -100,6 +100,18 @@ class BusinessDetailOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class BusinessUpdate(BaseModel):
+    name: str
+
+    @field_validator("name")
+    @classmethod
+    def not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("no puede estar vacío")
+        return v
+
+
 class BusinessCreate(BaseModel):
     name: str
     contact_name: str

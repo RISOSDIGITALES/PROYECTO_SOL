@@ -76,6 +76,44 @@ def test_no_se_puede_ver_un_negocio_de_otra_agencia(client, seed, agency_token):
     assert res.status_code == 404
 
 
+def test_renombrar_negocio_ok(client, seed, agency_token):
+    business_id = seed["business"].id
+    res = client.patch(
+        f"/agency/businesses/{business_id}",
+        headers=auth(agency_token),
+        json={"name": "Negocio Renombrado"},
+    )
+    assert res.status_code == 200
+    assert res.json()["name"] == "Negocio Renombrado"
+
+    # el cambio debe persistir, no solo devolverse en la respuesta
+    detail = client.get(f"/agency/businesses/{business_id}", headers=auth(agency_token))
+    assert detail.json()["name"] == "Negocio Renombrado"
+
+
+def test_renombrar_negocio_nombre_vacio_falla(client, seed, agency_token):
+    business_id = seed["business"].id
+    res = client.patch(
+        f"/agency/businesses/{business_id}",
+        headers=auth(agency_token),
+        json={"name": "   "},
+    )
+    assert res.status_code == 422
+
+    # el nombre original no debe haberse tocado
+    detail = client.get(f"/agency/businesses/{business_id}", headers=auth(agency_token))
+    assert detail.json()["name"] == "Negocio de Prueba"
+
+
+def test_no_se_puede_renombrar_un_negocio_de_otra_agencia(client, seed, agency_token):
+    res = client.patch(
+        "/agency/businesses/999",
+        headers=auth(agency_token),
+        json={"name": "Intento Ajeno"},
+    )
+    assert res.status_code == 404
+
+
 def test_actualizar_bot_config_valido(client, seed, agency_token):
     business_id = seed["business"].id
     res = client.put(

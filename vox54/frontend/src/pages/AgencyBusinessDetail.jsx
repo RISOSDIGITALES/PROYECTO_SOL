@@ -17,6 +17,10 @@ export default function AgencyBusinessDetail() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState("");
+  const [renaming, setRenaming] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [renameError, setRenameError] = useState("");
+  const [renameSaving, setRenameSaving] = useState(false);
 
   useEffect(() => {
     if (!session) return;
@@ -50,6 +54,32 @@ export default function AgencyBusinessDetail() {
     }
   }
 
+  function startRenaming() {
+    setNameDraft(business?.name || "");
+    setRenameError("");
+    setRenaming(true);
+  }
+
+  function cancelRenaming() {
+    setRenaming(false);
+    setRenameError("");
+  }
+
+  async function handleRename(e) {
+    e.preventDefault();
+    setRenameError("");
+    setRenameSaving(true);
+    try {
+      const updated = await api.renameBusiness(session.access_token, id, nameDraft);
+      setBusiness((prev) => ({ ...prev, name: updated.name }));
+      setRenaming(false);
+    } catch (err) {
+      setRenameError(err.message);
+    } finally {
+      setRenameSaving(false);
+    }
+  }
+
   if (!session) return null;
 
   return (
@@ -66,9 +96,42 @@ export default function AgencyBusinessDetail() {
 
       <div style={{ maxWidth: 640, margin: "0 auto", padding: 32 }}>
         <Link to="/agencia" style={backLink}>← Volver a negocios</Link>
-        <h1 style={{ fontSize: 22, color: "var(--ink)", margin: "8px 0 4px" }}>
-          {business?.name || "…"}
-        </h1>
+
+        {renaming ? (
+          <form onSubmit={handleRename} style={{ margin: "8px 0 4px", display: "flex", gap: 8, alignItems: "center" }}>
+            <input
+              aria-label="Nombre del negocio"
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              autoFocus
+              onKeyDown={(e) => { if (e.key === "Escape") cancelRenaming(); }}
+              style={renameInputStyle}
+            />
+            <button type="submit" disabled={renameSaving} style={renameSaveBtn}>
+              {renameSaving ? "Guardando…" : "Guardar"}
+            </button>
+            <button type="button" onClick={cancelRenaming} style={renameCancelBtn}>
+              Cancelar
+            </button>
+          </form>
+        ) : (
+          <h1 style={{ fontSize: 22, color: "var(--ink)", margin: "8px 0 4px", display: "flex", alignItems: "center", gap: 8 }}>
+            {business?.name || "…"}
+            {business && (
+              <button
+                type="button"
+                onClick={startRenaming}
+                aria-label="Renombrar negocio"
+                title="Renombrar negocio"
+                style={renameIconBtn}
+              >
+                ✎
+              </button>
+            )}
+          </h1>
+        )}
+        {renameError && <div style={{ fontSize: 12.5, color: "var(--danger)", marginBottom: 8 }}>{renameError}</div>}
+
         <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginBottom: 24 }}>
           Configuración del agente de voz — vista de agencia.
         </p>
@@ -96,6 +159,52 @@ const backLink = {
   fontSize: 12.5,
   color: "var(--ink-soft)",
   textDecoration: "none",
+};
+
+const renameIconBtn = {
+  background: "none",
+  border: "none",
+  color: "var(--ink-soft)",
+  cursor: "pointer",
+  fontSize: 15,
+  lineHeight: 1,
+  padding: 4,
+  borderRadius: 6,
+};
+
+const renameInputStyle = {
+  fontSize: 18,
+  padding: "8px 10px",
+  border: "1px solid var(--border)",
+  borderRadius: 8,
+  outline: "none",
+  fontFamily: "var(--font)",
+  flex: 1,
+  maxWidth: 320,
+};
+
+const renameSaveBtn = {
+  background: "var(--g54-blue)",
+  color: "#fff",
+  border: "none",
+  borderRadius: 8,
+  padding: "8px 14px",
+  fontSize: 13,
+  fontWeight: 700,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+};
+
+const renameCancelBtn = {
+  background: "var(--surface)",
+  color: "var(--ink-soft)",
+  border: "1px solid var(--border)",
+  borderRadius: 8,
+  padding: "8px 14px",
+  fontSize: 13,
+  fontWeight: 600,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
 };
 
 const logoutBtn = {

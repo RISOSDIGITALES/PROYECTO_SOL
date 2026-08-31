@@ -42,6 +42,8 @@ export const api = {
   listBusinesses: (token) => request("/agency/businesses", { token }),
   createBusiness: (token, body) => request("/agency/businesses", { method: "POST", body, token }),
   getBusinessDetail: (token, id) => request(`/agency/businesses/${id}`, { token }),
+  renameBusiness: (token, id, name) =>
+    request(`/agency/businesses/${id}`, { method: "PATCH", body: { name }, token }),
   updateBusinessBotConfig: (token, id, body) =>
     request(`/agency/businesses/${id}/bot-config`, { method: "PUT", body, token }),
   getBotConfig: (token) => request("/business/bot-config", { token }),

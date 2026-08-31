@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..deps import get_current_agency_user
 from ..security import hash_password
-from ..schemas import AgencyMeResponse, BusinessOut, BusinessCreate, BusinessDetailOut, BotConfigUpdate, BotConfigOut
+from ..schemas import AgencyMeResponse, BusinessOut, BusinessCreate, BusinessUpdate, BusinessDetailOut, BotConfigUpdate, BotConfigOut
 from ..validators import bot_config_as_dict, validate_bot_config
 from .. import models
 
@@ -78,6 +78,20 @@ def get_business(
     user: models.AgencyUser = Depends(get_current_agency_user),
 ):
     return _get_owned_business(db, user, business_id)
+
+
+@router.patch("/businesses/{business_id}", response_model=BusinessOut)
+def update_business(
+    business_id: int,
+    body: BusinessUpdate,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    business = _get_owned_business(db, user, business_id)
+    business.name = body.name
+    db.commit()
+    db.refresh(business)
+    return business
 
 
 @router.put("/businesses/{business_id}/bot-config", response_model=BotConfigOut)
