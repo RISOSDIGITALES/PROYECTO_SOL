@@ -1,10 +1,20 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import Logo from "../components/Logo";
+import AgencyShell from "../components/AgencyShell";
+import StatusPill from "../components/StatusPill";
 import CreateBusinessModal from "../components/CreateBusinessModal";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
+
+function initials(name) {
+  return (name || "?")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("");
+}
 
 export default function AgencyDashboard() {
   const { logout } = useAuth();
@@ -34,19 +44,9 @@ export default function AgencyDashboard() {
   if (!session) return null;
 
   return (
-    <div style={{ minHeight: "100vh" }}>
-      <div className="g54-gradient" style={{ padding: "20px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Logo size="small" />
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <span style={{ color: "#fff", fontSize: 13.5 }}>{me?.name}</span>
-          <button onClick={() => { logout(); navigate("/agencia/login"); }} style={logoutBtn}>
-            Salir
-          </button>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: 32 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24 }}>
+    <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
+      <div style={{ maxWidth: 1040, margin: "0 auto", padding: "36px 32px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28 }}>
           <div>
             <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>
               Panel de agencia — {me?.agency_name || "…"}
@@ -58,13 +58,24 @@ export default function AgencyDashboard() {
           <button onClick={() => setShowCreate(true)} style={createBtn}>+ Crear negocio</button>
         </div>
 
-        {error && <div style={{ color: "var(--danger)", marginBottom: 12 }}>{error}</div>}
+        {error && <div style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</div>}
 
-        <div style={{ display: "grid", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
           {businesses.map((b) => (
             <Link key={b.id} to={`/agencia/negocios/${b.id}`} className="vox54-card" style={cardStyle}>
-              <div style={{ fontWeight: 700, fontSize: 14.5 }}>{b.name}</div>
-              <div style={{ fontSize: 12, color: "var(--ink-soft)" }}>ID {b.id} — ver / editar configuración →</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                <div style={avatarStyle}>{initials(b.name)}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14.5, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {b.name}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: "var(--ink-softer)" }}>ID {b.id}</div>
+                </div>
+              </div>
+              <StatusPill status={b.bot_status} />
+              <div style={{ fontSize: 12, color: "var(--g54-blue)", fontWeight: 700, marginTop: 16 }}>
+                Ver / editar configuración →
+              </div>
             </Link>
           ))}
           {businesses.length === 0 && !error && (
@@ -76,7 +87,7 @@ export default function AgencyDashboard() {
       {showCreate && (
         <CreateBusinessModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />
       )}
-    </div>
+    </AgencyShell>
   );
 }
 
@@ -84,10 +95,24 @@ const cardStyle = {
   display: "block",
   background: "var(--white)",
   border: "1px solid var(--border)",
-  borderRadius: 10,
-  padding: "14px 18px",
+  borderRadius: 12,
+  padding: "18px 18px 16px",
   textDecoration: "none",
   color: "var(--ink)",
+};
+
+const avatarStyle = {
+  width: 40,
+  height: 40,
+  flexShrink: 0,
+  borderRadius: 10,
+  background: "var(--g54-blue)",
+  color: "#fff",
+  fontWeight: 800,
+  fontSize: 14,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
 };
 
 const createBtn = {
@@ -98,15 +123,5 @@ const createBtn = {
   padding: "10px 16px",
   fontSize: 13.5,
   fontWeight: 700,
-  cursor: "pointer",
-};
-
-const logoutBtn = {
-  background: "rgba(255,255,255,0.14)",
-  border: "1px solid rgba(255,255,255,0.22)",
-  color: "#fff",
-  borderRadius: 8,
-  padding: "6px 14px",
-  fontSize: 12.5,
   cursor: "pointer",
 };

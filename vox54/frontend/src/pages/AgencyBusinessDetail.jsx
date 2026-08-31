@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import Logo from "../components/Logo";
+import AgencyShell from "../components/AgencyShell";
 import BotConfigForm from "../components/BotConfigForm";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
@@ -11,6 +11,7 @@ export default function AgencyBusinessDetail() {
   const session = useRequireRole("agency");
   const navigate = useNavigate();
   const { id } = useParams();
+  const [me, setMe] = useState(null);
   const [business, setBusiness] = useState(null);
   const [config, setConfig] = useState(null);
   const [catalog, setCatalog] = useState(null);
@@ -24,6 +25,7 @@ export default function AgencyBusinessDetail() {
 
   useEffect(() => {
     if (!session) return;
+    api.agencyMe(session.access_token).then(setMe).catch((e) => setError(e.message));
     api.getBusinessDetail(session.access_token, id)
       .then((detail) => {
         setBusiness(detail);
@@ -83,18 +85,8 @@ export default function AgencyBusinessDetail() {
   if (!session) return null;
 
   return (
-    <div style={{ minHeight: "100vh" }}>
-      <div className="g54-gradient" style={{ padding: "20px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Logo size="small" />
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <span style={{ color: "#fff", fontSize: 13.5 }}>Agencia</span>
-          <button onClick={() => { logout(); navigate("/agencia/login"); }} style={logoutBtn}>
-            Salir
-          </button>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 640, margin: "0 auto", padding: 32 }}>
+    <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
+      <div style={{ maxWidth: 680, margin: "0 auto", padding: "36px 32px" }}>
         <Link to="/agencia" style={backLink}>← Volver a negocios</Link>
 
         {renaming ? (
@@ -151,7 +143,7 @@ export default function AgencyBusinessDetail() {
         )}
         {error && !config && <div style={{ color: "var(--danger)" }}>{error}</div>}
       </div>
-    </div>
+    </AgencyShell>
   );
 }
 
@@ -205,14 +197,4 @@ const renameCancelBtn = {
   fontWeight: 600,
   cursor: "pointer",
   whiteSpace: "nowrap",
-};
-
-const logoutBtn = {
-  background: "rgba(255,255,255,0.14)",
-  border: "1px solid rgba(255,255,255,0.22)",
-  color: "#fff",
-  borderRadius: 8,
-  padding: "6px 14px",
-  fontSize: 12.5,
-  cursor: "pointer",
 };

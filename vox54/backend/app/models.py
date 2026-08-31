@@ -46,6 +46,10 @@ class Business(Base):
     users = relationship("BusinessUser", back_populates="business", cascade="all, delete-orphan")
     bot_config = relationship("BotConfig", back_populates="business", uselist=False, cascade="all, delete-orphan")
 
+    @property
+    def bot_status(self) -> str | None:
+        return self.bot_config.status if self.bot_config else None
+
 
 class BusinessUser(Base):
     __tablename__ = "business_users"

@@ -88,6 +88,7 @@ class BotConfigUpdate(BaseModel):
 class BusinessOut(BaseModel):
     id: int
     name: str
+    bot_status: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
