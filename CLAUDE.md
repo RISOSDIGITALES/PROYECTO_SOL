@@ -757,6 +757,89 @@ Cuando se migre a servidor propio (Node.js + Express + MariaDB), el login de Net
 12. **BLOQUEADO:** Reinicio de n8n → activa VAPI handoff (no afecta planilla, cálculo ya es independiente)
 13. **EN PAUSA:** Backend local Node.js/Express + MariaDB — esperar acceso al servidor propio
 
+---
+
+# Vox54 (nombre provisorio) — Plataforma de agentes de voz
+
+Producto nuevo y separado de G54/RRSS/Nomify — un SaaS multiempresa para agentes de voz con IA (telefonía real vía LiveKit Agents, no relacionado con Marco/VAPI de Crating Express). "Vox54" es un nombre de trabajo, no el definitivo — cambiar en `vox54/frontend/src/components/Logo.jsx` cuando se decida el real.
+
+**Modelo de negocio:** una **agencia** (nosotros, u otra agencia que use la plataforma) gestiona varios **negocios** clientes, cada uno con su propio bot de voz configurable. Dos roles de login separados, cada uno con su propio JWT y su propia pantalla:
+- **Agencia** (`/agencia/login`) — ve y edita todos los negocios que gestiona, más la configuración de la agencia en sí.
+- **Negocio** (`/negocio/login`) — un cliente final logueado directo, solo ve y edita el bot de su propio negocio.
+
+## Stack
+
+| Capa | Tecnología |
+|---|---|
+| Backend | FastAPI + SQLAlchemy 2.0 + Pydantic v2, SQLite (`vox54/backend/vox54.db`) |
+| Auth | JWT propio (`python-jose`), un token por rol (agency/business) |
+| Frontend | React + Vite, sin CSS framework — tokens propios en `theme.css` |
+
+## Estructura del repo
+
+```
+vox54/
+  backend/
+    app/
+      routers/agency.py, business.py, auth.py, catalog.py
+      models.py, schemas.py, validators.py, security.py, deps.py
+    tests/            — pytest, 31 tests
+    seed.py           — datos demo (ver credenciales abajo)
+    requirements.txt
+  frontend/
+    src/
+      pages/          — LoginPage, AgencyDashboard, AgencyBusinessDetail,
+                         AgencyBotConfig, AgencyConfigPage, BusinessDashboard,
+                         NotFoundPage
+      components/     — AgencyShell (menú lateral), StatusPill, BotConfigForm
+                         (compartido por agencia y negocio), CreateBusinessModal, Logo
+      theme.css        — paleta y tokens (--g54-blue, --g54-navy, --paper, etc.)
+    tests: vitest, 20 tests (api.test.js, BotConfigForm.test.jsx, useRequireRole.test.jsx)
+```
+
+## Rutas del lado de agencia (reorganizado 2026-08-31)
+
+Antes una sola pantalla mezclaba la identidad del negocio con el formulario completo del bot — separado en 3 áreas distintas, cada una con su propia ruta y su propio trabajo:
+
+| Ruta | Qué hace |
+|---|---|
+| `/agencia` | Lista de negocios (grilla de tarjetas, estado real del bot por tarjeta) |
+| `/agencia/configuracion` | Datos de la agencia + cuenta del admin logueado (solo lectura — el backend no tiene endpoint de edición todavía) |
+| `/agencia/negocios/:id` | Identidad del negocio — nombre (renombrable), ID, estado, y una tarjeta que lleva a su bot |
+| `/agencia/negocios/:id/bot` | Configuración completa del bot de ese negocio (`BotConfigForm`) |
+| `/negocio` | Dashboard de un negocio logueado directo — su propio bot, mismo `BotConfigForm` |
+
+`AgencyShell` (el menú lateral oscuro) es compartido por las 4 pantallas de agencia — "Negocios" queda resaltado tanto en la lista como en cualquier pantalla de un negocio puntual (identidad o bot), "Configuración" solo en la pantalla de agencia.
+
+## Credenciales demo (`python seed.py`)
+
+| Rol | Email | Password |
+|---|---|---|
+| Agencia | `admin@growth54.com` | `agencia123` |
+| Negocio (Crating Express demo) | `admin@cratingexpress-demo.com` | `negocio123` |
+| Negocio (Orison demo) | `admin@orison-demo.com` | `negocio123` |
+
+## Cómo levantarlo
+
+```bash
+# Backend (desde vox54/backend, con el venv activado)
+uvicorn app.main:app --reload --port 8000
+python seed.py          # solo la primera vez, o para resetear datos demo
+
+# Frontend (desde vox54/frontend)
+npm run dev              # sirve en :5173, lee VITE_API_BASE de .env
+```
+
+**Cuidado conocido — proceso zombie en el puerto 8000:** en esta máquina, en algún momento el puerto 8000 quedó ocupado por un proceso que ningún método probó pudo matar (`taskkill`, PowerShell `Stop-Process`, `kill -9` nativo — todos lo reportan inexistente mientras el puerto sigue respondiendo con código viejo). Workaround aplicado: se levantó una instancia limpia en el **8010**, y `vox54/frontend/.env` (git-ignorado) tiene `VITE_API_BASE=http://localhost:8010` apuntando ahí. Si en una sesión nueva el puerto 8000 arranca limpio, se puede borrar ese `.env` y usar el 8000 de siempre — si vuelve a pasar, repetir el mismo workaround (otro puerto + `.env` local) en vez de perder tiempo insistiendo con matar el proceso viejo.
+
+## Estado actual (al 2026-08-31)
+
+Construido y probado: login de los 2 roles, catálogo de proveedores (telefonía/STT/TTS/IA) con cascada de modelos dependiente del proveedor, formulario completo de configuración del bot (compartido agencia/negocio), crear negocio nuevo, renombrar negocio, panel de agencia con menú lateral y estado real del bot por tarjeta, y la separación de rutas de arriba. 31 tests de backend + 20 de frontend, todos en verde.
+
+Pendiente, sin resolver todavía: la agencia no tiene ningún endpoint para editar su propio perfil (la pantalla de Configuración es de solo lectura por eso); no hay ninguna integración real con LiveKit/telefonía de verdad todavía — el formulario guarda la configuración pero no hay ningún bot corriendo de verdad detrás.
+
+---
+
 ## Modelo de reporte diario
 
 El reporte se escribe en primera persona, en tono conversacional, siguiendo el orden cronológico del día. Incluye contexto humano (reuniones, personas involucradas, interrupciones), no solo lo técnico. Se menciona qué salió mal y cómo se resolvió. Termina con dónde se paró y por qué. Sin bullets ni headers internos — todo en párrafos corridos.
@@ -3116,6 +3199,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 ## Reportes Diarios
 
 > Los últimos 14 días. Anteriores archivados en `PROYECTO-SOL/reportes/`.
+
+---
+
+### 2026-08-31 (Lunes)
+
+Hoy seguí con Vox54, la plataforma de agentes de voz que estamos armando aparte de todo lo de G54. Ya había dejado el panel de agencia con un menú lateral de verdad y las tarjetas de cada negocio mostrando su estado real, así que hoy me puse a probar todo lo demás con calma — el renombrado de un negocio, los interruptores del formulario del bot, guardar cambios, el modal de crear negocio nuevo, y hasta entré por el lado del negocio directo para confirmar que ese login también sigue andando bien. En el medio me topé varias veces con que el navegador de pruebas me mostraba cosas raras — el menú desapareciendo a la mitad, texto cortado en el borde — y en vez de asumir que eran bugs reales me puse a medir la página por dentro para confirmar, y en los tres casos resultó ser el propio navegador de pruebas fallando al sacar la foto, no algo roto de verdad.
+
+Con todo ya confirmado funcionando, revisé la pantalla de configuración de un negocio y seguía siendo el mismo problema de siempre: una sola pantalla larga mezclando el nombre del negocio con el formulario entero del bot, sin ninguna separación. La corté en tres partes bien distintas — una pantalla para ver quién es el negocio (nombre, estado, y un botón que lleva a su bot), la configuración del bot en su propia pantalla aparte, y agregué una tercera que no existía todavía, la configuración de la agencia en sí, en el menú lateral. Dejé esa última con los datos reales que ya tenemos (nombre de la agencia, cuántos negocios manejamos, quién soy yo ahí adentro) sin inventar ningún botón de guardar que no fuera a hacer nada real, porque el sistema todavía no tiene manera de editar eso.
+
+Se me hizo tarde revisando todo esto con calma, así que corté ahí, subí los cambios al repositorio y actualicé la documentación del proyecto para que quede toda la información de Vox54 (cómo se levanta, las credenciales de prueba, y un detalle molesto de esta máquina en particular — un proceso que se queda pegado en el puerto 8000 y no hay forma de matarlo, así que por ahora corro el servidor en otro puerto) — para poder seguir mañana desde otra computadora sin perder tiempo reconstruyendo el contexto.
 
 ---
 
