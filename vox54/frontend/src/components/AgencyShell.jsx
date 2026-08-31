@@ -6,7 +6,12 @@ import Logo from "./Logo";
 // dejando el panel sin ninguna estructura de navegación real.
 export default function AgencyShell({ userName, onLogout, children }) {
   const location = useLocation();
-  const isNegocios = location.pathname.startsWith("/agencia");
+  // "Negocios" cubre la lista y todo lo que cuelga de un negocio puntual
+  // (identidad, configuración de su bot) — son la misma sección de la
+  // agencia, no páginas sueltas. "Configuración" es exclusivamente la
+  // config de la agencia en sí, nunca la de un negocio.
+  const isNegocios = location.pathname === "/agencia" || location.pathname.startsWith("/agencia/negocios");
+  const isConfig = location.pathname.startsWith("/agencia/configuracion");
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
@@ -18,6 +23,9 @@ export default function AgencyShell({ userName, onLogout, children }) {
         <nav style={{ padding: "4px 12px", flex: 1 }}>
           <Link to="/agencia" style={{ ...navItemStyle, ...(isNegocios ? activeNavItemStyle : {}) }}>
             <span style={navIconStyle}>🏢</span> Negocios
+          </Link>
+          <Link to="/agencia/configuracion" style={{ ...navItemStyle, ...(isConfig ? activeNavItemStyle : {}) }}>
+            <span style={navIconStyle}>⚙️</span> Configuración
           </Link>
         </nav>
 
