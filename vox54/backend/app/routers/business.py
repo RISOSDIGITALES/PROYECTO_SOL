@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import get_current_business_user
-from ..schemas import BusinessMeResponse, BotConfigOut, BotConfigUpdateClient, CallOut, PasswordChange
+from ..schemas import BusinessMeResponse, BotConfigOutClient, BotConfigUpdateClient, CallOut, PasswordChange
 from ..security import hash_password, verify_password
 from ..validators import bot_config_as_dict, validate_bot_config
 from .. import models
@@ -36,7 +36,7 @@ def change_password(
     return {"ok": True}
 
 
-@router.get("/bot-config", response_model=BotConfigOut)
+@router.get("/bot-config", response_model=BotConfigOutClient)
 def get_bot_config(
     db: Session = Depends(get_db),
     user: models.BusinessUser = Depends(get_current_business_user),
@@ -44,7 +44,7 @@ def get_bot_config(
     return db.query(models.BotConfig).filter(models.BotConfig.business_id == user.business_id).first()
 
 
-@router.put("/bot-config", response_model=BotConfigOut)
+@router.put("/bot-config", response_model=BotConfigOutClient)
 def update_bot_config(
     body: BotConfigUpdateClient,
     db: Session = Depends(get_db),

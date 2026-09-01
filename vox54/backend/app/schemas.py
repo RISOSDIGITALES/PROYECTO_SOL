@@ -129,6 +129,35 @@ class BotConfigUpdateClient(BaseModel):
     voicemail_message: str | None = None
 
 
+class BotConfigOutClient(BaseModel):
+    """Espejo de lectura de BotConfigUpdateClient — la misma barrera de
+    escritura no sirve de nada si GET /business/bot-config sigue mandando
+    todo el objeto completo igual. Un negocio SÍ necesita ver su propio
+    `phone_number` (de solo lectura, para mostrarlo en 'Tu número'), pero
+    nunca `ai_api_key` ni el resto de infraestructura — antes de este
+    schema, esos campos viajaban igual en la respuesta HTTP aunque el
+    formulario nunca los mostrara, visibles para cualquiera que abriera
+    las devtools del navegador."""
+
+    business_id: int
+    phone_number: str
+    system_prompt: str
+    welcome_message: str
+    escalation_email: str
+    language: str
+    status: str
+    first_message_mode: str
+    allow_interruptions: bool
+    silence_timeout_seconds: int
+    max_duration_seconds: int
+    end_call_message: str
+    transfer_phone_number: str
+    voicemail_detection_enabled: bool
+    voicemail_message: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class BusinessOut(BaseModel):
     id: int
     name: str

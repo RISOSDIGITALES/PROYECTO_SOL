@@ -29,11 +29,41 @@ def test_update_bot_config_valido(client, seed, business_token):
     assert res.json()["welcome_message"] == "Hola, gracias por llamar"
 
 
-def test_negocio_no_puede_tocar_campos_de_infraestructura(client, seed, business_token):
+def test_get_bot_config_no_expone_infraestructura(client, seed, business_token, db_session):
+    """La barrera de escritura (BotConfigUpdateClient) no sirve de nada si
+    la RESPUESTA de lectura sigue mandando todo el objeto completo — un
+    negocio no debe recibir en el JSON ni el api key propio de otro
+    negocio ni ningún dato de infraestructura, aunque el formulario nunca
+    los muestre (network tab del navegador los vería igual)."""
+    seed["business"].bot_config.ai_api_key = "sk-secreto-de-verdad-nunca-deberia-viajar"
+    db_session.commit()
+
+    res = client.get("/business/bot-config", headers=auth(business_token))
+    assert res.status_code == 200
+    data = res.json()
+    for campo in ("ai_api_key", "ai_provider", "ai_model", "telephony_provider", "telephony_trunk_id", "stt_provider", "stt_model", "tts_provider", "tts_voice_id", "runtime_target"):
+        assert campo not in data, f"'{campo}' no debería estar en la respuesta de /business/bot-config"
+    # lo que sí le corresponde ver seguir presente
+    assert data["phone_number"] == "+17865550100"
+    assert "system_prompt" in data
+
+
+def test_update_bot_config_respuesta_no_expone_infraestructura(client, seed, business_token):
+    res = client.put("/business/bot-config", headers=auth(business_token), json={"welcome_message": "Hola"})
+    assert res.status_code == 200
+    assert "ai_api_key" not in res.json()
+    assert "ai_provider" not in res.json()
+
+
+def test_negocio_no_puede_tocar_campos_de_infraestructura(client, seed, business_token, db_session):
     """telefonía/STT/TTS/modelo de IA son decisiones de la agencia, no del
     cliente — el schema de este endpoint ni siquiera los conoce, así que
-    mandarlos no da error, simplemente se ignoran sin tocar nada."""
-    before = client.get("/business/bot-config", headers=auth(business_token)).json()
+    mandarlos no da error, simplemente se ignoran sin tocar nada. Ni la
+    respuesta de este endpoint expone esos campos (ver
+    test_get_bot_config_no_expone_infraestructura), así que la comparación
+    real de "no cambió nada" se hace contra la base, no contra el JSON."""
+    bot_config = seed["business"].bot_config
+    antes = (bot_config.ai_provider, bot_config.stt_provider, bot_config.tts_provider, bot_config.telephony_provider, bot_config.runtime_target, bot_config.ai_api_key)
 
     res = client.put(
         "/business/bot-config",
@@ -49,15 +79,11 @@ def test_negocio_no_puede_tocar_campos_de_infraestructura(client, seed, business
         },
     )
     assert res.status_code == 200
-    after = res.json()
+    assert res.json()["welcome_message"] == "esto sí debería guardarse"
 
-    assert after["welcome_message"] == "esto sí debería guardarse"
-    assert after["ai_provider"] == before["ai_provider"]
-    assert after["stt_provider"] == before["stt_provider"]
-    assert after["tts_provider"] == before["tts_provider"]
-    assert after["telephony_provider"] == before["telephony_provider"]
-    assert after["runtime_target"] == before["runtime_target"]
-    assert after["ai_api_key"] == before["ai_api_key"]
+    db_session.refresh(bot_config)
+    despues = (bot_config.ai_provider, bot_config.stt_provider, bot_config.tts_provider, bot_config.telephony_provider, bot_config.runtime_target, bot_config.ai_api_key)
+    assert despues == antes
 
 
 def test_update_bot_config_email_de_escalacion_invalido(client, seed, business_token):
