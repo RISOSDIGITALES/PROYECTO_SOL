@@ -18,6 +18,11 @@
 
   --radius: 12px;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, Helvetica, sans-serif;
+  /* Voz de marca — redondeada, con onda de burbuja, reservada para el
+     logo y los títulos de cada pantalla. El texto de trabajo (tablas,
+     formularios, botones) se queda con --font, que sigue siendo el que
+     mejor lee en pantallas densas de datos. */
+  --font-display: "Fredoka", var(--font);
 }
 
 * {
@@ -35,6 +40,11 @@ body {
   min-height: 100vh;
 }
 
+h1, h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
 .g54-gradient {
   background: linear-gradient(135deg, var(--g54-blue) 0%, var(--g54-blue-dark) 100%);
 }
@@ -46,12 +56,12 @@ body {
   background: #fff;
   color: var(--g54-blue);
   font-size: 18px;
-  font-weight: 800;
-  letter-spacing: -0.8px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: Arial, sans-serif;
+  font-family: var(--font-display);
   margin: 0 2px;
   flex-shrink: 0;
 }
@@ -66,8 +76,8 @@ body {
   font-size: 26px;
   font-weight: 600;
   color: #fff;
-  letter-spacing: -0.4px;
-  font-family: Arial, sans-serif;
+  letter-spacing: -0.2px;
+  font-family: var(--font-display);
 }
 
 /* Estado de foco real para teclado — todos los inputs/selects del panel
@@ -96,4 +106,192 @@ textarea:focus {
   border-color: var(--g54-blue) !important;
   box-shadow: 0 4px 14px rgba(45, 91, 255, 0.12);
   transform: translateY(-1px);
+}
+
+/* ============ Menú de burbujas (AgencyShell) ============
+   Reemplaza el sidebar lateral — un campo de burbujas de vidrio flotando
+   abajo, cada una con su propio color, tamaño y ritmo, sin ninguna caja
+   ni barra que las encierre. Diseño aprobado en sops/ (mockup de referencia
+   en vox54/design/menu-propuestas.html) antes de implementarlo acá. */
+
+@keyframes vox54-floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-9px); }
+}
+
+@keyframes vox54-floaty-soft {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.04); }
+}
+
+@keyframes vox54-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(0.8, 1.2); }
+  62% { transform: scale(1.16, 0.88); }
+  82% { transform: scale(0.95, 1.05); }
+  100% { transform: scale(1); }
+}
+
+.vox54-bubblefield {
+  position: relative;
+  flex-shrink: 0;
+  height: 150px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 26px;
+  padding-bottom: 26px;
+  pointer-events: none;
+}
+
+.vox54-amb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95), transparent 45%),
+    rgba(147, 197, 253, 0.32);
+  border: 1px solid rgba(255,255,255,0.55);
+  animation: vox54-floaty 5s ease-in-out infinite;
+}
+
+.vox54-amb.green {
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95), transparent 45%),
+    rgba(63, 214, 143, 0.3);
+}
+
+.vox54-amb.violet {
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95), transparent 45%),
+    rgba(196, 181, 253, 0.32);
+}
+
+.vox54-navcol {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+  animation: vox54-floaty 4.2s ease-in-out infinite;
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font);
+  cursor: pointer;
+}
+
+.vox54-navbubble {
+  --tint: 147,197,253;
+  --base: 219,234,254;
+  --glow: 45,91,255;
+  --size: 58px;
+  position: relative;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  font-family: var(--font);
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.55) 22%, transparent 46%),
+    radial-gradient(circle at 72% 82%, rgba(var(--tint),0.4), transparent 60%),
+    rgba(var(--base), 0.62);
+  border: 1.5px solid rgba(255,255,255,0.85);
+  box-shadow:
+    inset 0 -7px 12px rgba(var(--glow),0.14),
+    inset 0 2px 3px rgba(255,255,255,0.8),
+    0 14px 22px -12px rgba(var(--glow),0.4);
+  transition: transform 0.2s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s ease;
+}
+
+/* variedad de tono y tamaño por ítem — no todo el menú es el mismo azul */
+.vox54-navbubble.hueB { --tint: 94,234,212; --base: 204,251,241; --glow: 20,184,166; --size: 62px; }
+.vox54-navbubble.hueC { --tint: 196,181,253; --base: 237,233,254; --glow: 139,92,246; --size: 56px; }
+
+.vox54-navbubble:hover { transform: scale(1.1); }
+
+.vox54-navbubble .icon {
+  font-size: 21px;
+  filter: drop-shadow(0 1px 1px rgba(19,27,46,0.15));
+}
+
+.vox54-navbubble.active {
+  width: 70px;
+  height: 70px;
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.5) 20%, transparent 46%),
+    radial-gradient(circle at 72% 85%, rgba(255,255,255,0.3), transparent 60%),
+    linear-gradient(155deg, rgba(var(--tint),0.95) 0%, rgb(var(--glow)) 55%, rgb(var(--glow)) 100%);
+  border-color: rgba(255,255,255,0.95);
+  box-shadow:
+    inset 0 -8px 14px rgba(var(--glow),0.4),
+    inset 0 2px 4px rgba(255,255,255,0.85),
+    0 0 0 7px rgba(var(--glow),0.16),
+    0 18px 30px -12px rgba(var(--glow),0.55);
+}
+
+.vox54-navbubble.active .icon { font-size: 24px; }
+
+.vox54-navbubble.exit {
+  --tint: 252,165,165;
+  --base: 254,226,226;
+  --glow: 239,68,68;
+  --size: 60px;
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.5) 22%, transparent 46%),
+    radial-gradient(circle at 72% 82%, rgba(var(--tint),0.4), transparent 60%),
+    rgba(var(--base), 0.7);
+  box-shadow:
+    inset 0 -7px 12px rgba(var(--glow),0.15),
+    inset 0 2px 3px rgba(255,255,255,0.8),
+    0 14px 22px -12px rgba(var(--glow),0.3);
+}
+
+.vox54-navbubble.popping { animation: vox54-pop 0.5s cubic-bezier(.34,1.56,.64,1); }
+
+.vox54-navlabel {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  background: rgba(255,255,255,0.75);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.vox54-notif {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,0.95), transparent 42%),
+    #fb7185;
+  border: 1.5px solid rgba(255,255,255,0.9);
+  box-shadow:
+    inset 0 -3px 5px rgba(190,18,60,0.35),
+    0 5px 10px -3px rgba(251,113,133,0.6);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  text-shadow: 0 1px 1px rgba(159,18,57,0.4);
+  animation: vox54-floaty-soft 2.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vox54-amb, .vox54-navcol, .vox54-notif { animation: none; }
+  .vox54-navbubble.popping { animation: none; }
 }
