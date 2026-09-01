@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import BotConfigForm from "../components/BotConfigForm";
 import CallsList from "../components/CallsList";
+import StatusPill from "../components/StatusPill";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
+import { initials } from "../utils";
 
 export default function BusinessDashboard() {
   const { logout } = useAuth();
@@ -67,12 +69,16 @@ export default function BusinessDashboard() {
       </div>
 
       <div style={{ maxWidth: 640, margin: "0 auto", padding: 32 }}>
-        <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>
-          {me?.business_name || "…"}
-        </h1>
-        <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginBottom: 20 }}>
-          Tu agente de voz.
-        </p>
+        <div style={identityCardStyle}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={avatarStyle}>{initials(me?.business_name)}</div>
+            <div>
+              <h1 style={{ fontSize: 18, color: "var(--ink)", margin: 0 }}>{me?.business_name || "…"}</h1>
+              <div style={{ fontSize: 12, color: "var(--ink-softer)", marginTop: 2 }}>Tu agente de voz</div>
+            </div>
+          </div>
+          {config && <StatusPill status={config.status} />}
+        </div>
 
         <div style={{ display: "flex", gap: 6, marginBottom: 20, borderBottom: "1px solid var(--border)" }}>
           <TabButton active={tab === "calls"} onClick={() => setTab("calls")}>Llamadas</TabButton>
@@ -123,6 +129,32 @@ function TabButton({ active, onClick, children }) {
     </button>
   );
 }
+
+const identityCardStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 16,
+  background: "var(--white)",
+  border: "1px solid var(--border)",
+  borderRadius: 12,
+  padding: "16px 20px",
+  marginBottom: 20,
+};
+
+const avatarStyle = {
+  width: 40,
+  height: 40,
+  flexShrink: 0,
+  borderRadius: 10,
+  background: "var(--g54-blue)",
+  color: "#fff",
+  fontWeight: 800,
+  fontSize: 14,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
 
 const logoutBtn = {
   background: "rgba(255,255,255,0.14)",

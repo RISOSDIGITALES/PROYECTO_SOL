@@ -6,15 +6,7 @@ import CreateBusinessModal from "../components/CreateBusinessModal";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
-
-function initials(name) {
-  return (name || "?")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase())
-    .join("");
-}
+import { initials } from "../utils";
 
 export default function AgencyDashboard() {
   const { logout } = useAuth();

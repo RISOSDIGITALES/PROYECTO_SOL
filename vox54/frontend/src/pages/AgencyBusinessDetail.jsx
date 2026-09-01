@@ -6,6 +6,7 @@ import CallsList from "../components/CallsList";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
+import { initials } from "../utils";
 
 // Identidad del negocio (nombre, estado, ID) — separada a propósito de la
 // configuración del bot en sí, que vive en su propia página
@@ -144,15 +145,6 @@ export default function AgencyBusinessDetail() {
       </div>
     </AgencyShell>
   );
-}
-
-function initials(name) {
-  return (name || "?")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase())
-    .join("");
 }
 
 const backLink = {
