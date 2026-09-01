@@ -29,6 +29,23 @@ class BusinessMeResponse(BaseModel):
     email: str
     business_id: int
     business_name: str
+    # Un negocio no tiene ningún canal de soporte propio todavía — quien
+    # atiende sus dudas reales es la agencia que lo gestiona, así que se le
+    # muestra el nombre real de esa agencia en vez de inventar un contacto
+    # de "soporte" que no existe.
+    agency_name: str
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def min_length(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("la contraseña nueva debe tener al menos 8 caracteres")
+        return v
 
 
 class BotConfigOut(BaseModel):

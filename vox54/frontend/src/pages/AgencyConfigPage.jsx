@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AgencyShell from "../components/AgencyShell";
+import ChangePasswordForm from "../components/ChangePasswordForm";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 
 // Página propia para la configuración de la agencia en sí — separada a
-// propósito de "Negocios" (que lista y edita cada negocio y su bot). Hoy
-// solo hay datos reales de solo-lectura porque el backend todavía no
-// expone ningún endpoint para editar el perfil de la agencia; se muestra
-// tal cual, sin inventar un botón de "Guardar" que no tendría nada real
-// que guardar.
+// propósito de "Negocios" (que lista y edita cada negocio y su bot). El
+// perfil de la agencia (nombre, negocios gestionados) sigue siendo de
+// solo-lectura porque el backend todavía no expone ningún endpoint para
+// editarlo — la cuenta del admin sí es editable (cambio de contraseña).
 export default function AgencyConfigPage() {
   const { logout } = useAuth();
   const session = useRequireRole("agency");
@@ -51,6 +51,14 @@ export default function AgencyConfigPage() {
             <Card title="Tu cuenta">
               <Row label="Nombre">{me.name}</Row>
               <Row label="Correo">{me.email}</Row>
+            </Card>
+
+            <Card title="Cambiar contraseña">
+              <ChangePasswordForm
+                onSubmit={(current, next) =>
+                  api.changeAgencyPassword(session.access_token, { current_password: current, new_password: next })
+                }
+              />
             </Card>
           </div>
         )}

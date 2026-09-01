@@ -39,6 +39,8 @@ export const api = {
     request("/auth/business/login", { method: "POST", body: { email, password } }),
   agencyMe: (token) => request("/agency/me", { token }),
   businessMe: (token) => request("/business/me", { token }),
+  changeAgencyPassword: (token, body) => request("/agency/me/password", { method: "PUT", body, token }),
+  changeBusinessPassword: (token, body) => request("/business/me/password", { method: "PUT", body, token }),
   listBusinesses: (token) => request("/agency/businesses", { token }),
   createBusiness: (token, body) => request("/agency/businesses", { method: "POST", body, token }),
   getBusinessDetail: (token, id) => request(`/agency/businesses/${id}`, { token }),

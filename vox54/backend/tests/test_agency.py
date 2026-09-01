@@ -13,6 +13,30 @@ def auth(token):
     return {"Authorization": f"Bearer {token}"}
 
 
+def test_cambiar_password_ok(client, seed, agency_token):
+    res = client.put(
+        "/agency/me/password",
+        headers=auth(agency_token),
+        json={"current_password": "agencia_pass_123", "new_password": "nueva_password_valida"},
+    )
+    assert res.status_code == 200
+
+    login_vieja = client.post("/auth/agency/login", json={"email": "agencia@test-demo.com", "password": "agencia_pass_123"})
+    assert login_vieja.status_code == 401
+
+    login_nueva = client.post("/auth/agency/login", json={"email": "agencia@test-demo.com", "password": "nueva_password_valida"})
+    assert login_nueva.status_code == 200
+
+
+def test_cambiar_password_con_password_actual_incorrecta_falla(client, seed, agency_token):
+    res = client.put(
+        "/agency/me/password",
+        headers=auth(agency_token),
+        json={"current_password": "no-es-la-real", "new_password": "nueva_password_valida"},
+    )
+    assert res.status_code == 400
+
+
 def test_listar_negocios(client, seed, agency_token):
     res = client.get("/agency/businesses", headers=auth(agency_token))
     assert res.status_code == 200

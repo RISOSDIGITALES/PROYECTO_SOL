@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import BotConfigForm from "../components/BotConfigForm";
 import CallsList from "../components/CallsList";
+import ChangePasswordForm from "../components/ChangePasswordForm";
 import StatusPill from "../components/StatusPill";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
@@ -83,6 +84,7 @@ export default function BusinessDashboard() {
         <div style={{ display: "flex", gap: 6, marginBottom: 20, borderBottom: "1px solid var(--border)" }}>
           <TabButton active={tab === "calls"} onClick={() => setTab("calls")}>Llamadas</TabButton>
           <TabButton active={tab === "config"} onClick={() => setTab("config")}>Configuración</TabButton>
+          <TabButton active={tab === "account"} onClick={() => setTab("account")}>Cuenta</TabButton>
         </div>
 
         {tab === "calls" && <CallsList calls={calls} loading={calls === null && !callsError} error={callsError} />}
@@ -103,7 +105,48 @@ export default function BusinessDashboard() {
             !error && <div style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>Cargando…</div>
           )
         )}
+
+        {tab === "account" && (
+          <div style={{ display: "grid", gap: 16 }}>
+            <div style={accountCardStyle}>
+              <div style={accountCardTitleStyle}>Tu cuenta</div>
+              <Row label="Nombre">{me?.name}</Row>
+              <Row label="Correo">{me?.email}</Row>
+            </div>
+
+            <div style={accountCardStyle}>
+              <div style={accountCardTitleStyle}>Cambiar contraseña</div>
+              <ChangePasswordForm
+                onSubmit={(current, next) =>
+                  api.changeBusinessPassword(session.access_token, { current_password: current, new_password: next })
+                }
+              />
+            </div>
+
+            {/* Nunca inventamos un canal de soporte propio — quien gestiona
+                este negocio es la agencia, así que es a ella a quien hay
+                que avisarle si algo no funciona. */}
+            {me?.agency_name && (
+              <div style={{ ...accountCardStyle, background: "#eef4ff" }}>
+                <div style={accountCardTitleStyle}>¿Necesitás ayuda?</div>
+                <p style={{ fontSize: 13, color: "var(--ink-soft)", margin: 0 }}>
+                  Este bot lo gestiona <strong style={{ color: "var(--ink)" }}>{me.agency_name}</strong>. Si algo no funciona
+                  como esperás o necesitás un cambio que no podés hacer desde acá, contactalos directamente a ellos.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function Row({ label, children }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+      <span style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>{label}</span>
+      <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>{children}</span>
     </div>
   );
 }
@@ -154,6 +197,23 @@ const avatarStyle = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
+};
+
+const accountCardStyle = {
+  display: "grid",
+  gap: 14,
+  background: "var(--white)",
+  border: "1px solid var(--border)",
+  borderRadius: 12,
+  padding: 20,
+};
+
+const accountCardTitleStyle = {
+  fontSize: 11,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+  color: "var(--ink-soft)",
 };
 
 const logoutBtn = {

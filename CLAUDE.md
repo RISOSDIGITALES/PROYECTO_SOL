@@ -781,9 +781,9 @@ Producto nuevo y separado de G54/RRSS/Nomify — un SaaS multiempresa para agent
 vox54/
   backend/
     app/
-      routers/agency.py, business.py, auth.py, catalog.py
+      routers/agency.py, business.py, auth.py, catalog.py, worker.py
       models.py, schemas.py, validators.py, security.py, deps.py
-    tests/            — pytest, 31 tests
+    tests/            — pytest, 50 tests
     seed.py           — datos demo (ver credenciales abajo)
     requirements.txt
   frontend/
@@ -792,9 +792,18 @@ vox54/
                          AgencyBotConfig, AgencyConfigPage, BusinessDashboard,
                          NotFoundPage
       components/     — AgencyShell (menú lateral), StatusPill, BotConfigForm
-                         (compartido por agencia y negocio), CreateBusinessModal, Logo
+                         (compartido por agencia y negocio), CallsList (idem),
+                         ChangePasswordForm (idem), CreateBusinessModal, Logo
       theme.css        — paleta y tokens (--g54-blue, --g54-navy, --paper, etc.)
-    tests: vitest, 20 tests (api.test.js, BotConfigForm.test.jsx, useRequireRole.test.jsx)
+    tests: vitest, 34 tests
+  worker/
+    agent.py           — LiveKit Agents worker real (STT/TTS/LLM por proveedor,
+                         resuelve config del bot llamando a /worker/*, reporta
+                         cada llamada terminada a POST /worker/calls)
+    test_agent.py       — unittest (no pytest), 15 tests — correr con
+                         `WORKER_SECRET=test venv/Scripts/python.exe -m unittest test_agent -v`
+    requirements.txt    — su propio venv, separado del de backend/ (tiene
+                         livekit-agents + plugins, backend/ no los necesita)
 ```
 
 ## Rutas del lado de agencia (reorganizado 2026-08-31)
@@ -804,10 +813,10 @@ Antes una sola pantalla mezclaba la identidad del negocio con el formulario comp
 | Ruta | Qué hace |
 |---|---|
 | `/agencia` | Lista de negocios (grilla de tarjetas, estado real del bot por tarjeta) |
-| `/agencia/configuracion` | Datos de la agencia + cuenta del admin logueado (solo lectura — el backend no tiene endpoint de edición todavía) |
-| `/agencia/negocios/:id` | Identidad del negocio — nombre (renombrable), ID, estado, y una tarjeta que lleva a su bot |
-| `/agencia/negocios/:id/bot` | Configuración completa del bot de ese negocio (`BotConfigForm`) |
-| `/negocio` | Dashboard de un negocio logueado directo — su propio bot, mismo `BotConfigForm` |
+| `/agencia/configuracion` | Datos de la agencia (solo lectura — sin endpoint de edición todavía) + cuenta del admin logueado (nombre/correo de solo lectura, más cambio de contraseña real) |
+| `/agencia/negocios/:id` | Identidad del negocio — nombre (renombrable), ID, estado, sus llamadas recientes (`CallsList`), y una tarjeta que lleva a su bot |
+| `/agencia/negocios/:id/bot` | Configuración completa del bot de ese negocio (`BotConfigForm`, scope agencia — ve/edita también telefonía/STT/TTS/modelo de IA) |
+| `/negocio` | Dashboard de un negocio logueado directo — 3 pestañas: Llamadas (`CallsList`, por defecto), Configuración (mismo `BotConfigForm` pero scope cliente — sin los campos de infraestructura), y Cuenta (cambio de contraseña + el nombre de la agencia que lo gestiona, como único "contacto de soporte" real) |
 
 `AgencyShell` (el menú lateral oscuro) es compartido por las 4 pantallas de agencia — "Negocios" queda resaltado tanto en la lista como en cualquier pantalla de un negocio puntual (identidad o bot), "Configuración" solo en la pantalla de agencia.
 
@@ -822,8 +831,10 @@ Antes una sola pantalla mezclaba la identidad del negocio con el formulario comp
 ## Cómo levantarlo
 
 ```bash
-# Backend (desde vox54/backend, con el venv activado)
-uvicorn app.main:app --reload --port 8000
+# Backend (desde vox54/backend, con el venv activado) — puerto 8010, no 8000
+# (ver "proceso zombie" abajo); si no `--reload`, hay que reiniciarlo a mano
+# después de cada cambio de código real, o se sigue sirviendo la versión vieja.
+uvicorn app.main:app --port 8010
 python seed.py          # solo la primera vez, o para resetear datos demo
 
 # Frontend (desde vox54/frontend)
@@ -832,11 +843,13 @@ npm run dev              # sirve en :5173, lee VITE_API_BASE de .env
 
 **Cuidado conocido — proceso zombie en el puerto 8000:** en esta máquina, en algún momento el puerto 8000 quedó ocupado por un proceso que ningún método probó pudo matar (`taskkill`, PowerShell `Stop-Process`, `kill -9` nativo — todos lo reportan inexistente mientras el puerto sigue respondiendo con código viejo). Workaround aplicado: se levantó una instancia limpia en el **8010**, y `vox54/frontend/.env` (git-ignorado) tiene `VITE_API_BASE=http://localhost:8010` apuntando ahí. Si en una sesión nueva el puerto 8000 arranca limpio, se puede borrar ese `.env` y usar el 8000 de siempre — si vuelve a pasar, repetir el mismo workaround (otro puerto + `.env` local) en vez de perder tiempo insistiendo con matar el proceso viejo.
 
-## Estado actual (al 2026-08-31)
+**Cuidado conocido — el servidor local no corre con `--reload`:** confirmado una vez con un bug real (ítem del 31-ago) que un cambio de schema ya probado y en verde en pytest no se reflejaba contra el servidor local porque el proceso llevaba corriendo desde una sesión anterior sin haberse reiniciado. Después de editar cualquier archivo de `backend/app/`, matar el proceso viejo (`netstat -ano | grep :8010` → `taskkill //PID <pid> //F`) y volver a levantarlo antes de dar por buena una verificación en vivo.
 
-Construido y probado: login de los 2 roles, catálogo de proveedores (telefonía/STT/TTS/IA) con cascada de modelos dependiente del proveedor, formulario completo de configuración del bot (compartido agencia/negocio), crear negocio nuevo, renombrar negocio, panel de agencia con menú lateral y estado real del bot por tarjeta, y la separación de rutas de arriba. 31 tests de backend + 20 de frontend, todos en verde.
+## Estado actual (al 2026-09-01)
 
-Pendiente, sin resolver todavía: la agencia no tiene ningún endpoint para editar su propio perfil (la pantalla de Configuración es de solo lectura por eso); no hay ninguna integración real con LiveKit/telefonía de verdad todavía — el formulario guarda la configuración pero no hay ningún bot corriendo de verdad detrás.
+Construido y probado: login de los 2 roles; catálogo de proveedores (telefonía/STT/TTS/IA) con cascada de modelos dependiente del proveedor; formulario de configuración del bot con separación real cliente/agencia (`BotConfigUpdateClient` — un negocio no puede tocar telefonía/STT/TTS/modelo de IA, ni siquiera mandándolo a mano, porque el schema del endpoint ni conoce esos campos); crear negocio nuevo, renombrar negocio; visibilidad real de resultados de llamadas (modelo `Call`, el worker de LiveKit reporta cada llamada real al terminar vía `POST /worker/calls` con su duración/outcome/transcripción real, `CallsList` compartido la muestra tanto en el dashboard del negocio como en la ficha de cada negocio del lado de agencia — nunca se fabrica una llamada de ejemplo, vacío-de-verdad se muestra vacío); dashboard del negocio con paridad visual con las vistas de agencia (tarjeta de identidad con el estado real del bot siempre visible, sin importar la pestaña activa); y autogestión de cuenta (cambio de contraseña real para ambos roles, y un negocio ve el nombre de la agencia que lo gestiona como su único canal de "soporte" honesto — nunca un sistema de tickets inventado). 50 tests de backend + 34 de frontend + 15 del worker, todos en verde.
+
+Pendiente, sin resolver todavía: la agencia no tiene ningún endpoint para editar su propio perfil (nombre/negocios gestionados de `/agencia/configuracion` siguen siendo de solo lectura); no hay ninguna integración real con LiveKit/telefonía de verdad todavía en producción — el worker (`agent.py`) ya está construido y probado contra el SDK real, pero nunca se conectó a un número de teléfono real ni a una llamada real de punta a punta.
 
 ---
 
@@ -2644,6 +2657,20 @@ Investigadas 3 herramientas que la usuaria había visto mencionadas como "plugin
 
 **Tercer bug real, el más grave del día, encontrado por insistencia de la usuaria en revisar con más profundidad:** la tarjeta "Negocios en el CRM" contaba tratos en la etapa `lost` como si fueran negocios activos, inflando el número real — corregido en el nodo `🔧 Armar Línea Base` del Strategist AI (`S62o0wcXq8Wfj67S`) agregando un filtro de etapas activas (excluyendo `lost`) y un filtro de 30 días que faltaba en el conteo de leads. El registro de línea base ya guardado con el número contaminado se corrigió a mano (borrado y regrabado, ya que la API no soporta editar un reporte existente) — en el primer intento la corrección se contaminó con datos de prueba propios sin limpiar, detectado y rehecho con valores limpios antes de darlo por cerrado. Un commit de esta misma ronda quedó con el mensaje mal armado (arrastraba el título del commit anterior) — informado tal cual a la usuaria, sin reescribir el historial ya empujado sin que ella lo pidiera. Sincronizados ambos workflows al repo, sin secretos en texto plano.
 
+302. **Corte de día 01-sep — diagnóstico sin novedades, confirmado en vivo que el reordenamiento del reporte de Analytics del día anterior ya está completo, y el resto del día invertido en una auditoría honesta de Vox54 desde la perspectiva de un cliente real, con las 4 correcciones encontradas ya implementadas y probadas en vivo** (2026-09-01): arrancado el día con el mismo diagnóstico de rutina de siempre — n8n limpio, storage de imágenes respondiendo `200`, cadencia del Vigía exacta, y la documentación de la API de G54 sin ningún marcador nuevo desde el 31-ago. Pedido explícito de seguir con "el reordenamiento" (la reorganización por etapa de embudo del ítem 301) — confirmado en vivo, con datos reales de Crating Express y de Orison, que el HTML del reporte ya sale completo con las 4 secciones en el orden correcto (Atracción/Consideración/Conversión/Post-venta + Supervisión de IA) y sin ninguna de las 3 fallas ya corregidas ayer (comparación cruzada entre empresas, gráfico con datos inventados, negocios `lost` contados como activos) — no hizo falta ningún cambio de código, el trabajo de ayer ya había quedado cerrado del todo. Repasados también los 9 pedidos abiertos del Éxodo contra la API real — ninguno cambió desde la última verificación, siguen exactamente igual de bloqueados del lado de Walter.
+
+**El resto del día se dedicó a Vox54**, a pedido explícito de dar una evaluación honesta desde la perspectiva de un cliente real (negocio, no agencia) probando la plataforma en vivo, no solo revisando código. La auditoría encontró 4 problemas reales, y se resolvieron los 4 en orden, uno por uno, cada uno confirmado en vivo antes de pasar al siguiente:
+
+1. **Separación cliente/agencia** — el hallazgo más serio: el formulario de configuración del bot que veía un negocio (`BotConfigForm`) era literalmente el mismo que usa la agencia, exponiendo campos de infraestructura (proveedor de telefonía, STT, TTS, modelo de IA, y hasta la API key propia) que un cliente nunca debería poder tocar — sin ninguna restricción real del lado del servidor, solo lo que el frontend decidiera mostrar. Corregido con un schema nuevo y deliberadamente incompleto (`BotConfigUpdateClient`) para el endpoint que usa un negocio — ni siquiera reconoce esos campos, así que mandarlos a mano no da error, simplemente se ignoran. **Encontrado un bug real durante la propia verificación:** el servidor local llevaba corriendo desde una sesión anterior sin reiniciarse (no usa `--reload`), así que una prueba deliberada de "intentar colar `ai_provider` desde la sesión del cliente" tuvo éxito la primera vez, pese a que el fix ya estaba en el código y los tests ya lo confirmaban en verde — quedó como recordatorio de que un servidor de desarrollo desactualizado puede ocultar justo el tipo de bug que se está tratando de confirmar resuelto. Reiniciado el proceso y reconfirmado: el mismo intento de manipulación quedó bloqueado.
+
+2. **Visibilidad real de resultados de llamadas** — hasta ayer, un cliente no tenía ninguna forma de saber qué había pasado en una llamada real a su bot. Se agregó un modelo de datos nuevo (`Call`), se instrumentó el worker real de LiveKit (verificado contra el SDK realmente instalado, no contra una API asumida) para que reporte cada llamada terminada — duración real, cómo terminó (completada, transferida, cortada por duración máxima, o error), y la transcripción real — a un endpoint nuevo del backend, y se construyó un componente compartido (`CallsList`) que la agencia ve por cada negocio y el negocio ve de las suyas. Disciplina aplicada a propósito: nunca se fabricó una llamada de ejemplo para que la pantalla "se vea llena" — sin ninguna llamada real todavía, se muestra vacío de verdad, con un mensaje honesto en vez de un dato inventado.
+
+3. **Visual desactualizado del dashboard del negocio** — la pantalla que ve un cliente se había quedado atrás en pulido respecto a las vistas de agencia ya rediseñadas. Se agregó una tarjeta de identidad con el estado real del bot (activo/pausado) siempre visible, sin importar en qué pestaña esté parado el cliente — antes solo se veía dentro de la pestaña de Configuración, un hueco real de información para alguien que solo entra a mirar sus llamadas.
+
+4. **Autogestión de cuenta** — un negocio no tenía ninguna forma de cambiar su propia contraseña, ni ningún canal real para pedir ayuda. Se construyó un formulario de cambio de contraseña compartido entre agencia y negocio (con su propio endpoint por rol, verificando siempre la contraseña actual antes de aceptar la nueva), y en vez de inventar un sistema de soporte que no existe, la pestaña de Cuenta del negocio ahora muestra el nombre real de la agencia que lo gestiona como su único contacto honesto. **Bug propio encontrado y corregido antes de darlo por terminado:** el primer diseño del formulario ponía el texto de ayuda ("Mínimo 8 caracteres.") dentro del mismo `<label>` que envuelve el campo de contraseña nueva — como las pruebas automatizadas resuelven la etiqueta de un campo por el texto completo del `<label>` que lo envuelve, ese texto extra hacía que la etiqueta real ("Contraseña nueva") dejara de calzar exacto y las 3 pruebas fallaran; movido el texto de ayuda fuera del `<label>`, sin cambiar nada visual. Confirmado en vivo, con el servidor real y no solo con pruebas automatizadas: se cambió la contraseña real de la cuenta demo de agencia desde el formulario, se cerró sesión, se volvió a entrar con la contraseña vieja (rechazada) y con la nueva (aceptada) — confirmando que el cambio persiste de verdad en la base de datos — y se la revirtió al valor de siempre para no dejar las credenciales de demo desactualizadas. Confirmado también en vivo, del lado del negocio, que la pestaña de Cuenta muestra el nombre real de la agencia ("Growth54") en vez de cualquier canal de soporte inventado.
+
+Las 3 baterías de pruebas (backend, frontend, worker) quedaron en 50/50, 34/34 y 15/15 — worker corre con `unittest`, no `pytest` (ese venv nunca tuvo pytest instalado, y no hizo falta: el propio archivo de test ya documenta el comando real con `unittest`). Actualizada la sección de referencia de Vox54 en este mismo archivo con la estructura real del repo (incluyendo `worker/`, que nunca se había documentado), las rutas actualizadas, y un "Estado actual" reescrito con los números y el trabajo real de hoy.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
@@ -3207,6 +3234,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 ## Reportes Diarios
 
 > Los últimos 14 días. Anteriores archivados en `PROYECTO-SOL/reportes/`.
+
+---
+
+### 2026-09-01 (Martes)
+
+Arranqué haciendo el diagnóstico de siempre en G54 — todo en orden, sin ningún cambio nuevo en la API desde ayer. Confirmé en vivo, con datos reales de Crating Express y de Orison, que la reorganización del reporte de Analytics que dejé armada ayer ya está completa y sin ninguna de las tres fallas que corregí entonces — no hizo falta tocar nada más ahí. Repasé también los nueve pedidos que le quedan pendientes a Walter y siguen exactamente igual, sin ningún movimiento de su lado.
+
+El resto del día me lo pasé en Vox54, dándole una vuelta completa desde la perspectiva de un cliente real en vez de solo revisar el código. Entrando como si fuera un negocio, no la agencia, encontré cuatro problemas reales y los fui resolviendo uno por uno. El más serio: el formulario que usa un negocio para configurar su bot era literalmente el mismo que usa la agencia, así que un cliente podía ver y hasta intentar tocar cosas que nunca le corresponden — el proveedor de telefonía, las claves de las IA, todo eso — sin que hubiera ninguna restricción real detrás, solo lo que decidiera mostrar la pantalla. Até eso a nivel de servidor, no solo escondiendo botones, y en el camino agarré un susto real: la primera vez que probé si el arreglo funcionaba, el intento de manipulación pasó igual — resultó que el servidor que tenía corriendo localmente llevaba desde ayer sin reiniciarse, así que seguía usando el código viejo aunque el nuevo ya estuviera guardado y las pruebas automáticas ya lo dieran por bueno. Lo reinicié y ahí sí quedó confirmado bloqueado de verdad — quedó como recordatorio de no confiar solo en que el código esté escrito, sino en probarlo contra el servidor real que de verdad está corriendo.
+
+Después até tres cosas más que un cliente real necesitaba y no tenía. Que pueda ver de verdad qué pasó en sus llamadas — antes no había ninguna visibilidad real, así que construí que el motor de voz reporte cada llamada terminada (cuánto duró, cómo terminó, la conversación real) y que tanto el negocio como la agencia la puedan ver, con la regla de siempre bien firme: si todavía no hubo ninguna llamada real, se muestra vacío de verdad, nunca invento una de ejemplo. Le di un repaso visual al panel del negocio, que se había quedado atrás del de la agencia — ahora siempre se ve el estado real del bot sin importar en qué pestaña esté parado. Y por último, dejé que un cliente pueda cambiar su propia contraseña y le mostré, en vez de un sistema de soporte que no existe, el nombre real de la agencia que lo atiende. En el camino se me coló un error propio en el diseño del formulario de contraseña que hizo fallar las pruebas de ese mismo cambio — até por qué las pruebas no encontraban uno de los campos y lo corregí sin tocar nada visual — y quedó confirmado en vivo de punta a punta: cambié la contraseña real de la cuenta de prueba desde la pantalla misma, cerré sesión, confirmé que la vieja ya no entraba y la nueva sí, y la volví a dejar como estaba para no romper las credenciales de siempre. Cerré el día con las tres baterías de pruebas en verde y la documentación del proyecto puesta al día.
 
 ---
 

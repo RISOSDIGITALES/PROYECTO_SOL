@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import get_current_business_user
-from ..schemas import BusinessMeResponse, BotConfigOut, BotConfigUpdateClient, CallOut
+from ..schemas import BusinessMeResponse, BotConfigOut, BotConfigUpdateClient, CallOut, PasswordChange
+from ..security import hash_password, verify_password
 from ..validators import bot_config_as_dict, validate_bot_config
 from .. import models
 
@@ -18,7 +19,21 @@ def me(user: models.BusinessUser = Depends(get_current_business_user)):
         email=user.email,
         business_id=user.business_id,
         business_name=user.business.name,
+        agency_name=user.business.agency.name,
     )
+
+
+@router.put("/me/password")
+def change_password(
+    body: PasswordChange,
+    db: Session = Depends(get_db),
+    user: models.BusinessUser = Depends(get_current_business_user),
+):
+    if not verify_password(body.current_password, user.password_hash):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "La contraseña actual no es correcta")
+    user.password_hash = hash_password(body.new_password)
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/bot-config", response_model=BotConfigOut)

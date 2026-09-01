@@ -77,6 +77,52 @@ def test_update_bot_config_silence_timeout_fuera_de_rango(client, seed, business
     assert res.status_code == 422
 
 
+def test_me_incluye_el_nombre_de_la_agencia(client, seed, business_token):
+    """Un negocio no tiene ningún canal de soporte propio — quien lo
+    gestiona es su agencia, así que necesita saber cuál es."""
+    res = client.get("/business/me", headers=auth(business_token))
+    assert res.status_code == 200
+    assert res.json()["agency_name"] == "Agencia de Prueba"
+
+
+def test_cambiar_password_ok(client, seed, business_token):
+    res = client.put(
+        "/business/me/password",
+        headers=auth(business_token),
+        json={"current_password": "negocio_pass_123", "new_password": "nueva_password_valida"},
+    )
+    assert res.status_code == 200
+
+    # la contraseña vieja ya no sirve
+    login_vieja = client.post("/auth/business/login", json={"email": "negocio@test-demo.com", "password": "negocio_pass_123"})
+    assert login_vieja.status_code == 401
+
+    # la nueva sí
+    login_nueva = client.post("/auth/business/login", json={"email": "negocio@test-demo.com", "password": "nueva_password_valida"})
+    assert login_nueva.status_code == 200
+
+
+def test_cambiar_password_con_password_actual_incorrecta_falla(client, seed, business_token):
+    res = client.put(
+        "/business/me/password",
+        headers=auth(business_token),
+        json={"current_password": "esto-no-es-la-password-real", "new_password": "nueva_password_valida"},
+    )
+    assert res.status_code == 400
+    # la contraseña real sigue funcionando — el intento fallido no la tocó
+    login = client.post("/auth/business/login", json={"email": "negocio@test-demo.com", "password": "negocio_pass_123"})
+    assert login.status_code == 200
+
+
+def test_cambiar_password_nueva_muy_corta_falla(client, seed, business_token):
+    res = client.put(
+        "/business/me/password",
+        headers=auth(business_token),
+        json={"current_password": "negocio_pass_123", "new_password": "corta"},
+    )
+    assert res.status_code == 422
+
+
 def test_lista_de_llamadas_vacia_al_principio(client, seed, business_token):
     """El estado real hoy — nunca inventar una llamada de ejemplo para que
     la pantalla 'se vea llena'; vacío de verdad es honesto mientras no haya
