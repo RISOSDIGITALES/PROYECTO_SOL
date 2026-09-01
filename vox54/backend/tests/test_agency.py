@@ -136,6 +136,20 @@ def test_actualizar_bot_config_modelo_no_pertenece_al_proveedor(client, seed, ag
     assert "errors" in res.json()["detail"]
 
 
+def test_actualizar_bot_config_voz_no_pertenece_al_proveedor(client, seed, agency_token):
+    # tts_provider/tts_voice_id dejaron de ser editables por el negocio (ver
+    # test_negocio_no_puede_tocar_campos_de_infraestructura) — esta validación
+    # solo se puede seguir ejercitando desde la agencia.
+    business_id = seed["business"].id
+    res = client.put(
+        f"/agency/businesses/{business_id}/bot-config",
+        headers=auth(agency_token),
+        json={"tts_provider": "cartesia", "tts_voice_id": "voz-que-no-existe"},
+    )
+    assert res.status_code == 422
+    assert "errors" in res.json()["detail"]
+
+
 def test_patch_parcial_se_valida_contra_el_proveedor_ya_guardado(client, seed, agency_token):
     """Caso crítico: mandar solo ai_model, sin ai_provider, debe validarse
     contra el ai_provider que YA está en la base (groq por default) —

@@ -54,14 +54,14 @@ const baseConfig = {
 /** Envoltorio con estado real, igual al patrón que usan BusinessDashboard y
  * AgencyBusinessDetail — onChange hace un merge real, no un mock ciego, así
  * que el formulario recibe props actualizadas de verdad tras cada cambio. */
-function Wrapper({ initialConfig, onSave = vi.fn(), onChangeSpy }) {
+function Wrapper({ initialConfig, onSave = vi.fn(), onChangeSpy, scope }) {
   const [config, setConfig] = useState(initialConfig);
   function handleChange(patch) {
     onChangeSpy?.(patch);
     setConfig((prev) => ({ ...prev, ...patch }));
   }
   return (
-    <BotConfigForm config={config} catalog={catalog} onChange={handleChange} onSave={onSave} saving={false} />
+    <BotConfigForm config={config} catalog={catalog} onChange={handleChange} onSave={onSave} saving={false} scope={scope} />
   );
 }
 
@@ -134,5 +134,38 @@ describe("BotConfigForm — envío", () => {
       <BotConfigForm config={baseConfig} catalog={catalog} onChange={vi.fn()} onSave={vi.fn()} saving={true} />
     );
     expect(screen.getByRole("button", { name: "Guardando…" })).toBeDisabled();
+  });
+});
+
+describe("BotConfigForm — separación cliente/agencia", () => {
+  it("scope agencia (default) muestra las 4 secciones técnicas completas", () => {
+    render(<Wrapper initialConfig={baseConfig} scope="agency" />);
+    expect(screen.getByText("Telefonía")).toBeInTheDocument();
+    expect(screen.getByText("Reconocimiento de voz (STT)")).toBeInTheDocument();
+    expect(screen.getByText("Síntesis de voz (TTS)")).toBeInTheDocument();
+    expect(screen.getByText("Modelo de IA")).toBeInTheDocument();
+  });
+
+  it("scope cliente oculta las 4 secciones técnicas por completo, ni siquiera quedan en el DOM", () => {
+    render(<Wrapper initialConfig={baseConfig} scope="client" />);
+    expect(screen.queryByText("Telefonía")).not.toBeInTheDocument();
+    expect(screen.queryByText("Reconocimiento de voz (STT)")).not.toBeInTheDocument();
+    expect(screen.queryByText("Síntesis de voz (TTS)")).not.toBeInTheDocument();
+    expect(screen.queryByText("Modelo de IA")).not.toBeInTheDocument();
+    expect(screen.queryByText("Proveedor de telefonía")).not.toBeInTheDocument();
+    expect(screen.queryByText("API key propia (opcional)")).not.toBeInTheDocument();
+  });
+
+  it("scope cliente muestra el número asignado como texto de solo lectura, no un input editable", () => {
+    render(<Wrapper initialConfig={{ ...baseConfig, phone_number: "+17865550100" }} scope="client" />);
+    expect(screen.getByText("+17865550100")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("+17865550100")).not.toBeInTheDocument(); // un <input> lo mostraría por value, no por texto
+  });
+
+  it("scope cliente conserva las secciones que sí le corresponden al negocio", () => {
+    render(<Wrapper initialConfig={baseConfig} scope="client" />);
+    expect(screen.getByText("Estado del agente")).toBeInTheDocument();
+    expect(screen.getByText("Comportamiento del agente")).toBeInTheDocument();
+    expect(screen.getByText("Control de la llamada")).toBeInTheDocument();
   });
 });

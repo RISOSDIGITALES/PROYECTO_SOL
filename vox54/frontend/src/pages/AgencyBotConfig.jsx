@@ -80,6 +80,7 @@ export default function AgencyBotConfig() {
             saving={saving}
             savedMessage={savedMessage}
             error={error}
+            scope="agency"
           />
         ) : (
           !error && <div style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>Cargando…</div>

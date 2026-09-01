@@ -1,13 +1,24 @@
 import { useEffect, useMemo } from "react";
 
 /**
- * Formulario completo de configuración del agente de voz — reusado tanto por el
- * panel de negocio (edita su propio bot) como por el panel de agencia (edita el
- * bot de cualquier negocio suyo). Los desplegables de modelo/voz dependen del
+ * Formulario de configuración del agente de voz — reusado tanto por el panel
+ * de negocio (edita su propio bot) como por el panel de agencia (edita el bot
+ * de cualquier negocio suyo). Los desplegables de modelo/voz dependen del
  * proveedor elegido (cascada) — si cambia el proveedor y el valor actual no
  * pertenece a la lista nueva, se ajusta solo al primero disponible.
+ *
+ * `scope`: "agency" (default) muestra el formulario completo, incluyendo
+ * telefonía/STT/TTS/modelo de IA — decisiones de infraestructura que le
+ * corresponden a la agencia, no al cliente. "client" oculta esas secciones
+ * (el negocio solo ve su número ya asignado, de solo lectura) y deja
+ * únicamente lo que sí es suyo: comportamiento del bot y control de la
+ * llamada. La barrera real no es esta — vive en el backend
+ * (BotConfigUpdateClient, ver schemas.py) — esto es la vista honesta de esa
+ * misma barrera, para no mostrarle al cliente un campo que después el
+ * servidor va a ignorar en silencio.
  */
-export default function BotConfigForm({ config, catalog, onChange, onSave, saving, savedMessage, error }) {
+export default function BotConfigForm({ config, catalog, onChange, onSave, saving, savedMessage, error, scope = "agency" }) {
+  const isAgency = scope === "agency";
   const aiModels = useMemo(() => {
     const provider = catalog.ai_providers.find((p) => p.id === config.ai_provider);
     return provider ? provider.models : [];
@@ -103,138 +114,150 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
         </div>
       </Section>
 
-      <Section title="Telefonía">
-        <Row>
-          <Field label="Proveedor de telefonía">
-            <select
-              value={config.telephony_provider}
-              onChange={(e) => onChange({ telephony_provider: e.target.value })}
-              style={inputStyle}
-            >
-              {catalog.telephony_providers.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Número de teléfono asignado">
+      {isAgency ? (
+        <Section title="Telefonía">
+          <Row>
+            <Field label="Proveedor de telefonía">
+              <select
+                value={config.telephony_provider}
+                onChange={(e) => onChange({ telephony_provider: e.target.value })}
+                style={inputStyle}
+              >
+                {catalog.telephony_providers.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Número de teléfono asignado">
+              <input
+                value={config.phone_number}
+                onChange={(e) => onChange({ phone_number: e.target.value })}
+                placeholder="Sin asignar todavía"
+                style={inputStyle}
+              />
+            </Field>
+          </Row>
+          <Field label="SIP trunk / ID de configuración (opcional)">
             <input
-              value={config.phone_number}
-              onChange={(e) => onChange({ phone_number: e.target.value })}
-              placeholder="Sin asignar todavía"
+              value={config.telephony_trunk_id}
+              onChange={(e) => onChange({ telephony_trunk_id: e.target.value })}
+              placeholder="Sin configurar todavía"
               style={inputStyle}
             />
           </Field>
-        </Row>
-        <Field label="SIP trunk / ID de configuración (opcional)">
-          <input
-            value={config.telephony_trunk_id}
-            onChange={(e) => onChange({ telephony_trunk_id: e.target.value })}
-            placeholder="Sin configurar todavía"
-            style={inputStyle}
-          />
-        </Field>
-        <Field label="Dónde corre el agente (worker de LiveKit Agents)">
-          <select
-            value={config.runtime_target}
-            onChange={(e) => onChange({ runtime_target: e.target.value })}
-            style={inputStyle}
-          >
-            {catalog.runtime_targets.map((r) => (
-              <option key={r.id} value={r.id}>{r.name}</option>
-            ))}
-          </select>
-        </Field>
-      </Section>
+          <Field label="Dónde corre el agente (worker de LiveKit Agents)">
+            <select
+              value={config.runtime_target}
+              onChange={(e) => onChange({ runtime_target: e.target.value })}
+              style={inputStyle}
+            >
+              {catalog.runtime_targets.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+          </Field>
+        </Section>
+      ) : (
+        <Section title="Tu número">
+          <Field label="Número de teléfono asignado">
+            <div style={readOnlyValueStyle}>{config.phone_number || "Sin asignar todavía — hablalo con tu agencia"}</div>
+          </Field>
+        </Section>
+      )}
 
-      <Section title="Reconocimiento de voz (STT)">
-        <Row>
-          <Field label="Proveedor">
-            <select
-              value={config.stt_provider}
-              onChange={(e) => handleSttProviderChange(e.target.value)}
-              style={inputStyle}
-            >
-              {catalog.stt_providers.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Modelo">
-            <select
-              value={config.stt_model}
-              onChange={(e) => onChange({ stt_model: e.target.value })}
-              style={inputStyle}
-            >
-              {sttModels.map((m) => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </select>
-          </Field>
-        </Row>
-      </Section>
+      {isAgency && (
+        <>
+          <Section title="Reconocimiento de voz (STT)">
+            <Row>
+              <Field label="Proveedor">
+                <select
+                  value={config.stt_provider}
+                  onChange={(e) => handleSttProviderChange(e.target.value)}
+                  style={inputStyle}
+                >
+                  {catalog.stt_providers.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Modelo">
+                <select
+                  value={config.stt_model}
+                  onChange={(e) => onChange({ stt_model: e.target.value })}
+                  style={inputStyle}
+                >
+                  {sttModels.map((m) => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </Field>
+            </Row>
+          </Section>
 
-      <Section title="Síntesis de voz (TTS)">
-        <Row>
-          <Field label="Proveedor">
-            <select
-              value={config.tts_provider}
-              onChange={(e) => handleTtsProviderChange(e.target.value)}
-              style={inputStyle}
-            >
-              {catalog.tts_providers.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Voz">
-            <select
-              value={config.tts_voice_id}
-              onChange={(e) => onChange({ tts_voice_id: e.target.value })}
-              style={inputStyle}
-            >
-              {ttsVoices.map((v) => (
-                <option key={v.id} value={v.id}>{v.name}</option>
-              ))}
-            </select>
-          </Field>
-        </Row>
-      </Section>
+          <Section title="Síntesis de voz (TTS)">
+            <Row>
+              <Field label="Proveedor">
+                <select
+                  value={config.tts_provider}
+                  onChange={(e) => handleTtsProviderChange(e.target.value)}
+                  style={inputStyle}
+                >
+                  {catalog.tts_providers.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Voz">
+                <select
+                  value={config.tts_voice_id}
+                  onChange={(e) => onChange({ tts_voice_id: e.target.value })}
+                  style={inputStyle}
+                >
+                  {ttsVoices.map((v) => (
+                    <option key={v.id} value={v.id}>{v.name}</option>
+                  ))}
+                </select>
+              </Field>
+            </Row>
+          </Section>
 
-      <Section title="Modelo de IA">
-        <Row>
-          <Field label="Proveedor">
-            <select
-              value={config.ai_provider}
-              onChange={(e) => handleAiProviderChange(e.target.value)}
-              style={inputStyle}
-            >
-              {catalog.ai_providers.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Modelo">
-            <select
-              value={config.ai_model}
-              onChange={(e) => onChange({ ai_model: e.target.value })}
-              style={inputStyle}
-            >
-              {aiModels.map((m) => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </select>
-          </Field>
-        </Row>
-        <Field label="API key propia (opcional)">
-          <input
-            type="password"
-            value={config.ai_api_key}
-            onChange={(e) => onChange({ ai_api_key: e.target.value })}
-            placeholder="Dejar vacío para usar la key compartida de la plataforma"
-            style={inputStyle}
-          />
-        </Field>
-      </Section>
+          <Section title="Modelo de IA">
+            <Row>
+              <Field label="Proveedor">
+                <select
+                  value={config.ai_provider}
+                  onChange={(e) => handleAiProviderChange(e.target.value)}
+                  style={inputStyle}
+                >
+                  {catalog.ai_providers.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Modelo">
+                <select
+                  value={config.ai_model}
+                  onChange={(e) => onChange({ ai_model: e.target.value })}
+                  style={inputStyle}
+                >
+                  {aiModels.map((m) => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </Field>
+            </Row>
+            <Field label="API key propia (opcional)">
+              <input
+                type="password"
+                value={config.ai_api_key}
+                onChange={(e) => onChange({ ai_api_key: e.target.value })}
+                placeholder="Dejar vacío para usar la key compartida de la plataforma"
+                style={inputStyle}
+              />
+            </Field>
+          </Section>
+        </>
+      )}
 
       <Section title="Comportamiento del agente">
         <Field label="Idioma">
@@ -442,6 +465,17 @@ const inputStyle = {
   outline: "none",
   fontFamily: "var(--font)",
   background: "var(--white)",
+};
+
+const readOnlyValueStyle = {
+  width: "100%",
+  padding: "10px 12px",
+  fontSize: 14,
+  color: "var(--ink)",
+  fontWeight: 600,
+  border: "1px solid var(--border)",
+  borderRadius: 8,
+  background: "var(--surface)",
 };
 
 const buttonStyle = {

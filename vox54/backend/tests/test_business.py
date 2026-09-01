@@ -21,19 +21,41 @@ def test_update_bot_config_valido(client, seed, business_token):
     res = client.put(
         "/business/bot-config",
         headers=auth(business_token),
-        json={"stt_provider": "groq", "stt_model": "whisper-large-v3-turbo"},
+        json={"welcome_message": "Hola, gracias por llamar", "language": "es"},
     )
     assert res.status_code == 200
-    assert res.json()["stt_provider"] == "groq"
+    assert res.json()["welcome_message"] == "Hola, gracias por llamar"
 
 
-def test_update_bot_config_voz_no_pertenece_al_proveedor(client, seed, business_token):
+def test_negocio_no_puede_tocar_campos_de_infraestructura(client, seed, business_token):
+    """telefonía/STT/TTS/modelo de IA son decisiones de la agencia, no del
+    cliente — el schema de este endpoint ni siquiera los conoce, así que
+    mandarlos no da error, simplemente se ignoran sin tocar nada."""
+    before = client.get("/business/bot-config", headers=auth(business_token)).json()
+
     res = client.put(
         "/business/bot-config",
         headers=auth(business_token),
-        json={"tts_provider": "cartesia", "tts_voice_id": "voz-que-no-existe"},
+        json={
+            "ai_provider": "openai",
+            "stt_provider": "groq",
+            "tts_provider": "elevenlabs",
+            "telephony_provider": "telnyx",
+            "runtime_target": "self_hosted",
+            "ai_api_key": "sk-deberia-ser-ignorado",
+            "welcome_message": "esto sí debería guardarse",
+        },
     )
-    assert res.status_code == 422
+    assert res.status_code == 200
+    after = res.json()
+
+    assert after["welcome_message"] == "esto sí debería guardarse"
+    assert after["ai_provider"] == before["ai_provider"]
+    assert after["stt_provider"] == before["stt_provider"]
+    assert after["tts_provider"] == before["tts_provider"]
+    assert after["telephony_provider"] == before["telephony_provider"]
+    assert after["runtime_target"] == before["runtime_target"]
+    assert after["ai_api_key"] == before["ai_api_key"]
 
 
 def test_update_bot_config_email_de_escalacion_invalido(client, seed, business_token):
@@ -41,8 +63,10 @@ def test_update_bot_config_email_de_escalacion_invalido(client, seed, business_t
     assert res.status_code == 422
 
 
-def test_update_bot_config_telefono_con_letras_invalido(client, seed, business_token):
-    res = client.put("/business/bot-config", headers=auth(business_token), json={"phone_number": "llamame-porfa"})
+def test_update_bot_config_telefono_de_transferencia_con_letras_invalido(client, seed, business_token):
+    # phone_number es de la agencia (ver test_negocio_no_puede_tocar_campos_de_infraestructura);
+    # transfer_phone_number sí sigue siendo del cliente y usa la misma validación de formato.
+    res = client.put("/business/bot-config", headers=auth(business_token), json={"transfer_phone_number": "llamame-porfa"})
     assert res.status_code == 422
 
 
@@ -65,17 +89,17 @@ def test_un_negocio_nunca_ve_ni_toca_la_config_de_otro(client, seed, business_to
         business_id=business2.id, name="Dueño 2", email="negocio2@test-demo.com",
         password_hash=hash_password("otra_pass_123"),
     ))
-    db_session.add(models.BotConfig(business_id=business2.id, phone_number="+17865559999"))
+    db_session.add(models.BotConfig(business_id=business2.id, welcome_message="Bienvenida negocio 2"))
     db_session.commit()
 
     login2 = client.post("/auth/business/login", json={"email": "negocio2@test-demo.com", "password": "otra_pass_123"})
     token2 = login2.json()["access_token"]
 
-    # negocio 1 cambia su propio teléfono
-    client.put("/business/bot-config", headers=auth(business_token), json={"phone_number": "+17865551111"})
+    # negocio 1 cambia su propio mensaje de bienvenida
+    client.put("/business/bot-config", headers=auth(business_token), json={"welcome_message": "Bienvenida negocio 1"})
 
     config1 = client.get("/business/bot-config", headers=auth(business_token)).json()
     config2 = client.get("/business/bot-config", headers=auth(token2)).json()
 
-    assert config1["phone_number"] == "+17865551111"
-    assert config2["phone_number"] == "+17865559999"  # intacto, nunca lo tocó el otro negocio
+    assert config1["welcome_message"] == "Bienvenida negocio 1"
+    assert config2["welcome_message"] == "Bienvenida negocio 2"  # intacto, nunca lo tocó el otro negocio

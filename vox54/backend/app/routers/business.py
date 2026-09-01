@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import get_current_business_user
-from ..schemas import BusinessMeResponse, BotConfigOut, BotConfigUpdate
+from ..schemas import BusinessMeResponse, BotConfigOut, BotConfigUpdateClient
 from ..validators import bot_config_as_dict, validate_bot_config
 from .. import models
 
@@ -31,7 +31,7 @@ def get_bot_config(
 
 @router.put("/bot-config", response_model=BotConfigOut)
 def update_bot_config(
-    body: BotConfigUpdate,
+    body: BotConfigUpdateClient,
     db: Session = Depends(get_db),
     user: models.BusinessUser = Depends(get_current_business_user),
 ):

@@ -76,6 +76,7 @@ export default function BusinessDashboard() {
             saving={saving}
             savedMessage={savedMessage}
             error={error}
+            scope="client"
           />
         ) : (
           !error && <div style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>Cargando…</div>

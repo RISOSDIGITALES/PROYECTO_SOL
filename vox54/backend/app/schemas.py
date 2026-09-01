@@ -85,6 +85,30 @@ class BotConfigUpdate(BaseModel):
     voicemail_message: str | None = None
 
 
+class BotConfigUpdateClient(BaseModel):
+    """Subconjunto de BotConfigUpdate seguro para que un negocio edite su
+    propio bot — deliberadamente NO incluye telefonía/STT/TTS/modelo de IA
+    (proveedor, modelo, API key propia): son decisiones de infraestructura
+    de la agencia, no del cliente. Cualquier campo fuera de esta lista que
+    llegue en el body (ej. ai_provider) se descarta solo, sin error — no es
+    un campo que este endpoint conozca. La barrera real vive acá, en el
+    schema — no es solo que el formulario del cliente no lo muestre."""
+
+    system_prompt: str | None = None
+    welcome_message: str | None = None
+    escalation_email: str | None = None
+    language: str | None = None
+    status: str | None = None
+    first_message_mode: str | None = None
+    allow_interruptions: bool | None = None
+    silence_timeout_seconds: int | None = None
+    max_duration_seconds: int | None = None
+    end_call_message: str | None = None
+    transfer_phone_number: str | None = None
+    voicemail_detection_enabled: bool | None = None
+    voicemail_message: str | None = None
+
+
 class BusinessOut(BaseModel):
     id: int
     name: str
