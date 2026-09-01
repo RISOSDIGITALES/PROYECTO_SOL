@@ -37,6 +37,33 @@ def test_cambiar_password_con_password_actual_incorrecta_falla(client, seed, age
     assert res.status_code == 400
 
 
+def test_inventario_de_agentes(client, seed, agency_token):
+    res = client.get("/agency/agents", headers=auth(agency_token))
+    assert res.status_code == 200
+    data = res.json()
+    assert len(data) == 1
+    assert data[0]["business_name"] == "Negocio de Prueba"
+    assert data[0]["bot_status"] == "paused"
+    assert data[0]["ai_provider"] == "groq"
+
+
+def test_inventario_de_agentes_no_incluye_los_de_otra_agencia(client, seed, agency_token, db_session):
+    from app import models
+
+    otra_agencia = models.Agency(name="Otra Agencia")
+    db_session.add(otra_agencia)
+    db_session.flush()
+    negocio_ajeno = models.Business(agency_id=otra_agencia.id, name="Negocio Ajeno")
+    db_session.add(negocio_ajeno)
+    db_session.flush()
+    db_session.add(models.BotConfig(business_id=negocio_ajeno.id))
+    db_session.commit()
+
+    res = client.get("/agency/agents", headers=auth(agency_token))
+    assert res.status_code == 200
+    assert len(res.json()) == 1  # solo el propio, el ajeno nunca aparece
+
+
 def test_listar_negocios(client, seed, agency_token):
     res = client.get("/agency/businesses", headers=auth(agency_token))
     assert res.status_code == 200

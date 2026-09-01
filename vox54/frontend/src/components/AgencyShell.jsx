@@ -8,9 +8,12 @@ export default function AgencyShell({ userName, onLogout, children }) {
   const location = useLocation();
   // "Negocios" cubre la lista y todo lo que cuelga de un negocio puntual
   // (identidad, configuración de su bot) — son la misma sección de la
-  // agencia, no páginas sueltas. "Configuración" es exclusivamente la
-  // config de la agencia en sí, nunca la de un negocio.
+  // agencia, no páginas sueltas. "Agentes" es el inventario aparte, de solo
+  // lectura, de todos los bots. "Configuración" (la config de la agencia en
+  // sí, nunca la de un negocio) vive abajo, junto a la cuenta y Salir — es
+  // ajuste de la cuenta propia, no un destino de trabajo del día a día.
   const isNegocios = location.pathname === "/agencia" || location.pathname.startsWith("/agencia/negocios");
+  const isAgentes = location.pathname.startsWith("/agencia/agentes");
   const isConfig = location.pathname.startsWith("/agencia/configuracion");
 
   return (
@@ -24,12 +27,15 @@ export default function AgencyShell({ userName, onLogout, children }) {
           <Link to="/agencia" style={{ ...navItemStyle, ...(isNegocios ? activeNavItemStyle : {}) }}>
             <span style={navIconStyle}>🏢</span> Negocios
           </Link>
-          <Link to="/agencia/configuracion" style={{ ...navItemStyle, ...(isConfig ? activeNavItemStyle : {}) }}>
-            <span style={navIconStyle}>⚙️</span> Configuración
+          <Link to="/agencia/agentes" style={{ ...navItemStyle, ...(isAgentes ? activeNavItemStyle : {}) }}>
+            <span style={navIconStyle}>🎙️</span> Agentes
           </Link>
         </nav>
 
         <div style={footerStyle}>
+          <Link to="/agencia/configuracion" style={{ ...navItemStyle, ...(isConfig ? activeNavItemStyle : {}), marginBottom: 10 }}>
+            <span style={navIconStyle}>⚙️</span> Configuración
+          </Link>
           <div style={{ fontSize: 12.5, color: "rgba(255,255,255,.65)", marginBottom: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {userName}
           </div>

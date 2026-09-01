@@ -783,14 +783,14 @@ vox54/
     app/
       routers/agency.py, business.py, auth.py, catalog.py, worker.py
       models.py, schemas.py, validators.py, security.py, deps.py
-    tests/            — pytest, 50 tests
+    tests/            — pytest, 52 tests
     seed.py           — datos demo (ver credenciales abajo)
     requirements.txt
   frontend/
     src/
-      pages/          — LoginPage, AgencyDashboard, AgencyBusinessDetail,
-                         AgencyBotConfig, AgencyConfigPage, BusinessDashboard,
-                         NotFoundPage
+      pages/          — LoginPage, AgencyDashboard, AgencyAgentsPage,
+                         AgencyBusinessDetail, AgencyBotConfig, AgencyConfigPage,
+                         BusinessDashboard, NotFoundPage
       components/     — AgencyShell (menú lateral), StatusPill, BotConfigForm
                          (compartido por agencia y negocio), CallsList (idem),
                          ChangePasswordForm (idem), CreateBusinessModal, Logo
@@ -813,12 +813,13 @@ Antes una sola pantalla mezclaba la identidad del negocio con el formulario comp
 | Ruta | Qué hace |
 |---|---|
 | `/agencia` | Lista de negocios (grilla de tarjetas, estado real del bot por tarjeta) |
+| `/agencia/agentes` | Inventario de agentes — tabla de todos los bots con su negocio, estado, telefonía/número y modelo de IA reales, resueltos contra el catálogo (`GET /agency/agents`) |
 | `/agencia/configuracion` | Datos de la agencia (solo lectura — sin endpoint de edición todavía) + cuenta del admin logueado (nombre/correo de solo lectura, más cambio de contraseña real) |
 | `/agencia/negocios/:id` | Identidad del negocio — nombre (renombrable), ID, estado, sus llamadas recientes (`CallsList`), y una tarjeta que lleva a su bot |
 | `/agencia/negocios/:id/bot` | Configuración completa del bot de ese negocio (`BotConfigForm`, scope agencia — ve/edita también telefonía/STT/TTS/modelo de IA) |
 | `/negocio` | Dashboard de un negocio logueado directo — 3 pestañas: Llamadas (`CallsList`, por defecto), Configuración (mismo `BotConfigForm` pero scope cliente — sin los campos de infraestructura), y Cuenta (cambio de contraseña + el nombre de la agencia que lo gestiona, como único "contacto de soporte" real) |
 
-`AgencyShell` (el menú lateral oscuro) es compartido por las 4 pantallas de agencia — "Negocios" queda resaltado tanto en la lista como en cualquier pantalla de un negocio puntual (identidad o bot), "Configuración" solo en la pantalla de agencia.
+`AgencyShell` (el menú lateral oscuro) es compartido por las 5 pantallas de agencia — arriba, "Negocios" y "Agentes" son los 2 destinos de trabajo del día a día; abajo, junto a la cuenta y "Salir", vive "Configuración" (ajuste de la cuenta propia, no un destino de trabajo — reorganizado 2026-09-01, antes vivía arriba junto a Negocios).
 
 ## Credenciales demo (`python seed.py`)
 
@@ -847,7 +848,7 @@ npm run dev              # sirve en :5173, lee VITE_API_BASE de .env
 
 ## Estado actual (al 2026-09-01)
 
-Construido y probado: login de los 2 roles; catálogo de proveedores (telefonía/STT/TTS/IA) con cascada de modelos dependiente del proveedor; formulario de configuración del bot con separación real cliente/agencia (`BotConfigUpdateClient` — un negocio no puede tocar telefonía/STT/TTS/modelo de IA, ni siquiera mandándolo a mano, porque el schema del endpoint ni conoce esos campos); crear negocio nuevo, renombrar negocio; visibilidad real de resultados de llamadas (modelo `Call`, el worker de LiveKit reporta cada llamada real al terminar vía `POST /worker/calls` con su duración/outcome/transcripción real, `CallsList` compartido la muestra tanto en el dashboard del negocio como en la ficha de cada negocio del lado de agencia — nunca se fabrica una llamada de ejemplo, vacío-de-verdad se muestra vacío); dashboard del negocio con paridad visual con las vistas de agencia (tarjeta de identidad con el estado real del bot siempre visible, sin importar la pestaña activa); y autogestión de cuenta (cambio de contraseña real para ambos roles, y un negocio ve el nombre de la agencia que lo gestiona como su único canal de "soporte" honesto — nunca un sistema de tickets inventado). 50 tests de backend + 34 de frontend + 15 del worker, todos en verde.
+Construido y probado: login de los 2 roles; catálogo de proveedores (telefonía/STT/TTS/IA) con cascada de modelos dependiente del proveedor; formulario de configuración del bot con separación real cliente/agencia (`BotConfigUpdateClient` — un negocio no puede tocar telefonía/STT/TTS/modelo de IA, ni siquiera mandándolo a mano, porque el schema del endpoint ni conoce esos campos); crear negocio nuevo, renombrar negocio; visibilidad real de resultados de llamadas (modelo `Call`, el worker de LiveKit reporta cada llamada real al terminar vía `POST /worker/calls` con su duración/outcome/transcripción real, `CallsList` compartido la muestra tanto en el dashboard del negocio como en la ficha de cada negocio del lado de agencia — nunca se fabrica una llamada de ejemplo, vacío-de-verdad se muestra vacío); dashboard del negocio con paridad visual con las vistas de agencia (tarjeta de identidad con el estado real del bot siempre visible, sin importar la pestaña activa); autogestión de cuenta (cambio de contraseña real para ambos roles, y un negocio ve el nombre de la agencia que lo gestiona como su único canal de "soporte" honesto — nunca un sistema de tickets inventado); e inventario de agentes (`/agencia/agentes`, `GET /agency/agents`) — tabla de todos los bots de la agencia con su negocio, estado, telefonía/número y modelo de IA reales, con "Configuración" reubicada abajo del menú lateral (ajuste de cuenta, no un destino de trabajo) para dejarle su lugar arriba a "Negocios" y "Agentes". 52 tests de backend + 34 de frontend + 15 del worker, todos en verde.
 
 Pendiente, sin resolver todavía: la agencia no tiene ningún endpoint para editar su propio perfil (nombre/negocios gestionados de `/agencia/configuracion` siguen siendo de solo lectura); no hay ninguna integración real con LiveKit/telefonía de verdad todavía en producción — el worker (`agent.py`) ya está construido y probado contra el SDK real, pero nunca se conectó a un número de teléfono real ni a una llamada real de punta a punta.
 
@@ -2670,6 +2671,12 @@ Investigadas 3 herramientas que la usuaria había visto mencionadas como "plugin
 4. **Autogestión de cuenta** — un negocio no tenía ninguna forma de cambiar su propia contraseña, ni ningún canal real para pedir ayuda. Se construyó un formulario de cambio de contraseña compartido entre agencia y negocio (con su propio endpoint por rol, verificando siempre la contraseña actual antes de aceptar la nueva), y en vez de inventar un sistema de soporte que no existe, la pestaña de Cuenta del negocio ahora muestra el nombre real de la agencia que lo gestiona como su único contacto honesto. **Bug propio encontrado y corregido antes de darlo por terminado:** el primer diseño del formulario ponía el texto de ayuda ("Mínimo 8 caracteres.") dentro del mismo `<label>` que envuelve el campo de contraseña nueva — como las pruebas automatizadas resuelven la etiqueta de un campo por el texto completo del `<label>` que lo envuelve, ese texto extra hacía que la etiqueta real ("Contraseña nueva") dejara de calzar exacto y las 3 pruebas fallaran; movido el texto de ayuda fuera del `<label>`, sin cambiar nada visual. Confirmado en vivo, con el servidor real y no solo con pruebas automatizadas: se cambió la contraseña real de la cuenta demo de agencia desde el formulario, se cerró sesión, se volvió a entrar con la contraseña vieja (rechazada) y con la nueva (aceptada) — confirmando que el cambio persiste de verdad en la base de datos — y se la revirtió al valor de siempre para no dejar las credenciales de demo desactualizadas. Confirmado también en vivo, del lado del negocio, que la pestaña de Cuenta muestra el nombre real de la agencia ("Growth54") en vez de cualquier canal de soporte inventado.
 
 Las 3 baterías de pruebas (backend, frontend, worker) quedaron en 50/50, 34/34 y 15/15 — worker corre con `unittest`, no `pytest` (ese venv nunca tuvo pytest instalado, y no hizo falta: el propio archivo de test ya documenta el comando real con `unittest`). Actualizada la sección de referencia de Vox54 en este mismo archivo con la estructura real del repo (incluyendo `worker/`, que nunca se había documentado), las rutas actualizadas, y un "Estado actual" reescrito con los números y el trabajo real de hoy.
+
+303. **Vox54 — inventario de agentes + reorganización del menú lateral, a pedido explícito de la usuaria tras revisar una captura real del panel** (2026-09-01, mismo día que el ítem 302): dos pedidos concretos sobre el panel de agencia. (1) **"Configuración" reubicada** de la barra de navegación de arriba (donde competía con "Negocios" como si fuera un destino de trabajo del día a día) al pie del menú lateral, justo arriba de "Salir" — mismo patrón visual que el resto de los links de nav (mismo ícono+etiqueta, mismo resaltado activo), solo que ahora vive junto a la identidad del usuario y el logout, como corresponde a un ajuste de cuenta y no a una sección de trabajo. (2) **Inventario de agentes nuevo** (`/agencia/agentes`) — como hoy cada negocio tiene exactamente 1 bot (`BotConfig` es 1-a-1 con `Business`, confirmado en el modelo), no hay "muchos agentes por empresa" que inventariar — es la misma relación que ya usa la tarjeta de "Negocios" para el estado, pero en forma de tabla densa con más campos reales de infraestructura (telefonía, número, proveedor y modelo de IA) para verlos todos de un vistazo sin entrar a cada negocio.
+
+**Backend, nuevo endpoint `GET /agency/agents`** (`AgentInventoryItem`, en `agency.py`) — trae los negocios de la propia agencia con `joinedload(Business.bot_config)` (una sola consulta, no N+1) y arma la fila desde ahí; ningún dato inventado, todo sale de columnas ya existentes de `BotConfig`. Confirmado con 2 tests nuevos que sí devuelve los datos reales de la empresa (estado, proveedor de IA) y que nunca se filtran los agentes de otra agencia (mismo patrón de aislamiento ya probado para negocios/llamadas). **Frontend**, `AgencyAgentsPage.jsx` — tabla con `StatusPill` (mismo componente ya usado en el resto del panel) y los IDs de proveedor/modelo resueltos a su nombre real contra `GET /catalog` (mismo patrón de lookup que ya usa `BotConfigForm`), con un link "Ver bot →" directo a la configuración de cada negocio.
+
+**Confirmado en vivo, no solo con tests:** reiniciado el backend local (no corre con `--reload`, mismo cuidado de siempre), login real de agencia, la barra lateral ya muestra solo "Negocios"/"Agentes" arriba y "Configuración" abajo junto al nombre y "Salir" — y el inventario mostró los 3 negocios demo reales con sus datos reales (Crating Express activo con Twilio/+17865550100/Groq·Llama 3.3 70B, Orison y Ferretería pausados sin número asignado) — confirmado además que "Ver bot →" de la fila de Orison lleva de verdad a la configuración de Orison, no a otro negocio. 52 tests de backend + 34 de frontend, todos en verde.
 
 ## Error conocido
 

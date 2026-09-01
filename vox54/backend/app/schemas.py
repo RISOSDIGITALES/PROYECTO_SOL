@@ -145,6 +145,22 @@ class BusinessDetailOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AgentInventoryItem(BaseModel):
+    """Una fila del inventario de agentes — hoy cada negocio tiene exactamente
+    un bot (BotConfig es 1-a-1 con Business), así que esto es la misma
+    relación que ya usa BusinessOut.bot_status, solo con más campos reales
+    del lado de infraestructura para poder ver de un vistazo a qué proveedor
+    y número está atado cada agente sin entrar al detalle de cada negocio."""
+
+    business_id: int
+    business_name: str
+    bot_status: str | None = None
+    telephony_provider: str | None = None
+    phone_number: str | None = None
+    ai_provider: str | None = None
+    ai_model: str | None = None
+
+
 class BusinessUpdate(BaseModel):
     name: str
 

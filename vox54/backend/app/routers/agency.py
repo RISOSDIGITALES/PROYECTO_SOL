@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from ..database import get_db
 from ..deps import get_current_agency_user
 from ..security import hash_password, verify_password
-from ..schemas import AgencyMeResponse, BusinessOut, BusinessCreate, BusinessUpdate, BusinessDetailOut, BotConfigUpdate, BotConfigOut, CallOut, PasswordChange
+from ..schemas import AgencyMeResponse, BusinessOut, BusinessCreate, BusinessUpdate, BusinessDetailOut, BotConfigUpdate, BotConfigOut, CallOut, PasswordChange, AgentInventoryItem
 from ..validators import bot_config_as_dict, validate_bot_config
 from .. import models
 
@@ -41,6 +41,31 @@ def list_businesses(
     user: models.AgencyUser = Depends(get_current_agency_user),
 ):
     return db.query(models.Business).filter(models.Business.agency_id == user.agency_id).all()
+
+
+@router.get("/agents", response_model=list[AgentInventoryItem])
+def list_agents(
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    businesses = (
+        db.query(models.Business)
+        .options(joinedload(models.Business.bot_config))
+        .filter(models.Business.agency_id == user.agency_id)
+        .all()
+    )
+    return [
+        AgentInventoryItem(
+            business_id=b.id,
+            business_name=b.name,
+            bot_status=b.bot_config.status if b.bot_config else None,
+            telephony_provider=b.bot_config.telephony_provider if b.bot_config else None,
+            phone_number=b.bot_config.phone_number if b.bot_config else None,
+            ai_provider=b.bot_config.ai_provider if b.bot_config else None,
+            ai_model=b.bot_config.ai_model if b.bot_config else None,
+        )
+        for b in businesses
+    ]
 
 
 @router.post("/businesses", response_model=BusinessOut, status_code=status.HTTP_201_CREATED)

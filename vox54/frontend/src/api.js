@@ -42,6 +42,7 @@ export const api = {
   changeAgencyPassword: (token, body) => request("/agency/me/password", { method: "PUT", body, token }),
   changeBusinessPassword: (token, body) => request("/business/me/password", { method: "PUT", body, token }),
   listBusinesses: (token) => request("/agency/businesses", { token }),
+  listAgents: (token) => request("/agency/agents", { token }),
   createBusiness: (token, body) => request("/agency/businesses", { method: "POST", body, token }),
   getBusinessDetail: (token, id) => request(`/agency/businesses/${id}`, { token }),
   renameBusiness: (token, id, name) =>
