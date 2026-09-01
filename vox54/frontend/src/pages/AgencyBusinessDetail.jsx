@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import AgencyShell from "../components/AgencyShell";
 import StatusPill from "../components/StatusPill";
+import CallsList from "../components/CallsList";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
@@ -23,6 +24,8 @@ export default function AgencyBusinessDetail() {
   const [nameDraft, setNameDraft] = useState("");
   const [renameError, setRenameError] = useState("");
   const [renameSaving, setRenameSaving] = useState(false);
+  const [calls, setCalls] = useState(null);
+  const [callsError, setCallsError] = useState("");
 
   useEffect(() => {
     if (!session) return;
@@ -30,6 +33,7 @@ export default function AgencyBusinessDetail() {
     api.getBusinessDetail(session.access_token, id)
       .then(setBusiness)
       .catch((e) => setError(e.message));
+    api.listBusinessCalls(session.access_token, id).then(setCalls).catch((e) => setCallsError(e.message));
   }, [session, id]);
 
   function startRenaming() {
@@ -128,6 +132,15 @@ export default function AgencyBusinessDetail() {
         )}
 
         {!business && !error && <div style={{ color: "var(--ink-soft)", fontSize: 13.5, marginTop: 16 }}>Cargando…</div>}
+
+        {business && (
+          <div style={{ marginTop: 28 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-soft)", marginBottom: 10 }}>
+              Llamadas recientes
+            </div>
+            <CallsList calls={calls} loading={calls === null && !callsError} error={callsError} />
+          </div>
+        )}
       </div>
     </AgencyShell>
   );

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import BotConfigForm from "../components/BotConfigForm";
+import CallsList from "../components/CallsList";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
@@ -16,12 +17,18 @@ export default function BusinessDashboard() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState("");
+  // "Llamadas" primero, no "Configuración" — lo que le importa a un cliente
+  // real es qué pasó, no ajustar perillas; la config queda a un clic.
+  const [tab, setTab] = useState("calls");
+  const [calls, setCalls] = useState(null);
+  const [callsError, setCallsError] = useState("");
 
   useEffect(() => {
     if (!session) return;
     api.businessMe(session.access_token).then(setMe).catch((e) => setError(e.message));
     api.getBotConfig(session.access_token).then(setConfig).catch((e) => setError(e.message));
     api.getCatalog().then(setCatalog).catch((e) => setError(e.message));
+    api.listCalls(session.access_token).then(setCalls).catch((e) => setCallsError(e.message));
   }, [session]);
 
   function handleChange(patch) {
@@ -63,26 +70,57 @@ export default function BusinessDashboard() {
         <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>
           {me?.business_name || "…"}
         </h1>
-        <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginBottom: 24 }}>
-          Configuración de tu agente de voz.
+        <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginBottom: 20 }}>
+          Tu agente de voz.
         </p>
 
-        {config && catalog ? (
-          <BotConfigForm
-            config={config}
-            catalog={catalog}
-            onChange={handleChange}
-            onSave={handleSave}
-            saving={saving}
-            savedMessage={savedMessage}
-            error={error}
-            scope="client"
-          />
-        ) : (
-          !error && <div style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>Cargando…</div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 20, borderBottom: "1px solid var(--border)" }}>
+          <TabButton active={tab === "calls"} onClick={() => setTab("calls")}>Llamadas</TabButton>
+          <TabButton active={tab === "config"} onClick={() => setTab("config")}>Configuración</TabButton>
+        </div>
+
+        {tab === "calls" && <CallsList calls={calls} loading={calls === null && !callsError} error={callsError} />}
+
+        {tab === "config" && (
+          config && catalog ? (
+            <BotConfigForm
+              config={config}
+              catalog={catalog}
+              onChange={handleChange}
+              onSave={handleSave}
+              saving={saving}
+              savedMessage={savedMessage}
+              error={error}
+              scope="client"
+            />
+          ) : (
+            !error && <div style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>Cargando…</div>
+          )
         )}
       </div>
     </div>
+  );
+}
+
+function TabButton({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        background: "none",
+        border: "none",
+        borderBottom: active ? "2px solid var(--g54-blue)" : "2px solid transparent",
+        color: active ? "var(--g54-blue)" : "var(--ink-soft)",
+        fontWeight: 700,
+        fontSize: 13.5,
+        padding: "8px 4px",
+        marginBottom: -1,
+        cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
   );
 }
 

@@ -1,3 +1,5 @@
+import datetime
+
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
 
@@ -30,6 +32,7 @@ class BusinessMeResponse(BaseModel):
 
 
 class BotConfigOut(BaseModel):
+    business_id: int
     telephony_provider: str
     telephony_trunk_id: str
     phone_number: str
@@ -157,6 +160,40 @@ class BusinessCreate(BaseModel):
         if len(v) < 8:
             raise ValueError("la contraseña debe tener al menos 8 caracteres")
         return v
+
+
+VALID_CALL_OUTCOMES = {"completed", "transferred", "max_duration_reached", "error"}
+
+
+class CallReport(BaseModel):
+    """Lo que manda el worker al terminar una llamada real — nunca lo manda
+    ni un negocio ni una agencia."""
+
+    business_id: int
+    started_at: datetime.datetime
+    ended_at: datetime.datetime
+    caller_number: str | None = None
+    outcome: str
+    transcript: str | None = None
+
+    @field_validator("outcome")
+    @classmethod
+    def outcome_valido(cls, v: str) -> str:
+        if v not in VALID_CALL_OUTCOMES:
+            raise ValueError(f"outcome debe ser uno de {sorted(VALID_CALL_OUTCOMES)}")
+        return v
+
+
+class CallOut(BaseModel):
+    id: int
+    started_at: datetime.datetime
+    ended_at: datetime.datetime
+    duration_seconds: int
+    caller_number: str | None
+    outcome: str
+    transcript: str | None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ModelOut(BaseModel):

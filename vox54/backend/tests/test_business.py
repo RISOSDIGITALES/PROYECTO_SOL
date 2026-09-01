@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 
 
@@ -73,6 +75,61 @@ def test_update_bot_config_telefono_de_transferencia_con_letras_invalido(client,
 def test_update_bot_config_silence_timeout_fuera_de_rango(client, seed, business_token):
     res = client.put("/business/bot-config", headers=auth(business_token), json={"silence_timeout_seconds": 9999})
     assert res.status_code == 422
+
+
+def test_lista_de_llamadas_vacia_al_principio(client, seed, business_token):
+    """El estado real hoy — nunca inventar una llamada de ejemplo para que
+    la pantalla 'se vea llena'; vacío de verdad es honesto mientras no haya
+    ninguna llamada real todavía."""
+    res = client.get("/business/calls", headers=auth(business_token))
+    assert res.status_code == 200
+    assert res.json() == []
+
+
+def test_lista_de_llamadas_reales(client, seed, business_token, db_session):
+    from app import models
+
+    call = models.Call(
+        business_id=seed["business"].id,
+        started_at=datetime.datetime(2026, 9, 1, 10, 0, 0),
+        ended_at=datetime.datetime(2026, 9, 1, 10, 3, 0),
+        duration_seconds=180,
+        caller_number="+17865551234",
+        outcome="completed",
+        transcript='[{"role":"user","content":"Hola"}]',
+    )
+    db_session.add(call)
+    db_session.commit()
+
+    res = client.get("/business/calls", headers=auth(business_token))
+    assert res.status_code == 200
+    data = res.json()
+    assert len(data) == 1
+    assert data[0]["caller_number"] == "+17865551234"
+    assert data[0]["duration_seconds"] == 180
+
+
+def test_un_negocio_nunca_ve_las_llamadas_de_otro(client, seed, business_token, db_session):
+    from app import models
+    from app.security import hash_password
+
+    business2 = models.Business(agency_id=seed["agency"].id, name="Negocio 2")
+    db_session.add(business2)
+    db_session.flush()
+    db_session.add(models.BusinessUser(
+        business_id=business2.id, name="Dueño 2", email="negocio2-calls@test-demo.com",
+        password_hash=hash_password("otra_pass_123"),
+    ))
+    db_session.add(models.Call(
+        business_id=business2.id, started_at=datetime.datetime(2026, 9, 1, 10, 0, 0),
+        ended_at=datetime.datetime(2026, 9, 1, 10, 1, 0),
+        duration_seconds=60, outcome="completed",
+    ))
+    db_session.commit()
+
+    res = client.get("/business/calls", headers=auth(business_token))
+    assert res.status_code == 200
+    assert res.json() == []  # las de negocio 1 siguen vacías, la de negocio 2 no se filtró
 
 
 def test_un_negocio_nunca_ve_ni_toca_la_config_de_otro(client, seed, business_token, db_session):

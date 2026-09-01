@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 
 
@@ -161,3 +163,40 @@ def test_patch_parcial_se_valida_contra_el_proveedor_ya_guardado(client, seed, a
         json={"ai_model": "gpt-4o"},  # inválido contra groq (default ya guardado)
     )
     assert res.status_code == 422
+
+
+def test_ver_llamadas_de_un_negocio_propio(client, seed, agency_token, db_session):
+    from app import models
+
+    db_session.add(models.Call(
+        business_id=seed["business"].id, started_at=datetime.datetime(2026, 9, 1, 10, 0, 0),
+        ended_at=datetime.datetime(2026, 9, 1, 10, 2, 0),
+        duration_seconds=120, caller_number="+17865551234", outcome="completed",
+    ))
+    db_session.commit()
+
+    business_id = seed["business"].id
+    res = client.get(f"/agency/businesses/{business_id}/calls", headers=auth(agency_token))
+    assert res.status_code == 200
+    assert len(res.json()) == 1
+    assert res.json()[0]["outcome"] == "completed"
+
+
+def test_no_se_pueden_ver_llamadas_de_un_negocio_de_otra_agencia(client, seed, agency_token, db_session):
+    from app import models
+
+    otra_agencia = models.Agency(name="Otra Agencia")
+    db_session.add(otra_agencia)
+    db_session.flush()
+    negocio_ajeno = models.Business(agency_id=otra_agencia.id, name="Negocio Ajeno")
+    db_session.add(negocio_ajeno)
+    db_session.flush()
+    db_session.add(models.Call(
+        business_id=negocio_ajeno.id, started_at=datetime.datetime(2026, 9, 1, 10, 0, 0),
+        ended_at=datetime.datetime(2026, 9, 1, 10, 1, 0),
+        duration_seconds=60, outcome="completed",
+    ))
+    db_session.commit()
+
+    res = client.get(f"/agency/businesses/{negocio_ajeno.id}/calls", headers=auth(agency_token))
+    assert res.status_code == 404

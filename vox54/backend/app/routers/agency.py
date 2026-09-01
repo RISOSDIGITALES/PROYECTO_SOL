@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..deps import get_current_agency_user
 from ..security import hash_password
-from ..schemas import AgencyMeResponse, BusinessOut, BusinessCreate, BusinessUpdate, BusinessDetailOut, BotConfigUpdate, BotConfigOut
+from ..schemas import AgencyMeResponse, BusinessOut, BusinessCreate, BusinessUpdate, BusinessDetailOut, BotConfigUpdate, BotConfigOut, CallOut
 from ..validators import bot_config_as_dict, validate_bot_config
 from .. import models
 
@@ -111,3 +111,19 @@ def update_business_bot_config(
     db.commit()
     db.refresh(config)
     return config
+
+
+@router.get("/businesses/{business_id}/calls", response_model=list[CallOut])
+def list_business_calls(
+    business_id: int,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    business = _get_owned_business(db, user, business_id)
+    return (
+        db.query(models.Call)
+        .filter(models.Call.business_id == business.id)
+        .order_by(models.Call.started_at.desc())
+        .limit(100)
+        .all()
+    )

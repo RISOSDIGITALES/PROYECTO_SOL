@@ -48,5 +48,7 @@ export const api = {
     request(`/agency/businesses/${id}/bot-config`, { method: "PUT", body, token }),
   getBotConfig: (token) => request("/business/bot-config", { token }),
   updateBotConfig: (token, body) => request("/business/bot-config", { method: "PUT", body, token }),
+  listCalls: (token) => request("/business/calls", { token }),
+  listBusinessCalls: (token, id) => request(`/agency/businesses/${id}/calls`, { token }),
   getCatalog: () => request("/catalog"),
 };

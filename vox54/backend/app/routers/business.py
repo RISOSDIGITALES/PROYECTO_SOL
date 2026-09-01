@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import get_current_business_user
-from ..schemas import BusinessMeResponse, BotConfigOut, BotConfigUpdateClient
+from ..schemas import BusinessMeResponse, BotConfigOut, BotConfigUpdateClient, CallOut
 from ..validators import bot_config_as_dict, validate_bot_config
 from .. import models
 
@@ -44,3 +44,17 @@ def update_bot_config(
     db.commit()
     db.refresh(config)
     return config
+
+
+@router.get("/calls", response_model=list[CallOut])
+def list_calls(
+    db: Session = Depends(get_db),
+    user: models.BusinessUser = Depends(get_current_business_user),
+):
+    return (
+        db.query(models.Call)
+        .filter(models.Call.business_id == user.business_id)
+        .order_by(models.Call.started_at.desc())
+        .limit(100)
+        .all()
+    )

@@ -45,6 +45,7 @@ class Business(Base):
     agency = relationship("Agency", back_populates="businesses")
     users = relationship("BusinessUser", back_populates="business", cascade="all, delete-orphan")
     bot_config = relationship("BotConfig", back_populates="business", uselist=False, cascade="all, delete-orphan")
+    calls = relationship("Call", back_populates="business", cascade="all, delete-orphan", order_by="Call.started_at.desc()")
 
     @property
     def bot_status(self) -> str | None:
@@ -131,3 +132,40 @@ class BotConfig(Base):
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     business = relationship("Business", back_populates="bot_config")
+
+
+class Call(Base):
+    """Resultado real de una llamada atendida por el worker — la visibilidad
+    de resultado que hasta ahora no existía: un negocio configuraba su bot
+    pero nunca veía qué pasó con ninguna llamada real. Solo el worker escribe
+    acá (ver POST /worker/calls, mismo secreto compartido que ya usa para
+    leer BotConfig) — nunca un negocio ni una agencia, para que este
+    historial sea siempre lo que realmente pasó, no algo editable a mano."""
+
+    __tablename__ = "calls"
+
+    id = Column(Integer, primary_key=True)
+    business_id = Column(Integer, ForeignKey("businesses.id"), nullable=False, index=True)
+
+    started_at = Column(DateTime, nullable=False)
+    ended_at = Column(DateTime, nullable=False)
+    duration_seconds = Column(Integer, nullable=False)
+
+    # Atributo SIP del participante remoto — puede no venir según el trunk/
+    # proveedor real que conecte cada negocio, por eso nullable en vez de
+    # exigirlo (ver el comentario de fetch en worker/agent.py).
+    caller_number = Column(String(30), nullable=True)
+
+    # completed | transferred | max_duration_reached | error — cómo terminó,
+    # nunca inventado: cada worker solo puede reportar una de las razones que
+    # su propio código realmente distingue.
+    outcome = Column(String(30), nullable=False, default="completed")
+
+    # JSON (lista de mensajes rol/contenido/timestamp) armado por
+    # ChatContext.to_dict() del lado del worker — se guarda como texto plano,
+    # sin parsear ni interpretar nada de su lado del backend.
+    transcript = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=utcnow)
+
+    business = relationship("Business", back_populates="calls")

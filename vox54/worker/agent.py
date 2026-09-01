@@ -48,6 +48,7 @@ Pendiente, sin implementar a propósito (documentado, no un olvido):
   su agente de voz, build_llm() falla explícito en vez de improvisar.
 """
 import asyncio
+import datetime
 import json
 import logging
 import os
@@ -98,6 +99,37 @@ async def fetch_bot_config(business_id: int | None = None, phone_number: str | N
         resp = await client.get(path, headers={"X-Worker-Secret": WORKER_SECRET})
         resp.raise_for_status()
         return resp.json()
+
+
+async def report_call(
+    business_id: int,
+    started_at: datetime.datetime,
+    ended_at: datetime.datetime,
+    caller_number: str | None,
+    outcome: str,
+    transcript: str | None,
+) -> None:
+    """Le avisa al backend cómo terminó una llamada real — la única escritura
+    que hace este worker (todo lo demás es solo lectura de BotConfig). Un
+    fallo acá nunca debe tumbar el shutdown del job ni ocultar el error real
+    de la llamada en sí — se loguea y se sigue."""
+    try:
+        async with httpx.AsyncClient(base_url=VOX54_API_BASE, timeout=10.0) as client:
+            resp = await client.post(
+                "/worker/calls",
+                headers={"X-Worker-Secret": WORKER_SECRET},
+                json={
+                    "business_id": business_id,
+                    "started_at": started_at.isoformat(),
+                    "ended_at": ended_at.isoformat(),
+                    "caller_number": caller_number,
+                    "outcome": outcome,
+                    "transcript": transcript,
+                },
+            )
+            resp.raise_for_status()
+    except Exception:
+        logger.exception("no se pudo reportar el resultado de la llamada del negocio %s", business_id)
 
 
 def build_stt(config: dict):
@@ -164,6 +196,15 @@ async def entrypoint(ctx: JobContext):
 
     await ctx.connect()
 
+    # --- Visibilidad de resultado: desde acá hasta el shutdown callback de
+    # más abajo, todo lo que se agrega es para poder reportar qué pasó en
+    # esta llamada real — antes de esto, un negocio configuraba su bot y
+    # nunca se enteraba de ningún resultado. call_state es un dict (no una
+    # variable suelta) para poder mutarlo desde los closures de más abajo
+    # (transfer_to_human, _hangup_by_max_duration) sin pelear con `nonlocal`. ---
+    started_at = datetime.datetime.utcnow()
+    call_state = {"outcome": "completed"}
+
     session = AgentSession(
         stt=build_stt(config),
         llm=build_llm(config),
@@ -173,6 +214,41 @@ async def entrypoint(ctx: JobContext):
         allow_interruptions=config["allow_interruptions"],
         min_endpointing_delay=config["silence_timeout_seconds"],
     )
+
+    async def _report_call_result():
+        ended_at = datetime.datetime.utcnow()
+
+        caller_number = None
+        try:
+            participant = next(iter(ctx.room.remote_participants.values()), None)
+            if participant:
+                # LiveKit no documenta un nombre fijo de atributo para el
+                # número real que marcó — se intenta el atributo SIP más
+                # habitual primero y, si no está, se cae a `identity` (que en
+                # la integración SIP de LiveKit suele coincidir con el
+                # número). Sin una llamada SIP real contra la que confirmar
+                # esto desde acá — documentado como incierto, no adivinado
+                # en silencio (ver nota de voicemail_detection más arriba).
+                caller_number = participant.attributes.get("sip.phoneNumber") or participant.identity or None
+        except Exception:
+            logger.exception("no se pudo leer el número del participante remoto")
+
+        transcript = None
+        try:
+            transcript = json.dumps(session.history.to_dict(exclude_timestamp=False)["items"])
+        except Exception:
+            logger.exception("no se pudo armar el transcript de la llamada")
+
+        await report_call(
+            business_id=config["business_id"],
+            started_at=started_at,
+            ended_at=ended_at,
+            caller_number=caller_number,
+            outcome=call_state["outcome"],
+            transcript=transcript,
+        )
+
+    ctx.add_shutdown_callback(_report_call_result)
 
     # --- Transferencia a un humano — expuesta como tool, la invoca la IA
     # cuando la conversación lo amerita, no un evento externo. Sin número
@@ -189,6 +265,7 @@ async def entrypoint(ctx: JobContext):
             if not participant:
                 return "No hay ningún participante remoto para transferir todavía."
             await ctx.transfer_sip_participant(participant, config["transfer_phone_number"])
+            call_state["outcome"] = "transferred"
             return "Transferencia iniciada."
 
         tools.append(transfer_to_human)
@@ -202,6 +279,7 @@ async def entrypoint(ctx: JobContext):
     # nosotros con un timer que cuelga la llamada sola pasado ese tiempo. ---
     async def _hangup_by_max_duration():
         await asyncio.sleep(config["max_duration_seconds"])
+        call_state["outcome"] = "max_duration_reached"
         if config.get("end_call_message"):
             await session.say(config["end_call_message"])
         ctx.shutdown(reason="max_duration_reached")
@@ -209,13 +287,21 @@ async def entrypoint(ctx: JobContext):
     max_duration_task = asyncio.create_task(_hangup_by_max_duration())
     ctx.add_shutdown_callback(lambda: max_duration_task.cancel())
 
-    await session.start(agent=agent, room=ctx.room)
+    try:
+        await session.start(agent=agent, room=ctx.room)
 
-    # --- Quién habla primero ---
-    if config["first_message_mode"] == "assistant_first" and config.get("welcome_message"):
-        await session.say(config["welcome_message"])
-    # Si es "user_first", no se dice nada acá — se deja que el cliente hable
-    # primero; AgentSession ya maneja el turno de escucha inicial solo.
+        # --- Quién habla primero ---
+        if config["first_message_mode"] == "assistant_first" and config.get("welcome_message"):
+            await session.say(config["welcome_message"])
+        # Si es "user_first", no se dice nada acá — se deja que el cliente hable
+        # primero; AgentSession ya maneja el turno de escucha inicial solo.
+    except Exception:
+        # No se sobreescribe un outcome ya decidido (ej. una transferencia que
+        # salió bien y disparó un error de limpieza después) — solo se marca
+        # error si la llamada no había llegado a ningún resultado real todavía.
+        if call_state["outcome"] == "completed":
+            call_state["outcome"] = "error"
+        raise
 
 
 async def request_fn(req: agents.JobRequest):

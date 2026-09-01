@@ -144,5 +144,62 @@ class TestFetchBotConfig(unittest.IsolatedAsyncioTestCase):
             await agent.fetch_bot_config()
 
 
+class TestReportCall(unittest.IsolatedAsyncioTestCase):
+    async def test_manda_el_body_correcto(self):
+        import datetime
+
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+
+        started = datetime.datetime(2026, 9, 1, 10, 0, 0)
+        ended = datetime.datetime(2026, 9, 1, 10, 3, 0)
+
+        with patch("agent.httpx.AsyncClient", return_value=mock_client):
+            await agent.report_call(
+                business_id=1,
+                started_at=started,
+                ended_at=ended,
+                caller_number="+17865551234",
+                outcome="completed",
+                transcript="[]",
+            )
+
+        mock_client.post.assert_called_once_with(
+            "/worker/calls",
+            headers={"X-Worker-Secret": os.environ["WORKER_SECRET"]},
+            json={
+                "business_id": 1,
+                "started_at": started.isoformat(),
+                "ended_at": ended.isoformat(),
+                "caller_number": "+17865551234",
+                "outcome": "completed",
+                "transcript": "[]",
+            },
+        )
+
+    async def test_un_fallo_de_red_se_loguea_y_nunca_se_propaga(self):
+        """El shutdown del job no debe explotar porque el backend esté caído
+        — un fallo acá se pierde el reporte de esa llamada puntual, pero
+        nunca debe tumbar el resto del apagado del worker."""
+        import datetime
+
+        mock_client = AsyncMock()
+        mock_client.post.side_effect = ConnectionError("backend caído")
+        mock_client.__aenter__.return_value = mock_client
+
+        with patch("agent.httpx.AsyncClient", return_value=mock_client):
+            await agent.report_call(
+                business_id=1,
+                started_at=datetime.datetime(2026, 9, 1, 10, 0, 0),
+                ended_at=datetime.datetime(2026, 9, 1, 10, 1, 0),
+                caller_number=None,
+                outcome="completed",
+                transcript=None,
+            )  # no debe lanzar nada
+
+
 if __name__ == "__main__":
     unittest.main()

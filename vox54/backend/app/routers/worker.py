@@ -1,15 +1,19 @@
 """Endpoints que llama el worker de LiveKit Agents (un servicio, no un usuario
 con sesión) — protegidos con un secreto compartido, no con JWT de agencia/negocio.
 
-Es de solo lectura: el worker nunca escribe BotConfig, solo lo lee al arrancar
-una llamada real para saber qué proveedor/modelo/prompt usar en esa sesión.
+La lectura de BotConfig es de solo lectura: el worker nunca la escribe, solo
+la lee al arrancar una llamada real para saber qué proveedor/modelo/prompt
+usar en esa sesión. El reporte de llamadas (POST /calls) es la única
+escritura que hace el worker — y la única fuente real de la tabla `calls`:
+ni un negocio ni una agencia pueden crear ni editar un registro de llamada
+a mano, para que ese historial sea siempre lo que realmente pasó.
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import require_worker_secret
-from ..schemas import BotConfigOut
+from ..schemas import BotConfigOut, CallOut, CallReport
 from .. import models
 
 router = APIRouter(prefix="/worker", tags=["worker"], dependencies=[Depends(require_worker_secret)])
@@ -32,3 +36,28 @@ def get_bot_config_by_phone(phone_number: str, db: Session = Depends(get_db)):
     if not config:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Ningún negocio tiene asignado ese número")
     return config
+
+
+@router.post("/calls", response_model=CallOut, status_code=status.HTTP_201_CREATED)
+def report_call(body: CallReport, db: Session = Depends(get_db)):
+    business = db.query(models.Business).filter(models.Business.id == body.business_id).first()
+    if not business:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No existe ese business_id")
+
+    duration = int((body.ended_at - body.started_at).total_seconds())
+    if duration < 0:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "ended_at no puede ser anterior a started_at")
+
+    call = models.Call(
+        business_id=body.business_id,
+        started_at=body.started_at,
+        ended_at=body.ended_at,
+        duration_seconds=duration,
+        caller_number=body.caller_number,
+        outcome=body.outcome,
+        transcript=body.transcript,
+    )
+    db.add(call)
+    db.commit()
+    db.refresh(call)
+    return call
