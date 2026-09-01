@@ -17,6 +17,24 @@ import { initials } from "../utils";
 // flex 100vh, <main> con su propio scroll) por la misma razón: el dock
 // nunca puede terminar tapando contenido, sin importar el largo de cada
 // sección — ver el ítem del 01-sep en CLAUDE.md si hace falta el porqué.
+
+// Burbujas decorativas de fondo del dock — datos en vez de JSX repetido,
+// mismo mecanismo interactivo que ya tiene el login (estallan al tocarlas
+// y vuelven a aparecer solas). Nunca son las burbujas de navegación reales
+// (Llamadas/Configuración/Cuenta/Salir) — esas siguen con su propio squish
+// de siempre, tienen que quedarse ahí para poder navegar.
+const DOCK_BUBBLES = [
+  { id: "d1", size: 14, style: { left: "6%", bottom: 92 }, delay: "-1.2s" },
+  { id: "d2", size: 9, hue: "green", style: { left: "14%", bottom: 40, filter: "blur(0.4px)" }, delay: "-2.7s" },
+  { id: "d3", size: 20, style: { left: "24%", bottom: 110, filter: "blur(0.5px)" }, delay: "-0.4s" },
+  { id: "d4", size: 10, hue: "violet", style: { left: "36%", bottom: 28 }, delay: "-4.1s" },
+  { id: "d5", size: 11, hue: "green", style: { right: "32%", bottom: 100 }, delay: "-3.4s" },
+  { id: "d6", size: 15, hue: "violet", style: { right: "22%", bottom: 115, filter: "blur(0.4px)" }, delay: "-1.5s" },
+  { id: "d7", size: 16, style: { right: "16%", bottom: 50 }, delay: "-1.8s" },
+  { id: "d8", size: 8, style: { right: "9%", bottom: 108 }, delay: "-2.2s" },
+  { id: "d9", size: 13, hue: "green", style: { right: "6%", bottom: 70 }, delay: "-0.9s" },
+];
+
 export default function BusinessDashboard() {
   const { logout } = useAuth();
   const session = useRequireRole("business");
@@ -33,6 +51,33 @@ export default function BusinessDashboard() {
   const [calls, setCalls] = useState(null);
   const [callsError, setCallsError] = useState("");
   const [poppingId, setPoppingId] = useState(null);
+
+  // burbujas decorativas del dock que están a mitad del estallido vs. las
+  // que ya reventaron y están "de vacaciones" antes de reaparecer solas —
+  // mismo patrón ya usado en LoginPage.jsx
+  const [burstingDockIds, setBurstingDockIds] = useState(() => new Set());
+  const [poppedDockIds, setPoppedDockIds] = useState(() => new Set());
+
+  function popDockBubble(id) {
+    if (burstingDockIds.has(id) || poppedDockIds.has(id)) return;
+    setBurstingDockIds((prev) => new Set(prev).add(id));
+    setTimeout(() => {
+      setBurstingDockIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      setPoppedDockIds((prev) => new Set(prev).add(id));
+      const respawnDelay = 1600 + Math.random() * 1400;
+      setTimeout(() => {
+        setPoppedDockIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }, respawnDelay);
+    }, 420);
+  }
 
   useEffect(() => {
     if (!session) return;
@@ -155,15 +200,19 @@ export default function BusinessDashboard() {
       </main>
 
       <nav className="vox54-bubblefield" aria-label="Navegación de negocio">
-        <span className="vox54-amb" style={{ width: 14, height: 14, left: "6%", bottom: 92, animationDelay: "-1.2s" }} />
-        <span className="vox54-amb green" style={{ width: 9, height: 9, left: "14%", bottom: 40, animationDelay: "-2.7s", filter: "blur(0.4px)" }} />
-        <span className="vox54-amb" style={{ width: 20, height: 20, left: "24%", bottom: 110, animationDelay: "-0.4s", filter: "blur(0.5px)" }} />
-        <span className="vox54-amb violet" style={{ width: 10, height: 10, left: "36%", bottom: 28, animationDelay: "-4.1s" }} />
-        <span className="vox54-amb green" style={{ width: 11, height: 11, right: "32%", bottom: 100, animationDelay: "-3.4s" }} />
-        <span className="vox54-amb violet" style={{ width: 15, height: 15, right: "22%", bottom: 115, animationDelay: "-1.5s", filter: "blur(0.4px)" }} />
-        <span className="vox54-amb" style={{ width: 16, height: 16, right: "16%", bottom: 50, animationDelay: "-1.8s" }} />
-        <span className="vox54-amb" style={{ width: 8, height: 8, right: "9%", bottom: 108, animationDelay: "-2.2s" }} />
-        <span className="vox54-amb green" style={{ width: 13, height: 13, right: "6%", bottom: 70, animationDelay: "-0.9s" }} />
+        {DOCK_BUBBLES.map((b) => {
+          if (poppedDockIds.has(b.id)) return null;
+          const bursting = burstingDockIds.has(b.id);
+          return (
+            <span
+              key={b.id}
+              aria-hidden="true"
+              className={`vox54-amb poppable ${b.hue || ""} ${bursting ? "bursting" : ""}`}
+              style={{ width: b.size, height: b.size, animationDelay: b.delay, ...b.style }}
+              onClick={() => popDockBubble(b.id)}
+            />
+          );
+        })}
 
         <button type="button" className="vox54-navcol" style={{ animationDelay: "-0.6s" }} onClick={() => goTo("calls")}>
           <span className={`vox54-navbubble ${tab === "calls" ? "active" : ""} ${poppingId === "calls" ? "popping" : ""}`}>
