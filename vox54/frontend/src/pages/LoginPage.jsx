@@ -33,6 +33,13 @@ export default function LoginPage({ role }) {
   return (
     <div style={pageStyle}>
       <div className="g54-gradient" style={introStyle}>
+        {/* burbujas grandes, protagonistas — sin miedo al tamaño */}
+        <span className="vox54-amb" style={{ width: 130, height: 130, left: "-4%", top: "-6%", animationDelay: "-1s" }} />
+        <span className="vox54-amb violet" style={{ width: 95, height: 95, right: "-3%", top: "58%", animationDelay: "-2.4s" }} />
+        <span className="vox54-amb green" style={{ width: 70, height: 70, left: "72%", top: "8%", animationDelay: "-3.6s" }} />
+        <span className="vox54-amb" style={{ width: 60, height: 60, left: "8%", top: "72%", animationDelay: "-0.8s" }} />
+
+        {/* burbujas chicas, de textura, como ya estaban */}
         <span className="vox54-amb" style={{ width: 26, height: 26, left: "12%", top: "18%", animationDelay: "-1s" }} />
         <span className="vox54-amb green" style={{ width: 14, height: 14, left: "22%", top: "62%", animationDelay: "-2.6s" }} />
         <span className="vox54-amb violet" style={{ width: 34, height: 34, left: "68%", top: "12%", animationDelay: "-0.5s" }} />
@@ -55,7 +62,7 @@ export default function LoginPage({ role }) {
         <form onSubmit={handleSubmit} style={formStyle}>
           <div style={{ marginBottom: 6 }}>
             <div style={formEyebrowStyle}>{isAgency ? "Acceso de agencia" : "Acceso de negocio"}</div>
-            <h2 style={formHeadingStyle}>Entrá a tu cuenta</h2>
+            <h2 style={formHeadingStyle}>Bienvenido</h2>
           </div>
 
           <div>
@@ -115,7 +122,8 @@ const introStyle = {
   flex: "1 1 420px",
   display: "flex",
   alignItems: "center",
-  padding: "48px 56px",
+  justifyContent: "center",
+  padding: "48px 40px 48px 72px",
 };
 
 const introContentStyle = {
@@ -123,30 +131,31 @@ const introContentStyle = {
   zIndex: 1,
   display: "flex",
   flexDirection: "column",
-  gap: 16,
-  maxWidth: 420,
+  gap: 18,
+  maxWidth: 440,
+  width: "100%",
 };
 
 const eyebrowStyle = {
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 700,
   letterSpacing: "1.5px",
   textTransform: "uppercase",
   color: "#CFE0FF",
-  marginTop: 10,
+  marginTop: 12,
 };
 
 const introHeadingStyle = {
-  fontSize: 32,
-  lineHeight: 1.15,
+  fontSize: 40,
+  lineHeight: 1.14,
   color: "#fff",
   margin: 0,
 };
 
 const introCopyStyle = {
-  fontSize: 14.5,
+  fontSize: 16,
   lineHeight: 1.6,
-  color: "rgba(255,255,255,0.82)",
+  color: "rgba(255,255,255,0.85)",
   margin: 0,
 };
 
