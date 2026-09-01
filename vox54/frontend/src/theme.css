@@ -155,17 +155,33 @@ textarea:focus {
   to { opacity: 1; }
 }
 
-/* la burbuja se infla y se desvanece — el "estallido" en sí */
+/* el "estallido" real de la burbuja — se infla de golpe con un pulso de
+   brillo (el momento del reviente) y recién ahí colapsa a la nada, en vez
+   de solo desvanecerse */
 @keyframes vox54-burst {
-  0% { transform: scale(1); opacity: 1; }
-  40% { transform: scale(1.35); opacity: 0.9; }
-  100% { transform: scale(0.2); opacity: 0; }
+  0% { transform: scale(1); opacity: 1; filter: brightness(1); }
+  18% { transform: scale(1.55); opacity: 1; filter: brightness(1.7); }
+  46% { transform: scale(1.15); opacity: 0.85; filter: brightness(1.15); }
+  100% { transform: scale(0.1); opacity: 0; filter: brightness(1); }
+}
+
+/* destello blanco en el centro, el flash del propio estallido */
+@keyframes vox54-flash {
+  0% { transform: scale(0.25); opacity: 0.95; }
+  100% { transform: scale(2); opacity: 0; }
 }
 
 /* onda expansiva del estallido — un aro que crece y se disuelve */
 @keyframes vox54-shock {
-  0% { transform: scale(0.6); opacity: 0.75; }
-  100% { transform: scale(2.6); opacity: 0; }
+  0% { transform: scale(0.55); opacity: 0.9; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+/* partículas reales saliendo disparadas del centro — --tx/--ty los pone
+   cada burbuja en JS, según el ángulo y la distancia que le tocó */
+@keyframes vox54-shard-fly {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0.15); opacity: 0; }
 }
 
 .vox54-bubblefield {
@@ -184,22 +200,37 @@ textarea:focus {
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
+  /* más transparentes que antes (0.32→0.16 de relleno) y con más brillo
+     real — el resplandor blanco de arriba-izquierda más grande y opaco,
+     más un glow hacia afuera con box-shadow, no solo el borde claro */
   background:
-    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95), transparent 45%),
-    rgba(147, 197, 253, 0.32);
-  border: 1px solid rgba(255,255,255,0.55);
+    radial-gradient(circle at 28% 22%, rgba(255,255,255,1) 0%, rgba(255,255,255,0.65) 26%, transparent 52%),
+    rgba(147, 197, 253, 0.16);
+  border: 1px solid rgba(255,255,255,0.75);
+  box-shadow: 0 0 14px -4px rgba(147, 197, 253, 0.55), inset 0 -3px 6px rgba(147, 197, 253, 0.12);
   animation: vox54-floaty-amb 5s ease-in-out infinite, vox54-fadein 0.5s ease-out;
 }
 
-/* variante clickeable — solo donde de verdad hace falta (login), para no
-   volver interactivas las burbujas decorativas de fondo del dock de nav */
+/* variante clickeable — solo donde de verdad hace falta (login, dock de
+   negocio/agencia), para no volver interactivas otras burbujas decorativas */
 .vox54-amb.poppable {
   pointer-events: auto;
   cursor: pointer;
 }
 
 .vox54-amb.bursting {
-  animation: vox54-burst 0.42s cubic-bezier(.34,1.56,.64,1) forwards;
+  animation: vox54-burst 0.48s cubic-bezier(.22,.9,.35,1) forwards;
+}
+
+/* destello del centro — el primer instante del estallido, antes de que
+   se vea el aro expandirse */
+.vox54-amb.bursting::before {
+  content: "";
+  position: absolute;
+  inset: -25%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.95), transparent 65%);
+  animation: vox54-flash 0.3s ease-out forwards;
 }
 
 .vox54-amb.bursting::after {
@@ -207,20 +238,43 @@ textarea:focus {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.75);
-  animation: vox54-shock 0.5s ease-out forwards;
+  border: 2.5px solid rgba(255,255,255,0.9);
+  animation: vox54-shock 0.55s ease-out forwards;
 }
 
 .vox54-amb.green {
   background:
-    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95), transparent 45%),
-    rgba(63, 214, 143, 0.3);
+    radial-gradient(circle at 28% 22%, rgba(255,255,255,1) 0%, rgba(255,255,255,0.65) 26%, transparent 52%),
+    rgba(63, 214, 143, 0.14);
+  box-shadow: 0 0 14px -4px rgba(63, 214, 143, 0.5), inset 0 -3px 6px rgba(63, 214, 143, 0.1);
 }
 
 .vox54-amb.violet {
   background:
-    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95), transparent 45%),
-    rgba(196, 181, 253, 0.32);
+    radial-gradient(circle at 28% 22%, rgba(255,255,255,1) 0%, rgba(255,255,255,0.65) 26%, transparent 52%),
+    rgba(196, 181, 253, 0.16);
+  box-shadow: 0 0 14px -4px rgba(196, 181, 253, 0.5), inset 0 -3px 6px rgba(196, 181, 253, 0.12);
+}
+
+/* campo de partículas — hermano de la burbuja que estalla, con el mismo
+   tamaño/posición, para que las partículas no hereden el propio scale(0.1)
+   de la burbuja colapsando */
+.vox54-shardfield {
+  position: absolute;
+  pointer-events: none;
+}
+
+.vox54-shard {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, rgba(255,255,255,0.5) 55%, transparent 75%);
+  box-shadow: 0 0 6px rgba(255,255,255,0.85);
+  animation: vox54-shard-fly 0.5s cubic-bezier(.16,.84,.44,1) forwards;
 }
 
 .vox54-navcol {
@@ -350,8 +404,12 @@ textarea:focus {
 @media (prefers-reduced-motion: reduce) {
   .vox54-amb, .vox54-navcol, .vox54-notif { animation: none; }
   .vox54-navbubble.popping { animation: none; }
-  /* estas dos tienen más especificidad que .vox54-amb de arriba (2 clases,
-     y una pseudo-clase ::after aparte) — sin declararlas acá explícito
-     seguirían animando aunque el usuario haya pedido menos movimiento */
-  .vox54-amb.bursting, .vox54-amb.bursting::after { animation: none; }
+  /* estas tienen más especificidad que .vox54-amb de arriba (2 clases, o
+     una pseudo-clase ::before/::after aparte) — sin declararlas acá
+     explícito seguirían animando aunque el usuario haya pedido menos
+     movimiento */
+  .vox54-amb.bursting,
+  .vox54-amb.bursting::before,
+  .vox54-amb.bursting::after { animation: none; }
+  .vox54-shard { animation: none; opacity: 0; }
 }

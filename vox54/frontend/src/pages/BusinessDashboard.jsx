@@ -4,6 +4,7 @@ import Logo from "../components/Logo";
 import BotConfigForm from "../components/BotConfigForm";
 import CallsList from "../components/CallsList";
 import ChangePasswordForm from "../components/ChangePasswordForm";
+import PoppableBubbles from "../components/PoppableBubbles";
 import StatusPill from "../components/StatusPill";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
@@ -18,11 +19,11 @@ import { initials } from "../utils";
 // nunca puede terminar tapando contenido, sin importar el largo de cada
 // sección — ver el ítem del 01-sep en CLAUDE.md si hace falta el porqué.
 
-// Burbujas decorativas de fondo del dock — datos en vez de JSX repetido,
-// mismo mecanismo interactivo que ya tiene el login (estallan al tocarlas
-// y vuelven a aparecer solas). Nunca son las burbujas de navegación reales
-// (Llamadas/Configuración/Cuenta/Salir) — esas siguen con su propio squish
-// de siempre, tienen que quedarse ahí para poder navegar.
+// Burbujas decorativas de fondo del dock — datos en vez de JSX repetido; el
+// estado del estallido/reaparición vive en PoppableBubbles, compartido con
+// el login. Nunca son las burbujas de navegación reales (Llamadas/
+// Configuración/Cuenta/Salir) — esas siguen con su propio squish de
+// siempre, tienen que quedarse ahí para poder navegar.
 const DOCK_BUBBLES = [
   { id: "d1", size: 14, style: { left: "6%", bottom: 92 }, delay: "-1.2s" },
   { id: "d2", size: 9, hue: "green", style: { left: "14%", bottom: 40, filter: "blur(0.4px)" }, delay: "-2.7s" },
@@ -51,33 +52,6 @@ export default function BusinessDashboard() {
   const [calls, setCalls] = useState(null);
   const [callsError, setCallsError] = useState("");
   const [poppingId, setPoppingId] = useState(null);
-
-  // burbujas decorativas del dock que están a mitad del estallido vs. las
-  // que ya reventaron y están "de vacaciones" antes de reaparecer solas —
-  // mismo patrón ya usado en LoginPage.jsx
-  const [burstingDockIds, setBurstingDockIds] = useState(() => new Set());
-  const [poppedDockIds, setPoppedDockIds] = useState(() => new Set());
-
-  function popDockBubble(id) {
-    if (burstingDockIds.has(id) || poppedDockIds.has(id)) return;
-    setBurstingDockIds((prev) => new Set(prev).add(id));
-    setTimeout(() => {
-      setBurstingDockIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-      setPoppedDockIds((prev) => new Set(prev).add(id));
-      const respawnDelay = 1600 + Math.random() * 1400;
-      setTimeout(() => {
-        setPoppedDockIds((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-      }, respawnDelay);
-    }, 420);
-  }
 
   useEffect(() => {
     if (!session) return;
@@ -200,19 +174,7 @@ export default function BusinessDashboard() {
       </main>
 
       <nav className="vox54-bubblefield" aria-label="Navegación de negocio">
-        {DOCK_BUBBLES.map((b) => {
-          if (poppedDockIds.has(b.id)) return null;
-          const bursting = burstingDockIds.has(b.id);
-          return (
-            <span
-              key={b.id}
-              aria-hidden="true"
-              className={`vox54-amb poppable ${b.hue || ""} ${bursting ? "bursting" : ""}`}
-              style={{ width: b.size, height: b.size, animationDelay: b.delay, ...b.style }}
-              onClick={() => popDockBubble(b.id)}
-            />
-          );
-        })}
+        <PoppableBubbles bubbles={DOCK_BUBBLES} />
 
         <button type="button" className="vox54-navcol" style={{ animationDelay: "-0.6s" }} onClick={() => goTo("calls")}>
           <span className={`vox54-navbubble ${tab === "calls" ? "active" : ""} ${poppingId === "calls" ? "popping" : ""}`}>

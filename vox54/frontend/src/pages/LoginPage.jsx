@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Logo from "../components/Logo";
+import PoppableBubbles from "../components/PoppableBubbles";
 import { useAuth } from "../AuthContext";
 import { api } from "../api";
 
-// Burbujas decorativas del panel de intro — datos en vez de JSX repetido
-// para poder engancharles el clic (estallan y vuelven a aparecer solas).
+// Burbujas decorativas del panel de intro — datos en vez de JSX repetido;
+// el estado del estallido/reaparición vive en PoppableBubbles, compartido
+// con el dock de negocio/agencia.
 const AMB_BUBBLES = [
   { id: "b1", size: 130, style: { left: "-4%", top: "-6%" }, delay: "-1s" },
   { id: "b2", size: 95, hue: "violet", style: { right: "-3%", top: "58%" }, delay: "-2.4s" },
@@ -28,32 +30,6 @@ export default function LoginPage({ role }) {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  // burbujas que están a mitad del estallido (animando) vs. las que ya
-  // reventaron y están "de vacaciones" antes de volver a aparecer solas
-  const [burstingIds, setBurstingIds] = useState(() => new Set());
-  const [poppedIds, setPoppedIds] = useState(() => new Set());
-
-  function popBubble(id) {
-    if (burstingIds.has(id) || poppedIds.has(id)) return;
-    setBurstingIds((prev) => new Set(prev).add(id));
-    setTimeout(() => {
-      setBurstingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-      setPoppedIds((prev) => new Set(prev).add(id));
-      const respawnDelay = 1600 + Math.random() * 1400;
-      setTimeout(() => {
-        setPoppedIds((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-      }, respawnDelay);
-    }, 420);
-  }
-
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
@@ -74,20 +50,8 @@ export default function LoginPage({ role }) {
   return (
     <div style={pageStyle}>
       <div className="g54-gradient" style={introStyle}>
-        {/* burbujas decorativas — clickeables, estallan y vuelven a aparecer solas */}
-        {AMB_BUBBLES.map((b) => {
-          if (poppedIds.has(b.id)) return null;
-          const bursting = burstingIds.has(b.id);
-          return (
-            <span
-              key={b.id}
-              aria-hidden="true"
-              className={`vox54-amb poppable ${b.hue || ""} ${bursting ? "bursting" : ""}`}
-              style={{ width: b.size, height: b.size, animationDelay: b.delay, ...b.style }}
-              onClick={() => popBubble(b.id)}
-            />
-          );
-        })}
+        {/* burbujas decorativas — clickeables, estallan de verdad y vuelven a aparecer solas */}
+        <PoppableBubbles bubbles={AMB_BUBBLES} />
 
         <div style={introContentStyle}>
           <Logo />
