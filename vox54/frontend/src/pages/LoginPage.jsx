@@ -4,6 +4,21 @@ import Logo from "../components/Logo";
 import { useAuth } from "../AuthContext";
 import { api } from "../api";
 
+// Burbujas decorativas del panel de intro — datos en vez de JSX repetido
+// para poder engancharles el clic (estallan y vuelven a aparecer solas).
+const AMB_BUBBLES = [
+  { id: "b1", size: 130, style: { left: "-4%", top: "-6%" }, delay: "-1s" },
+  { id: "b2", size: 95, hue: "violet", style: { right: "-3%", top: "58%" }, delay: "-2.4s" },
+  { id: "b3", size: 70, hue: "green", style: { left: "72%", top: "8%" }, delay: "-3.6s" },
+  { id: "b4", size: 60, style: { left: "8%", top: "72%" }, delay: "-0.8s" },
+  { id: "b5", size: 26, style: { left: "12%", top: "18%" }, delay: "-1s" },
+  { id: "b6", size: 14, hue: "green", style: { left: "22%", top: "62%" }, delay: "-2.6s" },
+  { id: "b7", size: 34, hue: "violet", style: { left: "68%", top: "12%" }, delay: "-0.5s" },
+  { id: "b8", size: 18, style: { left: "78%", top: "70%" }, delay: "-3.3s" },
+  { id: "b9", size: 10, hue: "green", style: { left: "50%", top: "82%" }, delay: "-1.8s" },
+  { id: "b10", size: 12, hue: "violet", style: { left: "40%", top: "30%" }, delay: "-4s" },
+];
+
 export default function LoginPage({ role }) {
   const isAgency = role === "agency";
   const [email, setEmail] = useState("");
@@ -12,6 +27,32 @@ export default function LoginPage({ role }) {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // burbujas que están a mitad del estallido (animando) vs. las que ya
+  // reventaron y están "de vacaciones" antes de volver a aparecer solas
+  const [burstingIds, setBurstingIds] = useState(() => new Set());
+  const [poppedIds, setPoppedIds] = useState(() => new Set());
+
+  function popBubble(id) {
+    if (burstingIds.has(id) || poppedIds.has(id)) return;
+    setBurstingIds((prev) => new Set(prev).add(id));
+    setTimeout(() => {
+      setBurstingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      setPoppedIds((prev) => new Set(prev).add(id));
+      const respawnDelay = 1600 + Math.random() * 1400;
+      setTimeout(() => {
+        setPoppedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }, respawnDelay);
+    }, 420);
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -33,19 +74,20 @@ export default function LoginPage({ role }) {
   return (
     <div style={pageStyle}>
       <div className="g54-gradient" style={introStyle}>
-        {/* burbujas grandes, protagonistas — sin miedo al tamaño */}
-        <span className="vox54-amb" style={{ width: 130, height: 130, left: "-4%", top: "-6%", animationDelay: "-1s" }} />
-        <span className="vox54-amb violet" style={{ width: 95, height: 95, right: "-3%", top: "58%", animationDelay: "-2.4s" }} />
-        <span className="vox54-amb green" style={{ width: 70, height: 70, left: "72%", top: "8%", animationDelay: "-3.6s" }} />
-        <span className="vox54-amb" style={{ width: 60, height: 60, left: "8%", top: "72%", animationDelay: "-0.8s" }} />
-
-        {/* burbujas chicas, de textura, como ya estaban */}
-        <span className="vox54-amb" style={{ width: 26, height: 26, left: "12%", top: "18%", animationDelay: "-1s" }} />
-        <span className="vox54-amb green" style={{ width: 14, height: 14, left: "22%", top: "62%", animationDelay: "-2.6s" }} />
-        <span className="vox54-amb violet" style={{ width: 34, height: 34, left: "68%", top: "12%", animationDelay: "-0.5s" }} />
-        <span className="vox54-amb" style={{ width: 18, height: 18, left: "78%", top: "70%", animationDelay: "-3.3s" }} />
-        <span className="vox54-amb green" style={{ width: 10, height: 10, left: "50%", top: "82%", animationDelay: "-1.8s" }} />
-        <span className="vox54-amb violet" style={{ width: 12, height: 12, left: "40%", top: "30%", animationDelay: "-4s" }} />
+        {/* burbujas decorativas — clickeables, estallan y vuelven a aparecer solas */}
+        {AMB_BUBBLES.map((b) => {
+          if (poppedIds.has(b.id)) return null;
+          const bursting = burstingIds.has(b.id);
+          return (
+            <span
+              key={b.id}
+              aria-hidden="true"
+              className={`vox54-amb poppable ${b.hue || ""} ${bursting ? "bursting" : ""}`}
+              style={{ width: b.size, height: b.size, animationDelay: b.delay, ...b.style }}
+              onClick={() => popBubble(b.id)}
+            />
+          );
+        })}
 
         <div style={introContentStyle}>
           <Logo />

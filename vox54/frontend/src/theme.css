@@ -129,6 +129,14 @@ textarea:focus {
   50% { transform: translateY(-9px); }
 }
 
+/* mismo flote que vox54-floaty pero con un margen de movimiento mucho más
+   chico — para las burbujas decorativas del fondo (vox54-amb), que antes se
+   sentían demasiado sueltas moviéndose -9px sin importar su tamaño real */
+@keyframes vox54-floaty-amb {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
 @keyframes vox54-floaty-soft {
   0%, 100% { transform: translateY(0) scale(1); }
   50% { transform: translateY(-6px) scale(1.04); }
@@ -140,6 +148,24 @@ textarea:focus {
   62% { transform: scale(1.16, 0.88); }
   82% { transform: scale(0.95, 1.05); }
   100% { transform: scale(1); }
+}
+
+@keyframes vox54-fadein {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* la burbuja se infla y se desvanece — el "estallido" en sí */
+@keyframes vox54-burst {
+  0% { transform: scale(1); opacity: 1; }
+  40% { transform: scale(1.35); opacity: 0.9; }
+  100% { transform: scale(0.2); opacity: 0; }
+}
+
+/* onda expansiva del estallido — un aro que crece y se disuelve */
+@keyframes vox54-shock {
+  0% { transform: scale(0.6); opacity: 0.75; }
+  100% { transform: scale(2.6); opacity: 0; }
 }
 
 .vox54-bubblefield {
@@ -162,7 +188,27 @@ textarea:focus {
     radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95), transparent 45%),
     rgba(147, 197, 253, 0.32);
   border: 1px solid rgba(255,255,255,0.55);
-  animation: vox54-floaty 5s ease-in-out infinite;
+  animation: vox54-floaty-amb 5s ease-in-out infinite, vox54-fadein 0.5s ease-out;
+}
+
+/* variante clickeable — solo donde de verdad hace falta (login), para no
+   volver interactivas las burbujas decorativas de fondo del dock de nav */
+.vox54-amb.poppable {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.vox54-amb.bursting {
+  animation: vox54-burst 0.42s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+
+.vox54-amb.bursting::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.75);
+  animation: vox54-shock 0.5s ease-out forwards;
 }
 
 .vox54-amb.green {
@@ -304,4 +350,8 @@ textarea:focus {
 @media (prefers-reduced-motion: reduce) {
   .vox54-amb, .vox54-navcol, .vox54-notif { animation: none; }
   .vox54-navbubble.popping { animation: none; }
+  /* estas dos tienen más especificidad que .vox54-amb de arriba (2 clases,
+     y una pseudo-clase ::after aparte) — sin declararlas acá explícito
+     seguirían animando aunque el usuario haya pedido menos movimiento */
+  .vox54-amb.bursting, .vox54-amb.bursting::after { animation: none; }
 }
