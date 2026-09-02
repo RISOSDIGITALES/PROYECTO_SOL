@@ -1,12 +1,15 @@
 // "Pop" sintético para el estallido de las burbujas — sin depender de
 // ningún archivo de audio externo (nada que descargar, licenciar ni
-// alojar). Un pop de burbuja real es, sobre todo, un chasquido — un
-// golpe corto y seco, casi todo ruido — con apenas un resonancia suave
-// por debajo que se apaga enseguida; no es un tono que se escucha solo.
-// Por eso acá el "snap" (ruido filtrado, decayendo rapidísimo) es la
-// capa protagonista y el "boop" (un seno corto) queda muy por debajo,
-// como cola, no como voz principal — la primera versión tenía esto al
-// revés y sonaba más a un blip electrónico que a un reviente real.
+// alojar). Segundo rediseño: la versión anterior (ruido dominante,
+// tipo "crack") sonaba más a chasquido/estática que a un "pop" real —
+// feedback directo: "prefiero un sonido más pop". Un pop reconocible
+// (burbuja de chicle, corcho, el sonido clásico de una UI) es sobre
+// todo TONAL — un golpe muy corto seguido de un tono redondo que cae
+// de tono rápido — con apenas un click brevísimo al inicio para el
+// ataque percusivo (la "p" de "pop"), no una ráfaga de ruido sostenida.
+// Acá el tono manda: 2 osciladores (fundamental + una octava arriba,
+// más suave, para que suene redondo y no delgado) con una caída de
+// tono marcada, y el click queda reducido a una chispa de 3ms.
 // Mantenido bajo a propósito (sutil, nunca un efecto que llame la
 // atención). Un solo AudioContext compartido, reusado en cada estallido.
 let audioCtx = null;
@@ -32,68 +35,77 @@ export function playPopSound(size = 20) {
     if (ctx.state === "suspended") ctx.resume();
 
     const now = ctx.currentTime;
-    const baseFreq = 1500 - Math.min(size, 130) * 5;
-    const jitter = 0.9 + Math.random() * 0.2;
+    const baseFreq = 820 - Math.min(size, 130) * 2.6;
+    const jitter = 0.92 + Math.random() * 0.16;
     const freq = baseFreq * jitter;
 
-    // --- capa 1: el chasquido — la parte que realmente hace que suene
-    // a "pop" y no a un pitido. Ruido filtrado con un pasa-banda angosto
-    // que se desliza hacia abajo muy rápido, y una caída de volumen
-    // todavía más rápida que la del propio buffer (doble envolvente) —
-    // el golpe seco de una membrana reventando, no un "shh" sostenido.
-    const noiseDur = 0.035;
-    const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * noiseDur));
-    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = noiseBuffer.getChannelData(0);
+    // --- capa 1: el click — una chispa brevísima (3ms) que le da el
+    // ataque percusivo del inicio, la "p" de "pop"; casi imperceptible
+    // por separado, solo define el golpe antes de que entre el tono.
+    const clickDur = 0.003;
+    const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * clickDur));
+    const clickBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = clickBuffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.12));
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
     }
-    const noise = ctx.createBufferSource();
-    noise.buffer = noiseBuffer;
+    const click = ctx.createBufferSource();
+    click.buffer = clickBuffer;
+    const clickFilter = ctx.createBiquadFilter();
+    clickFilter.type = "lowpass";
+    clickFilter.frequency.value = freq * 4;
+    const clickGain = ctx.createGain();
+    clickGain.gain.setValueAtTime(0.09, now);
+    clickGain.gain.exponentialRampToValueAtTime(0.0001, now + clickDur);
+    click.connect(clickFilter);
+    clickFilter.connect(clickGain);
+    clickGain.connect(ctx.destination);
 
-    const noiseFilter = ctx.createBiquadFilter();
-    noiseFilter.type = "bandpass";
-    noiseFilter.Q.value = 3.2;
-    noiseFilter.frequency.setValueAtTime(freq * 3, now);
-    noiseFilter.frequency.exponentialRampToValueAtTime(freq * 0.9, now + 0.035);
-
-    const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.24, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.035);
-
-    noise.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.connect(ctx.destination);
-
-    // --- capa 2: la resonancia — una cola tonal muy discreta por debajo
-    // del chasquido, apenas perceptible por separado; le da cuerpo sin
-    // convertirse en un tono que se escuche solo.
+    // --- capa 2: el cuerpo del pop — el tono que manda. Fundamental +
+    // una octava arriba más suave (le da redondez, evita que suene
+    // delgado/sintético) — ambos con la misma caída de tono marcada,
+    // el contorno que reconocemos como "pop" en vez de un pitido plano.
     const osc = ctx.createOscillator();
     const oscGain = ctx.createGain();
     osc.type = "sine";
-    osc.frequency.setValueAtTime(freq * 1.3, now);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(freq * 0.55, 90), now + 0.07);
-
+    osc.frequency.setValueAtTime(freq * 1.7, now);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(freq * 0.45, 110), now + 0.075);
     oscGain.gain.setValueAtTime(0.0001, now);
-    oscGain.gain.exponentialRampToValueAtTime(0.022, now + 0.004);
-    oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
-
+    oscGain.gain.exponentialRampToValueAtTime(0.075, now + 0.004);
+    oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
     osc.connect(oscGain);
     oscGain.connect(ctx.destination);
 
-    noise.start(now);
-    noise.stop(now + noiseDur);
+    const osc2 = ctx.createOscillator();
+    const osc2Gain = ctx.createGain();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(freq * 3.4, now);
+    osc2.frequency.exponentialRampToValueAtTime(Math.max(freq * 0.9, 220), now + 0.06);
+    osc2Gain.gain.setValueAtTime(0.0001, now);
+    osc2Gain.gain.exponentialRampToValueAtTime(0.025, now + 0.003);
+    osc2Gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
+    osc2.connect(osc2Gain);
+    osc2Gain.connect(ctx.destination);
+
+    click.start(now);
+    click.stop(now + clickDur);
     osc.start(now);
-    osc.stop(now + 0.1);
+    osc.stop(now + 0.11);
+    osc2.start(now);
+    osc2.stop(now + 0.08);
 
     osc.onended = () => {
       osc.disconnect();
       oscGain.disconnect();
     };
-    noise.onended = () => {
-      noise.disconnect();
-      noiseFilter.disconnect();
-      noiseGain.disconnect();
+    osc2.onended = () => {
+      osc2.disconnect();
+      osc2Gain.disconnect();
+    };
+    click.onended = () => {
+      click.disconnect();
+      clickFilter.disconnect();
+      clickGain.disconnect();
     };
   } catch {
     // el sonido nunca debe romper el estallido visual si algo falla acá
