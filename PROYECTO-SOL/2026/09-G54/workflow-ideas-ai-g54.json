@@ -1,5 +1,16 @@
 {
+  "id": "nHawWPIIu51ABBgl",
   "name": "🧠 Ideas AI — RRSS G54",
+  "description": null,
+  "active": true,
+  "activeVersionId": "1b191d20-636e-45cd-815a-869d509451b9",
+  "createdAt": "2026-07-13T20:46:43.062Z",
+  "updatedAt": "2026-09-02T15:59:13.558Z",
+  "isArchived": false,
+  "versionId": "1b191d20-636e-45cd-815a-869d509451b9",
+  "versionCounter": 24,
+  "sourceWorkflowId": null,
+  "triggerCount": 2,
   "nodes": [
     {
       "id": "ideas-webhook",
@@ -81,9 +92,10 @@
         "specifyBody": "json",
         "jsonBody": "={{ { \"company_id\": $json.company_id, \"modo\": \"semanal\" } }}",
         "options": {
-          "timeout": 20000
+          "timeout": 240000
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -1192,7 +1204,1255 @@
       ]
     }
   },
+  "nodeGroups": [],
   "settings": {
     "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:⏰ Trigger Semanal (Ideas)": {
+      "recurrenceRules": [
+        null
+      ],
+      "recurrenceRuleSignatures": [
+        null
+      ]
+    }
+  },
+  "pinData": null,
+  "meta": null,
+  "tags": [],
+  "shared": [
+    {
+      "role": "workflow:owner",
+      "workflowId": "nHawWPIIu51ABBgl",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-07-13T20:46:43.067Z",
+      "updatedAt": "2026-07-13T20:46:43.067Z"
+    }
+  ],
+  "activeVersion": {
+    "versionId": "1b191d20-636e-45cd-815a-869d509451b9",
+    "workflowId": "nHawWPIIu51ABBgl",
+    "nodes": [
+      {
+        "id": "ideas-webhook",
+        "name": "🔔 Webhook: Generar Ideas",
+        "type": "n8n-nodes-base.webhook",
+        "position": [
+          200,
+          300
+        ],
+        "typeVersion": 2,
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "ideas-ai-g54",
+          "options": {},
+          "responseMode": "responseNode"
+        },
+        "webhookId": "b2014051-d152-43db-b814-d7df00b7ecb6"
+      },
+      {
+        "id": "ideas-schedule",
+        "name": "⏰ Trigger Semanal (Ideas)",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "position": [
+          200,
+          480
+        ],
+        "typeVersion": 1.2,
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "cronExpression",
+                "expression": "0 7 * * 1"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "ideas-get-companies",
+        "name": "🏢 Obtener Empresas Activas (G54)",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          420,
+          480
+        ],
+        "typeVersion": 4.2,
+        "parameters": {
+          "url": "https://apigrowth.mdarthurdigital.com/api/n8n/companies",
+          "options": {}
+        }
+      },
+      {
+        "id": "ideas-filter-companies",
+        "name": "🔧 Filtrar Empresas Activas",
+        "type": "n8n-nodes-base.code",
+        "position": [
+          640,
+          480
+        ],
+        "typeVersion": 2,
+        "parameters": {
+          "jsCode": "const companies = $input.first().json.data || [];\nreturn companies.filter(c => c.is_active).map(c => ({ json: { company_id: c.id, name: c.name } }));"
+        }
+      },
+      {
+        "id": "ideas-dispatch-self",
+        "name": "📢 Disparar Ideas AI (self)",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          860,
+          480
+        ],
+        "typeVersion": 4.2,
+        "parameters": {
+          "method": "POST",
+          "url": "https://n8n.mdarthurdigital.com/webhook/ideas-ai-g54",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ { \"company_id\": $json.company_id, \"modo\": \"semanal\" } }}",
+          "options": {
+            "timeout": 240000
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "g54-base-url",
+                "name": "G54_BASE_URL",
+                "value": "https://apigrowth.mdarthurdigital.com",
+                "type": "string"
+              },
+              {
+                "id": "g54-n8n-token",
+                "name": "G54_N8N_TOKEN",
+                "value": "",
+                "type": "string"
+              },
+              {
+                "id": "g54-agent-token",
+                "name": "G54_AGENT_TOKEN",
+                "value": "REDACTED_AGENT_TOKEN",
+                "type": "string"
+              },
+              {
+                "id": "g54-company-id",
+                "name": "G54_COMPANY_ID",
+                "value": "={{ $('🔔 Webhook: Generar Ideas').item.json.body.company_id }}",
+                "type": "string"
+              },
+              {
+                "id": "g54-plan-horizonte",
+                "name": "G54_PLAN_HORIZONTE",
+                "value": "3 meses",
+                "type": "string"
+              },
+              {
+                "id": "g54-frecuencia",
+                "name": "G54_FRECUENCIA_SEMANAL",
+                "value": "3",
+                "type": "string"
+              },
+              {
+                "id": "google-search-key",
+                "name": "GOOGLE_SEARCH_KEY",
+                "value": "",
+                "type": "string"
+              },
+              {
+                "id": "google-search-cx",
+                "name": "GOOGLE_SEARCH_CX",
+                "value": "",
+                "type": "string"
+              },
+              {
+                "id": "groq-key-v3",
+                "name": "GROQ_API_KEY",
+                "value": "",
+                "type": "string"
+              },
+              {
+                "id": "gemini-key",
+                "name": "GEMINI_API_KEY",
+                "value": "={{ $vars.GEMINI_API_KEY }}",
+                "type": "string"
+              },
+              {
+                "id": "g54-master-email",
+                "name": "G54_MASTER_EMAIL",
+                "value": "master@growth54.local",
+                "type": "string"
+              },
+              {
+                "id": "g54-master-pass",
+                "name": "G54_MASTER_PASSWORD",
+                "value": "REDACTED_MASTER_PASSWORD",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "config-g54-strat",
+        "name": "⚙️ Config G54",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          420,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54').item.json.G54_COMPANY_ID }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_N8N_TOKEN }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "empresa-g54-strat",
+        "name": "🏢 Obtener Empresa G54",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          640,
+          300
+        ]
+      },
+      {
+        "id": "ideas-get-estrategia",
+        "name": "🎯 Obtener Estrategia G54",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          860,
+          300
+        ],
+        "typeVersion": 4.2,
+        "parameters": {
+          "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54').item.json.G54_COMPANY_ID + '/rrss/estrategia' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_N8N_TOKEN }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "parameters": {
+          "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54').item.json.G54_COMPANY_ID + '/productos-servicios' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_N8N_TOKEN }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "productos-g54-strat",
+        "name": "📦 Obtener Productos G54",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1080,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54').item.json.G54_COMPANY_ID + '/keywords' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_N8N_TOKEN }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "keywords-g54-strat",
+        "name": "🔍 Obtener Keywords G54",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1300,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config G54').item.json.G54_COMPANY_ID + '/social-accounts' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config G54').item.json.G54_N8N_TOKEN }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "obtener-plataformas-g54",
+        "name": "🔗 Obtener Plataformas G54",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          1520,
+          300
+        ],
+        "continueOnFail": true
+      },
+      {
+        "id": "ideas-get-existing",
+        "name": "📋 Obtener Ideas Existentes (G54)",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          1740,
+          300
+        ],
+        "typeVersion": 4.2,
+        "parameters": {
+          "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL }}/api/rrss/ideas",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Build English search query from company data\nconst empresa = $('🏢 Obtener Empresa G54').item.json.data;\nconst industry = (empresa.industry || '').toLowerCase();\nconst city = (empresa.base_city || '').split('/')[1]?.trim() || empresa.base_city || '';\n\n// Map known industry terms to English search queries\nconst industryMap = {\n  'embalaje': 'industrial packaging OR wooden crates OR crating',\n  'crating': 'industrial crating OR wooden crates OR industrial packaging',\n  'packaging': 'industrial packaging OR wooden crates',\n  'logistic': 'logistics OR freight OR supply chain',\n  'transport': 'freight transport OR logistics',\n  'construction': 'construction industry OR building materials',\n  'food': 'food industry OR food packaging',\n  'tech': 'technology industry OR tech innovation',\n};\n\nlet query = industry || 'business news'; // sin industria conocida: genérico, nunca el rubro de otro cliente\nfor (const [key, val] of Object.entries(industryMap)) {\n  if (industry.includes(key)) {\n    query = val;\n    break;\n  }\n}\n\nreturn [{ json: { newsapi_query: query } }];"
+        },
+        "id": "build-newsapi-query",
+        "name": "🔧 Preparar Query NewsAPI",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1960,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "=https://newsapi.org/v2/everything?q={{ encodeURIComponent($('🔧 Preparar Query NewsAPI').item.json.newsapi_query) }}&language=en&sortBy=publishedAt&pageSize=8&apiKey=de29024eefed4c2d813c639e92f73dd6",
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "trend-rss",
+        "name": "📰 NewsAPI: Noticias Sector",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2180,
+          300
+        ],
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "jsCode": "// Extract titles from NewsAPI JSON response\nconst resp = $input.item.json;\n\nconst articles = resp.articles || [];\nconst titles = articles\n  .filter(a => a.title && a.title !== '[Removed]')\n  .slice(0, 8)\n  .map((a, i) => `${i+1}. ${a.title} (${a.source?.name || ''})`);\n\nconst summary = titles.length > 0\n  ? titles.join('\\n')\n  : 'No recent news found.';\n\nreturn [{ json: {\n  headlines: summary,\n  count: titles.length\n}}];"
+        },
+        "id": "parse-rss-xml-node",
+        "name": "📋 Extraer Titulares News",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2400,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.groq.com/openai/v1/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({\n  model: \"openai/gpt-oss-120b\",\n  messages: [{\n    role: \"system\",\n    content: \"Eres estratega de contenido experto en PYMES latinoamericanas. Analiza titulares de noticias y elige el tema más relevante para redes sociales.\"\n  },{\n    role: \"user\",\n    content: \"Empresa: \" + $('🏢 Obtener Empresa G54').item.json.data.name + \"\\nIndustria: \" + ($('🏢 Obtener Empresa G54').item.json.data.industry || 'su rubro') + \"\\nCiudad: \" + ($('🏢 Obtener Empresa G54').item.json.data.base_city || '') + \"\\nObjetivo: \" + (($('🎯 Obtener Estrategia G54').item.json.data || {}).objetivo || '') + \"\\n\\nTitulares de noticias recientes:\\n\" + $('📋 Extraer Titulares News').item.json.headlines + \"\\n\\nElige UN tema de tendencia actual relevante para esta empresa. Responde SOLO en JSON válido sin markdown:\\n{\\\"topic\\\": \\\"título del post sobre la tendencia\\\", \\\"keyword\\\": \\\"keyword principal\\\", \\\"justificacion\\\": \\\"por qué es relevante\\\", \\\"plataforma\\\": \\\"Instagram\\\", \\\"keyword_en\\\": \\\"término de búsqueda en inglés equivalente, para buscar en NewsAPI\\\"}\"\n  }],\n  max_tokens: 1500,\n  temperature: 0.7\n}) }}",
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          },
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "groqApi"
+        },
+        "id": "trend-ai",
+        "name": "🧠 Groq: Analizar Tendencias",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2620,
+          300
+        ],
+        "continueOnFail": true,
+        "credentials": {
+          "groqApi": {
+            "id": "jORffbRhRNohHT1B",
+            "name": "Groq API"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const raw = $input.item.json.choices?.[0]?.message?.content || '{}';\nlet tema;\ntry { tema = JSON.parse(raw); }\ncatch(e) {\n  const m = raw.match(/\\{[\\s\\S]*?\\}/);\n  try { tema = m ? JSON.parse(m[0]) : {}; } catch(e2) { tema = {}; }\n}\nreturn [{ json: {\n  trend_topic:    tema.topic         || '',\n  trend_keyword:  tema.keyword       || '',\n  trend_justify:  tema.justificacion || '',\n  trend_platform: tema.plataforma    || 'Instagram',\n  trend_keyword_en: tema.keyword_en  || ''\n}}];"
+        },
+        "id": "trend-parse",
+        "name": "🔍 Parsear Tema Tendencia",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2840,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "=https://newsapi.org/v2/everything?q={{ encodeURIComponent($('🔍 Parsear Tema Tendencia').item.json.trend_keyword_en || $('🔍 Parsear Tema Tendencia').item.json.trend_keyword || $('🔍 Parsear Tema Tendencia').item.json.trend_topic) }}&language=en&sortBy=publishedAt&from={{ $now.minus({days:3}).toFormat('yyyy-MM-dd') }}&pageSize=10&apiKey=de29024eefed4c2d813c639e92f73dd6",
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "verify-trend-newsapi",
+        "name": "🔎 Verificar Tendencia NewsAPI",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3060,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const tema = $('🔍 Parsear Tema Tendencia').item.json;\nconst verif = $input.item.json;\n\nconst totalResults = verif.totalResults || 0;\nconst THRESHOLD = 5; // mínimo artículos en últimos 3 días para confirmar tendencia\n\nconst esVerificada = tema.trend_topic && totalResults >= THRESHOLD;\n\nreturn [{ json: {\n  trend_topic:     tema.trend_topic,\n  trend_keyword:   tema.trend_keyword,\n  trend_justify:   tema.trend_justify,\n  trend_platform:  tema.trend_platform,\n  es_tendencia:    esVerificada,\n  trend_verificada: esVerificada,\n  trend_articulos_recientes: totalResults,\n  trend_nota: esVerificada\n    ? `Verificada: ${totalResults} artículos en últimos 3 días`\n    : `No verificada: solo ${totalResults} artículos recientes (mínimo ${THRESHOLD})`\n}}];"
+        },
+        "id": "eval-trend-verification",
+        "name": "✅ Evaluar Verificación Tendencia",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3280,
+          300
+        ]
+      },
+      {
+        "id": "ideas-preparar-contexto",
+        "name": "🔧 Preparar Contexto Ideas",
+        "type": "n8n-nodes-base.code",
+        "position": [
+          3500,
+          300
+        ],
+        "typeVersion": 2,
+        "parameters": {
+          "jsCode": "const cfg      = $('⚙️ Config G54').item.json;\nconst empRaw   = $('🏢 Obtener Empresa G54').item.json;\nconst estRaw   = $('🎯 Obtener Estrategia G54').item.json;\nconst kwRaw    = $('🔍 Obtener Keywords G54').item.json;\nconst ideasRaw = $('📋 Obtener Ideas Existentes (G54)').item.json;\nconst trend    = $('✅ Evaluar Verificación Tendencia').item?.json || {};\n\nconst emp = empRaw.data || empRaw || {};\nconst est = estRaw.data || estRaw || {};\n\nif (!est || !est.objetivo) {\n  throw new Error('No hay estrategia guardada para esta empresa — hay que correr el Strategist AI primero.');\n}\n\n// modo \"semanal\": el trigger automático — genera TODAS las ideas de la semana por plataforma.\n// modo \"regenerar\": el cliente no le gustó una idea puntual pero quiere conservar su keyword —\n//   genera 1 sola idea nueva para ese par keyword+plataforma exacto, sin tocar el resto del plan.\n// modo \"manual\" (default): el botón de generar idea suelta del panel — genera 1 sola idea.\nconst webhookBody = $('🔔 Webhook: Generar Ideas').item.json.body || {};\n// Detecta \"regenerar\" tanto por modo explícito como por la sola presencia de idea_id —\n// confirmado el 29-jul que el camino real del panel (vía Content AI -> mode:\"ideas\") reenvía\n// idea_id sin nunca mandar modo:\"regenerar\", así que depender solo del campo modo dejaba\n// el botón \"Regenerar idea\" del panel creando ideas nuevas en vez de regenerar la existente.\nconst modo = webhookBody.modo === 'semanal' ? 'semanal'\n  : (webhookBody.modo === 'regenerar' || webhookBody.idea_id) ? 'regenerar'\n  : 'manual';\n\nconst allKw = (kwRaw.data || kwRaw || []).filter(k => k.estado === 'activa');\nconst ideasExistentes = ideasRaw.data || (Array.isArray(ideasRaw) ? ideasRaw : []);\nconst keywordsUsadas = new Set(ideasExistentes.map(i => (i.keyword || '').toLowerCase().trim()).filter(Boolean));\n\nconst keywordsDisponibles = allKw\n  .map(k => k.keyword)\n  .filter(kw => kw && !keywordsUsadas.has(kw.toLowerCase().trim()));\n\nconst plataformasEstrategia = (est.plataformas && est.plataformas.length) ? est.plataformas : ['Instagram', 'Facebook'];\n\n// --- Desglose por plataforma: parsea est.frecuencia formato \"Facebook 3x/sem, Instagram 2x/sem\" ---\nfunction parsearDesglose(frecuenciaStr, plataformas, frecuenciaEstructurada) {\n  const resultado = {};\n  // Preferir frecuencia_estructurada (calculada por G54 directamente, sin parsear texto\n  // libre) sobre el regex propio — mismo formato {\"Facebook\":2,\"Instagram\":1}, más\n  // confiable porque no depende de que la IA redacte la frecuencia con una forma exacta.\n  if (frecuenciaEstructurada && typeof frecuenciaEstructurada === 'object') {\n    for (const [plat, cupo] of Object.entries(frecuenciaEstructurada)) {\n      const match = plataformas.find(p => p.toLowerCase() === String(plat).toLowerCase().trim());\n      if (match && Number(cupo) > 0) resultado[match] = Number(cupo);\n    }\n  }\n  if (Object.keys(resultado).length === 0 && frecuenciaStr) {\n    const regex = /([A-Za-zÀ-ÿ]+)\\s*(\\d+)\\s*x\\s*\\/?\\s*sem/gi;\n    let m;\n    while ((m = regex.exec(frecuenciaStr)) !== null) {\n      const plat = plataformas.find(p => p.toLowerCase() === m[1].toLowerCase().trim());\n      if (plat) resultado[plat] = parseInt(m[2], 10);\n    }\n  }\n  // Fallback si no se pudo parsear nada del campo frecuencia: repartir parejo entre las plataformas\n  if (Object.keys(resultado).length === 0) {\n    const total = Number(cfg.G54_FRECUENCIA_SEMANAL) || 3;\n    const base = Math.floor(total / plataformas.length);\n    const resto = total % plataformas.length;\n    plataformas.forEach((p, i) => { resultado[p] = base + (i < resto ? 1 : 0); });\n  } else {\n    // Cualquier plataforma activa en la estrategia que no esté mencionada en el texto de\n    // frecuencia (ej: se agregó después de generar la estrategia, sin regenerarla) recibe\n    // un cupo mínimo por defecto en vez de quedar en 0 ideas para siempre.\n    const DEFAULT_CUPO_PLATAFORMA_NUEVA = 1;\n    plataformas.forEach(p => {\n      if (!(p in resultado)) resultado[p] = DEFAULT_CUPO_PLATAFORMA_NUEVA;\n    });\n  }\n  return resultado;\n}\n\nlet asignaciones;\nlet idea_id = null;\nlet usaTendencia = false;\n\nif (modo === 'regenerar') {\n  // Cupo fijo de 1: la keyword y plataforma ya vienen decididas por el panel — no se\n  // excluyen por \"ya usadas\" (es intencional reusar la misma keyword) ni se reparte por desglose.\n  idea_id = webhookBody.idea_id || null;\n  if (!idea_id) {\n    throw new Error('modo=regenerar requiere idea_id en el body del webhook.');\n  }\n  // keyword/platform: preferí lo que venga explícito en el body, si no, resolvelo de la\n  // propia idea existente (ya cargada en ideasExistentes) — el camino real del panel solo\n  // manda idea_id, sin keyword/platform, así que sin este fallback siempre tiraba error.\n  const ideaExistente = ideasExistentes.find(i => String(i.id) === String(idea_id));\n  const keyword = webhookBody.keyword || (ideaExistente && ideaExistente.keyword);\n  const platform = webhookBody.platform || (ideaExistente && ideaExistente.platform);\n  if (!keyword || !platform) {\n    throw new Error(`No se pudo resolver keyword/platform para idea_id=${idea_id} — no vinieron en el body ni se encontró la idea en la lista de ideas existentes.`);\n  }\n  asignaciones = [{ keyword, platform }];\n} else {\n  const desglose = parsearDesglose(est.frecuencia, plataformasEstrategia, est.frecuencia_estructurada);\n\n  // --- Armar los \"cupos\" (uno por idea a generar) según el modo ---\n  let slots = [];\n  if (modo === 'semanal') {\n    for (const [plat, cantidad] of Object.entries(desglose)) {\n      for (let i = 0; i < cantidad; i++) slots.push({ platform: plat });\n    }\n    if (slots.length === 0) slots.push({ platform: plataformasEstrategia[0] });\n  } else {\n    // manual: 1 sola idea, en la plataforma con más cupo semanal según la estrategia\n    const platDefault = Object.entries(desglose).sort((a, b) => b[1] - a[1])[0]?.[0] || plataformasEstrategia[0];\n    slots = [{ platform: platDefault }];\n  }\n\n  // Si hay tendencia verificada y hay más de 1 cupo en modo semanal, el último cupo se reserva para la tendencia\n  usaTendencia = !!(trend.trend_verificada && trend.trend_topic) && slots.length > 1;\n  let slotsKeyword = slots;\n  if (usaTendencia) {\n    // El cupo de tendencia se le quita a la plataforma con MÁS ideas asignadas esa semana —\n    // nunca a una que solo tenga 1, para no dejarla sin publicar nada por perder su único turno.\n    const conteoPorPlataforma = {};\n    for (const s of slots) conteoPorPlataforma[s.platform] = (conteoPorPlataforma[s.platform] || 0) + 1;\n    const [platConMasCupos] = Object.entries(conteoPorPlataforma).sort((a, b) => b[1] - a[1])[0];\n    const idxAQuitar = slots.findIndex(s => s.platform === platConMasCupos);\n    slotsKeyword = slots.filter((_, i) => i !== idxAQuitar);\n  }\n\n  // Asignar una keyword real a cada cupo (recicla desde el principio de la lista completa si no alcanzan las sin usar)\n  let pool = keywordsDisponibles.length >= slotsKeyword.length ? keywordsDisponibles : allKw.map(k => k.keyword);\n  if (pool.length === 0) {\n    throw new Error('No hay keywords activas configuradas en G54 para esta empresa.');\n  }\n  asignaciones = slotsKeyword.map((slot, i) => ({ keyword: pool[i % pool.length], platform: slot.platform }));\n}\n\nconst keywordsListado = asignaciones.map((a, i) => `${i + 1}. keyword: \"${a.keyword}\" → plataforma: ${a.platform}`).join('\\n');\n\nconst now = new Date();\nconst startOfYear = new Date(now.getFullYear(), 0, 1);\nconst weekNum = Math.ceil(((now - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);\n\nconst prompt = `Actúa como especialista en contenido SEO/AEO para redes sociales B2B.\n\nREGLA DE IDIOMA — OBLIGATORIA: cada keyword de la lista de abajo puede venir en un idioma distinto (ya viene en el idioma real que prefiere ese cliente o mercado, decidido antes de esta etapa). Para CADA idea que generes, escribe el \"topic\" y el \"angulo\" en el MISMO idioma exacto en que está escrita SU keyword — nunca traduzcas ni uses un solo idioma para todas las ideas del lote. Si una keyword está en inglés, esa idea va en inglés; si está en español, esa idea va en español; y así con cualquier otro idioma que reconozcas.\n\nCONTEXTO DE LA EMPRESA:\nNegocio: ${emp.name || ''}\nIndustria: ${emp.industry || ''}\nCiudad base: ${emp.base_city || ''}\n\nESTRATEGIA YA APROBADA (no la modifiques, solo síguela):\nObjetivo: ${est.objetivo || ''}\nAudiencia: ${est.audiencia || ''}\nTono: ${est.tono || ''}\nPilares de contenido: ${(est.pilares || []).join(', ')}\n${modo === 'regenerar' ? '\\nESTA ES UNA REGENERACIÓN: al cliente no le gustó la idea anterior para esta keyword, pero quiere conservar la keyword. Genera un título y ángulo DIFERENTES a lo obvio/genérico, con otro enfoque para la misma keyword.\\n' : ''}\nTU TAREA: generar EXACTAMENTE ${asignaciones.length} ideas — una por cada combinación de keyword+plataforma de esta lista, EN ESTE ORDEN, ya asignadas:\n${keywordsListado}\n\nREGLA ABSOLUTA DE COHERENCIA — proceso obligatorio KEYWORD → IDEA (nunca al revés):\n1. Para cada keyword de la lista, primero identifica cuál es la intención de búsqueda real de ESA keyword específica.\n2. Después crea un título de idea que responda DIRECTAMENTE a esa intención — mismo tema que la keyword, no un tema relacionado ni general de la empresa.\n3. PROHIBIDO: inventar un título primero y después pegarle cualquier keyword de la lista solo porque sobraba. Cada keyword es el origen del título, no una etiqueta después del hecho.\n4. Para cada idea agrega el campo \"angulo\": una frase corta que explique por qué ese título responde exactamente a esa keyword.\n5. Respeta la plataforma ya asignada a cada keyword — no la cambies.\n\nEntrega ÚNICAMENTE un JSON válido con esta estructura exacta (sin markdown, sin texto extra):\n{\n  \"ideas\": [\n    {\"keyword\": \"la keyword EXACTA tal como te la di\", \"topic\": \"título del post que responde a esa keyword\", \"angulo\": \"por qué este título responde a esta keyword\", \"tipo\": \"TOFU|MOFU|BOFU\", \"platform\": \"la plataforma ya asignada a esa keyword\"}\n  ]\n}\n\nGenera exactamente ${asignaciones.length} ideas, una por keyword, en el mismo orden de la lista, respetando la plataforma indicada para cada una.`;\n\nreturn [{ json: {\n  prompt,\n  modo,\n  idea_id,\n  company_id: Number(cfg.G54_COMPANY_ID) || 1,\n  asignaciones,\n  weekNum,\n  trend_verificada: usaTendencia,\n  trend_topic: trend.trend_topic || '',\n  trend_keyword: trend.trend_keyword || '',\n  trend_justify: trend.trend_justify || '',\n  trend_platform: trend.trend_platform || plataformasEstrategia[0],\n}}];"
+        }
+      },
+      {
+        "id": "ideas-gemini",
+        "name": "🧠 Gemini: Generar Ideas",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          3720,
+          300
+        ],
+        "typeVersion": 4.2,
+        "parameters": {
+          "method": "POST",
+          "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={{ $('⚙️ Config G54').item.json.GEMINI_API_KEY }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":{{ JSON.stringify($json.prompt) }}}]}],\"generationConfig\":{\"temperature\":0.6,\"maxOutputTokens\":4096}}",
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "ideas-if-gemini",
+        "name": "🔀 ¿Gemini OK? (Ideas)",
+        "type": "n8n-nodes-base.if",
+        "position": [
+          3940,
+          300
+        ],
+        "typeVersion": 2,
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 1
+            },
+            "conditions": [
+              {
+                "id": "check-cand",
+                "leftValue": "={{ $json.candidates?.length || 0 }}",
+                "rightValue": 0,
+                "operator": {
+                  "type": "number",
+                  "operation": "gt"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.groq.com/openai/v1/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({\n  model: 'openai/gpt-oss-120b',\n  messages: [\n    { role: 'system', content: 'Eres un estratega senior de marketing digital especializado en SEO, AEO y GEO. Responde ÚNICAMENTE con JSON válido, sin markdown ni texto adicional.' },\n    { role: 'user',   content: $('🔧 Preparar Contexto Ideas').item.json.prompt }\n  ],\n  temperature: 0.7,\n  max_tokens: 8000\n}) }}",
+          "options": {},
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "groqApi"
+        },
+        "id": "ideas-groq-fallback",
+        "name": "🧠 Groq: Fallback Ideas",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3940,
+          460
+        ],
+        "continueOnFail": true,
+        "credentials": {
+          "groqApi": {
+            "id": "jORffbRhRNohHT1B",
+            "name": "Groq API"
+          }
+        }
+      },
+      {
+        "id": "ideas-parse-validate",
+        "name": "🔍 Parsear y Validar Ideas",
+        "type": "n8n-nodes-base.code",
+        "position": [
+          4160,
+          300
+        ],
+        "typeVersion": 2,
+        "parameters": {
+          "jsCode": "const ctx = $('🔧 Preparar Contexto Ideas').item.json;\nconst raw = $input.item.json.choices?.[0]?.message?.content\n  || $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text\n  || '{}';\n\nlet parsed;\ntry { parsed = JSON.parse(raw); }\ncatch (e) {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  try { parsed = m ? JSON.parse(m[0]) : {}; } catch (e2) { parsed = {}; }\n}\n\nconst ideasRaw = Array.isArray(parsed.ideas) ? parsed.ideas : [];\n\n// asignaciones = [{keyword, platform}] ya decididas por el contexto ANTES de llamar a la IA —\n// la plataforma se fuerza desde aquí, nunca se confía en lo que la IA devuelva en ese campo.\nconst asignadas = new Map(ctx.asignaciones.map(a => [a.keyword.toLowerCase().trim(), a.platform]));\n\nconst ideasValidas = [];\nconst ideasDescartadas = [];\n\nfor (const idea of ideasRaw) {\n  const kw = (idea.keyword || '').toLowerCase().trim();\n  const topic = (idea.topic || '').trim();\n  if (!kw || !asignadas.has(kw)) {\n    ideasDescartadas.push({ motivo: 'keyword no coincide con la lista asignada', idea });\n    continue;\n  }\n  if (!topic || !idea.angulo) {\n    ideasDescartadas.push({ motivo: 'falta topic o angulo de justificación', idea });\n    continue;\n  }\n  ideasValidas.push({\n    topic,\n    tipo: idea.tipo || 'TOFU',\n    keyword: idea.keyword,\n    platform: asignadas.get(kw), // plataforma forzada, no la de la IA\n    semana: ctx.weekNum,\n    estado: 'pendiente',\n    es_tendencia: false,\n    angulo: idea.angulo,\n  });\n}\n\n// Agregar la idea de tendencia si fue verificada y el modo la incluyó como slot\n// (ya viene con su propia justificación del análisis de noticias, no pasa por la IA de ideas)\nif (ctx.trend_verificada && ctx.trend_topic) {\n  ideasValidas.push({\n    topic: ctx.trend_topic,\n    tipo: 'TOFU',\n    keyword: ctx.trend_keyword || '',\n    platform: ctx.trend_platform,\n    semana: ctx.weekNum,\n    estado: 'pendiente',\n    es_tendencia: true,\n    angulo: ctx.trend_justify || '',\n  });\n}\n\nreturn [{ json: {\n  company_id: ctx.company_id,\n  modo: ctx.modo,\n  idea_id: ctx.idea_id || null,\n  ideas: ideasValidas,\n  ideas_descartadas_count: ideasDescartadas.length,\n  ideas_descartadas: ideasDescartadas,\n}}];\n"
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $(\"⚙️ Config G54\").item.json.G54_BASE_URL + \"/api/agent/rrss/ideas\" }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ \"Bearer \" + $(\"⚙️ Config G54\").item.json.G54_AGENT_TOKEN }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json) }}",
+          "options": {}
+        },
+        "id": "guardar-ideas-g54",
+        "name": "💾 Guardar Ideas G54",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          4380,
+          300
+        ],
+        "continueOnFail": true
+      },
+      {
+        "id": "ideas-login",
+        "name": "🔐 G54: Login Sesión",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          640,
+          220
+        ],
+        "typeVersion": 4.2,
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL }}/api/auth/login",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config G54').item.json.G54_MASTER_EMAIL, password: $('⚙️ Config G54').item.json.G54_MASTER_PASSWORD }) }}",
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "ideas-switch-company",
+        "name": "🏢 G54: Cambiar Empresa Activa",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          860,
+          220
+        ],
+        "typeVersion": 4.2,
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL }}/api/auth/switch-company",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ company_id: Number($('⚙️ Config G54').item.json.G54_COMPANY_ID) }) }}",
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": false
+            },
+            "conditions": [
+              {
+                "id": "is-regen",
+                "leftValue": "={{ $json.modo }}",
+                "rightValue": "regenerar",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "if-modo-regenerar",
+        "name": "🔀 ¿Modo Regenerar?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          2600,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "method": "PUT",
+          "url": "={{ $('⚙️ Config G54').item.json.G54_BASE_URL + '/api/rrss/ideas/' + $json.idea_id }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ topic: $json.ideas[0]?.topic || '', angulo: $json.ideas[0]?.angulo || '' }) }}",
+          "options": {}
+        },
+        "id": "http-actualizar-idea-regen",
+        "name": "💾 Actualizar Idea G54 (Regenerar)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2850,
+          120
+        ]
+      },
+      {
+        "id": "respond-regenerar",
+        "name": "📤 Responder Regenerar",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          2380,
+          340
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ { ok: true, idea_id: $('🔍 Parsear y Validar Ideas').item.json.idea_id, topic: $('🔍 Parsear y Validar Ideas').item.json.ideas[0]?.topic || '', angulo: $('🔍 Parsear y Validar Ideas').item.json.ideas[0]?.angulo || '' } }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "respond-guardar",
+        "name": "📤 Responder Ideas Generadas",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          2380,
+          500
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ { ok: true, modo: $('🔍 Parsear y Validar Ideas').item.json.modo, created: $('🔍 Parsear y Validar Ideas').item.json.ideas.length, ideas: $('🔍 Parsear y Validar Ideas').item.json.ideas } }}",
+          "options": {}
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "1",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty"
+                }
+              }
+            ]
+          }
+        },
+        "id": "if-groq-ok-ideas",
+        "name": "🔀 ¿Groq OK? (Ideas)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          4160,
+          460
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ model: 'glm-4.5-flash', messages: [ { role: 'system', content: 'Eres un estratega senior de marketing digital especializado en SEO, AEO y GEO. Responde ÚNICAMENTE con JSON válido, sin markdown ni texto adicional.' }, { role: 'user', content: $('🔧 Preparar Contexto Ideas').item.json.prompt } ], temperature: 0.7, max_tokens: 8000 }) }}",
+          "options": {},
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth"
+        },
+        "id": "zhipu-fallback-ideas",
+        "name": "🤖 Zhipu: Fallback IA (Ideas)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          4160,
+          610
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "rWF3VkYbayILPZTH",
+            "name": "Zhipu GLM � Fallback IA (G54)"
+          }
+        },
+        "onError": "continueRegularOutput"
+      }
+    ],
+    "connections": {
+      "🔔 Webhook: Generar Ideas": {
+        "main": [
+          [
+            {
+              "node": "⚙️ Config G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "⏰ Trigger Semanal (Ideas)": {
+        "main": [
+          [
+            {
+              "node": "🏢 Obtener Empresas Activas (G54)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🏢 Obtener Empresas Activas (G54)": {
+        "main": [
+          [
+            {
+              "node": "🔧 Filtrar Empresas Activas",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Filtrar Empresas Activas": {
+        "main": [
+          [
+            {
+              "node": "📢 Disparar Ideas AI (self)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "⚙️ Config G54": {
+        "main": [
+          [
+            {
+              "node": "🔐 G54: Login Sesión",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🏢 Obtener Empresa G54": {
+        "main": [
+          [
+            {
+              "node": "🎯 Obtener Estrategia G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🎯 Obtener Estrategia G54": {
+        "main": [
+          [
+            {
+              "node": "📦 Obtener Productos G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📦 Obtener Productos G54": {
+        "main": [
+          [
+            {
+              "node": "🔍 Obtener Keywords G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔍 Obtener Keywords G54": {
+        "main": [
+          [
+            {
+              "node": "🔗 Obtener Plataformas G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔗 Obtener Plataformas G54": {
+        "main": [
+          [
+            {
+              "node": "📋 Obtener Ideas Existentes (G54)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📋 Obtener Ideas Existentes (G54)": {
+        "main": [
+          [
+            {
+              "node": "🔧 Preparar Query NewsAPI",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Preparar Query NewsAPI": {
+        "main": [
+          [
+            {
+              "node": "📰 NewsAPI: Noticias Sector",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📰 NewsAPI: Noticias Sector": {
+        "main": [
+          [
+            {
+              "node": "📋 Extraer Titulares News",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📋 Extraer Titulares News": {
+        "main": [
+          [
+            {
+              "node": "🧠 Groq: Analizar Tendencias",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧠 Groq: Analizar Tendencias": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Tema Tendencia",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔍 Parsear Tema Tendencia": {
+        "main": [
+          [
+            {
+              "node": "🔎 Verificar Tendencia NewsAPI",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔎 Verificar Tendencia NewsAPI": {
+        "main": [
+          [
+            {
+              "node": "✅ Evaluar Verificación Tendencia",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "✅ Evaluar Verificación Tendencia": {
+        "main": [
+          [
+            {
+              "node": "🔧 Preparar Contexto Ideas",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Preparar Contexto Ideas": {
+        "main": [
+          [
+            {
+              "node": "🧠 Gemini: Generar Ideas",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧠 Gemini: Generar Ideas": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Gemini OK? (Ideas)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Gemini OK? (Ideas)": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear y Validar Ideas",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🧠 Groq: Fallback Ideas",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧠 Groq: Fallback Ideas": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Groq OK? (Ideas)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔍 Parsear y Validar Ideas": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Modo Regenerar?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔐 G54: Login Sesión": {
+        "main": [
+          [
+            {
+              "node": "🏢 G54: Cambiar Empresa Activa",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🏢 G54: Cambiar Empresa Activa": {
+        "main": [
+          [
+            {
+              "node": "🏢 Obtener Empresa G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Modo Regenerar?": {
+        "main": [
+          [
+            {
+              "node": "💾 Actualizar Idea G54 (Regenerar)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "💾 Guardar Ideas G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "💾 Actualizar Idea G54 (Regenerar)": {
+        "main": [
+          [
+            {
+              "node": "📤 Responder Regenerar",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "💾 Guardar Ideas G54": {
+        "main": [
+          [
+            {
+              "node": "📤 Responder Ideas Generadas",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Groq OK? (Ideas)": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear y Validar Ideas",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🤖 Zhipu: Fallback IA (Ideas)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 Zhipu: Fallback IA (Ideas)": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear y Validar Ideas",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "createdAt": "2026-09-02T15:59:13.568Z",
+    "updatedAt": "2026-09-02T15:59:13.568Z",
+    "workflowPublishHistory": [
+      {
+        "id": 3079,
+        "workflowId": "nHawWPIIu51ABBgl",
+        "versionId": "1b191d20-636e-45cd-815a-869d509451b9",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-09-02T15:59:13.934Z"
+      }
+    ]
   }
 }

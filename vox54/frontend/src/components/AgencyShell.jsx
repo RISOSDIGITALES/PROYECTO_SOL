@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Logo from "./Logo";
+import PoppableBubbles from "./PoppableBubbles";
 import { useAuth } from "../AuthContext";
 import { api } from "../api";
 
@@ -10,6 +11,23 @@ import { api } from "../api";
 // antes de implementarlo acá (ver ese archivo si hace falta retocar el
 // tratamiento visual — mismas clases, viven en theme.css con el prefijo
 // vox54-).
+
+// Burbujas decorativas de fondo del dock — mismo set y mismo mecanismo
+// interactivo (PoppableBubbles) ya usado en LoginPage y BusinessDashboard,
+// nunca las burbujas de navegación reales (Negocios/Agentes/Configuración/
+// Salir), que siguen con su propio squish de siempre.
+const DOCK_BUBBLES = [
+  { id: "d1", size: 14, style: { left: "6%", bottom: 92 }, delay: "-1.2s" },
+  { id: "d2", size: 9, hue: "green", style: { left: "14%", bottom: 40, filter: "blur(0.4px)" }, delay: "-2.7s" },
+  { id: "d3", size: 20, style: { left: "24%", bottom: 110, filter: "blur(0.5px)" }, delay: "-0.4s" },
+  { id: "d4", size: 10, hue: "violet", style: { left: "36%", bottom: 28 }, delay: "-4.1s" },
+  { id: "d5", size: 11, hue: "green", style: { right: "32%", bottom: 100 }, delay: "-3.4s" },
+  { id: "d6", size: 15, hue: "violet", style: { right: "22%", bottom: 115, filter: "blur(0.4px)" }, delay: "-1.5s" },
+  { id: "d7", size: 16, style: { right: "16%", bottom: 50 }, delay: "-1.8s" },
+  { id: "d8", size: 8, style: { right: "9%", bottom: 108 }, delay: "-2.2s" },
+  { id: "d9", size: 13, hue: "green", style: { right: "6%", bottom: 70 }, delay: "-0.9s" },
+];
+
 export default function AgencyShell({ userName, onLogout, children }) {
   const location = useLocation();
   const { session } = useAuth();
@@ -55,15 +73,7 @@ export default function AgencyShell({ userName, onLogout, children }) {
       <main style={mainScrollStyle}>{children}</main>
 
       <nav className="vox54-bubblefield" aria-label="Navegación de agencia">
-        <span className="vox54-amb" style={{ width: 14, height: 14, left: "6%", bottom: 92, animationDelay: "-1.2s" }} />
-        <span className="vox54-amb green" style={{ width: 9, height: 9, left: "14%", bottom: 40, animationDelay: "-2.7s", filter: "blur(0.4px)" }} />
-        <span className="vox54-amb" style={{ width: 20, height: 20, left: "24%", bottom: 110, animationDelay: "-0.4s", filter: "blur(0.5px)" }} />
-        <span className="vox54-amb violet" style={{ width: 10, height: 10, left: "36%", bottom: 28, animationDelay: "-4.1s" }} />
-        <span className="vox54-amb green" style={{ width: 11, height: 11, right: "32%", bottom: 100, animationDelay: "-3.4s" }} />
-        <span className="vox54-amb violet" style={{ width: 15, height: 15, right: "22%", bottom: 115, animationDelay: "-1.5s", filter: "blur(0.4px)" }} />
-        <span className="vox54-amb" style={{ width: 16, height: 16, right: "16%", bottom: 50, animationDelay: "-1.8s" }} />
-        <span className="vox54-amb" style={{ width: 8, height: 8, right: "9%", bottom: 108, animationDelay: "-2.2s" }} />
-        <span className="vox54-amb green" style={{ width: 13, height: 13, right: "6%", bottom: 70, animationDelay: "-0.9s" }} />
+        <PoppableBubbles bubbles={DOCK_BUBBLES} />
 
         <Link
           to="/agencia"
