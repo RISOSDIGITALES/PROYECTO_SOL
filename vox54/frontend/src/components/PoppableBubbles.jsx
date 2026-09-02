@@ -1,4 +1,5 @@
 import { Fragment, useState } from "react";
+import { playPopSound } from "../popSound";
 
 // Campo de burbujas de vidrio, clickeables — al tocarlas estallan de verdad
 // (destello + aro de onda expansiva + partículas que salen disparadas, no
@@ -28,6 +29,7 @@ export default function PoppableBubbles({ bubbles }) {
 
   function pop(id, size) {
     if (bursting.has(id) || popped.has(id)) return;
+    playPopSound(size);
     setBursting((prev) => {
       const next = new Map(prev);
       next.set(id, shardOffsets(size));
