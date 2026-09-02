@@ -31,7 +31,7 @@ export default function AgencyConfigPage() {
 
   return (
     <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
-      <div style={{ maxWidth: 680, margin: "0 auto", padding: "36px 32px" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "36px 32px" }}>
         <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>Configuración de la agencia</h1>
         <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginBottom: 24 }}>
           Datos de la agencia y de tu cuenta de administrador.
@@ -40,7 +40,7 @@ export default function AgencyConfigPage() {
         {error && <div style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</div>}
 
         {me && (
-          <div style={{ display: "grid", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, alignItems: "start" }}>
             <Card title="Agencia">
               <Row label="Nombre">{me.agency_name}</Row>
               <Row label="Negocios gestionados">
@@ -53,13 +53,15 @@ export default function AgencyConfigPage() {
               <Row label="Correo">{me.email}</Row>
             </Card>
 
-            <Card title="Cambiar contraseña">
-              <ChangePasswordForm
-                onSubmit={(current, next) =>
-                  api.changeAgencyPassword(session.access_token, { current_password: current, new_password: next })
-                }
-              />
-            </Card>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <Card title="Cambiar contraseña">
+                <ChangePasswordForm
+                  onSubmit={(current, next) =>
+                    api.changeAgencyPassword(session.access_token, { current_password: current, new_password: next })
+                  }
+                />
+              </Card>
+            </div>
           </div>
         )}
       </div>

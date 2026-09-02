@@ -67,7 +67,7 @@ export default function AgencyBusinessDetail() {
 
   return (
     <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
-      <div style={{ maxWidth: 680, margin: "0 auto", padding: "36px 32px" }}>
+      <div style={{ maxWidth: 780, margin: "0 auto", padding: "36px 32px" }}>
         <Link to="/agencia/negocios" style={backLink}>← Volver a negocios</Link>
 
         {error && <div style={{ color: "var(--danger)", margin: "16px 0" }}>{error}</div>}

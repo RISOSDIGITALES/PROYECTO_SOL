@@ -4,6 +4,7 @@ import AgencyShell from "../components/AgencyShell";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
+import { firstName } from "../utils";
 
 // Landing real de la agencia (vive en /agencia) — bienvenida + progreso de
 // arranque + un resumen rápido del estado de los agentes. "Negocios" (la
@@ -80,7 +81,7 @@ export default function AgencyHomePage() {
       <div style={{ maxWidth: 1040, margin: "0 auto", padding: "36px 32px" }}>
         <div style={{ marginBottom: 24 }}>
           <div style={eyebrowStyle}>Inicio</div>
-          <h1 style={{ fontSize: 22, color: "var(--ink)", margin: "4px 0" }}>Hola, {me?.name || "…"}</h1>
+          <h1 style={{ fontSize: 22, color: "var(--ink)", margin: "4px 0" }}>Hola, {me ? firstName(me) || me.name : "…"}</h1>
           <p style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>
             Esto es lo que está pasando hoy en {me?.agency_name || "tu agencia"}.
           </p>

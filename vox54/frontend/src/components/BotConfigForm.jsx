@@ -87,10 +87,19 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
 
   return (
     <form onSubmit={onSave} style={{ display: "grid", gap: 24 }}>
-      {error && <div style={bannerStyle("danger")}>{error}</div>}
-      {savedMessage && <div style={bannerStyle("success")}>{savedMessage}</div>}
+      {error && <div style={{ ...bannerStyle("danger"), gridColumn: "1 / -1" }}>{error}</div>}
+      {savedMessage && <div style={{ ...bannerStyle("success"), gridColumn: "1 / -1" }}>{savedMessage}</div>}
 
-      <Section title="Estado del agente">
+      {/* Grid real de 2+ columnas en vez de una sola columna angosta — en
+          una pantalla ancha, apilar 8 tarjetas una debajo de la otra dejaba
+          casi todo el espacio real vacío a los costados. Las secciones
+          cortas (Estado, Telefonía, STT, TTS, Modelo de IA) se emparejan de
+          a 2 por fila; las más largas (Comportamiento, Control de la
+          llamada — tienen textarea/varios toggles) ocupan el ancho completo
+          con `full`, para no dejar un hueco raro al lado de una tarjeta
+          corta. */}
+      <div style={gridStyle}>
+        <Section title="Estado del agente">
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <button
             type="button"
@@ -259,18 +268,28 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
         </>
       )}
 
-      <Section title="Comportamiento del agente">
-        <Field label="Idioma">
-          <select
-            value={config.language}
-            onChange={(e) => onChange({ language: e.target.value })}
-            style={inputStyle}
-          >
-            {catalog.languages.map((l) => (
-              <option key={l.id} value={l.id}>{l.name}</option>
-            ))}
-          </select>
-        </Field>
+      <Section title="Comportamiento del agente" full>
+        <Row>
+          <Field label="Idioma">
+            <select
+              value={config.language}
+              onChange={(e) => onChange({ language: e.target.value })}
+              style={inputStyle}
+            >
+              {catalog.languages.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Correo de escalación (cuando el bot no sabe algo)">
+            <input
+              type="email"
+              value={config.escalation_email}
+              onChange={(e) => onChange({ escalation_email: e.target.value })}
+              style={inputStyle}
+            />
+          </Field>
+        </Row>
         <Field label="Mensaje de bienvenida">
           <input
             value={config.welcome_message}
@@ -278,25 +297,17 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
             style={inputStyle}
           />
         </Field>
-        <Field label="Correo de escalación (cuando el bot no sabe algo)">
-          <input
-            type="email"
-            value={config.escalation_email}
-            onChange={(e) => onChange({ escalation_email: e.target.value })}
-            style={inputStyle}
-          />
-        </Field>
         <Field label="Prompt del sistema">
           <textarea
             value={config.system_prompt}
             onChange={(e) => onChange({ system_prompt: e.target.value })}
-            rows={6}
+            rows={8}
             style={{ ...inputStyle, resize: "vertical", fontFamily: "var(--font)" }}
           />
         </Field>
       </Section>
 
-      <Section title="Control de la llamada">
+      <Section title="Control de la llamada" full>
         <Row>
           <Field label="Quién habla primero">
             <select
@@ -343,29 +354,31 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
           </span>
         </div>
 
-        <Field label="Duración máxima de la llamada (segundos)">
-          <input
-            type="number"
-            min={30}
-            max={7200}
-            value={config.max_duration_seconds}
-            onChange={(e) => onChange({ max_duration_seconds: Number(e.target.value) })}
-            style={inputStyle}
-          />
-        </Field>
+        <Row>
+          <Field label="Duración máxima de la llamada (segundos)">
+            <input
+              type="number"
+              min={30}
+              max={7200}
+              value={config.max_duration_seconds}
+              onChange={(e) => onChange({ max_duration_seconds: Number(e.target.value) })}
+              style={inputStyle}
+            />
+          </Field>
+          <Field label="Transferir a un humano (número, opcional)">
+            <input
+              value={config.transfer_phone_number}
+              onChange={(e) => onChange({ transfer_phone_number: e.target.value })}
+              placeholder="Sin transferencia configurada"
+              style={inputStyle}
+            />
+          </Field>
+        </Row>
         <Field label="Mensaje antes de colgar (opcional)">
           <input
             value={config.end_call_message}
             onChange={(e) => onChange({ end_call_message: e.target.value })}
             placeholder="Ej: Gracias por llamar, que tengas un buen día."
-            style={inputStyle}
-          />
-        </Field>
-        <Field label="Transferir a un humano (número, opcional)">
-          <input
-            value={config.transfer_phone_number}
-            onChange={(e) => onChange({ transfer_phone_number: e.target.value })}
-            placeholder="Sin transferencia configurada"
             style={inputStyle}
           />
         </Field>
@@ -402,6 +415,7 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
           </Field>
         )}
       </Section>
+      </div>
 
       <button type="submit" disabled={saving} className="vox54-btn">
         {saving ? "Guardando…" : "Guardar cambios"}
@@ -410,9 +424,9 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
   );
 }
 
-function Section({ title, children }) {
+function Section({ title, full, children }) {
   return (
-    <div className="vox54-panel" style={{ padding: 20 }}>
+    <div className="vox54-panel" style={{ padding: 20, gridColumn: full ? "1 / -1" : undefined }}>
       <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-soft)", marginBottom: 14 }}>
         {title}
       </div>
@@ -447,6 +461,13 @@ function bannerStyle(kind) {
     color: isDanger ? "var(--danger)" : "var(--success)",
   };
 }
+
+const gridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
+  gap: 20,
+  alignItems: "start",
+};
 
 const labelStyle = {
   display: "block",

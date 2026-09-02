@@ -60,7 +60,7 @@ export default function AgencyBotConfig() {
 
   return (
     <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
-      <div style={{ maxWidth: 680, margin: "0 auto", padding: "36px 32px" }}>
+      <div style={{ maxWidth: 1040, margin: "0 auto", padding: "36px 32px" }}>
         <Link to={`/agencia/negocios/${id}`} style={backLink}>
           ← Volver a {business?.name || "negocio"}
         </Link>

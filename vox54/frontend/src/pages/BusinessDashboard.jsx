@@ -145,69 +145,79 @@ export default function BusinessDashboard() {
         </div>
 
         <main style={mainScrollStyle}>
-          <div style={{ maxWidth: 640, margin: "0 auto", padding: 32 }}>
-          <div className="vox54-panel" style={identityCardStyle}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div className="vox54-avatar" style={avatarStyle}>{initials(me?.business_name)}</div>
-              <div>
-                <h1 style={{ fontSize: 18, color: "var(--ink)", margin: 0 }}>{me?.business_name || "…"}</h1>
-                <div style={{ fontSize: 12, color: "var(--ink-softer)", marginTop: 2 }}>Tu agente de voz</div>
-              </div>
-            </div>
-            {config && <StatusPill status={config.status} />}
-          </div>
-
-          {tab === "calls" && <CallsList calls={calls} loading={calls === null && !callsError} error={callsError} />}
-
-          {tab === "config" && (
-            config && catalog ? (
-              <BotConfigForm
-                config={config}
-                catalog={catalog}
-                onChange={handleChange}
-                onSave={handleSave}
-                saving={saving}
-                savedMessage={savedMessage}
-                error={error}
-                scope="client"
-              />
-            ) : (
-              !error && <div style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>Cargando…</div>
-            )
-          )}
-
-          {tab === "account" && (
-            <div style={{ display: "grid", gap: 16 }}>
-              <div className="vox54-panel" style={accountCardStyle}>
-                <div style={accountCardTitleStyle}>Tu cuenta</div>
-                <Row label="Nombre">{me?.name}</Row>
-                <Row label="Correo">{me?.email}</Row>
-              </div>
-
-              <div className="vox54-panel" style={accountCardStyle}>
-                <div style={accountCardTitleStyle}>Cambiar contraseña</div>
-                <ChangePasswordForm
-                  onSubmit={(current, next) =>
-                    api.changeBusinessPassword(session.access_token, { current_password: current, new_password: next })
-                  }
-                />
-              </div>
-
-              {/* Nunca inventamos un canal de soporte propio — quien gestiona
-                  este negocio es la agencia, así que es a ella a quien hay
-                  que avisarle si algo no funciona. */}
-              {me?.agency_name && (
-                <div className="vox54-panel" style={{ ...accountCardStyle, background: "#eef4ff" }}>
-                  <div style={accountCardTitleStyle}>¿Necesitás ayuda?</div>
-                  <p style={{ fontSize: 13, color: "var(--ink-soft)", margin: 0 }}>
-                    Este bot lo gestiona <strong style={{ color: "var(--ink)" }}>{me.agency_name}</strong>. Si algo no funciona
-                    como esperás o necesitás un cambio que no podés hacer desde acá, contactalos directamente a ellos.
-                  </p>
+          {/* Identidad, llamadas y cuenta son contenido angosto por
+              naturaleza (una tarjeta con 2 datos, filas de lista) — se
+              quedan en una columna de lectura cómoda. La config del bot en
+              cambio ya tiene su propia grilla de 2 columnas (BotConfigForm)
+              y necesita el ancho completo para que esa grilla realmente
+              se note — antes todo compartía el mismo maxWidth angosto y
+              el formulario se veía diminuto en medio de una pantalla ancha. */}
+          <div style={tab === "config" ? wideWrapStyle : narrowWrapStyle}>
+            {tab !== "config" && (
+              <div className="vox54-panel" style={identityCardStyle}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div className="vox54-avatar" style={avatarStyle}>{initials(me?.business_name)}</div>
+                  <div>
+                    <h1 style={{ fontSize: 18, color: "var(--ink)", margin: 0 }}>{me?.business_name || "…"}</h1>
+                    <div style={{ fontSize: 12, color: "var(--ink-softer)", marginTop: 2 }}>Tu agente de voz</div>
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+                {config && <StatusPill status={config.status} />}
+              </div>
+            )}
+
+            {tab === "calls" && <CallsList calls={calls} loading={calls === null && !callsError} error={callsError} />}
+
+            {tab === "config" && (
+              config && catalog ? (
+                <BotConfigForm
+                  config={config}
+                  catalog={catalog}
+                  onChange={handleChange}
+                  onSave={handleSave}
+                  saving={saving}
+                  savedMessage={savedMessage}
+                  error={error}
+                  scope="client"
+                />
+              ) : (
+                !error && <div style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>Cargando…</div>
+              )
+            )}
+
+            {tab === "account" && (
+              <div style={accountGridStyle}>
+                <div className="vox54-panel" style={accountCardStyle}>
+                  <div style={accountCardTitleStyle}>Tu cuenta</div>
+                  <Row label="Nombre">{me?.name}</Row>
+                  <Row label="Correo">{me?.email}</Row>
+                </div>
+
+                {/* Nunca inventamos un canal de soporte propio — quien
+                    gestiona este negocio es la agencia, así que es a ella a
+                    quien hay que avisarle si algo no funciona. */}
+                {me?.agency_name && (
+                  <div className="vox54-panel" style={{ ...accountCardStyle, background: "#eef4ff" }}>
+                    <div style={accountCardTitleStyle}>¿Necesitás ayuda?</div>
+                    <p style={{ fontSize: 13, color: "var(--ink-soft)", margin: 0 }}>
+                      Este bot lo gestiona <strong style={{ color: "var(--ink)" }}>{me.agency_name}</strong>. Si algo no
+                      funciona como esperás o necesitás un cambio que no podés hacer desde acá, contactalos
+                      directamente a ellos.
+                    </p>
+                  </div>
+                )}
+
+                <div className="vox54-panel" style={{ ...accountCardStyle, gridColumn: "1 / -1" }}>
+                  <div style={accountCardTitleStyle}>Cambiar contraseña</div>
+                  <ChangePasswordForm
+                    onSubmit={(current, next) =>
+                      api.changeBusinessPassword(session.access_token, { current_password: current, new_password: next })
+                    }
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </main>
       </div>
     </div>
@@ -245,6 +255,25 @@ const mainScrollStyle = {
   flex: "1 1 auto",
   minHeight: 0,
   overflowY: "auto",
+};
+
+const narrowWrapStyle = {
+  maxWidth: 680,
+  margin: "0 auto",
+  padding: 32,
+};
+
+const wideWrapStyle = {
+  maxWidth: 1040,
+  margin: "0 auto",
+  padding: 32,
+};
+
+const accountGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+  gap: 16,
+  alignItems: "start",
 };
 
 const identityCardStyle = {
