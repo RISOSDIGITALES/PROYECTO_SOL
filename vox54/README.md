@@ -216,7 +216,14 @@ npm run dev
 ```
 
 Abre en `http://localhost:5173` — redirige a `/agencia/login` por defecto.
-El negocio entra por `/negocio/login`.
+El negocio entra por `/negocio/login`. Tras loguearse, la agencia aterriza en
+`/agencia` (Inicio) y el negocio en `/negocio`.
+
+**Si el backend no arranca en el puerto 8000** (ocupado por otro proceso en
+esa máquina): levantalo en otro puerto libre y creá `vox54/frontend/.env`
+(git-ignorado) con `VITE_API_BASE=http://localhost:<ese-puerto>` — ver
+`CLAUDE.md`, sección "Cuidado conocido — proceso zombie en el puerto 8000"
+para el detalle real de por qué puede pasar en Windows.
 
 ### Worker (opcional — solo hace falta si vas a probar una llamada real)
 
@@ -234,22 +241,23 @@ cp .env.example .env   # WORKER_SECRET debe coincidir con el del backend (.env),
 ### Tests
 
 ```bash
-# Backend — 28 tests reales contra una base SQLite en memoria (aislada de
+# Backend — 54 tests reales contra una base SQLite en memoria (aislada de
 # vox54.db), cubren auth, CRUD de negocios, validación de BotConfig
 # (incluyendo el caso crítico de PATCH parcial validado contra lo ya
-# guardado), y el endpoint del worker con su guardia de secreto.
+# guardado), la separación real de campos cliente/agencia, y el endpoint
+# del worker con su guardia de secreto.
 cd vox54/backend
 ./venv/Scripts/python.exe -m pip install -r requirements-dev.txt
 ./venv/Scripts/python.exe -m pytest tests/ -v
 
-# Worker — 13 tests de la lógica de armado del pipeline (qué argumento
+# Worker — 15 tests de la lógica de armado del pipeline (qué argumento
 # real le pasamos a cada plugin según el proveedor elegido), sin ninguna
 # llamada de red — ver el docstring de test_agent.py para por qué esto
 # importa incluso sin poder probar audio real.
 cd vox54/worker
 WORKER_SECRET=test-secret ./venv/Scripts/python.exe -m unittest test_agent -v
 
-# Frontend — 20 tests con Vitest + React Testing Library: manejo de
+# Frontend — 34 tests con Vitest + React Testing Library: manejo de
 # errores del backend (api.js), la guardia de sesión cruzada montada
 # contra un Router real (no mockeado), y el formulario completo de
 # configuración (auto-corrección de desplegables huérfanos, cambio de
@@ -259,12 +267,21 @@ npm install
 npm run test
 ```
 
+Los 3 números de arriba son los reales al 02-sep-2026 (confirmados corriendo
+las 3 suites completas, no de memoria) — si cambian con el tiempo y alguien
+nota que este README quedó desactualizado, el número real siempre gana;
+avisar/corregir acá.
+
 ## Estado actual
 
 - [x] Login de agencia y de negocio, con JWT y roles separados
-- [x] Panel de agencia — lista de negocios, crear negocio nuevo (formulario real,
-      confirmado creando uno de punta a punta), entrar al detalle de cualquiera
-      de los suyos para ver/editar su configuración completa
+- [x] Panel de agencia — Inicio (bienvenida con nombre de pila real, checklist
+      de arranque 100% derivado de datos reales de negocios/agentes, resumen
+      de agentes), lista de negocios en su propia ruta, crear negocio nuevo
+      (formulario real, confirmado creando uno de punta a punta), entrar al
+      detalle de cualquiera de los suyos para ver/editar su configuración
+      completa, inventario de agentes (tabla de todos los bots con su
+      infraestructura real)
 - [x] Panel de negocio — formulario completo del agente: proveedor de voz + voz
       (desplegable en cascada), teléfono asignado, proveedor de IA + modelo
       (desplegable en cascada), API key propia opcional, idioma, mensaje de
@@ -279,10 +296,10 @@ npm run test
       9 casos reales contra el servidor corriendo (válidos e inválidos)
 - [x] Guardia de sesión cruzada en el frontend (`useRequireRole`) — visitar la
       ruta del rol equivocado redirige, en vez de quedarse cargando para siempre
-- [x] Suite de tests automatizados: 28 en el backend (auth, CRUD, validación,
-      aislamiento multi-tenant real entre 2 negocios) + 13 en el worker (qué
+- [x] Suite de tests automatizados: 54 en el backend (auth, CRUD, validación,
+      aislamiento multi-tenant real entre 2 negocios) + 15 en el worker (qué
       arma cada `build_stt`/`build_tts`/`build_llm` según el proveedor, sin
-      red) + 20 en el frontend (Vitest + React Testing Library) — los 61
+      red) + 34 en el frontend (Vitest + React Testing Library) — los 103
       corren limpios hoy
 - [x] Ruta 404 real (antes cualquier URL desconocida mostraba una página
       en blanco), navegación consistente con React Router en todos los
@@ -297,6 +314,14 @@ npm run test
       voz (STT/TTS/LLM) dinámicamente desde `BotConfig`, sin depender de VAPI;
       verificado contra el SDK real instalado, sin poder probar una llamada
       real de punta a punta por falta de credenciales de un proveedor
+- [x] Rebrand a "Bubble 54" — menú lateral (agencia y negocio) con burbujas de
+      vidrio sobre el fondo azul degradado real, clickeables (estallan de
+      verdad con sonido sintetizado, `popSound.js`, y reaparecen solas), misma
+      estética extendida a botones/badges/tarjetas de toda la interfaz. El
+      formulario de configuración del bot pasó de una columna angosta a una
+      grilla real de 2 columnas para no desperdiciar espacio en pantallas
+      anchas — ver "Menú de burbujas" y "Estado actual" en `CLAUDE.md` para
+      el detalle completo de esta parte
 - [ ] Conexión real de punta a punta (una llamada real entrando por un número
       real) — el worker ya está listo, falta una cuenta real de LiveKit +
       Twilio/Telnyx + Deepgram/Cartesia/Groq para probarlo

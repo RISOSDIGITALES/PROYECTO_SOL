@@ -788,12 +788,20 @@ vox54/
     requirements.txt
   frontend/
     src/
-      pages/          — LoginPage, AgencyDashboard, AgencyAgentsPage,
-                         AgencyBusinessDetail, AgencyBotConfig, AgencyConfigPage,
-                         BusinessDashboard, NotFoundPage
-      components/     — AgencyShell (menú lateral), StatusPill, BotConfigForm
+      pages/          — LoginPage, AgencyHomePage (Inicio), AgencyBusinessesPage
+                         (Negocios — antes se llamaba AgencyDashboard, renombrado
+                         02-sep cuando Inicio pasó a ocupar /agencia),
+                         AgencyAgentsPage, AgencyBusinessDetail, AgencyBotConfig,
+                         AgencyConfigPage, BusinessDashboard, NotFoundPage
+      components/     — AgencyShell (menú lateral), PoppableBubbles (burbujas
+                         decorativas clickeables, compartido por LoginPage/
+                         AgencyShell/BusinessDashboard), StatusPill, BotConfigForm
                          (compartido por agencia y negocio), CallsList (idem),
                          ChangePasswordForm (idem), CreateBusinessModal, Logo
+      popSound.js      — sintetiza el "pop" del estallido de una burbuja con
+                         Web Audio API, sin ningún archivo de audio externo
+      utils.js         — initials(), firstName() (nombre de pila para saludos,
+                         con fallback a extraer algo legible del email)
       theme.css        — paleta y tokens (--g54-blue, --g54-navy, --paper, etc.)
     tests: vitest, 34 tests
   worker/
@@ -806,20 +814,21 @@ vox54/
                          livekit-agents + plugins, backend/ no los necesita)
 ```
 
-## Rutas del lado de agencia (reorganizado 2026-08-31)
+## Rutas del lado de agencia (reorganizado 2026-08-31, `/agencia` separado de Negocios el 02-sep)
 
-Antes una sola pantalla mezclaba la identidad del negocio con el formulario completo del bot — separado en 3 áreas distintas, cada una con su propia ruta y su propio trabajo:
+Antes una sola pantalla mezclaba la identidad del negocio con el formulario completo del bot — separado en áreas distintas, cada una con su propia ruta y su propio trabajo:
 
 | Ruta | Qué hace |
 |---|---|
-| `/agencia` | Lista de negocios (grilla de tarjetas, estado real del bot por tarjeta) |
+| `/agencia` | **Inicio** — bienvenida (saludo con nombre de pila real, `firstName()`), checklist de "Primeros pasos" con estado 100% real (creaste un negocio / le asignaste teléfono / lo activaste — cada paso pendiente enlaza directo al negocio real al que le falta), y un resumen de agentes (total/activos/pausados, mismo dato que el inventario) |
+| `/agencia/negocios` | **Negocios** — la grilla de tarjetas que antes vivía en `/agencia` (estado real del bot por tarjeta) — componente `AgencyBusinessesPage.jsx` |
 | `/agencia/agentes` | Inventario de agentes — tabla de todos los bots con su negocio, estado, telefonía/número y modelo de IA reales, resueltos contra el catálogo (`GET /agency/agents`) |
 | `/agencia/configuracion` | Datos de la agencia (solo lectura — sin endpoint de edición todavía) + cuenta del admin logueado (nombre/correo de solo lectura, más cambio de contraseña real) |
 | `/agencia/negocios/:id` | Identidad del negocio — nombre (renombrable), ID, estado, sus llamadas recientes (`CallsList`), y una tarjeta que lleva a su bot |
-| `/agencia/negocios/:id/bot` | Configuración completa del bot de ese negocio (`BotConfigForm`, scope agencia — ve/edita también telefonía/STT/TTS/modelo de IA) |
-| `/negocio` | Dashboard de un negocio logueado directo — 3 secciones controladas por el mismo dock de burbujas de abajo (no rutas reales, estado local): Llamadas (`CallsList`, por defecto, con aviso real si alguna terminó en error), Configuración (mismo `BotConfigForm` pero scope cliente — sin los campos de infraestructura), y Cuenta (cambio de contraseña + el nombre de la agencia que lo gestiona, como único "contacto de soporte" real) |
+| `/agencia/negocios/:id/bot` | Configuración completa del bot de ese negocio (`BotConfigForm`, scope agencia — ve/edita también telefonía/STT/TTS/modelo de IA; grilla real de 2 columnas desde el 02-sep, ver "Estado actual") |
+| `/negocio` | Dashboard de un negocio logueado directo — 4 secciones controladas por el mismo menú de burbujas (no rutas reales, estado local): Llamadas (`CallsList`, por defecto, con aviso real si alguna terminó en error), Configuración (mismo `BotConfigForm` pero scope cliente — sin los campos de infraestructura), Cuenta (cambio de contraseña + el nombre de la agencia que lo gestiona, como único "contacto de soporte" real) |
 
-`AgencyShell` es compartido por las 5 pantallas de agencia. El menú lateral se reemplazó (2026-09-01) por un campo de burbujas flotando abajo de la pantalla — ver "Menú de burbujas" más abajo para el detalle real de la arquitectura. Los 4 destinos son los mismos de siempre: "Negocios" y "Agentes" (trabajo del día a día), y "Configuración" + "Salir" (ajuste de la cuenta propia).
+`AgencyShell` es compartido por las 6 pantallas de agencia. El menú vive a la izquierda (ver "Menú de burbujas" más abajo) — 5 destinos: "Inicio" y "Negocios" y "Agentes" (trabajo del día a día), y "Configuración" + "Salir" (ajuste de la cuenta propia, agrupados al pie).
 
 ## Credenciales demo (`python seed.py`)
 
@@ -846,19 +855,23 @@ npm run dev              # sirve en :5173, lee VITE_API_BASE de .env
 
 **Cuidado conocido — el servidor local no corre con `--reload`:** confirmado una vez con un bug real (ítem del 31-ago) que un cambio de schema ya probado y en verde en pytest no se reflejaba contra el servidor local porque el proceso llevaba corriendo desde una sesión anterior sin haberse reiniciado. Después de editar cualquier archivo de `backend/app/`, matar el proceso viejo (`netstat -ano | grep :8010` → `taskkill //PID <pid> //F`) y volver a levantarlo antes de dar por buena una verificación en vivo.
 
-## Menú de burbujas (implementado 2026-09-01)
+## Menú de burbujas (implementado 2026-09-01, vuelto a la izquierda el 02-sep)
 
-El sidebar lateral se reemplazó por un campo de burbujas de vidrio flotando abajo de la pantalla — sin ninguna barra ni caja que las encierre. Diseñado primero como comparación de 2 propuestas en un Artifact, afinado ahí mismo con la usuaria antes de tocar código real (mockup de referencia guardado en `vox54/design/menu-propuestas.html`, self-contenido, se abre directo con doble clic sin depender de ningún servidor).
+El sidebar plano y oscuro se reemplazó por burbujas de vidrio. Hubo un experimento intermedio (01-sep) de moverlas a un dock flotando abajo de la pantalla, sobre el fondo blanco de la página — se abandonó al día siguiente porque ahí el vidrio translúcido casi no se veía (esa era justo la queja real que lo hizo revertir). El diseño final volvió a la izquierda, pero sobre el fondo azul degradado real (`.g54-gradient`, el mismo de la intro del login) en vez del sidebar plano de antes — ahí el vidrio sí se lee. Diseñado primero como comparación de propuestas en un Artifact, afinado con la usuaria antes de tocar código real (mockup de referencia guardado en `vox54/design/menu-propuestas.html`, self-contenido, se abre directo con doble clic sin depender de ningún servidor — describe la versión de dock ya abandonada, queda como referencia histórica del proceso, no como el diseño vigente).
 
-**Arquitectura real (no `position:fixed`):** el layout de `AgencyShell` es una columna flex de 100vh — topbar arriba, `<main>` en el medio con `flex:1` + `overflow-y:auto` (scroll propio, independiente del resto), y el dock de burbujas como último hermano de la columna, con `flex-shrink:0`. Esto es deliberado y reemplaza un primer intento con `position:fixed` que se descartó por un bug real: confirmado con `getBoundingClientRect()` que en páginas con contenido moderadamente largo (ej. Configuración, con 2 tarjetas + un formulario de 3 campos) la burbuja de notificación llegaba a superponerse en pixeles reales sobre el botón de submit, robándole el clic. El modelo de columna flex garantiza matemáticamente que el dock nunca puede superponerse a nada, sin importar cuán largo sea el contenido de una página — mismo principio que ya usaba el sidebar viejo (espacio reservado, no una capa flotando encima), solo que ahora abajo en vez de a la izquierda.
+**Arquitectura real:** `.vox54-sidebar` es una columna angosta de ancho fijo (176px) y alto completo (100vh), hermana — en una fila flex — de la columna de contenido (topbar + `<main>` con su propio scroll). Al ser un hermano de ancho fijo en una fila flex (no una capa flotando encima con `position:fixed`, ni tampoco el último ítem de una columna como era el dock), el menú nunca puede superponerse al contenido sin importar cuán largo sea — se lo cede automáticamente por construcción, sin ningún truco extra. `overflow:hidden` en la barra recorta a propósito las burbujas decorativas que asoman parcialmente por los bordes (varias usan `left`/`right` negativos, como si vinieran de más allá del panel).
 
-Cada ítem (`Negocios`, `Agentes`, `Configuración`, `Salir`) es su propia burbuja de vidrio — degradado radial con brillo simulando luz, tono propio por ítem (azul/turquesa/violeta/coral vía variables CSS `--tint`/`--base`/`--glow` en `theme.css`, prefijo `vox54-`), tamaño ligeramente distinto entre sí, animación de flote asíncrona (cada una con su propio `animation-delay`), y un "pop" elástico al hacer clic. La burbuja de "Agentes" muestra un aviso real — cuántos bots propios están pausados ahora mismo (`GET /agency/agents`, contando `bot_status==='paused'`) — nunca un número inventado; sin ninguno pausado, no aparece ningún aviso. Respeta `prefers-reduced-motion` (desactiva toda animación).
+Dentro de la barra, los ítems de navegación se agrupan en dos bloques: los destinos de trabajo del día a día arriba-centro (`Inicio`/`Negocios`/`Agentes` en agencia; `Llamadas`/`Configuración` en negocio) y los de ajuste de cuenta al pie (`Configuración`/`Salir` en agencia; `Cuenta`/`Salir` en negocio). Cada ítem es su propia burbuja de vidrio — degradado radial con brillo simulando luz, tono propio por ítem (azul/turquesa/violeta/ámbar/coral vía variables CSS `--tint`/`--base`/`--glow` en `theme.css`, prefijo `vox54-`, clases `hueB`/`hueC`/`hueD`/`exit`), tamaño ligeramente distinto entre sí, animación de flote asíncrona (cada una con su propio `animation-delay`), y un "pop" elástico al hacer clic. La burbuja de "Agentes" muestra un aviso real — cuántos bots propios están pausados ahora mismo (`GET /agency/agents`, contando `bot_status==='paused'`) — nunca un número inventado; sin ninguno pausado, no aparece ningún aviso. Respeta `prefers-reduced-motion` (desactiva toda animación).
 
-**Rebrand del mismo día:** "Vox54" → "**Bubble 54**" (nombre de trabajo, sigue sin ser el definitivo) — coherente con que el propio menú ya es literalmente de burbujas. Tipografía nueva para el logo y los títulos de cada pantalla (`<h1>`/`<h2>`, regla global en `theme.css`): **Fredoka** (Google Fonts, cargada en `index.html`) — redondeada, con más personalidad, reservada para branding/encabezados; el resto de la UI (tablas, formularios, botones) se queda con el stack de sistema de siempre, más legible para trabajo denso. Login rediseñado en 2 paneles — uno con el copy de marca ("Atención al cliente que nunca hace esperar") sobre el fondo degradado con burbujas decorativas, el otro con el formulario, mismo componente `LoginPage.jsx` para agencia y negocio.
+**Burbujas decorativas interactivas y sonido:** las burbujas ambiente de fondo (login, ambas barras laterales) son clickeables — al tocarlas estallan de verdad (destello + aro de onda expansiva + partículas disparadas, componente compartido `PoppableBubbles.jsx`) y reaparecen solas 1.6-3s después en el mismo lugar, nunca dejan el panel "agujereado". El estallido también suena — un "pop" sintetizado en el momento con Web Audio API (`popSound.js`, sin ningún archivo de audio externo): un solo estallido de ruido blanco filtrado que colapsa de agudo a grave en ~20ms (nunca un oscilador con melodía — varios intentos de eso sonaban a blip electrónico o chillante, no a un pop físico real), con una capa de "crack" breve y nítida y una de "thump" grave más larga que le da peso, mismo criterio de tono variable por tamaño ya usado en las partículas.
 
-## Estado actual (al 2026-09-01)
+**Estética de vidrio extendida a toda la interfaz, en "consistencia moderada"** (02-sep, decisión consultada con la usuaria antes de tocar una decena de pantallas): botones y badges de estado pasan a ser vidrio real (`.vox54-btn`/`.vox54-pill`, variante sólida/opaca para fondos claros — la traslúcida de `.vox54-navbubble`/`.vox54-amb` casi desaparece sobre blanco), las tarjetas se redondean más con un glow de esquina sutil (`.vox54-panel`, base compartida con `.vox54-card`) — pero tablas, formularios e inputs se quedan planos por legibilidad, y los toggles funcionales de `BotConfigForm` no se tocaron (el color verde/gris ahí es la señal real, no decoración).
 
-Construido y probado: login de los 2 roles; catálogo de proveedores (telefonía/STT/TTS/IA) con cascada de modelos dependiente del proveedor; formulario de configuración del bot con separación real cliente/agencia (`BotConfigUpdateClient` — un negocio no puede tocar telefonía/STT/TTS/modelo de IA, ni siquiera mandándolo a mano, porque el schema del endpoint ni conoce esos campos, y desde hoy tampoco puede LEERLOS — `BotConfigOutClient` es el mismo espejo de lectura, cerrado después de confirmar en vivo que `GET/PUT /business/bot-config` filtraban `ai_api_key` en texto plano hacia el negocio); crear negocio nuevo, renombrar negocio; visibilidad real de resultados de llamadas (modelo `Call`, el worker de LiveKit reporta cada llamada real al terminar vía `POST /worker/calls` con su duración/outcome/transcripción real, `CallsList` compartido la muestra tanto en el dashboard del negocio como en la ficha de cada negocio del lado de agencia — nunca se fabrica una llamada de ejemplo, vacío-de-verdad se muestra vacío); dashboard del negocio con paridad visual con las vistas de agencia; autogestión de cuenta (cambio de contraseña real para ambos roles, y un negocio ve el nombre de la agencia que lo gestiona como su único canal de "soporte" honesto); inventario de agentes (`/agencia/agentes`, `GET /agency/agents`); y el menú de burbujas + rebrand a Bubble 54 documentados arriba. 54 tests de backend + 34 de frontend + 15 del worker, todos en verde.
+**Rebrand del 01-sep:** "Vox54" → "**Bubble 54**" (nombre de trabajo, sigue sin ser el definitivo). Tipografía nueva para el logo y los títulos de cada pantalla (`<h1>`/`<h2>`, regla global en `theme.css`): **Fredoka** (Google Fonts, cargada en `index.html`) — redondeada, con más personalidad, reservada para branding/encabezados; el resto de la UI (tablas, formularios, botones) se queda con el stack de sistema de siempre, más legible para trabajo denso. Login rediseñado en 2 paneles — uno con el copy de marca sobre el fondo degradado con burbujas decorativas, el otro con el formulario, mismo componente `LoginPage.jsx` para agencia y negocio.
+
+## Estado actual (al 2026-09-02)
+
+Construido y probado: login de los 2 roles; catálogo de proveedores (telefonía/STT/TTS/IA) con cascada de modelos dependiente del proveedor; formulario de configuración del bot con separación real cliente/agencia (`BotConfigUpdateClient` — un negocio no puede tocar telefonía/STT/TTS/modelo de IA, ni siquiera mandándolo a mano, porque el schema del endpoint ni conoce esos campos, y tampoco puede LEERLOS — `BotConfigOutClient` es el mismo espejo de lectura, cerrado después de confirmar en vivo que `GET/PUT /business/bot-config` filtraban `ai_api_key` en texto plano hacia el negocio) con una grilla real de 2 columnas desde el 02-sep (antes una sola columna angosta, desperdiciaba casi todo el ancho en pantallas anchas); crear negocio nuevo, renombrar negocio; visibilidad real de resultados de llamadas (modelo `Call`, el worker de LiveKit reporta cada llamada real al terminar vía `POST /worker/calls` con su duración/outcome/transcripción real, `CallsList` compartido la muestra tanto en el dashboard del negocio como en la ficha de cada negocio del lado de agencia — nunca se fabrica una llamada de ejemplo, vacío-de-verdad se muestra vacío); dashboard del negocio con paridad visual con las vistas de agencia; autogestión de cuenta (cambio de contraseña real para ambos roles, y un negocio ve el nombre de la agencia que lo gestiona como su único canal de "soporte" honesto); inventario de agentes (`/agencia/agentes`, `GET /agency/agents`); panel de Inicio para agencia (`/agencia`, bienvenida con nombre de pila real + checklist de arranque 100% derivado de datos reales + resumen de agentes); y el menú de burbujas + rebrand a Bubble 54 documentados arriba. 54 tests de backend + 34 de frontend + 15 del worker, todos en verde.
 
 Pendiente, sin resolver todavía: la agencia no tiene ningún endpoint para editar su propio perfil (nombre/negocios gestionados de `/agencia/configuracion` siguen siendo de solo lectura); no hay ninguna integración real con LiveKit/telefonía de verdad todavía en producción — el worker (`agent.py`) ya está construido y probado contra el SDK real, pero nunca se conectó a un número de teléfono real ni a una llamada real de punta a punta.
 
@@ -3363,6 +3376,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 ## Reportes Diarios
 
 > Los últimos 14 días. Anteriores archivados en `PROYECTO-SOL/reportes/`.
+
+---
+
+### 2026-09-02 (Miércoles)
+
+Arranqué con el diagnóstico de siempre en G54, todo en orden — el único aviso real (un error semanal recurrente en uno de los agentes) lo investigué a fondo antes de asumir que era un bug, y resultó ser el diseño correcto: una ejecución por cada empresa activa, solo el tiempo de espera estaba mal calibrado, lo até. Seguí con lo de ayer en Bubble 54: extendí las burbujas interactivas al menú de la agencia, y después llevé la misma estética de vidrio a toda la interfaz — botones, tarjetas, badges — acordando primero hasta dónde llevarlo para no terminar con tablas y formularios ilegibles.
+
+Me tomó bastante encontrar el sonido correcto para cuando estalla una burbuja — probé varias versiones (un tono simple, después uno más ruidoso, después uno demasiado agudo) y ninguna me convencía, hasta que caí en la referencia real: el sonido del plástico de burbujas de embalaje, y ahí sí armé un chasquido con peso real. De ahí pasé a algo más grande: volví a poner el menú a la izquierda, esta vez sobre el fondo azul de verdad en vez del blanco donde las burbujas casi no se veían — corregido en agencia y en negocio por igual.
+
+Con eso resuelto, construí un panel de Inicio nuevo para la agencia — saludo, una lista de primeros pasos que se marca sola según el estado real de los negocios, y un resumen de cuántos bots tengo activos, con cada paso pendiente llevando directo al negocio real al que le falta resolverlo. Cerré el día con dos ajustes de pulido — el saludo pasó a usar mi nombre de pila en vez del completo, y el formulario de configuración del bot se veía diminuto en pantallas anchas, así que lo rearmé en una grilla real de 2 columnas. Terminé revisando y actualizando toda la documentación del proyecto (había quedado desactualizada con tantos cambios de rutas y nombres de archivos) para que quede todo listo si necesito retomarlo desde otra máquina solo con lo que hay en GitHub.
 
 ---
 
