@@ -8,7 +8,7 @@ import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 import { initials } from "../utils";
 
-export default function AgencyDashboard() {
+export default function AgencyBusinessesPage() {
   const { logout } = useAuth();
   const session = useRequireRole("agency");
   const navigate = useNavigate();
@@ -40,9 +40,7 @@ export default function AgencyDashboard() {
       <div style={{ maxWidth: 1040, margin: "0 auto", padding: "36px 32px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28 }}>
           <div>
-            <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>
-              Panel de agencia — {me?.agency_name || "…"}
-            </h1>
+            <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>Negocios</h1>
             <p style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>
               Negocios que gestionás y sus bots de voz.
             </p>

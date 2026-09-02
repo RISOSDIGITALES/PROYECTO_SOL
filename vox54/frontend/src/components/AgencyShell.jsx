@@ -37,12 +37,14 @@ export default function AgencyShell({ userName, onLogout, children }) {
   const [poppingId, setPoppingId] = useState(null);
   const [pausedCount, setPausedCount] = useState(0);
 
-  // "Negocios" cubre la lista y todo lo que cuelga de un negocio puntual
-  // (identidad, configuración de su bot) — son la misma sección de la
-  // agencia, no páginas sueltas. "Agentes" es el inventario aparte, de solo
-  // lectura, de todos los bots. "Configuración" es la config de la agencia
-  // en sí, nunca la de un negocio.
-  const isNegocios = location.pathname === "/agencia" || location.pathname.startsWith("/agencia/negocios");
+  // "Inicio" es la landing (bienvenida + progreso + resumen), exclusiva de
+  // /agencia — ya no comparte ruta con "Negocios", que se corrió a
+  // /agencia/negocios y cubre la lista más todo lo que cuelga de un negocio
+  // puntual (identidad, configuración de su bot). "Agentes" es el
+  // inventario aparte, de solo lectura, de todos los bots. "Configuración"
+  // es la config de la agencia en sí, nunca la de un negocio.
+  const isInicio = location.pathname === "/agencia";
+  const isNegocios = location.pathname.startsWith("/agencia/negocios");
   const isAgentes = location.pathname.startsWith("/agencia/agentes");
   const isConfig = location.pathname.startsWith("/agencia/configuracion");
 
@@ -74,6 +76,18 @@ export default function AgencyShell({ userName, onLogout, children }) {
         <div className="vox54-sidebar-main">
           <Link
             to="/agencia"
+            className="vox54-navcol"
+            style={{ animationDelay: "-2.4s" }}
+            onClick={() => handleClick("inicio")}
+          >
+            <span className={`vox54-navbubble hueD ${isInicio ? "active" : ""} ${poppingId === "inicio" ? "popping" : ""}`}>
+              <span className="icon">🏠</span>
+            </span>
+            <span className="vox54-navlabel">Inicio</span>
+          </Link>
+
+          <Link
+            to="/agencia/negocios"
             className="vox54-navcol"
             style={{ animationDelay: "-0.6s" }}
             onClick={() => handleClick("negocios")}
