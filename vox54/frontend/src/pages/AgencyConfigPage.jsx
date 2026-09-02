@@ -69,7 +69,7 @@ export default function AgencyConfigPage() {
 
 function Card({ title, children }) {
   return (
-    <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 20 }}>
+    <div className="vox54-panel" style={{ padding: 20 }}>
       <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-soft)", marginBottom: 14 }}>
         {title}
       </div>

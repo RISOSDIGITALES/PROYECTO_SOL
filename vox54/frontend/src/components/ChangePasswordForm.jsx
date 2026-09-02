@@ -73,7 +73,7 @@ export default function ChangePasswordForm({ onSubmit }) {
         />
       </label>
 
-      <button type="submit" disabled={saving} style={buttonStyle}>
+      <button type="submit" disabled={saving} className="vox54-btn">
         {saving ? "Guardando…" : "Cambiar contraseña"}
       </button>
     </form>
@@ -110,13 +110,3 @@ const inputStyle = {
   background: "var(--white)",
 };
 
-const buttonStyle = {
-  background: "var(--g54-blue)",
-  color: "#fff",
-  border: "none",
-  borderRadius: 8,
-  padding: "10px 16px",
-  fontSize: 13.5,
-  fontWeight: 700,
-  cursor: "pointer",
-};

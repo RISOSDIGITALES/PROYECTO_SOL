@@ -20,7 +20,7 @@ export default function CreateBusinessModal({ onClose, onCreate }) {
 
   return (
     <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+      <div className="vox54-panel" style={modalStyle} onClick={(e) => e.stopPropagation()}>
         <h2 style={{ fontSize: 17, marginBottom: 16 }}>Crear negocio nuevo</h2>
         <form onSubmit={handleSubmit} style={{ display: "grid", gap: 14 }}>
           <div>
@@ -68,8 +68,8 @@ export default function CreateBusinessModal({ onClose, onCreate }) {
           {error && <div style={{ fontSize: 13, color: "var(--danger)" }}>{error}</div>}
 
           <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
-            <button type="button" onClick={onClose} style={cancelBtn}>Cancelar</button>
-            <button type="submit" disabled={saving} style={submitBtn}>
+            <button type="button" onClick={onClose} className="vox54-btn secondary" style={{ flex: 1 }}>Cancelar</button>
+            <button type="submit" disabled={saving} className="vox54-btn" style={{ flex: 1 }}>
               {saving ? "Creando…" : "Crear negocio"}
             </button>
           </div>
@@ -90,8 +90,6 @@ const overlayStyle = {
 };
 
 const modalStyle = {
-  background: "var(--white)",
-  borderRadius: 12,
   padding: 28,
   width: "100%",
   maxWidth: 420,
@@ -120,28 +118,4 @@ const inputStyle = {
   borderRadius: 8,
   outline: "none",
   fontFamily: "var(--font)",
-};
-
-const submitBtn = {
-  flex: 1,
-  background: "var(--g54-blue)",
-  color: "#fff",
-  border: "none",
-  borderRadius: 8,
-  padding: "10px 16px",
-  fontSize: 14,
-  fontWeight: 700,
-  cursor: "pointer",
-};
-
-const cancelBtn = {
-  flex: 1,
-  background: "var(--surface)",
-  color: "var(--ink-soft)",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  padding: "10px 16px",
-  fontSize: 14,
-  fontWeight: 600,
-  cursor: "pointer",
 };

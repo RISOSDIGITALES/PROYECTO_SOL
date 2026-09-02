@@ -52,7 +52,7 @@ export default function AgencyAgentsPage() {
         {error && <div style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</div>}
 
         {agents && (
-          <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+          <div className="vox54-panel">
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>

@@ -109,9 +109,9 @@ export default function BusinessDashboard() {
 
       <main style={mainScrollStyle}>
         <div style={{ maxWidth: 640, margin: "0 auto", padding: 32 }}>
-          <div style={identityCardStyle}>
+          <div className="vox54-panel" style={identityCardStyle}>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={avatarStyle}>{initials(me?.business_name)}</div>
+              <div className="vox54-avatar" style={avatarStyle}>{initials(me?.business_name)}</div>
               <div>
                 <h1 style={{ fontSize: 18, color: "var(--ink)", margin: 0 }}>{me?.business_name || "…"}</h1>
                 <div style={{ fontSize: 12, color: "var(--ink-softer)", marginTop: 2 }}>Tu agente de voz</div>
@@ -141,13 +141,13 @@ export default function BusinessDashboard() {
 
           {tab === "account" && (
             <div style={{ display: "grid", gap: 16 }}>
-              <div style={accountCardStyle}>
+              <div className="vox54-panel" style={accountCardStyle}>
                 <div style={accountCardTitleStyle}>Tu cuenta</div>
                 <Row label="Nombre">{me?.name}</Row>
                 <Row label="Correo">{me?.email}</Row>
               </div>
 
-              <div style={accountCardStyle}>
+              <div className="vox54-panel" style={accountCardStyle}>
                 <div style={accountCardTitleStyle}>Cambiar contraseña</div>
                 <ChangePasswordForm
                   onSubmit={(current, next) =>
@@ -160,7 +160,7 @@ export default function BusinessDashboard() {
                   este negocio es la agencia, así que es a ella a quien hay
                   que avisarle si algo no funciona. */}
               {me?.agency_name && (
-                <div style={{ ...accountCardStyle, background: "#eef4ff" }}>
+                <div className="vox54-panel" style={{ ...accountCardStyle, background: "#eef4ff" }}>
                   <div style={accountCardTitleStyle}>¿Necesitás ayuda?</div>
                   <p style={{ fontSize: 13, color: "var(--ink-soft)", margin: 0 }}>
                     Este bot lo gestiona <strong style={{ color: "var(--ink)" }}>{me.agency_name}</strong>. Si algo no funciona
@@ -237,9 +237,6 @@ const identityCardStyle = {
   alignItems: "center",
   justifyContent: "space-between",
   gap: 16,
-  background: "var(--white)",
-  border: "1px solid var(--border)",
-  borderRadius: 12,
   padding: "16px 20px",
   marginBottom: 20,
 };
@@ -249,21 +246,12 @@ const avatarStyle = {
   height: 40,
   flexShrink: 0,
   borderRadius: 10,
-  background: "var(--g54-blue)",
-  color: "#fff",
-  fontWeight: 800,
   fontSize: 14,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
 };
 
 const accountCardStyle = {
   display: "grid",
   gap: 14,
-  background: "var(--white)",
-  border: "1px solid var(--border)",
-  borderRadius: 12,
   padding: 20,
 };
 

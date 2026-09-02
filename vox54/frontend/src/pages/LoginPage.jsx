@@ -100,7 +100,7 @@ export default function LoginPage({ role }) {
             </div>
           )}
 
-          <button type="submit" disabled={loading} style={buttonStyle}>
+          <button type="submit" disabled={loading} className="vox54-btn">
             {loading ? "Entrando…" : "Entrar"}
           </button>
 
@@ -215,13 +215,3 @@ const inputStyle = {
   fontFamily: "var(--font)",
 };
 
-const buttonStyle = {
-  background: "var(--g54-blue)",
-  color: "#fff",
-  border: "none",
-  borderRadius: 8,
-  padding: "12px 16px",
-  fontSize: 14,
-  fontWeight: 700,
-  cursor: "pointer",
-};

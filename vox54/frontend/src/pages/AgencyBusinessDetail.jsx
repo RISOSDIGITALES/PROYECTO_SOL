@@ -73,10 +73,10 @@ export default function AgencyBusinessDetail() {
         {error && <div style={{ color: "var(--danger)", margin: "16px 0" }}>{error}</div>}
 
         {business && (
-          <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 24, marginTop: 12 }}>
+          <div className="vox54-panel" style={{ padding: 24, marginTop: 12 }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <div style={avatarStyle}>{initials(business.name)}</div>
+                <div className="vox54-avatar" style={avatarStyle}>{initials(business.name)}</div>
                 <div>
                   {renaming ? (
                     <form onSubmit={handleRename} style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -88,10 +88,10 @@ export default function AgencyBusinessDetail() {
                         onKeyDown={(e) => { if (e.key === "Escape") cancelRenaming(); }}
                         style={renameInputStyle}
                       />
-                      <button type="submit" disabled={renameSaving} style={renameSaveBtn}>
+                      <button type="submit" disabled={renameSaving} className="vox54-btn small">
                         {renameSaving ? "Guardando…" : "Guardar"}
                       </button>
-                      <button type="button" onClick={cancelRenaming} style={renameCancelBtn}>
+                      <button type="button" onClick={cancelRenaming} className="vox54-btn secondary small">
                         Cancelar
                       </button>
                     </form>
@@ -158,13 +158,7 @@ const avatarStyle = {
   height: 44,
   flexShrink: 0,
   borderRadius: 10,
-  background: "var(--g54-blue)",
-  color: "#fff",
-  fontWeight: 800,
   fontSize: 15,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
 };
 
 const ctaCardStyle = {
@@ -172,9 +166,6 @@ const ctaCardStyle = {
   alignItems: "center",
   justifyContent: "space-between",
   gap: 16,
-  background: "var(--white)",
-  border: "1px solid var(--border)",
-  borderRadius: 12,
   padding: "18px 20px",
   marginTop: 16,
   textDecoration: "none",
@@ -201,28 +192,4 @@ const renameInputStyle = {
   fontFamily: "var(--font)",
   flex: 1,
   maxWidth: 260,
-};
-
-const renameSaveBtn = {
-  background: "var(--g54-blue)",
-  color: "#fff",
-  border: "none",
-  borderRadius: 8,
-  padding: "7px 12px",
-  fontSize: 12.5,
-  fontWeight: 700,
-  cursor: "pointer",
-  whiteSpace: "nowrap",
-};
-
-const renameCancelBtn = {
-  background: "var(--surface)",
-  color: "var(--ink-soft)",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  padding: "7px 12px",
-  fontSize: 12.5,
-  fontWeight: 600,
-  cursor: "pointer",
-  whiteSpace: "nowrap",
 };

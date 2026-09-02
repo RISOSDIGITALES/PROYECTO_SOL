@@ -15,7 +15,7 @@ export default function CallsList({ calls, loading, error }) {
   }
   if (!calls || calls.length === 0) {
     return (
-      <div style={emptyStateStyle}>
+      <div className="vox54-panel" style={emptyStateStyle}>
         <div style={{ fontSize: 24, marginBottom: 6 }}>📞</div>
         <div style={{ fontWeight: 700, fontSize: 14, color: "var(--ink)", marginBottom: 4 }}>
           Todavía no hubo ninguna llamada
@@ -41,7 +41,7 @@ function CallRow({ call }) {
   const messages = parseTranscript(call.transcript);
 
   return (
-    <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+    <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden" }}>
       <button
         type="button"
         onClick={() => messages.length > 0 && setOpen((v) => !v)}
@@ -92,19 +92,23 @@ function CallRow({ call }) {
 }
 
 function OutcomeBadge({ outcome }) {
-  const cfg = OUTCOME_CONFIG[outcome] || { label: outcome, color: "var(--ink-softer)", bg: "rgba(156,163,175,0.14)" };
-  return (
-    <span style={{ fontSize: 11, fontWeight: 700, color: cfg.color, background: cfg.bg, borderRadius: 999, padding: "3px 9px", whiteSpace: "nowrap" }}>
-      {cfg.label}
-    </span>
-  );
+  const hue = OUTCOME_HUE[outcome] || "gray";
+  const label = OUTCOME_LABEL[outcome] || outcome;
+  return <span className={`vox54-pill ${hue}`}>{label}</span>;
 }
 
-const OUTCOME_CONFIG = {
-  completed: { label: "Completada", color: "var(--success)", bg: "rgba(34,197,94,0.1)" },
-  transferred: { label: "Transferida", color: "var(--g54-blue)", bg: "rgba(45,91,255,0.1)" },
-  max_duration_reached: { label: "Cortada por duración", color: "#b45309", bg: "rgba(217,119,6,0.12)" },
-  error: { label: "Error", color: "var(--danger)", bg: "rgba(239,68,68,0.1)" },
+const OUTCOME_LABEL = {
+  completed: "Completada",
+  transferred: "Transferida",
+  max_duration_reached: "Cortada por duración",
+  error: "Error",
+};
+
+const OUTCOME_HUE = {
+  completed: "green",
+  transferred: "",
+  max_duration_reached: "amber",
+  error: "red",
 };
 
 function parseTranscript(raw) {
@@ -131,9 +135,7 @@ function formatDate(iso) {
 }
 
 const emptyStateStyle = {
-  background: "var(--white)",
   border: "1px dashed var(--border)",
-  borderRadius: 12,
   padding: "32px 20px",
   textAlign: "center",
 };

@@ -47,7 +47,7 @@ export default function AgencyDashboard() {
               Negocios que gestionás y sus bots de voz.
             </p>
           </div>
-          <button onClick={() => setShowCreate(true)} style={createBtn}>+ Crear negocio</button>
+          <button onClick={() => setShowCreate(true)} className="vox54-btn">+ Crear negocio</button>
         </div>
 
         {error && <div style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</div>}
@@ -56,7 +56,7 @@ export default function AgencyDashboard() {
           {businesses.map((b) => (
             <Link key={b.id} to={`/agencia/negocios/${b.id}`} className="vox54-card" style={cardStyle}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-                <div style={avatarStyle}>{initials(b.name)}</div>
+                <div className="vox54-avatar" style={avatarStyle}>{initials(b.name)}</div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 14.5, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {b.name}
@@ -85,9 +85,6 @@ export default function AgencyDashboard() {
 
 const cardStyle = {
   display: "block",
-  background: "var(--white)",
-  border: "1px solid var(--border)",
-  borderRadius: 12,
   padding: "18px 18px 16px",
   textDecoration: "none",
   color: "var(--ink)",
@@ -98,22 +95,5 @@ const avatarStyle = {
   height: 40,
   flexShrink: 0,
   borderRadius: 10,
-  background: "var(--g54-blue)",
-  color: "#fff",
-  fontWeight: 800,
   fontSize: 14,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
-
-const createBtn = {
-  background: "var(--g54-blue)",
-  color: "#fff",
-  border: "none",
-  borderRadius: 8,
-  padding: "10px 16px",
-  fontSize: 13.5,
-  fontWeight: 700,
-  cursor: "pointer",
 };

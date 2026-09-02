@@ -403,7 +403,7 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
         )}
       </Section>
 
-      <button type="submit" disabled={saving} style={buttonStyle}>
+      <button type="submit" disabled={saving} className="vox54-btn">
         {saving ? "Guardando…" : "Guardar cambios"}
       </button>
     </form>
@@ -412,7 +412,7 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
 
 function Section({ title, children }) {
   return (
-    <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 20 }}>
+    <div className="vox54-panel" style={{ padding: 20 }}>
       <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-soft)", marginBottom: 14 }}>
         {title}
       </div>
@@ -476,17 +476,6 @@ const readOnlyValueStyle = {
   border: "1px solid var(--border)",
   borderRadius: 8,
   background: "var(--surface)",
-};
-
-const buttonStyle = {
-  background: "var(--g54-blue)",
-  color: "#fff",
-  border: "none",
-  borderRadius: 8,
-  padding: "12px 16px",
-  fontSize: 14,
-  fontWeight: 700,
-  cursor: "pointer",
 };
 
 const toggleStyle = {
