@@ -11,29 +11,27 @@ import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 import { initials } from "../utils";
 
-// Mismo tratamiento de menú que AgencyShell — dock de burbujas abajo,
-// nada de sidebar ni de tabs planas. Acá las 3 secciones (Llamadas,
-// Configuración, Cuenta) son estado local, no rutas reales — el dock
-// hace de tabs, no de <Link>. Layout idéntico al de AgencyShell (columna
-// flex 100vh, <main> con su propio scroll) por la misma razón: el dock
-// nunca puede terminar tapando contenido, sin importar el largo de cada
-// sección — ver el ítem del 01-sep en CLAUDE.md si hace falta el porqué.
+// Mismo tratamiento de menú que AgencyShell — vuelve a vivir a la
+// izquierda, sobre el fondo azul degradado real, en vez del dock flotando
+// abajo sobre blanco (donde el vidrio translúcido casi no se veía). Acá
+// las 4 secciones (Llamadas, Configuración, Cuenta, Salir) son estado
+// local, no rutas reales — la barra hace de tabs, no de <Link>.
 
-// Burbujas decorativas de fondo del dock — datos en vez de JSX repetido; el
-// estado del estallido/reaparición vive en PoppableBubbles, compartido con
-// el login. Nunca son las burbujas de navegación reales (Llamadas/
+// Burbujas decorativas de fondo de la barra — datos en vez de JSX repetido;
+// el estado del estallido/reaparición vive en PoppableBubbles, compartido
+// con el login. Nunca son las burbujas de navegación reales (Llamadas/
 // Configuración/Cuenta/Salir) — esas siguen con su propio squish de
 // siempre, tienen que quedarse ahí para poder navegar.
 const DOCK_BUBBLES = [
-  { id: "d1", size: 14, style: { left: "6%", bottom: 92 }, delay: "-1.2s" },
-  { id: "d2", size: 9, hue: "green", style: { left: "14%", bottom: 40, filter: "blur(0.4px)" }, delay: "-2.7s" },
-  { id: "d3", size: 20, style: { left: "24%", bottom: 110, filter: "blur(0.5px)" }, delay: "-0.4s" },
-  { id: "d4", size: 10, hue: "violet", style: { left: "36%", bottom: 28 }, delay: "-4.1s" },
-  { id: "d5", size: 11, hue: "green", style: { right: "32%", bottom: 100 }, delay: "-3.4s" },
-  { id: "d6", size: 15, hue: "violet", style: { right: "22%", bottom: 115, filter: "blur(0.4px)" }, delay: "-1.5s" },
-  { id: "d7", size: 16, style: { right: "16%", bottom: 50 }, delay: "-1.8s" },
-  { id: "d8", size: 8, style: { right: "9%", bottom: 108 }, delay: "-2.2s" },
-  { id: "d9", size: 13, hue: "green", style: { right: "6%", bottom: 70 }, delay: "-0.9s" },
+  { id: "d1", size: 16, style: { left: "8%", top: "4%" }, delay: "-1.2s" },
+  { id: "d2", size: 10, hue: "green", style: { right: "10%", top: "13%" }, delay: "-2.7s" },
+  { id: "d3", size: 22, style: { left: "-14%", top: "24%", filter: "blur(0.5px)" }, delay: "-0.4s" },
+  { id: "d4", size: 11, hue: "violet", style: { right: "-10%", top: "37%" }, delay: "-4.1s" },
+  { id: "d5", size: 13, hue: "green", style: { left: "4%", top: "50%" }, delay: "-3.4s" },
+  { id: "d6", size: 19, hue: "violet", style: { right: "6%", top: "63%", filter: "blur(0.4px)" }, delay: "-1.5s" },
+  { id: "d7", size: 21, style: { left: "-12%", top: "75%" }, delay: "-1.8s" },
+  { id: "d8", size: 9, style: { right: "16%", top: "87%" }, delay: "-2.2s" },
+  { id: "d9", size: 15, hue: "green", style: { left: "10%", top: "95%" }, delay: "-0.9s" },
 ];
 
 export default function BusinessDashboard() {
@@ -101,14 +99,53 @@ export default function BusinessDashboard() {
   const errorCallsCount = calls ? calls.filter((c) => c.outcome === "error").length : 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      <div className="g54-gradient" style={topbarStyle}>
-        <Logo size="small" />
-        <span style={{ color: "#fff", fontSize: 12.5, fontWeight: 600 }}>{me?.name}</span>
-      </div>
+    <div style={{ display: "flex", height: "100vh" }}>
+      <nav className="vox54-sidebar g54-gradient" aria-label="Navegación de negocio">
+        <PoppableBubbles bubbles={DOCK_BUBBLES} />
 
-      <main style={mainScrollStyle}>
-        <div style={{ maxWidth: 640, margin: "0 auto", padding: 32 }}>
+        <div className="vox54-sidebar-brand"><Logo size="small" /></div>
+
+        <div className="vox54-sidebar-main">
+          <button type="button" className="vox54-navcol" style={{ animationDelay: "-0.6s" }} onClick={() => goTo("calls")}>
+            <span className={`vox54-navbubble ${tab === "calls" ? "active" : ""} ${poppingId === "calls" ? "popping" : ""}`}>
+              <span className="icon">📞</span>
+              {errorCallsCount > 0 && <span className="vox54-notif">{errorCallsCount}</span>}
+            </span>
+            <span className="vox54-navlabel">Llamadas</span>
+          </button>
+
+          <button type="button" className="vox54-navcol" style={{ animationDelay: "-1.9s" }} onClick={() => goTo("config")}>
+            <span className={`vox54-navbubble hueB ${tab === "config" ? "active" : ""} ${poppingId === "config" ? "popping" : ""}`}>
+              <span className="icon">⚙️</span>
+            </span>
+            <span className="vox54-navlabel">Configuración</span>
+          </button>
+        </div>
+
+        <div className="vox54-sidebar-foot">
+          <button type="button" className="vox54-navcol" style={{ animationDelay: "-3.1s" }} onClick={() => goTo("account")}>
+            <span className={`vox54-navbubble hueC ${tab === "account" ? "active" : ""} ${poppingId === "account" ? "popping" : ""}`}>
+              <span className="icon">👤</span>
+            </span>
+            <span className="vox54-navlabel">Cuenta</span>
+          </button>
+
+          <button type="button" className="vox54-navcol" style={{ animationDelay: "-0.2s" }} onClick={() => goTo("salir")}>
+            <span className={`vox54-navbubble exit ${poppingId === "salir" ? "popping" : ""}`}>
+              <span className="icon">🚪</span>
+            </span>
+            <span className="vox54-navlabel">Salir</span>
+          </button>
+        </div>
+      </nav>
+
+      <div style={contentColStyle}>
+        <div style={topbarStyle}>
+          <span style={{ color: "var(--ink-soft)", fontSize: 12.5, fontWeight: 600 }}>{me?.name}</span>
+        </div>
+
+        <main style={mainScrollStyle}>
+          <div style={{ maxWidth: 640, margin: "0 auto", padding: 32 }}>
           <div className="vox54-panel" style={identityCardStyle}>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <div className="vox54-avatar" style={avatarStyle}>{initials(me?.business_name)}</div>
@@ -171,40 +208,8 @@ export default function BusinessDashboard() {
             </div>
           )}
         </div>
-      </main>
-
-      <nav className="vox54-bubblefield" aria-label="Navegación de negocio">
-        <PoppableBubbles bubbles={DOCK_BUBBLES} />
-
-        <button type="button" className="vox54-navcol" style={{ animationDelay: "-0.6s" }} onClick={() => goTo("calls")}>
-          <span className={`vox54-navbubble ${tab === "calls" ? "active" : ""} ${poppingId === "calls" ? "popping" : ""}`}>
-            <span className="icon">📞</span>
-            {errorCallsCount > 0 && <span className="vox54-notif">{errorCallsCount}</span>}
-          </span>
-          <span className="vox54-navlabel">Llamadas</span>
-        </button>
-
-        <button type="button" className="vox54-navcol" style={{ animationDelay: "-1.9s" }} onClick={() => goTo("config")}>
-          <span className={`vox54-navbubble hueB ${tab === "config" ? "active" : ""} ${poppingId === "config" ? "popping" : ""}`}>
-            <span className="icon">⚙️</span>
-          </span>
-          <span className="vox54-navlabel">Configuración</span>
-        </button>
-
-        <button type="button" className="vox54-navcol" style={{ animationDelay: "-3.1s" }} onClick={() => goTo("account")}>
-          <span className={`vox54-navbubble hueC ${tab === "account" ? "active" : ""} ${poppingId === "account" ? "popping" : ""}`}>
-            <span className="icon">👤</span>
-          </span>
-          <span className="vox54-navlabel">Cuenta</span>
-        </button>
-
-        <button type="button" className="vox54-navcol" style={{ animationDelay: "-0.2s" }} onClick={() => goTo("salir")}>
-          <span className={`vox54-navbubble exit ${poppingId === "salir" ? "popping" : ""}`}>
-            <span className="icon">🚪</span>
-          </span>
-          <span className="vox54-navlabel">Salir</span>
-        </button>
-      </nav>
+        </main>
+      </div>
     </div>
   );
 }
@@ -218,12 +223,22 @@ function Row({ label, children }) {
   );
 }
 
+const contentColStyle = {
+  flex: "1 1 auto",
+  minWidth: 0,
+  display: "flex",
+  flexDirection: "column",
+  height: "100vh",
+};
+
 const topbarStyle = {
   flexShrink: 0,
   padding: "14px 28px",
   display: "flex",
-  justifyContent: "space-between",
+  justifyContent: "flex-end",
   alignItems: "center",
+  borderBottom: "1px solid var(--border)",
+  background: "var(--white)",
 };
 
 const mainScrollStyle = {
