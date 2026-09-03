@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AgencyShell from "../components/AgencyShell";
+import StatusPill from "../components/StatusPill";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
-import { firstName } from "../utils";
+import { firstName, initials } from "../utils";
+import { formatDate } from "../callFormat";
 
 // Landing real de la agencia (vive en /agencia) — bienvenida + progreso de
 // arranque + un resumen rápido del estado de los agentes. "Negocios" (la
@@ -23,15 +25,19 @@ export default function AgencyHomePage() {
   const session = useRequireRole("agency");
   const navigate = useNavigate();
   const [me, setMe] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [businesses, setBusinesses] = useState(null);
   const [agents, setAgents] = useState(null);
+  const [calls, setCalls] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!session) return;
     api.agencyMe(session.access_token).then(setMe).catch((e) => setError(e.message));
+    api.getAgencyProfile(session.access_token).then(setProfile).catch((e) => setError(e.message));
     api.listBusinesses(session.access_token).then(setBusinesses).catch((e) => setError(e.message));
     api.listAgents(session.access_token).then(setAgents).catch((e) => setError(e.message));
+    api.listAgencyCalls(session.access_token).then(setCalls).catch((e) => setError(e.message));
   }, [session]);
 
   if (!session) return null;
@@ -75,6 +81,9 @@ export default function AgencyHomePage() {
   const total = loading ? 0 : agents.length;
   const active = loading ? 0 : agents.filter((a) => a.bot_status === "active").length;
   const paused = total - active;
+
+  const hasContact = profile && (profile.contact_email || profile.contact_phone);
+  const mostRecentCall = calls && calls.length > 0 ? calls[0] : null;
 
   return (
     <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
@@ -142,6 +151,80 @@ export default function AgencyHomePage() {
               <StatCard label="Activos" value={loading ? "…" : active} hue="#16A34A" />
               <StatCard label="Pausados" value={loading ? "…" : paused} hue="#6B7280" />
             </div>
+          </div>
+
+          {/* Un resumen real por cada sección del menú, no solo Agentes —
+              antes Inicio se sentía vacío con nada más que Primeros Pasos y
+              este único resumen. Nunca se inventa nada acá: si algo está
+              vacío de verdad (sin contacto cargado, sin llamadas todavía),
+              se dice tal cual. */}
+          <div className="vox54-panel" style={{ padding: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div style={sectionTitleStyle}>Agencia</div>
+              <Link to="/agencia/perfil" style={sectionLinkStyle}>Ver perfil →</Link>
+            </div>
+            {profile ? (
+              <div style={{ display: "grid", gap: 8 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>{profile.name}</div>
+                <div style={{ fontSize: 12.5, color: hasContact ? "var(--success)" : "var(--ink-softer)" }}>
+                  {hasContact ? "✓ Contacto configurado" : "Sin correo ni teléfono de contacto cargados todavía"}
+                </div>
+              </div>
+            ) : (
+              !error && <div style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>Cargando…</div>
+            )}
+          </div>
+
+          <div className="vox54-panel" style={{ padding: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div style={sectionTitleStyle}>Negocios ({loading ? "…" : businesses.length})</div>
+              <Link to="/agencia/negocios" style={sectionLinkStyle}>Ver todos →</Link>
+            </div>
+            {loading ? (
+              <div style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>Cargando…</div>
+            ) : businesses.length === 0 ? (
+              <div style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>Todavía no gestionás ningún negocio.</div>
+            ) : (
+              <div style={{ display: "grid", gap: 8 }}>
+                {businesses.map((b) => (
+                  <Link key={b.id} to={`/agencia/negocios/${b.id}`} className="vox54-steprow" style={businessRowStyle}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                      <div className="vox54-avatar" style={avatarStyle}>{initials(b.name)}</div>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {b.name}
+                      </span>
+                    </div>
+                    <StatusPill status={b.bot_status} />
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="vox54-panel" style={{ padding: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div style={sectionTitleStyle}>Registros</div>
+              <Link to="/agencia/registros" style={sectionLinkStyle}>Ver todos →</Link>
+            </div>
+            {calls === null ? (
+              !error && <div style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>Cargando…</div>
+            ) : calls.length === 0 ? (
+              <div style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>Todavía no hubo ninguna llamada real.</div>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                <div style={{ fontSize: 24, fontWeight: 800, color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>
+                  {calls.length}
+                  <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--ink-soft)", marginLeft: 6 }}>
+                    llamada{calls.length === 1 ? "" : "s"} en total
+                  </span>
+                </div>
+                {mostRecentCall && (
+                  <div style={{ fontSize: 12, color: "var(--ink-softer)" }}>
+                    Última: {mostRecentCall.business_name}, {formatDate(mostRecentCall.started_at)}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -221,4 +304,38 @@ const statCardStyle = {
   padding: "14px 16px",
   borderRadius: 10,
   background: "var(--surface)",
+};
+
+const sectionTitleStyle = {
+  fontSize: 11,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+  color: "var(--ink-soft)",
+};
+
+const sectionLinkStyle = {
+  fontSize: 12,
+  color: "var(--g54-blue)",
+  fontWeight: 700,
+  textDecoration: "none",
+};
+
+const businessRowStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 10,
+  padding: "8px 10px",
+  borderRadius: 10,
+  textDecoration: "none",
+  border: "1px solid var(--border)",
+};
+
+const avatarStyle = {
+  width: 30,
+  height: 30,
+  flexShrink: 0,
+  borderRadius: 8,
+  fontSize: 11.5,
 };

@@ -37,6 +37,7 @@ export default function AgencyShell({ userName, onLogout, children }) {
   const { session } = useAuth();
   const [poppingId, setPoppingId] = useState(null);
   const [pausedCount, setPausedCount] = useState(0);
+  const [agencyName, setAgencyName] = useState("");
 
   // "Inicio" es la landing (bienvenida + progreso + resumen), exclusiva de
   // /agencia — ya no comparte ruta con "Negocios", que se corrió a
@@ -65,6 +66,12 @@ export default function AgencyShell({ userName, onLogout, children }) {
     api.listAgents(session.access_token)
       .then((agents) => setPausedCount(agents.filter((a) => a.bot_status === "paused").length))
       .catch(() => {});
+    // Nombre real de la agencia para el rectángulo bajo el logo — llamada
+    // propia del shell, independiente de lo que cada pantalla ya pida para
+    // sí misma (mismo criterio que el conteo de pausados de arriba).
+    api.agencyMe(session.access_token)
+      .then((me) => setAgencyName(me.agency_name || ""))
+      .catch(() => {});
   }, [session]);
 
   function handleClick(id, e) {
@@ -81,6 +88,12 @@ export default function AgencyShell({ userName, onLogout, children }) {
         <Link to="/agencia" className="vox54-sidebar-brand" aria-label="Bubble 54">
           <Logo size="small" />
         </Link>
+
+        {agencyName && (
+          <div className="vox54-agency-badge" title={agencyName}>
+            {agencyName}
+          </div>
+        )}
 
         <div className="vox54-sidebar-main">
           <Link

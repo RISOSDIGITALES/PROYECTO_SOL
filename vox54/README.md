@@ -299,11 +299,22 @@ avisar/corregir acá.
       9 casos reales contra el servidor corriendo (válidos e inválidos)
 - [x] Guardia de sesión cruzada en el frontend (`useRequireRole`) — visitar la
       ruta del rol equivocado redirige, en vez de quedarse cargando para siempre
-- [x] Suite de tests automatizados: 54 en el backend (auth, CRUD, validación,
-      aislamiento multi-tenant real entre 2 negocios) + 15 en el worker (qué
-      arma cada `build_stt`/`build_tts`/`build_llm` según el proveedor, sin
-      red) + 34 en el frontend (Vitest + React Testing Library) — los 103
-      corren limpios hoy
+- [x] Suite de tests automatizados: 78 en el backend (auth, CRUD, validación,
+      aislamiento multi-tenant real entre 2 negocios, perfiles de agencia/
+      negocio, registros de llamadas) + 19 en el worker (qué arma cada
+      `build_stt`/`build_tts`/`build_llm` según el proveedor, sin red, más
+      `build_instructions` con/sin perfil de negocio cargado) + 34 en el
+      frontend (Vitest + React Testing Library) — los 131 corren limpios hoy
+- [x] Perfil real de la agencia (contacto/sitio/dirección, editable) con la
+      lista real de negocios que gestiona (antes solo un número, "2 negocios
+      gestionados", sin decir cuáles); perfil real de cada negocio (resumen/
+      horarios/productos, deliberadamente separado de la config técnica del
+      bot) editable tanto por la agencia como por el propio negocio, y que el
+      worker ya usa de verdad — se lo agrega al `system_prompt` real antes de
+      armar el `Agent()` de LiveKit; "Registros", el historial de llamadas de
+      toda la agencia en una sola tabla con filtro por negocio y detalle +
+      transcripción completa por llamada — ver "Estado actual" en `CLAUDE.md`
+      para el detalle completo de las 3 rondas de esta parte
 - [x] Ruta 404 real (antes cualquier URL desconocida mostraba una página
       en blanco), navegación consistente con React Router en todos los
       links, foco de teclado visible en todos los inputs/selects/botones,
