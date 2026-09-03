@@ -13,6 +13,12 @@
 // grave y más largo que sí le da el "boom" de fondo. Mantenido bajo
 // a propósito (sutil, nunca un efecto que llame la atención). Un solo
 // AudioContext compartido, reusado en cada estallido.
+//
+// El interruptor de "Sonido" de Configuración vive acá adentro, no en cada
+// lugar que llama a playPopSound — así cualquier caller nuevo lo respeta
+// automáticamente sin tener que acordarse de chequearlo primero.
+import { getPrefs } from "./prefs";
+
 let audioCtx = null;
 
 function getContext() {
@@ -38,6 +44,7 @@ function makeNoiseBuffer(ctx, durSec) {
 // suenan un poco más graves/con más cuerpo, chicos más secos/agudos,
 // para que 6 estallidos seguidos no suenen todos idénticos.
 export function playPopSound(size = 20) {
+  if (!getPrefs().soundEnabled) return;
   const ctx = getContext();
   if (!ctx) return;
   try {

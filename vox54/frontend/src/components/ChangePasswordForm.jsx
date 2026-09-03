@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { burst } from "../burst";
 
 // Compartido por las dos vistas de cuenta (agencia y negocio) — nada acá
 // sabe de qué rol es, solo llama a `onSubmit(currentPassword, newPassword)`
@@ -10,6 +11,7 @@ export default function ChangePasswordForm({ onSubmit }) {
   const [error, setError] = useState("");
   const [savedMessage, setSavedMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const saveBtnRef = useRef(null);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -28,6 +30,7 @@ export default function ChangePasswordForm({ onSubmit }) {
       setCurrent("");
       setNext("");
       setConfirm("");
+      burst(saveBtnRef.current);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -73,7 +76,7 @@ export default function ChangePasswordForm({ onSubmit }) {
         />
       </label>
 
-      <button type="submit" disabled={saving} className="vox54-btn">
+      <button ref={saveBtnRef} type="submit" disabled={saving} className="vox54-btn">
         {saving ? "Guardando…" : "Cambiar contraseña"}
       </button>
     </form>

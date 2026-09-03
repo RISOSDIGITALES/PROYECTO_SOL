@@ -1,3 +1,6 @@
+import { useEffect, useRef } from "react";
+import { burst } from "../burst";
+
 // El conocimiento real de un negocio — a qué se dedica, cuándo atiende, qué
 // vende — separado a propósito de BotConfigForm (infraestructura del bot:
 // telefonía/STT/TTS/modelo/prompt). Reusado tanto por la agencia (edita el
@@ -6,6 +9,15 @@
 // ninguno de estos 3 campos es infraestructura sensible, así que ambos lados
 // ven y editan exactamente lo mismo.
 export default function BusinessProfileForm({ profile, onChange, onSave, saving, savedMessage, error }) {
+  // El botón estalla (sin desaparecer) cuando el guardado se confirmó de
+  // verdad — savedMessage lo pone el padre solo tras una respuesta real del
+  // servidor, nunca en el click en sí, para no festejar un guardado que
+  // todavía puede fallar.
+  const saveBtnRef = useRef(null);
+  useEffect(() => {
+    if (savedMessage) burst(saveBtnRef.current);
+  }, [savedMessage]);
+
   return (
     <form onSubmit={onSave} style={{ display: "grid", gap: 20 }}>
       {error && <div style={bannerStyle("danger")}>{error}</div>}
@@ -47,7 +59,7 @@ export default function BusinessProfileForm({ profile, onChange, onSave, saving,
         </p>
       </div>
 
-      <button type="submit" disabled={saving} className="vox54-btn" style={{ justifySelf: "start" }}>
+      <button ref={saveBtnRef} type="submit" disabled={saving} className="vox54-btn" style={{ justifySelf: "start" }}>
         {saving ? "Guardando…" : "Guardar cambios"}
       </button>
     </form>

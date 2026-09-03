@@ -5,6 +5,7 @@ import Icon from "./Icon";
 import PoppableBubbles from "./PoppableBubbles";
 import { useAuth } from "../AuthContext";
 import { api } from "../api";
+import { burst } from "../burst";
 
 // Shell compartido por todas las pantallas del lado de agencia. El menú
 // vuelve a vivir a la izquierda (después del experimento con el dock
@@ -18,8 +19,9 @@ import { api } from "../api";
 // mecanismo interactivo (PoppableBubbles) ya usado en LoginPage y
 // BusinessDashboard, nunca las burbujas de navegación reales
 // (Negocios/Agentes/Configuración/Salir), que siguen con su propio squish
-// de siempre. Coordenadas repensadas para una columna angosta y alta en
-// vez de una barra horizontal.
+// de siempre. Ampliado con más burbujas pegadas a los bordes (left/right
+// cerca de 0% o negativos, como si asomaran desde más allá del panel) a
+// pedido explícito de la usuaria — antes se concentraban más al centro.
 const DOCK_BUBBLES = [
   { id: "d1", size: 16, style: { left: "8%", top: "4%" }, delay: "-1.2s" },
   { id: "d2", size: 10, hue: "green", style: { right: "10%", top: "13%" }, delay: "-2.7s" },
@@ -30,12 +32,17 @@ const DOCK_BUBBLES = [
   { id: "d7", size: 21, style: { left: "-12%", top: "75%" }, delay: "-1.8s" },
   { id: "d8", size: 9, style: { right: "16%", top: "87%" }, delay: "-2.2s" },
   { id: "d9", size: 15, hue: "green", style: { left: "10%", top: "95%" }, delay: "-0.9s" },
+  { id: "d10", size: 12, hue: "violet", style: { left: "-16%", top: "8%" }, delay: "-3.9s" },
+  { id: "d11", size: 8, style: { right: "-8%", top: "20%" }, delay: "-0.6s" },
+  { id: "d12", size: 14, hue: "green", style: { right: "-12%", top: "45%", filter: "blur(0.4px)" }, delay: "-2.1s" },
+  { id: "d13", size: 10, style: { left: "-10%", top: "58%" }, delay: "-4.4s" },
+  { id: "d14", size: 17, hue: "violet", style: { left: "-15%", top: "90%" }, delay: "-1.1s" },
+  { id: "d15", size: 9, style: { right: "-9%", top: "72%" }, delay: "-3.2s" },
 ];
 
 export default function AgencyShell({ userName, onLogout, children }) {
   const location = useLocation();
   const { session } = useAuth();
-  const [poppingId, setPoppingId] = useState(null);
   const [pausedCount, setPausedCount] = useState(0);
   const [agencyName, setAgencyName] = useState("");
 
@@ -74,9 +81,13 @@ export default function AgencyShell({ userName, onLogout, children }) {
       .catch(() => {});
   }, [session]);
 
+  // Estallido real (flash+aro+partículas) al elegir una sección, en vez del
+  // simple squish de antes — a pedido explícito de la usuaria. El elemento
+  // nunca desaparece (ver burst.js): la burbuja sigue ahí, clickeable,
+  // navegando de verdad al mismo tiempo que revienta.
   function handleClick(id, e) {
-    setPoppingId(id);
-    setTimeout(() => setPoppingId(null), 500);
+    const bubbleEl = e?.currentTarget?.querySelector(".vox54-navbubble");
+    burst(bubbleEl);
     if (id === "salir") onLogout();
   }
 
@@ -96,63 +107,48 @@ export default function AgencyShell({ userName, onLogout, children }) {
         )}
 
         <div className="vox54-sidebar-main">
-          <Link
-            to="/agencia"
-            className="vox54-navcol"
-            style={{ animationDelay: "-2.4s" }}
-            onClick={() => handleClick("inicio")}
-          >
-            <span className={`vox54-navbubble hueD ${isInicio ? "active" : ""} ${poppingId === "inicio" ? "popping" : ""}`}>
-              <Icon name="home" className="icon" />
+          <Link to="/agencia" className="vox54-navcol" onClick={(e) => handleClick("inicio", e)}>
+            <span className="vox54-navfloat" style={{ animationDelay: "-2.4s" }}>
+              <span className={`vox54-navbubble hueD ${isInicio ? "active" : ""}`}>
+                <Icon name="home" className="icon" />
+              </span>
             </span>
             <span className="vox54-navlabel">Inicio</span>
           </Link>
 
-          <Link
-            to="/agencia/perfil"
-            className="vox54-navcol"
-            style={{ animationDelay: "-2.1s" }}
-            onClick={() => handleClick("agencia")}
-          >
-            <span className={`vox54-navbubble hueE ${isAgencia ? "active" : ""} ${poppingId === "agencia" ? "popping" : ""}`}>
-              <Icon name="building" className="icon" />
+          <Link to="/agencia/perfil" className="vox54-navcol" onClick={(e) => handleClick("agencia", e)}>
+            <span className="vox54-navfloat" style={{ animationDelay: "-2.1s" }}>
+              <span className={`vox54-navbubble hueE ${isAgencia ? "active" : ""}`}>
+                <Icon name="building" className="icon" />
+              </span>
             </span>
             <span className="vox54-navlabel">Agencia</span>
           </Link>
 
-          <Link
-            to="/agencia/negocios"
-            className="vox54-navcol"
-            style={{ animationDelay: "-0.6s" }}
-            onClick={() => handleClick("negocios")}
-          >
-            <span className={`vox54-navbubble ${isNegocios ? "active" : ""} ${poppingId === "negocios" ? "popping" : ""}`}>
-              <Icon name="briefcase" className="icon" />
+          <Link to="/agencia/negocios" className="vox54-navcol" onClick={(e) => handleClick("negocios", e)}>
+            <span className="vox54-navfloat" style={{ animationDelay: "-0.6s" }}>
+              <span className={`vox54-navbubble ${isNegocios ? "active" : ""}`}>
+                <Icon name="briefcase" className="icon" />
+              </span>
             </span>
             <span className="vox54-navlabel">Negocios</span>
           </Link>
 
-          <Link
-            to="/agencia/agentes"
-            className="vox54-navcol"
-            style={{ animationDelay: "-1.9s" }}
-            onClick={() => handleClick("agentes")}
-          >
-            <span className={`vox54-navbubble hueB ${isAgentes ? "active" : ""} ${poppingId === "agentes" ? "popping" : ""}`}>
-              <Icon name="mic" className="icon" />
-              {pausedCount > 0 && <span className="vox54-notif">{pausedCount}</span>}
+          <Link to="/agencia/agentes" className="vox54-navcol" onClick={(e) => handleClick("agentes", e)}>
+            <span className="vox54-navfloat" style={{ animationDelay: "-1.9s" }}>
+              <span className={`vox54-navbubble hueB ${isAgentes ? "active" : ""}`}>
+                <Icon name="mic" className="icon" />
+                {pausedCount > 0 && <span className="vox54-notif">{pausedCount}</span>}
+              </span>
             </span>
             <span className="vox54-navlabel">Agentes</span>
           </Link>
 
-          <Link
-            to="/agencia/registros"
-            className="vox54-navcol"
-            style={{ animationDelay: "-3.6s" }}
-            onClick={() => handleClick("registros")}
-          >
-            <span className={`vox54-navbubble hueF ${isRegistros ? "active" : ""} ${poppingId === "registros" ? "popping" : ""}`}>
-              <Icon name="list" className="icon" />
+          <Link to="/agencia/registros" className="vox54-navcol" onClick={(e) => handleClick("registros", e)}>
+            <span className="vox54-navfloat" style={{ animationDelay: "-3.6s" }}>
+              <span className={`vox54-navbubble hueF ${isRegistros ? "active" : ""}`}>
+                <Icon name="list" className="icon" />
+              </span>
             </span>
             <span className="vox54-navlabel">Registros</span>
           </Link>
@@ -163,26 +159,20 @@ export default function AgencyShell({ userName, onLogout, children }) {
             del lado izquierdo la primera vez (son ajuste de cuenta, no
             un destino de trabajo). */}
         <div className="vox54-sidebar-foot">
-          <Link
-            to="/agencia/configuracion"
-            className="vox54-navcol"
-            style={{ animationDelay: "-3.1s" }}
-            onClick={() => handleClick("config")}
-          >
-            <span className={`vox54-navbubble hueC ${isConfig ? "active" : ""} ${poppingId === "config" ? "popping" : ""}`}>
-              <Icon name="gear" className="icon" />
+          <Link to="/agencia/configuracion" className="vox54-navcol" onClick={(e) => handleClick("config", e)}>
+            <span className="vox54-navfloat" style={{ animationDelay: "-3.1s" }}>
+              <span className={`vox54-navbubble hueC ${isConfig ? "active" : ""}`}>
+                <Icon name="gear" className="icon" />
+              </span>
             </span>
             <span className="vox54-navlabel">Configuración</span>
           </Link>
 
-          <button
-            type="button"
-            className="vox54-navcol"
-            style={{ animationDelay: "-0.2s" }}
-            onClick={() => handleClick("salir")}
-          >
-            <span className={`vox54-navbubble exit ${poppingId === "salir" ? "popping" : ""}`}>
-              <Icon name="logout" className="icon" />
+          <button type="button" className="vox54-navcol" onClick={(e) => handleClick("salir", e)}>
+            <span className="vox54-navfloat" style={{ animationDelay: "-0.2s" }}>
+              <span className="vox54-navbubble exit">
+                <Icon name="logout" className="icon" />
+              </span>
             </span>
             <span className="vox54-navlabel">Salir</span>
           </button>

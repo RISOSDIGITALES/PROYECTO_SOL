@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AgencyShell from "../components/AgencyShell";
 import ChangePasswordForm from "../components/ChangePasswordForm";
+import PrefsToggles from "../components/PrefsToggles";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
@@ -52,6 +53,10 @@ export default function AgencyConfigPage() {
                   api.changeAgencyPassword(session.access_token, { current_password: current, new_password: next })
                 }
               />
+            </Card>
+
+            <Card title="Efectos">
+              <PrefsToggles />
             </Card>
           </div>
         )}

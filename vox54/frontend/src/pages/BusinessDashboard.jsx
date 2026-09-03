@@ -7,11 +7,13 @@ import BusinessProfileForm from "../components/BusinessProfileForm";
 import CallsList from "../components/CallsList";
 import ChangePasswordForm from "../components/ChangePasswordForm";
 import PoppableBubbles from "../components/PoppableBubbles";
+import PrefsToggles from "../components/PrefsToggles";
 import StatusPill from "../components/StatusPill";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 import { initials } from "../utils";
+import { burst } from "../burst";
 
 // Mismo tratamiento de menú que AgencyShell — vuelve a vivir a la
 // izquierda, sobre el fondo azul degradado real, en vez del dock flotando
@@ -23,7 +25,8 @@ import { initials } from "../utils";
 // el estado del estallido/reaparición vive en PoppableBubbles, compartido
 // con el login. Nunca son las burbujas de navegación reales (Llamadas/
 // Configuración/Cuenta/Salir) — esas siguen con su propio squish de
-// siempre, tienen que quedarse ahí para poder navegar.
+// siempre, tienen que quedarse ahí para poder navegar. Ampliado con más
+// burbujas pegadas a los bordes, mismo criterio que AgencyShell.
 const DOCK_BUBBLES = [
   { id: "d1", size: 16, style: { left: "8%", top: "4%" }, delay: "-1.2s" },
   { id: "d2", size: 10, hue: "green", style: { right: "10%", top: "13%" }, delay: "-2.7s" },
@@ -34,6 +37,12 @@ const DOCK_BUBBLES = [
   { id: "d7", size: 21, style: { left: "-12%", top: "75%" }, delay: "-1.8s" },
   { id: "d8", size: 9, style: { right: "16%", top: "87%" }, delay: "-2.2s" },
   { id: "d9", size: 15, hue: "green", style: { left: "10%", top: "95%" }, delay: "-0.9s" },
+  { id: "d10", size: 12, hue: "violet", style: { left: "-16%", top: "8%" }, delay: "-3.9s" },
+  { id: "d11", size: 8, style: { right: "-8%", top: "20%" }, delay: "-0.6s" },
+  { id: "d12", size: 14, hue: "green", style: { right: "-12%", top: "45%", filter: "blur(0.4px)" }, delay: "-2.1s" },
+  { id: "d13", size: 10, style: { left: "-10%", top: "58%" }, delay: "-4.4s" },
+  { id: "d14", size: 17, hue: "violet", style: { left: "-15%", top: "90%" }, delay: "-1.1s" },
+  { id: "d15", size: 9, style: { right: "-9%", top: "72%" }, delay: "-3.2s" },
 ];
 
 export default function BusinessDashboard() {
@@ -55,7 +64,6 @@ export default function BusinessDashboard() {
   const [tab, setTab] = useState("calls");
   const [calls, setCalls] = useState(null);
   const [callsError, setCallsError] = useState("");
-  const [poppingId, setPoppingId] = useState(null);
 
   useEffect(() => {
     if (!session) return;
@@ -112,9 +120,9 @@ export default function BusinessDashboard() {
     }
   }
 
-  function goTo(id) {
-    setPoppingId(id);
-    setTimeout(() => setPoppingId(null), 500);
+  function goTo(id, e) {
+    const bubbleEl = e?.currentTarget?.querySelector(".vox54-navbubble");
+    burst(bubbleEl);
     if (id === "salir") {
       logout();
       navigate("/negocio/login");
@@ -138,40 +146,50 @@ export default function BusinessDashboard() {
         <div className="vox54-sidebar-brand"><Logo size="small" /></div>
 
         <div className="vox54-sidebar-main">
-          <button type="button" className="vox54-navcol" style={{ animationDelay: "-0.6s" }} onClick={() => goTo("calls")}>
-            <span className={`vox54-navbubble ${tab === "calls" ? "active" : ""} ${poppingId === "calls" ? "popping" : ""}`}>
-              <Icon name="phone" className="icon" />
-              {errorCallsCount > 0 && <span className="vox54-notif">{errorCallsCount}</span>}
+          <button type="button" className="vox54-navcol" onClick={(e) => goTo("calls", e)}>
+            <span className="vox54-navfloat" style={{ animationDelay: "-0.6s" }}>
+              <span className={`vox54-navbubble ${tab === "calls" ? "active" : ""}`}>
+                <Icon name="phone" className="icon" />
+                {errorCallsCount > 0 && <span className="vox54-notif">{errorCallsCount}</span>}
+              </span>
             </span>
             <span className="vox54-navlabel">Llamadas</span>
           </button>
 
-          <button type="button" className="vox54-navcol" style={{ animationDelay: "-2.4s" }} onClick={() => goTo("negocio")}>
-            <span className={`vox54-navbubble hueE ${tab === "negocio" ? "active" : ""} ${poppingId === "negocio" ? "popping" : ""}`}>
-              <Icon name="tag" className="icon" />
+          <button type="button" className="vox54-navcol" onClick={(e) => goTo("negocio", e)}>
+            <span className="vox54-navfloat" style={{ animationDelay: "-2.4s" }}>
+              <span className={`vox54-navbubble hueE ${tab === "negocio" ? "active" : ""}`}>
+                <Icon name="tag" className="icon" />
+              </span>
             </span>
             <span className="vox54-navlabel">Negocio</span>
           </button>
 
-          <button type="button" className="vox54-navcol" style={{ animationDelay: "-1.9s" }} onClick={() => goTo("config")}>
-            <span className={`vox54-navbubble hueB ${tab === "config" ? "active" : ""} ${poppingId === "config" ? "popping" : ""}`}>
-              <Icon name="gear" className="icon" />
+          <button type="button" className="vox54-navcol" onClick={(e) => goTo("config", e)}>
+            <span className="vox54-navfloat" style={{ animationDelay: "-1.9s" }}>
+              <span className={`vox54-navbubble hueB ${tab === "config" ? "active" : ""}`}>
+                <Icon name="gear" className="icon" />
+              </span>
             </span>
             <span className="vox54-navlabel">Configuración</span>
           </button>
         </div>
 
         <div className="vox54-sidebar-foot">
-          <button type="button" className="vox54-navcol" style={{ animationDelay: "-3.1s" }} onClick={() => goTo("account")}>
-            <span className={`vox54-navbubble hueC ${tab === "account" ? "active" : ""} ${poppingId === "account" ? "popping" : ""}`}>
-              <Icon name="user" className="icon" />
+          <button type="button" className="vox54-navcol" onClick={(e) => goTo("account", e)}>
+            <span className="vox54-navfloat" style={{ animationDelay: "-3.1s" }}>
+              <span className={`vox54-navbubble hueC ${tab === "account" ? "active" : ""}`}>
+                <Icon name="user" className="icon" />
+              </span>
             </span>
             <span className="vox54-navlabel">Cuenta</span>
           </button>
 
-          <button type="button" className="vox54-navcol" style={{ animationDelay: "-0.2s" }} onClick={() => goTo("salir")}>
-            <span className={`vox54-navbubble exit ${poppingId === "salir" ? "popping" : ""}`}>
-              <Icon name="logout" className="icon" />
+          <button type="button" className="vox54-navcol" onClick={(e) => goTo("salir", e)}>
+            <span className="vox54-navfloat" style={{ animationDelay: "-0.2s" }}>
+              <span className="vox54-navbubble exit">
+                <Icon name="logout" className="icon" />
+              </span>
             </span>
             <span className="vox54-navlabel">Salir</span>
           </button>
@@ -245,6 +263,11 @@ export default function BusinessDashboard() {
                   <div style={accountCardTitleStyle}>Tu cuenta</div>
                   <Row label="Nombre">{me?.name}</Row>
                   <Row label="Correo">{me?.email}</Row>
+                </div>
+
+                <div className="vox54-panel" style={accountCardStyle}>
+                  <div style={accountCardTitleStyle}>Efectos</div>
+                  <PrefsToggles />
                 </div>
 
                 {/* Nunca inventamos un canal de soporte propio — quien

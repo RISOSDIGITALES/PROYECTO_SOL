@@ -501,13 +501,27 @@ textarea:focus {
   align-items: center;
   gap: 8px;
   pointer-events: auto;
-  animation: vox54-floaty 4.2s ease-in-out infinite;
   text-decoration: none;
   background: none;
   border: none;
   padding: 0;
   font-family: var(--font);
   cursor: pointer;
+}
+
+/* Envoltorio SOLO para el flote — antes vivía en .vox54-navcol y hacía
+   flotar el ícono Y el rectángulo del nombre juntos, a pedido explícito
+   de la usuaria el nombre se queda quieto, solo la burbuja se mueve. No
+   se le puso el flote directo a .vox54-navbubble porque ese elemento ya
+   tiene su propio transform de hover/activo (scale) — un `animation`
+   infinito ahí adentro le gana la pulseada al hover en cada frame y el
+   scale nunca llega a verse. Un span de por medio, sin ningún otro
+   transform propio, deja que los dos efectos convivan sin pisarse: el
+   navegador compone el translateY del padre con el scale del hijo solo
+   con anidar los elementos, sin ningún truco extra. */
+.vox54-navfloat {
+  display: inline-flex;
+  animation: vox54-floaty 4.2s ease-in-out infinite;
 }
 
 .vox54-navbubble {
@@ -596,6 +610,39 @@ textarea:focus {
 
 .vox54-navbubble.popping { animation: vox54-pop 0.5s cubic-bezier(.34,1.56,.64,1); }
 
+/* Pulso de "estallido sin desaparecer" — un botón real (Guardar cambios,
+   una burbuja de nav) nunca puede colapsar a 0 como vox54-burst; acá el
+   scale vuelve solo a 1 al final, con un pulso de brillo en el medio para
+   que se lea como el mismo tipo de reviente. El destello/aro/partículas
+   que acompañan a esto viven aparte, en .vox54-burstfx-* — ver burst.js,
+   que arma y posiciona ese overlay sobre el rect real del elemento. */
+@keyframes vox54-burst-keep {
+  0% { transform: scale(1); filter: brightness(1); }
+  18% { transform: scale(1.16); filter: brightness(1.55); }
+  50% { transform: scale(0.96); filter: brightness(1.1); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+.vox54-burstkeep {
+  animation: vox54-burst-keep 0.42s cubic-bezier(.34,1.56,.64,1);
+}
+
+.vox54-burstfx-flash {
+  position: absolute;
+  inset: -25%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.95), transparent 65%);
+  animation: vox54-flash 0.3s ease-out forwards;
+}
+
+.vox54-burstfx-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255,255,255,0.9);
+  animation: vox54-shock 0.55s ease-out forwards;
+}
+
 .vox54-navlabel {
   font-size: 11.5px;
   font-weight: 700;
@@ -631,8 +678,8 @@ textarea:focus {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .vox54-amb, .vox54-navcol, .vox54-notif { animation: none; }
-  .vox54-navbubble.popping { animation: none; }
+  .vox54-amb, .vox54-navfloat, .vox54-notif { animation: none; }
+  .vox54-navbubble.popping, .vox54-burstkeep { animation: none; }
   /* estas tienen más especificidad que .vox54-amb de arriba (2 clases, o
      una pseudo-clase ::before/::after aparte) — sin declararlas acá
      explícito seguirían animando aunque el usuario haya pedido menos
@@ -640,5 +687,24 @@ textarea:focus {
   .vox54-amb.bursting,
   .vox54-amb.bursting::before,
   .vox54-amb.bursting::after { animation: none; }
-  .vox54-shard { animation: none; opacity: 0; }
+  .vox54-shard, .vox54-burstfx-flash, .vox54-burstfx-ring { animation: none; opacity: 0; }
 }
+
+/* Mismo apagado de animaciones que la media query de arriba, pero
+   controlado por el interruptor real de la app (Configuración → Efectos),
+   no por la preferencia del sistema operativo — las dos señales se suman,
+   ninguna pisa a la otra (ver prefs.js, que pone este atributo en <html>).
+   burst()/playPopSound ya se frenan solos en JS antes de tocar el DOM
+   (ver burst.js) — este bloque cubre las animaciones puramente CSS que
+   corren solas todo el tiempo (el flote, el pulso del aviso de Agentes). */
+html[data-vox54-motion="off"] .vox54-amb,
+html[data-vox54-motion="off"] .vox54-navfloat,
+html[data-vox54-motion="off"] .vox54-notif { animation: none; }
+html[data-vox54-motion="off"] .vox54-navbubble.popping,
+html[data-vox54-motion="off"] .vox54-burstkeep { animation: none; }
+html[data-vox54-motion="off"] .vox54-amb.bursting,
+html[data-vox54-motion="off"] .vox54-amb.bursting::before,
+html[data-vox54-motion="off"] .vox54-amb.bursting::after { animation: none; }
+html[data-vox54-motion="off"] .vox54-shard,
+html[data-vox54-motion="off"] .vox54-burstfx-flash,
+html[data-vox54-motion="off"] .vox54-burstfx-ring { animation: none; opacity: 0; }

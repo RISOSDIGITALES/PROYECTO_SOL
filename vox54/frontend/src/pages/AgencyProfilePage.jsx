@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AgencyShell from "../components/AgencyShell";
 import StatusPill from "../components/StatusPill";
@@ -6,6 +6,7 @@ import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 import { initials } from "../utils";
+import { burst } from "../burst";
 
 // Perfil real de la agencia — nombre, contacto, sitio, dirección, y ahora
 // también LA LISTA REAL de negocios que gestiona (antes era solo un número,
@@ -24,6 +25,7 @@ export default function AgencyProfilePage() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState("");
+  const saveBtnRef = useRef(null);
 
   useEffect(() => {
     if (!session) return;
@@ -51,6 +53,7 @@ export default function AgencyProfilePage() {
       });
       setProfile((prev) => ({ ...prev, ...updated }));
       setSavedMessage("Guardado correctamente.");
+      burst(saveBtnRef.current);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -153,7 +156,7 @@ export default function AgencyProfilePage() {
               </p>
             </div>
 
-            <button type="submit" disabled={saving} className="vox54-btn" style={{ justifySelf: "start" }}>
+            <button ref={saveBtnRef} type="submit" disabled={saving} className="vox54-btn" style={{ justifySelf: "start" }}>
               {saving ? "Guardando…" : "Guardar cambios"}
             </button>
           </form>

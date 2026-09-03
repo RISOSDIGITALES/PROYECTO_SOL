@@ -1,4 +1,5 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { burst } from "../burst";
 
 /**
  * Formulario de configuración del agente de voz — reusado tanto por el panel
@@ -84,6 +85,14 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
   }
 
   const isActive = config.status === "active";
+
+  // Mismo criterio que BusinessProfileForm — el botón estalla (sin
+  // desaparecer) recién cuando el padre confirma un guardado real, nunca
+  // en el click en sí.
+  const saveBtnRef = useRef(null);
+  useEffect(() => {
+    if (savedMessage) burst(saveBtnRef.current);
+  }, [savedMessage]);
 
   return (
     <form onSubmit={onSave} style={{ display: "grid", gap: 24 }}>
@@ -417,7 +426,7 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
       </Section>
       </div>
 
-      <button type="submit" disabled={saving} className="vox54-btn">
+      <button ref={saveBtnRef} type="submit" disabled={saving} className="vox54-btn">
         {saving ? "Guardando…" : "Guardar cambios"}
       </button>
     </form>
