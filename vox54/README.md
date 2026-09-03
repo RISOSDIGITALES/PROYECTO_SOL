@@ -241,13 +241,15 @@ cp .env.example .env   # WORKER_SECRET debe coincidir con el del backend (.env),
 ### Tests
 
 ```bash
-# Backend — 78 tests reales contra una base SQLite en memoria (aislada de
-# vox54.db), cubren auth, CRUD de negocios, validación de BotConfig
-# (incluyendo el caso crítico de PATCH parcial validado contra lo ya
-# guardado), la separación real de campos cliente/agencia, el perfil real
-# de agencia/negocio (con aislamiento entre agencias distintas), Registros
-# (historial de llamadas de toda la agencia), y el endpoint del worker con
-# su guardia de secreto.
+# Backend — 90 tests reales contra una base SQLite en memoria (aislada de
+# vox54.db, y de la carpeta real de uploads/ vía un fixture autouse), cubren
+# auth, CRUD de negocios, validación de BotConfig (incluyendo el caso
+# crítico de PATCH parcial validado contra lo ya guardado), la separación
+# real de campos cliente/agencia, el perfil real de agencia/negocio (con
+# aislamiento entre agencias distintas), Registros (historial de llamadas
+# de toda la agencia), la subida real de logo/PDF (tipo de archivo, tamaño
+# máximo, y que un negocio nunca pueda tocar el de otro), y el endpoint del
+# worker con su guardia de secreto.
 cd vox54/backend
 ./venv/Scripts/python.exe -m pip install -r requirements-dev.txt
 ./venv/Scripts/python.exe -m pytest tests/ -v
