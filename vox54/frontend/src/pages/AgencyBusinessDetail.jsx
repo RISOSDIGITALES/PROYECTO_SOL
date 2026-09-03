@@ -119,17 +119,31 @@ export default function AgencyBusinessDetail() {
         )}
 
         {business && (
-          <Link to={`/agencia/negocios/${id}/bot`} className="vox54-card" style={ctaCardStyle}>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 14.5, color: "var(--ink)", marginBottom: 3 }}>
-                Configuración del bot de voz
+          <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
+            <Link to={`/agencia/negocios/${id}/perfil`} className="vox54-card" style={ctaCardStyle}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14.5, color: "var(--ink)", marginBottom: 3 }}>
+                  Perfil del negocio
+                </div>
+                <div style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>
+                  Resumen, horarios y productos — lo que el agente necesita saber para responder.
+                </div>
               </div>
-              <div style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>
-                Telefonía, voz, modelo de IA, comportamiento y control de la llamada.
+              <span style={{ fontSize: 20, color: "var(--g54-blue)" }}>→</span>
+            </Link>
+
+            <Link to={`/agencia/negocios/${id}/bot`} className="vox54-card" style={ctaCardStyle}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14.5, color: "var(--ink)", marginBottom: 3 }}>
+                  Configuración del bot de voz
+                </div>
+                <div style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>
+                  Telefonía, voz, modelo de IA, comportamiento y control de la llamada.
+                </div>
               </div>
-            </div>
-            <span style={{ fontSize: 20, color: "var(--g54-blue)" }}>→</span>
-          </Link>
+              <span style={{ fontSize: 20, color: "var(--g54-blue)" }}>→</span>
+            </Link>
+          </div>
         )}
 
         {!business && !error && <div style={{ color: "var(--ink-soft)", fontSize: 13.5, marginTop: 16 }}>Cargando…</div>}
@@ -167,7 +181,6 @@ const ctaCardStyle = {
   justifyContent: "space-between",
   gap: 16,
   padding: "18px 20px",
-  marginTop: 16,
   textDecoration: "none",
   color: "inherit",
 };

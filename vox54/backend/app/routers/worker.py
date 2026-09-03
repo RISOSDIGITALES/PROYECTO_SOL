@@ -13,21 +13,36 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import require_worker_secret
-from ..schemas import BotConfigOut, CallOut, CallReport
+from ..schemas import CallOut, CallReport, WorkerBotConfigOut
+from ..validators import bot_config_as_dict
 from .. import models
 
 router = APIRouter(prefix="/worker", tags=["worker"], dependencies=[Depends(require_worker_secret)])
 
 
-@router.get("/bot-config/{business_id}", response_model=BotConfigOut)
+def _worker_bot_config_out(config: models.BotConfig) -> WorkerBotConfigOut:
+    """BotConfigOut (infraestructura) + el perfil real del negocio (nombre,
+    resumen, horario, productos) — el worker es el único consumidor que
+    necesita ambas cosas juntas para armar el contexto real del agente."""
+    business = config.business
+    data = bot_config_as_dict(config)
+    data["business_id"] = config.business_id
+    data["business_name"] = business.name
+    data["business_description"] = business.description or ""
+    data["business_hours"] = business.hours or ""
+    data["business_products_services"] = business.products_services or ""
+    return WorkerBotConfigOut(**data)
+
+
+@router.get("/bot-config/{business_id}", response_model=WorkerBotConfigOut)
 def get_bot_config_for_worker(business_id: int, db: Session = Depends(get_db)):
     config = db.query(models.BotConfig).filter(models.BotConfig.business_id == business_id).first()
     if not config:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No existe BotConfig para ese business_id")
-    return config
+    return _worker_bot_config_out(config)
 
 
-@router.get("/bot-config/by-phone/{phone_number}", response_model=BotConfigOut)
+@router.get("/bot-config/by-phone/{phone_number}", response_model=WorkerBotConfigOut)
 def get_bot_config_by_phone(phone_number: str, db: Session = Depends(get_db)):
     """El worker resuelve qué negocio es dueño de una llamada entrante por el
     número al que marcó el cliente — así arma el AgentSession correcto antes
@@ -35,7 +50,7 @@ def get_bot_config_by_phone(phone_number: str, db: Session = Depends(get_db)):
     config = db.query(models.BotConfig).filter(models.BotConfig.phone_number == phone_number).first()
     if not config:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Ningún negocio tiene asignado ese número")
-    return config
+    return _worker_bot_config_out(config)
 
 
 @router.post("/calls", response_model=CallOut, status_code=status.HTTP_201_CREATED)

@@ -111,6 +111,85 @@ def test_me_incluye_el_nombre_de_la_agencia(client, seed, business_token):
     assert res.json()["agency_name"] == "Agencia de Prueba"
 
 
+def test_me_incluye_el_contacto_real_de_la_agencia_si_lo_cargo(client, seed, business_token, db_session):
+    seed["agency"].contact_email = "hola@agenciaprueba.com"
+    seed["agency"].contact_phone = "+1 555 0100"
+    db_session.commit()
+
+    res = client.get("/business/me", headers=auth(business_token))
+    assert res.status_code == 200
+    assert res.json()["agency_contact_email"] == "hola@agenciaprueba.com"
+    assert res.json()["agency_contact_phone"] == "+1 555 0100"
+
+
+def test_me_sin_contacto_de_agencia_cargado_no_inventa_nada(client, seed, business_token):
+    res = client.get("/business/me", headers=auth(business_token))
+    assert res.status_code == 200
+    assert res.json()["agency_contact_email"] == ""
+    assert res.json()["agency_contact_phone"] == ""
+
+
+# --- Perfil del propio negocio ---
+
+def test_get_profile(client, seed, business_token):
+    res = client.get("/business/profile", headers=auth(business_token))
+    assert res.status_code == 200
+    assert res.json()["name"] == "Negocio de Prueba"
+    assert res.json()["hours"] == ""
+
+
+def test_update_profile_persiste(client, seed, business_token):
+    res = client.put(
+        "/business/profile",
+        headers=auth(business_token),
+        json={
+            "description": "Somos una empresa de prueba.",
+            "hours": "Todos los días 8am-6pm",
+            "products_services": "Servicio A, Servicio B",
+        },
+    )
+    assert res.status_code == 200
+    assert res.json()["description"] == "Somos una empresa de prueba."
+
+    detail = client.get("/business/profile", headers=auth(business_token))
+    assert detail.json()["hours"] == "Todos los días 8am-6pm"
+    assert detail.json()["products_services"] == "Servicio A, Servicio B"
+
+
+def test_update_profile_no_puede_cambiar_el_nombre(client, seed, business_token):
+    """A propósito: BusinessProfileUpdate ni siquiera conoce `name` — el
+    negocio no se renombra a sí mismo, eso es de la agencia (ver
+    /agency/businesses/{id}, endpoint distinto)."""
+    res = client.put("/business/profile", headers=auth(business_token), json={"name": "Nombre Robado"})
+    assert res.status_code == 200  # el campo desconocido se ignora, no da error
+    assert res.json()["name"] == "Negocio de Prueba"
+
+
+def test_un_negocio_nunca_ve_ni_toca_el_perfil_de_otro(client, seed, business_token, db_session):
+    from app import models
+    from app.security import hash_password
+
+    business2 = models.Business(agency_id=seed["agency"].id, name="Negocio 2", description="Perfil de negocio 2")
+    db_session.add(business2)
+    db_session.flush()
+    db_session.add(models.BusinessUser(
+        business_id=business2.id, name="Dueño 2", email="negocio2-perfil@test-demo.com",
+        password_hash=hash_password("otra_pass_123"),
+    ))
+    db_session.commit()
+
+    login2 = client.post("/auth/business/login", json={"email": "negocio2-perfil@test-demo.com", "password": "otra_pass_123"})
+    token2 = login2.json()["access_token"]
+
+    client.put("/business/profile", headers=auth(business_token), json={"description": "Perfil de negocio 1"})
+
+    profile1 = client.get("/business/profile", headers=auth(business_token)).json()
+    profile2 = client.get("/business/profile", headers=auth(token2)).json()
+
+    assert profile1["description"] == "Perfil de negocio 1"
+    assert profile2["description"] == "Perfil de negocio 2"  # intacto
+
+
 def test_cambiar_password_ok(client, seed, business_token):
     res = client.put(
         "/business/me/password",

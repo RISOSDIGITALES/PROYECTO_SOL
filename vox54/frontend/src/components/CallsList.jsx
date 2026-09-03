@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { parseTranscript, formatDuration, formatDate, OUTCOME_LABEL, OUTCOME_HUE } from "../callFormat";
 
 // Visibilidad de resultado — antes de esto, un negocio configuraba su bot y
 // nunca se enteraba de qué pasaba con ninguna llamada real. Reusado tanto
@@ -91,47 +92,12 @@ function CallRow({ call }) {
   );
 }
 
-function OutcomeBadge({ outcome }) {
+// Exportado — Registros (lista y detalle de llamadas a nivel de agencia)
+// reusa este mismo badge, en vez de duplicar el mapeo outcome→color.
+export function OutcomeBadge({ outcome }) {
   const hue = OUTCOME_HUE[outcome] || "gray";
   const label = OUTCOME_LABEL[outcome] || outcome;
   return <span className={`vox54-pill ${hue}`}>{label}</span>;
-}
-
-const OUTCOME_LABEL = {
-  completed: "Completada",
-  transferred: "Transferida",
-  max_duration_reached: "Cortada por duración",
-  error: "Error",
-};
-
-const OUTCOME_HUE = {
-  completed: "green",
-  transferred: "",
-  max_duration_reached: "amber",
-  error: "red",
-};
-
-function parseTranscript(raw) {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    return parsed
-      .filter((item) => item.type === "message" && Array.isArray(item.content))
-      .map((item) => ({ role: item.role, content: item.content.join(" ") }));
-  } catch {
-    return [];
-  }
-}
-
-function formatDuration(seconds) {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
-function formatDate(iso) {
-  const d = new Date(iso.endsWith("Z") ? iso : iso + "Z");
-  return d.toLocaleString("es-NI", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 const emptyStateStyle = {

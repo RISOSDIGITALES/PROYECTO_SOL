@@ -4,7 +4,13 @@ from sqlalchemy.orm import Session, joinedload
 from ..database import get_db
 from ..deps import get_current_agency_user
 from ..security import hash_password, verify_password
-from ..schemas import AgencyMeResponse, BusinessOut, BusinessCreate, BusinessUpdate, BusinessDetailOut, BotConfigUpdate, BotConfigOut, CallOut, PasswordChange, AgentInventoryItem
+from ..schemas import (
+    AgencyMeResponse, AgencyProfileOut, AgencyProfileUpdate,
+    BusinessOut, BusinessCreate, BusinessUpdate, BusinessDetailOut,
+    BusinessProfileOut, BusinessProfileUpdate,
+    BotConfigUpdate, BotConfigOut, CallOut, AgencyCallOut,
+    PasswordChange, AgentInventoryItem,
+)
 from ..validators import bot_config_as_dict, validate_bot_config
 from .. import models
 
@@ -33,6 +39,42 @@ def change_password(
     user.password_hash = hash_password(body.new_password)
     db.commit()
     return {"ok": True}
+
+
+def _agency_profile_out(db: Session, agency: models.Agency) -> AgencyProfileOut:
+    business_count = db.query(models.Business).filter(models.Business.agency_id == agency.id).count()
+    return AgencyProfileOut(
+        id=agency.id,
+        name=agency.name,
+        contact_email=agency.contact_email or "",
+        contact_phone=agency.contact_phone or "",
+        website=agency.website or "",
+        address=agency.address or "",
+        business_count=business_count,
+    )
+
+
+@router.get("/profile", response_model=AgencyProfileOut)
+def get_agency_profile(
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    return _agency_profile_out(db, user.agency)
+
+
+@router.put("/profile", response_model=AgencyProfileOut)
+def update_agency_profile(
+    body: AgencyProfileUpdate,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    agency = user.agency
+    patch = body.model_dump(exclude_unset=True)
+    for field, value in patch.items():
+        setattr(agency, field, value)
+    db.commit()
+    db.refresh(agency)
+    return _agency_profile_out(db, agency)
 
 
 @router.get("/businesses", response_model=list[BusinessOut])
@@ -165,3 +207,80 @@ def list_business_calls(
         .limit(100)
         .all()
     )
+
+
+@router.get("/businesses/{business_id}/profile", response_model=BusinessProfileOut)
+def get_business_profile(
+    business_id: int,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    return _get_owned_business(db, user, business_id)
+
+
+@router.put("/businesses/{business_id}/profile", response_model=BusinessProfileOut)
+def update_business_profile(
+    business_id: int,
+    body: BusinessProfileUpdate,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    business = _get_owned_business(db, user, business_id)
+    patch = body.model_dump(exclude_unset=True)
+    for field, value in patch.items():
+        setattr(business, field, value)
+    db.commit()
+    db.refresh(business)
+    return business
+
+
+# --- Registros: historial de llamadas de TODA la agencia, no de un negocio
+# puntual (eso ya lo cubre list_business_calls arriba) — con el nombre del
+# negocio ya resuelto en cada fila, para no tener que cruzar datos del lado
+# del cliente. ---
+def _agency_call_out(call: models.Call) -> AgencyCallOut:
+    return AgencyCallOut(
+        id=call.id,
+        business_id=call.business_id,
+        business_name=call.business.name,
+        started_at=call.started_at,
+        ended_at=call.ended_at,
+        duration_seconds=call.duration_seconds,
+        caller_number=call.caller_number,
+        outcome=call.outcome,
+        transcript=call.transcript,
+    )
+
+
+@router.get("/calls", response_model=list[AgencyCallOut])
+def list_agency_calls(
+    business_id: int | None = None,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    q = (
+        db.query(models.Call)
+        .join(models.Business, models.Call.business_id == models.Business.id)
+        .filter(models.Business.agency_id == user.agency_id)
+    )
+    if business_id is not None:
+        q = q.filter(models.Call.business_id == business_id)
+    calls = q.order_by(models.Call.started_at.desc()).limit(200).all()
+    return [_agency_call_out(c) for c in calls]
+
+
+@router.get("/calls/{call_id}", response_model=AgencyCallOut)
+def get_agency_call(
+    call_id: int,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    call = (
+        db.query(models.Call)
+        .join(models.Business, models.Call.business_id == models.Business.id)
+        .filter(models.Call.id == call_id, models.Business.agency_id == user.agency_id)
+        .first()
+    )
+    if not call:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Llamada no encontrada")
+    return _agency_call_out(call)

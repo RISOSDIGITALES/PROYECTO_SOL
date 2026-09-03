@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import BotConfigForm from "../components/BotConfigForm";
+import BusinessProfileForm from "../components/BusinessProfileForm";
 import CallsList from "../components/CallsList";
 import ChangePasswordForm from "../components/ChangePasswordForm";
 import PoppableBubbles from "../components/PoppableBubbles";
@@ -44,6 +45,10 @@ export default function BusinessDashboard() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState("");
+  const [profile, setProfile] = useState(null);
+  const [profileError, setProfileError] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSavedMessage, setProfileSavedMessage] = useState("");
   // "Llamadas" primero, no "Configuración" — lo que le importa a un cliente
   // real es qué pasó, no ajustar perillas; la config queda a un clic.
   const [tab, setTab] = useState("calls");
@@ -57,6 +62,7 @@ export default function BusinessDashboard() {
     api.getBotConfig(session.access_token).then(setConfig).catch((e) => setError(e.message));
     api.getCatalog().then(setCatalog).catch((e) => setError(e.message));
     api.listCalls(session.access_token).then(setCalls).catch((e) => setCallsError(e.message));
+    api.getMyProfile(session.access_token).then(setProfile).catch((e) => setProfileError(e.message));
   }, [session]);
 
   function handleChange(patch) {
@@ -77,6 +83,31 @@ export default function BusinessDashboard() {
       setError(err.message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  function handleProfileChange(patch) {
+    setProfile((prev) => ({ ...prev, ...patch }));
+    setProfileSavedMessage("");
+  }
+
+  async function handleProfileSave(e) {
+    e.preventDefault();
+    setProfileError("");
+    setProfileSavedMessage("");
+    setProfileSaving(true);
+    try {
+      const updated = await api.updateMyProfile(session.access_token, {
+        description: profile.description,
+        hours: profile.hours,
+        products_services: profile.products_services,
+      });
+      setProfile(updated);
+      setProfileSavedMessage("Guardado correctamente.");
+    } catch (err) {
+      setProfileError(err.message);
+    } finally {
+      setProfileSaving(false);
     }
   }
 
@@ -112,6 +143,13 @@ export default function BusinessDashboard() {
               {errorCallsCount > 0 && <span className="vox54-notif">{errorCallsCount}</span>}
             </span>
             <span className="vox54-navlabel">Llamadas</span>
+          </button>
+
+          <button type="button" className="vox54-navcol" style={{ animationDelay: "-2.4s" }} onClick={() => goTo("negocio")}>
+            <span className={`vox54-navbubble hueE ${tab === "negocio" ? "active" : ""} ${poppingId === "negocio" ? "popping" : ""}`}>
+              <span className="icon">🏷️</span>
+            </span>
+            <span className="vox54-navlabel">Negocio</span>
           </button>
 
           <button type="button" className="vox54-navcol" style={{ animationDelay: "-1.9s" }} onClick={() => goTo("config")}>
@@ -168,6 +206,21 @@ export default function BusinessDashboard() {
 
             {tab === "calls" && <CallsList calls={calls} loading={calls === null && !callsError} error={callsError} />}
 
+            {tab === "negocio" && (
+              profile ? (
+                <BusinessProfileForm
+                  profile={profile}
+                  onChange={handleProfileChange}
+                  onSave={handleProfileSave}
+                  saving={profileSaving}
+                  savedMessage={profileSavedMessage}
+                  error={profileError}
+                />
+              ) : (
+                !profileError && <div style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>Cargando…</div>
+              )
+            )}
+
             {tab === "config" && (
               config && catalog ? (
                 <BotConfigForm
@@ -195,7 +248,11 @@ export default function BusinessDashboard() {
 
                 {/* Nunca inventamos un canal de soporte propio — quien
                     gestiona este negocio es la agencia, así que es a ella a
-                    quien hay que avisarle si algo no funciona. */}
+                    quien hay que avisarle si algo no funciona. Si la agencia
+                    cargó su correo/teléfono real (ver "Agencia" del lado de
+                    agencia), se muestran como un contacto real y directo —
+                    antes esto era solo el nombre, sin ninguna forma real de
+                    escribirle o llamarle. */}
                 {me?.agency_name && (
                   <div className="vox54-panel" style={{ ...accountCardStyle, background: "#eef4ff" }}>
                     <div style={accountCardTitleStyle}>¿Necesitás ayuda?</div>
@@ -204,6 +261,24 @@ export default function BusinessDashboard() {
                       funciona como esperás o necesitás un cambio que no podés hacer desde acá, contactalos
                       directamente a ellos.
                     </p>
+                    {(me.agency_contact_email || me.agency_contact_phone) && (
+                      <div style={{ display: "grid", gap: 4, marginTop: 2 }}>
+                        {me.agency_contact_email && (
+                          <div style={{ fontSize: 13 }}>
+                            <span style={{ color: "var(--ink-soft)" }}>Correo: </span>
+                            <a href={`mailto:${me.agency_contact_email}`} style={{ color: "var(--g54-blue)", fontWeight: 600, textDecoration: "none" }}>
+                              {me.agency_contact_email}
+                            </a>
+                          </div>
+                        )}
+                        {me.agency_contact_phone && (
+                          <div style={{ fontSize: 13 }}>
+                            <span style={{ color: "var(--ink-soft)" }}>Teléfono: </span>
+                            <span style={{ color: "var(--ink)", fontWeight: 600 }}>{me.agency_contact_phone}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 

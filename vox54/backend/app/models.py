@@ -15,6 +15,18 @@ class Agency(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(150), nullable=False)
+
+    # --- Perfil de la agencia ---
+    # Antes esto era solo `name` + un conteo de negocios — una agencia real
+    # necesita un canal de contacto propio, no solo el nombre y el correo
+    # personal del admin logueado. También cierra un hueco real del lado del
+    # negocio: hasta ahora su único "canal de soporte" era el nombre de la
+    # agencia (ver BusinessMeResponse) sin ningún dato real para contactarla.
+    contact_email = Column(String(255), default="")
+    contact_phone = Column(String(30), default="")
+    website = Column(String(255), default="")
+    address = Column(String(255), default="")
+
     created_at = Column(DateTime, default=utcnow)
 
     users = relationship("AgencyUser", back_populates="agency", cascade="all, delete-orphan")
@@ -40,6 +52,18 @@ class Business(Base):
     id = Column(Integer, primary_key=True)
     agency_id = Column(Integer, ForeignKey("agencies.id"), nullable=False)
     name = Column(String(150), nullable=False)
+
+    # --- Perfil real del negocio — lo que el bot necesita saber para
+    # responder, separado a propósito de BotConfig (que es infraestructura:
+    # telefonía/STT/TTS/modelo/prompt). Esto es el conocimiento de negocio en
+    # sí — a qué se dedica, cuándo atiende, qué vende — editable tanto por la
+    # agencia como por el propio negocio (nadie conoce mejor su horario real
+    # que el dueño). Texto libre a propósito: un catálogo estructurado por
+    # producto es una función mucho más grande, sin pedirse todavía. ---
+    description = Column(Text, default="")
+    hours = Column(Text, default="")
+    products_services = Column(Text, default="")
+
     created_at = Column(DateTime, default=utcnow)
 
     agency = relationship("Agency", back_populates="businesses")

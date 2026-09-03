@@ -105,6 +105,47 @@ class TestBuildLlm(unittest.TestCase):
         self.assertIn("anthropic", str(ctx.exception))
 
 
+class TestBuildInstructions(unittest.TestCase):
+    def test_sin_perfil_de_negocio_devuelve_el_system_prompt_tal_cual(self):
+        """Sin ningún campo de perfil cargado, no se agrega ninguna línea de
+        más — nunca inventar contexto que el negocio no puso."""
+        result = agent.build_instructions({
+            "system_prompt": "Sos Marco, el agente de Crating Express.",
+            "business_description": "", "business_hours": "", "business_products_services": "",
+        })
+        self.assertEqual(result, "Sos Marco, el agente de Crating Express.")
+
+    def test_sin_system_prompt_cae_al_default_generico(self):
+        result = agent.build_instructions({"system_prompt": ""})
+        self.assertEqual(result, "Sos un asistente de voz útil, breve y cordial.")
+
+    def test_agrega_el_perfil_real_del_negocio_cuando_esta_cargado(self):
+        result = agent.build_instructions({
+            "system_prompt": "Sos Marco.",
+            "business_description": "Embalajes de madera a medida en Miami.",
+            "business_hours": "Lunes a viernes 8am-5pm",
+            "business_products_services": "Cajones cerrados, jaulas",
+        })
+        self.assertIn("Sos Marco.", result)
+        self.assertIn("Sobre el negocio: Embalajes de madera a medida en Miami.", result)
+        self.assertIn("Horario de atención: Lunes a viernes 8am-5pm", result)
+        self.assertIn("Productos y servicios: Cajones cerrados, jaulas", result)
+
+    def test_agrega_solo_los_campos_que_de_verdad_vienen_cargados(self):
+        """Un negocio puede cargar solo el horario y dejar el resto vacío —
+        no debe aparecer ninguna línea vacía ('Sobre el negocio: ') para los
+        campos que sí están en blanco."""
+        result = agent.build_instructions({
+            "system_prompt": "Sos Marco.",
+            "business_description": "",
+            "business_hours": "24 horas",
+            "business_products_services": "",
+        })
+        self.assertIn("Horario de atención: 24 horas", result)
+        self.assertNotIn("Sobre el negocio:", result)
+        self.assertNotIn("Productos y servicios:", result)
+
+
 class TestFetchBotConfig(unittest.IsolatedAsyncioTestCase):
     async def test_por_business_id(self):
         mock_response = MagicMock()

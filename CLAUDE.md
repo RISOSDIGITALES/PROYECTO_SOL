@@ -783,21 +783,35 @@ vox54/
     app/
       routers/agency.py, business.py, auth.py, catalog.py, worker.py
       models.py, schemas.py, validators.py, security.py, deps.py
-    tests/            — pytest, 54 tests
+    tests/            — pytest, 75 tests
     seed.py           — datos demo (ver credenciales abajo)
     requirements.txt
   frontend/
     src/
-      pages/          — LoginPage, AgencyHomePage (Inicio), AgencyBusinessesPage
-                         (Negocios — antes se llamaba AgencyDashboard, renombrado
-                         02-sep cuando Inicio pasó a ocupar /agencia),
-                         AgencyAgentsPage, AgencyBusinessDetail, AgencyBotConfig,
-                         AgencyConfigPage, BusinessDashboard, NotFoundPage
+      pages/          — LoginPage, AgencyHomePage (Inicio), AgencyProfilePage
+                         (Agencia — perfil real de la agencia: contacto/sitio/
+                         dirección, 03-sep), AgencyBusinessesPage (Negocios —
+                         antes se llamaba AgencyDashboard, renombrado 02-sep
+                         cuando Inicio pasó a ocupar /agencia), AgencyAgentsPage,
+                         AgencyBusinessDetail, AgencyBusinessProfile (perfil de
+                         UN negocio — resumen/horario/productos, 03-sep),
+                         AgencyBotConfig, AgencyConfigPage (ahora solo cuenta
+                         personal, el perfil de agencia se movió a
+                         AgencyProfilePage), AgencyCallsPage + AgencyCallDetail
+                         (Registros — historial de llamadas de toda la agencia
+                         + detalle con transcripción completa, 03-sep),
+                         BusinessDashboard, NotFoundPage
       components/     — AgencyShell (menú lateral), PoppableBubbles (burbujas
                          decorativas clickeables, compartido por LoginPage/
                          AgencyShell/BusinessDashboard), StatusPill, BotConfigForm
-                         (compartido por agencia y negocio), CallsList (idem),
-                         ChangePasswordForm (idem), CreateBusinessModal, Logo
+                         (compartido por agencia y negocio), BusinessProfileForm
+                         (idem — el perfil real del negocio, sin `scope`: nada
+                         ahí es infraestructura sensible), CallsList (exporta
+                         `OutcomeBadge`, reusado por Registros), ChangePasswordForm
+                         (idem), CreateBusinessModal, Logo
+      callFormat.js    — parseTranscript/formatDuration/formatDate/OUTCOME_*
+                         compartidos entre CallsList y Registros (extraído
+                         03-sep para no duplicar el formato de una llamada)
       popSound.js      — sintetiza el "pop" del estallido de una burbuja con
                          Web Audio API, sin ningún archivo de audio externo
       utils.js         — initials(), firstName() (nombre de pila para saludos,
@@ -807,28 +821,34 @@ vox54/
   worker/
     agent.py           — LiveKit Agents worker real (STT/TTS/LLM por proveedor,
                          resuelve config del bot llamando a /worker/*, reporta
-                         cada llamada terminada a POST /worker/calls)
-    test_agent.py       — unittest (no pytest), 15 tests — correr con
+                         cada llamada terminada a POST /worker/calls,
+                         build_instructions() arma el prompt real con el
+                         perfil del negocio si está cargado — 03-sep)
+    test_agent.py       — unittest (no pytest), 19 tests — correr con
                          `WORKER_SECRET=test venv/Scripts/python.exe -m unittest test_agent -v`
     requirements.txt    — su propio venv, separado del de backend/ (tiene
                          livekit-agents + plugins, backend/ no los necesita)
 ```
 
-## Rutas del lado de agencia (reorganizado 2026-08-31, `/agencia` separado de Negocios el 02-sep)
+## Rutas del lado de agencia (reorganizado 2026-08-31, `/agencia` separado de Negocios el 02-sep, Agencia/perfiles de negocio/Registros agregados el 03-sep)
 
-Antes una sola pantalla mezclaba la identidad del negocio con el formulario completo del bot — separado en áreas distintas, cada una con su propia ruta y su propio trabajo:
+Antes una sola pantalla mezclaba la identidad del negocio con el formulario completo del bot — separado en áreas distintas, cada una con su propia ruta y su propio trabajo. El 03-sep se sumaron 3 conceptos nuevos, a pedido explícito de la usuaria: (1) un perfil real de la AGENCIA en sí (contacto/sitio/dirección — antes solo vivía el nombre, mezclado dentro de "Configuración" junto con la cuenta personal del admin); (2) un perfil real de CADA NEGOCIO (resumen/horarios/productos — lo que el bot necesita saber para responder, deliberadamente separado de la configuración técnica del bot, que sigue siendo exclusiva de "Configuración del bot de voz"); (3) "Registros", el historial de llamadas de TODA la agencia (no solo de un negocio puntual), con detalle completo + transcripción por llamada:
 
 | Ruta | Qué hace |
 |---|---|
 | `/agencia` | **Inicio** — bienvenida (saludo con nombre de pila real, `firstName()`), checklist de "Primeros pasos" con estado 100% real (creaste un negocio / le asignaste teléfono / lo activaste — cada paso pendiente enlaza directo al negocio real al que le falta), y un resumen de agentes (total/activos/pausados, mismo dato que el inventario) |
+| `/agencia/perfil` | **Agencia** — identidad y contacto reales de la agencia (nombre, correo, teléfono, sitio, dirección), editable (`PUT /agency/profile`) — es lo que un negocio ve como su canal de soporte real en la pestaña Cuenta (antes solo el nombre, ahora con correo/teléfono reales si se cargaron) |
 | `/agencia/negocios` | **Negocios** — la grilla de tarjetas que antes vivía en `/agencia` (estado real del bot por tarjeta) — componente `AgencyBusinessesPage.jsx` |
 | `/agencia/agentes` | Inventario de agentes — tabla de todos los bots con su negocio, estado, telefonía/número y modelo de IA reales, resueltos contra el catálogo (`GET /agency/agents`) |
-| `/agencia/configuracion` | Datos de la agencia (solo lectura — sin endpoint de edición todavía) + cuenta del admin logueado (nombre/correo de solo lectura, más cambio de contraseña real) |
-| `/agencia/negocios/:id` | Identidad del negocio — nombre (renombrable), ID, estado, sus llamadas recientes (`CallsList`), y una tarjeta que lleva a su bot |
+| `/agencia/registros` | **Registros** — historial de llamadas de TODOS los negocios de la agencia en una sola tabla (negocio/fecha/duración/número/resultado), con filtro real por negocio; cada fila lleva al detalle |
+| `/agencia/registros/:callId` | Detalle completo de una llamada real — metadata (fecha/hora, duración, número, cuándo terminó) + transcripción completa, mismo formato que el expandible de `CallsList` (comparten `callFormat.js`) |
+| `/agencia/configuracion` | Solo la cuenta personal del admin logueado (nombre/correo de solo lectura + cambio de contraseña real) — el perfil de la agencia en sí ya no vive acá, se movió a `/agencia/perfil` |
+| `/agencia/negocios/:id` | Identidad del negocio — nombre (renombrable), ID, estado, sus llamadas recientes (`CallsList`), y 2 tarjetas: una a su perfil, otra a su bot |
+| `/agencia/negocios/:id/perfil` | Perfil real del negocio — resumen/horario/productos (`BusinessProfileForm`, `GET/PUT /agency/businesses/{id}/profile`) |
 | `/agencia/negocios/:id/bot` | Configuración completa del bot de ese negocio (`BotConfigForm`, scope agencia — ve/edita también telefonía/STT/TTS/modelo de IA; grilla real de 2 columnas desde el 02-sep, ver "Estado actual") |
-| `/negocio` | Dashboard de un negocio logueado directo — 4 secciones controladas por el mismo menú de burbujas (no rutas reales, estado local): Llamadas (`CallsList`, por defecto, con aviso real si alguna terminó en error), Configuración (mismo `BotConfigForm` pero scope cliente — sin los campos de infraestructura), Cuenta (cambio de contraseña + el nombre de la agencia que lo gestiona, como único "contacto de soporte" real) |
+| `/negocio` | Dashboard de un negocio logueado directo — 5 secciones controladas por el mismo menú de burbujas (no rutas reales, estado local): Llamadas (`CallsList`, por defecto, con aviso real si alguna terminó en error), Negocio (`BusinessProfileForm`, el mismo perfil real que también puede editar la agencia — nadie sabe su horario real mejor que el dueño), Configuración (mismo `BotConfigForm` pero scope cliente — sin los campos de infraestructura), Cuenta (cambio de contraseña + el nombre/correo/teléfono real de la agencia que lo gestiona, como único "contacto de soporte" real) |
 
-`AgencyShell` es compartido por las 6 pantallas de agencia. El menú vive a la izquierda (ver "Menú de burbujas" más abajo) — 5 destinos: "Inicio" y "Negocios" y "Agentes" (trabajo del día a día), y "Configuración" + "Salir" (ajuste de la cuenta propia, agrupados al pie).
+`AgencyShell` es compartido por las 8 pantallas de agencia. El menú vive a la izquierda (ver "Menú de burbujas" más abajo) — 7 destinos: "Inicio", "Agencia", "Negocios", "Agentes" y "Registros" (trabajo del día a día), y "Configuración" + "Salir" (ajuste de la cuenta propia, agrupados al pie).
 
 ## Credenciales demo (`python seed.py`)
 
@@ -861,7 +881,7 @@ El sidebar plano y oscuro se reemplazó por burbujas de vidrio. Hubo un experime
 
 **Arquitectura real:** `.vox54-sidebar` es una columna angosta de ancho fijo (176px) y alto completo (100vh), hermana — en una fila flex — de la columna de contenido (topbar + `<main>` con su propio scroll). Al ser un hermano de ancho fijo en una fila flex (no una capa flotando encima con `position:fixed`, ni tampoco el último ítem de una columna como era el dock), el menú nunca puede superponerse al contenido sin importar cuán largo sea — se lo cede automáticamente por construcción, sin ningún truco extra. `overflow:hidden` en la barra recorta a propósito las burbujas decorativas que asoman parcialmente por los bordes (varias usan `left`/`right` negativos, como si vinieran de más allá del panel).
 
-Dentro de la barra, los ítems de navegación se agrupan en dos bloques: los destinos de trabajo del día a día arriba-centro (`Inicio`/`Negocios`/`Agentes` en agencia; `Llamadas`/`Configuración` en negocio) y los de ajuste de cuenta al pie (`Configuración`/`Salir` en agencia; `Cuenta`/`Salir` en negocio). Cada ítem es su propia burbuja de vidrio — degradado radial con brillo simulando luz, tono propio por ítem (azul/turquesa/violeta/ámbar/coral vía variables CSS `--tint`/`--base`/`--glow` en `theme.css`, prefijo `vox54-`, clases `hueB`/`hueC`/`hueD`/`exit`), tamaño ligeramente distinto entre sí, animación de flote asíncrona (cada una con su propio `animation-delay`), y un "pop" elástico al hacer clic. La burbuja de "Agentes" muestra un aviso real — cuántos bots propios están pausados ahora mismo (`GET /agency/agents`, contando `bot_status==='paused'`) — nunca un número inventado; sin ninguno pausado, no aparece ningún aviso. Respeta `prefers-reduced-motion` (desactiva toda animación).
+Dentro de la barra, los ítems de navegación se agrupan en dos bloques: los destinos de trabajo del día a día arriba-centro (`Inicio`/`Agencia`/`Negocios`/`Agentes`/`Registros` en agencia; `Llamadas`/`Negocio`/`Configuración` en negocio) y los de ajuste de cuenta al pie (`Configuración`/`Salir` en agencia; `Cuenta`/`Salir` en negocio). Cada ítem es su propia burbuja de vidrio — degradado radial con brillo simulando luz, tono propio por ítem (azul/turquesa/violeta/ámbar/rosa/celeste vía variables CSS `--tint`/`--base`/`--glow` en `theme.css`, prefijo `vox54-`, clases `hueB`/`hueC`/`hueD`/`hueE`/`hueF`/`exit` — `hueE` y `hueF` sumadas el 03-sep para "Agencia"/"Negocio" y "Registros" respectivamente, sin repetir ningún tono ya usado), tamaño ligeramente distinto entre sí, animación de flote asíncrona (cada una con su propio `animation-delay`), y un "pop" elástico al hacer clic. La burbuja de "Agentes" muestra un aviso real — cuántos bots propios están pausados ahora mismo (`GET /agency/agents`, contando `bot_status==='paused'`) — nunca un número inventado; sin ninguno pausado, no aparece ningún aviso. Respeta `prefers-reduced-motion` (desactiva toda animación).
 
 **Burbujas decorativas interactivas y sonido:** las burbujas ambiente de fondo (login, ambas barras laterales) son clickeables — al tocarlas estallan de verdad (destello + aro de onda expansiva + partículas disparadas, componente compartido `PoppableBubbles.jsx`) y reaparecen solas 1.6-3s después en el mismo lugar, nunca dejan el panel "agujereado". El estallido también suena — un "pop" sintetizado en el momento con Web Audio API (`popSound.js`, sin ningún archivo de audio externo): un solo estallido de ruido blanco filtrado que colapsa de agudo a grave en ~20ms (nunca un oscilador con melodía — varios intentos de eso sonaban a blip electrónico o chillante, no a un pop físico real), con una capa de "crack" breve y nítida y una de "thump" grave más larga que le da peso, mismo criterio de tono variable por tamaño ya usado en las partículas.
 
@@ -869,11 +889,13 @@ Dentro de la barra, los ítems de navegación se agrupan en dos bloques: los des
 
 **Rebrand del 01-sep:** "Vox54" → "**Bubble 54**" (nombre de trabajo, sigue sin ser el definitivo). Tipografía nueva para el logo y los títulos de cada pantalla (`<h1>`/`<h2>`, regla global en `theme.css`): **Fredoka** (Google Fonts, cargada en `index.html`) — redondeada, con más personalidad, reservada para branding/encabezados; el resto de la UI (tablas, formularios, botones) se queda con el stack de sistema de siempre, más legible para trabajo denso. Login rediseñado en 2 paneles — uno con el copy de marca sobre el fondo degradado con burbujas decorativas, el otro con el formulario, mismo componente `LoginPage.jsx` para agencia y negocio.
 
-## Estado actual (al 2026-09-02)
+## Estado actual (al 2026-09-03)
 
-Construido y probado: login de los 2 roles; catálogo de proveedores (telefonía/STT/TTS/IA) con cascada de modelos dependiente del proveedor; formulario de configuración del bot con separación real cliente/agencia (`BotConfigUpdateClient` — un negocio no puede tocar telefonía/STT/TTS/modelo de IA, ni siquiera mandándolo a mano, porque el schema del endpoint ni conoce esos campos, y tampoco puede LEERLOS — `BotConfigOutClient` es el mismo espejo de lectura, cerrado después de confirmar en vivo que `GET/PUT /business/bot-config` filtraban `ai_api_key` en texto plano hacia el negocio) con una grilla real de 2 columnas desde el 02-sep (antes una sola columna angosta, desperdiciaba casi todo el ancho en pantallas anchas); crear negocio nuevo, renombrar negocio; visibilidad real de resultados de llamadas (modelo `Call`, el worker de LiveKit reporta cada llamada real al terminar vía `POST /worker/calls` con su duración/outcome/transcripción real, `CallsList` compartido la muestra tanto en el dashboard del negocio como en la ficha de cada negocio del lado de agencia — nunca se fabrica una llamada de ejemplo, vacío-de-verdad se muestra vacío); dashboard del negocio con paridad visual con las vistas de agencia; autogestión de cuenta (cambio de contraseña real para ambos roles, y un negocio ve el nombre de la agencia que lo gestiona como su único canal de "soporte" honesto); inventario de agentes (`/agencia/agentes`, `GET /agency/agents`); panel de Inicio para agencia (`/agencia`, bienvenida con nombre de pila real + checklist de arranque 100% derivado de datos reales + resumen de agentes); y el menú de burbujas + rebrand a Bubble 54 documentados arriba. 54 tests de backend + 34 de frontend + 15 del worker, todos en verde.
+Construido y probado: login de los 2 roles; catálogo de proveedores (telefonía/STT/TTS/IA) con cascada de modelos dependiente del proveedor; formulario de configuración del bot con separación real cliente/agencia (`BotConfigUpdateClient` — un negocio no puede tocar telefonía/STT/TTS/modelo de IA, ni siquiera mandándolo a mano, porque el schema del endpoint ni conoce esos campos, y tampoco puede LEERLOS — `BotConfigOutClient` es el mismo espejo de lectura, cerrado después de confirmar en vivo que `GET/PUT /business/bot-config` filtraban `ai_api_key` en texto plano hacia el negocio) con una grilla real de 2 columnas desde el 02-sep; crear negocio nuevo, renombrar negocio; visibilidad real de resultados de llamadas (modelo `Call`, el worker de LiveKit reporta cada llamada real al terminar vía `POST /worker/calls` con su duración/outcome/transcripción real, `CallsList` compartido la muestra tanto en el dashboard del negocio como en la ficha de cada negocio del lado de agencia — nunca se fabrica una llamada de ejemplo, vacío-de-verdad se muestra vacío); dashboard del negocio con paridad visual con las vistas de agencia; autogestión de cuenta (cambio de contraseña real para ambos roles); inventario de agentes (`/agencia/agentes`, `GET /agency/agents`); panel de Inicio para agencia (`/agencia`, bienvenida con nombre de pila real + checklist de arranque 100% derivado de datos reales + resumen de agentes); y el menú de burbujas + rebrand a Bubble 54 documentados arriba.
 
-Pendiente, sin resolver todavía: la agencia no tiene ningún endpoint para editar su propio perfil (nombre/negocios gestionados de `/agencia/configuracion` siguen siendo de solo lectura); no hay ninguna integración real con LiveKit/telefonía de verdad todavía en producción — el worker (`agent.py`) ya está construido y probado contra el SDK real, pero nunca se conectó a un número de teléfono real ni a una llamada real de punta a punta.
+**Agregado el 03-sep, a pedido explícito de la usuaria ("necesitamos antes del inciso de negocios el de agencia... una agencia debería tener más información que solo eso"):** (1) perfil real y editable de la agencia (`GET/PUT /agency/profile` — nombre, correo de contacto, teléfono, sitio, dirección + conteo de negocios gestionados; antes de esto no existía ningún endpoint de escritura, era pura lectura mezclada con la cuenta personal del admin) — el correo/teléfono reales, cuando se cargan, ya se muestran del lado del negocio como su canal de soporte real (`BusinessMeResponse.agency_contact_email/phone`), no solo el nombre de la agencia como antes; (2) perfil real de cada negocio (`description`/`hours`/`products_services`, deliberadamente separado de `BotConfig` — es el conocimiento de negocio, no infraestructura), editable tanto por la agencia (`/agencia/negocios/:id/perfil`) como por el propio negocio (`/negocio`, pestaña "Negocio") con el mismo componente compartido `BusinessProfileForm` (no hace falta ningún `scope` como en `BotConfigForm`, ninguno de los 3 campos es sensible); (3) el worker YA USA este perfil de verdad — `WorkerBotConfigOut` (solo la ve `/worker/bot-config/*`, nunca agencia/negocio) trae el perfil resuelto, y `agent.py:build_instructions()` se lo agrega al `system_prompt` real antes de armar el `Agent()` de LiveKit, cuando el negocio cargó al menos un campo; (4) "Registros" (`/agencia/registros`), el historial de llamadas de TODA la agencia en una sola tabla con filtro por negocio (`GET /agency/calls`, con `business_name` ya resuelto por fila) y detalle completo por llamada con transcripción (`GET /agency/calls/{id}`, `/agencia/registros/:callId`) — antes solo existía el historial acotado a un negocio puntual, dentro de su propia ficha. 75 tests de backend (+21) + 34 de frontend + 19 del worker (+4), todos en verde; confirmado además con una build de producción limpia (`npm run build`) y en vivo en el navegador real, en los dos roles, incluyendo 2 llamadas reales reportadas vía `POST /worker/calls` para probar Registros de punta a punta.
+
+Pendiente, sin resolver todavía: `/agencia/negocios/:id/profile` y `/business/profile` no tienen ningún límite de longitud server-side (a diferencia de `BotConfig`, que sí valida largos máximos) — un texto absurdamente largo se guardaría igual; no hay ninguna integración real con LiveKit/telefonía de verdad todavía en producción — el worker (`agent.py`) ya está construido y probado contra el SDK real, pero nunca se conectó a un número de teléfono real ni a una llamada real de punta a punta.
 
 ---
 

@@ -6,25 +6,22 @@ import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 
-// Página propia para la configuración de la agencia en sí — separada a
-// propósito de "Negocios" (que lista y edita cada negocio y su bot). El
-// perfil de la agencia (nombre, negocios gestionados) sigue siendo de
-// solo-lectura porque el backend todavía no expone ningún endpoint para
-// editarlo — la cuenta del admin sí es editable (cambio de contraseña).
+// Página propia para el ajuste de la CUENTA PERSONAL del admin logueado —
+// separada a propósito del perfil de la agencia en sí (nombre, contacto,
+// sitio), que ahora tiene su propio ítem de menú, "Agencia". Antes las dos
+// cosas vivían mezcladas acá; un dato de la agencia (su correo de contacto)
+// y un dato de la cuenta (la contraseña de quien está logueado) son ajustes
+// de naturaleza distinta, aunque los edite la misma persona.
 export default function AgencyConfigPage() {
   const { logout } = useAuth();
   const session = useRequireRole("agency");
   const navigate = useNavigate();
   const [me, setMe] = useState(null);
-  const [businessCount, setBusinessCount] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!session) return;
     api.agencyMe(session.access_token).then(setMe).catch((e) => setError(e.message));
-    api.listBusinesses(session.access_token)
-      .then((list) => setBusinessCount(list.length))
-      .catch(() => {});
   }, [session]);
 
   if (!session) return null;
@@ -32,25 +29,19 @@ export default function AgencyConfigPage() {
   return (
     <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "36px 32px" }}>
-        <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>Configuración de la agencia</h1>
+        <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>Configuración</h1>
         <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginBottom: 24 }}>
-          Datos de la agencia y de tu cuenta de administrador.
+          Tu cuenta de administrador. Los datos de la agencia en sí viven en "Agencia".
         </p>
 
         {error && <div style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</div>}
 
         {me && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, alignItems: "start" }}>
-            <Card title="Agencia">
-              <Row label="Nombre">{me.agency_name}</Row>
-              <Row label="Negocios gestionados">
-                {businessCount === null ? "…" : businessCount}
-              </Row>
-            </Card>
-
             <Card title="Tu cuenta">
               <Row label="Nombre">{me.name}</Row>
               <Row label="Correo">{me.email}</Row>
+              <Row label="Agencia">{me.agency_name}</Row>
             </Card>
 
             <div style={{ gridColumn: "1 / -1" }}>

@@ -54,4 +54,22 @@ export const api = {
   listCalls: (token) => request("/business/calls", { token }),
   listBusinessCalls: (token, id) => request(`/agency/businesses/${id}/calls`, { token }),
   getCatalog: () => request("/catalog"),
+
+  // --- Perfil de la agencia ---
+  getAgencyProfile: (token) => request("/agency/profile", { token }),
+  updateAgencyProfile: (token, body) => request("/agency/profile", { method: "PUT", body, token }),
+
+  // --- Perfil de un negocio (lo que el bot necesita saber: resumen,
+  // horarios, productos — separado a propósito de bot-config, que es
+  // infraestructura) ---
+  getBusinessProfile: (token, id) => request(`/agency/businesses/${id}/profile`, { token }),
+  updateBusinessProfile: (token, id, body) =>
+    request(`/agency/businesses/${id}/profile`, { method: "PUT", body, token }),
+  getMyProfile: (token) => request("/business/profile", { token }),
+  updateMyProfile: (token, body) => request("/business/profile", { method: "PUT", body, token }),
+
+  // --- Registros: historial de llamadas de toda la agencia ---
+  listAgencyCalls: (token, businessId) =>
+    request(businessId ? `/agency/calls?business_id=${businessId}` : "/agency/calls", { token }),
+  getAgencyCall: (token, callId) => request(`/agency/calls/${callId}`, { token }),
 };

@@ -23,6 +23,38 @@ class AgencyMeResponse(BaseModel):
     agency_name: str
 
 
+class AgencyProfileOut(BaseModel):
+    """Perfil real de la agencia — antes solo vivía el nombre + un conteo de
+    negocios dentro de 'Configuración', mezclado con la cuenta personal del
+    admin. Esto es la identidad de la agencia en sí, editable, separada del
+    ajuste de cuenta (cambio de contraseña, que sigue en Configuración)."""
+
+    id: int
+    name: str
+    contact_email: str
+    contact_phone: str
+    website: str
+    address: str
+    business_count: int
+
+
+class AgencyProfileUpdate(BaseModel):
+    name: str | None = None
+    contact_email: str | None = None
+    contact_phone: str | None = None
+    website: str | None = None
+    address: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def not_blank(cls, v: str | None) -> str | None:
+        if v is not None:
+            v = v.strip()
+            if not v:
+                raise ValueError("no puede estar vacío")
+        return v
+
+
 class BusinessMeResponse(BaseModel):
     id: int
     name: str
@@ -34,6 +66,12 @@ class BusinessMeResponse(BaseModel):
     # muestra el nombre real de esa agencia en vez de inventar un contacto
     # de "soporte" que no existe.
     agency_name: str
+    # Correo/teléfono reales de la agencia, si los cargó — hacen que ese
+    # "canal de soporte" sea de verdad contactable, no solo un nombre.
+    # Pueden venir vacíos (agencia sin perfil cargado todavía); nunca se
+    # inventa un valor de respaldo.
+    agency_contact_email: str = ""
+    agency_contact_phone: str = ""
 
 
 class PasswordChange(BaseModel):
@@ -202,6 +240,26 @@ class BusinessUpdate(BaseModel):
         return v
 
 
+class BusinessProfileOut(BaseModel):
+    """El conocimiento real del negocio — separado a propósito de
+    BotConfigOut (infraestructura del bot). Lo edita tanto la agencia como el
+    propio negocio; nadie sabe su horario real mejor que el dueño."""
+
+    id: int
+    name: str
+    description: str
+    hours: str
+    products_services: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BusinessProfileUpdate(BaseModel):
+    description: str | None = None
+    hours: str | None = None
+    products_services: str | None = None
+
+
 class BusinessCreate(BaseModel):
     name: str
     contact_name: str
@@ -256,6 +314,30 @@ class CallOut(BaseModel):
     transcript: str | None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AgencyCallOut(CallOut):
+    """Una llamada real, pero vista desde 'Registros' — el historial agregado
+    de TODAS las llamadas de la agencia, de cualquiera de sus negocios, no
+    solo de uno puntual (eso ya lo cubre CallOut vía
+    /agency/businesses/{id}/calls). Necesita saber de qué negocio es cada
+    fila, así que suma ese único dato encima de CallOut."""
+
+    business_id: int
+    business_name: str
+
+
+class WorkerBotConfigOut(BotConfigOut):
+    """Mismo shape que BotConfigOut (todo lo de infraestructura), más el
+    conocimiento real del negocio — nombre, resumen, horario, productos —
+    para que el worker pueda pasárselo al modelo como contexto real. Solo la
+    ve el worker; la respuesta que ve agencia/negocio sigue siendo
+    BotConfigOut/BotConfigOutClient tal cual, sin estos campos."""
+
+    business_name: str
+    business_description: str
+    business_hours: str
+    business_products_services: str
 
 
 class ModelOut(BaseModel):

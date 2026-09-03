@@ -45,6 +45,37 @@ def test_resolver_por_telefono_no_asignado_da_404(client, seed):
     assert res.status_code == 404
 
 
+def test_bot_config_incluye_el_perfil_real_del_negocio(client, seed, db_session):
+    """El worker necesita el conocimiento real del negocio (no solo la
+    infraestructura del bot) para poder armar las instrucciones reales del
+    agente — ver worker/agent.py:build_instructions."""
+    seed["business"].description = "Empresa de embalajes de madera a medida."
+    seed["business"].hours = "Lunes a viernes 8am-5pm"
+    seed["business"].products_services = "Cajones cerrados, jaulas abiertas"
+    db_session.commit()
+
+    business_id = seed["business"].id
+    res = client.get(f"/worker/bot-config/{business_id}", headers=auth_worker())
+    assert res.status_code == 200
+    body = res.json()
+    assert body["business_name"] == "Negocio de Prueba"
+    assert body["business_description"] == "Empresa de embalajes de madera a medida."
+    assert body["business_hours"] == "Lunes a viernes 8am-5pm"
+    assert body["business_products_services"] == "Cajones cerrados, jaulas abiertas"
+
+
+def test_bot_config_sin_perfil_cargado_devuelve_strings_vacios_no_null(client, seed):
+    """Un negocio recién creado no tiene perfil todavía — el worker debe
+    poder confiar en que estos campos siempre son string, nunca None."""
+    business_id = seed["business"].id
+    res = client.get(f"/worker/bot-config/{business_id}", headers=auth_worker())
+    assert res.status_code == 200
+    body = res.json()
+    assert body["business_description"] == ""
+    assert body["business_hours"] == ""
+    assert body["business_products_services"] == ""
+
+
 def test_bot_config_incluye_business_id(client, seed):
     """El worker necesita saber a qué negocio reportarle la llamada — sin
     esto no tiene forma de armar el POST /worker/calls cuando resolvió la

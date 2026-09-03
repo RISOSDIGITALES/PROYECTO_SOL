@@ -3,7 +3,10 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import get_current_business_user
-from ..schemas import BusinessMeResponse, BotConfigOutClient, BotConfigUpdateClient, CallOut, PasswordChange
+from ..schemas import (
+    BusinessMeResponse, BotConfigOutClient, BotConfigUpdateClient,
+    BusinessProfileOut, BusinessProfileUpdate, CallOut, PasswordChange,
+)
 from ..security import hash_password, verify_password
 from ..validators import bot_config_as_dict, validate_bot_config
 from .. import models
@@ -13,13 +16,16 @@ router = APIRouter(prefix="/business", tags=["business"])
 
 @router.get("/me", response_model=BusinessMeResponse)
 def me(user: models.BusinessUser = Depends(get_current_business_user)):
+    agency = user.business.agency
     return BusinessMeResponse(
         id=user.id,
         name=user.name,
         email=user.email,
         business_id=user.business_id,
         business_name=user.business.name,
-        agency_name=user.business.agency.name,
+        agency_name=agency.name,
+        agency_contact_email=agency.contact_email or "",
+        agency_contact_phone=agency.contact_phone or "",
     )
 
 
@@ -73,3 +79,26 @@ def list_calls(
         .limit(100)
         .all()
     )
+
+
+@router.get("/profile", response_model=BusinessProfileOut)
+def get_profile(
+    db: Session = Depends(get_db),
+    user: models.BusinessUser = Depends(get_current_business_user),
+):
+    return db.query(models.Business).filter(models.Business.id == user.business_id).first()
+
+
+@router.put("/profile", response_model=BusinessProfileOut)
+def update_profile(
+    body: BusinessProfileUpdate,
+    db: Session = Depends(get_db),
+    user: models.BusinessUser = Depends(get_current_business_user),
+):
+    business = db.query(models.Business).filter(models.Business.id == user.business_id).first()
+    patch = body.model_dump(exclude_unset=True)
+    for field, value in patch.items():
+        setattr(business, field, value)
+    db.commit()
+    db.refresh(business)
+    return business

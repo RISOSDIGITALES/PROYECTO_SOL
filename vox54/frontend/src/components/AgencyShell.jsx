@@ -40,12 +40,20 @@ export default function AgencyShell({ userName, onLogout, children }) {
   // "Inicio" es la landing (bienvenida + progreso + resumen), exclusiva de
   // /agencia — ya no comparte ruta con "Negocios", que se corrió a
   // /agencia/negocios y cubre la lista más todo lo que cuelga de un negocio
-  // puntual (identidad, configuración de su bot). "Agentes" es el
-  // inventario aparte, de solo lectura, de todos los bots. "Configuración"
-  // es la config de la agencia en sí, nunca la de un negocio.
+  // puntual (identidad, perfil, configuración de su bot). "Agencia" es el
+  // perfil real de la agencia en sí (contacto, sitio, dirección) — antes
+  // vivía mezclado dentro de "Configuración" junto con la cuenta personal
+  // del admin; ahora tiene su propio lugar, antes de "Negocios". "Agentes"
+  // es el inventario aparte, de solo lectura, de todos los bots.
+  // "Registros" es el historial de llamadas de TODA la agencia (no de un
+  // negocio puntual, eso ya vive dentro de cada negocio). "Configuración"
+  // sigue siendo pura cuenta personal (cambio de contraseña), nunca la
+  // agencia ni un negocio.
   const isInicio = location.pathname === "/agencia";
+  const isAgencia = location.pathname.startsWith("/agencia/perfil");
   const isNegocios = location.pathname.startsWith("/agencia/negocios");
   const isAgentes = location.pathname.startsWith("/agencia/agentes");
+  const isRegistros = location.pathname.startsWith("/agencia/registros");
   const isConfig = location.pathname.startsWith("/agencia/configuracion");
 
   useEffect(() => {
@@ -87,6 +95,18 @@ export default function AgencyShell({ userName, onLogout, children }) {
           </Link>
 
           <Link
+            to="/agencia/perfil"
+            className="vox54-navcol"
+            style={{ animationDelay: "-2.1s" }}
+            onClick={() => handleClick("agencia")}
+          >
+            <span className={`vox54-navbubble hueE ${isAgencia ? "active" : ""} ${poppingId === "agencia" ? "popping" : ""}`}>
+              <span className="icon">🏛️</span>
+            </span>
+            <span className="vox54-navlabel">Agencia</span>
+          </Link>
+
+          <Link
             to="/agencia/negocios"
             className="vox54-navcol"
             style={{ animationDelay: "-0.6s" }}
@@ -109,6 +129,18 @@ export default function AgencyShell({ userName, onLogout, children }) {
               {pausedCount > 0 && <span className="vox54-notif">{pausedCount}</span>}
             </span>
             <span className="vox54-navlabel">Agentes</span>
+          </Link>
+
+          <Link
+            to="/agencia/registros"
+            className="vox54-navcol"
+            style={{ animationDelay: "-3.6s" }}
+            onClick={() => handleClick("registros")}
+          >
+            <span className={`vox54-navbubble hueF ${isRegistros ? "active" : ""} ${poppingId === "registros" ? "popping" : ""}`}>
+              <span className="icon">📋</span>
+            </span>
+            <span className="vox54-navlabel">Registros</span>
           </Link>
         </div>
 

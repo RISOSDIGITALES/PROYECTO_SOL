@@ -155,6 +155,25 @@ def build_tts(config: dict):
     raise ValueError(f"tts_provider no soportado por este worker: '{provider}'")
 
 
+def build_instructions(config: dict) -> str:
+    """El system_prompt que escribió el negocio, más su propio perfil real
+    (a qué se dedica, cuándo atiende, qué vende) si lo cargó en Vox54 —
+    `WorkerBotConfigOut` ya lo trae resuelto (ver backend/app/routers/
+    worker.py). Nunca se inventa nada: si el negocio no cargó ninguno de
+    estos 3 campos, no se agrega ninguna línea de más."""
+    base = config.get("system_prompt") or "Sos un asistente de voz útil, breve y cordial."
+    context_lines = []
+    if config.get("business_description"):
+        context_lines.append(f"Sobre el negocio: {config['business_description']}")
+    if config.get("business_hours"):
+        context_lines.append(f"Horario de atención: {config['business_hours']}")
+    if config.get("business_products_services"):
+        context_lines.append(f"Productos y servicios: {config['business_products_services']}")
+    if not context_lines:
+        return base
+    return base + "\n\n" + "\n".join(context_lines)
+
+
 def build_llm(config: dict):
     provider = config["ai_provider"]
     model = config["ai_model"]
@@ -271,7 +290,7 @@ async def entrypoint(ctx: JobContext):
         tools.append(transfer_to_human)
 
     agent = Agent(
-        instructions=config["system_prompt"] or "Sos un asistente de voz útil, breve y cordial.",
+        instructions=build_instructions(config),
         tools=tools,
     )
 
