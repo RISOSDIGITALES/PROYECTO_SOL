@@ -484,3 +484,113 @@ def test_no_se_puede_ver_el_detalle_de_una_llamada_de_otra_agencia(client, seed,
 def test_ver_una_llamada_inexistente_da_404(client, seed, agency_token):
     res = client.get("/agency/calls/999999", headers=auth(agency_token))
     assert res.status_code == 404
+
+
+# --- Logo de agencia / negocio + documento de información (PDF) — el
+# endpoint no valida el contenido real del archivo, solo el content-type
+# declarado y el tamaño (ver app/uploads.py), así que bytes cualquiera con
+# el content-type correcto alcanzan para probar la lógica real del
+# endpoint. `isolated_upload_dir` (conftest.py, autouse) ya redirige
+# settings.upload_dir a un tmp_path — estos tests nunca tocan la carpeta
+# real de uploads del backend.
+def test_subir_logo_de_agencia(client, seed, agency_token):
+    res = client.post(
+        "/agency/profile/logo",
+        headers=auth(agency_token),
+        files={"file": ("logo.png", b"\x89PNG\r\n\x1a\n" + b"0" * 100, "image/png")},
+    )
+    assert res.status_code == 200
+    assert res.json()["logo_url"].startswith("/uploads/logos/agency/")
+
+    # Persiste de verdad — no solo en la respuesta del propio POST.
+    fresh = client.get("/agency/profile", headers=auth(agency_token))
+    assert fresh.json()["logo_url"] == res.json()["logo_url"]
+
+
+def test_subir_logo_de_agencia_tipo_invalido_falla(client, seed, agency_token):
+    res = client.post(
+        "/agency/profile/logo",
+        headers=auth(agency_token),
+        files={"file": ("nota.txt", b"esto no es una imagen", "text/plain")},
+    )
+    assert res.status_code == 422
+
+
+def test_subir_logo_de_agencia_demasiado_grande_falla(client, seed, agency_token):
+    res = client.post(
+        "/agency/profile/logo",
+        headers=auth(agency_token),
+        files={"file": ("logo.png", b"0" * (3 * 1024 * 1024 + 1), "image/png")},
+    )
+    assert res.status_code == 413
+
+
+def test_borrar_logo_de_agencia(client, seed, agency_token):
+    client.post(
+        "/agency/profile/logo",
+        headers=auth(agency_token),
+        files={"file": ("logo.png", b"fake", "image/png")},
+    )
+    res = client.delete("/agency/profile/logo", headers=auth(agency_token))
+    assert res.status_code == 200
+    assert res.json()["logo_url"] == ""
+
+
+def test_subir_logo_de_un_negocio_propio(client, seed, agency_token):
+    business_id = seed["business"].id
+    res = client.post(
+        f"/agency/businesses/{business_id}/logo",
+        headers=auth(agency_token),
+        files={"file": ("logo.webp", b"fake-webp-bytes", "image/webp")},
+    )
+    assert res.status_code == 200
+    assert res.json()["logo_url"].startswith("/uploads/logos/business/")
+
+
+def test_subir_logo_de_un_negocio_ajeno_da_404(client, seed, agency_token, db_session):
+    from app import models
+
+    otra_agencia = models.Agency(name="Otra Agencia")
+    db_session.add(otra_agencia)
+    db_session.flush()
+    negocio_ajeno = models.Business(agency_id=otra_agencia.id, name="Negocio Ajeno")
+    db_session.add(negocio_ajeno)
+    db_session.commit()
+    db_session.refresh(negocio_ajeno)
+
+    res = client.post(
+        f"/agency/businesses/{negocio_ajeno.id}/logo",
+        headers=auth(agency_token),
+        files={"file": ("logo.png", b"fake", "image/png")},
+    )
+    assert res.status_code == 404
+
+
+def test_subir_y_borrar_documento_de_un_negocio(client, seed, agency_token):
+    business_id = seed["business"].id
+    res = client.post(
+        f"/agency/businesses/{business_id}/info-document",
+        headers=auth(agency_token),
+        files={"file": ("Catálogo real.pdf", b"%PDF-1.4 fake content", "application/pdf")},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["info_document_url"].startswith("/uploads/documents/business/")
+    # El nombre real que se muestra es el que puso el usuario, no el nombre
+    # interno con el que se guarda en disco.
+    assert body["info_document_name"] == "Catálogo real.pdf"
+
+    res = client.delete(f"/agency/businesses/{business_id}/info-document", headers=auth(agency_token))
+    assert res.status_code == 200
+    assert res.json()["info_document_url"] == ""
+    assert res.json()["info_document_name"] == ""
+
+
+def test_subir_documento_que_no_es_pdf_falla(client, seed, agency_token):
+    business_id = seed["business"].id
+    res = client.post(
+        f"/agency/businesses/{business_id}/info-document",
+        headers=auth(agency_token),
+        files={"file": ("archivo.docx", b"no es un pdf", "application/vnd.openxmlformats")},
+    )
+    assert res.status_code == 422

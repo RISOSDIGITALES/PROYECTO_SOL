@@ -4,7 +4,7 @@ import AgencyShell from "../components/AgencyShell";
 import StatusPill from "../components/StatusPill";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
-import { api } from "../api";
+import { api, API_BASE } from "../api";
 import { initials } from "../utils";
 import { burst } from "../burst";
 
@@ -26,12 +26,42 @@ export default function AgencyProfilePage() {
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState("");
   const saveBtnRef = useRef(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoError, setLogoError] = useState("");
+  const logoBtnRef = useRef(null);
 
   useEffect(() => {
     if (!session) return;
     api.agencyMe(session.access_token).then(setMe).catch((e) => setError(e.message));
     api.getAgencyProfile(session.access_token).then(setProfile).catch((e) => setError(e.message));
   }, [session]);
+
+  async function handleLogoFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setLogoError("");
+    setUploadingLogo(true);
+    try {
+      const updated = await api.uploadAgencyLogo(session.access_token, file);
+      setProfile((prev) => ({ ...prev, logo_url: updated.logo_url }));
+      burst(logoBtnRef.current);
+    } catch (err) {
+      setLogoError(err.message);
+    } finally {
+      setUploadingLogo(false);
+    }
+  }
+
+  async function handleRemoveLogo() {
+    setLogoError("");
+    try {
+      const updated = await api.removeAgencyLogo(session.access_token);
+      setProfile((prev) => ({ ...prev, logo_url: updated.logo_url }));
+    } catch (err) {
+      setLogoError(err.message);
+    }
+  }
 
   function handleChange(patch) {
     setProfile((prev) => ({ ...prev, ...patch }));
@@ -79,8 +109,31 @@ export default function AgencyProfilePage() {
             {savedMessage && <div style={bannerStyle("success")}>{savedMessage}</div>}
 
             <div style={gridStyle}>
-              <div className="vox54-panel" style={{ padding: 20 }}>
+              <div className="vox54-panel" style={{ padding: 20, display: "grid", gap: 16 }}>
                 <div style={sectionTitleStyle}>Identidad</div>
+                {logoError && <div style={bannerStyle("danger")}>{logoError}</div>}
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  {profile.logo_url ? (
+                    <img src={`${API_BASE}${profile.logo_url}`} alt="Logo" style={logoPreviewStyle} />
+                  ) : (
+                    <div style={logoPlaceholderStyle}>Sin logo</div>
+                  )}
+                  <div style={{ display: "grid", gap: 6 }}>
+                    <label ref={logoBtnRef} className="vox54-btn secondary small" style={{ cursor: "pointer", justifySelf: "start" }}>
+                      {uploadingLogo ? "Subiendo…" : profile.logo_url ? "Cambiar logo" : "Subir logo"}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        onChange={handleLogoFile}
+                        style={{ display: "none" }}
+                        disabled={uploadingLogo}
+                      />
+                    </label>
+                    {profile.logo_url && (
+                      <button type="button" onClick={handleRemoveLogo} style={removeLinkStyle}>Quitar logo</button>
+                    )}
+                  </div>
+                </div>
                 <Field label="Nombre de la agencia">
                   <input value={profile.name} onChange={(e) => handleChange({ name: e.target.value })} style={inputStyle} />
                 </Field>
@@ -240,4 +293,39 @@ const avatarStyle = {
   flexShrink: 0,
   borderRadius: 8,
   fontSize: 11.5,
+};
+
+const logoPreviewStyle = {
+  width: 56,
+  height: 56,
+  flexShrink: 0,
+  borderRadius: 10,
+  objectFit: "contain",
+  background: "var(--surface)",
+  border: "1px solid var(--border)",
+};
+
+const logoPlaceholderStyle = {
+  width: 56,
+  height: 56,
+  flexShrink: 0,
+  borderRadius: 10,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: 10.5,
+  color: "var(--ink-softer)",
+  background: "var(--surface)",
+  border: "1px dashed var(--border)",
+};
+
+const removeLinkStyle = {
+  background: "none",
+  border: "none",
+  color: "var(--danger)",
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: "pointer",
+  padding: 0,
+  justifySelf: "start",
 };

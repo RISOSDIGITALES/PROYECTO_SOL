@@ -167,6 +167,10 @@ export default function AgencyBusinessDetail() {
                 saving={profileSaving}
                 savedMessage={profileSavedMessage}
                 error={profileError}
+                onUploadLogo={(file) => api.uploadBusinessLogo(session.access_token, id, file, true)}
+                onRemoveLogo={() => api.removeBusinessLogo(session.access_token, id, true)}
+                onUploadDocument={(file) => api.uploadBusinessDocument(session.access_token, id, file, true)}
+                onRemoveDocument={() => api.removeBusinessDocument(session.access_token, id, true)}
               />
             ) : (
               !profileError && <div style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>Cargando…</div>

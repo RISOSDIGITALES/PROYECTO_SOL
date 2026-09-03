@@ -26,6 +26,9 @@ class Agency(Base):
     contact_phone = Column(String(30), default="")
     website = Column(String(255), default="")
     address = Column(String(255), default="")
+    # Ruta pública real (/uploads/logos/agency/...) — nunca el archivo en sí
+    # guardado en la base. Ver app/uploads.py.
+    logo_url = Column(String(500), default="")
 
     created_at = Column(DateTime, default=utcnow)
 
@@ -63,6 +66,14 @@ class Business(Base):
     description = Column(Text, default="")
     hours = Column(Text, default="")
     products_services = Column(Text, default="")
+    logo_url = Column(String(500), default="")
+    # PDF real como fuente de información adicional — hoy solo se guarda y
+    # se muestra (nombre real + link), todavía no se lee su contenido para
+    # nada: darle ese contenido al bot (extraer texto, indexarlo) es una
+    # función aparte, más grande, pendiente de construirse. No se inventa
+    # ningún procesamiento que no exista todavía.
+    info_document_url = Column(String(500), default="")
+    info_document_name = Column(String(255), default="")
 
     created_at = Column(DateTime, default=utcnow)
 

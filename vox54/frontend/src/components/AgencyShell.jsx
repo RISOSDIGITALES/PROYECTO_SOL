@@ -81,10 +81,19 @@ export default function AgencyShell({ userName, onLogout, children }) {
       .catch(() => {});
   }, [session]);
 
-  // Estallido real (flash+aro+partículas) al elegir una sección, en vez del
-  // simple squish de antes — a pedido explícito de la usuaria. El elemento
-  // nunca desaparece (ver burst.js): la burbuja sigue ahí, clickeable,
-  // navegando de verdad al mismo tiempo que revienta.
+  // Estallido real (flash+aro+partículas), igual al de las burbujas
+  // decorativas — a pedido explícito, sin que el ícono desaparezca (nunca
+  // se saca del DOM, ver burst.js). El "parpadeo"/salto que se veía al
+  // clickear NO era este efecto — era que `.vox54-navbubble.active`
+  // cambiaba width/height (70px), lo que reacomodaba el layout de toda la
+  // columna centrada del menú; corregido en theme.css a un transform:scale
+  // puramente visual, que nunca mueve a los demás ítems.
+  //
+  // No se combina con el squish viejo (.popping/vox54-pop, ya retirado) —
+  // los dos animan `transform` sobre el mismo elemento a la vez, y burst()
+  // ya trae su propio pulso de escala (.vox54-burstkeep) — apilar los dos
+  // es el mismo tipo de conflicto de animaciones ya encontrado y corregido
+  // antes en esta sesión (flote vs. hover).
   function handleClick(id, e) {
     const bubbleEl = e?.currentTarget?.querySelector(".vox54-navbubble");
     burst(bubbleEl);

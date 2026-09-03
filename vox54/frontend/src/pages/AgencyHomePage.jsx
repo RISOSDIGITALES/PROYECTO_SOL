@@ -58,15 +58,22 @@ export default function AgencyHomePage() {
 
   if (!session) return null;
 
-  const loading = businesses === null || agents === null;
+  const loading = businesses === null || agents === null || profile === null;
   const hasBusiness = !loading && businesses.length > 0;
   const businessWithoutPhone = !loading ? agents.find((a) => !a.phone_number) : null;
   const businessReadyToActivate = !loading ? agents.find((a) => a.phone_number && a.bot_status !== "active") : null;
   const hasActiveBot = !loading && agents.some((a) => a.bot_status === "active");
+  const agencyProfileDone = !loading && !!(profile.contact_email || profile.contact_phone || profile.logo_url);
 
   const steps = loading
     ? []
     : [
+        {
+          done: agencyProfileDone,
+          label: "Completá el perfil de tu agencia",
+          detail: "Un logo o un contacto real — es lo primero que ven tus negocios.",
+          to: "/agencia/perfil",
+        },
         {
           done: hasBusiness,
           label: "Creá tu primer negocio",

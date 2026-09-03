@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session, joinedload
 
 from ..database import get_db
@@ -11,6 +11,7 @@ from ..schemas import (
     BotConfigUpdate, BotConfigOut, CallOut, AgencyCallOut,
     PasswordChange, AgentInventoryItem,
 )
+from ..uploads import save_document, save_logo
 from ..validators import bot_config_as_dict, validate_bot_config
 from .. import models
 
@@ -61,6 +62,7 @@ def _agency_profile_out(db: Session, agency: models.Agency) -> AgencyProfileOut:
         contact_phone=agency.contact_phone or "",
         website=agency.website or "",
         address=agency.address or "",
+        logo_url=agency.logo_url or "",
         business_count=len(businesses),
         businesses=[
             AgencyBusinessSummary(id=b.id, name=b.name, bot_status=b.bot_config.status if b.bot_config else None)
@@ -87,6 +89,31 @@ def update_agency_profile(
     patch = body.model_dump(exclude_unset=True)
     for field, value in patch.items():
         setattr(agency, field, value)
+    db.commit()
+    db.refresh(agency)
+    return _agency_profile_out(db, agency)
+
+
+@router.post("/profile/logo", response_model=AgencyProfileOut)
+async def upload_agency_logo(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    agency = user.agency
+    agency.logo_url = await save_logo(file, "logos/agency", f"agency_{agency.id}")
+    db.commit()
+    db.refresh(agency)
+    return _agency_profile_out(db, agency)
+
+
+@router.delete("/profile/logo", response_model=AgencyProfileOut)
+def remove_agency_logo(
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    agency = user.agency
+    agency.logo_url = ""
     db.commit()
     db.refresh(agency)
     return _agency_profile_out(db, agency)
@@ -244,6 +271,63 @@ def update_business_profile(
     patch = body.model_dump(exclude_unset=True)
     for field, value in patch.items():
         setattr(business, field, value)
+    db.commit()
+    db.refresh(business)
+    return business
+
+
+@router.post("/businesses/{business_id}/logo", response_model=BusinessProfileOut)
+async def upload_business_logo(
+    business_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    business = _get_owned_business(db, user, business_id)
+    business.logo_url = await save_logo(file, "logos/business", f"business_{business.id}")
+    db.commit()
+    db.refresh(business)
+    return business
+
+
+@router.delete("/businesses/{business_id}/logo", response_model=BusinessProfileOut)
+def remove_business_logo(
+    business_id: int,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    business = _get_owned_business(db, user, business_id)
+    business.logo_url = ""
+    db.commit()
+    db.refresh(business)
+    return business
+
+
+@router.post("/businesses/{business_id}/info-document", response_model=BusinessProfileOut)
+async def upload_business_document(
+    business_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    business = _get_owned_business(db, user, business_id)
+    url, name = await save_document(file, "documents/business", f"business_{business.id}")
+    business.info_document_url = url
+    business.info_document_name = name
+    db.commit()
+    db.refresh(business)
+    return business
+
+
+@router.delete("/businesses/{business_id}/info-document", response_model=BusinessProfileOut)
+def remove_business_document(
+    business_id: int,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    business = _get_owned_business(db, user, business_id)
+    business.info_document_url = ""
+    business.info_document_name = ""
     db.commit()
     db.refresh(business)
     return business

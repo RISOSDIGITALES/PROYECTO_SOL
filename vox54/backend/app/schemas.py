@@ -50,6 +50,7 @@ class AgencyProfileOut(BaseModel):
     contact_phone: str
     website: str
     address: str
+    logo_url: str = ""
     business_count: int
     businesses: list[AgencyBusinessSummary] = []
 
@@ -266,6 +267,9 @@ class BusinessProfileOut(BaseModel):
     description: str
     hours: str
     products_services: str
+    logo_url: str = ""
+    info_document_url: str = ""
+    info_document_name: str = ""
 
     model_config = ConfigDict(from_attributes=True)
 

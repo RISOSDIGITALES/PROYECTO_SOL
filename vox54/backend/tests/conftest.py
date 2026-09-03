@@ -8,10 +8,21 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
+from app.config import settings
 from app.database import Base, get_db
 from app.main import app
 from app.security import hash_password
 from app import models
+
+
+@pytest.fixture(autouse=True)
+def isolated_upload_dir(tmp_path, monkeypatch):
+    """Ningún test debe escribir en la carpeta real de uploads del backend
+    (`uploads/`, en el cwd real) — cada test sube archivos a su propio
+    directorio temporal, descartado solo al terminar. `autouse=True` para
+    que ningún test nuevo se olvide de esto y termine ensuciando la carpeta
+    real por accidente."""
+    monkeypatch.setattr(settings, "upload_dir", str(tmp_path / "uploads"))
 
 
 @pytest.fixture()

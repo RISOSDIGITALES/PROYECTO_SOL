@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     # que fijar CORS_ORIGINS en el .env real con el dominio real del panel,
     # nunca dejar el default de localhost en un backend expuesto de verdad.
     cors_origins: str = "http://localhost:5173"
+    # Carpeta real donde se guardan logos/documentos subidos (relativa al
+    # cwd del backend, mismo criterio que database_url) — servida en
+    # /uploads via StaticFiles (ver main.py). Nunca en git: son archivos
+    # reales de cada instalación, no código.
+    upload_dir: str = "uploads"
 
     model_config = SettingsConfigDict(env_file=".env")
 

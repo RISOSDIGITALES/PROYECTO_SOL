@@ -120,6 +120,8 @@ export default function BusinessDashboard() {
     }
   }
 
+  // Mismo criterio que AgencyShell — estallido real (burst.js), sin
+  // combinarlo con ningún squish extra sobre el mismo elemento.
   function goTo(id, e) {
     const bubbleEl = e?.currentTarget?.querySelector(".vox54-navbubble");
     burst(bubbleEl);
@@ -234,6 +236,10 @@ export default function BusinessDashboard() {
                   saving={profileSaving}
                   savedMessage={profileSavedMessage}
                   error={profileError}
+                  onUploadLogo={(file) => api.uploadBusinessLogo(session.access_token, null, file, false)}
+                  onRemoveLogo={() => api.removeBusinessLogo(session.access_token, null, false)}
+                  onUploadDocument={(file) => api.uploadBusinessDocument(session.access_token, null, file, false)}
+                  onRemoveDocument={() => api.removeBusinessDocument(session.access_token, null, false)}
                 />
               ) : (
                 !profileError && <div style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>Cargando…</div>

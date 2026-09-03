@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -8,6 +8,7 @@ from ..schemas import (
     BusinessProfileOut, BusinessProfileUpdate, CallOut, PasswordChange,
 )
 from ..security import hash_password, verify_password
+from ..uploads import save_document, save_logo
 from ..validators import bot_config_as_dict, validate_bot_config
 from .. import models
 
@@ -99,6 +100,59 @@ def update_profile(
     patch = body.model_dump(exclude_unset=True)
     for field, value in patch.items():
         setattr(business, field, value)
+    db.commit()
+    db.refresh(business)
+    return business
+
+
+@router.post("/profile/logo", response_model=BusinessProfileOut)
+async def upload_my_logo(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: models.BusinessUser = Depends(get_current_business_user),
+):
+    business = db.query(models.Business).filter(models.Business.id == user.business_id).first()
+    business.logo_url = await save_logo(file, "logos/business", f"business_{business.id}")
+    db.commit()
+    db.refresh(business)
+    return business
+
+
+@router.delete("/profile/logo", response_model=BusinessProfileOut)
+def remove_my_logo(
+    db: Session = Depends(get_db),
+    user: models.BusinessUser = Depends(get_current_business_user),
+):
+    business = db.query(models.Business).filter(models.Business.id == user.business_id).first()
+    business.logo_url = ""
+    db.commit()
+    db.refresh(business)
+    return business
+
+
+@router.post("/profile/info-document", response_model=BusinessProfileOut)
+async def upload_my_document(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: models.BusinessUser = Depends(get_current_business_user),
+):
+    business = db.query(models.Business).filter(models.Business.id == user.business_id).first()
+    url, name = await save_document(file, "documents/business", f"business_{business.id}")
+    business.info_document_url = url
+    business.info_document_name = name
+    db.commit()
+    db.refresh(business)
+    return business
+
+
+@router.delete("/profile/info-document", response_model=BusinessProfileOut)
+def remove_my_document(
+    db: Session = Depends(get_db),
+    user: models.BusinessUser = Depends(get_current_business_user),
+):
+    business = db.query(models.Business).filter(models.Business.id == user.business_id).first()
+    business.info_document_url = ""
+    business.info_document_name = ""
     db.commit()
     db.refresh(business)
     return business

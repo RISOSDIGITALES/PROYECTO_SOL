@@ -311,3 +311,75 @@ def test_un_negocio_nunca_ve_ni_toca_la_config_de_otro(client, seed, business_to
 
     assert config1["welcome_message"] == "Bienvenida negocio 1"
     assert config2["welcome_message"] == "Bienvenida negocio 2"  # intacto, nunca lo tocó el otro negocio
+
+
+# --- Logo y documento de información propios — mismo criterio que en
+# test_agency.py: el endpoint solo valida content-type/tamaño, no el
+# contenido real del archivo. `isolated_upload_dir` (conftest.py, autouse)
+# ya redirige la escritura real a un directorio temporal.
+def test_subir_mi_propio_logo(client, seed, business_token):
+    res = client.post(
+        "/business/profile/logo",
+        headers=auth(business_token),
+        files={"file": ("logo.svg", b"<svg></svg>", "image/svg+xml")},
+    )
+    assert res.status_code == 200
+    assert res.json()["logo_url"].startswith("/uploads/logos/business/")
+
+    fresh = client.get("/business/profile", headers=auth(business_token))
+    assert fresh.json()["logo_url"] == res.json()["logo_url"]
+
+
+def test_borrar_mi_propio_logo(client, seed, business_token):
+    client.post(
+        "/business/profile/logo",
+        headers=auth(business_token),
+        files={"file": ("logo.png", b"fake", "image/png")},
+    )
+    res = client.delete("/business/profile/logo", headers=auth(business_token))
+    assert res.status_code == 200
+    assert res.json()["logo_url"] == ""
+
+
+def test_subir_mi_propio_documento(client, seed, business_token):
+    res = client.post(
+        "/business/profile/info-document",
+        headers=auth(business_token),
+        files={"file": ("Horarios y precios.pdf", b"%PDF-1.4 fake", "application/pdf")},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["info_document_url"].startswith("/uploads/documents/business/")
+    assert body["info_document_name"] == "Horarios y precios.pdf"
+
+    res = client.delete("/business/profile/info-document", headers=auth(business_token))
+    assert res.status_code == 200
+    assert res.json()["info_document_name"] == ""
+
+
+def test_un_negocio_no_puede_subir_documento_de_otro(client, seed, business_token, db_session):
+    from app.security import hash_password
+    from app import models
+
+    business2 = models.Business(agency_id=seed["agency"].id, name="Negocio 2")
+    db_session.add(business2)
+    db_session.flush()
+    db_session.add(models.BusinessUser(
+        business_id=business2.id, name="Dueño 2", email="negocio2@test-demo.com",
+        password_hash=hash_password("otra_pass_123"),
+    ))
+    db_session.commit()
+
+    # negocio 1 sube su propio documento
+    client.post(
+        "/business/profile/info-document",
+        headers=auth(business_token),
+        files={"file": ("propio.pdf", b"%PDF-1.4", "application/pdf")},
+    )
+
+    login2 = client.post("/auth/business/login", json={"email": "negocio2@test-demo.com", "password": "otra_pass_123"})
+    token2 = login2.json()["access_token"]
+    profile2 = client.get("/business/profile", headers=auth(token2))
+    # negocio 2 nunca tuvo su propio endpoint apuntado a business1 — pero la
+    # prueba real es que el documento de negocio 1 nunca se filtra al 2
+    assert profile2.json()["info_document_name"] == ""
