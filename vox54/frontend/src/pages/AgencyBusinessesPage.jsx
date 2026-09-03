@@ -1,18 +1,12 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import AgencyShell from "../components/AgencyShell";
+import { Link, useOutletContext } from "react-router-dom";
 import StatusPill from "../components/StatusPill";
 import CreateBusinessModal from "../components/CreateBusinessModal";
-import { useAuth } from "../AuthContext";
-import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 import { initials } from "../utils";
 
 export default function AgencyBusinessesPage() {
-  const { logout } = useAuth();
-  const session = useRequireRole("agency");
-  const navigate = useNavigate();
-  const [me, setMe] = useState(null);
+  const { session } = useOutletContext();
   const [businesses, setBusinesses] = useState([]);
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
@@ -23,7 +17,6 @@ export default function AgencyBusinessesPage() {
 
   useEffect(() => {
     if (!session) return;
-    api.agencyMe(session.access_token).then(setMe).catch((e) => setError(e.message));
     refreshBusinesses();
   }, [session]);
 
@@ -36,7 +29,7 @@ export default function AgencyBusinessesPage() {
   if (!session) return null;
 
   return (
-    <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
+    <>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28 }}>
           <div>
@@ -77,7 +70,7 @@ export default function AgencyBusinessesPage() {
       {showCreate && (
         <CreateBusinessModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />
       )}
-    </AgencyShell>
+    </>
   );
 }
 

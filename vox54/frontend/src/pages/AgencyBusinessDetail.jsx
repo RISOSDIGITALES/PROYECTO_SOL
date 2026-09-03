@@ -1,11 +1,8 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
-import AgencyShell from "../components/AgencyShell";
+import { useParams, Link, useOutletContext } from "react-router-dom";
 import StatusPill from "../components/StatusPill";
 import CallsList from "../components/CallsList";
 import BusinessProfileForm from "../components/BusinessProfileForm";
-import { useAuth } from "../AuthContext";
-import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 import { initials } from "../utils";
 
@@ -18,11 +15,8 @@ import { initials } from "../utils";
 // infraestructura, con motivo real para tener su propio espacio), y sus
 // llamadas recientes.
 export default function AgencyBusinessDetail() {
-  const { logout } = useAuth();
-  const session = useRequireRole("agency");
-  const navigate = useNavigate();
+  const { session } = useOutletContext();
   const { id } = useParams();
-  const [me, setMe] = useState(null);
   const [business, setBusiness] = useState(null);
   const [error, setError] = useState("");
   const [renaming, setRenaming] = useState(false);
@@ -38,7 +32,6 @@ export default function AgencyBusinessDetail() {
 
   useEffect(() => {
     if (!session) return;
-    api.agencyMe(session.access_token).then(setMe).catch((e) => setError(e.message));
     api.getBusinessDetail(session.access_token, id)
       .then(setBusiness)
       .catch((e) => setError(e.message));
@@ -102,7 +95,6 @@ export default function AgencyBusinessDetail() {
   const config = business?.bot_config;
 
   return (
-    <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
         <Link to="/agencia/negocios" style={backLink}>← Volver a negocios</Link>
 
@@ -199,7 +191,6 @@ export default function AgencyBusinessDetail() {
           </div>
         )}
       </div>
-    </AgencyShell>
   );
 }
 

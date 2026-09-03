@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
-import AgencyShell from "../components/AgencyShell";
+import { useParams, Link, useOutletContext } from "react-router-dom";
 import { OutcomeBadge } from "../components/CallsList";
-import { useAuth } from "../AuthContext";
-import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 import { formatDateLong, formatDuration, parseTranscript } from "../callFormat";
 
@@ -13,17 +10,13 @@ import { formatDateLong, formatDuration, parseTranscript } from "../callFormat";
 // de transcripción que ya usa CallsList (vía callFormat), para que se vea
 // exactamente igual en los dos lugares.
 export default function AgencyCallDetail() {
-  const { logout } = useAuth();
-  const session = useRequireRole("agency");
-  const navigate = useNavigate();
+  const { session } = useOutletContext();
   const { callId } = useParams();
-  const [me, setMe] = useState(null);
   const [call, setCall] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!session) return;
-    api.agencyMe(session.access_token).then(setMe).catch((e) => setError(e.message));
     api.getAgencyCall(session.access_token, callId).then(setCall).catch((e) => setError(e.message));
   }, [session, callId]);
 
@@ -32,7 +25,6 @@ export default function AgencyCallDetail() {
   const messages = call ? parseTranscript(call.transcript) : [];
 
   return (
-    <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "36px 40px" }}>
         <Link to="/agencia/registros" style={backLink}>← Volver a Registros</Link>
 
@@ -85,7 +77,6 @@ export default function AgencyCallDetail() {
           </>
         )}
       </div>
-    </AgencyShell>
   );
 }
 

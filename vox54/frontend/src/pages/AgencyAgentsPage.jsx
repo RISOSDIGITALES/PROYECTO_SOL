@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import AgencyShell from "../components/AgencyShell";
+import { Link, useOutletContext } from "react-router-dom";
 import StatusPill from "../components/StatusPill";
-import { useAuth } from "../AuthContext";
-import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 
 // Vista aparte de "Negocios" — esa es una grilla de tarjetas pensada para
@@ -11,17 +8,13 @@ import { api } from "../api";
 // ver de un vistazo el estado real de infraestructura de cada agente
 // (proveedor de telefonía, número, modelo de IA) sin entrar a cada uno.
 export default function AgencyAgentsPage() {
-  const { logout } = useAuth();
-  const session = useRequireRole("agency");
-  const navigate = useNavigate();
-  const [me, setMe] = useState(null);
+  const { session } = useOutletContext();
   const [agents, setAgents] = useState(null);
   const [catalog, setCatalog] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!session) return;
-    api.agencyMe(session.access_token).then(setMe).catch((e) => setError(e.message));
     api.listAgents(session.access_token).then(setAgents).catch((e) => setError(e.message));
     api.getCatalog().then(setCatalog).catch(() => {});
   }, [session]);
@@ -42,7 +35,6 @@ export default function AgencyAgentsPage() {
   }
 
   return (
-    <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
         <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>Inventario de agentes</h1>
         <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginBottom: 24 }}>
@@ -97,7 +89,6 @@ export default function AgencyAgentsPage() {
           </div>
         )}
       </div>
-    </AgencyShell>
   );
 }
 

@@ -1,10 +1,6 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import AgencyShell from "../components/AgencyShell";
+import { useOutletContext } from "react-router-dom";
 import ChangePasswordForm from "../components/ChangePasswordForm";
 import PrefsToggles from "../components/PrefsToggles";
-import { useAuth } from "../AuthContext";
-import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 import { formatDateLong } from "../callFormat";
 
@@ -14,29 +10,20 @@ import { formatDateLong } from "../callFormat";
 // cosas vivían mezcladas acá; un dato de la agencia (su correo de contacto)
 // y un dato de la cuenta (la contraseña de quien está logueado) son ajustes
 // de naturaleza distinta, aunque los edite la misma persona.
+//
+// `me` viene del layout (AgencyLayout ya lo pide una sola vez al loguearse,
+// ver comentario ahí) — esta pantalla no necesita pedirlo de nuevo.
 export default function AgencyConfigPage() {
-  const { logout } = useAuth();
-  const session = useRequireRole("agency");
-  const navigate = useNavigate();
-  const [me, setMe] = useState(null);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!session) return;
-    api.agencyMe(session.access_token).then(setMe).catch((e) => setError(e.message));
-  }, [session]);
+  const { session, me } = useOutletContext();
 
   if (!session) return null;
 
   return (
-    <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
         <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>Configuración</h1>
         <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginBottom: 24 }}>
           Tu cuenta de administrador. Los datos de la agencia en sí viven en "Agencia".
         </p>
-
-        {error && <div style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</div>}
 
         {me && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 20, alignItems: "start" }}>
@@ -61,7 +48,6 @@ export default function AgencyConfigPage() {
           </div>
         )}
       </div>
-    </AgencyShell>
   );
 }
 

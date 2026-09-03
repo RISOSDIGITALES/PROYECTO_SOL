@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
-import AgencyShell from "../components/AgencyShell";
+import { useParams, Link, useOutletContext } from "react-router-dom";
 import BotConfigForm from "../components/BotConfigForm";
-import { useAuth } from "../AuthContext";
-import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 
 // Configuración del bot de un negocio puntual — su propia página, separada
@@ -11,11 +8,8 @@ import { api } from "../api";
 // tenga un solo trabajo: una decide "qué negocio es", esta otra "cómo se
 // comporta su bot".
 export default function AgencyBotConfig() {
-  const { logout } = useAuth();
-  const session = useRequireRole("agency");
-  const navigate = useNavigate();
+  const { session } = useOutletContext();
   const { id } = useParams();
-  const [me, setMe] = useState(null);
   const [business, setBusiness] = useState(null);
   const [config, setConfig] = useState(null);
   const [catalog, setCatalog] = useState(null);
@@ -25,7 +19,6 @@ export default function AgencyBotConfig() {
 
   useEffect(() => {
     if (!session) return;
-    api.agencyMe(session.access_token).then(setMe).catch((e) => setError(e.message));
     api.getBusinessDetail(session.access_token, id)
       .then((detail) => {
         setBusiness(detail);
@@ -59,7 +52,6 @@ export default function AgencyBotConfig() {
   if (!session) return null;
 
   return (
-    <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
         <Link to={`/agencia/negocios/${id}`} style={backLink}>
           ← Volver a {business?.name || "negocio"}
@@ -87,7 +79,6 @@ export default function AgencyBotConfig() {
         )}
         {error && !config && <div style={{ color: "var(--danger)" }}>{error}</div>}
       </div>
-    </AgencyShell>
   );
 }
 

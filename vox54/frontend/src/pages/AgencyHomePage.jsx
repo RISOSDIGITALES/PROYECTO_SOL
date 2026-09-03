@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import AgencyShell from "../components/AgencyShell";
+import { Link, useOutletContext } from "react-router-dom";
 import StatusPill from "../components/StatusPill";
 import Icon from "../components/Icon";
-import { useAuth } from "../AuthContext";
-import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 import { firstName, initials } from "../utils";
 import { formatDate } from "../callFormat";
@@ -37,10 +34,9 @@ const HUE = {
 };
 
 export default function AgencyHomePage() {
-  const { logout } = useAuth();
-  const session = useRequireRole("agency");
-  const navigate = useNavigate();
-  const [me, setMe] = useState(null);
+  // `me` viene del layout (AgencyLayout ya lo pide una sola vez al
+  // loguearse) — esta pantalla pide solo lo que necesita para sí misma.
+  const { session, me } = useOutletContext();
   const [profile, setProfile] = useState(null);
   const [businesses, setBusinesses] = useState(null);
   const [agents, setAgents] = useState(null);
@@ -49,7 +45,6 @@ export default function AgencyHomePage() {
 
   useEffect(() => {
     if (!session) return;
-    api.agencyMe(session.access_token).then(setMe).catch((e) => setError(e.message));
     api.getAgencyProfile(session.access_token).then(setProfile).catch((e) => setError(e.message));
     api.listBusinesses(session.access_token).then(setBusinesses).catch((e) => setError(e.message));
     api.listAgents(session.access_token).then(setAgents).catch((e) => setError(e.message));
@@ -109,7 +104,6 @@ export default function AgencyHomePage() {
   const mostRecentCall = calls && calls.length > 0 ? calls[0] : null;
 
   return (
-    <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
         <div style={heroStyle}>
           <div style={eyebrowStyle}>Inicio</div>
@@ -234,7 +228,6 @@ export default function AgencyHomePage() {
           </div>
         </div>
       </div>
-    </AgencyShell>
   );
 }
 

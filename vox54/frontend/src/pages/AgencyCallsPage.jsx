@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import AgencyShell from "../components/AgencyShell";
+import { Link, useOutletContext } from "react-router-dom";
 import { OutcomeBadge } from "../components/CallsList";
-import { useAuth } from "../AuthContext";
-import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 import { formatDate, formatDuration } from "../callFormat";
 
@@ -12,10 +9,7 @@ import { formatDate, formatDuration } from "../callFormat";
 // dentro de la ficha de cada negocio). Tabla densa con lo básico de cada
 // fila; entrar a una lleva al detalle completo con la transcripción real.
 export default function AgencyCallsPage() {
-  const { logout } = useAuth();
-  const session = useRequireRole("agency");
-  const navigate = useNavigate();
-  const [me, setMe] = useState(null);
+  const { session } = useOutletContext();
   const [businesses, setBusinesses] = useState(null);
   const [calls, setCalls] = useState(null);
   const [businessFilter, setBusinessFilter] = useState("");
@@ -23,7 +17,6 @@ export default function AgencyCallsPage() {
 
   useEffect(() => {
     if (!session) return;
-    api.agencyMe(session.access_token).then(setMe).catch((e) => setError(e.message));
     api.listBusinesses(session.access_token).then(setBusinesses).catch(() => {});
   }, [session]);
 
@@ -38,7 +31,6 @@ export default function AgencyCallsPage() {
   if (!session) return null;
 
   return (
-    <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, marginBottom: 24 }}>
           <div>
@@ -111,7 +103,6 @@ export default function AgencyCallsPage() {
           </div>
         )}
       </div>
-    </AgencyShell>
   );
 }
 

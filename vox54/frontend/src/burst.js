@@ -1,5 +1,6 @@
 import { playPopSound } from "./popSound";
 import { getPrefs } from "./prefs";
+import { shardOffsets } from "./shardOffsets";
 
 // LA MISMA animación que PoppableBubbles.jsx (.vox54-amb.bursting) — no una
 // reimplementación paralela. Flash + PARTÍCULAS + el pulso de escala/brillo
@@ -17,17 +18,10 @@ import { getPrefs } from "./prefs";
 // inset-percentage, para que también funcione en un botón rectangular como
 // "Guardar cambios"). Las partículas se agregan como hijas reales de `el`
 // — igual que en PoppableBubbles, donde son hermanas de la burbuja dentro
-// del mismo contenedor — con el mismo `.vox54-shard`/`vox54-shard-fly`.
-function shardOffsets(size) {
-  const n = 6;
-  const dist = Math.max(18, size * 0.9);
-  return Array.from({ length: n }, (_, i) => {
-    const angle = (360 / n) * i + (Math.random() * 24 - 12);
-    const rad = (angle * Math.PI) / 180;
-    const d = dist * (0.7 + Math.random() * 0.6);
-    return { tx: Math.cos(rad) * d, ty: Math.sin(rad) * d };
-  });
-}
+// del mismo contenedor — con el mismo `.vox54-shard`/`vox54-shard-fly`, y
+// la MISMA fórmula real (`shardOffsets.js`, un solo archivo compartido —
+// antes cada lado tenía su propia copia con números que ya habían empezado
+// a divergir sin que nadie lo hubiera decidido).
 
 function reducedMotion() {
   try {
@@ -70,7 +64,7 @@ export function burst(el) {
     shard.style.setProperty("--ty", `${s.ty}px`);
     el.appendChild(shard);
   });
-  // vox54-shard-fly dura 0.5s — con margen de sobra, mismo motivo que el
+  // vox54-shard-fly dura 0.65s — con margen de sobra, mismo motivo que el
   // setTimeout de arriba.
-  setTimeout(() => el.querySelectorAll(".vox54-shard").forEach((s) => s.remove()), 550);
+  setTimeout(() => el.querySelectorAll(".vox54-shard").forEach((s) => s.remove()), 700);
 }

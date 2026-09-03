@@ -1,5 +1,6 @@
 import { Fragment, useState } from "react";
 import { playPopSound } from "../popSound";
+import { shardOffsets } from "../shardOffsets";
 
 // Campo de burbujas de vidrio, clickeables — al tocarlas estallan de verdad
 // (destello + aro de onda expansiva + partículas que salen disparadas, no
@@ -8,17 +9,9 @@ import { playPopSound } from "../popSound";
 // componente para no repetir esta lógica en cada pantalla que tiene su
 // propio campo de burbujas (login, dashboard de negocio, dashboard de
 // agencia). El CSS real (.vox54-amb, .bursting, .vox54-shard, etc.) vive
-// en theme.css.
-function shardOffsets(size) {
-  const n = 6;
-  const dist = Math.max(18, size * 0.9);
-  return Array.from({ length: n }, (_, i) => {
-    const angle = (360 / n) * i + (Math.random() * 24 - 12);
-    const rad = (angle * Math.PI) / 180;
-    const d = dist * (0.7 + Math.random() * 0.6);
-    return { tx: Math.cos(rad) * d, ty: Math.sin(rad) * d };
-  });
-}
+// en theme.css. La fórmula de las partículas (shardOffsets) vive en un solo
+// archivo compartido con burst.js — antes cada uno tenía su propia copia,
+// y llegaron a divergir en los números sin que nadie lo hubiera decidido.
 
 // bubbles: [{ id, size, hue?, delay, style: {left/right/top/bottom} }]
 export default function PoppableBubbles({ bubbles }) {
@@ -35,9 +28,10 @@ export default function PoppableBubbles({ bubbles }) {
       next.set(id, shardOffsets(size));
       return next;
     });
-    // 560ms deja terminar de desvanecerse al destello (0.28s), el estallido
-    // de la burbuja (0.48s), el aro (0.55s) y las partículas (0.5s) antes
-    // de sacarla del DOM — si se saca antes, se corta el efecto a mitad.
+    // 700ms deja terminar de desvanecerse al destello (0.3s), el estallido
+    // de la burbuja (0.48s), el aro (0.55s) y las partículas (0.65s, más
+    // grandes y con más recorrido que antes) antes de sacarla del DOM — si
+    // se saca antes, se corta el efecto a mitad.
     setTimeout(() => {
       setBursting((prev) => {
         const next = new Map(prev);
@@ -53,7 +47,7 @@ export default function PoppableBubbles({ bubbles }) {
           return next;
         });
       }, respawnDelay);
-    }, 560);
+    }, 700);
   }
 
   return bubbles.map((b) => {

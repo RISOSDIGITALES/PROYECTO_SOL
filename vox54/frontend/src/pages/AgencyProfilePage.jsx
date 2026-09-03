@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import AgencyShell from "../components/AgencyShell";
+import { Link, useOutletContext } from "react-router-dom";
 import StatusPill from "../components/StatusPill";
-import { useAuth } from "../AuthContext";
-import { useRequireRole } from "../useRequireRole";
 import { api, API_BASE } from "../api";
 import { initials } from "../utils";
 import { burst } from "../burst";
@@ -17,10 +14,7 @@ import { burst } from "../burst";
 // compartiendo una sola pantalla. Acá vive solo la identidad de la agencia
 // en sí, editable, con su propio ítem de menú antes de "Negocios".
 export default function AgencyProfilePage() {
-  const { logout } = useAuth();
-  const session = useRequireRole("agency");
-  const navigate = useNavigate();
-  const [me, setMe] = useState(null);
+  const { session } = useOutletContext();
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -32,7 +26,6 @@ export default function AgencyProfilePage() {
 
   useEffect(() => {
     if (!session) return;
-    api.agencyMe(session.access_token).then(setMe).catch((e) => setError(e.message));
     api.getAgencyProfile(session.access_token).then(setProfile).catch((e) => setError(e.message));
   }, [session]);
 
@@ -94,7 +87,6 @@ export default function AgencyProfilePage() {
   if (!session) return null;
 
   return (
-    <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
         <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>Agencia</h1>
         <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginBottom: 24 }}>
@@ -217,7 +209,6 @@ export default function AgencyProfilePage() {
           !error && <div style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>Cargando…</div>
         )}
       </div>
-    </AgencyShell>
   );
 }
 
