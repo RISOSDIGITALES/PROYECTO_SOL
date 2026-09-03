@@ -1,21 +1,23 @@
 import { playPopSound } from "./popSound";
 import { getPrefs } from "./prefs";
 
-// Estalla "sin desaparecer" — para botones y burbujas de navegación
-// FUNCIONALES, donde el elemento tiene que seguir ahí y usable después
-// (a diferencia de PoppableBubbles, que sí saca la burbuja decorativa del
-// DOM un rato antes de reaparecer). El elemento real nunca se toca de forma
-// destructiva: recibe una clase de pulso transitoria que vuelve sola a
-// scale(1) (nunca colapsa a 0), y el destello/aro/partículas viven en un
-// overlay aparte, insertado y sacado del DOM a mano, posicionado sobre el
-// rect real del elemento — así sirve tanto para una burbuja circular del
-// menú como para un botón rectangular de "Guardar cambios".
+// LA MISMA animación que PoppableBubbles.jsx (.vox54-amb.bursting) — no una
+// reimplementación paralela con los números copiados a mano. Se usa para
+// botones y burbujas de navegación FUNCIONALES, donde el elemento tiene que
+// seguir ahí y usable después (a diferencia de PoppableBubbles, que sí saca
+// la burbuja decorativa del DOM un rato antes de reaparecer): la única
+// diferencia real es que `el` nunca se toca de forma destructiva — recibe
+// una clase de pulso (`.vox54-burstkeep`, en theme.css) que anima
+// scale/brillo con el mismo pico que la burbuja real y vuelve sola a
+// scale(1) sin perder nunca opacidad, en vez de colapsar a 0 como hace
+// `.vox54-amb.bursting`. El destello y el aro son los mismos ::before/
+// ::after de siempre (mismos keyframes vox54-flash/vox54-shock, solo
+// centrados con --burst-size en vez de inset-percentage, para que un botón
+// rectangular como "Guardar cambios" también dé un aro circular). Las
+// partículas se agregan como hijas reales de `el` — igual que en
+// PoppableBubbles, donde son hermanas de la burbuja dentro del mismo
+// contenedor — con el mismo `.vox54-shard`/`vox54-shard-fly` de siempre.
 function shardOffsets(size) {
-  // Misma fórmula, número por número, que PoppableBubbles.jsx — antes
-  // usaba `size * 0.5` (contra `size * 0.9` de la burbuja) y las
-  // partículas salían disparadas a casi la mitad de distancia real,
-  // haciendo que el estallido de un ícono se viera notoriamente más
-  // débil que el de una burbuja del mismo tamaño.
   const n = 6;
   const dist = Math.max(18, size * 0.9);
   return Array.from({ length: n }, (_, i) => {
@@ -37,51 +39,37 @@ function reducedMotion() {
 export function burst(el) {
   if (!el) return;
   const prefs = getPrefs();
-
-  // Tamaño real del elemento, calculado ANTES de todo lo demás — el sonido
-  // y el tamaño del destello/aro/partículas dependen de esto. Antes el
-  // sonido usaba un 44 fijo sin importar si era un ícono chico o un botón
-  // grande — ahora varía igual que en una burbuja real.
-  const rect = el.getBoundingClientRect();
-  const size = Math.max(rect.width, rect.height);
+  const size = Math.max(el.offsetWidth, el.offsetHeight);
 
   if (prefs.soundEnabled) playPopSound(size);
   if (!prefs.animationsEnabled || reducedMotion()) return;
 
+  // Tamaño real para que ::before/::after (theme.css) armen un aro
+  // circular centrado, aunque `el` no sea cuadrado.
+  el.style.setProperty("--burst-size", `${size}px`);
+
   // Reflow forzado para poder re-disparar la animación si se hace clic dos
   // veces seguidas sobre el mismo botón antes de que termine la primera.
   el.classList.remove("vox54-burstkeep");
+  el.querySelectorAll(".vox54-shard").forEach((s) => s.remove());
   void el.offsetWidth;
   el.classList.add("vox54-burstkeep");
   el.addEventListener("animationend", () => el.classList.remove("vox54-burstkeep"), { once: true });
   // Red de seguridad — si la pestaña queda en segundo plano justo después
-  // del clic (guardaste y cambiaste de pestaña), el navegador puede
-  // pausar/atrasar el reloj de la animación y `animationend` nunca llega a
-  // disparar — sin esto, la clase se quedaría pegada para siempre. 500ms
-  // da margen de sobra sobre los 420ms reales de la animación.
+  // del clic, el navegador puede pausar/atrasar el reloj de la animación y
+  // `animationend` nunca llega a disparar — sin esto, la clase se quedaría
+  // pegada para siempre. 500ms da margen de sobra sobre los 420ms reales.
   setTimeout(() => el.classList.remove("vox54-burstkeep"), 500);
-
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-
-  const overlay = document.createElement("div");
-  overlay.className = "vox54-burstfx";
-  overlay.setAttribute("aria-hidden", "true");
-  overlay.style.cssText =
-    `position:fixed; left:${cx}px; top:${cy}px; width:${size}px; height:${size}px; ` +
-    `margin:${-size / 2}px 0 0 ${-size / 2}px; pointer-events:none; z-index:9999;`;
-
-  overlay.appendChild(Object.assign(document.createElement("span"), { className: "vox54-burstfx-flash" }));
-  overlay.appendChild(Object.assign(document.createElement("span"), { className: "vox54-burstfx-ring" }));
 
   shardOffsets(size).forEach((s) => {
     const shard = document.createElement("span");
     shard.className = "vox54-shard";
+    shard.setAttribute("aria-hidden", "true");
     shard.style.setProperty("--tx", `${s.tx}px`);
     shard.style.setProperty("--ty", `${s.ty}px`);
-    overlay.appendChild(shard);
+    el.appendChild(shard);
   });
-
-  document.body.appendChild(overlay);
-  setTimeout(() => overlay.remove(), 620);
+  // vox54-shard-fly dura 0.5s — con margen de sobra, mismo motivo que el
+  // setTimeout de arriba.
+  setTimeout(() => el.querySelectorAll(".vox54-shard").forEach((s) => s.remove()), 550);
 }
