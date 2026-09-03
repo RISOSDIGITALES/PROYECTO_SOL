@@ -954,6 +954,8 @@ A pedido explícito de la usuaria ("necesito que pongas la opción de subir un l
 
 **Hallazgo aparte, real, encontrado en el camino de esta misma corrección: 3 procesos de Vite corriendo a la vez en esta máquina, uno de ellos zombie desde el 31-ago (2 días).** Explicaba por qué un fix ya confirmado no se veía reflejado del lado de la usuaria — mismo tipo de proceso zombie ya documentado para el backend en el puerto 8000, esta vez del lado del frontend. Los 3 se mataron y se dejó uno solo, limpio, en el puerto 5173 de siempre.
 
+**Corrección final, con el mecanismo ya genuinamente idéntico — el pedido nunca fue "que se vea igual de sutil que la burbuja", era sacar el aro por completo ("EL DE LAS PARTÍCULAS... ESA ONDA QUE DISPARA ES HORRIBLE").** Recién ahí quedó claro qué pieza específica del efecto de la burbuja se pedía desde el principio (flash + partículas + el pulso del elemento) y cuál sobraba (el aro/onda expansiva, `::after` con `vox54-shock`) — las dos rondas anteriores intentaron hacer que el aro se pareciera más al de la burbuja en vez de sacarlo. `.vox54-burstkeep::after` y el keyframe `vox54-shock-centered` se eliminaron del todo (no solo se ocultaron), junto con las referencias en los bloques de `prefers-reduced-motion`/`data-vox54-motion="off"`. **Confirmado en vivo:** `getComputedStyle(bubble, '::after').content` da `"none"` (ningún pseudo-elemento se genera), mientras el flash (`vox54-flash-centered`, opacity 0.95) y las 6 partículas siguen disparando con el pico de escala real (`scale(1.55)`) intacto. 34/34 tests de frontend en verde.
+
 ---
 
 ## Modelo de reporte diario

@@ -2,21 +2,22 @@ import { playPopSound } from "./popSound";
 import { getPrefs } from "./prefs";
 
 // LA MISMA animación que PoppableBubbles.jsx (.vox54-amb.bursting) — no una
-// reimplementación paralela con los números copiados a mano. Se usa para
-// botones y burbujas de navegación FUNCIONALES, donde el elemento tiene que
-// seguir ahí y usable después (a diferencia de PoppableBubbles, que sí saca
-// la burbuja decorativa del DOM un rato antes de reaparecer): la única
-// diferencia real es que `el` nunca se toca de forma destructiva — recibe
-// una clase de pulso (`.vox54-burstkeep`, en theme.css) que anima
+// reimplementación paralela. Flash + PARTÍCULAS + el pulso de escala/brillo
+// del propio elemento — SIN aro/onda expansiva (a pedido explícito, "esa
+// onda que dispara es horrible" — sacado del todo, no solo suavizado). Se
+// usa para botones y burbujas de navegación FUNCIONALES, donde el elemento
+// tiene que seguir ahí y usable después (a diferencia de PoppableBubbles,
+// que sí saca la burbuja decorativa del DOM un rato antes de reaparecer):
+// la única diferencia real es que `el` nunca se toca de forma destructiva —
+// recibe una clase de pulso (`.vox54-burstkeep`, en theme.css) que anima
 // scale/brillo con el mismo pico que la burbuja real y vuelve sola a
 // scale(1) sin perder nunca opacidad, en vez de colapsar a 0 como hace
-// `.vox54-amb.bursting`. El destello y el aro son los mismos ::before/
-// ::after de siempre (mismos keyframes vox54-flash/vox54-shock, solo
-// centrados con --burst-size en vez de inset-percentage, para que un botón
-// rectangular como "Guardar cambios" también dé un aro circular). Las
-// partículas se agregan como hijas reales de `el` — igual que en
-// PoppableBubbles, donde son hermanas de la burbuja dentro del mismo
-// contenedor — con el mismo `.vox54-shard`/`vox54-shard-fly` de siempre.
+// `.vox54-amb.bursting`. El destello es el mismo ::before de siempre (mismo
+// keyframe vox54-flash, solo centrado con --burst-size en vez de
+// inset-percentage, para que también funcione en un botón rectangular como
+// "Guardar cambios"). Las partículas se agregan como hijas reales de `el`
+// — igual que en PoppableBubbles, donde son hermanas de la burbuja dentro
+// del mismo contenedor — con el mismo `.vox54-shard`/`vox54-shard-fly`.
 function shardOffsets(size) {
   const n = 6;
   const dist = Math.max(18, size * 0.9);

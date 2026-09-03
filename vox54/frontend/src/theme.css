@@ -617,29 +617,12 @@ textarea:focus {
 
 .vox54-navbubble.popping { animation: vox54-pop 0.5s cubic-bezier(.34,1.56,.64,1); }
 
-/* Estallido "sin desaparecer" — LA MISMA animación que .vox54-amb.bursting
-   (la burbuja real: mismo pico de escala 1.55/brillo 1.7 a los mismos 18%,
-   mismos ::before/::after con los mismos keyframes vox54-flash/vox54-shock,
-   mismas partículas vox54-shard-fly), no una reimplementación paralela con
-   los números copiados a mano — eso fue justo lo que se corrigió acá, a
-   pedido explícito, después de haber armado antes un overlay sintético
-   aparte (position:fixed + una <div> propia por JS) con clases propias
-   (.vox54-burstfx-*) que solo COINCIDÍAN en los números pero no eran el
-   mismo mecanismo. La única diferencia real, la que la usuaria pidió desde
-   el principio: un botón real no puede colapsar a scale(0.1)/opacity(0)
-   como hace la burbuja al final — acá vuelve a scale(1) sin perder nunca
-   opacidad, y por eso necesita su propio keyframe para el pulso del
-   elemento en sí (el flash/aro si son literalmente los mismos, ver abajo).
-
-   burst.js pone las partículas como hijas reales de `el` (no en una <div>
-   aparte) — igual que en PoppableBubbles, donde son hermanas de la burbuja
-   dentro del mismo contenedor — y fija `--burst-size` en `el` con su tamaño
-   real, para que ::before/::after tengan un ancla de tamaño aunque `el` no
-   sea cuadrado (un botón rectangular como "Guardar cambios" no tiene el
-   mismo ancho que alto — sin esto el aro saldría ovalado en vez de
-   circular, algo que nunca pasa con una burbuja porque siempre son
-   cuadradas). Con `el` cuadrado (cualquier ícono de burbuja) esto da
-   exactamente lo mismo que `inset:-25%`/`inset:0` sobre la propia burbuja. */
+/* Estallido "sin desaparecer" — flash + PARTÍCULAS (vox54-shard-fly, igual
+   que en .vox54-amb.bursting) + el pulso de escala/brillo del propio
+   elemento. SIN aro/onda expansiva — a pedido explícito de la usuaria
+   ("esa onda que dispara es horrible"), sacado del todo, no solo
+   suavizado. Antes acá vivía también un ::after con vox54-shock-centered
+   (el aro) — eliminado junto con su keyframe. */
 @keyframes vox54-burst-keep {
   0% { transform: scale(1); filter: brightness(1); }
   18% { transform: scale(1.55); filter: brightness(1.7); }
@@ -664,31 +647,13 @@ textarea:focus {
   pointer-events: none;
 }
 
-.vox54-burstkeep::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: var(--burst-size, 100%);
-  height: var(--burst-size, 100%);
-  border-radius: 50%;
-  border: 2.5px solid rgba(255,255,255,0.9);
-  animation: vox54-shock-centered 0.55s ease-out forwards;
-  pointer-events: none;
-}
-
-/* Mismas curvas exactas que vox54-flash/vox54-shock (las de la burbuja
-   real) — solo con translate(-50%,-50%) horneado adentro del keyframe,
-   porque acá el tamaño es fijo en px (var(--burst-size)) y centrado a
-   mano en vez de inset-percentage sobre una caja ya cuadrada. */
+/* Misma curva exacta que vox54-flash (la de la burbuja real) — solo con
+   translate(-50%,-50%) horneado adentro del keyframe, porque acá el
+   tamaño es fijo en px (var(--burst-size)) y centrado a mano en vez de
+   inset-percentage sobre una caja ya cuadrada. */
 @keyframes vox54-flash-centered {
   0% { transform: translate(-50%, -50%) scale(0.25); opacity: 0.95; }
   100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
-}
-
-@keyframes vox54-shock-centered {
-  0% { transform: translate(-50%, -50%) scale(0.55); opacity: 0.9; }
-  100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
 }
 
 .vox54-navlabel {
@@ -735,7 +700,7 @@ textarea:focus {
   .vox54-amb.bursting,
   .vox54-amb.bursting::before,
   .vox54-amb.bursting::after { animation: none; }
-  .vox54-burstkeep::before, .vox54-burstkeep::after { animation: none; }
+  .vox54-burstkeep::before { animation: none; }
   .vox54-shard { animation: none; opacity: 0; }
 }
 
@@ -754,6 +719,5 @@ html[data-vox54-motion="off"] .vox54-burstkeep { animation: none; }
 html[data-vox54-motion="off"] .vox54-amb.bursting,
 html[data-vox54-motion="off"] .vox54-amb.bursting::before,
 html[data-vox54-motion="off"] .vox54-amb.bursting::after { animation: none; }
-html[data-vox54-motion="off"] .vox54-burstkeep::before,
-html[data-vox54-motion="off"] .vox54-burstkeep::after { animation: none; }
+html[data-vox54-motion="off"] .vox54-burstkeep::before { animation: none; }
 html[data-vox54-motion="off"] .vox54-shard { animation: none; opacity: 0; }
