@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Logo from "./Logo";
+import Icon from "./Icon";
 import PoppableBubbles from "./PoppableBubbles";
 import { useAuth } from "../AuthContext";
 import { api } from "../api";
@@ -89,7 +90,7 @@ export default function AgencyShell({ userName, onLogout, children }) {
             onClick={() => handleClick("inicio")}
           >
             <span className={`vox54-navbubble hueD ${isInicio ? "active" : ""} ${poppingId === "inicio" ? "popping" : ""}`}>
-              <span className="icon">🏠</span>
+              <Icon name="home" className="icon" />
             </span>
             <span className="vox54-navlabel">Inicio</span>
           </Link>
@@ -101,7 +102,7 @@ export default function AgencyShell({ userName, onLogout, children }) {
             onClick={() => handleClick("agencia")}
           >
             <span className={`vox54-navbubble hueE ${isAgencia ? "active" : ""} ${poppingId === "agencia" ? "popping" : ""}`}>
-              <span className="icon">🏛️</span>
+              <Icon name="building" className="icon" />
             </span>
             <span className="vox54-navlabel">Agencia</span>
           </Link>
@@ -113,7 +114,7 @@ export default function AgencyShell({ userName, onLogout, children }) {
             onClick={() => handleClick("negocios")}
           >
             <span className={`vox54-navbubble ${isNegocios ? "active" : ""} ${poppingId === "negocios" ? "popping" : ""}`}>
-              <span className="icon">🏢</span>
+              <Icon name="briefcase" className="icon" />
             </span>
             <span className="vox54-navlabel">Negocios</span>
           </Link>
@@ -125,7 +126,7 @@ export default function AgencyShell({ userName, onLogout, children }) {
             onClick={() => handleClick("agentes")}
           >
             <span className={`vox54-navbubble hueB ${isAgentes ? "active" : ""} ${poppingId === "agentes" ? "popping" : ""}`}>
-              <span className="icon">🎙️</span>
+              <Icon name="mic" className="icon" />
               {pausedCount > 0 && <span className="vox54-notif">{pausedCount}</span>}
             </span>
             <span className="vox54-navlabel">Agentes</span>
@@ -138,7 +139,7 @@ export default function AgencyShell({ userName, onLogout, children }) {
             onClick={() => handleClick("registros")}
           >
             <span className={`vox54-navbubble hueF ${isRegistros ? "active" : ""} ${poppingId === "registros" ? "popping" : ""}`}>
-              <span className="icon">📋</span>
+              <Icon name="list" className="icon" />
             </span>
             <span className="vox54-navlabel">Registros</span>
           </Link>
@@ -156,7 +157,7 @@ export default function AgencyShell({ userName, onLogout, children }) {
             onClick={() => handleClick("config")}
           >
             <span className={`vox54-navbubble hueC ${isConfig ? "active" : ""} ${poppingId === "config" ? "popping" : ""}`}>
-              <span className="icon">⚙️</span>
+              <Icon name="gear" className="icon" />
             </span>
             <span className="vox54-navlabel">Configuración</span>
           </Link>
@@ -168,7 +169,7 @@ export default function AgencyShell({ userName, onLogout, children }) {
             onClick={() => handleClick("salir")}
           >
             <span className={`vox54-navbubble exit ${poppingId === "salir" ? "popping" : ""}`}>
-              <span className="icon">🚪</span>
+              <Icon name="logout" className="icon" />
             </span>
             <span className="vox54-navlabel">Salir</span>
           </button>

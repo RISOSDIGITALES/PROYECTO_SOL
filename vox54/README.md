@@ -241,19 +241,22 @@ cp .env.example .env   # WORKER_SECRET debe coincidir con el del backend (.env),
 ### Tests
 
 ```bash
-# Backend — 54 tests reales contra una base SQLite en memoria (aislada de
+# Backend — 78 tests reales contra una base SQLite en memoria (aislada de
 # vox54.db), cubren auth, CRUD de negocios, validación de BotConfig
 # (incluyendo el caso crítico de PATCH parcial validado contra lo ya
-# guardado), la separación real de campos cliente/agencia, y el endpoint
-# del worker con su guardia de secreto.
+# guardado), la separación real de campos cliente/agencia, el perfil real
+# de agencia/negocio (con aislamiento entre agencias distintas), Registros
+# (historial de llamadas de toda la agencia), y el endpoint del worker con
+# su guardia de secreto.
 cd vox54/backend
 ./venv/Scripts/python.exe -m pip install -r requirements-dev.txt
 ./venv/Scripts/python.exe -m pytest tests/ -v
 
-# Worker — 15 tests de la lógica de armado del pipeline (qué argumento
-# real le pasamos a cada plugin según el proveedor elegido), sin ninguna
-# llamada de red — ver el docstring de test_agent.py para por qué esto
-# importa incluso sin poder probar audio real.
+# Worker — 19 tests de la lógica de armado del pipeline (qué argumento
+# real le pasamos a cada plugin según el proveedor elegido) y de
+# build_instructions() (cómo se le agrega el perfil real del negocio al
+# system_prompt), sin ninguna llamada de red — ver el docstring de
+# test_agent.py para por qué esto importa incluso sin poder probar audio real.
 cd vox54/worker
 WORKER_SECRET=test-secret ./venv/Scripts/python.exe -m unittest test_agent -v
 

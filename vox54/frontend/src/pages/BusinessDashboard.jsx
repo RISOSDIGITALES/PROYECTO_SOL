@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
+import Icon from "../components/Icon";
 import BotConfigForm from "../components/BotConfigForm";
 import BusinessProfileForm from "../components/BusinessProfileForm";
 import CallsList from "../components/CallsList";
@@ -139,7 +140,7 @@ export default function BusinessDashboard() {
         <div className="vox54-sidebar-main">
           <button type="button" className="vox54-navcol" style={{ animationDelay: "-0.6s" }} onClick={() => goTo("calls")}>
             <span className={`vox54-navbubble ${tab === "calls" ? "active" : ""} ${poppingId === "calls" ? "popping" : ""}`}>
-              <span className="icon">📞</span>
+              <Icon name="phone" className="icon" />
               {errorCallsCount > 0 && <span className="vox54-notif">{errorCallsCount}</span>}
             </span>
             <span className="vox54-navlabel">Llamadas</span>
@@ -147,14 +148,14 @@ export default function BusinessDashboard() {
 
           <button type="button" className="vox54-navcol" style={{ animationDelay: "-2.4s" }} onClick={() => goTo("negocio")}>
             <span className={`vox54-navbubble hueE ${tab === "negocio" ? "active" : ""} ${poppingId === "negocio" ? "popping" : ""}`}>
-              <span className="icon">🏷️</span>
+              <Icon name="tag" className="icon" />
             </span>
             <span className="vox54-navlabel">Negocio</span>
           </button>
 
           <button type="button" className="vox54-navcol" style={{ animationDelay: "-1.9s" }} onClick={() => goTo("config")}>
             <span className={`vox54-navbubble hueB ${tab === "config" ? "active" : ""} ${poppingId === "config" ? "popping" : ""}`}>
-              <span className="icon">⚙️</span>
+              <Icon name="gear" className="icon" />
             </span>
             <span className="vox54-navlabel">Configuración</span>
           </button>
@@ -163,14 +164,14 @@ export default function BusinessDashboard() {
         <div className="vox54-sidebar-foot">
           <button type="button" className="vox54-navcol" style={{ animationDelay: "-3.1s" }} onClick={() => goTo("account")}>
             <span className={`vox54-navbubble hueC ${tab === "account" ? "active" : ""} ${poppingId === "account" ? "popping" : ""}`}>
-              <span className="icon">👤</span>
+              <Icon name="user" className="icon" />
             </span>
             <span className="vox54-navlabel">Cuenta</span>
           </button>
 
           <button type="button" className="vox54-navcol" style={{ animationDelay: "-0.2s" }} onClick={() => goTo("salir")}>
             <span className={`vox54-navbubble exit ${poppingId === "salir" ? "popping" : ""}`}>
-              <span className="icon">🚪</span>
+              <Icon name="logout" className="icon" />
             </span>
             <span className="vox54-navlabel">Salir</span>
           </button>

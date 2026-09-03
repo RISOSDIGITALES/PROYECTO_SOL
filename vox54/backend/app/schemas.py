@@ -21,6 +21,21 @@ class AgencyMeResponse(BaseModel):
     email: str
     agency_id: int
     agency_name: str
+    # Único dato real que hoy tiene sentido mostrar en "Tu cuenta" además de
+    # nombre/correo — cuándo se creó esta cuenta. No inventamos "último
+    # login" ni nada que no se esté registrando de verdad todavía.
+    member_since: datetime.datetime
+
+
+class AgencyBusinessSummary(BaseModel):
+    """Una fila de la lista real de negocios que muestra el perfil de la
+    agencia — antes solo había un número ('2 negocios gestionados') sin
+    decir cuáles; esto es la relación real (Agency → Business) resuelta y
+    mostrada, no solo contada."""
+
+    id: int
+    name: str
+    bot_status: str | None = None
 
 
 class AgencyProfileOut(BaseModel):
@@ -36,6 +51,7 @@ class AgencyProfileOut(BaseModel):
     website: str
     address: str
     business_count: int
+    businesses: list[AgencyBusinessSummary] = []
 
 
 class AgencyProfileUpdate(BaseModel):

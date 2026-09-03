@@ -37,7 +37,7 @@ export default function AgencyBusinessesPage() {
 
   return (
     <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
-      <div style={{ maxWidth: 1040, margin: "0 auto", padding: "36px 32px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28 }}>
           <div>
             <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>Negocios</h1>

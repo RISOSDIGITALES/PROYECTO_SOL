@@ -43,7 +43,7 @@ export default function AgencyAgentsPage() {
 
   return (
     <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
-      <div style={{ maxWidth: 1040, margin: "0 auto", padding: "36px 32px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
         <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>Inventario de agentes</h1>
         <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginBottom: 24 }}>
           Todos los agentes de voz que gestionás, a qué negocio pertenece cada uno, y con qué infraestructura corre.

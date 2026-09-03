@@ -3,16 +3,20 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import AgencyShell from "../components/AgencyShell";
 import StatusPill from "../components/StatusPill";
 import CallsList from "../components/CallsList";
+import BusinessProfileForm from "../components/BusinessProfileForm";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
 import { initials } from "../utils";
 
-// Identidad del negocio (nombre, estado, ID) — separada a propósito de la
-// configuración del bot en sí, que vive en su propia página
-// (AgencyBotConfig). Antes las dos cosas estaban mezcladas en una sola
-// pantalla larga; acá solo se decide "qué negocio es" y desde acá se entra
-// a configurarlo.
+// Ficha completa de un negocio — todo lo que hay que saber de él en una
+// sola pantalla: identidad, su perfil real (resumen/horario/productos,
+// editable acá mismo, sin un clic más — antes vivía detrás de una tarjeta
+// "Perfil del negocio" separada, un paso de más que no hacía falta), un
+// resumen rápido de su bot con un link a la configuración completa (esa sí
+// se queda en su propia pantalla — BotConfigForm es un formulario grande de
+// infraestructura, con motivo real para tener su propio espacio), y sus
+// llamadas recientes.
 export default function AgencyBusinessDetail() {
   const { logout } = useAuth();
   const session = useRequireRole("agency");
@@ -27,6 +31,10 @@ export default function AgencyBusinessDetail() {
   const [renameSaving, setRenameSaving] = useState(false);
   const [calls, setCalls] = useState(null);
   const [callsError, setCallsError] = useState("");
+  const [profile, setProfile] = useState(null);
+  const [profileError, setProfileError] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSavedMessage, setProfileSavedMessage] = useState("");
 
   useEffect(() => {
     if (!session) return;
@@ -35,6 +43,7 @@ export default function AgencyBusinessDetail() {
       .then(setBusiness)
       .catch((e) => setError(e.message));
     api.listBusinessCalls(session.access_token, id).then(setCalls).catch((e) => setCallsError(e.message));
+    api.getBusinessProfile(session.access_token, id).then(setProfile).catch((e) => setProfileError(e.message));
   }, [session, id]);
 
   function startRenaming() {
@@ -63,11 +72,38 @@ export default function AgencyBusinessDetail() {
     }
   }
 
+  function handleProfileChange(patch) {
+    setProfile((prev) => ({ ...prev, ...patch }));
+    setProfileSavedMessage("");
+  }
+
+  async function handleProfileSave(e) {
+    e.preventDefault();
+    setProfileError("");
+    setProfileSavedMessage("");
+    setProfileSaving(true);
+    try {
+      const updated = await api.updateBusinessProfile(session.access_token, id, {
+        description: profile.description,
+        hours: profile.hours,
+        products_services: profile.products_services,
+      });
+      setProfile(updated);
+      setProfileSavedMessage("Guardado correctamente.");
+    } catch (err) {
+      setProfileError(err.message);
+    } finally {
+      setProfileSaving(false);
+    }
+  }
+
   if (!session) return null;
+
+  const config = business?.bot_config;
 
   return (
     <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "36px 32px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
         <Link to="/agencia/negocios" style={backLink}>← Volver a negocios</Link>
 
         {error && <div style={{ color: "var(--danger)", margin: "16px 0" }}>{error}</div>}
@@ -112,52 +148,63 @@ export default function AgencyBusinessDetail() {
                   <div style={{ fontSize: 12, color: "var(--ink-softer)", marginTop: 2 }}>ID {business.id}</div>
                 </div>
               </div>
-              <StatusPill status={business.bot_config?.status} />
+              <StatusPill status={config?.status} />
             </div>
             {renameError && <div style={{ fontSize: 12.5, color: "var(--danger)", marginTop: 10 }}>{renameError}</div>}
-          </div>
-        )}
-
-        {business && (
-          <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
-            <Link to={`/agencia/negocios/${id}/perfil`} className="vox54-card" style={ctaCardStyle}>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 14.5, color: "var(--ink)", marginBottom: 3 }}>
-                  Perfil del negocio
-                </div>
-                <div style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>
-                  Resumen, horarios y productos — lo que el agente necesita saber para responder.
-                </div>
-              </div>
-              <span style={{ fontSize: 20, color: "var(--g54-blue)" }}>→</span>
-            </Link>
-
-            <Link to={`/agencia/negocios/${id}/bot`} className="vox54-card" style={ctaCardStyle}>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 14.5, color: "var(--ink)", marginBottom: 3 }}>
-                  Configuración del bot de voz
-                </div>
-                <div style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>
-                  Telefonía, voz, modelo de IA, comportamiento y control de la llamada.
-                </div>
-              </div>
-              <span style={{ fontSize: 20, color: "var(--g54-blue)" }}>→</span>
-            </Link>
           </div>
         )}
 
         {!business && !error && <div style={{ color: "var(--ink-soft)", fontSize: 13.5, marginTop: 16 }}>Cargando…</div>}
 
         {business && (
-          <div style={{ marginTop: 28 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-soft)", marginBottom: 10 }}>
-              Llamadas recientes
+          <div style={{ marginTop: 20 }}>
+            <div style={sectionTitleStyle}>Perfil del negocio</div>
+            {profile ? (
+              <BusinessProfileForm
+                profile={profile}
+                onChange={handleProfileChange}
+                onSave={handleProfileSave}
+                saving={profileSaving}
+                savedMessage={profileSavedMessage}
+                error={profileError}
+              />
+            ) : (
+              !profileError && <div style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>Cargando…</div>
+            )}
+          </div>
+        )}
+
+        {business && (
+          <div style={twoColStyle}>
+            <div>
+              <div style={sectionTitleStyle}>Bot de voz</div>
+              <div className="vox54-panel" style={{ padding: 20, display: "grid", gap: 12 }}>
+                <Row label="Estado"><StatusPill status={config?.status} /></Row>
+                <Row label="Número">{config?.phone_number || "Sin asignar todavía"}</Row>
+                <Row label="Modelo de IA">{config?.ai_model || "—"}</Row>
+                <Link to={`/agencia/negocios/${id}/bot`} style={fullConfigLinkStyle}>
+                  Configuración completa →
+                </Link>
+              </div>
             </div>
-            <CallsList calls={calls} loading={calls === null && !callsError} error={callsError} />
+
+            <div>
+              <div style={sectionTitleStyle}>Llamadas recientes</div>
+              <CallsList calls={calls} loading={calls === null && !callsError} error={callsError} />
+            </div>
           </div>
         )}
       </div>
     </AgencyShell>
+  );
+}
+
+function Row({ label, children }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+      <span style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>{label}</span>
+      <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>{children}</span>
+    </div>
   );
 }
 
@@ -175,14 +222,29 @@ const avatarStyle = {
   fontSize: 15,
 };
 
-const ctaCardStyle = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 16,
-  padding: "18px 20px",
+const sectionTitleStyle = {
+  fontSize: 11,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+  color: "var(--ink-soft)",
+  marginBottom: 10,
+};
+
+const twoColStyle = {
+  marginTop: 28,
+  display: "grid",
+  gridTemplateColumns: "minmax(280px, 1fr) minmax(340px, 1.4fr)",
+  gap: 24,
+  alignItems: "start",
+};
+
+const fullConfigLinkStyle = {
+  fontSize: 12.5,
+  fontWeight: 700,
+  color: "var(--g54-blue)",
   textDecoration: "none",
-  color: "inherit",
+  marginTop: 4,
 };
 
 const renameIconBtn = {

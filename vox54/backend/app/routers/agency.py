@@ -5,7 +5,7 @@ from ..database import get_db
 from ..deps import get_current_agency_user
 from ..security import hash_password, verify_password
 from ..schemas import (
-    AgencyMeResponse, AgencyProfileOut, AgencyProfileUpdate,
+    AgencyMeResponse, AgencyProfileOut, AgencyProfileUpdate, AgencyBusinessSummary,
     BusinessOut, BusinessCreate, BusinessUpdate, BusinessDetailOut,
     BusinessProfileOut, BusinessProfileUpdate,
     BotConfigUpdate, BotConfigOut, CallOut, AgencyCallOut,
@@ -25,6 +25,7 @@ def me(user: models.AgencyUser = Depends(get_current_agency_user)):
         email=user.email,
         agency_id=user.agency_id,
         agency_name=user.agency.name,
+        member_since=user.created_at,
     )
 
 
@@ -42,7 +43,17 @@ def change_password(
 
 
 def _agency_profile_out(db: Session, agency: models.Agency) -> AgencyProfileOut:
-    business_count = db.query(models.Business).filter(models.Business.agency_id == agency.id).count()
+    # Antes esto solo contaba (`business_count`) sin decir de cuáles negocios
+    # se trataba — la relación real (Agency → Business) ya existe en la
+    # base, acá se resuelve y se devuelve de verdad en vez de esconderla
+    # detrás de un número.
+    businesses = (
+        db.query(models.Business)
+        .options(joinedload(models.Business.bot_config))
+        .filter(models.Business.agency_id == agency.id)
+        .order_by(models.Business.name)
+        .all()
+    )
     return AgencyProfileOut(
         id=agency.id,
         name=agency.name,
@@ -50,7 +61,11 @@ def _agency_profile_out(db: Session, agency: models.Agency) -> AgencyProfileOut:
         contact_phone=agency.contact_phone or "",
         website=agency.website or "",
         address=agency.address or "",
-        business_count=business_count,
+        business_count=len(businesses),
+        businesses=[
+            AgencyBusinessSummary(id=b.id, name=b.name, bot_status=b.bot_config.status if b.bot_config else None)
+            for b in businesses
+        ],
     )
 
 

@@ -5,6 +5,7 @@ import ChangePasswordForm from "../components/ChangePasswordForm";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
+import { formatDateLong } from "../callFormat";
 
 // Página propia para el ajuste de la CUENTA PERSONAL del admin logueado —
 // separada a propósito del perfil de la agencia en sí (nombre, contacto,
@@ -28,7 +29,7 @@ export default function AgencyConfigPage() {
 
   return (
     <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "36px 32px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
         <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>Configuración</h1>
         <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginBottom: 24 }}>
           Tu cuenta de administrador. Los datos de la agencia en sí viven en "Agencia".
@@ -37,22 +38,21 @@ export default function AgencyConfigPage() {
         {error && <div style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</div>}
 
         {me && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 20, alignItems: "start" }}>
             <Card title="Tu cuenta">
               <Row label="Nombre">{me.name}</Row>
               <Row label="Correo">{me.email}</Row>
               <Row label="Agencia">{me.agency_name}</Row>
+              <Row label="Miembro desde">{formatDateLong(me.member_since)}</Row>
             </Card>
 
-            <div style={{ gridColumn: "1 / -1" }}>
-              <Card title="Cambiar contraseña">
-                <ChangePasswordForm
-                  onSubmit={(current, next) =>
-                    api.changeAgencyPassword(session.access_token, { current_password: current, new_password: next })
-                  }
-                />
-              </Card>
-            </div>
+            <Card title="Cambiar contraseña">
+              <ChangePasswordForm
+                onSubmit={(current, next) =>
+                  api.changeAgencyPassword(session.access_token, { current_password: current, new_password: next })
+                }
+              />
+            </Card>
           </div>
         )}
       </div>

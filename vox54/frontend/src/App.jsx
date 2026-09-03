@@ -6,7 +6,6 @@ import AgencyProfilePage from "./pages/AgencyProfilePage";
 import AgencyBusinessesPage from "./pages/AgencyBusinessesPage";
 import AgencyAgentsPage from "./pages/AgencyAgentsPage";
 import AgencyBusinessDetail from "./pages/AgencyBusinessDetail";
-import AgencyBusinessProfile from "./pages/AgencyBusinessProfile";
 import AgencyBotConfig from "./pages/AgencyBotConfig";
 import AgencyConfigPage from "./pages/AgencyConfigPage";
 import AgencyCallsPage from "./pages/AgencyCallsPage";
@@ -30,7 +29,6 @@ export default function App() {
           <Route path="/agencia/registros/:callId" element={<AgencyCallDetail />} />
           <Route path="/agencia/configuracion" element={<AgencyConfigPage />} />
           <Route path="/agencia/negocios/:id" element={<AgencyBusinessDetail />} />
-          <Route path="/agencia/negocios/:id/perfil" element={<AgencyBusinessProfile />} />
           <Route path="/agencia/negocios/:id/bot" element={<AgencyBotConfig />} />
           <Route path="/negocio" element={<BusinessDashboard />} />
           <Route path="*" element={<NotFoundPage />} />

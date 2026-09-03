@@ -13,6 +13,13 @@ def auth(token):
     return {"Authorization": f"Bearer {token}"}
 
 
+def test_me_incluye_desde_cuando_es_miembro(client, seed, agency_token):
+    res = client.get("/agency/me", headers=auth(agency_token))
+    assert res.status_code == 200
+    assert "member_since" in res.json()
+    assert res.json()["member_since"]  # no vacío/null
+
+
 def test_cambiar_password_ok(client, seed, agency_token):
     res = client.put(
         "/agency/me/password",
@@ -260,6 +267,43 @@ def test_get_agency_profile_incluye_negocios_gestionados(client, seed, agency_to
     assert res.status_code == 200
     assert res.json()["name"] == "Agencia de Prueba"
     assert res.json()["business_count"] == 1
+
+
+def test_get_agency_profile_lista_cuales_negocios_son_de_verdad(client, seed, agency_token, db_session):
+    """No alcanza con el número — antes de esto 'business_count' no decía
+    de qué negocios se trataba. Confirma que la relación real (Agency →
+    Business) se resuelve y no solo se cuenta."""
+    from app import models
+
+    business2 = models.Business(agency_id=seed["agency"].id, name="Segundo Negocio")
+    db_session.add(business2)
+    db_session.commit()
+
+    res = client.get("/agency/profile", headers=auth(agency_token))
+    assert res.status_code == 200
+    body = res.json()
+    assert body["business_count"] == 2
+    nombres = {b["name"] for b in body["businesses"]}
+    assert nombres == {"Negocio de Prueba", "Segundo Negocio"}
+    # el negocio real (del seed) sí tiene bot_config; el creado a mano acá no
+    ids_con_status = {b["id"]: b["bot_status"] for b in body["businesses"]}
+    assert ids_con_status[seed["business"].id] == "paused"
+    assert ids_con_status[business2.id] is None
+
+
+def test_agency_profile_no_incluye_negocios_de_otra_agencia(client, seed, agency_token, db_session):
+    from app import models
+
+    otra_agencia = models.Agency(name="Otra Agencia")
+    db_session.add(otra_agencia)
+    db_session.flush()
+    db_session.add(models.Business(agency_id=otra_agencia.id, name="Negocio Ajeno"))
+    db_session.commit()
+
+    res = client.get("/agency/profile", headers=auth(agency_token))
+    assert res.status_code == 200
+    nombres = {b["name"] for b in res.json()["businesses"]}
+    assert "Negocio Ajeno" not in nombres
 
 
 def test_update_agency_profile_persiste(client, seed, agency_token):

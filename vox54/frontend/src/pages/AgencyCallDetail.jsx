@@ -33,7 +33,7 @@ export default function AgencyCallDetail() {
 
   return (
     <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "36px 32px" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "36px 40px" }}>
         <Link to="/agencia/registros" style={backLink}>← Volver a Registros</Link>
 
         {error && <div style={{ color: "var(--danger)", margin: "16px 0" }}>{error}</div>}

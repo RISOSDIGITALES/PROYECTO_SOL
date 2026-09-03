@@ -39,7 +39,7 @@ export default function AgencyCallsPage() {
 
   return (
     <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
-      <div style={{ maxWidth: 1040, margin: "0 auto", padding: "36px 32px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, marginBottom: 24 }}>
           <div>
             <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>Registros</h1>

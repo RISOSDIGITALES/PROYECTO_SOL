@@ -78,7 +78,7 @@ export default function AgencyHomePage() {
 
   return (
     <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
-      <div style={{ maxWidth: 1040, margin: "0 auto", padding: "36px 32px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
         <div style={{ marginBottom: 24 }}>
           <div style={eyebrowStyle}>Inicio</div>
           <h1 style={{ fontSize: 22, color: "var(--ink)", margin: "4px 0" }}>Hola, {me ? firstName(me) || me.name : "…"}</h1>
@@ -89,7 +89,7 @@ export default function AgencyHomePage() {
 
         {error && <div style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</div>}
 
-        <div style={{ display: "grid", gap: 16 }}>
+        <div style={gridStyle}>
           {!loading && !allDone && (
             <Card title="Primeros pasos">
               <div style={{ display: "grid", gap: 8 }}>
@@ -117,7 +117,7 @@ export default function AgencyHomePage() {
           )}
 
           {!loading && allDone && (
-            <div className="vox54-panel" style={{ padding: 20, display: "flex", alignItems: "center", gap: 14 }}>
+            <div className="vox54-panel" style={{ padding: 20, display: "flex", alignItems: "center", gap: 14, gridColumn: "1 / -1" }}>
               <span style={{ fontSize: 24 }}>🎉</span>
               <div>
                 <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>
@@ -168,6 +168,13 @@ function StatCard({ label, value, hue = "var(--g54-blue)" }) {
     </div>
   );
 }
+
+const gridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
+  gap: 20,
+  alignItems: "start",
+};
 
 const eyebrowStyle = {
   fontSize: 11,
