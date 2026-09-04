@@ -1,11 +1,16 @@
 {
-  "updatedAt": "2026-08-17T17:04:09.705Z",
-  "createdAt": "2026-04-24T13:38:42.263Z",
   "id": "FYKfTJBfgwsMpJV7",
   "name": "📞 CE Voice Agent — Marco (Fusionado)",
   "description": null,
   "active": true,
+  "activeVersionId": "3413c12b-f120-441c-938b-ca65112c17e9",
+  "createdAt": "2026-04-24T13:38:42.263Z",
+  "updatedAt": "2026-08-17T17:04:09.705Z",
   "isArchived": false,
+  "versionId": "3413c12b-f120-441c-938b-ca65112c17e9",
+  "versionCounter": 44,
+  "sourceWorkflowId": null,
+  "triggerCount": 1,
   "nodes": [
     {
       "parameters": {
@@ -265,66 +270,6 @@
       ]
     },
     {
-      "id": "crm-voice-login",
-      "name": "🔐 G54: Login CRM (Voice)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2200,
-        700
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://apigrowth.mdarthurdigital.com/api/auth/login",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_MASTER_PASSWORD' }) }}",
-        "options": {}
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "crm-voice-switch",
-      "name": "🏢 G54: Cambiar Empresa (CRM Voice)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2420,
-        700
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://apigrowth.mdarthurdigital.com/api/auth/switch-company",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $('🔐 G54: Login CRM (Voice)').item.json.access_token }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ company_id: 1 }) }}",
-        "options": {}
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
       "id": "crm-voice-findcontact",
       "name": "🔍 Buscar Contact ID (CRM Voice)",
       "type": "n8n-nodes-base.httpRequest",
@@ -341,146 +286,10 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer "
+              "value": "Bearer REDACTED_AGENT_TOKEN"
             }
           ]
         },
-        "options": {}
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "crm-voice-board",
-      "name": "📋 G54: Buscar Deal Existente (CRM Voice)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2860,
-        700
-      ],
-      "parameters": {
-        "method": "GET",
-        "url": "https://apigrowth.mdarthurdigital.com/api/crm/board",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $('🔐 G54: Login CRM (Voice)').item.json.access_token }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "crm-voice-matchdeal",
-      "name": "🔍 Encontrar Deal por Teléfono (Voice)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 1,
-      "position": [
-        3080,
-        700
-      ],
-      "parameters": {
-        "jsCode": "const board = $json;\nconst telefono = $('🔍 Parsear Extracción').item.json.phoneFormatted;\nlet found = null;\nfor (const etapa of Object.keys(board)) {\n  const deals = board[etapa];\n  if (!Array.isArray(deals)) continue;\n  for (const deal of deals) {\n    if (deal.telefono === telefono) { found = deal; break; }\n  }\n  if (found) break;\n}\nreturn [{ json: { dealExiste: !!found, dealId: found ? found.id : null, telefono } }];"
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "crm-voice-ifdeal",
-      "name": "🔀 ¿Deal ya existe? (CRM Voice)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        3300,
-        700
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": false,
-            "leftValue": "",
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "id": "voice-deal-exists",
-              "leftValue": "={{ $json.dealExiste }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "crm-voice-update",
-      "name": "💾 G54: Actualizar Deal CRM (Voice)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        3520,
-        600
-      ],
-      "parameters": {
-        "method": "PUT",
-        "url": "=https://apigrowth.mdarthurdigital.com/api/crm/deals/{{ $json.dealId }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $('🔐 G54: Login CRM (Voice)').item.json.access_token }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  temperatura: {caliente:'alto', tibio:'medio', frio:'bajo'}[$('🔍 Parsear Extracción').item.json.clasificacionVoice] || 'bajo',\n  notas: 'Última interacción vía Marco (Voice CE)'\n}) }}",
-        "options": {}
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "crm-voice-create",
-      "name": "💾 G54: Crear Deal CRM (Voice)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        3520,
-        800
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://apigrowth.mdarthurdigital.com/api/crm/deals",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $('🔐 G54: Login CRM (Voice)').item.json.access_token }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  company_id: 1,\n  nombre: $('🔍 Parsear Extracción').item.json.nombre || $('🔍 Parsear Extracción').item.json.phoneFormatted,\n  telefono: $('🔍 Parsear Extracción').item.json.phoneFormatted,\n  wa_contact_id: null,\n  origen: 'whatsapp',\n  temperatura: {caliente:'alto', tibio:'medio', frio:'bajo'}[$('🔍 Parsear Extracción').item.json.clasificacionVoice] || 'bajo',\n  notas: 'Lead generado por Marco (Voice CE)'\n}) }}",
         "options": {}
       },
       "onError": "continueRegularOutput"
@@ -491,11 +300,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
-        3740,
-        700
+        3520,
+        600
       ],
       "parameters": {
-        "jsCode": "const dealId = $json.id || $('🔍 Encontrar Deal por Teléfono (Voice)').item.json.dealId;\nconst clasif = $('🔍 Parsear Extracción').item.json.clasificacionVoice;\nconst interes = $('🔍 Parsear Extracción').item.json.interes;\n\nlet contenido = null;\nif (clasif === 'caliente') {\n  contenido = `Marco (Voice): llamada clasificada como lead caliente (interés: ${interes}).`;\n} else if (interes === 'urgente') {\n  contenido = 'Marco (Voice): llamada marcada como urgente.';\n}\n\nreturn [{ json: { dealId, contenido, deberiaLoggear: !!contenido } }];"
+        "jsCode": "const dealResp = $json.deal || {};\nconst dealId = dealResp.id || null;\nconst clasif = $('🔍 Parsear Extracción').item.json.clasificacionVoice;\nconst interes = $('🔍 Parsear Extracción').item.json.interes;\n\nlet contenido = null;\nif (clasif === 'caliente') {\n  contenido = `Marco (Voice): llamada clasificada como lead caliente (interes: ${interes}).`;\n} else if (interes === 'urgente') {\n  contenido = 'Marco (Voice): llamada marcada como urgente.';\n}\n\nreturn [{ json: { dealId, contenido, deberiaLoggear: !!(dealId && contenido) } }];"
       },
       "onError": "continueRegularOutput"
     },
@@ -543,13 +352,13 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "=https://apigrowth.mdarthurdigital.com/api/crm/deals/{{ $json.dealId }}/activities",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/agent/crm/leads/' + $json.dealId + '/activities' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{ $('🔐 G54: Login CRM (Voice)').item.json.access_token }}"
+              "value": "Bearer REDACTED_AGENT_TOKEN"
             },
             {
               "name": "Content-Type",
@@ -559,7 +368,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ tipo: 'sistema', contenido: $json.contenido }) }}",
+        "jsonBody": "={{ JSON.stringify({ tipo: 'nota', contenido: $json.contenido }) }}",
         "options": {}
       },
       "onError": "continueRegularOutput"
@@ -570,8 +379,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        3780,
-        1020
+        3300,
+        700
       ],
       "parameters": {
         "conditions": {
@@ -582,7 +391,7 @@
           "conditions": [
             {
               "id": "c1",
-              "leftValue": "={{ String($json.company_id) }}",
+              "leftValue": "={{ String($json.deal.company_id) }}",
               "rightValue": "={{ String(1) }}",
               "operator": {
                 "type": "string",
@@ -601,7 +410,7 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        4040,
+        3520,
         1020
       ],
       "onError": "continueRegularOutput",
@@ -614,14 +423,63 @@
       "parameters": {
         "fromEmail": "Growth54 <risosadmi@gmail.com>",
         "toEmail": "risosadmi@gmail.com",
-        "subject": "=🚨 CRM — posible cruce de empresa (Marco Voice)",
-        "text": "=🚨 Posible colisión de empresa en el CRM (B-19)\n\nWorkflow: Marco Voice\nDeal ID: {{ $json.id }}\nEmpresa esperada: {{ 1 }}\nEmpresa donde quedó guardado: {{ $json.company_id }}\nTeléfono: {{ $json.telefono || '—' }}\nNombre: {{ $json.nombre || '—' }}\nHora: {{ new Date().toISOString() }}\n\nUn trato pudo haber quedado guardado bajo la empresa equivocada por la colisión de sesión compartida documentada en el Éxodo (B-19). Revisar manualmente en el panel del CRM y mover/corregir si corresponde.",
-        "html": "=🚨 Posible colisión de empresa en el CRM (B-19)\n\nWorkflow: Marco Voice\nDeal ID: {{ $json.id }}\nEmpresa esperada: {{ 1 }}\nEmpresa donde quedó guardado: {{ $json.company_id }}\nTeléfono: {{ $json.telefono || '—' }}\nNombre: {{ $json.nombre || '—' }}\nHora: {{ new Date().toISOString() }}\n\nUn trato pudo haber quedado guardado bajo la empresa equivocada por la colisión de sesión compartida documentada en el Éxodo (B-19). Revisar manualmente en el panel del CRM y mover/corregir si corresponde.",
+        "subject": "=🚨 CRM — el trato no quedo en la empresa esperada (Marco Voice)",
+        "text": "=🚨 El deal.company_id devuelto por /api/agent/crm/leads no coincide con la empresa esperada\n\nWorkflow: Marco Voice Agent\nDeal ID: {{ $json.deal.id }}\nEmpresa esperada: {{ 1 }}\nEmpresa donde quedo guardado: {{ $json.deal.company_id }}\nTelefono: {{ $json.deal.telefono || '-' }}\nNombre: {{ $json.deal.nombre || '-' }}\nHora: {{ new Date().toISOString() }}\n\nEsta llamada usa AGENT_TOKEN con company_id explicito por request - no depende de ninguna\nsesion compartida (B-19 ya esta resuelto), asi que este aviso indicaria un bug distinto del\nlado de G54 si llegara a dispararse. Revisar manualmente en el panel del CRM.",
+        "html": "=🚨 El deal.company_id devuelto por /api/agent/crm/leads no coincide con la empresa esperada\n\nWorkflow: Marco Voice Agent\nDeal ID: {{ $json.deal.id }}\nEmpresa esperada: {{ 1 }}\nEmpresa donde quedo guardado: {{ $json.deal.company_id }}\nTelefono: {{ $json.deal.telefono || '-' }}\nNombre: {{ $json.deal.nombre || '-' }}\nHora: {{ new Date().toISOString() }}\n\nEsta llamada usa AGENT_TOKEN con company_id explicito por request - no depende de ninguna\nsesion compartida (B-19 ya esta resuelto), asi que este aviso indicaria un bug distinto del\nlado de G54 si llegara a dispararse. Revisar manualmente en el panel del CRM.",
         "options": {
           "appendAttribution": false
         }
       },
       "webhookId": "d3a34cbb-09fb-450a-840a-26664187bb2a"
+    },
+    {
+      "id": "crm-payload-voice",
+      "name": "🔧 CRM: Preparar Payload (Voice)",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2860,
+        700
+      ],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const parseo = $('🔍 Parsear Extracción').item.json;\nconst telefono = parseo.phoneFormatted;\n\nlet wa_contact_id = null;\ntry {\n  const contactData = $('🔍 Buscar Contact ID (CRM Voice)').item.json.data || [];\n  wa_contact_id = contactData[0]?.id || null;\n} catch (e) { /* si fallo el lookup, seguimos sin el vinculo */ }\n\nconst temperatura = ({caliente:'alto', tibio:'medio', frio:'bajo'})[parseo.clasificacionVoice] || 'bajo';\n\nreturn [{ json: {\n  company_id: 1,\n  telefono,\n  nombre: parseo.nombre || telefono,\n  origen: 'whatsapp',\n  wa_contact_id,\n  temperatura,\n  notas: 'Lead generado/actualizado por Marco (Voice CE)',\n}}];"
+      }
+    },
+    {
+      "id": "crm-upsert-voice",
+      "name": "💾 G54: Upsert Deal CRM (Voice)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        3080,
+        700
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/agent/crm/leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED_AGENT_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      }
     }
   ],
   "connections": {
@@ -742,28 +600,6 @@
       "main": [
         [
           {
-            "node": "🔐 G54: Login CRM (Voice)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔐 G54: Login CRM (Voice)": {
-      "main": [
-        [
-          {
-            "node": "🏢 G54: Cambiar Empresa (CRM Voice)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🏢 G54: Cambiar Empresa (CRM Voice)": {
-      "main": [
-        [
-          {
             "node": "🔍 Buscar Contact ID (CRM Voice)",
             "type": "main",
             "index": 0
@@ -775,79 +611,7 @@
       "main": [
         [
           {
-            "node": "📋 G54: Buscar Deal Existente (CRM Voice)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📋 G54: Buscar Deal Existente (CRM Voice)": {
-      "main": [
-        [
-          {
-            "node": "🔍 Encontrar Deal por Teléfono (Voice)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔍 Encontrar Deal por Teléfono (Voice)": {
-      "main": [
-        [
-          {
-            "node": "🔀 ¿Deal ya existe? (CRM Voice)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔀 ¿Deal ya existe? (CRM Voice)": {
-      "main": [
-        [
-          {
-            "node": "💾 G54: Actualizar Deal CRM (Voice)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "💾 G54: Crear Deal CRM (Voice)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "💾 G54: Actualizar Deal CRM (Voice)": {
-      "main": [
-        [
-          {
-            "node": "📝 Preparar Nota Actividad (CRM Voice)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "🔀 ¿Empresa CRM Correcta?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "💾 G54: Crear Deal CRM (Voice)": {
-      "main": [
-        [
-          {
-            "node": "📝 Preparar Nota Actividad (CRM Voice)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "🔀 ¿Empresa CRM Correcta?",
+            "node": "🔧 CRM: Preparar Payload (Voice)",
             "type": "main",
             "index": 0
           }
@@ -879,7 +643,13 @@
     },
     "🔀 ¿Empresa CRM Correcta?": {
       "main": [
-        [],
+        [
+          {
+            "node": "📝 Preparar Nota Actividad (CRM Voice)",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "📧 Alertar Colisión CRM",
@@ -888,55 +658,70 @@
           }
         ]
       ]
+    },
+    "🔧 CRM: Preparar Payload (Voice)": {
+      "main": [
+        [
+          {
+            "node": "💾 G54: Upsert Deal CRM (Voice)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 G54: Upsert Deal CRM (Voice)": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Empresa CRM Correcta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
+  "nodeGroups": [],
   "settings": {
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
   "staticData": null,
+  "pinData": {},
   "meta": {
     "templateCredsSetupCompleted": true
   },
-  "nodeGroups": [],
-  "pinData": {},
-  "versionId": "3413c12b-f120-441c-938b-ca65112c17e9",
-  "activeVersionId": "3413c12b-f120-441c-938b-ca65112c17e9",
-  "versionCounter": 44,
-  "triggerCount": 1,
-  "sourceWorkflowId": null,
+  "tags": [
+    {
+      "id": "2CrVJWitAB77MgTJ",
+      "name": "Alex",
+      "createdAt": "2026-05-04T16:04:54.762Z",
+      "updatedAt": "2026-05-04T16:04:54.762Z"
+    }
+  ],
   "shared": [
     {
-      "updatedAt": "2026-04-24T13:38:42.272Z",
-      "createdAt": "2026-04-24T13:38:42.272Z",
       "role": "workflow:owner",
       "workflowId": "FYKfTJBfgwsMpJV7",
       "projectId": "scK6yPpEmlkikl67",
       "project": {
-        "updatedAt": "2026-03-16T19:58:01.773Z",
-        "createdAt": "2026-03-16T19:56:18.866Z",
         "id": "scK6yPpEmlkikl67",
         "name": "Solange  Torrez <risosadmi@gmail.com>",
         "type": "personal",
         "icon": null,
         "description": null,
         "customTelemetryTags": [],
-        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      }
-    }
-  ],
-  "tags": [
-    {
-      "updatedAt": "2026-05-04T16:04:54.762Z",
-      "createdAt": "2026-05-04T16:04:54.762Z",
-      "id": "2CrVJWitAB77MgTJ",
-      "name": "Alex"
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-04-24T13:38:42.272Z",
+      "updatedAt": "2026-04-24T13:38:42.272Z"
     }
   ],
   "activeVersion": {
-    "updatedAt": "2026-08-17T17:04:09.708Z",
-    "createdAt": "2026-08-17T17:04:09.708Z",
     "versionId": "3413c12b-f120-441c-938b-ca65112c17e9",
     "workflowId": "FYKfTJBfgwsMpJV7",
     "nodes": [
@@ -1828,22 +1613,24 @@
     "name": null,
     "description": null,
     "autosaved": false,
+    "createdAt": "2026-08-17T17:04:09.708Z",
+    "updatedAt": "2026-08-17T17:04:09.708Z",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-08-17T17:04:09.879Z",
         "id": 2897,
         "workflowId": "FYKfTJBfgwsMpJV7",
         "versionId": "3413c12b-f120-441c-938b-ca65112c17e9",
         "event": "activated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-08-17T17:04:09.879Z"
       },
       {
-        "createdAt": "2026-08-17T17:04:09.846Z",
         "id": 2896,
         "workflowId": "FYKfTJBfgwsMpJV7",
         "versionId": "3413c12b-f120-441c-938b-ca65112c17e9",
         "event": "deactivated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-08-17T17:04:09.846Z"
       }
     ]
   }

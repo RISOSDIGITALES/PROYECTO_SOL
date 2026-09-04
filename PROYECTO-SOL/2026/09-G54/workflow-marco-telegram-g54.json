@@ -1,11 +1,16 @@
 {
-  "updatedAt": "2026-08-17T17:00:43.464Z",
-  "createdAt": "2026-07-23T15:36:21.963Z",
   "id": "HaSG63Q9C2tGOLH3",
   "name": "CE Telegram Engine — Marco",
   "description": null,
   "active": true,
+  "activeVersionId": "538de843-bcb5-472c-8d18-f0540df338b7",
+  "createdAt": "2026-07-23T15:36:21.963Z",
+  "updatedAt": "2026-08-17T17:00:43.464Z",
   "isArchived": false,
+  "versionId": "538de843-bcb5-472c-8d18-f0540df338b7",
+  "versionCounter": 23,
+  "sourceWorkflowId": null,
+  "triggerCount": 2,
   "nodes": [
     {
       "id": "tg-trigger",
@@ -824,62 +829,6 @@
       }
     },
     {
-      "id": "crm-login-tg",
-      "name": "🔐 G54: Login CRM (Telegram)",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [
-        4200,
-        1200
-      ],
-      "typeVersion": 4.2,
-      "onError": "continueRegularOutput",
-      "parameters": {
-        "method": "POST",
-        "url": "https://apigrowth.mdarthurdigital.com/api/auth/login",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Accept",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_MASTER_PASSWORD' }) }}",
-        "options": {}
-      }
-    },
-    {
-      "id": "crm-switch-tg",
-      "name": "🏢 G54: Cambiar Empresa (CRM Telegram)",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [
-        4400,
-        1200
-      ],
-      "typeVersion": 4.2,
-      "onError": "continueRegularOutput",
-      "parameters": {
-        "method": "POST",
-        "url": "https://apigrowth.mdarthurdigital.com/api/auth/switch-company",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM (Telegram)').item.json.access_token }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ company_id: 1 }) }}",
-        "options": {}
-      }
-    },
-    {
       "id": "crm-buscar-contact-tg",
       "name": "🔍 Buscar Contact ID (CRM Telegram)",
       "type": "n8n-nodes-base.httpRequest",
@@ -906,7 +855,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer "
+              "value": "Bearer REDACTED_AGENT_TOKEN"
             },
             {
               "name": "Accept",
@@ -914,151 +863,6 @@
             }
           ]
         },
-        "options": {}
-      }
-    },
-    {
-      "id": "crm-board-tg",
-      "name": "📋 G54: Buscar Deal Existente (CRM Telegram)",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [
-        4800,
-        1200
-      ],
-      "typeVersion": 4.2,
-      "onError": "continueRegularOutput",
-      "parameters": {
-        "method": "GET",
-        "url": "https://apigrowth.mdarthurdigital.com/api/crm/board",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM (Telegram)').item.json.access_token }}"
-            },
-            {
-              "name": "Accept",
-              "value": "application/json"
-            }
-          ]
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "crm-encontrar-deal-tg",
-      "name": "🔍 Encontrar Deal por Teléfono (Telegram)",
-      "type": "n8n-nodes-base.code",
-      "position": [
-        5000,
-        1200
-      ],
-      "typeVersion": 2,
-      "parameters": {
-        "jsCode": "const board = $('📋 G54: Buscar Deal Existente (CRM Telegram)').item.json;\nconst telefono = $('📝 Armar Mensaje Final').item.json.telefono || '';\n\nlet match = null;\ntry {\n  for (const etapa of Object.keys(board)) {\n    const deals = board[etapa] || [];\n    const found = deals.find(d => d.telefono === telefono);\n    if (found) { match = found; break; }\n  }\n} catch (e) { /* si el board no cargó, seguimos como si no existiera */ }\n\nlet wa_contact_id = null;\ntry {\n  const contactData = $('🔍 Buscar Contact ID (CRM Telegram)').item.json.data || [];\n  wa_contact_id = contactData[0]?.id || null;\n} catch (e) { /* si falló el lookup, seguimos sin el vínculo */ }\n\nreturn [{ json: {\n  existe: !!match,\n  deal_id: match ? match.id : null,\n  telefono,\n  wa_contact_id,\n}}];"
-      }
-    },
-    {
-      "id": "crm-if-existe-tg",
-      "name": "🔀 ¿Deal ya existe? (CRM Telegram)",
-      "type": "n8n-nodes-base.if",
-      "position": [
-        5200,
-        1200
-      ],
-      "typeVersion": 2,
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "deal-existe-tg",
-              "leftValue": "={{ String($json.existe) }}",
-              "rightValue": "true",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        }
-      }
-    },
-    {
-      "id": "crm-actualizar-deal-tg",
-      "name": "💾 G54: Actualizar Deal CRM (Telegram)",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [
-        5400,
-        1120
-      ],
-      "typeVersion": 4.2,
-      "onError": "continueRegularOutput",
-      "parameters": {
-        "method": "PUT",
-        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/crm/deals/' + $('🔍 Encontrar Deal por Teléfono (Telegram)').item.json.deal_id }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM (Telegram)').item.json.access_token }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Accept",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ wa_contact_id: $('🔍 Encontrar Deal por Teléfono (Telegram)').item.json.wa_contact_id, temperatura: ({Caliente:'alto', Consulta:'medio'})[$('📝 Armar Mensaje Final').item.json.clasificacion] || 'bajo', notas: 'Última interacción vía Marco (Telegram CE)' }) }}",
-        "options": {}
-      }
-    },
-    {
-      "id": "crm-crear-deal-tg",
-      "name": "💾 G54: Crear Deal CRM (Telegram)",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [
-        5400,
-        1280
-      ],
-      "typeVersion": 4.2,
-      "onError": "continueRegularOutput",
-      "parameters": {
-        "method": "POST",
-        "url": "https://apigrowth.mdarthurdigital.com/api/crm/deals",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM (Telegram)').item.json.access_token }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Accept",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ nombre: $('📝 Armar Mensaje Final').item.json.datosRecolectados?.nombre_cliente || $('🔍 Encontrar Deal por Teléfono (Telegram)').item.json.telefono, telefono: $('🔍 Encontrar Deal por Teléfono (Telegram)').item.json.telefono, origen: 'whatsapp', wa_contact_id: $('🔍 Encontrar Deal por Teléfono (Telegram)').item.json.wa_contact_id, temperatura: ({Caliente:'alto', Consulta:'medio'})[$('📝 Armar Mensaje Final').item.json.clasificacion] || 'bajo', notas: 'Lead generado por Marco (Telegram CE)' }) }}",
         "options": {}
       }
     },
@@ -1067,12 +871,12 @@
       "name": "📝 Preparar Nota Actividad (CRM Telegram)",
       "type": "n8n-nodes-base.code",
       "position": [
-        5620,
-        1200
+        5400,
+        1120
       ],
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const dealResp = $json;\nconst dealId = dealResp && dealResp.id ? dealResp.id : null;\n\nlet contenido = null;\ntry {\n  const armado = $('📝 Armar Mensaje Final').item.json;\n  const clasificacion = armado.clasificacion || '';\n  if (clasificacion === 'Caliente') {\n    contenido = 'Marco (Telegram): cliente aceptó cotización, clasificado como lead caliente.';\n  } else if (clasificacion === 'Consulta') {\n    contenido = 'Marco (Telegram): consulta escalada a un especialista.';\n  }\n} catch (e) { /* si no se puede leer, no se loggea nada */ }\n\nreturn [{ json: { dealId, contenido, deberiaLoggear: !!(dealId && contenido) } }];"
+        "jsCode": "const dealResp = $json.deal || {};\nconst dealId = dealResp.id || null;\n\nlet contenido = null;\ntry {\n  const armado = $('📝 Armar Mensaje Final').item.json;\n  const clasificacion = armado.clasificacion || '';\n  if (clasificacion === 'Caliente') {\n    contenido = 'Marco (Telegram): cliente acepto cotizacion, clasificado como lead caliente.';\n  } else if (clasificacion === 'Consulta') {\n    contenido = 'Marco (Telegram): consulta escalada a un especialista.';\n  }\n} catch (e) { /* si no se puede leer, no se loggea nada */ }\n\nreturn [{ json: { dealId, contenido, deberiaLoggear: !!(dealId && contenido) } }];"
       }
     },
     {
@@ -1119,13 +923,13 @@
       "onError": "continueRegularOutput",
       "parameters": {
         "method": "POST",
-        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/crm/deals/' + $json.dealId + '/activities' }}",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/agent/crm/leads/' + $json.dealId + '/activities' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('🔐 G54: Login CRM (Telegram)').item.json.access_token }}"
+              "value": "Bearer REDACTED_AGENT_TOKEN"
             },
             {
               "name": "Content-Type",
@@ -1139,7 +943,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ tipo: 'sistema', contenido: $json.contenido }) }}",
+        "jsonBody": "={{ JSON.stringify({ tipo: 'nota', contenido: $json.contenido }) }}",
         "options": {}
       }
     },
@@ -1149,8 +953,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        5660,
-        1500
+        5200,
+        1200
       ],
       "parameters": {
         "conditions": {
@@ -1161,7 +965,7 @@
           "conditions": [
             {
               "id": "c1",
-              "leftValue": "={{ String($json.company_id) }}",
+              "leftValue": "={{ String($json.deal.company_id) }}",
               "rightValue": "={{ String(1) }}",
               "operator": {
                 "type": "string",
@@ -1180,8 +984,8 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        5920,
-        1500
+        5400,
+        1420
       ],
       "onError": "continueRegularOutput",
       "credentials": {
@@ -1193,9 +997,9 @@
       "parameters": {
         "fromEmail": "Growth54 <risosadmi@gmail.com>",
         "toEmail": "risosadmi@gmail.com",
-        "subject": "=🚨 CRM — posible cruce de empresa (Marco Telegram)",
-        "text": "=🚨 Posible colisión de empresa en el CRM (B-19)\n\nWorkflow: Marco Telegram\nDeal ID: {{ $json.id }}\nEmpresa esperada: {{ 1 }}\nEmpresa donde quedó guardado: {{ $json.company_id }}\nTeléfono: {{ $json.telefono || '—' }}\nNombre: {{ $json.nombre || '—' }}\nHora: {{ new Date().toISOString() }}\n\nUn trato pudo haber quedado guardado bajo la empresa equivocada por la colisión de sesión compartida documentada en el Éxodo (B-19). Revisar manualmente en el panel del CRM y mover/corregir si corresponde.",
-        "html": "=🚨 Posible colisión de empresa en el CRM (B-19)\n\nWorkflow: Marco Telegram\nDeal ID: {{ $json.id }}\nEmpresa esperada: {{ 1 }}\nEmpresa donde quedó guardado: {{ $json.company_id }}\nTeléfono: {{ $json.telefono || '—' }}\nNombre: {{ $json.nombre || '—' }}\nHora: {{ new Date().toISOString() }}\n\nUn trato pudo haber quedado guardado bajo la empresa equivocada por la colisión de sesión compartida documentada en el Éxodo (B-19). Revisar manualmente en el panel del CRM y mover/corregir si corresponde.",
+        "subject": "=🚨 CRM — el trato no quedo en la empresa esperada (Marco Telegram)",
+        "text": "=🚨 El deal.company_id devuelto por /api/agent/crm/leads no coincide con la empresa esperada\n\nWorkflow: Marco Telegram\nDeal ID: {{ $json.deal.id }}\nEmpresa esperada: {{ 1 }}\nEmpresa donde quedo guardado: {{ $json.deal.company_id }}\nTelefono: {{ $json.deal.telefono || '-' }}\nNombre: {{ $json.deal.nombre || '-' }}\nHora: {{ new Date().toISOString() }}\n\nEsta llamada usa AGENT_TOKEN con company_id explicito por request - no depende de ninguna\nsesion compartida (B-19 ya esta resuelto), asi que este aviso indicaria un bug distinto del\nlado de G54 si llegara a dispararse. Revisar manualmente en el panel del CRM.",
+        "html": "=🚨 El deal.company_id devuelto por /api/agent/crm/leads no coincide con la empresa esperada\n\nWorkflow: Marco Telegram\nDeal ID: {{ $json.deal.id }}\nEmpresa esperada: {{ 1 }}\nEmpresa donde quedo guardado: {{ $json.deal.company_id }}\nTelefono: {{ $json.deal.telefono || '-' }}\nNombre: {{ $json.deal.nombre || '-' }}\nHora: {{ new Date().toISOString() }}\n\nEsta llamada usa AGENT_TOKEN con company_id explicito por request - no depende de ninguna\nsesion compartida (B-19 ya esta resuelto), asi que este aviso indicaria un bug distinto del\nlado de G54 si llegara a dispararse. Revisar manualmente en el panel del CRM.",
         "options": {
           "appendAttribution": false
         }
@@ -1468,6 +1272,55 @@
         1760,
         1300
       ]
+    },
+    {
+      "id": "crm-payload-tg",
+      "name": "🔧 CRM: Preparar Payload (Telegram)",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        4800,
+        1200
+      ],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const armado = $('📝 Armar Mensaje Final').item.json;\nconst telefono = armado.telefono;\n\nlet wa_contact_id = null;\ntry {\n  const contactData = $('🔍 Buscar Contact ID (CRM Telegram)').item.json.data || [];\n  wa_contact_id = contactData[0]?.id || null;\n} catch (e) { /* si fallo el lookup, seguimos sin el vinculo */ }\n\nconst temperatura = ({Caliente:'alto', Consulta:'medio'})[armado.clasificacion] || 'bajo';\n\nreturn [{ json: {\n  company_id: 1,\n  telefono,\n  nombre: armado.datosRecolectados?.nombre_cliente || telefono,\n  origen: 'whatsapp',\n  wa_contact_id,\n  temperatura,\n  notas: 'Lead generado/actualizado por Marco (Telegram CE)',\n}}];"
+      }
+    },
+    {
+      "id": "crm-upsert-tg",
+      "name": "💾 G54: Upsert Deal CRM (Telegram)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        5000,
+        1200
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/agent/crm/leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED_AGENT_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      }
     }
   ],
   "connections": {
@@ -1677,12 +1530,7 @@
       "main": [
         [
           {
-            "node": "🔀 ¿Lead Caliente?",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "🔐 G54: Login CRM (Telegram)",
+            "node": "🔍 Buscar Contact ID (CRM Telegram)",
             "type": "main",
             "index": 0
           }
@@ -1858,105 +1706,11 @@
         []
       ]
     },
-    "🔐 G54: Login CRM (Telegram)": {
-      "main": [
-        [
-          {
-            "node": "🏢 G54: Cambiar Empresa (CRM Telegram)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🏢 G54: Cambiar Empresa (CRM Telegram)": {
-      "main": [
-        [
-          {
-            "node": "🔍 Buscar Contact ID (CRM Telegram)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "🔍 Buscar Contact ID (CRM Telegram)": {
       "main": [
         [
           {
-            "node": "📋 G54: Buscar Deal Existente (CRM Telegram)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📋 G54: Buscar Deal Existente (CRM Telegram)": {
-      "main": [
-        [
-          {
-            "node": "🔍 Encontrar Deal por Teléfono (Telegram)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔍 Encontrar Deal por Teléfono (Telegram)": {
-      "main": [
-        [
-          {
-            "node": "🔀 ¿Deal ya existe? (CRM Telegram)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔀 ¿Deal ya existe? (CRM Telegram)": {
-      "main": [
-        [
-          {
-            "node": "💾 G54: Actualizar Deal CRM (Telegram)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "💾 G54: Crear Deal CRM (Telegram)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "💾 G54: Actualizar Deal CRM (Telegram)": {
-      "main": [
-        [
-          {
-            "node": "📝 Preparar Nota Actividad (CRM Telegram)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "🔀 ¿Empresa CRM Correcta?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "💾 G54: Crear Deal CRM (Telegram)": {
-      "main": [
-        [
-          {
-            "node": "📝 Preparar Nota Actividad (CRM Telegram)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "🔀 ¿Empresa CRM Correcta?",
+            "node": "🔧 CRM: Preparar Payload (Telegram)",
             "type": "main",
             "index": 0
           }
@@ -1988,7 +1742,13 @@
     },
     "🔀 ¿Empresa CRM Correcta?": {
       "main": [
-        [],
+        [
+          {
+            "node": "📝 Preparar Nota Actividad (CRM Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "📧 Alertar Colisión CRM",
@@ -2093,8 +1853,31 @@
           }
         ]
       ]
+    },
+    "🔧 CRM: Preparar Payload (Telegram)": {
+      "main": [
+        [
+          {
+            "node": "💾 G54: Upsert Deal CRM (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 G54: Upsert Deal CRM (Telegram)": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Empresa CRM Correcta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
+  "nodeGroups": [],
   "settings": {
     "executionOrder": "v1"
   },
@@ -2113,38 +1896,30 @@
       ]
     }
   },
-  "meta": null,
-  "nodeGroups": [],
   "pinData": null,
-  "versionId": "538de843-bcb5-472c-8d18-f0540df338b7",
-  "activeVersionId": "538de843-bcb5-472c-8d18-f0540df338b7",
-  "versionCounter": 23,
-  "triggerCount": 2,
-  "sourceWorkflowId": null,
+  "meta": null,
+  "tags": [],
   "shared": [
     {
-      "updatedAt": "2026-07-23T15:36:21.970Z",
-      "createdAt": "2026-07-23T15:36:21.970Z",
       "role": "workflow:owner",
       "workflowId": "HaSG63Q9C2tGOLH3",
       "projectId": "scK6yPpEmlkikl67",
       "project": {
-        "updatedAt": "2026-03-16T19:58:01.773Z",
-        "createdAt": "2026-03-16T19:56:18.866Z",
         "id": "scK6yPpEmlkikl67",
         "name": "Solange  Torrez <risosadmi@gmail.com>",
         "type": "personal",
         "icon": null,
         "description": null,
         "customTelemetryTags": [],
-        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      }
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-07-23T15:36:21.970Z",
+      "updatedAt": "2026-07-23T15:36:21.970Z"
     }
   ],
-  "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-08-17T17:00:43.468Z",
-    "createdAt": "2026-08-17T17:00:43.468Z",
     "versionId": "538de843-bcb5-472c-8d18-f0540df338b7",
     "workflowId": "HaSG63Q9C2tGOLH3",
     "nodes": [
@@ -4241,22 +4016,24 @@
     "name": null,
     "description": null,
     "autosaved": false,
+    "createdAt": "2026-08-17T17:00:43.468Z",
+    "updatedAt": "2026-08-17T17:00:43.468Z",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-08-17T17:00:43.773Z",
         "id": 2889,
         "workflowId": "HaSG63Q9C2tGOLH3",
         "versionId": "538de843-bcb5-472c-8d18-f0540df338b7",
         "event": "activated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-08-17T17:00:43.773Z"
       },
       {
-        "createdAt": "2026-08-17T17:00:43.712Z",
         "id": 2888,
         "workflowId": "HaSG63Q9C2tGOLH3",
         "versionId": "538de843-bcb5-472c-8d18-f0540df338b7",
         "event": "deactivated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-08-17T17:00:43.712Z"
       }
     ]
   }
