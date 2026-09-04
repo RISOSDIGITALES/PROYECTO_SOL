@@ -1,0 +1,1136 @@
+{
+ "name": "🔍 Prospección AI — G54",
+ "nodes": [
+  {
+   "id": "webhook",
+   "name": "🔔 Webhook G54",
+   "type": "n8n-nodes-base.webhook",
+   "position": [
+    0,
+    0
+   ],
+   "typeVersion": 2,
+   "parameters": {
+    "path": "prospeccion-g54",
+    "httpMethod": "POST",
+    "responseMode": "responseNode",
+    "options": {}
+   },
+   "webhookId": "prospeccion-g54-webhook"
+  },
+  {
+   "id": "extraer-params",
+   "name": "🔧 Extraer Parámetros",
+   "type": "n8n-nodes-base.code",
+   "position": [
+    220,
+    0
+   ],
+   "typeVersion": 2,
+   "parameters": {
+    "jsCode": "const body = $input.item.json.body || $input.item.json;\nconst company_id = Number(body.company_id);\nif (!company_id) {\n  return [{ json: { error: true, motivo: 'Falta company_id en el body del webhook.' } }];\n}\nreturn [{ json: { company_id, error: false } }];"
+   }
+  },
+  {
+   "id": "obtener-empresa",
+   "name": "📊 Obtener Empresa",
+   "type": "n8n-nodes-base.httpRequest",
+   "position": [
+    440,
+    0
+   ],
+   "typeVersion": 4.2,
+   "parameters": {
+    "method": "GET",
+    "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/n8n/companies/' + $('🔧 Extraer Parámetros').item.json.company_id }}",
+    "options": {},
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "Authorization",
+       "value": "Bearer REDACTED_AGENT_TOKEN"
+      },
+      {
+       "name": "Accept",
+       "value": "application/json"
+      }
+     ]
+    }
+   },
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "construir-query",
+   "name": "🔧 Construir Query de Búsqueda",
+   "type": "n8n-nodes-base.code",
+   "position": [
+    660,
+    0
+   ],
+   "typeVersion": 2,
+   "parameters": {
+    "jsCode": "\nlet empresa = {};\ntry { empresa = $('📊 Obtener Empresa').item.json.data || {}; } catch (e) {}\n\nconst industry = (empresa.industry || '').trim();\nconst ciudad = (empresa.base_city || '').trim();\nconst geografia = (empresa.geography || '').trim();\nconst targetMarket = (empresa.target_market || '').trim();\n\n// keywords reales de la empresa (si existen) - se usa la primera como termino de busqueda\n// de negocio, nunca un rubro inventado por nosotros\nlet keyword = '';\ntry {\n  const kws = empresa.target_keywords;\n  if (Array.isArray(kws) && kws.length) keyword = String(kws[0]).trim();\n  else if (typeof kws === 'string' && kws.trim()) keyword = kws.split(',')[0].trim();\n} catch (e) {}\n\n// El termino de \"que buscar\" sale de la industria real, o si no existe, de la primera\n// keyword real, o si no existe, del target_market real. Nunca un valor inventado.\nconst termino = industry || keyword || targetMarket;\nconst lugar = ciudad || geografia;\n\nif (!termino) {\n  return [{ json: { valido: false, motivo: 'La empresa no tiene industry, target_keywords ni target_market configurados en G54 — no hay ningún dato real desde el cual construir una búsqueda.' } }];\n}\nif (!lugar) {\n  return [{ json: { valido: false, motivo: 'La empresa no tiene base_city ni geography configurados en G54 — no hay ninguna ciudad/zona real donde buscar.' } }];\n}\n\nconst query = termino + ' ' + lugar;\nreturn [{ json: { valido: true, query, termino, lugar } }];\n"
+   }
+  },
+  {
+   "id": "if-hay-query",
+   "name": "🔀 ¿Hay Query Real?",
+   "type": "n8n-nodes-base.if",
+   "position": [
+    880,
+    0
+   ],
+   "typeVersion": 2.2,
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "strict"
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.valido }}",
+       "rightValue": true,
+       "operator": {
+        "type": "boolean",
+        "operation": "equals"
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "config-busqueda",
+   "name": "⚙️ Config Búsqueda (Places + Hunter)",
+   "type": "n8n-nodes-base.set",
+   "position": [
+    1100,
+    -80
+   ],
+   "typeVersion": 3.4,
+   "parameters": {
+    "assignments": {
+     "assignments": [
+      {
+       "id": "k1",
+       "name": "GOOGLE_PLACES_API_KEY",
+       "value": "",
+       "type": "string"
+      },
+      {
+       "id": "k2",
+       "name": "HUNTER_API_KEY",
+       "value": "",
+       "type": "string"
+      }
+     ]
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "places-buscar",
+   "name": "🌍 Google Places: Búsqueda",
+   "type": "n8n-nodes-base.httpRequest",
+   "position": [
+    1320,
+    -80
+   ],
+   "typeVersion": 4.2,
+   "parameters": {
+    "method": "GET",
+    "url": "https://maps.googleapis.com/maps/api/place/textsearch/json",
+    "options": {},
+    "sendQuery": true,
+    "queryParameters": {
+     "parameters": [
+      {
+       "name": "query",
+       "value": "={{ $('🔧 Construir Query de Búsqueda').item.json.query }}"
+      },
+      {
+       "name": "key",
+       "value": "={{ $json.GOOGLE_PLACES_API_KEY }}"
+      },
+      {
+       "name": "language",
+       "value": "es"
+      }
+     ]
+    }
+   },
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "chequear-places",
+   "name": "🔧 Chequear Respuesta de Places",
+   "type": "n8n-nodes-base.code",
+   "position": [
+    1540,
+    -80
+   ],
+   "typeVersion": 2,
+   "parameters": {
+    "jsCode": "\nconst resp = $json;\nconst status = resp.status || '';\n\nif (status === 'REQUEST_DENIED') {\n  return [{ json: { sinResultados: true, motivo: 'Google Places rechazó la búsqueda — falta configurar una API key real (GOOGLE_PLACES_API_KEY vacía o inválida). ' + (resp.error_message || '') } }];\n}\nif (status === 'OVER_QUERY_LIMIT') {\n  return [{ json: { sinResultados: true, motivo: 'Google Places devolvió OVER_QUERY_LIMIT — se agotó la cuota real de la API key configurada.' } }];\n}\nif (status !== 'OK' || !Array.isArray(resp.results) || resp.results.length === 0) {\n  return [{ json: { sinResultados: true, motivo: 'Google Places no encontró ningún negocio real para esta búsqueda (status: ' + status + ').' } }];\n}\nreturn resp.results.map(r => ({ json: r }));\n"
+   }
+  },
+  {
+   "id": "if-sin-resultados",
+   "name": "🔀 ¿Sin Resultados?",
+   "type": "n8n-nodes-base.if",
+   "position": [
+    1760,
+    -80
+   ],
+   "typeVersion": 2.2,
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "strict"
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.sinResultados === true }}",
+       "rightValue": true,
+       "operator": {
+        "type": "boolean",
+        "operation": "equals"
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "limitar-resultados",
+   "name": "✂️ Limitar Resultados",
+   "type": "n8n-nodes-base.limit",
+   "position": [
+    1980,
+    -180
+   ],
+   "typeVersion": 1,
+   "parameters": {
+    "maxItems": 8
+   }
+  },
+  {
+   "id": "places-detalles",
+   "name": "🔎 Google Places: Detalles",
+   "type": "n8n-nodes-base.httpRequest",
+   "position": [
+    2200,
+    -180
+   ],
+   "typeVersion": 4.2,
+   "parameters": {
+    "method": "GET",
+    "url": "https://maps.googleapis.com/maps/api/place/details/json",
+    "options": {},
+    "sendQuery": true,
+    "queryParameters": {
+     "parameters": [
+      {
+       "name": "place_id",
+       "value": "={{ $json.place_id }}"
+      },
+      {
+       "name": "fields",
+       "value": "name,formatted_phone_number,international_phone_number,website,formatted_address,rating"
+      },
+      {
+       "name": "key",
+       "value": "={{ $('⚙️ Config Búsqueda (Places + Hunter)').item.json.GOOGLE_PLACES_API_KEY }}"
+      },
+      {
+       "name": "language",
+       "value": "es"
+      }
+     ]
+    }
+   },
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "formatear-lead",
+   "name": "🧹 Formatear Lead",
+   "type": "n8n-nodes-base.code",
+   "position": [
+    2420,
+    -180
+   ],
+   "typeVersion": 2,
+   "parameters": {
+    "jsCode": "\nconst r = $json.result || {};\nreturn [{ json: {\n  nombre: r.name || '',\n  direccion: r.formatted_address || '',\n  telefono: (r.international_phone_number || r.formatted_phone_number || '').replace(/\\s+/g, ' ').trim(),\n  web: r.website || '',\n  rating: r.rating || '',\n} }];\n"
+   }
+  },
+  {
+   "id": "if-tiene-contacto",
+   "name": "🔀 ¿Tiene Web o Teléfono?",
+   "type": "n8n-nodes-base.if",
+   "position": [
+    2640,
+    -180
+   ],
+   "typeVersion": 2.2,
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.web }}",
+       "rightValue": "",
+       "operator": {
+        "type": "string",
+        "operation": "notEquals"
+       }
+      },
+      {
+       "id": "c2",
+       "leftValue": "={{ $json.telefono }}",
+       "rightValue": "",
+       "operator": {
+        "type": "string",
+        "operation": "notEquals"
+       }
+      }
+     ],
+     "combinator": "or"
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "marcar-sin-contacto",
+   "name": "🚫 Marcar Sin Contacto",
+   "type": "n8n-nodes-base.code",
+   "position": [
+    2860,
+    -60
+   ],
+   "typeVersion": 2,
+   "parameters": {
+    "jsCode": "return [{ json: { descartado: true, motivo: 'Sin web ni teléfono real', nombre: $json.nombre } }];"
+   }
+  },
+  {
+   "id": "if-tiene-web",
+   "name": "🔀 ¿Tiene Web?",
+   "type": "n8n-nodes-base.if",
+   "position": [
+    2860,
+    -280
+   ],
+   "typeVersion": 2.2,
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.web }}",
+       "rightValue": "",
+       "operator": {
+        "type": "string",
+        "operation": "notEquals"
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "marcar-sin-web",
+   "name": "📵 Marcar Sin Web",
+   "type": "n8n-nodes-base.code",
+   "position": [
+    3080,
+    -140
+   ],
+   "typeVersion": 2,
+   "parameters": {
+    "jsCode": "return [{ json: { ...$json, email: '', origen_email: '' } }];"
+   }
+  },
+  {
+   "id": "hunter-buscar",
+   "name": "🔑 Hunter: Buscar Email",
+   "type": "n8n-nodes-base.httpRequest",
+   "position": [
+    3080,
+    -400
+   ],
+   "typeVersion": 4.2,
+   "parameters": {
+    "method": "GET",
+    "url": "https://api.hunter.io/v2/domain-search",
+    "options": {},
+    "sendQuery": true,
+    "queryParameters": {
+     "parameters": [
+      {
+       "name": "domain",
+       "value": "={{ $json.web.replace(/^https?:\\/\\/(www\\.)?/,'').replace(/\\/.*$/,'') }}"
+      },
+      {
+       "name": "api_key",
+       "value": "={{ $('⚙️ Config Búsqueda (Places + Hunter)').item.json.HUNTER_API_KEY }}"
+      }
+     ]
+    }
+   },
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "extraer-hunter",
+   "name": "📧 Extraer Email (Hunter)",
+   "type": "n8n-nodes-base.code",
+   "position": [
+    3300,
+    -400
+   ],
+   "typeVersion": 2,
+   "parameters": {
+    "jsCode": "\nconst lead = $('🧹 Formatear Lead').item.json;\nlet email = '';\ntry {\n  const emails = $json.data?.emails || [];\n  if (emails.length > 0) {\n    const sorted = [...emails].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));\n    email = sorted[0].value || '';\n  }\n} catch (e) {}\nreturn [{ json: { ...lead, email, origen_email: email ? 'hunter' : '' } }];\n"
+   }
+  },
+  {
+   "id": "if-encontro-hunter",
+   "name": "🔀 ¿Encontró Email (Hunter)?",
+   "type": "n8n-nodes-base.if",
+   "position": [
+    3520,
+    -400
+   ],
+   "typeVersion": 2.2,
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.email }}",
+       "rightValue": "",
+       "operator": {
+        "type": "string",
+        "operation": "notEquals"
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "scraping-contact",
+   "name": "🌐 Scraping: /contact",
+   "type": "n8n-nodes-base.httpRequest",
+   "position": [
+    3740,
+    -280
+   ],
+   "typeVersion": 4.2,
+   "parameters": {
+    "method": "GET",
+    "url": "={{ $('🧹 Formatear Lead').item.json.web.replace(/\\/+$/, '') + '/contact' }}",
+    "options": {}
+   },
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "extraer-contact",
+   "name": "📧 Extraer Email (/contact)",
+   "type": "n8n-nodes-base.code",
+   "position": [
+    3960,
+    -280
+   ],
+   "typeVersion": 2,
+   "parameters": {
+    "jsCode": "\nconst lead = $('🧹 Formatear Lead').item.json;\nlet html = '';\ntry {\n  const raw = $json.data !== undefined ? $json.data : $json;\n  html = typeof raw === 'string' ? raw : JSON.stringify(raw);\n} catch (e) {}\n\nlet mailtoEmails = [];\ntry {\n  const re = /href=[\"']mailto:([^\"'?\\s]+)/gi;\n  let m;\n  while ((m = re.exec(html)) !== null) {\n    if (m[1].includes('@')) mailtoEmails.push(m[1]);\n  }\n} catch (e) {}\n\nlet regexEmails = [];\ntry {\n  regexEmails = html.match(/[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}/g) || [];\n} catch (e) {}\n\nconst blacklist = ['example', 'sentry', 'wixpress', 'yourdomain', 'schema',\n                    'placeholder', 'noreply', 'no-reply', 'webmaster@'];\nconst all = [...new Set([...mailtoEmails, ...regexEmails])];\nconst emails = all.filter(e => {\n  const l = e.toLowerCase();\n  return !blacklist.some(b => l.includes(b))\n    && !l.endsWith('.js') && !l.endsWith('.css')\n    && !l.endsWith('.png') && !l.endsWith('.jpg') && !l.endsWith('.gif');\n});\n\nreturn [{ json: { ...lead, email: emails[0] || '', origen_email: emails[0] ? 'scraping_contact' : '' } }];\n"
+   }
+  },
+  {
+   "id": "if-encontro-contact",
+   "name": "🔀 ¿Encontró Email (/contact)?",
+   "type": "n8n-nodes-base.if",
+   "position": [
+    4180,
+    -280
+   ],
+   "typeVersion": 2.2,
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.email }}",
+       "rightValue": "",
+       "operator": {
+        "type": "string",
+        "operation": "notEquals"
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "scraping-about",
+   "name": "🌐 Scraping: /about",
+   "type": "n8n-nodes-base.httpRequest",
+   "position": [
+    4400,
+    -140
+   ],
+   "typeVersion": 4.2,
+   "parameters": {
+    "method": "GET",
+    "url": "={{ $('🧹 Formatear Lead').item.json.web.replace(/\\/+$/, '') + '/about' }}",
+    "options": {}
+   },
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "extraer-about",
+   "name": "📧 Extraer Email (/about)",
+   "type": "n8n-nodes-base.code",
+   "position": [
+    4620,
+    -140
+   ],
+   "typeVersion": 2,
+   "parameters": {
+    "jsCode": "\nconst lead = $('🧹 Formatear Lead').item.json;\nlet html = '';\ntry {\n  const raw = $json.data !== undefined ? $json.data : $json;\n  html = typeof raw === 'string' ? raw : JSON.stringify(raw);\n} catch (e) {}\n\nlet mailtoEmails = [];\ntry {\n  const re = /href=[\"']mailto:([^\"'?\\s]+)/gi;\n  let m;\n  while ((m = re.exec(html)) !== null) {\n    if (m[1].includes('@')) mailtoEmails.push(m[1]);\n  }\n} catch (e) {}\n\nlet regexEmails = [];\ntry {\n  regexEmails = html.match(/[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}/g) || [];\n} catch (e) {}\n\nconst blacklist = ['example', 'sentry', 'wixpress', 'yourdomain', 'schema',\n                    'placeholder', 'noreply', 'no-reply', 'webmaster@'];\nconst all = [...new Set([...mailtoEmails, ...regexEmails])];\nconst emails = all.filter(e => {\n  const l = e.toLowerCase();\n  return !blacklist.some(b => l.includes(b))\n    && !l.endsWith('.js') && !l.endsWith('.css')\n    && !l.endsWith('.png') && !l.endsWith('.jpg') && !l.endsWith('.gif');\n});\n\nreturn [{ json: { ...lead, email: emails[0] || '', origen_email: emails[0] ? 'scraping_about' : '' } }];\n"
+   }
+  },
+  {
+   "id": "preparar-payload",
+   "name": "🔧 CRM: Preparar Payload (Prospección)",
+   "type": "n8n-nodes-base.code",
+   "position": [
+    4840,
+    -180
+   ],
+   "typeVersion": 2,
+   "parameters": {
+    "jsCode": "\nconst lead = $json;\n\nlet query = '';\ntry { query = $('\\U0001F527 Construir Query de Búsqueda').item.json.query || ''; } catch (e) {}\nlet company_id = null;\ntry { company_id = Number($('\\U0001F527 Extraer Parámetros').item.json.company_id); } catch (e) {}\n\nif (!lead.telefono) {\n  return [{ json: { tiene_telefono: false, nombre: lead.nombre, email: lead.email || '', motivo: 'Se encontró el negocio pero sin teléfono real — el CRM de G54 guarda leads por teléfono, no se pudo persistir.' } }];\n}\n\nconst origenLabel = ({\n  hunter: 'Hunter.io',\n  scraping_contact: 'la página /contact del sitio',\n  scraping_about: 'la página /about del sitio',\n  '': 'ninguna fuente',\n})[lead.origen_email || ''] || 'ninguna fuente';\n\nconst notas = [\n  'Lead encontrado por Prospección AI' + (query ? (' (búsqueda: \"' + query + '\")') : '') + '.',\n  lead.web ? ('Sitio: ' + lead.web) : 'Sin sitio web conocido.',\n  lead.email ? ('Email encontrado vía ' + origenLabel + ': ' + lead.email) : 'No se encontró ningún email real.',\n  lead.rating ? ('Rating en Google: ' + lead.rating) : '',\n  lead.direccion ? ('Dirección: ' + lead.direccion) : '',\n].filter(Boolean).join(' ');\n\nreturn [{ json: {\n  tiene_telefono: true,\n  company_id,\n  telefono: lead.telefono,\n  nombre: lead.nombre,\n  origen: 'manual',\n  temperatura: 'bajo',\n  notas,\n  email: lead.email || '',\n} }];\n"
+   }
+  },
+  {
+   "id": "if-tiene-telefono",
+   "name": "🔀 ¿Tiene Teléfono para Guardar?",
+   "type": "n8n-nodes-base.if",
+   "position": [
+    5060,
+    -180
+   ],
+   "typeVersion": 2.2,
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "strict"
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ $json.tiene_telefono }}",
+       "rightValue": true,
+       "operator": {
+        "type": "boolean",
+        "operation": "equals"
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "guardar-lead",
+   "name": "💾 G54: Guardar Lead (Prospección)",
+   "type": "n8n-nodes-base.httpRequest",
+   "position": [
+    5280,
+    -280
+   ],
+   "typeVersion": 4.2,
+   "parameters": {
+    "method": "POST",
+    "url": "https://apigrowth.mdarthurdigital.com/api/agent/crm/leads",
+    "options": {},
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "Authorization",
+       "value": "Bearer REDACTED_AGENT_TOKEN"
+      },
+      {
+       "name": "Content-Type",
+       "value": "application/json"
+      },
+      {
+       "name": "Accept",
+       "value": "application/json"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ company_id: $json.company_id, telefono: $json.telefono, nombre: $json.nombre, origen: $json.origen, temperatura: $json.temperatura, notas: $json.notas }) }}"
+   },
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "if-guardado-ok",
+   "name": "🔀 ¿Guardado Confirmado?",
+   "type": "n8n-nodes-base.if",
+   "position": [
+    5500,
+    -360
+   ],
+   "typeVersion": 2.2,
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "strict"
+     },
+     "conditions": [
+      {
+       "id": "c1",
+       "leftValue": "={{ !!($json.deal && $json.deal.id) }}",
+       "rightValue": true,
+       "operator": {
+        "type": "boolean",
+        "operation": "equals"
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   }
+  },
+  {
+   "id": "marcar-guardado-ok",
+   "name": "✅ Marcar Guardado OK",
+   "type": "n8n-nodes-base.code",
+   "position": [
+    5720,
+    -440
+   ],
+   "typeVersion": 2,
+   "parameters": {
+    "jsCode": "const prev = $('🔧 CRM: Preparar Payload (Prospección)').item.json;\nreturn [{ json: { guardado_confirmado: true, deal_id: $json.deal.id, nombre: prev.nombre, email: prev.email || '' } }];"
+   }
+  },
+  {
+   "id": "marcar-guardado-fallo",
+   "name": "❌ Marcar Guardado Fallo",
+   "type": "n8n-nodes-base.code",
+   "position": [
+    5720,
+    -280
+   ],
+   "typeVersion": 2,
+   "parameters": {
+    "jsCode": "const prev = $('🔧 CRM: Preparar Payload (Prospección)').item.json;\nreturn [{ json: { guardado_confirmado: false, nombre: prev.nombre, email: prev.email || '', motivo: 'El guardado en el CRM de G54 no devolvió un deal real: ' + JSON.stringify($json).slice(0, 300) } }];"
+   }
+  },
+  {
+   "id": "agrupar-resultados",
+   "name": "📦 Agrupar Resultados",
+   "type": "n8n-nodes-base.aggregate",
+   "position": [
+    5940,
+    -80
+   ],
+   "typeVersion": 1,
+   "parameters": {
+    "aggregate": "aggregateAllItemData",
+    "options": {}
+   }
+  },
+  {
+   "id": "armar-resumen",
+   "name": "📤 Armar Resumen",
+   "type": "n8n-nodes-base.code",
+   "position": [
+    6160,
+    -80
+   ],
+   "typeVersion": 2,
+   "parameters": {
+    "jsCode": "\nconst raw = $input.all();\nconst items = (raw[0] && raw[0].json && raw[0].json.data) ? raw[0].json.data : raw.map(i => i.json);\n\n// Caso de salida temprana: un solo item con sinResultados/valido:false, sin ningún lead real procesado\nif (items.length === 1 && (items[0].sinResultados === true || items[0].valido === false)) {\n  return [{ json: { ok: true, encontrados: 0, guardados: 0, motivo: items[0].motivo } }];\n}\n\nlet encontrados = items.length;\nlet sinContacto = 0, sinTelefono = 0, conEmail = 0, sinEmail = 0, guardadosOk = 0, guardadosFallidos = 0;\n\nfor (const it of items) {\n  if (it.descartado) { sinContacto++; continue; }\n  if (it.tiene_telefono === false) { sinTelefono++; if (it.email) conEmail++; else sinEmail++; continue; }\n  if (it.guardado_confirmado === true) { guardadosOk++; if (it.email) conEmail++; else sinEmail++; continue; }\n  if (it.guardado_confirmado === false) { guardadosFallidos++; if (it.email) conEmail++; else sinEmail++; continue; }\n}\n\nreturn [{ json: {\n  ok: true,\n  encontrados,\n  sin_contacto: sinContacto,\n  sin_telefono: sinTelefono,\n  con_email: conEmail,\n  sin_email: sinEmail,\n  guardados: guardadosOk,\n  guardados_fallidos: guardadosFallidos,\n} }];\n"
+   }
+  },
+  {
+   "id": "responder",
+   "name": "📤 Responder Webhook",
+   "type": "n8n-nodes-base.respondToWebhook",
+   "position": [
+    6380,
+    -80
+   ],
+   "typeVersion": 1.1,
+   "parameters": {
+    "respondWith": "json",
+    "responseBody": "={{ $json }}",
+    "options": {}
+   }
+  }
+ ],
+ "connections": {
+  "🔔 Webhook G54": {
+   "main": [
+    [
+     {
+      "node": "🔧 Extraer Parámetros",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🔧 Extraer Parámetros": {
+   "main": [
+    [
+     {
+      "node": "📊 Obtener Empresa",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "📊 Obtener Empresa": {
+   "main": [
+    [
+     {
+      "node": "🔧 Construir Query de Búsqueda",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🔧 Construir Query de Búsqueda": {
+   "main": [
+    [
+     {
+      "node": "🔀 ¿Hay Query Real?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🔀 ¿Hay Query Real?": {
+   "main": [
+    [
+     {
+      "node": "⚙️ Config Búsqueda (Places + Hunter)",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "📦 Agrupar Resultados",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "⚙️ Config Búsqueda (Places + Hunter)": {
+   "main": [
+    [
+     {
+      "node": "🌍 Google Places: Búsqueda",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🌍 Google Places: Búsqueda": {
+   "main": [
+    [
+     {
+      "node": "🔧 Chequear Respuesta de Places",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🔧 Chequear Respuesta de Places": {
+   "main": [
+    [
+     {
+      "node": "🔀 ¿Sin Resultados?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🔀 ¿Sin Resultados?": {
+   "main": [
+    [
+     {
+      "node": "📦 Agrupar Resultados",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "✂️ Limitar Resultados",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "✂️ Limitar Resultados": {
+   "main": [
+    [
+     {
+      "node": "🔎 Google Places: Detalles",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🔎 Google Places: Detalles": {
+   "main": [
+    [
+     {
+      "node": "🧹 Formatear Lead",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🧹 Formatear Lead": {
+   "main": [
+    [
+     {
+      "node": "🔀 ¿Tiene Web o Teléfono?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🔀 ¿Tiene Web o Teléfono?": {
+   "main": [
+    [
+     {
+      "node": "🔀 ¿Tiene Web?",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "🚫 Marcar Sin Contacto",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🚫 Marcar Sin Contacto": {
+   "main": [
+    [
+     {
+      "node": "📦 Agrupar Resultados",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🔀 ¿Tiene Web?": {
+   "main": [
+    [
+     {
+      "node": "🔑 Hunter: Buscar Email",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "📵 Marcar Sin Web",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "📵 Marcar Sin Web": {
+   "main": [
+    [
+     {
+      "node": "🔧 CRM: Preparar Payload (Prospección)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🔑 Hunter: Buscar Email": {
+   "main": [
+    [
+     {
+      "node": "📧 Extraer Email (Hunter)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "📧 Extraer Email (Hunter)": {
+   "main": [
+    [
+     {
+      "node": "🔀 ¿Encontró Email (Hunter)?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🔀 ¿Encontró Email (Hunter)?": {
+   "main": [
+    [
+     {
+      "node": "🔧 CRM: Preparar Payload (Prospección)",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "🌐 Scraping: /contact",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🌐 Scraping: /contact": {
+   "main": [
+    [
+     {
+      "node": "📧 Extraer Email (/contact)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "📧 Extraer Email (/contact)": {
+   "main": [
+    [
+     {
+      "node": "🔀 ¿Encontró Email (/contact)?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🔀 ¿Encontró Email (/contact)?": {
+   "main": [
+    [
+     {
+      "node": "🔧 CRM: Preparar Payload (Prospección)",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "🌐 Scraping: /about",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🌐 Scraping: /about": {
+   "main": [
+    [
+     {
+      "node": "📧 Extraer Email (/about)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "📧 Extraer Email (/about)": {
+   "main": [
+    [
+     {
+      "node": "🔧 CRM: Preparar Payload (Prospección)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🔧 CRM: Preparar Payload (Prospección)": {
+   "main": [
+    [
+     {
+      "node": "🔀 ¿Tiene Teléfono para Guardar?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🔀 ¿Tiene Teléfono para Guardar?": {
+   "main": [
+    [
+     {
+      "node": "💾 G54: Guardar Lead (Prospección)",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "📦 Agrupar Resultados",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "💾 G54: Guardar Lead (Prospección)": {
+   "main": [
+    [
+     {
+      "node": "🔀 ¿Guardado Confirmado?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "🔀 ¿Guardado Confirmado?": {
+   "main": [
+    [
+     {
+      "node": "✅ Marcar Guardado OK",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "❌ Marcar Guardado Fallo",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "✅ Marcar Guardado OK": {
+   "main": [
+    [
+     {
+      "node": "📦 Agrupar Resultados",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "❌ Marcar Guardado Fallo": {
+   "main": [
+    [
+     {
+      "node": "📦 Agrupar Resultados",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "📦 Agrupar Resultados": {
+   "main": [
+    [
+     {
+      "node": "📤 Armar Resumen",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "📤 Armar Resumen": {
+   "main": [
+    [
+     {
+      "node": "📤 Responder Webhook",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1"
+ }
+}
