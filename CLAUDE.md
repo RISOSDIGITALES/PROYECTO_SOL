@@ -3593,6 +3593,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ---
 
+### 2026-09-04 (Viernes)
+
+Arranqué construyendo el segundo agente de prospección de leads que le faltaba a la plataforma, dejándolo con toda la lógica lista pero apagado, porque todavía no tengo una clave real de Google Places para probarlo de verdad. De ahí hice una auditoría de seguridad completa y encontré algo serio: el token que uso para manejar todos nuestros flujos de automatización está expuesto en texto plano en un repositorio que confirmé que es público — lo dejé marcado sin tocarlo, porque rotarlo es una decisión mía tomar, no de la herramienta. Seguí con un repaso honesto de cada agente que tengo en producción, uno por uno, y aunque nada está caído hay huecos reales: dos agentes nuevos que no pueden operar todavía por falta de datos de configuración, y un problema de fondo donde las respuestas de mis bots no siempre quedan visibles en el historial que veo yo misma desde el panel.
+
+El resto del día se me fue en el documento grande que me mandó el ingeniero con el estado de toda la plataforma. Lo leí completo la primera vez, pero cuando insistí en que había cosas nuevas que no estaba viendo — puntualmente algo sobre videos y reels en las publicaciones — lo volví a leer línea por línea, y tenía razón en parte: el documento se había actualizado ese mismo día con contenido que mi primera lectura nunca llegó a procesar. Sobre lo de reels investigué a fondo contra el código real y confirmé que ya lo tengo construido y funcionando desde hace semanas, sin nada roto — lo que sí encontré nuevo de verdad fueron cinco pendientes que el ingeniero cerró ese mismo día, cuatro preguntas suyas que necesitaban respuesta directa mía, y un pedido urgente de cambiar cómo mando correo que resultó ser algo que ya había resuelto sin darme cuenta al construir el agente nuevo de la mañana.
+
+Antes de contestarle nada, probé en vivo cada cosa que el documento decía que ya funcionaba, con evidencia real, no de memoria. La mayoría estaba bien, pero encontré dos que no: guardar un lead con el origen de prospección real sigue reventando con el mismo error de siempre, y algo más serio — que un segundo mensaje se agregue a una conversación de WhatsApp ya existente, que había confirmado funcionando esta misma tarde, volvió a fallar en silencio unas horas después con el mismo método exacto. Armé toda la respuesta para el ingeniero con las cuatro preguntas contestadas y esos dos hallazgos con la petición y la respuesta real pegadas, la dejé lista para revisarla antes de mandarla, y cerré subiendo todo al repositorio.
+
+---
+
 ### 2026-09-02 (Miércoles)
 
 Arranqué con el diagnóstico de siempre en G54, todo en orden — el único aviso real (un error semanal recurrente en uno de los agentes) lo investigué a fondo antes de asumir que era un bug, y resultó ser el diseño correcto: una ejecución por cada empresa activa, solo el tiempo de espera estaba mal calibrado, lo até. Seguí con lo de ayer en Bubble 54: extendí las burbujas interactivas al menú de la agencia, y después llevé la misma estética de vidrio a toda la interfaz — botones, tarjetas, badges — acordando primero hasta dónde llevarlo para no terminar con tablas y formularios ilegibles.
