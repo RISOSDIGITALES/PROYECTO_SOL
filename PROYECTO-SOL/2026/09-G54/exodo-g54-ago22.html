@@ -442,11 +442,12 @@
 
   <div class="item-card p0">
     <div class="item-header">
-      <div><div class="item-title"><code>origen: "prospeccion"</code> revienta con <code>500</code> en <code>POST /api/agent/crm/leads</code></div><div class="item-where">Backend — CRM, endpoint de agentes (<code>AGENT_TOKEN</code>)</div></div>
+      <div><div class="item-title"><code>origen: "prospeccion"</code> revienta con <code>500</code> — confirmado hoy que afecta también al <code>PUT</code>, no solo a la creación</div><div class="item-where">Backend — CRM, <code>POST /api/agent/crm/leads</code> y <code>PUT /api/crm/deals/{id}</code></div></div>
       <span class="badge p0">P0</span>
     </div>
     <div class="item-body">
       <p class="item-why">Confirmado hoy, en vivo, con 3 intentos aislados: los otros 4 valores agregados el 25-ago al enum de <code>origen</code> (<code>facebook</code>, <code>instagram</code>, <code>telegram</code>, <code>email</code>) crean el lead sin problema — solo <code>prospeccion</code> (el pensado para el agente que prospecta negocios en frío, según la propia nota de la doc del 25-ago) devuelve <code>500 "Server Error"</code>, siempre, reproducible, sin importar qué otros campos se manden. Contradice lo que la misma documentación promete para este endpoint ("un valor fuera de la lista devuelve <code>422</code>, no se guarda en silencio") — acá el valor SÍ está en la lista, y aun así revienta con un error de servidor, no de validación. La nota del 25-ago menciona que <code>prospeccion</code> necesita consentimiento antes de escribirle al lead — probamos también mandando un campo <code>consentimiento:true</code> por si acaso, mismo resultado. Sin poder usar este valor, cualquier agente de prospección en frío que se construya no tiene forma de crear el lead con el origen correcto — quedaría forzado a usar <code>agente</code> genérico, perdiendo la distinción que el propio enum fue pensado para dar. 6 tratos de prueba generados durante la verificación (incluidos los de los 4 valores que sí funcionan) ya se limpiaron, movidos a <code>lost</code>.</p>
+      <p class="item-why"><strong>Confirmado el 04-sep, más grave de lo pensado:</strong> el mismo <code>500</code> ocurre también con <code>PUT /api/crm/deals/{id}</code> al intentar cambiar el <code>origen</code> de un trato ya existente a <code>prospeccion</code> — no es un problema exclusivo del endpoint de creación, es el valor en sí el que rompe en cualquier punto de escritura. Encontrado al construir el nuevo agente de nutrición/outreach (`blog_distribution`), que necesita poder filtrar tratos por <code>origen=prospeccion</code> — hoy no hay forma de generar ese dato en absoluto, en ningún camino.</p>
     </div>
   </div>
 

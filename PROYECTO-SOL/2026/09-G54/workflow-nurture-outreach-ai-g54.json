@@ -1,0 +1,1225 @@
+{
+  "id": "fahn0L68z5czTocE",
+  "name": "📧 Nurture & Outreach AI — G54",
+  "description": null,
+  "active": true,
+  "activeVersionId": "acf33e82-b17f-4842-88d4-3ed50b3806e0",
+  "createdAt": "2026-09-04T16:32:22.063Z",
+  "updatedAt": "2026-09-04T16:46:42.770Z",
+  "isArchived": false,
+  "versionId": "acf33e82-b17f-4842-88d4-3ed50b3806e0",
+  "versionCounter": 4,
+  "sourceWorkflowId": null,
+  "triggerCount": 1,
+  "nodes": [
+    {
+      "id": "webhook",
+      "name": "🔔 Webhook G54",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        0,
+        0
+      ],
+      "typeVersion": 2,
+      "parameters": {
+        "path": "blog-nurture-g54",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "blog-nurture-g54-webhook"
+    },
+    {
+      "id": "extraer-params",
+      "name": "🔧 Extraer Parámetros",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        220,
+        0
+      ],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\nconst company_id = Number(body.company_id);\nconst modo = (body.modo === 'outreach') ? 'outreach' : 'blog';\nif (!company_id) {\n  return [{ json: { error: true, motivo: 'Falta company_id en el body del webhook.' } }];\n}\nreturn [{ json: { company_id, modo, error: false } }];"
+      }
+    },
+    {
+      "id": "obtener-empresa",
+      "name": "📊 Obtener Empresa",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        440,
+        0
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/n8n/companies/' + $('🔧 Extraer Parámetros').item.json.company_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED_AGENT_TOKEN"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "obtener-cms",
+      "name": "🔗 Obtener CMS WordPress",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        660,
+        0
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/agent/companies/' + $('🔧 Extraer Parámetros').item.json.company_id + '/cms/wordpress' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED_AGENT_TOKEN"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "wp-obtener-posts",
+      "name": "📰 WP: Obtener Posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        880,
+        0
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "={{ (($('🔗 Obtener CMS WordPress').item.json.data || {}).base_url || '').replace(/\\/$/, '') + '/wp-json/wp/v2/posts' }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "per_page",
+              "value": "1"
+            },
+            {
+              "name": "orderby",
+              "value": "date"
+            },
+            {
+              "name": "order",
+              "value": "desc"
+            },
+            {
+              "name": "status",
+              "value": "publish"
+            },
+            {
+              "name": "_fields",
+              "value": "id,title,excerpt,link,date"
+            },
+            {
+              "name": "_embed",
+              "value": "wp:featuredmedia"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Basic ' + Buffer.from((($('🔗 Obtener CMS WordPress').item.json.data || {}).username || '') + ':' +(($('🔗 Obtener CMS WordPress').item.json.data || {}).secret || '')).toString('base64') }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "login-sesion",
+      "name": "🔐 G54: Login Sesión",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        440,
+        220
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/auth/login",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_MASTER_PASSWORD' }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "cambiar-empresa",
+      "name": "🏢 G54: Cambiar Empresa",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        660,
+        220
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/auth/switch-company",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: $('🔧 Extraer Parámetros').item.json.company_id }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "obtener-board",
+      "name": "📋 Obtener Board CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        880,
+        220
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "https://apigrowth.mdarthurdigital.com/api/crm/board",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "filtrar-armar",
+      "name": "🔍 Filtrar y Armar Emails",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1100,
+        110
+      ],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "\nconst params = $('🔧 Extraer Parámetros').first().json;\nconst modo = params.modo;\n\nlet empresa = {};\ntry { empresa = $('📊 Obtener Empresa').first().json.data || {}; } catch (e) {}\nconst empresaNombre = empresa.nombre || 'nuestra empresa';\nconst empresaWeb = empresa.website || '';\nconst empresaProp = empresa.value_proposition || '';\n\n// Blog: post más reciente (solo si modo === 'blog')\nlet post = null;\nif (modo === 'blog') {\n  try {\n    const cms = $('🔗 Obtener CMS WordPress').first().json.data;\n    if (!cms || !cms.is_active) {\n      return [{ json: { sinLeads: true, motivo: 'La empresa no tiene WordPress conectado (Ajustes → CMS Integrations) — no hay ningún blog real que compartir.' } }];\n    }\n    const first = $('📰 WP: Obtener Posts').first().json;\n    if (!first) {\n      return [{ json: { sinLeads: true, motivo: 'El blog de la empresa no tiene ningún post publicado todavía.' } }];\n    }\n    const media = first._embedded && first._embedded['wp:featuredmedia'] && first._embedded['wp:featuredmedia'][0];\n    post = {\n      id: first.id,\n      titulo: (first.title && first.title.rendered) || '',\n      extracto: ((first.excerpt && first.excerpt.rendered) || '').replace(/<[^>]+>/g, '').trim(),\n      url: first.link,\n      imagen: media ? media.source_url : '',\n    };\n  } catch (e) {\n    return [{ json: { sinLeads: true, motivo: 'No se pudo leer el blog real de la empresa (' + (e.message || e) + ').' } }];\n  }\n}\n\n// Board CRM\nlet board = {};\ntry { board = $('📋 Obtener Board CRM').first().json || {}; } catch (e) {}\nconst excluidas = ['closed', 'lost'];\nlet deals = [];\nfor (const etapa of Object.keys(board)) {\n  if (excluidas.includes(etapa)) continue;\n  const arr = Array.isArray(board[etapa]) ? board[etapa] : [];\n  for (const d of arr) deals.push(d);\n}\n\n// Filtrar por modo\nlet candidatos = [];\nif (modo === 'outreach') {\n  // Primer contacto en frío: solo leads recién prospectados, nunca contactados\n  candidatos = deals.filter(d => d.email && d.origen === 'prospeccion' && !(d.notas || '').includes('outreach_enviado'));\n} else {\n  // Nutrir con el blog: cualquier lead activo con email, que no haya recibido YA este mismo post\n  const marker = 'blog:' + (post ? post.id : '');\n  candidatos = deals.filter(d => d.email && !(d.notas || '').includes(marker));\n}\n\nif (candidatos.length === 0) {\n  const motivo = modo === 'outreach'\n    ? 'No hay leads nuevos de prospección con email pendientes de un primer contacto.'\n    : 'No hay ningún lead con email pendiente de recibir este post — ya se les mandó, o no hay ningún lead con email guardado todavía.';\n  return [{ json: { sinLeads: true, motivo } }];\n}\n\n// Armar el email por cada lead (personalizado)\nconst salida = candidatos.map(d => {\n  const nombre = (d.nombre || '').split(' ')[0] || 'hola';\n  let asunto, html, texto, notaNueva;\n\n  if (modo === 'outreach') {\n    asunto = `${empresaNombre} — nos encantaría ayudarte`;\n    html = `<div style=\"font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#222;\">\n<p>Hola ${nombre},</p>\n<p>Somos <strong>${empresaNombre}</strong>${empresaProp ? ' — ' + empresaProp : ''}.</p>\n<p>Vimos tu negocio y creemos que podríamos serte útiles. Si te interesa saber más, respondé este correo o visitá <a href=\"${empresaWeb}\">${empresaWeb}</a>.</p>\n<p>Saludos,<br>${empresaNombre}</p>\n</div>`;\n    texto = `Hola ${nombre}, somos ${empresaNombre}. ${empresaProp} Más info: ${empresaWeb}`;\n    notaNueva = ((d.notas ? d.notas + ' | ' : '') + 'outreach_enviado ' + new Date().toISOString().slice(0,10)).slice(0, 1000);\n  } else {\n    asunto = post.titulo ? `${empresaNombre} — ${post.titulo}` : `Novedades de ${empresaNombre}`;\n    html = `<div style=\"font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#222;\">\n<p>Hola ${nombre},</p>\n<h2 style=\"margin:0 0 12px;font-size:19px;color:#222;\">${post.titulo}</h2>\n${post.imagen ? `<img src=\"${post.imagen}\" alt=\"${post.titulo}\" style=\"width:100%;border-radius:6px;margin-bottom:12px;\" />` : ''}\n<p>${post.extracto}</p>\n<p><a href=\"${post.url}\">Leer la nota completa →</a></p>\n<p>Saludos,<br>${empresaNombre}</p>\n</div>`;\n    texto = `${post.titulo}\\n\\n${post.extracto}\\n\\nLeer más: ${post.url}`;\n    notaNueva = ((d.notas ? d.notas + ' | ' : '') + 'blog:' + post.id + ' enviado ' + new Date().toISOString().slice(0,10)).slice(0, 1000);\n  }\n\n  return {\n    json: {\n      deal_id: d.id,\n      email: d.email,\n      asunto,\n      html,\n      texto,\n      notas_nueva: notaNueva,\n    }\n  };\n});\n\nreturn salida;\n"
+      }
+    },
+    {
+      "id": "if-hay-leads",
+      "name": "🔀 ¿Hay Leads?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1320,
+        110
+      ],
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.sinLeads === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "enviar-correo",
+      "name": "📧 Enviar Correo",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1540,
+        20
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/agent/email/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED_AGENT_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: $('🔧 Extraer Parámetros').item.json.company_id, para: $json.email, asunto: $json.asunto, html: $json.html, texto: $json.texto }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "marcar-nota",
+      "name": "🏷️ Marcar Nota en CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1540,
+        200
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/crm/deals/' + $('🔍 Filtrar y Armar Emails').item.json.deal_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ notas: $('🔍 Filtrar y Armar Emails').item.json.notas_nueva }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "armar-resumen",
+      "name": "📤 Armar Resumen",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1760,
+        110
+      ],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif (items.length === 1 && items[0].json.sinLeads) {\n  return [{ json: { ok: true, enviados: 0, fallidos: 0, motivo: items[0].json.motivo } }];\n}\nconst fallidos = items.filter(i => i.json.error).length;\nconst exitosos = items.length - fallidos;\nconst errores = items.filter(i => i.json.error).map(i => (i.json.error.message || '').slice(0,200));\nreturn [{ json: { ok: true, enviados: exitosos, fallidos, errores: fallidos ? errores : undefined } }];"
+      }
+    },
+    {
+      "id": "responder",
+      "name": "📤 Responder Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1980,
+        110
+      ],
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "if-correo-enviado",
+      "name": "🔀 ¿Correo Enviado?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1650,
+        20
+      ],
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.error === undefined }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "🔔 Webhook G54": {
+      "main": [
+        [
+          {
+            "node": "🔧 Extraer Parámetros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Extraer Parámetros": {
+      "main": [
+        [
+          {
+            "node": "📊 Obtener Empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Obtener Empresa": {
+      "main": [
+        [
+          {
+            "node": "🔗 Obtener CMS WordPress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 Obtener CMS WordPress": {
+      "main": [
+        [
+          {
+            "node": "📰 WP: Obtener Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔐 G54: Login Sesión": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 G54: Cambiar Empresa": {
+      "main": [
+        [
+          {
+            "node": "📋 Obtener Board CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📰 WP: Obtener Posts": {
+      "main": [
+        [
+          {
+            "node": "🔐 G54: Login Sesión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Obtener Board CRM": {
+      "main": [
+        [
+          {
+            "node": "🔍 Filtrar y Armar Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Filtrar y Armar Emails": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Hay Leads?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Hay Leads?": {
+      "main": [
+        [
+          {
+            "node": "📧 Enviar Correo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📤 Armar Resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Enviar Correo": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Correo Enviado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏷️ Marcar Nota en CRM": {
+      "main": [
+        [
+          {
+            "node": "📤 Armar Resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Armar Resumen": {
+      "main": [
+        [
+          {
+            "node": "📤 Responder Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Correo Enviado?": {
+      "main": [
+        [
+          {
+            "node": "🏷️ Marcar Nota en CRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📤 Armar Resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodeGroups": [],
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "pinData": null,
+  "meta": null,
+  "tags": [],
+  "shared": [
+    {
+      "role": "workflow:owner",
+      "workflowId": "fahn0L68z5czTocE",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-09-04T16:32:22.074Z",
+      "updatedAt": "2026-09-04T16:32:22.074Z"
+    }
+  ],
+  "activeVersion": {
+    "versionId": "acf33e82-b17f-4842-88d4-3ed50b3806e0",
+    "workflowId": "fahn0L68z5czTocE",
+    "nodes": [
+      {
+        "id": "webhook",
+        "name": "🔔 Webhook G54",
+        "type": "n8n-nodes-base.webhook",
+        "position": [
+          0,
+          0
+        ],
+        "typeVersion": 2,
+        "parameters": {
+          "path": "blog-nurture-g54",
+          "httpMethod": "POST",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "webhookId": "blog-nurture-g54-webhook"
+      },
+      {
+        "id": "extraer-params",
+        "name": "🔧 Extraer Parámetros",
+        "type": "n8n-nodes-base.code",
+        "position": [
+          220,
+          0
+        ],
+        "typeVersion": 2,
+        "parameters": {
+          "jsCode": "const body = $input.item.json.body || $input.item.json;\nconst company_id = Number(body.company_id);\nconst modo = (body.modo === 'outreach') ? 'outreach' : 'blog';\nif (!company_id) {\n  return [{ json: { error: true, motivo: 'Falta company_id en el body del webhook.' } }];\n}\nreturn [{ json: { company_id, modo, error: false } }];"
+        }
+      },
+      {
+        "id": "obtener-empresa",
+        "name": "📊 Obtener Empresa",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          440,
+          0
+        ],
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "GET",
+          "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/n8n/companies/' + $('🔧 Extraer Parámetros').item.json.company_id }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer REDACTED_AGENT_TOKEN"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "obtener-cms",
+        "name": "🔗 Obtener CMS WordPress",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          660,
+          0
+        ],
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "GET",
+          "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/agent/companies/' + $('🔧 Extraer Parámetros').item.json.company_id + '/cms/wordpress' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer REDACTED_AGENT_TOKEN"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wp-obtener-posts",
+        "name": "📰 WP: Obtener Posts",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          880,
+          0
+        ],
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "GET",
+          "url": "={{ (($('🔗 Obtener CMS WordPress').item.json.data || {}).base_url || '').replace(/\\/$/, '') + '/wp-json/wp/v2/posts' }}",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "per_page",
+                "value": "1"
+              },
+              {
+                "name": "orderby",
+                "value": "date"
+              },
+              {
+                "name": "order",
+                "value": "desc"
+              },
+              {
+                "name": "status",
+                "value": "publish"
+              },
+              {
+                "name": "_fields",
+                "value": "id,title,excerpt,link,date"
+              },
+              {
+                "name": "_embed",
+                "value": "wp:featuredmedia"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Basic ' + Buffer.from((($('🔗 Obtener CMS WordPress').item.json.data || {}).username || '') + ':' +(($('🔗 Obtener CMS WordPress').item.json.data || {}).secret || '')).toString('base64') }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "login-sesion",
+        "name": "🔐 G54: Login Sesión",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          440,
+          220
+        ],
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "POST",
+          "url": "https://apigrowth.mdarthurdigital.com/api/auth/login",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_MASTER_PASSWORD' }) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "cambiar-empresa",
+        "name": "🏢 G54: Cambiar Empresa",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          660,
+          220
+        ],
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "POST",
+          "url": "https://apigrowth.mdarthurdigital.com/api/auth/switch-company",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ company_id: $('🔧 Extraer Parámetros').item.json.company_id }) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "obtener-board",
+        "name": "📋 Obtener Board CRM",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          880,
+          220
+        ],
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "GET",
+          "url": "https://apigrowth.mdarthurdigital.com/api/crm/board",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "filtrar-armar",
+        "name": "🔍 Filtrar y Armar Emails",
+        "type": "n8n-nodes-base.code",
+        "position": [
+          1100,
+          110
+        ],
+        "typeVersion": 2,
+        "parameters": {
+          "jsCode": "\nconst params = $('🔧 Extraer Parámetros').first().json;\nconst modo = params.modo;\n\nlet empresa = {};\ntry { empresa = $('📊 Obtener Empresa').first().json.data || {}; } catch (e) {}\nconst empresaNombre = empresa.nombre || 'nuestra empresa';\nconst empresaWeb = empresa.website || '';\nconst empresaProp = empresa.value_proposition || '';\n\n// Blog: post más reciente (solo si modo === 'blog')\nlet post = null;\nif (modo === 'blog') {\n  try {\n    const cms = $('🔗 Obtener CMS WordPress').first().json.data;\n    if (!cms || !cms.is_active) {\n      return [{ json: { sinLeads: true, motivo: 'La empresa no tiene WordPress conectado (Ajustes → CMS Integrations) — no hay ningún blog real que compartir.' } }];\n    }\n    const first = $('📰 WP: Obtener Posts').first().json;\n    if (!first) {\n      return [{ json: { sinLeads: true, motivo: 'El blog de la empresa no tiene ningún post publicado todavía.' } }];\n    }\n    const media = first._embedded && first._embedded['wp:featuredmedia'] && first._embedded['wp:featuredmedia'][0];\n    post = {\n      id: first.id,\n      titulo: (first.title && first.title.rendered) || '',\n      extracto: ((first.excerpt && first.excerpt.rendered) || '').replace(/<[^>]+>/g, '').trim(),\n      url: first.link,\n      imagen: media ? media.source_url : '',\n    };\n  } catch (e) {\n    return [{ json: { sinLeads: true, motivo: 'No se pudo leer el blog real de la empresa (' + (e.message || e) + ').' } }];\n  }\n}\n\n// Board CRM\nlet board = {};\ntry { board = $('📋 Obtener Board CRM').first().json || {}; } catch (e) {}\nconst excluidas = ['closed', 'lost'];\nlet deals = [];\nfor (const etapa of Object.keys(board)) {\n  if (excluidas.includes(etapa)) continue;\n  const arr = Array.isArray(board[etapa]) ? board[etapa] : [];\n  for (const d of arr) deals.push(d);\n}\n\n// Filtrar por modo\nlet candidatos = [];\nif (modo === 'outreach') {\n  // Primer contacto en frío: solo leads recién prospectados, nunca contactados\n  candidatos = deals.filter(d => d.email && d.origen === 'prospeccion' && !(d.notas || '').includes('outreach_enviado'));\n} else {\n  // Nutrir con el blog: cualquier lead activo con email, que no haya recibido YA este mismo post\n  const marker = 'blog:' + (post ? post.id : '');\n  candidatos = deals.filter(d => d.email && !(d.notas || '').includes(marker));\n}\n\nif (candidatos.length === 0) {\n  const motivo = modo === 'outreach'\n    ? 'No hay leads nuevos de prospección con email pendientes de un primer contacto.'\n    : 'No hay ningún lead con email pendiente de recibir este post — ya se les mandó, o no hay ningún lead con email guardado todavía.';\n  return [{ json: { sinLeads: true, motivo } }];\n}\n\n// Armar el email por cada lead (personalizado)\nconst salida = candidatos.map(d => {\n  const nombre = (d.nombre || '').split(' ')[0] || 'hola';\n  let asunto, html, texto, notaNueva;\n\n  if (modo === 'outreach') {\n    asunto = `${empresaNombre} — nos encantaría ayudarte`;\n    html = `<div style=\"font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#222;\">\n<p>Hola ${nombre},</p>\n<p>Somos <strong>${empresaNombre}</strong>${empresaProp ? ' — ' + empresaProp : ''}.</p>\n<p>Vimos tu negocio y creemos que podríamos serte útiles. Si te interesa saber más, respondé este correo o visitá <a href=\"${empresaWeb}\">${empresaWeb}</a>.</p>\n<p>Saludos,<br>${empresaNombre}</p>\n</div>`;\n    texto = `Hola ${nombre}, somos ${empresaNombre}. ${empresaProp} Más info: ${empresaWeb}`;\n    notaNueva = ((d.notas ? d.notas + ' | ' : '') + 'outreach_enviado ' + new Date().toISOString().slice(0,10)).slice(0, 1000);\n  } else {\n    asunto = post.titulo ? `${empresaNombre} — ${post.titulo}` : `Novedades de ${empresaNombre}`;\n    html = `<div style=\"font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#222;\">\n<p>Hola ${nombre},</p>\n<h2 style=\"margin:0 0 12px;font-size:19px;color:#222;\">${post.titulo}</h2>\n${post.imagen ? `<img src=\"${post.imagen}\" alt=\"${post.titulo}\" style=\"width:100%;border-radius:6px;margin-bottom:12px;\" />` : ''}\n<p>${post.extracto}</p>\n<p><a href=\"${post.url}\">Leer la nota completa →</a></p>\n<p>Saludos,<br>${empresaNombre}</p>\n</div>`;\n    texto = `${post.titulo}\\n\\n${post.extracto}\\n\\nLeer más: ${post.url}`;\n    notaNueva = ((d.notas ? d.notas + ' | ' : '') + 'blog:' + post.id + ' enviado ' + new Date().toISOString().slice(0,10)).slice(0, 1000);\n  }\n\n  return {\n    json: {\n      deal_id: d.id,\n      email: d.email,\n      asunto,\n      html,\n      texto,\n      notas_nueva: notaNueva,\n    }\n  };\n});\n\nreturn salida;\n"
+        }
+      },
+      {
+        "id": "if-hay-leads",
+        "name": "🔀 ¿Hay Leads?",
+        "type": "n8n-nodes-base.if",
+        "position": [
+          1320,
+          110
+        ],
+        "typeVersion": 2.2,
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.sinLeads === true }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "notEquals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "enviar-correo",
+        "name": "📧 Enviar Correo",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          1540,
+          20
+        ],
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "POST",
+          "url": "https://apigrowth.mdarthurdigital.com/api/agent/email/send",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer REDACTED_AGENT_TOKEN"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ company_id: $('🔧 Extraer Parámetros').item.json.company_id, para: $json.email, asunto: $json.asunto, html: $json.html, texto: $json.texto }) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "marcar-nota",
+        "name": "🏷️ Marcar Nota en CRM",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          1540,
+          200
+        ],
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "PUT",
+          "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/crm/deals/' + $('🔍 Filtrar y Armar Emails').item.json.deal_id }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ notas: $('🔍 Filtrar y Armar Emails').item.json.notas_nueva }) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "armar-resumen",
+        "name": "📤 Armar Resumen",
+        "type": "n8n-nodes-base.code",
+        "position": [
+          1760,
+          110
+        ],
+        "typeVersion": 2,
+        "parameters": {
+          "jsCode": "const items = $input.all();\nif (items.length === 1 && items[0].json.sinLeads) {\n  return [{ json: { ok: true, enviados: 0, fallidos: 0, motivo: items[0].json.motivo } }];\n}\nconst fallidos = items.filter(i => i.json.error).length;\nconst exitosos = items.length - fallidos;\nconst errores = items.filter(i => i.json.error).map(i => (i.json.error.message || '').slice(0,200));\nreturn [{ json: { ok: true, enviados: exitosos, fallidos, errores: fallidos ? errores : undefined } }];"
+        }
+      },
+      {
+        "id": "responder",
+        "name": "📤 Responder Webhook",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "position": [
+          1980,
+          110
+        ],
+        "typeVersion": 1.1,
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ $json }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "if-correo-enviado",
+        "name": "🔀 ¿Correo Enviado?",
+        "type": "n8n-nodes-base.if",
+        "position": [
+          1650,
+          20
+        ],
+        "typeVersion": 2.2,
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.error === undefined }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      }
+    ],
+    "connections": {
+      "🔔 Webhook G54": {
+        "main": [
+          [
+            {
+              "node": "🔧 Extraer Parámetros",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Extraer Parámetros": {
+        "main": [
+          [
+            {
+              "node": "📊 Obtener Empresa",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📊 Obtener Empresa": {
+        "main": [
+          [
+            {
+              "node": "🔗 Obtener CMS WordPress",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔗 Obtener CMS WordPress": {
+        "main": [
+          [
+            {
+              "node": "📰 WP: Obtener Posts",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔐 G54: Login Sesión": {
+        "main": [
+          [
+            {
+              "node": "🏢 G54: Cambiar Empresa",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🏢 G54: Cambiar Empresa": {
+        "main": [
+          [
+            {
+              "node": "📋 Obtener Board CRM",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📰 WP: Obtener Posts": {
+        "main": [
+          [
+            {
+              "node": "🔐 G54: Login Sesión",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📋 Obtener Board CRM": {
+        "main": [
+          [
+            {
+              "node": "🔍 Filtrar y Armar Emails",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔍 Filtrar y Armar Emails": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Hay Leads?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Hay Leads?": {
+        "main": [
+          [
+            {
+              "node": "📧 Enviar Correo",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📤 Armar Resumen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📧 Enviar Correo": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Correo Enviado?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🏷️ Marcar Nota en CRM": {
+        "main": [
+          [
+            {
+              "node": "📤 Armar Resumen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📤 Armar Resumen": {
+        "main": [
+          [
+            {
+              "node": "📤 Responder Webhook",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Correo Enviado?": {
+        "main": [
+          [
+            {
+              "node": "🏷️ Marcar Nota en CRM",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📤 Armar Resumen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "createdAt": "2026-09-04T16:46:42.774Z",
+    "updatedAt": "2026-09-04T16:46:42.774Z",
+    "workflowPublishHistory": [
+      {
+        "id": 3096,
+        "workflowId": "fahn0L68z5czTocE",
+        "versionId": "acf33e82-b17f-4842-88d4-3ed50b3806e0",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-09-04T16:46:43.109Z"
+      }
+    ]
+  }
+}
