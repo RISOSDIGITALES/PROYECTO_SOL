@@ -64,7 +64,7 @@ export function playPopSound(size = 20) {
     crackFilter.type = "highpass";
     crackFilter.frequency.value = 1800 * sizeFactor * jitter;
     const crackGain = ctx.createGain();
-    crackGain.gain.setValueAtTime(0.09, now);
+    crackGain.gain.setValueAtTime(0.12, now);
     crackGain.gain.exponentialRampToValueAtTime(0.0001, now + crackDur);
     crack.connect(crackFilter);
     crackFilter.connect(crackGain);
@@ -85,7 +85,7 @@ export function playPopSound(size = 20) {
     thumpFilter.frequency.exponentialRampToValueAtTime(thumpFreq, now + 0.015);
     const thumpGain = ctx.createGain();
     thumpGain.gain.setValueAtTime(0.0001, now);
-    thumpGain.gain.exponentialRampToValueAtTime(0.5, now + 0.006);
+    thumpGain.gain.exponentialRampToValueAtTime(0.68, now + 0.006);
     thumpGain.gain.exponentialRampToValueAtTime(0.0001, now + thumpDur);
     thump.connect(thumpFilter);
     thumpFilter.connect(thumpGain);
