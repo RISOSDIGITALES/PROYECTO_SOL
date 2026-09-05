@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { OutcomeBadge } from "../components/CallsList";
+import EmptyCallsState from "../components/EmptyCallsState";
 import { api } from "../api";
 import { formatDate, formatDuration } from "../callFormat";
 
@@ -57,18 +58,13 @@ export default function AgencyCallsPage() {
         {error && <div style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</div>}
 
         {calls && (
+          calls.length === 0 ? (
+            <EmptyCallsState
+              title="Todavía no hubo ninguna llamada"
+              subtitle="En cuanto un negocio reciba una llamada real, va a aparecer acá."
+            />
+          ) : (
           <div className="vox54-panel">
-            {calls.length === 0 ? (
-              <div style={{ padding: 32, textAlign: "center" }}>
-                <div style={{ fontSize: 24, marginBottom: 6 }}>📞</div>
-                <div style={{ fontWeight: 700, fontSize: 14, color: "var(--ink)", marginBottom: 4 }}>
-                  Todavía no hubo ninguna llamada
-                </div>
-                <div style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>
-                  En cuanto un negocio reciba una llamada real, va a aparecer acá.
-                </div>
-              </div>
-            ) : (
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
@@ -99,8 +95,8 @@ export default function AgencyCallsPage() {
                   </tbody>
                 </table>
               </div>
-            )}
           </div>
+          )
         )}
       </div>
   );

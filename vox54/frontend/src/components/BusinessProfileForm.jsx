@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { burst } from "../burst";
 import { API_BASE } from "../api";
+import Icon from "./Icon";
 
 // El conocimiento real de un negocio — a qué se dedica, cuándo atiende, qué
 // vende — separado a propósito de BotConfigForm (infraestructura del bot:
@@ -34,12 +35,14 @@ export default function BusinessProfileForm({
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [logoDragOver, setLogoDragOver] = useState(false);
   const logoBtnRef = useRef(null);
   const docBtnRef = useRef(null);
 
-  async function handleLogoFile(e) {
-    const file = e.target.files?.[0];
-    e.target.value = ""; // deja re-elegir el mismo archivo después si hace falta
+  // Núcleo compartido — tanto elegir el archivo desde el <input> como
+  // soltarlo arriba de la dropzone terminan en la misma subida real, sin
+  // duplicar el try/catch ni el burst() de confirmación.
+  async function uploadLogoFile(file) {
     if (!file) return;
     setUploadError("");
     setUploadingLogo(true);
@@ -52,6 +55,19 @@ export default function BusinessProfileForm({
     } finally {
       setUploadingLogo(false);
     }
+  }
+
+  function handleLogoFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // deja re-elegir el mismo archivo después si hace falta
+    uploadLogoFile(file);
+  }
+
+  function handleLogoDrop(e) {
+    e.preventDefault();
+    setLogoDragOver(false);
+    if (uploadingLogo) return;
+    uploadLogoFile(e.dataTransfer.files?.[0]);
   }
 
   async function handleRemoveLogo() {
@@ -104,16 +120,34 @@ export default function BusinessProfileForm({
           <div>
             <span style={labelStyle}>Logo</span>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              {profile.logo_url ? (
-                <img src={`${API_BASE}${profile.logo_url}`} alt="Logo" style={logoPreviewStyle} />
-              ) : (
-                <div style={logoPlaceholderStyle}>Sin logo</div>
-              )}
+              <label
+                ref={logoBtnRef}
+                style={{ ...logoDropzoneStyle, ...(logoDragOver ? logoDropzoneDragStyle : null), cursor: uploadingLogo ? "default" : "pointer" }}
+                onDragOver={(e) => { e.preventDefault(); if (!uploadingLogo) setLogoDragOver(true); }}
+                onDragLeave={() => setLogoDragOver(false)}
+                onDrop={handleLogoDrop}
+                title={profile.logo_url ? "Hacé clic o soltá una imagen para cambiarlo" : "Hacé clic o soltá una imagen acá"}
+              >
+                {profile.logo_url ? (
+                  <img src={`${API_BASE}${profile.logo_url}`} alt="Logo" style={logoPreviewImgStyle} />
+                ) : (
+                  <>
+                    <Icon name="image" size={22} style={{ color: "var(--ink-softer)" }} />
+                    <span style={{ fontSize: 10, color: "var(--ink-softer)", fontWeight: 600 }}>Sin logo</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  onChange={handleLogoFile}
+                  style={{ display: "none" }}
+                  disabled={uploadingLogo}
+                />
+              </label>
               <div style={{ display: "grid", gap: 6 }}>
-                <label ref={logoBtnRef} className="vox54-btn secondary small" style={{ cursor: "pointer", justifySelf: "start" }}>
-                  {uploadingLogo ? "Subiendo…" : profile.logo_url ? "Cambiar logo" : "Subir logo"}
-                  <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={handleLogoFile} style={{ display: "none" }} disabled={uploadingLogo} />
-                </label>
+                <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>
+                  {uploadingLogo ? "Subiendo…" : profile.logo_url ? "Hacé clic en el logo para cambiarlo" : "Hacé clic o arrastrá una imagen acá"}
+                </span>
                 {profile.logo_url && (
                   <button type="button" onClick={handleRemoveLogo} style={removeLinkStyle}>Quitar logo</button>
                 )}
@@ -243,28 +277,35 @@ const twoColStyle = {
   gap: 20,
 };
 
-const logoPreviewStyle = {
-  width: 56,
-  height: 56,
-  flexShrink: 0,
-  borderRadius: 10,
+const logoPreviewImgStyle = {
+  width: "100%",
+  height: "100%",
   objectFit: "contain",
-  background: "var(--surface)",
-  border: "1px solid var(--border)",
+  borderRadius: 8,
 };
 
-const logoPlaceholderStyle = {
-  width: 56,
-  height: 56,
+// Dropzone real — clic o arrastre disparan la misma subida. Punteada y
+// chica cuando no hay logo (invita a completarla); apenas hay uno, el
+// borde pasa a sólido, es la miniatura real, no un placeholder.
+const logoDropzoneStyle = {
+  width: 72,
+  height: 72,
   flexShrink: 0,
-  borderRadius: 10,
+  borderRadius: 12,
   display: "flex",
+  flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
-  fontSize: 10.5,
-  color: "var(--ink-softer)",
+  gap: 4,
   background: "var(--surface)",
-  border: "1px dashed var(--border)",
+  border: "1.5px dashed var(--border)",
+  transition: "border-color 0.15s ease, background-color 0.15s ease",
+};
+
+const logoDropzoneDragStyle = {
+  borderColor: "var(--g54-blue)",
+  borderStyle: "solid",
+  background: "rgba(45,91,255,0.06)",
 };
 
 const docLinkStyle = {

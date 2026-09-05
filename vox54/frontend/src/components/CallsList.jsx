@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { parseTranscript, formatDuration, formatDate, OUTCOME_LABEL, OUTCOME_HUE } from "../callFormat";
+import EmptyCallsState from "./EmptyCallsState";
 
 // Visibilidad de resultado — antes de esto, un negocio configuraba su bot y
 // nunca se enteraba de qué pasaba con ninguna llamada real. Reusado tanto
@@ -16,15 +17,10 @@ export default function CallsList({ calls, loading, error }) {
   }
   if (!calls || calls.length === 0) {
     return (
-      <div className="vox54-panel" style={emptyStateStyle}>
-        <div style={{ fontSize: 24, marginBottom: 6 }}>📞</div>
-        <div style={{ fontWeight: 700, fontSize: 14, color: "var(--ink)", marginBottom: 4 }}>
-          Todavía no hubo ninguna llamada
-        </div>
-        <div style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>
-          En cuanto el agente atienda una llamada real, va a aparecer acá.
-        </div>
-      </div>
+      <EmptyCallsState
+        title="Todavía no hubo ninguna llamada"
+        subtitle="En cuanto el agente atienda una llamada real, va a aparecer acá."
+      />
     );
   }
 
@@ -99,9 +95,3 @@ export function OutcomeBadge({ outcome }) {
   const label = OUTCOME_LABEL[outcome] || outcome;
   return <span className={`vox54-pill ${hue}`}>{label}</span>;
 }
-
-const emptyStateStyle = {
-  border: "1px dashed var(--border)",
-  padding: "32px 20px",
-  textAlign: "center",
-};

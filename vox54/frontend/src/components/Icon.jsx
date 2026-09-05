@@ -67,6 +67,16 @@ const PATHS = {
       <path d="M4.5 20a7.5 7.5 0 0 1 15 0" />
     </>
   ),
+  // Logo/imagen — usado en la dropzone de BusinessProfileForm, no en el
+  // menú, pero mismo criterio: un ícono de trazo real en vez de un emoji
+  // (🖼️) que no responde a color.
+  image: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="8.5" cy="9.5" r="1.6" />
+      <path d="m4 17 5-5 3.5 3.5L16 12l4 5" />
+    </>
+  ),
 };
 
 export default function Icon({ name, size = 22, className, style }) {
