@@ -3639,6 +3639,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ---
 
+### 2026-09-05 (Sábado)
+
+Arranqué el día con el diagnóstico de siempre, todo en orden, y le di seguimiento a algo que había quedado abierto: probando con Orison encontré que Ideas AI me estaba inventando un precio de oferta y una playa que Managua ni tiene, sin ninguna regla que le impidiera hacerlo — la até, y de paso encontré que el respaldo de Groq de Content AI estaba roto con un modelo falso de una prueba vieja que nunca revertí, así que también lo dejé andando. Después me metí con algo que el ingeniero me había explicado sobre un bug viejo de WhatsApp que veníamos arrastrando hacía semanas — en vez de darle la razón sin más, lo probé en vivo con mensajes reales, y confirmé que tenía razón: no se perdía nada, yo estaba mirando la bandeja en vez del hilo completo de la conversación. Quedó cerrado del todo.
+
+De ahí encontré algo que había construido mal — la línea base que uso para medir progreso se veía mezclada, sin ningún diseño, en la misma lista de informes que le llega al cliente. Lo hablé con el ingeniero en el momento: la dejamos donde está, pero le hice su propio diseño con la marca real, y le agregamos el pedido de que viva en un campo propio de la estrategia. En el camino cometí un error real que no puedo deshacer — borré 2 registros reales de Crating Express sin haberlos leído antes, así que esos dos puntos de partida quedaron perdidos para siempre. Con todo eso armé el nuevo documento de pendientes para el ingeniero, reemplazando al de hace dos semanas, y cuando me pidieron que probara cada ruta una por una en vez de confiar en lo ya escrito, encontré que uno de los bugs viejos (el origen "prospección" que reventaba siempre) ya se había resuelto solo. Actualicé también una copia vieja de la planilla de Nicaragua que había quedado 16 commits atrás.
+
+Cerré el día con Bubble 54 — levanté el servidor real y entré al panel de agencia para confirmar que todo el rediseño de las últimas semanas sigue funcionando bien de punta a punta: el menú de burbujas, el inicio con el resumen real de mis agentes. Le subí un poco el volumen al sonido de cuando explota una burbuja, y antes de dar nada por bueno hice un clic real para confirmar que sonaba distinto y sin ningún error. Todo quedó commiteado y subido a los dos repositorios, y ahí terminé.
+
+---
+
 ### 2026-09-04 (Viernes)
 
 Arranqué construyendo el segundo agente de prospección de leads que le faltaba a la plataforma, dejándolo con toda la lógica lista pero apagado, porque todavía no tengo una clave real de Google Places para probarlo de verdad. De ahí hice una auditoría de seguridad completa y encontré algo serio: el token que uso para manejar todos nuestros flujos de automatización está expuesto en texto plano en un repositorio que confirmé que es público — lo dejé marcado sin tocarlo, porque rotarlo es una decisión mía tomar, no de la herramienta. Seguí con un repaso honesto de cada agente que tengo en producción, uno por uno, y aunque nada está caído hay huecos reales: dos agentes nuevos que no pueden operar todavía por falta de datos de configuración, y un problema de fondo donde las respuestas de mis bots no siempre quedan visibles en el historial que veo yo misma desde el panel.
