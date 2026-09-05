@@ -158,11 +158,12 @@
     <h1>Éxodo — Pendientes para el ingeniero · <span>05 Sep 2026</span></h1>
     <p>Reemplaza a <code style="color:#a78bfa;background:transparent;border:none;">exodo-g54-ago22.html</code>. Este documento lista los pedidos abiertos por área — el historial de qué se confirmó resuelto y cuándo está abajo, plegado.</p>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> 8 pedidos activos</div>
+      <div class="meta-item"><div class="dot"></div> 6 pedidos activos</div>
     </div>
     <details class="header-updates">
-      <summary>Historial de actualizaciones (1 entrada)</summary>
+      <summary>Historial de actualizaciones (2 entradas)</summary>
       <ul>
+        <li><strong class="upd-date">05-sep (reprobado ruta por ruta contra la API real, con evidencia):</strong> sacado "Banco de ideas" (ya no importa). Reprobados los 6 restantes uno por uno: <strong style="color:#4ade80;">resuelto</strong> — <code>POST /api/agent/crm/leads</code> con <code>origen:"prospeccion"</code> ya da <code>201</code> (antes <code>500</code> siempre) — trato de prueba 172 creado con <code>origen:"prospeccion"</code> real, movido a <code>lost</code>. Sin cambios, confirmados de nuevo: <code>GET /api/n8n/companies/{id}/rrss/analytics</code> sigue <code>404</code>; <code>OPTIONS /api/crm/deals/{id}</code> sigue sin <code>DELETE</code> (<code>Allow: GET,HEAD,PUT,PATCH</code>); <code>OPTIONS /api/crm/deals/{id}/activities</code> igual (<code>Allow: POST</code>); <code>rrss_content_ai</code> sigue <code>is_active:true</code> con webhook real (el falso positivo del panel sigue siendo del panel, no del backend); el bundle real del panel (<code>index-CpgTvMy3.js</code>) tiene 18 llamadas a <code>confirm()</code>, ninguna en el camino de <code>runStrategist()</code>; y los botones "Generar cotización"/"Ejecutar seguimiento IA" siguen sin ningún <code>onClick</code> en su JSX compilado.</li>
         <li><strong class="upd-date">05-sep (creación del documento, reemplaza a exodo-g54-ago22.html):</strong> consolidado el historial acumulado desde el 22-ago. Del lado de Walter, quedaron resueltos y confirmados en vivo: el tablero del CRM con las 6 etapas siempre presentes, el estado <code>usada</code> para ideas, el <code>ig_access_token</code> de Instagram, y que "Generar Post" mande el <code>idea_id</code> real desde el panel (los 4, confirmados el 22-ago); los 4 campos de demanda (<code>guardados</code>/<code>compartidos</code>/<code>visitas_perfil</code>/<code>seguidores_nuevos</code>) + el desglose semanal de calificados/deals (25-ago); <code>modos_respuesta</code> y <code>alertar_nueva_conversacion</code> por canal (27-ago); y, con el documento grande del 04-sep, <code>GET /api/agent/companies/{id}/social-targets</code> (resuelve empresa→página de Meta sin depender de un post en cola) y <code>POST /api/agent/email/send</code> (en vez de un GET que hubiera dejado contraseñas SMTP en texto plano en n8n). De nuestro lado: <code>DELETE /api/rrss/metricas</code> ya existe (confirmado el 27-ago, con la advertencia real de acotarlo siempre con <code>period_start</code>/<code>period_end</code> — sin eso borra el histórico completo, no solo el dato de prueba); el historial del Generador de Imágenes ya responde a los clics (28-ago); y el hallazgo más grande de esta ventana — el "segundo mensaje perdido" de WhatsApp — quedó cerrado del todo el 05-sep: Walter explicó que el problema real era leer por <code>GET /api/whatsapp/conversations</code> (la bandeja, solo trae 1 mensaje de vista previa) en vez de <code>.../conversations/{id}</code> (el hilo completo) — verificado en vivo con evidencia dura antes de aceptarlo, nada se había perdido nunca en la base de datos. También el 05-sep: "línea base"/"evento marcado" (el snapshot interno de progreso de una estrategia) recibió su propio diseño de marca en vez de un fragmento de texto crudo, y se agregó — hablado en conjunto con Walter — el pedido de un campo dedicado en la estrategia para este dato (ver tarjeta en Backend), en vez del recurso separado que se había pedido por error en un primer intento.</li>
       </ul>
     </details>
@@ -331,21 +332,6 @@
     </div>
   </div>
 
-  <!-- ============ BANCO DE IDEAS ============ -->
-  <div class="cat-header">
-    <span class="cat-icon">🗂️</span>
-    <span class="cat-title">Banco de ideas — panel</span>
-  </div>
-
-  <div class="item-card">
-    <div class="item-header">
-      <div><div class="item-title">El panel muestra las ideas ya usadas — el cliente no necesita verlas</div><div class="item-where">Pantalla RRSS › Banco de Ideas</div></div>
-    </div>
-    <div class="item-body">
-      <p class="item-why">El estado <code>usada</code> (que Content AI ya marca al generar un post desde una idea) es control interno nuestro, no algo que el cliente deba ver — hoy la tabla del panel lo muestra igual, con la etiqueta "YA USADO" mezclada entre las ideas pendientes de revisar. El fix es chico: <code>GET /api/rrss/ideas</code> ya soporta <code>?status=idea</code> como filtro real (confirmado en vivo — devuelve exactamente las pendientes, sin las usadas ni las aprobadas), solo falta que la pantalla del Banco de Ideas lo use por defecto en vez de traer y mostrar todo sin filtrar.</p>
-    </div>
-  </div>
-
   <!-- ============ STRATEGIST AI — PANEL ============ -->
   <div class="cat-header">
     <span class="cat-icon">🧠</span>
@@ -406,17 +392,6 @@
     </div>
     <div class="item-body">
       <p class="item-why">Confirmado con <code>OPTIONS /api/crm/deals/{id}</code> (solo <code>GET, HEAD, PUT, PATCH</code>) y con <code>OPTIONS /api/crm/deals/{id}/activities</code> (solo <code>POST</code>) — ninguno de los dos recursos admite borrado. Lo único que se puede hacer con un trato de prueba hoy es moverlo a la etapa <code>lost</code>, y ahí se queda para siempre. Con meses de pruebas reales acumuladas, esto ya generó 63 tratos huérfanos solo en Crating Express (ninguno con <code>wa_contact_id</code> real, así que tampoco se pueden arrastrar borrando el contacto de WhatsApp — ese camino sí tiene <code>DELETE</code> y sí encadena, mismo patrón que ya usamos para leads). Pedido concreto: agregar <code>DELETE /api/crm/deals/{id}</code> (al menos restringido a tratos en <code>lost</code>, mismo criterio que ya existe para posts en <code>borrador</code>) — y, si es posible, lo mismo para una actividad individual dentro de un trato.</p>
-    </div>
-  </div>
-
-  <div class="item-card p0">
-    <div class="item-header">
-      <div><div class="item-title"><code>origen: "prospeccion"</code> revienta con <code>500</code> — confirmado que afecta tanto a crear como a actualizar</div><div class="item-where">Backend — CRM, <code>POST /api/agent/crm/leads</code> y <code>PUT /api/crm/deals/{id}</code></div></div>
-      <span class="badge p0">P0</span>
-    </div>
-    <div class="item-body">
-      <p class="item-why">Confirmado en vivo, con varios intentos aislados: los otros 4 valores agregados el 25-ago al enum de <code>origen</code> (<code>facebook</code>, <code>instagram</code>, <code>telegram</code>, <code>email</code>) crean el lead sin problema — solo <code>prospeccion</code> (el pensado para el agente que prospecta negocios en frío, según la propia nota de la doc del 25-ago) devuelve <code>500 "Server Error"</code>, siempre, reproducible, sin importar qué otros campos se manden. Contradice lo que la misma documentación promete para este endpoint ("un valor fuera de la lista devuelve <code>422</code>, no se guarda en silencio") — acá el valor SÍ está en la lista, y aun así revienta con un error de servidor, no de validación. Mismo <code>500</code> ocurre también con <code>PUT /api/crm/deals/{id}</code> al intentar cambiar el <code>origen</code> de un trato ya existente a <code>prospeccion</code> — no es un problema exclusivo del endpoint de creación, es el valor en sí el que rompe en cualquier punto de escritura. Sin poder usar este valor, el nuevo agente de prospección en frío (`lead_prospecting`) no tiene forma de crear el lead con el origen correcto.</p>
-      <p class="item-why"><strong>Reconfirmado el 04-sep, pese a que un documento de Walter lo daba por resuelto:</strong> probado dos veces por caminos distintos — la llamada directa (sigue <code>500</code>) y, entrando al panel real como usuaria y creando un negocio nuevo con Origen = "Prospección" desde el formulario — el propio panel mostró <strong>"Server Error"</strong> en el modal, el mismo error exacto. Sigue roto de punta a punta, sin importar el camino.</p>
     </div>
   </div>
 
