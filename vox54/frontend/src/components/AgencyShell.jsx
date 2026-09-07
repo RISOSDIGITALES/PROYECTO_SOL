@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import Logo from "./Logo";
 import Icon from "./Icon";
 import PoppableBubbles from "./PoppableBubbles";
+import TopBrandBar from "./TopBrandBar";
 import { useAuth } from "../AuthContext";
 import { api } from "../api";
 import { burst } from "../burst";
+import { AGENCY_PROFILE_EVENT } from "../agencyProfileEvents";
 
 // Shell compartido por todas las pantallas del lado de agencia. El menú
 // vuelve a vivir a la izquierda (después del experimento con el dock
@@ -45,6 +46,7 @@ export default function AgencyShell({ userName, onLogout, children }) {
   const { session } = useAuth();
   const [pausedCount, setPausedCount] = useState(0);
   const [agencyName, setAgencyName] = useState("");
+  const [agencyLogoUrl, setAgencyLogoUrl] = useState("");
 
   // "Inicio" es la landing (bienvenida + progreso + resumen), exclusiva de
   // /agencia — ya no comparte ruta con "Negocios", que se corrió a
@@ -67,18 +69,37 @@ export default function AgencyShell({ userName, onLogout, children }) {
 
   useEffect(() => {
     if (!session?.access_token) return;
+
+    // Nombre + logo real de la agencia para el tope de la barra lateral —
+    // llamada propia del shell, independiente de lo que cada pantalla ya
+    // pida para sí misma. Separada en su propia función porque, a
+    // diferencia del conteo de agentes pausados, esto necesita poder
+    // volver a correr sin que el componente se remonte: si se sube/quita
+    // un logo o se renombra la agencia desde AgencyProfilePage, este shell
+    // se enteraba solo en el próximo login — bug real reportado, ver
+    // agencyProfileEvents.js.
+    function refreshAgencyIdentity() {
+      api.agencyMe(session.access_token)
+        .then((me) => setAgencyName(me.agency_name || ""))
+        .catch(() => {});
+      // agencyMe() no trae logo_url (solo nombre/correo) — hace falta el
+      // perfil completo. Sin logo cargado, BrandMark cae solo a las
+      // iniciales, nunca queda sin nada.
+      api.getAgencyProfile(session.access_token)
+        .then((p) => setAgencyLogoUrl(p.logo_url || ""))
+        .catch(() => {});
+    }
+
     // La burbuja de "Agentes" solo muestra un número real — cuántos bots
     // propios están pausados ahora mismo — nunca un dato inventado. Sin
     // ninguno pausado, no se muestra ninguna burbuja de aviso.
     api.listAgents(session.access_token)
       .then((agents) => setPausedCount(agents.filter((a) => a.bot_status === "paused").length))
       .catch(() => {});
-    // Nombre real de la agencia para el rectángulo bajo el logo — llamada
-    // propia del shell, independiente de lo que cada pantalla ya pida para
-    // sí misma (mismo criterio que el conteo de pausados de arriba).
-    api.agencyMe(session.access_token)
-      .then((me) => setAgencyName(me.agency_name || ""))
-      .catch(() => {});
+
+    refreshAgencyIdentity();
+    window.addEventListener(AGENCY_PROFILE_EVENT, refreshAgencyIdentity);
+    return () => window.removeEventListener(AGENCY_PROFILE_EVENT, refreshAgencyIdentity);
   }, [session]);
 
   // Estallido real (flash+aro+partículas), igual al de las burbujas
@@ -101,20 +122,18 @@ export default function AgencyShell({ userName, onLogout, children }) {
   }
 
   return (
-    <div style={{ display: "flex", height: "100vh" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      <TopBrandBar logoUrl={agencyLogoUrl} name={agencyName} />
+      <div style={{ display: "flex", flex: "1 1 auto", minHeight: 0 }}>
       <nav className="vox54-sidebar g54-gradient" aria-label="Navegación de agencia">
         <PoppableBubbles bubbles={DOCK_BUBBLES} />
 
-        <Link to="/agencia" className="vox54-sidebar-brand" aria-label="Bubble 54">
-          <Logo size="small" />
-        </Link>
-
-        {agencyName && (
-          <div className="vox54-agency-badge" title={agencyName}>
-            {agencyName}
-          </div>
-        )}
-
+        {/* Un solo listado, sin ítems anclados aparte — antes
+            Configuración/Salir vivían agrupados al pie, separados del
+            resto; eso hacía que se vieran "pegados" al fondo en vez de
+            fluir con todo lo demás. El logo/nombre de la agencia ya no
+            vive acá — se movió a TopBrandBar, pegado a la esquina de
+            arriba, sin el hueco que dejaba antes en esta barra. */}
         <div className="vox54-sidebar-main">
           <Link to="/agencia" className="vox54-navcol" onClick={(e) => handleClick("inicio", e)}>
             <span className="vox54-navfloat" style={{ animationDelay: "-2.4s" }}>
@@ -161,13 +180,7 @@ export default function AgencyShell({ userName, onLogout, children }) {
             </span>
             <span className="vox54-navlabel">Registros</span>
           </Link>
-        </div>
 
-        {/* Configuración + Salir agrupadas al pie, separadas del trabajo
-            del día a día — mismo criterio ya usado cuando el menú vivía
-            del lado izquierdo la primera vez (son ajuste de cuenta, no
-            un destino de trabajo). */}
-        <div className="vox54-sidebar-foot">
           <Link to="/agencia/configuracion" className="vox54-navcol" onClick={(e) => handleClick("config", e)}>
             <span className="vox54-navfloat" style={{ animationDelay: "-3.1s" }}>
               <span className={`vox54-navbubble hueC ${isConfig ? "active" : ""}`}>
@@ -199,6 +212,7 @@ export default function AgencyShell({ userName, onLogout, children }) {
             puede superponerse al contenido, se lo cede automáticamente. */}
         <main style={mainScrollStyle}>{children}</main>
       </div>
+      </div>
     </div>
   );
 }
@@ -208,7 +222,10 @@ const contentColStyle = {
   minWidth: 0,
   display: "flex",
   flexDirection: "column",
-  height: "100vh",
+  // 100% (no 100vh) — ahora esta columna es hija de la fila que vive
+  // debajo de TopBrandBar, no directa del viewport. Mismo motivo que el
+  // fix de .vox54-sidebar en theme.css.
+  height: "100%",
 };
 
 const topbarStyle = {

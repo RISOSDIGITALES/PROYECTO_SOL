@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Logo from "../components/Logo";
 import Icon from "../components/Icon";
 import BotConfigForm from "../components/BotConfigForm";
 import BusinessProfileForm from "../components/BusinessProfileForm";
@@ -9,6 +8,7 @@ import ChangePasswordForm from "../components/ChangePasswordForm";
 import PoppableBubbles from "../components/PoppableBubbles";
 import PrefsToggles from "../components/PrefsToggles";
 import StatusPill from "../components/StatusPill";
+import TopBrandBar from "../components/TopBrandBar";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
@@ -141,12 +141,14 @@ export default function BusinessDashboard() {
   const errorCallsCount = calls ? calls.filter((c) => c.outcome === "error").length : 0;
 
   return (
-    <div style={{ display: "flex", height: "100vh" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      <TopBrandBar logoUrl={profile?.logo_url} name={me?.business_name} />
+      <div style={{ display: "flex", flex: "1 1 auto", minHeight: 0 }}>
       <nav className="vox54-sidebar g54-gradient" aria-label="Navegación de negocio">
         <PoppableBubbles bubbles={DOCK_BUBBLES} />
 
-        <div className="vox54-sidebar-brand"><Logo size="small" /></div>
-
+        {/* Un solo listado, sin ítems anclados aparte — el logo/nombre
+            del negocio ya no vive acá, se movió a TopBrandBar. */}
         <div className="vox54-sidebar-main">
           <button type="button" className="vox54-navcol" onClick={(e) => goTo("calls", e)}>
             <span className="vox54-navfloat" style={{ animationDelay: "-0.6s" }}>
@@ -175,9 +177,7 @@ export default function BusinessDashboard() {
             </span>
             <span className="vox54-navlabel">Configuración</span>
           </button>
-        </div>
 
-        <div className="vox54-sidebar-foot">
           <button type="button" className="vox54-navcol" onClick={(e) => goTo("account", e)}>
             <span className="vox54-navfloat" style={{ animationDelay: "-3.1s" }}>
               <span className={`vox54-navbubble hueC ${tab === "account" ? "active" : ""}`}>
@@ -325,6 +325,7 @@ export default function BusinessDashboard() {
           </div>
         </main>
       </div>
+      </div>
     </div>
   );
 }
@@ -343,7 +344,10 @@ const contentColStyle = {
   minWidth: 0,
   display: "flex",
   flexDirection: "column",
-  height: "100vh",
+  // 100% (no 100vh) — ahora esta columna es hija de la fila que vive
+  // debajo de TopBrandBar, no directa del viewport. Mismo motivo que el
+  // fix de .vox54-sidebar en theme.css.
+  height: "100%",
 };
 
 const topbarStyle = {

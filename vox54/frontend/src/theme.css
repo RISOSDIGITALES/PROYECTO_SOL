@@ -352,41 +352,22 @@ textarea:focus {
   position: relative;
   flex-shrink: 0;
   width: 176px;
-  height: 100vh;
+  /* 100% en vez de un 100vh fijo — ahora vive dentro de una fila que a su
+     vez es un hijo flex (flex:1 1 auto; min-height:0) de la columna que
+     tiene el 100vh real (TopBrandBar arriba). Con 100vh fijo acá se
+     desbordaba por la altura de esa franja nueva. */
+  height: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 26px 0 22px;
-}
-
-.vox54-sidebar-brand {
-  position: relative;
-  z-index: 2;
-  margin-bottom: 8px;
-  text-decoration: none;
-}
-
-/* Rectángulo chico bajo el logo con el nombre real de la agencia —
-   ver AgencyShell.jsx. Vidrio traslúcido, mismo criterio que el resto
-   de la barra lateral sobre el fondo azul degradado. */
-.vox54-agency-badge {
-  position: relative;
-  z-index: 2;
-  max-width: 136px;
-  margin: 0 0 18px;
-  padding: 4px 11px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  font-size: 10.5px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.92);
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  letter-spacing: 0.01em;
+  /* Antes 26px arriba + el logo/badge propios de esta barra (ver historial
+     de .vox54-sidebar-brand/.vox54-agency-badge, retirados) — sumado a los
+     52px de TopBrandBar arriba, dejaba un hueco real antes del primer
+     ítem. El logo ya no vive acá — se movió a TopBrandBar, pegado a la
+     esquina — así que este padding vuelve a ser solo el respiro normal
+     de la lista, no espacio para nada más. */
+  padding: 18px 0 22px;
 }
 
 .vox54-sidebar-main {
@@ -397,19 +378,46 @@ textarea:focus {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 40px;
+  /* flex-start (default), no center — un solo listado real ahora
+     (Inicio...Registros, Configuración, Salir juntos, ya no separados en
+     dos grupos anclados) tiene que fluir desde arriba, no repartirse
+     centrado en el espacio libre. Con center, cuando el contenido no
+     entraba en el alto disponible (ventana baja) desbordaba SIMÉTRICO —
+     para arriba y para abajo por igual — pisando lo que hubiera arriba y
+     abajo del propio elemento, sin importar overflow:hidden en el padre
+     (ese overflow solo recorta contra SU PROPIO borde, no contra los
+     hermanos de este). Con flex-start, si no entra, el desborde queda
+     siempre abajo — el comportamiento esperado de una lista, sin pisar
+     nada de arriba.
+     overflow-y:auto + la barra oculta (scrollbar-width/::-webkit-scrollbar
+     abajo) siguen de red de seguridad para ese caso — desplazable con la
+     rueda, sin ninguna barra visible ni scroll horizontal (overflow-x:
+     hidden, necesario porque el navegador trata overflow-x como auto
+     también en cuanto overflow-y deja de ser "visible", y las burbujas
+     decorativas que asoman a propósito fuera del ancho angosto ya cuentan
+     como desborde horizontal acá adentro). */
+  /* 28px, no 40 — con los 7 ítems ya juntos en una sola lista (antes eran
+     5 arriba + 2 anclados abajo, nunca competían por el mismo espacio),
+     40px de por medio dejaba a "Salir" fuera de vista incluso en una
+     ventana real de 1440x900 — obligaba a un scroll invisible para algo
+     tan básico como cerrar sesión. Con 28px entran los 7 sin scroll en
+     cualquier tamaño razonable, confirmado en vivo. */
+  gap: 28px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none; /* Firefox */
+  /* El flote (vox54-floaty) mueve cada ícono hasta 9px hacia arriba de su
+     posición real — con la lista ya sin el espacio libre de antes
+     (justify-content:center dejaba margen arriba gratis), el primer
+     ítem ("Inicio") no tenía ningún respiro y el propio overflow-y:auto
+     le recortaba la punta en cada subida del flote, un corte real, no
+     solo apariencia. Este padding le da lugar al movimiento sin que la
+     caja lo recorte. */
+  padding-top: 10px;
 }
 
-.vox54-sidebar-foot {
-  position: relative;
-  z-index: 2;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 24px;
-  padding-top: 18px;
+.vox54-sidebar-main::-webkit-scrollbar {
+  display: none; /* Chrome/Edge/Safari */
 }
 
 .vox54-amb {

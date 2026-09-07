@@ -1,23 +1,44 @@
 import { useEffect, useState } from "react";
-import { Link, useOutletContext } from "react-router-dom";
+import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import StatusPill from "../components/StatusPill";
+import CreateBusinessModal from "../components/CreateBusinessModal";
 import { api } from "../api";
 
 // Vista aparte de "Negocios" — esa es una grilla de tarjetas pensada para
 // entrar a editar un negocio puntual; esta es una tabla densa pensada para
 // ver de un vistazo el estado real de infraestructura de cada agente
 // (proveedor de telefonía, número, modelo de IA) sin entrar a cada uno.
+//
+// No existe ningún "crear agente" independiente — el modelo real es 1
+// negocio = 1 bot (BotConfig nace solo al crear el Business, ver
+// create_business en agency.py). El botón de acá reusa el mismo modal de
+// "Crear negocio" que ya usa /agencia/negocios, para no tener dos flujos
+// de creación distintos aterrizando en lo mismo — y, a diferencia de esa
+// pantalla, después de crear manda directo a configurar el bot nuevo (que
+// es lo que alguien mirando ESTE inventario en particular busca).
 export default function AgencyAgentsPage() {
   const { session } = useOutletContext();
+  const navigate = useNavigate();
   const [agents, setAgents] = useState(null);
   const [catalog, setCatalog] = useState(null);
   const [error, setError] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+
+  function refreshAgents() {
+    api.listAgents(session.access_token).then(setAgents).catch((e) => setError(e.message));
+  }
 
   useEffect(() => {
     if (!session) return;
-    api.listAgents(session.access_token).then(setAgents).catch((e) => setError(e.message));
+    refreshAgents();
     api.getCatalog().then(setCatalog).catch(() => {});
   }, [session]);
+
+  async function handleCreate(form) {
+    const created = await api.createBusiness(session.access_token, form);
+    setShowCreate(false);
+    navigate(`/agencia/negocios/${created.id}/bot`);
+  }
 
   if (!session) return null;
 
@@ -35,11 +56,17 @@ export default function AgencyAgentsPage() {
   }
 
   return (
+    <>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
-        <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>Inventario de agentes</h1>
-        <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginBottom: 24 }}>
-          Todos los agentes de voz que gestionás, a qué negocio pertenece cada uno, y con qué infraestructura corre.
-        </p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24 }}>
+          <div>
+            <h1 style={{ fontSize: 22, color: "var(--ink)", marginBottom: 4 }}>Inventario de agentes</h1>
+            <p style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>
+              Todos los agentes de voz que gestionás, a qué negocio pertenece cada uno, y con qué infraestructura corre.
+            </p>
+          </div>
+          <button onClick={() => setShowCreate(true)} className="vox54-btn" style={{ flexShrink: 0 }}>+ Nuevo agente</button>
+        </div>
 
         {error && <div style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</div>}
 
@@ -89,6 +116,10 @@ export default function AgencyAgentsPage() {
           </div>
         )}
       </div>
+      {showCreate && (
+        <CreateBusinessModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />
+      )}
+    </>
   );
 }
 

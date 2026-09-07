@@ -5,6 +5,7 @@ import Icon from "../components/Icon";
 import { api, API_BASE } from "../api";
 import { initials } from "../utils";
 import { burst } from "../burst";
+import { notifyAgencyProfileChanged } from "../agencyProfileEvents";
 
 // Perfil real de la agencia — nombre, contacto, sitio, dirección, y ahora
 // también LA LISTA REAL de negocios que gestiona (antes era solo un número,
@@ -39,6 +40,7 @@ export default function AgencyProfilePage() {
       const updated = await api.uploadAgencyLogo(session.access_token, file);
       setProfile((prev) => ({ ...prev, logo_url: updated.logo_url }));
       burst(logoBtnRef.current);
+      notifyAgencyProfileChanged();
     } catch (err) {
       setLogoError(err.message);
     } finally {
@@ -64,6 +66,7 @@ export default function AgencyProfilePage() {
     try {
       const updated = await api.removeAgencyLogo(session.access_token);
       setProfile((prev) => ({ ...prev, logo_url: updated.logo_url }));
+      notifyAgencyProfileChanged();
     } catch (err) {
       setLogoError(err.message);
     }
@@ -90,6 +93,7 @@ export default function AgencyProfilePage() {
       setProfile((prev) => ({ ...prev, ...updated }));
       setSavedMessage("Guardado correctamente.");
       burst(saveBtnRef.current);
+      notifyAgencyProfileChanged();
     } catch (err) {
       setError(err.message);
     } finally {
