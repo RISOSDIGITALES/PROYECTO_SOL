@@ -1,23 +1,24 @@
 {
-  "updatedAt": "2026-08-17T16:33:13.294Z",
-  "createdAt": "2026-06-12T20:28:34.750Z",
   "id": "EX9K1AZwKeouSJ9G",
   "name": "📊 Analytics AI Semanal — G54",
   "description": null,
   "active": true,
+  "activeVersionId": "7fe25181-1b3d-4b4b-9cd8-8a5589d68974",
+  "createdAt": "2026-06-12T20:28:34.750Z",
+  "updatedAt": "2026-09-07T15:11:17.279Z",
   "isArchived": false,
+  "versionId": "7fe25181-1b3d-4b4b-9cd8-8a5589d68974",
+  "versionCounter": 24,
+  "sourceWorkflowId": null,
+  "triggerCount": 2,
   "nodes": [
     {
       "parameters": {
         "rule": {
           "interval": [
             {
-              "field": "weeks",
-              "weeksInterval": 1,
-              "triggerAtDay": [
-                1
-              ],
-              "triggerAtHour": 8
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
             }
           ]
         }
@@ -30,7 +31,7 @@
         240,
         400
       ],
-      "disabled": true
+      "disabled": false
     },
     {
       "parameters": {
@@ -536,6 +537,35 @@
         "options": {}
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "config-empresas-semanal",
+      "name": "📋 Empresas con Redes Conocidas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        400
+      ],
+      "parameters": {
+        "jsCode": "const BASE = \"https://apigrowth.mdarthurdigital.com\";\nconst AGENT_TOKEN = \"REDACTED_AGENT_TOKEN\";\n\n// Excluidas del despacho automático: empresas cuyas credenciales de Meta\n// están confirmadas como copiadas/compartidas con otra empresa (no son\n// datos reales propios) — hoy Orison (id 6) comparte el mismo page_id de\n// Facebook que Crating Express (ver CLAUDE.md, hallazgo del 13-jul, decisión\n// explícita del 07-sep de excluirla hasta que tenga sus propias redes).\nconst EXCLUIDAS = [6];\n\nconst empresasResp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: BASE + \"/api/n8n/companies?activas=1&con_redes=1\",\n  headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n  json: true,\n});\nconst empresas = (empresasResp && empresasResp.data) || [];\n\nconst salida = [];\nfor (const emp of empresas) {\n  if (EXCLUIDAS.includes(emp.id)) continue;\n\n  let targets = [];\n  try {\n    const tResp = await this.helpers.httpRequest({\n      method: \"GET\",\n      url: BASE + \"/api/agent/companies/\" + emp.id + \"/social-targets\",\n      headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n      json: true,\n    });\n    targets = (tResp && tResp.data) || [];\n  } catch (e) {\n    continue; // empresa sin conexión resuelta - se salta, no se inventa nada\n  }\n\n  const fb = targets.find(t => t.platform === \"Facebook\" && t.listo);\n  const ig = targets.find(t => t.platform === \"Instagram\" && t.listo);\n\n  if (!fb && !ig) continue; // ninguna red lista - nada real que reportar\n\n  salida.push({\n    json: {\n      company_id: emp.id,\n      fb_page_id: fb ? fb.page_id : null,\n      ig_user_id: ig ? ig.instagram_account_id : null,\n    },\n  });\n}\n\nreturn salida;"
+      }
+    },
+    {
+      "id": "disparar-semanal-self",
+      "name": "📤 Disparar Reporte Semanal (auto-despacho)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        760,
+        400
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "=https://n8n.mdarthurdigital.com/webhook/analytics-semanal-g54?company_id={{ $json.company_id }}&fb_page_id={{ $json.fb_page_id || \"\" }}&ig_user_id={{ $json.ig_user_id || \"\" }}",
+        "options": {}
+      }
     }
   ],
   "connections": {
@@ -543,7 +573,7 @@
       "main": [
         [
           {
-            "node": "⚙️ Config Growth54",
+            "node": "📋 Empresas con Redes Conocidas",
             "type": "main",
             "index": 0
           }
@@ -775,8 +805,20 @@
           }
         ]
       ]
+    },
+    "📋 Empresas con Redes Conocidas": {
+      "main": [
+        [
+          {
+            "node": "📤 Disparar Reporte Semanal (auto-despacho)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
+  "nodeGroups": [],
   "settings": {
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner",
@@ -784,42 +826,39 @@
   },
   "staticData": {
     "node:⏰ Trigger Semanal (Lunes 8am)": {
-      "recurrenceRules": []
+      "recurrenceRules": [
+        null
+      ],
+      "recurrenceRuleSignatures": [
+        null
+      ]
     }
   },
-  "meta": null,
-  "nodeGroups": [],
   "pinData": null,
-  "versionId": "269fb64d-9a4a-48ca-b6ae-7f077ce2e678",
-  "activeVersionId": "269fb64d-9a4a-48ca-b6ae-7f077ce2e678",
-  "versionCounter": 20,
-  "triggerCount": 1,
-  "sourceWorkflowId": null,
+  "meta": null,
+  "tags": [],
   "shared": [
     {
-      "updatedAt": "2026-06-12T20:28:34.755Z",
-      "createdAt": "2026-06-12T20:28:34.755Z",
       "role": "workflow:owner",
       "workflowId": "EX9K1AZwKeouSJ9G",
       "projectId": "scK6yPpEmlkikl67",
       "project": {
-        "updatedAt": "2026-03-16T19:58:01.773Z",
-        "createdAt": "2026-03-16T19:56:18.866Z",
         "id": "scK6yPpEmlkikl67",
         "name": "Solange  Torrez <risosadmi@gmail.com>",
         "type": "personal",
         "icon": null,
         "description": null,
         "customTelemetryTags": [],
-        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      }
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-06-12T20:28:34.755Z",
+      "updatedAt": "2026-06-12T20:28:34.755Z"
     }
   ],
-  "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-08-17T16:33:13.297Z",
-    "createdAt": "2026-08-17T16:33:13.297Z",
-    "versionId": "269fb64d-9a4a-48ca-b6ae-7f077ce2e678",
+    "versionId": "7fe25181-1b3d-4b4b-9cd8-8a5589d68974",
     "workflowId": "EX9K1AZwKeouSJ9G",
     "nodes": [
       {
@@ -827,12 +866,8 @@
           "rule": {
             "interval": [
               {
-                "field": "weeks",
-                "weeksInterval": 1,
-                "triggerAtDay": [
-                  1
-                ],
-                "triggerAtHour": 8
+                "field": "cronExpression",
+                "expression": "0 8 * * 1"
               }
             ]
           }
@@ -845,7 +880,7 @@
           240,
           400
         ],
-        "disabled": true
+        "disabled": false
       },
       {
         "parameters": {
@@ -1351,6 +1386,35 @@
           "options": {}
         },
         "onError": "continueRegularOutput"
+      },
+      {
+        "id": "config-empresas-semanal",
+        "name": "📋 Empresas con Redes Conocidas",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          500,
+          400
+        ],
+        "parameters": {
+          "jsCode": "const BASE = \"https://apigrowth.mdarthurdigital.com\";\nconst AGENT_TOKEN = \"REDACTED_AGENT_TOKEN\";\n\n// Excluidas del despacho automático: empresas cuyas credenciales de Meta\n// están confirmadas como copiadas/compartidas con otra empresa (no son\n// datos reales propios) — hoy Orison (id 6) comparte el mismo page_id de\n// Facebook que Crating Express (ver CLAUDE.md, hallazgo del 13-jul, decisión\n// explícita del 07-sep de excluirla hasta que tenga sus propias redes).\nconst EXCLUIDAS = [6];\n\nconst empresasResp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: BASE + \"/api/n8n/companies?activas=1&con_redes=1\",\n  headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n  json: true,\n});\nconst empresas = (empresasResp && empresasResp.data) || [];\n\nconst salida = [];\nfor (const emp of empresas) {\n  if (EXCLUIDAS.includes(emp.id)) continue;\n\n  let targets = [];\n  try {\n    const tResp = await this.helpers.httpRequest({\n      method: \"GET\",\n      url: BASE + \"/api/agent/companies/\" + emp.id + \"/social-targets\",\n      headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n      json: true,\n    });\n    targets = (tResp && tResp.data) || [];\n  } catch (e) {\n    continue; // empresa sin conexión resuelta - se salta, no se inventa nada\n  }\n\n  const fb = targets.find(t => t.platform === \"Facebook\" && t.listo);\n  const ig = targets.find(t => t.platform === \"Instagram\" && t.listo);\n\n  if (!fb && !ig) continue; // ninguna red lista - nada real que reportar\n\n  salida.push({\n    json: {\n      company_id: emp.id,\n      fb_page_id: fb ? fb.page_id : null,\n      ig_user_id: ig ? ig.instagram_account_id : null,\n    },\n  });\n}\n\nreturn salida;"
+        }
+      },
+      {
+        "id": "disparar-semanal-self",
+        "name": "📤 Disparar Reporte Semanal (auto-despacho)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          760,
+          400
+        ],
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "GET",
+          "url": "=https://n8n.mdarthurdigital.com/webhook/analytics-semanal-g54?company_id={{ $json.company_id }}&fb_page_id={{ $json.fb_page_id || \"\" }}&ig_user_id={{ $json.ig_user_id || \"\" }}",
+          "options": {}
+        }
       }
     ],
     "connections": {
@@ -1358,7 +1422,7 @@
         "main": [
           [
             {
-              "node": "⚙️ Config Growth54",
+              "node": "📋 Empresas con Redes Conocidas",
               "type": "main",
               "index": 0
             }
@@ -1590,6 +1654,17 @@
             }
           ]
         ]
+      },
+      "📋 Empresas con Redes Conocidas": {
+        "main": [
+          [
+            {
+              "node": "📤 Disparar Reporte Semanal (auto-despacho)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -1597,22 +1672,32 @@
     "name": null,
     "description": null,
     "autosaved": false,
+    "createdAt": "2026-09-07T15:11:17.282Z",
+    "updatedAt": "2026-09-07T15:11:17.282Z",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-08-17T16:33:13.410Z",
-        "id": 2868,
+        "id": 3128,
         "workflowId": "EX9K1AZwKeouSJ9G",
-        "versionId": "269fb64d-9a4a-48ca-b6ae-7f077ce2e678",
+        "versionId": "7fe25181-1b3d-4b4b-9cd8-8a5589d68974",
         "event": "activated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-09-07T15:11:17.692Z"
       },
       {
-        "createdAt": "2026-08-17T16:33:13.382Z",
-        "id": 2867,
+        "id": 3130,
         "workflowId": "EX9K1AZwKeouSJ9G",
-        "versionId": "269fb64d-9a4a-48ca-b6ae-7f077ce2e678",
+        "versionId": "7fe25181-1b3d-4b4b-9cd8-8a5589d68974",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-09-07T15:11:19.578Z"
+      },
+      {
+        "id": 3129,
+        "workflowId": "EX9K1AZwKeouSJ9G",
+        "versionId": "7fe25181-1b3d-4b4b-9cd8-8a5589d68974",
         "event": "deactivated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-09-07T15:11:18.635Z"
       }
     ]
   }
