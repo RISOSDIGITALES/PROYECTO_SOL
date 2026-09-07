@@ -72,8 +72,10 @@ describe("BotConfigForm — auto-corrección de desplegables huérfanos", () => 
     expect(select).toBeInTheDocument();
   });
 
-  it("mismo caso para stt_model", async () => {
+  it("mismo caso para stt_model — corregido en estado aunque el select viva plegado en Configuración técnica", async () => {
+    const user = userEvent.setup();
     render(<Wrapper initialConfig={{ ...baseConfig, stt_provider: "groq", stt_model: "" }} />);
+    await user.click(screen.getByRole("button", { name: /Configuración técnica/ }));
     const select = await screen.findByDisplayValue("Whisper Turbo");
     expect(select).toBeInTheDocument();
   });
@@ -138,22 +140,36 @@ describe("BotConfigForm — envío", () => {
 });
 
 describe("BotConfigForm — separación cliente/agencia", () => {
-  it("scope agencia (default) muestra las 4 secciones técnicas completas", () => {
+  it("scope agencia (default) muestra personalización (Número, Modelo de IA, Voz del agente) a simple vista", () => {
     render(<Wrapper initialConfig={baseConfig} scope="agency" />);
-    expect(screen.getByText("Telefonía")).toBeInTheDocument();
-    expect(screen.getByText("Reconocimiento de voz (STT)")).toBeInTheDocument();
-    expect(screen.getByText("Síntesis de voz (TTS)")).toBeInTheDocument();
+    expect(screen.getByText("Número")).toBeInTheDocument();
     expect(screen.getByText("Modelo de IA")).toBeInTheDocument();
+    expect(screen.getByText("Voz del agente")).toBeInTheDocument();
   });
 
-  it("scope cliente oculta las 4 secciones técnicas por completo, ni siquiera quedan en el DOM", () => {
+  it("scope agencia arranca con la configuración técnica plegada, y el botón la despliega", async () => {
+    const user = userEvent.setup();
+    render(<Wrapper initialConfig={baseConfig} scope="agency" />);
+
+    expect(screen.queryByText("Telefonía")).not.toBeInTheDocument();
+    expect(screen.queryByText("Reconocimiento de voz (STT)")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Configuración técnica/ }));
+
+    expect(screen.getByText("Telefonía")).toBeInTheDocument();
+    expect(screen.getByText("Reconocimiento de voz (STT)")).toBeInTheDocument();
+    expect(screen.getByLabelText("API key propia de IA (opcional)")).toBeInTheDocument();
+  });
+
+  it("scope cliente oculta las secciones técnicas por completo, ni siquiera quedan en el DOM", () => {
     render(<Wrapper initialConfig={baseConfig} scope="client" />);
     expect(screen.queryByText("Telefonía")).not.toBeInTheDocument();
     expect(screen.queryByText("Reconocimiento de voz (STT)")).not.toBeInTheDocument();
-    expect(screen.queryByText("Síntesis de voz (TTS)")).not.toBeInTheDocument();
+    expect(screen.queryByText("Voz del agente")).not.toBeInTheDocument();
     expect(screen.queryByText("Modelo de IA")).not.toBeInTheDocument();
     expect(screen.queryByText("Proveedor de telefonía")).not.toBeInTheDocument();
-    expect(screen.queryByText("API key propia (opcional)")).not.toBeInTheDocument();
+    expect(screen.queryByText("API key propia de IA (opcional)")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Configuración técnica/ })).not.toBeInTheDocument();
   });
 
   it("scope cliente muestra el número asignado como texto de solo lectura, no un input editable", () => {

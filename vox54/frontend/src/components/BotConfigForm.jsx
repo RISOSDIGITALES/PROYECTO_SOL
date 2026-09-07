@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { burst } from "../burst";
 
 /**
@@ -17,6 +17,14 @@ import { burst } from "../burst";
  * (BotConfigUpdateClient, ver schemas.py) — esto es la vista honesta de esa
  * misma barrera, para no mostrarle al cliente un campo que después el
  * servidor va a ignorar en silencio.
+ *
+ * Dentro del scope "agency" hay una segunda separación, solo visual — entre
+ * lo que alguien no técnico personaliza seguido (número, modelo de IA, voz)
+ * y lo que es configuración técnica de una sola vez (proveedor de telefonía,
+ * SIP trunk, dónde corre el worker, reconocimiento de voz, API key propia).
+ * Lo segundo vive plegado en <AdvancedSection>, cerrado por default — mismos
+ * campos y mismo submit de siempre, solo reordenados para no enterrar la
+ * personalización real bajo términos de infraestructura.
  */
 export default function BotConfigForm({ config, catalog, onChange, onSave, saving, savedMessage, error, scope = "agency" }) {
   const isAgency = scope === "agency";
@@ -133,46 +141,14 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
       </Section>
 
       {isAgency ? (
-        <Section title="Telefonía">
-          <Row>
-            <Field label="Proveedor de telefonía">
-              <select
-                value={config.telephony_provider}
-                onChange={(e) => onChange({ telephony_provider: e.target.value })}
-                style={inputStyle}
-              >
-                {catalog.telephony_providers.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Número de teléfono asignado">
-              <input
-                value={config.phone_number}
-                onChange={(e) => onChange({ phone_number: e.target.value })}
-                placeholder="Sin asignar todavía"
-                style={inputStyle}
-              />
-            </Field>
-          </Row>
-          <Field label="SIP trunk / ID de configuración (opcional)">
+        <Section title="Número">
+          <Field label="Número de teléfono asignado">
             <input
-              value={config.telephony_trunk_id}
-              onChange={(e) => onChange({ telephony_trunk_id: e.target.value })}
-              placeholder="Sin configurar todavía"
+              value={config.phone_number}
+              onChange={(e) => onChange({ phone_number: e.target.value })}
+              placeholder="Sin asignar todavía"
               style={inputStyle}
             />
-          </Field>
-          <Field label="Dónde corre el agente (worker de LiveKit Agents)">
-            <select
-              value={config.runtime_target}
-              onChange={(e) => onChange({ runtime_target: e.target.value })}
-              style={inputStyle}
-            >
-              {catalog.runtime_targets.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
-            </select>
           </Field>
         </Section>
       ) : (
@@ -185,60 +161,6 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
 
       {isAgency && (
         <>
-          <Section title="Reconocimiento de voz (STT)">
-            <Row>
-              <Field label="Proveedor">
-                <select
-                  value={config.stt_provider}
-                  onChange={(e) => handleSttProviderChange(e.target.value)}
-                  style={inputStyle}
-                >
-                  {catalog.stt_providers.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Modelo">
-                <select
-                  value={config.stt_model}
-                  onChange={(e) => onChange({ stt_model: e.target.value })}
-                  style={inputStyle}
-                >
-                  {sttModels.map((m) => (
-                    <option key={m.id} value={m.id}>{m.name}</option>
-                  ))}
-                </select>
-              </Field>
-            </Row>
-          </Section>
-
-          <Section title="Síntesis de voz (TTS)">
-            <Row>
-              <Field label="Proveedor">
-                <select
-                  value={config.tts_provider}
-                  onChange={(e) => handleTtsProviderChange(e.target.value)}
-                  style={inputStyle}
-                >
-                  {catalog.tts_providers.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Voz">
-                <select
-                  value={config.tts_voice_id}
-                  onChange={(e) => onChange({ tts_voice_id: e.target.value })}
-                  style={inputStyle}
-                >
-                  {ttsVoices.map((v) => (
-                    <option key={v.id} value={v.id}>{v.name}</option>
-                  ))}
-                </select>
-              </Field>
-            </Row>
-          </Section>
-
           <Section title="Modelo de IA">
             <Row>
               <Field label="Proveedor">
@@ -264,15 +186,33 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
                 </select>
               </Field>
             </Row>
-            <Field label="API key propia (opcional)">
-              <input
-                type="password"
-                value={config.ai_api_key}
-                onChange={(e) => onChange({ ai_api_key: e.target.value })}
-                placeholder="Dejar vacío para usar la key compartida de la plataforma"
-                style={inputStyle}
-              />
-            </Field>
+          </Section>
+
+          <Section title="Voz del agente">
+            <Row>
+              <Field label="Proveedor">
+                <select
+                  value={config.tts_provider}
+                  onChange={(e) => handleTtsProviderChange(e.target.value)}
+                  style={inputStyle}
+                >
+                  {catalog.tts_providers.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Voz">
+                <select
+                  value={config.tts_voice_id}
+                  onChange={(e) => onChange({ tts_voice_id: e.target.value })}
+                  style={inputStyle}
+                >
+                  {ttsVoices.map((v) => (
+                    <option key={v.id} value={v.id}>{v.name}</option>
+                  ))}
+                </select>
+              </Field>
+            </Row>
           </Section>
         </>
       )}
@@ -424,6 +364,81 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
           </Field>
         )}
       </Section>
+
+      {isAgency && (
+        <AdvancedSection>
+          <Section title="Telefonía">
+            <Row>
+              <Field label="Proveedor de telefonía">
+                <select
+                  value={config.telephony_provider}
+                  onChange={(e) => onChange({ telephony_provider: e.target.value })}
+                  style={inputStyle}
+                >
+                  {catalog.telephony_providers.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="SIP trunk / ID de configuración (opcional)">
+                <input
+                  value={config.telephony_trunk_id}
+                  onChange={(e) => onChange({ telephony_trunk_id: e.target.value })}
+                  placeholder="Sin configurar todavía"
+                  style={inputStyle}
+                />
+              </Field>
+            </Row>
+            <Field label="Dónde corre el agente (worker de LiveKit Agents)">
+              <select
+                value={config.runtime_target}
+                onChange={(e) => onChange({ runtime_target: e.target.value })}
+                style={inputStyle}
+              >
+                {catalog.runtime_targets.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+            </Field>
+          </Section>
+
+          <Section title="Reconocimiento de voz (STT)">
+            <Row>
+              <Field label="Proveedor">
+                <select
+                  value={config.stt_provider}
+                  onChange={(e) => handleSttProviderChange(e.target.value)}
+                  style={inputStyle}
+                >
+                  {catalog.stt_providers.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Modelo">
+                <select
+                  value={config.stt_model}
+                  onChange={(e) => onChange({ stt_model: e.target.value })}
+                  style={inputStyle}
+                >
+                  {sttModels.map((m) => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </Field>
+            </Row>
+            <Field label="API key propia de IA (opcional)">
+              <input
+                type="password"
+                value={config.ai_api_key}
+                onChange={(e) => onChange({ ai_api_key: e.target.value })}
+                placeholder="Dejar vacío para usar la key compartida de la plataforma"
+                style={inputStyle}
+              />
+            </Field>
+          </Section>
+        </AdvancedSection>
+      )}
       </div>
 
       <button ref={saveBtnRef} type="submit" disabled={saving} className="vox54-btn">
@@ -440,6 +455,27 @@ function Section({ title, full, children }) {
         {title}
       </div>
       <div style={{ display: "grid", gap: 14 }}>{children}</div>
+    </div>
+  );
+}
+
+// Agrupa lo que es configuración técnica de una sola vez (telefonía, SIP,
+// reconocimiento de voz, API key propia) — plegado por default para que la
+// personalización real (número, modelo de IA, voz) no quede enterrada entre
+// términos de infraestructura que a nadie no técnico le importan seguido.
+function AdvancedSection({ children }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ gridColumn: "1 / -1", display: "grid", gap: 16 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={advancedToggleStyle}
+      >
+        <span style={{ display: "inline-block", transform: open ? "rotate(90deg)" : "none", transition: "transform .15s ease" }}>▸</span>
+        {open ? "Ocultar configuración técnica" : "Configuración técnica (telefonía, reconocimiento de voz)"}
+      </button>
+      {open && <div style={gridStyle}>{children}</div>}
     </div>
   );
 }
@@ -495,6 +531,20 @@ const inputStyle = {
   outline: "none",
   fontFamily: "var(--font)",
   background: "var(--white)",
+};
+
+const advancedToggleStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  width: "fit-content",
+  background: "none",
+  border: "none",
+  padding: "4px 0",
+  fontSize: 12.5,
+  fontWeight: 600,
+  color: "var(--ink-soft)",
+  cursor: "pointer",
 };
 
 const readOnlyValueStyle = {
