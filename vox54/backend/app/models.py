@@ -146,6 +146,13 @@ class BotConfig(Base):
     escalation_email = Column(String(255), default="")
     language = Column(String(20), default="auto")  # es | en | auto
     status = Column(String(20), default="paused")  # active | paused
+    # Si el agente usa el perfil real del negocio (Business.products_services)
+    # como contexto para responder, y si puede mencionar los precios que el
+    # propio negocio haya puesto ahí — apagado por default: mencionar un
+    # precio en voz, sin que el negocio lo haya pedido explícitamente, es un
+    # riesgo real (un precio viejo, mal cotizado, o que varía por caso).
+    use_products_services = Column(Boolean, default=True)
+    mention_prices = Column(Boolean, default=False)
 
     # --- Control de la llamada ---
     # Campos reales de conversación — investigados contra VAPI/Retell/Bland

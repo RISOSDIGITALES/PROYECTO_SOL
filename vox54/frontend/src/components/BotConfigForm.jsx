@@ -116,6 +116,13 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
           con `full`, para no dejar un hueco raro al lado de una tarjeta
           corta. */}
       <div style={gridStyle}>
+      {/* Las 4 tarjetas de personalización van en su propio sub-grid de 2
+          columnas fijas — el auto-fit del grid de afuera las repartía 3+1 en
+          pantallas anchas (se acomodaban tantas como entraran por ancho, no
+          por cuántas hay), dejando "Voz del agente" sola y feo en su propia
+          fila. Acá siempre son 2 y 2 (o 1 fila de 2 en el scope cliente, que
+          solo tiene Estado + Tu número). */}
+      <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
         <Section title="Estado del agente">
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <button
@@ -213,9 +220,13 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
                 </select>
               </Field>
             </Row>
+            <div style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>
+              Estas voces son solo etiquetas por ahora — sin una cuenta real de {catalog.tts_providers.find((p) => p.id === config.tts_provider)?.name || "el proveedor"} conectada no hay ningún audio real que reproducir todavía.
+            </div>
           </Section>
         </>
       )}
+      </div>
 
       <Section title="Comportamiento del agente" full>
         <Row>
@@ -239,6 +250,59 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
             />
           </Field>
         </Row>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <button
+            type="button"
+            onClick={() => onChange({ use_products_services: !config.use_products_services })}
+            style={{
+              ...toggleStyle,
+              flexShrink: 0,
+              background: config.use_products_services ? "var(--success)" : "var(--border)",
+            }}
+          >
+            <span
+              style={{
+                ...toggleKnobStyle,
+                transform: config.use_products_services ? "translateX(20px)" : "translateX(2px)",
+              }}
+            />
+          </button>
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>
+            Usar los productos y servicios del negocio como contexto para responder
+          </span>
+        </div>
+
+        {/* Solo tiene sentido ofrecer esto si el toggle de arriba está
+            prendido — mencionar precios sin usar el catálogo en absoluto
+            no significa nada. Mismo criterio real que ya aplica el worker
+            (ver build_instructions en agent.py): apagado por default,
+            mencionar un precio real en una llamada sin que el negocio lo
+            haya autorizado es un riesgo real, no un detalle cosmético. */}
+        {config.use_products_services && (
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginLeft: 58 }}>
+            <button
+              type="button"
+              onClick={() => onChange({ mention_prices: !config.mention_prices })}
+              style={{
+                ...toggleStyle,
+                flexShrink: 0,
+                background: config.mention_prices ? "var(--success)" : "var(--border)",
+              }}
+            >
+              <span
+                style={{
+                  ...toggleKnobStyle,
+                  transform: config.mention_prices ? "translateX(20px)" : "translateX(2px)",
+                }}
+              />
+            </button>
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>
+              Puede mencionar los precios que el negocio haya cargado
+            </span>
+          </div>
+        )}
+
         <Field label="Mensaje de bienvenida">
           <input
             value={config.welcome_message}

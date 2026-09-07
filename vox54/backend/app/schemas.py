@@ -121,6 +121,8 @@ class BotConfigOut(BaseModel):
     escalation_email: str
     language: str
     status: str
+    use_products_services: bool
+    mention_prices: bool
     first_message_mode: str
     allow_interruptions: bool
     silence_timeout_seconds: int
@@ -150,6 +152,8 @@ class BotConfigUpdate(BaseModel):
     escalation_email: str | None = None
     language: str | None = None
     status: str | None = None
+    use_products_services: bool | None = None
+    mention_prices: bool | None = None
     first_message_mode: str | None = None
     allow_interruptions: bool | None = None
     silence_timeout_seconds: int | None = None
@@ -174,6 +178,8 @@ class BotConfigUpdateClient(BaseModel):
     escalation_email: str | None = None
     language: str | None = None
     status: str | None = None
+    use_products_services: bool | None = None
+    mention_prices: bool | None = None
     first_message_mode: str | None = None
     allow_interruptions: bool | None = None
     silence_timeout_seconds: int | None = None
@@ -201,6 +207,8 @@ class BotConfigOutClient(BaseModel):
     escalation_email: str
     language: str
     status: str
+    use_products_services: bool
+    mention_prices: bool
     first_message_mode: str
     allow_interruptions: bool
     silence_timeout_seconds: int

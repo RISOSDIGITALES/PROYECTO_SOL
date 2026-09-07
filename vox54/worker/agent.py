@@ -52,6 +52,7 @@ import datetime
 import json
 import logging
 import os
+import re
 
 import httpx
 from livekit import agents
@@ -155,20 +156,41 @@ def build_tts(config: dict):
     raise ValueError(f"tts_provider no soportado por este worker: '{provider}'")
 
 
+# El frontend arma cada línea de productos/servicios como "Nombre — $Precio"
+# cuando el negocio cargó un precio (ver BusinessProfileForm.jsx) — este
+# patrón le saca ese sufijo cuando `mention_prices` está apagado, sin tocar
+# el resto de la línea.
+_PRICE_SUFFIX = re.compile(r"\s+—\s*\$[^\n]*$", re.MULTILINE)
+
+
+def _strip_prices(text: str) -> str:
+    return _PRICE_SUFFIX.sub("", text)
+
+
 def build_instructions(config: dict) -> str:
     """El system_prompt que escribió el negocio, más su propio perfil real
     (a qué se dedica, cuándo atiende, qué vende) si lo cargó en Vox54 —
     `WorkerBotConfigOut` ya lo trae resuelto (ver backend/app/routers/
     worker.py). Nunca se inventa nada: si el negocio no cargó ninguno de
-    estos 3 campos, no se agrega ninguna línea de más."""
+    estos 3 campos, no se agrega ninguna línea de más.
+
+    `use_products_services` deja afuera el catálogo entero si el negocio no
+    quiere que el bot lo use; `mention_prices` (aparte, solo aplica si el
+    catálogo sí se usa) decide si los precios que el negocio haya puesto
+    quedan visibles para el modelo o se recortan antes de llegar al prompt —
+    apagado por default, mencionar un precio en una llamada real sin que el
+    negocio lo haya autorizado es un riesgo real, no un detalle cosmético."""
     base = config.get("system_prompt") or "Sos un asistente de voz útil, breve y cordial."
     context_lines = []
     if config.get("business_description"):
         context_lines.append(f"Sobre el negocio: {config['business_description']}")
     if config.get("business_hours"):
         context_lines.append(f"Horario de atención: {config['business_hours']}")
-    if config.get("business_products_services"):
-        context_lines.append(f"Productos y servicios: {config['business_products_services']}")
+    products = config.get("business_products_services")
+    if products and config.get("use_products_services", True):
+        if not config.get("mention_prices", False):
+            products = _strip_prices(products)
+        context_lines.append(f"Productos y servicios: {products}")
     if not context_lines:
         return base
     return base + "\n\n" + "\n".join(context_lines)

@@ -19,10 +19,69 @@ import Icon from "./Icon";
 // una función que hace la llamada real y devuelve una Promise con el
 // perfil actualizado) — mismo patrón ya usado en todo el proyecto, y lo que
 // mantiene esto testeable sin tener que mockear el módulo de red.
+// El texto guardado sigue siendo UN string plano (products_services, sin
+// migración de schema) — una línea por producto, opcionalmente
+// "Nombre — $Precio". Es el mismo separador que ya espera el worker real
+// (_PRICE_SUFFIX en agent.py) para poder recortar los precios cuando el
+// negocio no quiere que el bot los mencione (ver el toggle nuevo en
+// BotConfigForm). Estas dos funciones son solo cómo el FORMULARIO edita
+// ese mismo string de a un producto por vez, en vez de como un párrafo.
+function parseProducts(text) {
+  const lines = (text || "").split("\n").map((l) => l.trim()).filter(Boolean);
+  if (lines.length === 0) return [{ name: "", price: "" }];
+  return lines.map((line) => {
+    const m = line.match(/^(.*?)\s+—\s*\$?\s*(.+)$/);
+    return m ? { name: m[1].trim(), price: m[2].trim() } : { name: line, price: "" };
+  });
+}
+
+function serializeProducts(items) {
+  return items
+    .filter((it) => it.name.trim())
+    .map((it) => (it.price.trim() ? `${it.name.trim()} — $${it.price.trim()}` : it.name.trim()))
+    .join("\n");
+}
+
 export default function BusinessProfileForm({
   profile, onChange, onSave, saving, savedMessage, error,
   onUploadLogo, onRemoveLogo, onUploadDocument, onRemoveDocument,
 }) {
+  // Estado local, no derivado de `profile` en cada render — si se
+  // re-parseara el string en cada tecleo (incluyendo el eco que vuelve del
+  // propio onChange del padre), una fila nueva todavía sin nombre
+  // desaparecería antes de poder escribirle nada. Solo se re-sincroniza
+  // cuando cambia la IDENTIDAD del negocio (este mismo formulario lo edita
+  // tanto la agencia, sobre cualquier negocio suyo, como el propio
+  // negocio) — nunca en cada tecla.
+  const [productItems, setProductItems] = useState(() => parseProducts(profile.products_services));
+  const loadedProfileId = useRef(profile.id);
+  useEffect(() => {
+    if (profile.id !== loadedProfileId.current) {
+      loadedProfileId.current = profile.id;
+      setProductItems(parseProducts(profile.products_services));
+    }
+  }, [profile.id, profile.products_services]);
+
+  function updateProductItem(index, patch) {
+    const next = productItems.map((it, i) => (i === index ? { ...it, ...patch } : it));
+    setProductItems(next);
+    onChange({ products_services: serializeProducts(next) });
+  }
+
+  function addProductItem() {
+    // No hace falta propagar onChange acá — una fila vacía nueva serializa
+    // a nada (se filtra), así que el texto real del padre no cambia hasta
+    // que el usuario escriba algo de verdad.
+    setProductItems((prev) => [...prev, { name: "", price: "" }]);
+  }
+
+  function removeProductItem(index) {
+    const next = productItems.filter((_, i) => i !== index);
+    const finalItems = next.length ? next : [{ name: "", price: "" }];
+    setProductItems(finalItems);
+    onChange({ products_services: serializeProducts(finalItems) });
+  }
+
   // El botón estalla (sin desaparecer) cuando el guardado se confirmó de
   // verdad — savedMessage lo pone el padre solo tras una respuesta real del
   // servidor, nunca en el click en sí, para no festejar un guardado que
@@ -208,15 +267,42 @@ export default function BusinessProfileForm({
             />
           </Field>
 
-          <Field label="Productos y servicios">
-            <textarea
-              value={profile.products_services}
-              onChange={(e) => onChange({ products_services: e.target.value })}
-              rows={5}
-              placeholder="Ej: Cajones cerrados a medida, jaulas abiertas, cunas para maquinaria, embalaje certificado para exportación."
-              style={textareaStyle}
-            />
-          </Field>
+          <div>
+            <span style={labelStyle}>Productos y servicios</span>
+            <div style={{ display: "grid", gap: 8 }}>
+              {productItems.map((item, i) => (
+                <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input
+                    value={item.name}
+                    onChange={(e) => updateProductItem(i, { name: e.target.value })}
+                    placeholder="Ej: Cajones cerrados a medida"
+                    style={{ ...rowInputStyle, flex: 1 }}
+                  />
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                    <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>$</span>
+                    <input
+                      value={item.price}
+                      onChange={(e) => updateProductItem(i, { price: e.target.value })}
+                      placeholder="Precio (opcional)"
+                      style={{ ...rowInputStyle, width: 130 }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeProductItem(i)}
+                    style={removeItemBtnStyle}
+                    aria-label="Quitar este producto o servicio"
+                    title="Quitar"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button type="button" onClick={addProductItem} className="vox54-btn secondary small" style={{ marginTop: 10 }}>
+              + Agregar producto o servicio
+            </button>
+          </div>
 
           <p style={{ fontSize: 12, color: "var(--ink-softer)", margin: 0 }}>
             Esto es lo que tu agente de voz usa como contexto real para responder — cuanto más completo, mejor puede ayudar sin inventar nada.
@@ -257,6 +343,32 @@ const labelStyle = {
   fontWeight: 600,
   color: "var(--ink-soft)",
   marginBottom: 6,
+};
+
+const rowInputStyle = {
+  padding: "9px 11px",
+  fontSize: 13.5,
+  border: "1px solid var(--border)",
+  borderRadius: 8,
+  outline: "none",
+  fontFamily: "var(--font)",
+  background: "var(--white)",
+};
+
+const removeItemBtnStyle = {
+  flexShrink: 0,
+  width: 30,
+  height: 30,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "none",
+  border: "1px solid var(--border)",
+  borderRadius: 8,
+  color: "var(--ink-softer)",
+  fontSize: 16,
+  lineHeight: 1,
+  cursor: "pointer",
 };
 
 const textareaStyle = {

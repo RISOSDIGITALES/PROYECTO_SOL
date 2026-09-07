@@ -21,6 +21,7 @@ BOT_CONFIG_FIELDS = [
     "ai_provider", "ai_model", "ai_api_key",
     "system_prompt", "welcome_message", "escalation_email",
     "language", "status",
+    "use_products_services", "mention_prices",
     "first_message_mode", "allow_interruptions",
     "silence_timeout_seconds", "max_duration_seconds",
     "end_call_message", "transfer_phone_number",

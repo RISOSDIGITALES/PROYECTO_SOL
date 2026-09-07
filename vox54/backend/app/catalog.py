@@ -17,35 +17,35 @@ AI_PROVIDERS = [
         "id": "groq",
         "name": "Groq",
         "models": [
-            {"id": "llama-3.3-70b-versatile", "name": "Llama 3.3 70B Versatile"},
-            {"id": "llama-3.1-8b-instant", "name": "Llama 3.1 8B Instant"},
-            {"id": "gemma2-9b-it", "name": "Gemma 2 9B"},
+            {"id": "llama-3.3-70b-versatile", "name": "Llama 3.3 70B Versatile (el más capaz, algo más lento)"},
+            {"id": "llama-3.1-8b-instant", "name": "Llama 3.1 8B Instant (más rápido y económico)"},
+            {"id": "gemma2-9b-it", "name": "Gemma 2 9B (liviano, para conversaciones simples)"},
         ],
     },
     {
         "id": "openai",
         "name": "OpenAI",
         "models": [
-            {"id": "gpt-4o", "name": "GPT-4o"},
-            {"id": "gpt-4o-mini", "name": "GPT-4o Mini"},
-            {"id": "gpt-4-turbo", "name": "GPT-4 Turbo"},
+            {"id": "gpt-4o", "name": "GPT-4o (equilibrado)"},
+            {"id": "gpt-4o-mini", "name": "GPT-4o Mini (más rápido y económico)"},
+            {"id": "gpt-4-turbo", "name": "GPT-4 Turbo (más potente, más lento)"},
         ],
     },
     {
         "id": "anthropic",
         "name": "Anthropic",
         "models": [
-            {"id": "claude-opus-5", "name": "Claude Opus 5"},
-            {"id": "claude-sonnet-5", "name": "Claude Sonnet 5"},
-            {"id": "claude-haiku-4-5", "name": "Claude Haiku 4.5"},
+            {"id": "claude-opus-5", "name": "Claude Opus 5 (el más capaz, más lento)"},
+            {"id": "claude-sonnet-5", "name": "Claude Sonnet 5 (el equilibrio recomendado)"},
+            {"id": "claude-haiku-4-5", "name": "Claude Haiku 4.5 (el más rápido)"},
         ],
     },
     {
         "id": "gemini",
         "name": "Google Gemini",
         "models": [
-            {"id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash"},
-            {"id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro"},
+            {"id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash (rápido y económico)"},
+            {"id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro (piensa mejor, más lento)"},
         ],
     },
 ]
@@ -102,10 +102,18 @@ RUNTIME_TARGETS = [
     {"id": "self_hosted", "name": "Self-hosted (solo si el volumen lo justifica)"},
 ]
 
+# "auto" hoy solo cubre español/inglés (lo único probado de punta a punta) —
+# el nombre lo aclara para que no se confunda con "cualquier idioma". Los
+# proveedores reales (Deepgram/Groq Whisper para STT, Cartesia/ElevenLabs para
+# TTS) sí soportan portugués y francés como idioma fijo, no como parte del
+# auto-detect todavía — agregar más acá alcanza en tanto el proveedor elegido
+# los soporte, sin volver a tocar el pipeline.
 LANGUAGES = [
-    {"id": "auto", "name": "Detectar automáticamente"},
+    {"id": "auto", "name": "Detectar automáticamente (español e inglés)"},
     {"id": "es", "name": "Español"},
     {"id": "en", "name": "Inglés"},
+    {"id": "pt", "name": "Portugués"},
+    {"id": "fr", "name": "Francés"},
 ]
 
 STATUSES = [
