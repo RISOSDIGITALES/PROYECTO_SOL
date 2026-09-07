@@ -29,6 +29,7 @@ export default function AgencyBusinessDetail() {
   const [profileError, setProfileError] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSavedMessage, setProfileSavedMessage] = useState("");
+  const [catalog, setCatalog] = useState(null);
 
   useEffect(() => {
     if (!session) return;
@@ -37,7 +38,18 @@ export default function AgencyBusinessDetail() {
       .catch((e) => setError(e.message));
     api.listBusinessCalls(session.access_token, id).then(setCalls).catch((e) => setCallsError(e.message));
     api.getBusinessProfile(session.access_token, id).then(setProfile).catch((e) => setProfileError(e.message));
+    // Solo para resolver el nombre real del modelo de IA en el resumen de
+    // abajo — sin esto se ve el id crudo del catálogo (ej. "llama-3.3-70b-
+    // versatile") en vez de "Llama 3.3 70B Versatile", mismo criterio que ya
+    // se aplicó en BotConfigForm y en el Inventario de Agentes.
+    api.getCatalog().then(setCatalog).catch(() => {});
   }, [session, id]);
+
+  function aiModelLabel(providerId, modelId) {
+    if (!modelId) return "—";
+    const provider = catalog?.ai_providers?.find((p) => p.id === providerId);
+    return provider?.models?.find((m) => m.id === modelId)?.name || modelId;
+  }
 
   function startRenaming() {
     setNameDraft(business?.name || "");
@@ -177,7 +189,7 @@ export default function AgencyBusinessDetail() {
               <div className="vox54-panel" style={{ padding: 20, display: "grid", gap: 12 }}>
                 <Row label="Estado"><StatusPill status={config?.status} /></Row>
                 <Row label="Número">{config?.phone_number || "Sin asignar todavía"}</Row>
-                <Row label="Modelo de IA">{config?.ai_model || "—"}</Row>
+                <Row label="Modelo de IA">{aiModelLabel(config?.ai_provider, config?.ai_model)}</Row>
                 <Link to={`/agencia/negocios/${id}/bot`} style={fullConfigLinkStyle}>
                   Configuración completa →
                 </Link>
