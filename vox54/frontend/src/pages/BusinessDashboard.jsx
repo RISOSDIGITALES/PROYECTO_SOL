@@ -110,6 +110,8 @@ export default function BusinessDashboard() {
         description: profile.description,
         hours: profile.hours,
         products_services: profile.products_services,
+        address: profile.address,
+        phone: profile.phone,
       });
       setProfile(updated);
       setProfileSavedMessage("Guardado correctamente.");

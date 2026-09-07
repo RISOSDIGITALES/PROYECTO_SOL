@@ -84,6 +84,10 @@ def test_crear_negocio_ok(client, seed, agency_token):
         headers=auth(agency_token),
         json={
             "name": "Negocio Nuevo",
+            "hours": "Lun-Vie 9-18",
+            "products_services": "Cortes de cabello",
+            "address": "Calle Falsa 123",
+            "phone": "+50588887777",
             "contact_name": "Contacto Nuevo",
             "contact_email": "nuevo@test-demo.com",
             "contact_password": "password123",
@@ -103,7 +107,16 @@ def test_crear_negocio_password_corta_falla(client, seed, agency_token):
     res = client.post(
         "/agency/businesses",
         headers=auth(agency_token),
-        json={"name": "X", "contact_name": "Y", "contact_email": "z@test-demo.com", "contact_password": "corta"},
+        json={
+            "name": "X",
+            "hours": "Lun-Vie 9-18",
+            "products_services": "Algo",
+            "address": "Calle 1",
+            "phone": "+50588887777",
+            "contact_name": "Y",
+            "contact_email": "z@test-demo.com",
+            "contact_password": "corta",
+        },
     )
     assert res.status_code == 422
 
@@ -112,7 +125,16 @@ def test_crear_negocio_nombre_vacio_falla(client, seed, agency_token):
     res = client.post(
         "/agency/businesses",
         headers=auth(agency_token),
-        json={"name": "   ", "contact_name": "Y", "contact_email": "z@test-demo.com", "contact_password": "password123"},
+        json={
+            "name": "   ",
+            "hours": "Lun-Vie 9-18",
+            "products_services": "Algo",
+            "address": "Calle 1",
+            "phone": "+50588887777",
+            "contact_name": "Y",
+            "contact_email": "z@test-demo.com",
+            "contact_password": "password123",
+        },
     )
     assert res.status_code == 422
 
@@ -123,6 +145,10 @@ def test_crear_negocio_email_de_contacto_duplicado_falla(client, seed, agency_to
         headers=auth(agency_token),
         json={
             "name": "Otro",
+            "hours": "Lun-Vie 9-18",
+            "products_services": "Algo",
+            "address": "Calle 1",
+            "phone": "+50588887777",
             "contact_name": "Otro Contacto",
             "contact_email": "negocio@test-demo.com",  # ya existe (seed)
             "contact_password": "password123",

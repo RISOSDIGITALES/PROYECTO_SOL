@@ -1,9 +1,26 @@
 import { useState } from "react";
 
+// A pedido explícito de la usuaria ("necesitamos TODOS LOS DATOS") — crear
+// un negocio ya no pide solo el nombre y el contacto: pide también lo que el
+// bot necesita para responder desde el primer día (horario, productos,
+// dirección, teléfono), sin dejarlo como un segundo paso opcional.
 export default function CreateBusinessModal({ onClose, onCreate }) {
-  const [form, setForm] = useState({ name: "", contact_name: "", contact_email: "", contact_password: "" });
+  const [form, setForm] = useState({
+    name: "",
+    hours: "",
+    products_services: "",
+    address: "",
+    phone: "",
+    contact_name: "",
+    contact_email: "",
+    contact_password: "",
+  });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  function set(field) {
+    return (e) => setForm({ ...form, [field]: e.target.value });
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -22,22 +39,74 @@ export default function CreateBusinessModal({ onClose, onCreate }) {
     <div style={overlayStyle} onClick={onClose}>
       <div className="vox54-panel" style={modalStyle} onClick={(e) => e.stopPropagation()}>
         <h2 style={{ fontSize: 17, marginBottom: 16 }}>Crear negocio nuevo</h2>
-        <form onSubmit={handleSubmit} style={{ display: "grid", gap: 14 }}>
+        <form onSubmit={handleSubmit} style={{ display: "grid", gap: 14, maxHeight: "70vh", overflowY: "auto", paddingRight: 4 }}>
           <div>
             <label style={labelStyle}>Nombre del negocio</label>
             <input
               value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              onChange={set("name")}
               required
               style={inputStyle}
               placeholder="Ej: Panadería La Espiga"
             />
           </div>
+
+          <div>
+            <label style={labelStyle}>Horario de atención</label>
+            <textarea
+              value={form.hours}
+              onChange={set("hours")}
+              required
+              rows={2}
+              style={textareaStyle}
+              placeholder="Ej: Lunes a viernes 8am–5pm, sábados 9am–1pm"
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Productos y servicios</label>
+            <textarea
+              value={form.products_services}
+              onChange={set("products_services")}
+              required
+              rows={3}
+              style={textareaStyle}
+              placeholder={"Uno por línea, ej:\nCajones cerrados a medida\nEmbalaje de exportación — $150"}
+            />
+          </div>
+
+          <div style={twoColStyle}>
+            <div>
+              <label style={labelStyle}>Dirección</label>
+              <input
+                value={form.address}
+                onChange={set("address")}
+                required
+                style={inputStyle}
+                placeholder="Ej: 123 NW 82nd Ave, Doral, FL"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Teléfono</label>
+              <input
+                value={form.phone}
+                onChange={set("phone")}
+                required
+                style={inputStyle}
+                placeholder="Ej: +1 305 555 0100"
+              />
+            </div>
+          </div>
+
+          <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+            <div style={sectionLabelStyle}>Cuenta del negocio</div>
+          </div>
+
           <div>
             <label style={labelStyle}>Nombre del contacto</label>
             <input
               value={form.contact_name}
-              onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
+              onChange={set("contact_name")}
               required
               style={inputStyle}
             />
@@ -47,7 +116,7 @@ export default function CreateBusinessModal({ onClose, onCreate }) {
             <input
               type="email"
               value={form.contact_email}
-              onChange={(e) => setForm({ ...form, contact_email: e.target.value })}
+              onChange={set("contact_email")}
               required
               style={inputStyle}
             />
@@ -57,7 +126,7 @@ export default function CreateBusinessModal({ onClose, onCreate }) {
             <input
               type="password"
               value={form.contact_password}
-              onChange={(e) => setForm({ ...form, contact_password: e.target.value })}
+              onChange={set("contact_password")}
               required
               minLength={8}
               style={inputStyle}
@@ -92,7 +161,7 @@ const overlayStyle = {
 const modalStyle = {
   padding: 28,
   width: "100%",
-  maxWidth: 420,
+  maxWidth: 460,
   boxShadow: "0 20px 50px rgba(19,27,46,0.25)",
 };
 
@@ -102,6 +171,14 @@ const labelStyle = {
   fontWeight: 600,
   color: "var(--ink-soft)",
   marginBottom: 6,
+};
+
+const sectionLabelStyle = {
+  fontSize: 12,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
+  color: "var(--ink-softer)",
 };
 
 const hintStyle = {
@@ -118,4 +195,15 @@ const inputStyle = {
   borderRadius: 8,
   outline: "none",
   fontFamily: "var(--font)",
+};
+
+const textareaStyle = {
+  ...inputStyle,
+  resize: "vertical",
+};
+
+const twoColStyle = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 14,
 };

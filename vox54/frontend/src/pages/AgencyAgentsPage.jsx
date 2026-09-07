@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import StatusPill from "../components/StatusPill";
 import CreateBusinessModal from "../components/CreateBusinessModal";
+import BusinessPickerModal from "../components/BusinessPickerModal";
+import AgencyProfileRequiredModal from "../components/AgencyProfileRequiredModal";
 import { api } from "../api";
+import { useAgencyProfileDone } from "../useAgencyProfileDone";
 
 // Vista aparte de "Negocios" — esa es una grilla de tarjetas pensada para
 // entrar a editar un negocio puntual; esta es una tabla densa pensada para
@@ -22,7 +25,10 @@ export default function AgencyAgentsPage() {
   const [agents, setAgents] = useState(null);
   const [catalog, setCatalog] = useState(null);
   const [error, setError] = useState("");
+  const [showPicker, setShowPicker] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [showProfileRequired, setShowProfileRequired] = useState(false);
+  const { done: agencyProfileDone } = useAgencyProfileDone(session?.access_token);
 
   function refreshAgents() {
     api.listAgents(session.access_token).then(setAgents).catch((e) => setError(e.message));
@@ -65,7 +71,13 @@ export default function AgencyAgentsPage() {
               Todos los agentes de voz que gestionás, a qué negocio pertenece cada uno, y con qué infraestructura corre.
             </p>
           </div>
-          <button onClick={() => setShowCreate(true)} className="vox54-btn" style={{ flexShrink: 0 }}>+ Nuevo agente</button>
+          {/* Nunca salta directo a "crear negocio" -- primero muestra los
+              que ya existen (BusinessPickerModal), para no crear uno
+              duplicado por error cuando la intención era ir a configurar
+              uno que ya está. Si ya hay negocios, el picker solo deja
+              elegir uno -- crear uno nuevo se hace desde /agencia/negocios,
+              no desde acá. Solo ofrece crear cuando no hay ninguno todavía. */}
+          <button onClick={() => setShowPicker(true)} className="vox54-btn" style={{ flexShrink: 0 }}>+ Nuevo agente</button>
         </div>
 
         {error && <div style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</div>}
@@ -116,8 +128,26 @@ export default function AgencyAgentsPage() {
           </div>
         )}
       </div>
+      {showPicker && (
+        <BusinessPickerModal
+          agents={agents || []}
+          onClose={() => setShowPicker(false)}
+          onRequestCreate={() => {
+            setShowPicker(false);
+            // Sin ningún dato real de contacto/logo en el perfil de la
+            // agencia, un negocio nuevo no tendría ningún canal de soporte
+            // real que mostrar -- se corta acá, antes de llegar al
+            // formulario, en vez de dejar que se cree igual.
+            if (agencyProfileDone) setShowCreate(true);
+            else setShowProfileRequired(true);
+          }}
+        />
+      )}
       {showCreate && (
         <CreateBusinessModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />
+      )}
+      {showProfileRequired && (
+        <AgencyProfileRequiredModal onClose={() => setShowProfileRequired(false)} />
       )}
     </>
   );

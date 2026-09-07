@@ -267,6 +267,25 @@ export default function BusinessProfileForm({
             />
           </Field>
 
+          <div style={twoColStyle}>
+            <Field label="Dirección">
+              <input
+                value={profile.address || ""}
+                onChange={(e) => onChange({ address: e.target.value })}
+                placeholder="Ej: 123 NW 82nd Ave, Doral, FL"
+                style={rowInputStyle}
+              />
+            </Field>
+            <Field label="Teléfono">
+              <input
+                value={profile.phone || ""}
+                onChange={(e) => onChange({ phone: e.target.value })}
+                placeholder="Ej: +1 305 555 0100"
+                style={rowInputStyle}
+              />
+            </Field>
+          </div>
+
           <div>
             <span style={labelStyle}>Productos y servicios</span>
             <div style={{ display: "grid", gap: 8 }}>

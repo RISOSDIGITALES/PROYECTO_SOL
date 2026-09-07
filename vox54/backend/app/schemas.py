@@ -275,6 +275,8 @@ class BusinessProfileOut(BaseModel):
     description: str
     hours: str
     products_services: str
+    address: str = ""
+    phone: str = ""
     logo_url: str = ""
     info_document_url: str = ""
     info_document_name: str = ""
@@ -286,15 +288,26 @@ class BusinessProfileUpdate(BaseModel):
     description: str | None = None
     hours: str | None = None
     products_services: str | None = None
+    address: str | None = None
+    phone: str | None = None
 
 
 class BusinessCreate(BaseModel):
+    """Datos completos del negocio al crearlo — a pedido explícito de la
+    usuaria, el formulario de creación ya no pide solo el nombre: un negocio
+    real necesita horario/productos/dirección/teléfono cargados desde el
+    principio, no como un segundo paso opcional después."""
+
     name: str
+    hours: str
+    products_services: str
+    address: str
+    phone: str
     contact_name: str
     contact_email: EmailStr
     contact_password: str
 
-    @field_validator("name", "contact_name")
+    @field_validator("name", "contact_name", "hours", "products_services", "address", "phone")
     @classmethod
     def not_blank(cls, v: str) -> str:
         v = v.strip()

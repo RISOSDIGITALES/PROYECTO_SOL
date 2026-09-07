@@ -162,7 +162,14 @@ def create_business(
     if existing:
         raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe un usuario de negocio con ese email")
 
-    business = models.Business(agency_id=user.agency_id, name=body.name)
+    business = models.Business(
+        agency_id=user.agency_id,
+        name=body.name,
+        hours=body.hours,
+        products_services=body.products_services,
+        address=body.address,
+        phone=body.phone,
+    )
     db.add(business)
     db.flush()  # para tener business.id antes del commit
 

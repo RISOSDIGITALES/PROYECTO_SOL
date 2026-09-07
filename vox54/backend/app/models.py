@@ -66,6 +66,8 @@ class Business(Base):
     description = Column(Text, default="")
     hours = Column(Text, default="")
     products_services = Column(Text, default="")
+    address = Column(String(255), default="")
+    phone = Column(String(30), default="")
     logo_url = Column(String(500), default="")
     # PDF real como fuente de información adicional — hoy solo se guarda y
     # se muestra (nombre real + link), todavía no se lee su contenido para

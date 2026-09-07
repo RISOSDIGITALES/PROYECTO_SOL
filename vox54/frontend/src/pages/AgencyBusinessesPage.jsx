@@ -2,14 +2,26 @@ import { useEffect, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import StatusPill from "../components/StatusPill";
 import CreateBusinessModal from "../components/CreateBusinessModal";
+import AgencyProfileRequiredModal from "../components/AgencyProfileRequiredModal";
 import { api } from "../api";
 import { initials } from "../utils";
+import { useAgencyProfileDone } from "../useAgencyProfileDone";
 
 export default function AgencyBusinessesPage() {
   const { session } = useOutletContext();
   const [businesses, setBusinesses] = useState([]);
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [showProfileRequired, setShowProfileRequired] = useState(false);
+  const { done: agencyProfileDone } = useAgencyProfileDone(session?.access_token);
+
+  function handleCreateClick() {
+    // Mismo gate que el picker de /agencia/agentes -- sin ningún dato real
+    // de contacto/logo en el perfil de la agencia, no tiene sentido dejar
+    // crear un negocio nuevo todavía.
+    if (agencyProfileDone) setShowCreate(true);
+    else setShowProfileRequired(true);
+  }
 
   function refreshBusinesses() {
     api.listBusinesses(session.access_token).then(setBusinesses).catch((e) => setError(e.message));
@@ -38,7 +50,7 @@ export default function AgencyBusinessesPage() {
               Negocios que gestionás y sus bots de voz.
             </p>
           </div>
-          <button onClick={() => setShowCreate(true)} className="vox54-btn">+ Crear negocio</button>
+          <button onClick={handleCreateClick} className="vox54-btn">+ Crear negocio</button>
         </div>
 
         {error && <div style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</div>}
@@ -69,6 +81,9 @@ export default function AgencyBusinessesPage() {
 
       {showCreate && (
         <CreateBusinessModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />
+      )}
+      {showProfileRequired && (
+        <AgencyProfileRequiredModal onClose={() => setShowProfileRequired(false)} />
       )}
     </>
   );
