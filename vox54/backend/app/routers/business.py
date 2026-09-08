@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
+from .. import documents
 from ..database import get_db
 from ..deps import get_current_business_user
 from ..schemas import (
@@ -142,6 +143,7 @@ async def upload_my_document(
     business.info_document_name = name
     db.commit()
     db.refresh(business)
+    documents.process_business_document(db, business)
     return business
 
 
@@ -155,4 +157,5 @@ def remove_my_document(
     business.info_document_name = ""
     db.commit()
     db.refresh(business)
+    documents.process_business_document(db, business)  # borra los fragmentos viejos, ya sin PDF
     return business

@@ -393,6 +393,17 @@ class WorkerBotConfigOut(BotConfigOut):
     business_description: str
     business_hours: str
     business_products_services: str
+    has_document: bool = False
+
+
+class DocumentSearchRequest(BaseModel):
+    business_id: int
+    query: str
+    top_k: int = 3
+
+
+class DocumentSearchOut(BaseModel):
+    chunks: list[str]
 
 
 class ModelOut(BaseModel):

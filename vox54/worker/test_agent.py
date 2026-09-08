@@ -242,5 +242,38 @@ class TestReportCall(unittest.IsolatedAsyncioTestCase):
             )  # no debe lanzar nada
 
 
+class TestSearchBusinessDocuments(unittest.IsolatedAsyncioTestCase):
+    async def test_manda_el_body_correcto_y_devuelve_los_fragmentos(self):
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {"chunks": ["fragmento uno", "fragmento dos"]}
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+
+        with patch("agent.httpx.AsyncClient", return_value=mock_client):
+            result = await agent.search_business_documents(business_id=1, query="cuánto cuesta")
+
+        mock_client.post.assert_called_once_with(
+            "/worker/documents/search",
+            headers={"X-Worker-Secret": os.environ["WORKER_SECRET"]},
+            json={"business_id": 1, "query": "cuánto cuesta", "top_k": 3},
+        )
+        self.assertEqual(result, ["fragmento uno", "fragmento dos"])
+
+    async def test_un_fallo_de_red_se_loguea_y_devuelve_lista_vacia_no_explota(self):
+        """Mismo criterio que report_call — si el backend está caído a mitad
+        de una llamada real, la IA debe poder seguir la conversación (con un
+        'no encontré nada'), nunca que la llamada entera se caiga por esto."""
+        mock_client = AsyncMock()
+        mock_client.post.side_effect = ConnectionError("backend caído")
+        mock_client.__aenter__.return_value = mock_client
+
+        with patch("agent.httpx.AsyncClient", return_value=mock_client):
+            result = await agent.search_business_documents(business_id=1, query="algo")
+
+        self.assertEqual(result, [])
+
+
 if __name__ == "__main__":
     unittest.main()

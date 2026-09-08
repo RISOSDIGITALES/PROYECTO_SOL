@@ -13,7 +13,7 @@ from ..schemas import (
 )
 from ..uploads import save_document, save_logo
 from ..validators import bot_config_as_dict, validate_bot_config
-from .. import models
+from .. import documents, models
 
 router = APIRouter(prefix="/agency", tags=["agency"])
 
@@ -323,6 +323,7 @@ async def upload_business_document(
     business.info_document_name = name
     db.commit()
     db.refresh(business)
+    documents.process_business_document(db, business)
     return business
 
 
@@ -337,6 +338,7 @@ def remove_business_document(
     business.info_document_name = ""
     db.commit()
     db.refresh(business)
+    documents.process_business_document(db, business)  # borra los fragmentos viejos, ya sin PDF
     return business
 
 

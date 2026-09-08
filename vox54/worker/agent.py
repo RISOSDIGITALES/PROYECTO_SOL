@@ -67,6 +67,17 @@ from livekit.agents import (
 )
 from livekit.plugins import cartesia, deepgram, elevenlabs, openai, silero
 
+try:
+    from dotenv import load_dotenv
+
+    # No hace nada si no hay .env (ej. en CI o corriendo con las vars ya
+    # exportadas a mano) — y no pisa una var que ya esté seteada en el
+    # entorno real (default de load_dotenv), así que `WORKER_SECRET=test`
+    # puesto a mano antes de correr los tests sigue ganando.
+    load_dotenv()
+except ImportError:
+    pass
+
 logger = logging.getLogger("vox54-worker")
 
 VOX54_API_BASE = os.environ.get("VOX54_API_BASE", "http://localhost:8000")
@@ -131,6 +142,27 @@ async def report_call(
             resp.raise_for_status()
     except Exception:
         logger.exception("no se pudo reportar el resultado de la llamada del negocio %s", business_id)
+
+
+async def search_business_documents(business_id: int, query: str, top_k: int = 3) -> list[str]:
+    """Fragmentos reales del PDF del negocio más parecidos por significado a
+    `query` — el backend hace la búsqueda semántica real (ver
+    app/documents.py), acá solo se llama al endpoint. Un fallo de red no
+    debe tumbar la llamada en curso: se loguea y se responde con nada
+    encontrado, igual que si el negocio genuinamente no tuviera esa
+    información en su documento."""
+    try:
+        async with httpx.AsyncClient(base_url=VOX54_API_BASE, timeout=10.0) as client:
+            resp = await client.post(
+                "/worker/documents/search",
+                headers={"X-Worker-Secret": WORKER_SECRET},
+                json={"business_id": business_id, "query": query, "top_k": top_k},
+            )
+            resp.raise_for_status()
+            return resp.json()["chunks"]
+    except Exception:
+        logger.exception("no se pudo buscar en los documentos del negocio %s", business_id)
+        return []
 
 
 def build_stt(config: dict):
@@ -310,6 +342,25 @@ async def entrypoint(ctx: JobContext):
             return "Transferencia iniciada."
 
         tools.append(transfer_to_human)
+
+    # --- Buscar en el documento real del negocio — expuesta como tool solo
+    # si el negocio tiene un PDF real ya indexado (has_document, ver
+    # backend/app/routers/worker.py); si no, la IA ni ve la opción, para no
+    # ofrecerle algo que siempre va a devolver una lista vacía. ---
+    if config.get("has_document"):
+        @function_tool(
+            name="buscar_en_documentos",
+            description="Buscá información específica en el documento real que el negocio cargó "
+            "(precios, catálogo, políticas, etc.) cuando el cliente pregunte algo que no esté ya "
+            "en tus instrucciones. Nunca inventes un dato que no venga de este resultado.",
+        )
+        async def buscar_en_documentos(consulta: str) -> str:
+            chunks = await search_business_documents(config["business_id"], consulta)
+            if not chunks:
+                return "No se encontró nada relacionado en el documento."
+            return "\n---\n".join(chunks)
+
+        tools.append(buscar_en_documentos)
 
     agent = Agent(
         instructions=build_instructions(config),

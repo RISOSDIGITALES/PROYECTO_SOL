@@ -69,11 +69,10 @@ class Business(Base):
     address = Column(String(255), default="")
     phone = Column(String(30), default="")
     logo_url = Column(String(500), default="")
-    # PDF real como fuente de información adicional — hoy solo se guarda y
-    # se muestra (nombre real + link), todavía no se lee su contenido para
-    # nada: darle ese contenido al bot (extraer texto, indexarlo) es una
-    # función aparte, más grande, pendiente de construirse. No se inventa
-    # ningún procesamiento que no exista todavía.
+    # PDF real como fuente de información adicional — se guarda y se muestra
+    # (nombre real + link) Y su contenido real ya se indexa: ver
+    # DocumentChunk más abajo (app/documents.py hace la extracción/embedding
+    # cada vez que se sube o se borra un documento).
     info_document_url = Column(String(500), default="")
     info_document_name = Column(String(255), default="")
 
@@ -87,6 +86,30 @@ class Business(Base):
     @property
     def bot_status(self) -> str | None:
         return self.bot_config.status if self.bot_config else None
+
+
+class DocumentChunk(Base):
+    """Un fragmento del PDF real de un negocio (`Business.info_document_url`),
+    ya con su embedding calculado — la pieza que le faltaba a la subida de
+    documentos (ver comentario en `Business.info_document_url`): antes el PDF
+    solo se guardaba y se mostraba, ahora su contenido real es lo que el
+    worker busca en cada llamada (ver `/worker/documents/search`).
+
+    El embedding se guarda como JSON (lista de floats) en vez de un tipo de
+    columna vectorial nativo — a esta escala (un PDF por negocio, unas pocas
+    docenas de fragmentos) comparar a mano en Python con NumPy es más que
+    suficiente, sin sumar una dependencia de base de datos vectorial que acá
+    no hace ninguna falta."""
+
+    __tablename__ = "document_chunks"
+
+    id = Column(Integer, primary_key=True)
+    business_id = Column(Integer, ForeignKey("businesses.id"), nullable=False, index=True)
+    chunk_index = Column(Integer, nullable=False)
+    text = Column(Text, nullable=False)
+    embedding_json = Column(Text, nullable=False)
+
+    business = relationship("Business")
 
 
 class BusinessUser(Base):
