@@ -166,13 +166,22 @@ class BotConfigUpdate(BaseModel):
 
 class BotConfigUpdateClient(BaseModel):
     """Subconjunto de BotConfigUpdate seguro para que un negocio edite su
-    propio bot — deliberadamente NO incluye telefonía/STT/TTS/modelo de IA
-    (proveedor, modelo, API key propia): son decisiones de infraestructura
-    de la agencia, no del cliente. Cualquier campo fuera de esta lista que
-    llegue en el body (ej. ai_provider) se descarta solo, sin error — no es
-    un campo que este endpoint conozca. La barrera real vive acá, en el
-    schema — no es solo que el formulario del cliente no lo muestre."""
+    propio bot. Incluye la personalización real de cara al cliente —
+    modelo de IA y voz del agente, lo que "elige un negocio real" al armar
+    su bot— pero deliberadamente NO telefonía/SIP/STT ni la API key propia
+    de IA: eso sigue siendo infraestructura que administra la plataforma
+    (Growth54), invisible para cualquier cliente sin importar si entra como
+    Agencia o como Negocio — ninguno de los dos roles es "nuestra" vista
+    interna, los dos son clientes reales. Cualquier campo fuera de esta
+    lista que llegue en el body (ej. telephony_trunk_id) se descarta solo,
+    sin error — no es un campo que este endpoint conozca. La barrera real
+    vive acá, en el schema — no es solo que el formulario del cliente no
+    lo muestre."""
 
+    ai_provider: str | None = None
+    ai_model: str | None = None
+    tts_provider: str | None = None
+    tts_voice_id: str | None = None
     system_prompt: str | None = None
     welcome_message: str | None = None
     escalation_email: str | None = None
@@ -194,14 +203,19 @@ class BotConfigOutClient(BaseModel):
     """Espejo de lectura de BotConfigUpdateClient — la misma barrera de
     escritura no sirve de nada si GET /business/bot-config sigue mandando
     todo el objeto completo igual. Un negocio SÍ necesita ver su propio
-    `phone_number` (de solo lectura, para mostrarlo en 'Tu número'), pero
-    nunca `ai_api_key` ni el resto de infraestructura — antes de este
-    schema, esos campos viajaban igual en la respuesta HTTP aunque el
-    formulario nunca los mostrara, visibles para cualquiera que abriera
-    las devtools del navegador."""
+    `phone_number` (de solo lectura, para mostrarlo en 'Tu número') y su
+    modelo de IA / voz reales (para poder cambiarlos), pero nunca
+    `ai_api_key` ni el resto de infraestructura — antes de este schema,
+    esos campos viajaban igual en la respuesta HTTP aunque el formulario
+    nunca los mostrara, visibles para cualquiera que abriera las devtools
+    del navegador."""
 
     business_id: int
     phone_number: str
+    ai_provider: str
+    ai_model: str
+    tts_provider: str
+    tts_voice_id: str
     system_prompt: str
     welcome_message: str
     escalation_email: str

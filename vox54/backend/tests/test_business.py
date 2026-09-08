@@ -33,45 +33,74 @@ def test_get_bot_config_no_expone_infraestructura(client, seed, business_token, 
     """La barrera de escritura (BotConfigUpdateClient) no sirve de nada si
     la RESPUESTA de lectura sigue mandando todo el objeto completo — un
     negocio no debe recibir en el JSON ni el api key propio de otro
-    negocio ni ningún dato de infraestructura, aunque el formulario nunca
-    los muestre (network tab del navegador los vería igual)."""
+    negocio ni ningún dato de infraestructura real (telefonía/SIP/STT),
+    aunque el formulario nunca los muestre (network tab del navegador los
+    vería igual). Modelo de IA y voz SÍ son personalización real de
+    cualquier cliente (Agencia o Negocio) — esos dos quedan expuestos."""
     seed["business"].bot_config.ai_api_key = "sk-secreto-de-verdad-nunca-deberia-viajar"
     db_session.commit()
 
     res = client.get("/business/bot-config", headers=auth(business_token))
     assert res.status_code == 200
     data = res.json()
-    for campo in ("ai_api_key", "ai_provider", "ai_model", "telephony_provider", "telephony_trunk_id", "stt_provider", "stt_model", "tts_provider", "tts_voice_id", "runtime_target"):
+    for campo in ("ai_api_key", "telephony_provider", "telephony_trunk_id", "stt_provider", "stt_model", "runtime_target"):
         assert campo not in data, f"'{campo}' no debería estar en la respuesta de /business/bot-config"
-    # lo que sí le corresponde ver seguir presente
+    # lo que sí le corresponde ver y cambiar, presente
     assert data["phone_number"] == "+17865550100"
     assert "system_prompt" in data
+    assert "ai_provider" in data
+    assert "ai_model" in data
+    assert "tts_provider" in data
+    assert "tts_voice_id" in data
 
 
 def test_update_bot_config_respuesta_no_expone_infraestructura(client, seed, business_token):
     res = client.put("/business/bot-config", headers=auth(business_token), json={"welcome_message": "Hola"})
     assert res.status_code == 200
     assert "ai_api_key" not in res.json()
-    assert "ai_provider" not in res.json()
+    assert "telephony_provider" not in res.json()
 
 
-def test_negocio_no_puede_tocar_campos_de_infraestructura(client, seed, business_token, db_session):
-    """telefonía/STT/TTS/modelo de IA son decisiones de la agencia, no del
-    cliente — el schema de este endpoint ni siquiera los conoce, así que
+def test_negocio_puede_elegir_su_modelo_de_ia_y_su_voz(client, seed, business_token, db_session):
+    """Modelo de IA y voz del agente son personalización real de cara al
+    cliente — Agencia y Negocio son los dos clientes reales de la
+    plataforma, ninguno es la vista interna de Growth54 — así que un
+    negocio también puede elegir su propio modelo de IA y su voz, igual
+    que ya podía una agencia."""
+    res = client.put(
+        "/business/bot-config",
+        headers=auth(business_token),
+        json={"ai_provider": "openai", "ai_model": "gpt-4o-mini", "tts_provider": "elevenlabs", "tts_voice_id": "sample-female-warm"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["ai_provider"] == "openai"
+    assert data["ai_model"] == "gpt-4o-mini"
+    assert data["tts_provider"] == "elevenlabs"
+    assert data["tts_voice_id"] == "sample-female-warm"
+
+    bot_config = seed["business"].bot_config
+    db_session.refresh(bot_config)
+    assert bot_config.ai_provider == "openai"
+    assert bot_config.tts_provider == "elevenlabs"
+
+
+def test_negocio_no_puede_tocar_infraestructura_real(client, seed, business_token, db_session):
+    """Telefonía/SIP/STT y la API key propia siguen siendo exclusivas de la
+    plataforma (Growth54) — nunca de ningún cliente, sea Agencia o Negocio.
+    El schema de este endpoint ni siquiera conoce estos campos, así que
     mandarlos no da error, simplemente se ignoran sin tocar nada. Ni la
-    respuesta de este endpoint expone esos campos (ver
+    respuesta de este endpoint los expone (ver
     test_get_bot_config_no_expone_infraestructura), así que la comparación
     real de "no cambió nada" se hace contra la base, no contra el JSON."""
     bot_config = seed["business"].bot_config
-    antes = (bot_config.ai_provider, bot_config.stt_provider, bot_config.tts_provider, bot_config.telephony_provider, bot_config.runtime_target, bot_config.ai_api_key)
+    antes = (bot_config.stt_provider, bot_config.telephony_provider, bot_config.runtime_target, bot_config.ai_api_key)
 
     res = client.put(
         "/business/bot-config",
         headers=auth(business_token),
         json={
-            "ai_provider": "openai",
             "stt_provider": "groq",
-            "tts_provider": "elevenlabs",
             "telephony_provider": "telnyx",
             "runtime_target": "self_hosted",
             "ai_api_key": "sk-deberia-ser-ignorado",
@@ -82,7 +111,7 @@ def test_negocio_no_puede_tocar_campos_de_infraestructura(client, seed, business
     assert res.json()["welcome_message"] == "esto sí debería guardarse"
 
     db_session.refresh(bot_config)
-    despues = (bot_config.ai_provider, bot_config.stt_provider, bot_config.tts_provider, bot_config.telephony_provider, bot_config.runtime_target, bot_config.ai_api_key)
+    despues = (bot_config.stt_provider, bot_config.telephony_provider, bot_config.runtime_target, bot_config.ai_api_key)
     assert despues == antes
 
 
@@ -92,8 +121,10 @@ def test_update_bot_config_email_de_escalacion_invalido(client, seed, business_t
 
 
 def test_update_bot_config_telefono_de_transferencia_con_letras_invalido(client, seed, business_token):
-    # phone_number es de la agencia (ver test_negocio_no_puede_tocar_campos_de_infraestructura);
-    # transfer_phone_number sí sigue siendo del cliente y usa la misma validación de formato.
+    # phone_number sigue siendo de solo lectura para el negocio — conectar un
+    # número real es infraestructura que administra la plataforma (ver
+    # test_negocio_no_puede_tocar_infraestructura_real); transfer_phone_number
+    # sí sigue siendo del cliente y usa la misma validación de formato.
     res = client.put("/business/bot-config", headers=auth(business_token), json={"transfer_phone_number": "llamame-porfa"})
     assert res.status_code == 422
 

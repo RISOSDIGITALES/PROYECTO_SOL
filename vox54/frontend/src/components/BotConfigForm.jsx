@@ -8,23 +8,23 @@ import { burst } from "../burst";
  * proveedor elegido (cascada) — si cambia el proveedor y el valor actual no
  * pertenece a la lista nueva, se ajusta solo al primero disponible.
  *
- * `scope`: "agency" (default) muestra el formulario completo, incluyendo
- * telefonía/STT/TTS/modelo de IA — decisiones de infraestructura que le
- * corresponden a la agencia, no al cliente. "client" oculta esas secciones
- * (el negocio solo ve su número ya asignado, de solo lectura) y deja
- * únicamente lo que sí es suyo: comportamiento del bot y control de la
- * llamada. La barrera real no es esta — vive en el backend
- * (BotConfigUpdateClient, ver schemas.py) — esto es la vista honesta de esa
- * misma barrera, para no mostrarle al cliente un campo que después el
- * servidor va a ignorar en silencio.
+ * Agencia y Negocio son los dos clientes reales de la plataforma (una
+ * agencia gestiona varios negocios/sucursales; un negocio es uno solo) —
+ * ninguno de los dos es "nuestra" vista interna de administrador. Por eso
+ * la personalización real de cara al cliente — número (de solo lectura,
+ * ver más abajo), modelo de IA, voz del agente — se ve en los DOS scopes
+ * por igual: es lo que cualquier cliente real "elige" al armar su bot.
  *
- * Dentro del scope "agency" hay una segunda separación, solo visual — entre
- * lo que alguien no técnico personaliza seguido (número, modelo de IA, voz)
- * y lo que es configuración técnica de una sola vez (proveedor de telefonía,
- * SIP trunk, dónde corre el worker, reconocimiento de voz, API key propia).
- * Lo segundo vive plegado en <AdvancedSection>, cerrado por default — mismos
- * campos y mismo submit de siempre, solo reordenados para no enterrar la
- * personalización real bajo términos de infraestructura.
+ * `scope`: solo cambia qué tan al fondo vive la configuración técnica de
+ * infraestructura (telefonía/SIP, reconocimiento de voz/STT, la API key
+ * propia de IA) — eso sigue siendo exclusivo de la plataforma (Growth54),
+ * nunca de ningún cliente, agencia o negocio: "agency" la muestra plegada
+ * en <AdvancedSection> (mientras no exista una vista propia de operador de
+ * plataforma, alguien tiene que poder tocarla); "client" la oculta del
+ * todo. La barrera real no es esta — vive en el backend
+ * (BotConfigUpdateClient, ver schemas.py) — esto es la vista honesta de esa
+ * misma barrera, para no mostrarle a nadie un campo que después el
+ * servidor va a ignorar en silencio.
  */
 export default function BotConfigForm({ config, catalog, onChange, onSave, saving, savedMessage, error, scope = "agency" }) {
   const isAgency = scope === "agency";
@@ -116,12 +116,12 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
           con `full`, para no dejar un hueco raro al lado de una tarjeta
           corta. */}
       <div style={gridStyle}>
-      {/* Las 4 tarjetas de personalización van en su propio sub-grid de 2
-          columnas fijas — el auto-fit del grid de afuera las repartía 3+1 en
+      {/* Las 4 tarjetas de personalización (Estado, Número, Modelo de IA,
+          Voz) van en su propio sub-grid de 2 columnas fijas, iguales en los
+          dos scopes — el auto-fit del grid de afuera las repartía 3+1 en
           pantallas anchas (se acomodaban tantas como entraran por ancho, no
           por cuántas hay), dejando "Voz del agente" sola y feo en su propia
-          fila. Acá siempre son 2 y 2 (o 1 fila de 2 en el scope cliente, que
-          solo tiene Estado + Tu número). */}
+          fila. Acá siempre son 2 y 2. */}
       <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
         <Section title="Estado del agente">
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -166,66 +166,67 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
         </Section>
       )}
 
-      {isAgency && (
-        <>
-          <Section title="Modelo de IA">
-            <Row>
-              <Field label="Proveedor">
-                <select
-                  value={config.ai_provider}
-                  onChange={(e) => handleAiProviderChange(e.target.value)}
-                  style={inputStyle}
-                >
-                  {catalog.ai_providers.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Modelo">
-                <select
-                  value={config.ai_model}
-                  onChange={(e) => onChange({ ai_model: e.target.value })}
-                  style={inputStyle}
-                >
-                  {aiModels.map((m) => (
-                    <option key={m.id} value={m.id}>{m.name}</option>
-                  ))}
-                </select>
-              </Field>
-            </Row>
-          </Section>
+      {/* Modelo de IA y Voz del agente son personalización real de cara al
+          cliente (Agencia o Negocio, los dos son clientes reales — ninguno
+          es "nuestra" vista interna) — visibles en los dos scopes. Lo que
+          sigue siendo exclusivo de infraestructura (telefonía/SIP/STT/API
+          key propia) vive más abajo, en <AdvancedSection>. */}
+      <Section title="Modelo de IA">
+        <Row>
+          <Field label="Proveedor">
+            <select
+              value={config.ai_provider}
+              onChange={(e) => handleAiProviderChange(e.target.value)}
+              style={inputStyle}
+            >
+              {catalog.ai_providers.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Modelo">
+            <select
+              value={config.ai_model}
+              onChange={(e) => onChange({ ai_model: e.target.value })}
+              style={inputStyle}
+            >
+              {aiModels.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          </Field>
+        </Row>
+      </Section>
 
-          <Section title="Voz del agente">
-            <Row>
-              <Field label="Proveedor">
-                <select
-                  value={config.tts_provider}
-                  onChange={(e) => handleTtsProviderChange(e.target.value)}
-                  style={inputStyle}
-                >
-                  {catalog.tts_providers.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Voz">
-                <select
-                  value={config.tts_voice_id}
-                  onChange={(e) => onChange({ tts_voice_id: e.target.value })}
-                  style={inputStyle}
-                >
-                  {ttsVoices.map((v) => (
-                    <option key={v.id} value={v.id}>{v.name}</option>
-                  ))}
-                </select>
-              </Field>
-            </Row>
-            <div style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>
-              Estas voces son solo etiquetas por ahora — sin una cuenta real de {catalog.tts_providers.find((p) => p.id === config.tts_provider)?.name || "el proveedor"} conectada no hay ningún audio real que reproducir todavía.
-            </div>
-          </Section>
-        </>
-      )}
+      <Section title="Voz del agente">
+        <Row>
+          <Field label="Proveedor">
+            <select
+              value={config.tts_provider}
+              onChange={(e) => handleTtsProviderChange(e.target.value)}
+              style={inputStyle}
+            >
+              {catalog.tts_providers.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Voz">
+            <select
+              value={config.tts_voice_id}
+              onChange={(e) => onChange({ tts_voice_id: e.target.value })}
+              style={inputStyle}
+            >
+              {ttsVoices.map((v) => (
+                <option key={v.id} value={v.id}>{v.name}</option>
+              ))}
+            </select>
+          </Field>
+        </Row>
+        <div style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>
+          Estas voces son solo etiquetas por ahora — sin una cuenta real de {catalog.tts_providers.find((p) => p.id === config.tts_provider)?.name || "el proveedor"} conectada no hay ningún audio real que reproducir todavía.
+        </div>
+      </Section>
       </div>
 
       <Section title="Comportamiento del agente" full>

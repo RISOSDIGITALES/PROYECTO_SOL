@@ -140,6 +140,11 @@ describe("BotConfigForm — envío", () => {
 });
 
 describe("BotConfigForm — separación cliente/agencia", () => {
+  // Agencia y Negocio son los dos clientes reales de la plataforma (ninguno
+  // es la vista interna de Growth54) — la personalización de cara al
+  // cliente (Número, Modelo de IA, Voz del agente) se ve igual en los dos
+  // scopes. Lo único que cambia es la configuración técnica de
+  // infraestructura (telefonía/SIP/STT/API key), exclusiva de la plataforma.
   it("scope agencia (default) muestra personalización (Número, Modelo de IA, Voz del agente) a simple vista", () => {
     render(<Wrapper initialConfig={baseConfig} scope="agency" />);
     expect(screen.getByText("Número")).toBeInTheDocument();
@@ -161,15 +166,19 @@ describe("BotConfigForm — separación cliente/agencia", () => {
     expect(screen.getByLabelText("API key propia de IA (opcional)")).toBeInTheDocument();
   });
 
-  it("scope cliente oculta las secciones técnicas por completo, ni siquiera quedan en el DOM", () => {
+  it("scope cliente oculta las secciones técnicas de infraestructura por completo, ni siquiera quedan en el DOM", () => {
     render(<Wrapper initialConfig={baseConfig} scope="client" />);
     expect(screen.queryByText("Telefonía")).not.toBeInTheDocument();
     expect(screen.queryByText("Reconocimiento de voz (STT)")).not.toBeInTheDocument();
-    expect(screen.queryByText("Voz del agente")).not.toBeInTheDocument();
-    expect(screen.queryByText("Modelo de IA")).not.toBeInTheDocument();
     expect(screen.queryByText("Proveedor de telefonía")).not.toBeInTheDocument();
     expect(screen.queryByText("API key propia de IA (opcional)")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Configuración técnica/ })).not.toBeInTheDocument();
+  });
+
+  it("scope cliente SÍ muestra Modelo de IA y Voz del agente — es personalización real de cualquier cliente, no solo de agencia", () => {
+    render(<Wrapper initialConfig={baseConfig} scope="client" />);
+    expect(screen.getByText("Modelo de IA")).toBeInTheDocument();
+    expect(screen.getByText("Voz del agente")).toBeInTheDocument();
   });
 
   it("scope cliente muestra el número asignado como texto de solo lectura, no un input editable", () => {
