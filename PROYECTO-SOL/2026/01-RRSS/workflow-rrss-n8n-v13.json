@@ -3,12 +3,12 @@
   "name": "🎨 Content AI — RRSS G54 v1.3",
   "description": null,
   "active": true,
-  "activeVersionId": "15d7690d-6f3d-46b7-89fd-c6654ed08ead",
+  "activeVersionId": "89c5659a-c3e5-4aa8-8891-6d7326491522",
   "createdAt": "2026-05-15T15:53:30.951Z",
-  "updatedAt": "2026-08-27T16:13:30.707Z",
+  "updatedAt": "2026-09-16T16:36:26.061Z",
   "isArchived": false,
-  "versionId": "15d7690d-6f3d-46b7-89fd-c6654ed08ead",
-  "versionCounter": 165,
+  "versionId": "89c5659a-c3e5-4aa8-8891-6d7326491522",
+  "versionCounter": 168,
   "sourceWorkflowId": null,
   "triggerCount": 1,
   "nodes": [
@@ -128,7 +128,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ====================================================\n// Preparar Contexto para IA — G54 Field Mapping\n// G54 API fields:\n//   company: name, description, value_proposition, base_city, website, emails[], phones[]\n//   products: name, description, keywords[]\n//   ideas: id, topic, keyword, platform, description\n//   estrategia: objetivo, audiencia, tono, cta_principal, embudo, pilares[]\n// ====================================================\n\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\n// G54 wraps in .data, Airtable uses .fields\nconst empresa = empresaRaw.data || empresaRaw.fields || empresaRaw || {};\n\nconst productosRaw = $('📦 Obtener Servicios Activos').item.json;\n// G54: { company_id, data: [{id, name, description, keywords[]}] }\nconst productosData = productosRaw.data || productosRaw.items || productosRaw.records || (Array.isArray(productosRaw) ? productosRaw : []);\n\n// G54 ideas response: { data: [{id, topic, keyword, platform, description}] }\nconst temaRaw = $('📅 Obtener Próximo Tema Semanal').item.json;\nconst temaList = temaRaw.data || temaRaw.items || temaRaw.records || (Array.isArray(temaRaw) ? temaRaw : [temaRaw]);\n\n// Ideas que ya tienen un post generado (cualquier estado: borrador/aprobado/publicado) — para no volver a generar el mismo tema\nlet usedIdeaIds = new Set();\ntry {\n  const postsRaw = $('📋 Obtener Posts Existentes (G54)').item.json;\n  const postsList = postsRaw.data || (Array.isArray(postsRaw) ? postsRaw : []);\n  usedIdeaIds = new Set(postsList.map(p => p.social_idea_id).filter(id => id !== null && id !== undefined));\n} catch (e) {\n  // Si la lectura de posts falla (login caído, etc.), seguimos sin filtrar — mismo comportamiento de antes\n}\n\n// Use idea_id from webhook if provided (G54 sends it in mode:post)\nconst webhookBody = $('🔔 Webhook G54').item?.json?.body || $('🔔 Webhook G54').item?.json || {};\nconst webhookIdeaId = webhookBody.idea_id;\nconst temaList2 = Array.isArray(temaList) ? temaList : [temaList];\nlet temaItem;\nif (webhookIdeaId) {\n  // Mismo candado anti-duplicado del ítem 117, ahora también para cuando el panel manda\n  // un idea_id explícito (botón \"Generar Post\" sobre una idea puntual) — antes solo protegía\n  // la elección automática, así que un clic sobre una idea ya usada volvía a duplicar el post.\n  const usedIdsStr = new Set(Array.from(usedIdeaIds).map(id => String(id)));\n  if (usedIdsStr.has(String(webhookIdeaId))) {\n    throw new Error(`La idea ${webhookIdeaId} ya tiene un post generado — no se crea un duplicado. Para un contenido distinto usá \"Regenerar Idea\" antes de generar el post, o borrá primero el post existente si es un borrador.`);\n  }\n  temaItem = temaList2.find(t => String(t.id) === String(webhookIdeaId)) || temaList2[0];\n} else {\n  // Bug real del 14-ago: el botón \"Generar Post\" del panel no manda idea_id (confirmado\n  // con la ejecución real), así que sin este filtro se podía elegir cualquier idea sin\n  // post generado, sin importar su estado — incluida una idea de tendencia todavía sin\n  // aprobar, en vez de la idea real que el cliente ya había aprobado en el panel.\n  // Nunca generar un post de una idea que un humano no aprobó primero.\n  temaItem = temaList2.find(t => !usedIdeaIds.has(t.id) && t.status === 'aprobado');\n  if (!temaItem) {\n    throw new Error('No hay ninguna idea aprobada y sin usar disponible para generar un post — aprobá una idea en el panel antes de generar el post, o genera ideas nuevas si no hay ninguna pendiente.');\n  }\n}\ntemaItem = temaItem || {};\nconst tema = temaItem.fields || temaItem || {};\nconst temaId = temaItem.id || temaItem.social_idea_id || temaItem.tema_id || null;\n\n// Estrategia (continueOnFail — null if not configured yet)\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\n// Build product/service summary — handles G54 (name/description) and Airtable fallback\nconst servicios = productosData\n  .filter(p => (p.fields || p).is_active !== false)\n  .map(p => {\n    const f = p.fields || p;\n    const nombre = f.name || f.nombre || f['Nombre de Servicio'] || '';\n    const desc   = f.description || f.descripcion || f['Descripción comercial'] || '';\n    const kws    = Array.isArray(f.keywords) ? f.keywords.slice(0,3).join(', ') : '';\n    return `- ${nombre}: ${desc}${kws ? ' [' + kws + ']' : ''}`.slice(0, 220);\n  })\n  .join('\\n');\n\nreturn [{\n  json: {\n    // ---- Empresa (G54 field names first, Airtable fallback) ----\n    empresa_nombre:          empresa.name || empresa.nombre_empresa || empresa['\\ufeffnombre_empresa'] || '',\n    empresa_descripcion:     empresa.description || empresa.descripcion_corta || '',\n    empresa_propuesta_valor: empresa.value_proposition || empresa.propuesta_valor || '',\n    empresa_ciudad:          empresa.base_city || empresa.ciudad_base || empresa['ciudad base'] || '',\n    empresa_web:             empresa.website || empresa.sitio_web || '',\n    empresa_telefono:        (empresa.phones || [])[0] || empresa.telefono || '',\n    empresa_email:           (empresa.emails || [])[0] || '',\n    empresa_geografia:       empresa.geography || empresa.coverage || '',\n    empresa_competidores:    (empresa.competitors_known || []).slice(0,3).map(c => c.name).join(', '),\n    servicios_resumen:       servicios,\n    // ---- Tema / Idea G54 ----\n    tema_id:                 temaId,\n    tema_texto:              tema.topic || tema.tema || tema['Tema'] || '',\n    tema_descripcion:        tema.fecha_propuesta || '',\n    tema_palabras_clave:     tema.keyword || tema.palabras_clave || '',\n    keyword_principal:       tema.keyword || tema.keyword_principal || '',\n    tema_semana:             tema.week || tema.semana || tema['Semana'] || 0,\n    tema_plataforma:         tema.platform || tema.plataforma || 'Instagram',\n    fecha_post:              new Date().toISOString().slice(0, 10), // UTC, sin asumir zona horaria de ninguna empresa\n    // ---- Estrategia G54 ----\n    estrategia_objetivo:     estrategia.objetivo || estrategia.primary_goal || empresa.primary_goal || '',\n    estrategia_audiencia:    estrategia.audiencia || estrategia.target_market || empresa.target_market || '',\n    estrategia_tono:         estrategia.tono || 'profesional, directo y humano',\n    estrategia_cta:          (estrategia.link_origen && estrategia.link_origen !== 'ninguno' && estrategia.link_resuelto) ? estrategia.link_resuelto : (estrategia.link_principal || estrategia.cta_principal || (empresa.website || empresa.sitio_web || '')), // Preferir link_resuelto (ya calculado por G54, ítem del 24-ago) sobre resolverlo nosotros mismos; misma cadena de respaldo si no viene.\n    estrategia_embudo:       estrategia.embudo || 'TOFU-MOFU',\n    estrategia_pilares:      Array.isArray(estrategia.pilares) ? estrategia.pilares.join(', ') : (estrategia.pilares || ''),\n    // ---- Imagen (G54 provee la URL — subida por usuario o generada por Image AI) ----\n    imagen_url:              tema.imagen_url || tema.image_url || null,\n    imagen_specs:            tema.imagen_specs || tema.image_specs || '',\n  }\n}];\n"
+        "jsCode": "// ====================================================\n// Preparar Contexto para IA — G54 Field Mapping\n// G54 API fields:\n//   company: name, description, value_proposition, base_city, website, emails[], phones[]\n//   products: name, description, keywords[]\n//   ideas: id, topic, keyword, platform, description\n//   estrategia: objetivo, audiencia, tono, cta_principal, embudo, pilares[]\n// ====================================================\n\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\n// G54 wraps in .data, Airtable uses .fields\nconst empresa = empresaRaw.data || empresaRaw.fields || empresaRaw || {};\n\nconst productosRaw = $('📦 Obtener Servicios Activos').item.json;\n// G54: { company_id, data: [{id, name, description, keywords[]}] }\nconst productosData = productosRaw.data || productosRaw.items || productosRaw.records || (Array.isArray(productosRaw) ? productosRaw : []);\n\n// G54 ideas response: { data: [{id, topic, keyword, platform, description}] }\nconst temaRaw = $('📅 Obtener Próximo Tema Semanal').item.json;\nconst temaList = temaRaw.data || temaRaw.items || temaRaw.records || (Array.isArray(temaRaw) ? temaRaw : [temaRaw]);\n\n// Ideas que ya tienen un post generado (cualquier estado: borrador/aprobado/publicado) — para no volver a generar el mismo tema\nlet usedIdeaIds = new Set();\ntry {\n  const postsRaw = $('📋 Obtener Posts Existentes (G54)').item.json;\n  const postsList = postsRaw.data || (Array.isArray(postsRaw) ? postsRaw : []);\n  usedIdeaIds = new Set(postsList.map(p => p.social_idea_id).filter(id => id !== null && id !== undefined));\n} catch (e) {\n  // Si la lectura de posts falla (login caído, etc.), seguimos sin filtrar — mismo comportamiento de antes\n}\n\n// Use idea_id from webhook if provided (G54 sends it in mode:post)\nconst webhookBody = $('🔔 Webhook G54').item?.json?.body || $('🔔 Webhook G54').item?.json || {};\nconst webhookIdeaId = webhookBody.idea_id;\nconst temaList2 = Array.isArray(temaList) ? temaList : [temaList];\nlet temaItem;\nif (webhookIdeaId) {\n  // Mismo candado anti-duplicado del ítem 117, ahora también para cuando el panel manda\n  // un idea_id explícito (botón \"Generar Post\" sobre una idea puntual) — antes solo protegía\n  // la elección automática, así que un clic sobre una idea ya usada volvía a duplicar el post.\n  const usedIdsStr = new Set(Array.from(usedIdeaIds).map(id => String(id)));\n  if (usedIdsStr.has(String(webhookIdeaId))) {\n    throw new Error(`La idea ${webhookIdeaId} ya tiene un post generado — no se crea un duplicado. Para un contenido distinto usá \"Regenerar Idea\" antes de generar el post, o borrá primero el post existente si es un borrador.`);\n  }\n  temaItem = temaList2.find(t => String(t.id) === String(webhookIdeaId));\n    if (!temaItem) {\n      // Antes esto caia en silencio a temaList2[0] (la primera idea de la lista, sin importar\n      // cual) cuando el idea_id pedido no existia -- confirmado en vivo el 16-sep generando un\n      // post real de una idea distinta a la pedida, sin ningun aviso. Ahora falla limpio.\n      throw new Error(`No se encontro la idea ${webhookIdeaId} -- puede que ya no exista o que el ID este mal. No se genera ningun post de reemplazo.`);\n    }\n} else {\n  // Bug real del 14-ago: el botón \"Generar Post\" del panel no manda idea_id (confirmado\n  // con la ejecución real), así que sin este filtro se podía elegir cualquier idea sin\n  // post generado, sin importar su estado — incluida una idea de tendencia todavía sin\n  // aprobar, en vez de la idea real que el cliente ya había aprobado en el panel.\n  // Nunca generar un post de una idea que un humano no aprobó primero.\n  temaItem = temaList2.find(t => !usedIdeaIds.has(t.id) && t.status === 'aprobado');\n  if (!temaItem) {\n    throw new Error('No hay ninguna idea aprobada y sin usar disponible para generar un post — aprobá una idea en el panel antes de generar el post, o genera ideas nuevas si no hay ninguna pendiente.');\n  }\n}\ntemaItem = temaItem || {};\nconst tema = temaItem.fields || temaItem || {};\nconst temaId = temaItem.id || temaItem.social_idea_id || temaItem.tema_id || null;\n\n// Estrategia (continueOnFail — null if not configured yet)\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\n// Build product/service summary — handles G54 (name/description) and Airtable fallback\nconst servicios = productosData\n  .filter(p => (p.fields || p).is_active !== false)\n  .map(p => {\n    const f = p.fields || p;\n    const nombre = f.name || f.nombre || f['Nombre de Servicio'] || '';\n    const desc   = f.description || f.descripcion || f['Descripción comercial'] || '';\n    const kws    = Array.isArray(f.keywords) ? f.keywords.slice(0,3).join(', ') : '';\n    return `- ${nombre}: ${desc}${kws ? ' [' + kws + ']' : ''}`.slice(0, 220);\n  })\n  .join('\\n');\n\nreturn [{\n  json: {\n    // ---- Empresa (G54 field names first, Airtable fallback) ----\n    empresa_nombre:          empresa.name || empresa.nombre_empresa || empresa['\\ufeffnombre_empresa'] || '',\n    empresa_descripcion:     empresa.description || empresa.descripcion_corta || '',\n    empresa_propuesta_valor: empresa.value_proposition || empresa.propuesta_valor || '',\n    empresa_ciudad:          empresa.base_city || empresa.ciudad_base || empresa['ciudad base'] || '',\n    empresa_web:             empresa.website || empresa.sitio_web || '',\n    empresa_telefono:        (empresa.phones || [])[0] || empresa.telefono || '',\n    empresa_email:           (empresa.emails || [])[0] || '',\n    empresa_geografia:       empresa.geography || empresa.coverage || '',\n    empresa_competidores:    (empresa.competitors_known || []).slice(0,3).map(c => c.name).join(', '),\n    servicios_resumen:       servicios,\n    // ---- Tema / Idea G54 ----\n    tema_id:                 temaId,\n    tema_texto:              tema.topic || tema.tema || tema['Tema'] || '',\n    tema_descripcion:        tema.fecha_propuesta || '',\n    tema_palabras_clave:     tema.keyword || tema.palabras_clave || '',\n    keyword_principal:       tema.keyword || tema.keyword_principal || '',\n    tema_semana:             tema.week || tema.semana || tema['Semana'] || 0,\n    tema_plataforma:         tema.platform || tema.plataforma || 'Instagram',\n    fecha_post:              new Date().toISOString().slice(0, 10), // UTC, sin asumir zona horaria de ninguna empresa\n    // ---- Estrategia G54 ----\n    estrategia_objetivo:     estrategia.objetivo || estrategia.primary_goal || empresa.primary_goal || '',\n    estrategia_audiencia:    estrategia.audiencia || estrategia.target_market || empresa.target_market || '',\n    estrategia_tono:         estrategia.tono || 'profesional, directo y humano',\n    estrategia_cta:          (estrategia.link_origen && estrategia.link_origen !== 'ninguno' && estrategia.link_resuelto) ? estrategia.link_resuelto : (estrategia.link_principal || estrategia.cta_principal || (empresa.website || empresa.sitio_web || '')), // Preferir link_resuelto (ya calculado por G54, ítem del 24-ago) sobre resolverlo nosotros mismos; misma cadena de respaldo si no viene.\n    estrategia_embudo:       estrategia.embudo || 'TOFU-MOFU',\n    estrategia_pilares:      Array.isArray(estrategia.pilares) ? estrategia.pilares.join(', ') : (estrategia.pilares || ''),\n    // ---- Imagen (G54 provee la URL — subida por usuario o generada por Image AI) ----\n    imagen_url:              tema.imagen_url || tema.image_url || null,\n    imagen_specs:            tema.imagen_specs || tema.image_specs || '',\n  }\n}];\n"
       },
       "id": "preparar-contexto",
       "name": "🔧 Preparar Contexto para IA",
@@ -861,6 +861,93 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "if-lote-ideas",
+      "name": "🔀 ¿Lote de Ideas?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        190,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-es-lote",
+              "leftValue": "={{ Array.isArray($json.body.idea_ids) && [...new Set($json.body.idea_ids)].length > 1 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "responder-lote",
+      "name": "📤 Responder Lote (Fire-and-Forget)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [
+        420,
+        380
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, mode: 'lote', total: ($('🔔 Webhook G54').item.json.body.idea_ids || []).length, message: 'Recibido: generando ' + (($('🔔 Webhook G54').item.json.body.idea_ids)||[]).length + ' publicaciones en segundo plano. Van a ir apareciendo como borrador en los proximos minutos.' }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "preparar-lote-posts",
+      "name": "🔧 Preparar Lote de Posts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        540
+      ],
+      "parameters": {
+        "jsCode": "const body = $('🔔 Webhook G54').item.json.body || {};\nconst idsRaw = Array.isArray(body.idea_ids) ? body.idea_ids : [];\nconst unicos = [...new Set(idsRaw.map(id => Number(id)).filter(id => Number.isFinite(id)))];\nif (unicos.length === 0) {\n  throw new Error('idea_ids llego vacio o invalido -- no hay nada que generar en lote.');\n}\nreturn unicos.map(id => ({ json: { company_id: body.company_id, idea_id: id } }));"
+      }
+    },
+    {
+      "id": "dispatch-lote-post",
+      "name": "📤 Generar Post (Lote, self-dispatch)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        540
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.mdarthurdigital.com/webhook/rrss-automation-g54",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: $json.company_id, mode: 'post', idea_id: $json.idea_id }) }}",
+        "options": {
+          "timeout": 15000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 15000
+            }
+          }
+        }
+      }
     }
   ],
   "connections": {
@@ -996,7 +1083,7 @@
       "main": [
         [
           {
-            "node": "⚙️ Config Growth54",
+            "node": "🔀 ¿Lote de Ideas?",
             "type": "main",
             "index": 0
           }
@@ -1165,6 +1252,40 @@
           }
         ]
       ]
+    },
+    "🔀 ¿Lote de Ideas?": {
+      "main": [
+        [
+          {
+            "node": "📤 Responder Lote (Fire-and-Forget)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔧 Preparar Lote de Posts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⚙️ Config Growth54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Lote de Posts": {
+      "main": [
+        [
+          {
+            "node": "📤 Generar Post (Lote, self-dispatch)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -1207,7 +1328,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "15d7690d-6f3d-46b7-89fd-c6654ed08ead",
+    "versionId": "89c5659a-c3e5-4aa8-8891-6d7326491522",
     "workflowId": "wyO1f93A66imn9qw",
     "nodes": [
       {
@@ -1326,7 +1447,7 @@
       },
       {
         "parameters": {
-          "jsCode": "// ====================================================\n// Preparar Contexto para IA — G54 Field Mapping\n// G54 API fields:\n//   company: name, description, value_proposition, base_city, website, emails[], phones[]\n//   products: name, description, keywords[]\n//   ideas: id, topic, keyword, platform, description\n//   estrategia: objetivo, audiencia, tono, cta_principal, embudo, pilares[]\n// ====================================================\n\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\n// G54 wraps in .data, Airtable uses .fields\nconst empresa = empresaRaw.data || empresaRaw.fields || empresaRaw || {};\n\nconst productosRaw = $('📦 Obtener Servicios Activos').item.json;\n// G54: { company_id, data: [{id, name, description, keywords[]}] }\nconst productosData = productosRaw.data || productosRaw.items || productosRaw.records || (Array.isArray(productosRaw) ? productosRaw : []);\n\n// G54 ideas response: { data: [{id, topic, keyword, platform, description}] }\nconst temaRaw = $('📅 Obtener Próximo Tema Semanal').item.json;\nconst temaList = temaRaw.data || temaRaw.items || temaRaw.records || (Array.isArray(temaRaw) ? temaRaw : [temaRaw]);\n\n// Ideas que ya tienen un post generado (cualquier estado: borrador/aprobado/publicado) — para no volver a generar el mismo tema\nlet usedIdeaIds = new Set();\ntry {\n  const postsRaw = $('📋 Obtener Posts Existentes (G54)').item.json;\n  const postsList = postsRaw.data || (Array.isArray(postsRaw) ? postsRaw : []);\n  usedIdeaIds = new Set(postsList.map(p => p.social_idea_id).filter(id => id !== null && id !== undefined));\n} catch (e) {\n  // Si la lectura de posts falla (login caído, etc.), seguimos sin filtrar — mismo comportamiento de antes\n}\n\n// Use idea_id from webhook if provided (G54 sends it in mode:post)\nconst webhookBody = $('🔔 Webhook G54').item?.json?.body || $('🔔 Webhook G54').item?.json || {};\nconst webhookIdeaId = webhookBody.idea_id;\nconst temaList2 = Array.isArray(temaList) ? temaList : [temaList];\nlet temaItem;\nif (webhookIdeaId) {\n  // Mismo candado anti-duplicado del ítem 117, ahora también para cuando el panel manda\n  // un idea_id explícito (botón \"Generar Post\" sobre una idea puntual) — antes solo protegía\n  // la elección automática, así que un clic sobre una idea ya usada volvía a duplicar el post.\n  const usedIdsStr = new Set(Array.from(usedIdeaIds).map(id => String(id)));\n  if (usedIdsStr.has(String(webhookIdeaId))) {\n    throw new Error(`La idea ${webhookIdeaId} ya tiene un post generado — no se crea un duplicado. Para un contenido distinto usá \"Regenerar Idea\" antes de generar el post, o borrá primero el post existente si es un borrador.`);\n  }\n  temaItem = temaList2.find(t => String(t.id) === String(webhookIdeaId)) || temaList2[0];\n} else {\n  // Bug real del 14-ago: el botón \"Generar Post\" del panel no manda idea_id (confirmado\n  // con la ejecución real), así que sin este filtro se podía elegir cualquier idea sin\n  // post generado, sin importar su estado — incluida una idea de tendencia todavía sin\n  // aprobar, en vez de la idea real que el cliente ya había aprobado en el panel.\n  // Nunca generar un post de una idea que un humano no aprobó primero.\n  temaItem = temaList2.find(t => !usedIdeaIds.has(t.id) && t.status === 'aprobado');\n  if (!temaItem) {\n    throw new Error('No hay ninguna idea aprobada y sin usar disponible para generar un post — aprobá una idea en el panel antes de generar el post, o genera ideas nuevas si no hay ninguna pendiente.');\n  }\n}\ntemaItem = temaItem || {};\nconst tema = temaItem.fields || temaItem || {};\nconst temaId = temaItem.id || temaItem.social_idea_id || temaItem.tema_id || null;\n\n// Estrategia (continueOnFail — null if not configured yet)\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\n// Build product/service summary — handles G54 (name/description) and Airtable fallback\nconst servicios = productosData\n  .filter(p => (p.fields || p).is_active !== false)\n  .map(p => {\n    const f = p.fields || p;\n    const nombre = f.name || f.nombre || f['Nombre de Servicio'] || '';\n    const desc   = f.description || f.descripcion || f['Descripción comercial'] || '';\n    const kws    = Array.isArray(f.keywords) ? f.keywords.slice(0,3).join(', ') : '';\n    return `- ${nombre}: ${desc}${kws ? ' [' + kws + ']' : ''}`.slice(0, 220);\n  })\n  .join('\\n');\n\nreturn [{\n  json: {\n    // ---- Empresa (G54 field names first, Airtable fallback) ----\n    empresa_nombre:          empresa.name || empresa.nombre_empresa || empresa['\\ufeffnombre_empresa'] || '',\n    empresa_descripcion:     empresa.description || empresa.descripcion_corta || '',\n    empresa_propuesta_valor: empresa.value_proposition || empresa.propuesta_valor || '',\n    empresa_ciudad:          empresa.base_city || empresa.ciudad_base || empresa['ciudad base'] || '',\n    empresa_web:             empresa.website || empresa.sitio_web || '',\n    empresa_telefono:        (empresa.phones || [])[0] || empresa.telefono || '',\n    empresa_email:           (empresa.emails || [])[0] || '',\n    empresa_geografia:       empresa.geography || empresa.coverage || '',\n    empresa_competidores:    (empresa.competitors_known || []).slice(0,3).map(c => c.name).join(', '),\n    servicios_resumen:       servicios,\n    // ---- Tema / Idea G54 ----\n    tema_id:                 temaId,\n    tema_texto:              tema.topic || tema.tema || tema['Tema'] || '',\n    tema_descripcion:        tema.fecha_propuesta || '',\n    tema_palabras_clave:     tema.keyword || tema.palabras_clave || '',\n    keyword_principal:       tema.keyword || tema.keyword_principal || '',\n    tema_semana:             tema.week || tema.semana || tema['Semana'] || 0,\n    tema_plataforma:         tema.platform || tema.plataforma || 'Instagram',\n    fecha_post:              new Date().toISOString().slice(0, 10), // UTC, sin asumir zona horaria de ninguna empresa\n    // ---- Estrategia G54 ----\n    estrategia_objetivo:     estrategia.objetivo || estrategia.primary_goal || empresa.primary_goal || '',\n    estrategia_audiencia:    estrategia.audiencia || estrategia.target_market || empresa.target_market || '',\n    estrategia_tono:         estrategia.tono || 'profesional, directo y humano',\n    estrategia_cta:          (estrategia.link_origen && estrategia.link_origen !== 'ninguno' && estrategia.link_resuelto) ? estrategia.link_resuelto : (estrategia.link_principal || estrategia.cta_principal || (empresa.website || empresa.sitio_web || '')), // Preferir link_resuelto (ya calculado por G54, ítem del 24-ago) sobre resolverlo nosotros mismos; misma cadena de respaldo si no viene.\n    estrategia_embudo:       estrategia.embudo || 'TOFU-MOFU',\n    estrategia_pilares:      Array.isArray(estrategia.pilares) ? estrategia.pilares.join(', ') : (estrategia.pilares || ''),\n    // ---- Imagen (G54 provee la URL — subida por usuario o generada por Image AI) ----\n    imagen_url:              tema.imagen_url || tema.image_url || null,\n    imagen_specs:            tema.imagen_specs || tema.image_specs || '',\n  }\n}];\n"
+          "jsCode": "// ====================================================\n// Preparar Contexto para IA — G54 Field Mapping\n// G54 API fields:\n//   company: name, description, value_proposition, base_city, website, emails[], phones[]\n//   products: name, description, keywords[]\n//   ideas: id, topic, keyword, platform, description\n//   estrategia: objetivo, audiencia, tono, cta_principal, embudo, pilares[]\n// ====================================================\n\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\n// G54 wraps in .data, Airtable uses .fields\nconst empresa = empresaRaw.data || empresaRaw.fields || empresaRaw || {};\n\nconst productosRaw = $('📦 Obtener Servicios Activos').item.json;\n// G54: { company_id, data: [{id, name, description, keywords[]}] }\nconst productosData = productosRaw.data || productosRaw.items || productosRaw.records || (Array.isArray(productosRaw) ? productosRaw : []);\n\n// G54 ideas response: { data: [{id, topic, keyword, platform, description}] }\nconst temaRaw = $('📅 Obtener Próximo Tema Semanal').item.json;\nconst temaList = temaRaw.data || temaRaw.items || temaRaw.records || (Array.isArray(temaRaw) ? temaRaw : [temaRaw]);\n\n// Ideas que ya tienen un post generado (cualquier estado: borrador/aprobado/publicado) — para no volver a generar el mismo tema\nlet usedIdeaIds = new Set();\ntry {\n  const postsRaw = $('📋 Obtener Posts Existentes (G54)').item.json;\n  const postsList = postsRaw.data || (Array.isArray(postsRaw) ? postsRaw : []);\n  usedIdeaIds = new Set(postsList.map(p => p.social_idea_id).filter(id => id !== null && id !== undefined));\n} catch (e) {\n  // Si la lectura de posts falla (login caído, etc.), seguimos sin filtrar — mismo comportamiento de antes\n}\n\n// Use idea_id from webhook if provided (G54 sends it in mode:post)\nconst webhookBody = $('🔔 Webhook G54').item?.json?.body || $('🔔 Webhook G54').item?.json || {};\nconst webhookIdeaId = webhookBody.idea_id;\nconst temaList2 = Array.isArray(temaList) ? temaList : [temaList];\nlet temaItem;\nif (webhookIdeaId) {\n  // Mismo candado anti-duplicado del ítem 117, ahora también para cuando el panel manda\n  // un idea_id explícito (botón \"Generar Post\" sobre una idea puntual) — antes solo protegía\n  // la elección automática, así que un clic sobre una idea ya usada volvía a duplicar el post.\n  const usedIdsStr = new Set(Array.from(usedIdeaIds).map(id => String(id)));\n  if (usedIdsStr.has(String(webhookIdeaId))) {\n    throw new Error(`La idea ${webhookIdeaId} ya tiene un post generado — no se crea un duplicado. Para un contenido distinto usá \"Regenerar Idea\" antes de generar el post, o borrá primero el post existente si es un borrador.`);\n  }\n  temaItem = temaList2.find(t => String(t.id) === String(webhookIdeaId));\n    if (!temaItem) {\n      // Antes esto caia en silencio a temaList2[0] (la primera idea de la lista, sin importar\n      // cual) cuando el idea_id pedido no existia -- confirmado en vivo el 16-sep generando un\n      // post real de una idea distinta a la pedida, sin ningun aviso. Ahora falla limpio.\n      throw new Error(`No se encontro la idea ${webhookIdeaId} -- puede que ya no exista o que el ID este mal. No se genera ningun post de reemplazo.`);\n    }\n} else {\n  // Bug real del 14-ago: el botón \"Generar Post\" del panel no manda idea_id (confirmado\n  // con la ejecución real), así que sin este filtro se podía elegir cualquier idea sin\n  // post generado, sin importar su estado — incluida una idea de tendencia todavía sin\n  // aprobar, en vez de la idea real que el cliente ya había aprobado en el panel.\n  // Nunca generar un post de una idea que un humano no aprobó primero.\n  temaItem = temaList2.find(t => !usedIdeaIds.has(t.id) && t.status === 'aprobado');\n  if (!temaItem) {\n    throw new Error('No hay ninguna idea aprobada y sin usar disponible para generar un post — aprobá una idea en el panel antes de generar el post, o genera ideas nuevas si no hay ninguna pendiente.');\n  }\n}\ntemaItem = temaItem || {};\nconst tema = temaItem.fields || temaItem || {};\nconst temaId = temaItem.id || temaItem.social_idea_id || temaItem.tema_id || null;\n\n// Estrategia (continueOnFail — null if not configured yet)\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\n// Build product/service summary — handles G54 (name/description) and Airtable fallback\nconst servicios = productosData\n  .filter(p => (p.fields || p).is_active !== false)\n  .map(p => {\n    const f = p.fields || p;\n    const nombre = f.name || f.nombre || f['Nombre de Servicio'] || '';\n    const desc   = f.description || f.descripcion || f['Descripción comercial'] || '';\n    const kws    = Array.isArray(f.keywords) ? f.keywords.slice(0,3).join(', ') : '';\n    return `- ${nombre}: ${desc}${kws ? ' [' + kws + ']' : ''}`.slice(0, 220);\n  })\n  .join('\\n');\n\nreturn [{\n  json: {\n    // ---- Empresa (G54 field names first, Airtable fallback) ----\n    empresa_nombre:          empresa.name || empresa.nombre_empresa || empresa['\\ufeffnombre_empresa'] || '',\n    empresa_descripcion:     empresa.description || empresa.descripcion_corta || '',\n    empresa_propuesta_valor: empresa.value_proposition || empresa.propuesta_valor || '',\n    empresa_ciudad:          empresa.base_city || empresa.ciudad_base || empresa['ciudad base'] || '',\n    empresa_web:             empresa.website || empresa.sitio_web || '',\n    empresa_telefono:        (empresa.phones || [])[0] || empresa.telefono || '',\n    empresa_email:           (empresa.emails || [])[0] || '',\n    empresa_geografia:       empresa.geography || empresa.coverage || '',\n    empresa_competidores:    (empresa.competitors_known || []).slice(0,3).map(c => c.name).join(', '),\n    servicios_resumen:       servicios,\n    // ---- Tema / Idea G54 ----\n    tema_id:                 temaId,\n    tema_texto:              tema.topic || tema.tema || tema['Tema'] || '',\n    tema_descripcion:        tema.fecha_propuesta || '',\n    tema_palabras_clave:     tema.keyword || tema.palabras_clave || '',\n    keyword_principal:       tema.keyword || tema.keyword_principal || '',\n    tema_semana:             tema.week || tema.semana || tema['Semana'] || 0,\n    tema_plataforma:         tema.platform || tema.plataforma || 'Instagram',\n    fecha_post:              new Date().toISOString().slice(0, 10), // UTC, sin asumir zona horaria de ninguna empresa\n    // ---- Estrategia G54 ----\n    estrategia_objetivo:     estrategia.objetivo || estrategia.primary_goal || empresa.primary_goal || '',\n    estrategia_audiencia:    estrategia.audiencia || estrategia.target_market || empresa.target_market || '',\n    estrategia_tono:         estrategia.tono || 'profesional, directo y humano',\n    estrategia_cta:          (estrategia.link_origen && estrategia.link_origen !== 'ninguno' && estrategia.link_resuelto) ? estrategia.link_resuelto : (estrategia.link_principal || estrategia.cta_principal || (empresa.website || empresa.sitio_web || '')), // Preferir link_resuelto (ya calculado por G54, ítem del 24-ago) sobre resolverlo nosotros mismos; misma cadena de respaldo si no viene.\n    estrategia_embudo:       estrategia.embudo || 'TOFU-MOFU',\n    estrategia_pilares:      Array.isArray(estrategia.pilares) ? estrategia.pilares.join(', ') : (estrategia.pilares || ''),\n    // ---- Imagen (G54 provee la URL — subida por usuario o generada por Image AI) ----\n    imagen_url:              tema.imagen_url || tema.image_url || null,\n    imagen_specs:            tema.imagen_specs || tema.image_specs || '',\n  }\n}];\n"
         },
         "id": "preparar-contexto",
         "name": "🔧 Preparar Contexto para IA",
@@ -1352,7 +1473,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={\"contents\": [{\"role\": \"user\", \"parts\": [{\"text\": {{ JSON.stringify(\"Eres un Content Strategist especializado en SEO/AEO/GEO, adaptado al rubro real de cada empresa.\\n\\nREGLA DE IDIOMA — OBLIGATORIA: escribe TODO el contenido de este post (hook, mensaje, respuesta AEO, CTA, hashtags, títulos) en el MISMO idioma en que está escrita la KEYWORD PRINCIPAL / el TEMA SEMANAL indicados más abajo — nunca traduzcas al español por defecto. Si están en inglés, todo el post va en inglés; si están en español, todo va en español; y así con cualquier otro idioma que reconozcas.\\n\\nEMPRESA: {{ $json.empresa_nombre }}\\nDESCRIPCI\\u00d3N: {{ $json.empresa_descripcion }}\\nPROPUESTA DE VALOR: {{ $json.empresa_propuesta_valor }}\\nCIUDAD: {{ $json.empresa_ciudad }} | WEB: {{ $json.empresa_web }}\\nSERVICIOS:\\n{{ $json.servicios_resumen }}\\n\\nESTRATEGIA G54:\\n- Objetivo: {{ $json.estrategia_objetivo || 'Generar leads para el negocio' }}\\n- Audiencia: {{ $json.estrategia_audiencia || 'clientes potenciales del negocio' }}\\n- Tono: {{ $json.estrategia_tono || 'profesional y directo' }}\\n- CTA principal: {{ $json.estrategia_cta || 'Visita nuestro sitio web: ' + $json.empresa_web }}\\n- Pilares: {{ $json.estrategia_pilares || 'los servicios principales de la empresa' }}\\n\\nTEMA SEMANAL: {{ $json.tema_texto }}\\nDESCRIPCI\\u00d3N DEL TEMA: {{ $json.tema_descripcion || '' }}\\nKEYWORD PRINCIPAL: {{ $json.keyword_principal || $json.tema_palabras_clave || '' }}\\n\\n=== PROCESO DE 8 PASOS G54 ===\\n\\nPASO 1 \\u2014 INTENCI\\u00d3N DE B\\u00daSQUEDA\\nAnaliza qu\\u00e9 intenci\\u00f3n tiene el usuario al buscar sobre este tema.\\nElige: informacional | comercial | transaccional | local\\n\\nPASO 2 \\u2014 KEYWORDS\\nIdentifica 3-5 palabras clave secundarias relacionadas con el tema y la empresa.\\n\\nPASO 3 \\u2014 AEO (Answer Engine Optimization)\\nRedacta 2-3 oraciones que respondan directamente y espec\\u00edficamente la pregunta impl\\u00edcita del tema.\\nDebe ser una respuesta directa al estilo \\\"La respuesta a [tema] es...\\\", optimizada para IA y b\\u00fasqueda conversacional.\\n\\nPASO 4 \\u2014 HOOK\\nPrimera frase impactante de m\\u00e1x 12 palabras. Usa el keyword principal. Genera curiosidad o urgencia real.\\n\\nPASO 5 \\u2014 DESARROLLO\\nCuerpo del post: 2-3 p\\u00e1rrafos, m\\u00e1x 200 palabras. Incluye datos concretos, beneficios y prueba social de {{ $json.empresa_nombre }}.\\n\\nPASO 6 \\u2014 GEO\\nIncorpora referencias geogr\\u00e1ficas espec\\u00edficas relevantes a la ubicaci\\u00f3n real de la empresa: {{ $json.empresa_ciudad }}{{ $json.empresa_geografia ? ' (' + $json.empresa_geografia + ')' : '' }}.\\n\\nPASO 7 \\u2014 ADAPTACI\\u00d3N\\nAjusta el tono para redes sociales \\u2014 natural, directo, NO corporativo ni gen\\u00e9rico.\\n\\nPASO 8 \\u2014 CTA + HASHTAGS\\nCTA con URL OBLIGATORIO. 10 hashtags relevantes.\\n\\nPASO 9 \\u2014 VERSI\\u00d3N LINKEDIN\\nReescribe el mismo mensaje (mismo hook, mismos datos, mismo CTA) en tono profesional de LinkedIn: sin emojis, sin exclamaciones de venta directa, estilo thought-leadership B2B, como si lo publicara un directivo comentando una tendencia del sector, no un anuncio. 2-3 p\\u00e1rrafos, m\\u00e1x 200 palabras, mismo idioma que el resto del post.\\n\\nREGLAS:\\n- CTA SIEMPRE incluye una URL completa y clicable — usa exactamente el valor de CTA principal indicado arriba\\n- M\\u00e1x 200 palabras en 'mensaje'\\n- NUNCA inventar premios, certificaciones o datos falsos\\n- NUNCA menciones otro rubro, ciudad o empresa que no sea la indicada arriba\\n\\nDevuelve \\u00daNICAMENTE este JSON (sin markdown, sin texto adicional):\\n{\\n  \\\"intencion_busqueda\\\": \\\"informacional|comercial|transaccional|local\\\",\\n  \\\"keywords_secundarias\\\": [\\\"kw1\\\", \\\"kw2\\\", \\\"kw3\\\"],\\n  \\\"respuesta_aeo\\\": \\\"2-3 oraciones respondiendo directamente la pregunta impl\\u00edcita, optimizado para b\\u00fasqueda IA\\\",\\n  \\\"hook\\\": \\\"Primera frase impactante m\\u00e1x 12 palabras\\\",\\n  \\\"mensaje\\\": \\\"Cuerpo 2-3 p\\u00e1rrafos con referencias GEO, m\\u00e1x 200 palabras\\\",\\n  \\\"mensaje_linkedin\\\": \\\"Versi\\u00f3n profesional del mismo mensaje para LinkedIn (PASO 9), sin emojis, tono thought-leadership, mismo idioma\\\",\\n  \\\"geo_menciones\\\": \\\"menciona la ciudad/zona real de la empresa\\\",\\n  \\\"cta\\\": \\\"Llamada a la acci\\u00f3n con URL obligatorio\\\",\\n  \\\"hashtags\\\": \\\"#hash1 #hash2 #hash3 #hash4 #hash5 #hash6 #hash7 #hash8 #hash9 #hash10\\\",\\n  \\\"texto_canva_titulo\\\": \\\"T\\u00cdTULO EN MAY\\u00daSCULAS M\\u00c1XIMO 8 PALABRAS\\\",\\n  \\\"texto_canva_subtitulo\\\": \\\"Subt\\u00edtulo m\\u00e1ximo 15 palabras\\\"\\n}\") }}]}], \"systemInstruction\": {\"parts\": [{\"text\": \"Eres un experto en Content Strategy con enfoque SEO/AEO/GEO, adaptado al rubro real de cada empresa. SIEMPRE devuelves JSON válido, sin markdown, sin explicaciones adicionales.\"}]}}",
+          "jsonBody": "={\"contents\": [{\"role\": \"user\", \"parts\": [{\"text\": {{ JSON.stringify(\"Eres un Content Strategist especializado en SEO/AEO/GEO, adaptado al rubro real de cada empresa.\\n\\nREGLA DE IDIOMA — OBLIGATORIA: escribe TODO el contenido de este post (hook, mensaje, respuesta AEO, CTA, hashtags, títulos) en el MISMO idioma en que está escrita la KEYWORD PRINCIPAL / el TEMA SEMANAL indicados más abajo — nunca traduzcas al español por defecto. Si están en inglés, todo el post va en inglés; si están en español, todo va en español; y así con cualquier otro idioma que reconozcas.\\n\\nEMPRESA: {{ $json.empresa_nombre }}\\nDESCRIPCI\\u00d3N: {{ $json.empresa_descripcion }}\\nPROPUESTA DE VALOR: {{ $json.empresa_propuesta_valor }}\\nCIUDAD: {{ $json.empresa_ciudad }} | WEB: {{ $json.empresa_web }}\\nSERVICIOS:\\n{{ $json.servicios_resumen }}\\n\\nESTRATEGIA G54:\\n- Objetivo: {{ $json.estrategia_objetivo || 'Generar leads para el negocio' }}\\n- Audiencia: {{ $json.estrategia_audiencia || 'clientes potenciales del negocio' }}\\n- Tono: {{ $json.estrategia_tono || 'profesional y directo' }}\\n- CTA principal: {{ $json.estrategia_cta || 'Visita nuestro sitio web: ' + $json.empresa_web }}\\n- Pilares: {{ $json.estrategia_pilares || 'los servicios principales de la empresa' }}\\n\\nTEMA SEMANAL: {{ $json.tema_texto }}\\nDESCRIPCI\\u00d3N DEL TEMA: {{ $json.tema_descripcion || '' }}\\nKEYWORD PRINCIPAL: {{ $json.keyword_principal || $json.tema_palabras_clave || '' }}\\n\\n=== PROCESO DE 8 PASOS G54 ===\\n\\nPASO 1 \\u2014 INTENCI\\u00d3N DE B\\u00daSQUEDA\\nAnaliza qu\\u00e9 intenci\\u00f3n tiene el usuario al buscar sobre este tema.\\nElige: informacional | comercial | transaccional | local\\n\\nPASO 2 \\u2014 KEYWORDS\\nIdentifica 3-5 palabras clave secundarias relacionadas con el tema y la empresa.\\n\\nPASO 3 \\u2014 AEO (Answer Engine Optimization)\\nRedacta 2-3 oraciones que respondan directamente y espec\\u00edficamente la pregunta impl\\u00edcita del tema.\\nDebe ser una respuesta directa al estilo \\\"La respuesta a [tema] es...\\\", optimizada para IA y b\\u00fasqueda conversacional.\\n\\nPASO 4 \\u2014 HOOK\\nPrimera frase impactante de m\\u00e1x 12 palabras. Usa el keyword principal. Genera curiosidad o urgencia real.\\n\\nPASO 5 \\u2014 DESARROLLO\\nCuerpo del post: 2-3 p\\u00e1rrafos, m\\u00e1x 200 palabras. Incluye datos concretos, beneficios y prueba social de {{ $json.empresa_nombre }}.\\n\\nPASO 6 \\u2014 GEO\\nIncorpora referencias geogr\\u00e1ficas espec\\u00edficas relevantes a la ubicaci\\u00f3n real de la empresa: {{ $json.empresa_ciudad }}{{ $json.empresa_geografia ? ' (' + $json.empresa_geografia + ')' : '' }}.\\n\\nPASO 7 \\u2014 ADAPTACI\\u00d3N\\nAjusta el tono para redes sociales \\u2014 natural, directo, NO corporativo ni gen\\u00e9rico.\\n\\nPASO 8 \\u2014 CTA + HASHTAGS\\nCTA con URL OBLIGATORIO. 10 hashtags relevantes.\\n\\nPASO 9 \\u2014 VERSI\\u00d3N LINKEDIN\\nReescribe el mismo mensaje (mismo hook, mismos datos, mismo CTA) en tono profesional de LinkedIn: sin emojis, sin exclamaciones de venta directa, estilo thought-leadership B2B, como si lo publicara un directivo comentando una tendencia del sector, no un anuncio. 2-3 p\\u00e1rrafos, m\\u00e1x 200 palabras, mismo idioma que el resto del post.\\n\\nREGLAS:\\n- CTA SIEMPRE incluye una URL completa y clicable — usa exactamente el valor de CTA principal indicado arriba\\n- M\\u00e1x 200 palabras en 'mensaje'\\n- NUNCA inventar premios, certificaciones o datos falsos\\n- NUNCA inventar un precio, número, descuento, oferta relámpago o plazo específico (ej: '$30', '48 horas', '2x1') que no esté escrito literalmente en SERVICIOS arriba — si no hay ningún precio real ahí, describí el beneficio sin inventar ninguna cifra. Tampoco menciones ninguna característica de ubicación, amenidad o servicio (ej: 'cerca de la playa', 'con piscina', 'vista al mar') que no esté respaldada por CIUDAD/geografía real o por SERVICIOS de arriba — un cliché típico del rubro nunca se asume, se verifica contra los datos reales de esta empresa puntual.\\n- NUNCA menciones otro rubro, ciudad o empresa que no sea la indicada arriba\\n\\nDevuelve \\u00daNICAMENTE este JSON (sin markdown, sin texto adicional):\\n{\\n  \\\"intencion_busqueda\\\": \\\"informacional|comercial|transaccional|local\\\",\\n  \\\"keywords_secundarias\\\": [\\\"kw1\\\", \\\"kw2\\\", \\\"kw3\\\"],\\n  \\\"respuesta_aeo\\\": \\\"2-3 oraciones respondiendo directamente la pregunta impl\\u00edcita, optimizado para b\\u00fasqueda IA\\\",\\n  \\\"hook\\\": \\\"Primera frase impactante m\\u00e1x 12 palabras\\\",\\n  \\\"mensaje\\\": \\\"Cuerpo 2-3 p\\u00e1rrafos con referencias GEO, m\\u00e1x 200 palabras\\\",\\n  \\\"mensaje_linkedin\\\": \\\"Versi\\u00f3n profesional del mismo mensaje para LinkedIn (PASO 9), sin emojis, tono thought-leadership, mismo idioma\\\",\\n  \\\"geo_menciones\\\": \\\"menciona la ciudad/zona real de la empresa\\\",\\n  \\\"cta\\\": \\\"Llamada a la acci\\u00f3n con URL obligatorio\\\",\\n  \\\"hashtags\\\": \\\"#hash1 #hash2 #hash3 #hash4 #hash5 #hash6 #hash7 #hash8 #hash9 #hash10\\\",\\n  \\\"texto_canva_titulo\\\": \\\"T\\u00cdTULO EN MAY\\u00daSCULAS M\\u00c1XIMO 8 PALABRAS\\\",\\n  \\\"texto_canva_subtitulo\\\": \\\"Subt\\u00edtulo m\\u00e1ximo 15 palabras\\\"\\n}\") }}]}], \"systemInstruction\": {\"parts\": [{\"text\": \"Eres un experto en Content Strategy con enfoque SEO/AEO/GEO, adaptado al rubro real de cada empresa. SIEMPRE devuelves JSON válido, sin markdown, sin explicaciones adicionales.\"}]}}",
           "options": {}
         },
         "id": "generar-post-es",
@@ -1419,7 +1540,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={\"model\": \"modelo-roto-a-proposito\", \"messages\": [{\"role\": \"system\", \"content\": \"Escribe TODO el contenido en el mismo idioma del tema/palabra clave que te den en el mensaje del usuario — nunca traduzcas al español por defecto.\\n\\nEres un experto en marketing digital y copywriting, adaptado al rubro real de cada empresa. Tu especialidad es crear contenido auténtico, persuasivo y orientado a conversión para redes sociales. Siempre respondes en formato JSON válido sin texto adicional.\"}, {\"role\": \"user\", \"content\": {{ JSON.stringify(\"Crea un post para redes sociales para la siguiente empresa (escribe TODO el contenido en el mismo idioma en que estén escritos el TEMA y las PALABRAS CLAVE indicados abajo, no traduzcas al español por defecto):\\n\\n**EMPRESA:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_nombre + \"\\n**DESCRIPCIÓN:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_descripcion + \"\\n**PROPUESTA DE VALOR:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_propuesta_valor + \"\\n**CIUDAD:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_ciudad + \"\\n**WEB:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_web + \"\\n**SERVICIOS:**\\n\" + $('🔧 Preparar Contexto para IA').item.json.servicios_resumen + \"\\n**CTA PRINCIPAL (usa esta URL si existe):** \" + ($('🔧 Preparar Contexto para IA').item.json.estrategia_cta || '') + \"\\n\\n**TEMA DE ESTA SEMANA:** \" + $('🔧 Preparar Contexto para IA').item.json.tema_texto + \"\\n**DESCRIPCIÓN DEL TEMA:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_descripcion || '') + \"\\n**PALABRAS CLAVE:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_palabras_clave || '') + \"\\n\\nDevuelve un JSON con los siguientes campos:\\n- hook: primera frase impactante máximo 12 palabras\\n- mensaje: cuerpo del mensaje 2-3 párrafos máximo 180 palabras\\n- cta: llamada a la acción máximo 15 palabras, SIEMPRE terminando con una URL completa y clicable — usa exactamente el CTA PRINCIPAL indicado arriba\\n- hashtags: 10 hashtags comenzando con #\\n- texto_canva_titulo: título visual máximo 8 palabras EN MAYÚSCULAS\\n- texto_canva_subtitulo: subtítulo máximo 15 palabras\\n- mensaje_linkedin: el MISMO contenido (mismo hook, mismos datos, mismo CTA) reescrito en tono profesional de LinkedIn — sin emojis, sin exclamaciones de venta directa, estilo thought-leadership B2B como si lo publicara un directivo comentando una tendencia del sector, no un anuncio. 2-3 párrafos, máx 200 palabras, mismo idioma que el resto del post.\\n\\nResponde ÚNICAMENTE con el JSON, sin texto adicional.\") }}}], \"temperature\": 0.75, \"max_tokens\": 1500, \"response_format\": {\"type\": \"json_object\"}}",
+          "jsonBody": "={\"model\": \"openai/gpt-oss-120b\", \"messages\": [{\"role\": \"system\", \"content\": \"Escribe TODO el contenido en el mismo idioma del tema/palabra clave que te den en el mensaje del usuario — nunca traduzcas al español por defecto.\\n\\nEres un experto en marketing digital y copywriting, adaptado al rubro real de cada empresa. Tu especialidad es crear contenido auténtico, persuasivo y orientado a conversión para redes sociales. Siempre respondes en formato JSON válido sin texto adicional.\"}, {\"role\": \"user\", \"content\": {{ JSON.stringify(\"Crea un post para redes sociales para la siguiente empresa (escribe TODO el contenido en el mismo idioma en que estén escritos el TEMA y las PALABRAS CLAVE indicados abajo, no traduzcas al español por defecto):\\n\\n**EMPRESA:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_nombre + \"\\n**DESCRIPCIÓN:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_descripcion + \"\\n**PROPUESTA DE VALOR:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_propuesta_valor + \"\\n**CIUDAD:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_ciudad + \"\\n**WEB:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_web + \"\\n**SERVICIOS:**\\n\" + $('🔧 Preparar Contexto para IA').item.json.servicios_resumen + \"\\n**CTA PRINCIPAL (usa esta URL si existe):** \" + ($('🔧 Preparar Contexto para IA').item.json.estrategia_cta || '') + \"\\n\\n**TEMA DE ESTA SEMANA:** \" + $('🔧 Preparar Contexto para IA').item.json.tema_texto + \"\\n**DESCRIPCIÓN DEL TEMA:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_descripcion || '') + \"\\n**PALABRAS CLAVE:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_palabras_clave || '') + \"\\n\\nDevuelve un JSON con los siguientes campos:\\n- hook: primera frase impactante máximo 12 palabras\\n- mensaje: cuerpo del mensaje 2-3 párrafos máximo 180 palabras\\n- cta: llamada a la acción máximo 15 palabras, SIEMPRE terminando con una URL completa y clicable — usa exactamente el CTA PRINCIPAL indicado arriba\\n- hashtags: 10 hashtags comenzando con #\\n- texto_canva_titulo: título visual máximo 8 palabras EN MAYÚSCULAS\\n- texto_canva_subtitulo: subtítulo máximo 15 palabras\\n- mensaje_linkedin: el MISMO contenido (mismo hook, mismos datos, mismo CTA) reescrito en tono profesional de LinkedIn — sin emojis, sin exclamaciones de venta directa, estilo thought-leadership B2B como si lo publicara un directivo comentando una tendencia del sector, no un anuncio. 2-3 párrafos, máx 200 palabras, mismo idioma que el resto del post.\\n\\nNUNCA inventar un precio, número, descuento, oferta relámpago o plazo específico (ej: '$30', '48 horas', '2x1') que no esté escrito literalmente en SERVICIOS arriba — si no hay ningún precio real ahí, describí el beneficio sin inventar ninguna cifra. Tampoco menciones ninguna característica de ubicación, amenidad o servicio (ej: 'cerca de la playa', 'con piscina', 'vista al mar') que no esté respaldada por CIUDAD/geografía real o por SERVICIOS de arriba — un cliché típico del rubro nunca se asume, se verifica contra los datos reales de esta empresa puntual.\\n\\nResponde ÚNICAMENTE con el JSON, sin texto adicional.\") }}}], \"temperature\": 0.75, \"max_tokens\": 1500, \"response_format\": {\"type\": \"json_object\"}}",
           "options": {}
         },
         "id": "grok-post-es",
@@ -2039,7 +2160,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={\"model\": \"glm-4.5-flash\", \"messages\": [{\"role\": \"system\", \"content\": \"Escribe TODO el contenido en el mismo idioma del tema/palabra clave que te den en el mensaje del usuario — nunca traduzcas al español por defecto.\\n\\nEres un experto en marketing digital y copywriting, adaptado al rubro real de cada empresa. Tu especialidad es crear contenido auténtico, persuasivo y orientado a conversión para redes sociales. Siempre respondes en formato JSON válido sin texto adicional.\"}, {\"role\": \"user\", \"content\": {{ JSON.stringify(\"Crea un post para redes sociales para la siguiente empresa (escribe TODO el contenido en el mismo idioma en que estén escritos el TEMA y las PALABRAS CLAVE indicados abajo, no traduzcas al español por defecto):\\n\\n**EMPRESA:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_nombre + \"\\n**DESCRIPCIÓN:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_descripcion + \"\\n**PROPUESTA DE VALOR:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_propuesta_valor + \"\\n**CIUDAD:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_ciudad + \"\\n**WEB:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_web + \"\\n**SERVICIOS:**\\n\" + $('🔧 Preparar Contexto para IA').item.json.servicios_resumen + \"\\n**CTA PRINCIPAL (usa esta URL si existe):** \" + ($('🔧 Preparar Contexto para IA').item.json.estrategia_cta || '') + \"\\n\\n**TEMA DE ESTA SEMANA:** \" + $('🔧 Preparar Contexto para IA').item.json.tema_texto + \"\\n**DESCRIPCIÓN DEL TEMA:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_descripcion || '') + \"\\n**PALABRAS CLAVE:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_palabras_clave || '') + \"\\n\\nDevuelve un JSON con los siguientes campos:\\n- hook: primera frase impactante máximo 12 palabras\\n- mensaje: cuerpo del mensaje 2-3 párrafos máximo 180 palabras\\n- cta: llamada a la acción máximo 15 palabras, SIEMPRE terminando con una URL completa y clicable — usa exactamente el CTA PRINCIPAL indicado arriba\\n- hashtags: 10 hashtags comenzando con #\\n- texto_canva_titulo: título visual máximo 8 palabras EN MAYÚSCULAS\\n- texto_canva_subtitulo: subtítulo máximo 15 palabras\\n- mensaje_linkedin: el MISMO contenido (mismo hook, mismos datos, mismo CTA) reescrito en tono profesional de LinkedIn — sin emojis, sin exclamaciones de venta directa, estilo thought-leadership B2B como si lo publicara un directivo comentando una tendencia del sector, no un anuncio. 2-3 párrafos, máx 200 palabras, mismo idioma que el resto del post.\\n\\nResponde ÚNICAMENTE con el JSON, sin texto adicional.\") }}}], \"temperature\": 0.75, \"max_tokens\": 1500, \"response_format\": {\"type\": \"json_object\"}}",
+          "jsonBody": "={\"model\": \"glm-4.5-flash\", \"messages\": [{\"role\": \"system\", \"content\": \"Escribe TODO el contenido en el mismo idioma del tema/palabra clave que te den en el mensaje del usuario — nunca traduzcas al español por defecto.\\n\\nEres un experto en marketing digital y copywriting, adaptado al rubro real de cada empresa. Tu especialidad es crear contenido auténtico, persuasivo y orientado a conversión para redes sociales. Siempre respondes en formato JSON válido sin texto adicional.\"}, {\"role\": \"user\", \"content\": {{ JSON.stringify(\"Crea un post para redes sociales para la siguiente empresa (escribe TODO el contenido en el mismo idioma en que estén escritos el TEMA y las PALABRAS CLAVE indicados abajo, no traduzcas al español por defecto):\\n\\n**EMPRESA:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_nombre + \"\\n**DESCRIPCIÓN:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_descripcion + \"\\n**PROPUESTA DE VALOR:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_propuesta_valor + \"\\n**CIUDAD:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_ciudad + \"\\n**WEB:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_web + \"\\n**SERVICIOS:**\\n\" + $('🔧 Preparar Contexto para IA').item.json.servicios_resumen + \"\\n**CTA PRINCIPAL (usa esta URL si existe):** \" + ($('🔧 Preparar Contexto para IA').item.json.estrategia_cta || '') + \"\\n\\n**TEMA DE ESTA SEMANA:** \" + $('🔧 Preparar Contexto para IA').item.json.tema_texto + \"\\n**DESCRIPCIÓN DEL TEMA:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_descripcion || '') + \"\\n**PALABRAS CLAVE:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_palabras_clave || '') + \"\\n\\nDevuelve un JSON con los siguientes campos:\\n- hook: primera frase impactante máximo 12 palabras\\n- mensaje: cuerpo del mensaje 2-3 párrafos máximo 180 palabras\\n- cta: llamada a la acción máximo 15 palabras, SIEMPRE terminando con una URL completa y clicable — usa exactamente el CTA PRINCIPAL indicado arriba\\n- hashtags: 10 hashtags comenzando con #\\n- texto_canva_titulo: título visual máximo 8 palabras EN MAYÚSCULAS\\n- texto_canva_subtitulo: subtítulo máximo 15 palabras\\n- mensaje_linkedin: el MISMO contenido (mismo hook, mismos datos, mismo CTA) reescrito en tono profesional de LinkedIn — sin emojis, sin exclamaciones de venta directa, estilo thought-leadership B2B como si lo publicara un directivo comentando una tendencia del sector, no un anuncio. 2-3 párrafos, máx 200 palabras, mismo idioma que el resto del post.\\n\\nNUNCA inventar un precio, número, descuento, oferta relámpago o plazo específico (ej: '$30', '48 horas', '2x1') que no esté escrito literalmente en SERVICIOS arriba — si no hay ningún precio real ahí, describí el beneficio sin inventar ninguna cifra. Tampoco menciones ninguna característica de ubicación, amenidad o servicio (ej: 'cerca de la playa', 'con piscina', 'vista al mar') que no esté respaldada por CIUDAD/geografía real o por SERVICIOS de arriba — un cliché típico del rubro nunca se asume, se verifica contra los datos reales de esta empresa puntual.\\n\\nResponde ÚNICAMENTE con el JSON, sin texto adicional.\") }}}], \"temperature\": 0.75, \"max_tokens\": 1500, \"response_format\": {\"type\": \"json_object\"}}",
           "options": {},
           "authentication": "genericCredentialType",
           "genericAuthType": "httpHeaderAuth"
@@ -2059,6 +2180,93 @@
           }
         },
         "onError": "continueRegularOutput"
+      },
+      {
+        "id": "if-lote-ideas",
+        "name": "🔀 ¿Lote de Ideas?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          190,
+          460
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "cond-es-lote",
+                "leftValue": "={{ Array.isArray($json.body.idea_ids) && [...new Set($json.body.idea_ids)].length > 1 }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "responder-lote",
+        "name": "📤 Responder Lote (Fire-and-Forget)",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.2,
+        "position": [
+          420,
+          380
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ ok: true, mode: 'lote', total: ($('🔔 Webhook G54').item.json.body.idea_ids || []).length, message: 'Recibido: generando ' + (($('🔔 Webhook G54').item.json.body.idea_ids)||[]).length + ' publicaciones en segundo plano. Van a ir apareciendo como borrador en los proximos minutos.' }) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "preparar-lote-posts",
+        "name": "🔧 Preparar Lote de Posts",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          420,
+          540
+        ],
+        "parameters": {
+          "jsCode": "const body = $('🔔 Webhook G54').item.json.body || {};\nconst idsRaw = Array.isArray(body.idea_ids) ? body.idea_ids : [];\nconst unicos = [...new Set(idsRaw.map(id => Number(id)).filter(id => Number.isFinite(id)))];\nif (unicos.length === 0) {\n  throw new Error('idea_ids llego vacio o invalido -- no hay nada que generar en lote.');\n}\nreturn unicos.map(id => ({ json: { company_id: body.company_id, idea_id: id } }));"
+        }
+      },
+      {
+        "id": "dispatch-lote-post",
+        "name": "📤 Generar Post (Lote, self-dispatch)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          640,
+          540
+        ],
+        "continueOnFail": true,
+        "parameters": {
+          "method": "POST",
+          "url": "https://n8n.mdarthurdigital.com/webhook/rrss-automation-g54",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ company_id: $json.company_id, mode: 'post', idea_id: $json.idea_id }) }}",
+          "options": {
+            "timeout": 15000,
+            "batching": {
+              "batch": {
+                "batchSize": 1,
+                "batchInterval": 15000
+              }
+            }
+          }
+        }
       }
     ],
     "connections": {
@@ -2194,7 +2402,7 @@
         "main": [
           [
             {
-              "node": "⚙️ Config Growth54",
+              "node": "🔀 ¿Lote de Ideas?",
               "type": "main",
               "index": 0
             }
@@ -2363,6 +2571,40 @@
             }
           ]
         ]
+      },
+      "🔀 ¿Lote de Ideas?": {
+        "main": [
+          [
+            {
+              "node": "📤 Responder Lote (Fire-and-Forget)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "🔧 Preparar Lote de Posts",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "⚙️ Config Growth54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Preparar Lote de Posts": {
+        "main": [
+          [
+            {
+              "node": "📤 Generar Post (Lote, self-dispatch)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -2370,16 +2612,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-08-27T16:13:30.713Z",
-    "updatedAt": "2026-08-27T16:13:30.713Z",
+    "createdAt": "2026-09-16T16:36:26.067Z",
+    "updatedAt": "2026-09-16T16:36:26.067Z",
     "workflowPublishHistory": [
       {
-        "id": 3029,
+        "id": 3136,
         "workflowId": "wyO1f93A66imn9qw",
-        "versionId": "15d7690d-6f3d-46b7-89fd-c6654ed08ead",
+        "versionId": "89c5659a-c3e5-4aa8-8891-6d7326491522",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-08-27T16:13:31.006Z"
+        "createdAt": "2026-09-16T16:36:26.427Z"
       }
     ]
   }
