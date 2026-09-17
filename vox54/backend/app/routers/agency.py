@@ -7,7 +7,7 @@ from ..security import hash_password, verify_password
 from ..schemas import (
     AgencyMeResponse, AgencyProfileOut, AgencyProfileUpdate, AgencyBusinessSummary,
     BusinessOut, BusinessCreate, BusinessUpdate, BusinessDetailOut,
-    BusinessProfileOut, BusinessProfileUpdate,
+    BusinessProfileOut, BusinessProfileUpdate, DocumentSuggestionAction,
     BotConfigUpdate, BotConfigOut, CallOut, AgencyCallOut,
     PasswordChange, AgentInventoryItem,
 )
@@ -344,6 +344,34 @@ def remove_business_document(
     db.commit()
     db.refresh(business)
     documents.process_business_document(db, business)  # borra los fragmentos viejos, ya sin PDF
+    return business
+
+
+@router.post("/businesses/{business_id}/document-suggestions/accept", response_model=BusinessProfileOut)
+def accept_business_document_suggestion(
+    business_id: int,
+    body: DocumentSuggestionAction,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    business = _get_owned_business(db, user, business_id)
+    documents.accept_suggested_service(business, body.suggestion)
+    db.commit()
+    db.refresh(business)
+    return business
+
+
+@router.post("/businesses/{business_id}/document-suggestions/dismiss", response_model=BusinessProfileOut)
+def dismiss_business_document_suggestion(
+    business_id: int,
+    body: DocumentSuggestionAction,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    business = _get_owned_business(db, user, business_id)
+    documents.dismiss_suggested_service(business, body.suggestion)
+    db.commit()
+    db.refresh(business)
     return business
 
 

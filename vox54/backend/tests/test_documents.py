@@ -7,6 +7,8 @@ determinística (`fake_embed`, más abajo) — rápida y sin depender de
 internet ni del modelo real. Un puñado de tests (marcados explícitamente)
 usan el modelo real de verdad, para confirmar que la búsqueda semántica
 funciona de verdad y no solo que la plomería de datos está bien armada."""
+import json
+
 import numpy as np
 import pytest
 
@@ -297,3 +299,174 @@ def test_busqueda_semantica_real_encuentra_por_significado_no_por_palabra_exacta
     results = documents.search_chunks(db_session, seed["business"].id, "cuanto cuesta", top_k=1)
     assert len(results) == 1
     assert "quinientos dolares" in results[0]
+
+
+# ---------------------------------------------------------------------------
+# generate_document_insights — resumen + sugerencias de servicios via Groq.
+# Nunca llama a la API real: sin key configurada corta sola (ya es el
+# comportamiento real en el .env de test, vacío), y con key se mockea
+# httpx.post para no depender de red ni de una cuenta real.
+# ---------------------------------------------------------------------------
+
+def test_insights_sin_key_configurada_devuelve_vacio(monkeypatch):
+    monkeypatch.setattr(settings, "groq_api_key", "")
+    result = documents.generate_document_insights("Texto real del documento.", "")
+    assert result == {"summary": "", "suggested_services": []}
+
+
+def test_insights_con_texto_vacio_no_llama_a_groq(monkeypatch):
+    monkeypatch.setattr(settings, "groq_api_key", "fake-key-de-prueba")
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("no debería llamar a Groq con texto vacío")
+
+    monkeypatch.setattr(documents.httpx, "post", fail_if_called)
+    result = documents.generate_document_insights("   ", "")
+    assert result == {"summary": "", "suggested_services": []}
+
+
+class _FakeGroqResponse:
+    def __init__(self, payload: dict):
+        self._payload = payload
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return {"choices": [{"message": {"content": json.dumps(self._payload)}}]}
+
+
+def test_insights_con_key_real_parsea_la_respuesta_de_groq(monkeypatch):
+    monkeypatch.setattr(settings, "groq_api_key", "fake-key-de-prueba")
+    fake_payload = {
+        "summary": "El documento explica precios y horarios de atención.",
+        "suggested_services": ["Instalación express", "Mantenimiento anual"],
+    }
+    monkeypatch.setattr(documents.httpx, "post", lambda *a, **k: _FakeGroqResponse(fake_payload))
+
+    result = documents.generate_document_insights("El precio es 500 y abrimos 8 a 5.", "Instalación estándar")
+    assert result["summary"] == fake_payload["summary"]
+    assert result["suggested_services"] == fake_payload["suggested_services"]
+
+
+def test_insights_ante_falla_de_red_devuelve_vacio_sin_reventar(monkeypatch):
+    monkeypatch.setattr(settings, "groq_api_key", "fake-key-de-prueba")
+
+    def raise_network_error(*args, **kwargs):
+        raise ConnectionError("simulado — sin internet")
+
+    monkeypatch.setattr(documents.httpx, "post", raise_network_error)
+    result = documents.generate_document_insights("Texto real.", "")
+    assert result == {"summary": "", "suggested_services": []}
+
+
+def test_insights_ante_json_mal_formado_devuelve_vacio_sin_reventar(monkeypatch):
+    monkeypatch.setattr(settings, "groq_api_key", "fake-key-de-prueba")
+
+    class BadResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"choices": [{"message": {"content": "esto no es json real"}}]}
+
+    monkeypatch.setattr(documents.httpx, "post", lambda *a, **k: BadResponse())
+    result = documents.generate_document_insights("Texto real.", "")
+    assert result == {"summary": "", "suggested_services": []}
+
+
+@pytest.fixture()
+def fake_insights(monkeypatch):
+    """Mismo espíritu que `fake_embeddings` — reemplaza la llamada real a
+    Groq por un resultado fijo y determinístico, para probar que
+    process_business_document guarda lo que generate_document_insights le
+    devuelve, sin depender de red."""
+    monkeypatch.setattr(
+        documents,
+        "generate_document_insights",
+        lambda text, existing: {
+            "summary": "Resumen de prueba generado a partir del documento real.",
+            "suggested_services": ["Servicio detectado en el PDF"],
+        },
+    )
+
+
+def test_procesar_documento_guarda_resumen_y_sugerencias_reales(db_session, seed, fake_embeddings, fake_insights, tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "upload_dir", str(tmp_path))
+    (tmp_path / "documents" / "business").mkdir(parents=True)
+    pdf_bytes = make_minimal_pdf(["Contenido real del documento subido."])
+    (tmp_path / "documents/business/v1.pdf").write_bytes(pdf_bytes)
+    seed["business"].info_document_url = "/uploads/documents/business/v1.pdf"
+    db_session.commit()
+
+    documents.process_business_document(db_session, seed["business"])
+
+    assert seed["business"].doc_summary == "Resumen de prueba generado a partir del documento real."
+    assert seed["business"].doc_suggested_services == ["Servicio detectado en el PDF"]
+
+
+def test_borrar_documento_limpia_resumen_y_sugerencias_viejas(db_session, seed, fake_embeddings, fake_insights, tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "upload_dir", str(tmp_path))
+    (tmp_path / "documents" / "business").mkdir(parents=True)
+    pdf_bytes = make_minimal_pdf(["Contenido real."])
+    (tmp_path / "documents/business/v1.pdf").write_bytes(pdf_bytes)
+    seed["business"].info_document_url = "/uploads/documents/business/v1.pdf"
+    db_session.commit()
+    documents.process_business_document(db_session, seed["business"])
+    assert seed["business"].doc_summary  # confirma que sí quedó algo, antes de borrarlo
+
+    seed["business"].info_document_url = ""
+    db_session.commit()
+    documents.process_business_document(db_session, seed["business"])
+
+    assert seed["business"].doc_summary == ""
+    assert seed["business"].doc_suggested_services == []
+
+
+def test_pdf_sin_texto_no_llama_a_groq_ni_genera_resumen(db_session, seed, fake_embeddings, tmp_path, monkeypatch):
+    """Sin ningún chunk real (PDF corrupto), nunca debe llamarse a Groq —
+    no hay ningún texto real que resumir."""
+    monkeypatch.setattr(settings, "upload_dir", str(tmp_path))
+    (tmp_path / "documents" / "business").mkdir(parents=True)
+    (tmp_path / "documents/business/roto.pdf").write_bytes(b"%PDF-1.4 no es un pdf real")
+    seed["business"].info_document_url = "/uploads/documents/business/roto.pdf"
+    db_session.commit()
+
+    def fail_if_called(text, existing):
+        raise AssertionError("no debería generar insights sin ningún chunk real")
+
+    monkeypatch.setattr(documents, "generate_document_insights", fail_if_called)
+    documents.process_business_document(db_session, seed["business"])
+    assert seed["business"].doc_summary == ""
+
+
+# ---------------------------------------------------------------------------
+# accept_suggested_service / dismiss_suggested_service — nunca se aplican
+# solas, solo cuando el negocio/agencia confirma con un clic explícito.
+# ---------------------------------------------------------------------------
+
+def test_aceptar_sugerencia_la_agrega_a_products_services_y_la_saca_de_la_lista(db_session, seed):
+    business = seed["business"]
+    business.products_services = "Servicio original"
+    business.doc_suggested_services_json = json.dumps(["Servicio A", "Servicio B"])
+    db_session.commit()
+
+    documents.accept_suggested_service(business, "Servicio A")
+    db_session.commit()
+
+    assert "Servicio A" in business.products_services.splitlines()
+    assert "Servicio original" in business.products_services.splitlines()
+    assert business.doc_suggested_services == ["Servicio B"]
+
+
+def test_descartar_sugerencia_no_toca_products_services(db_session, seed):
+    business = seed["business"]
+    business.products_services = "Servicio original"
+    business.doc_suggested_services_json = json.dumps(["Servicio A", "Servicio B"])
+    db_session.commit()
+
+    documents.dismiss_suggested_service(business, "Servicio A")
+    db_session.commit()
+
+    assert business.products_services == "Servicio original"
+    assert business.doc_suggested_services == ["Servicio B"]

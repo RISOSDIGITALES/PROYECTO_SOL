@@ -6,7 +6,8 @@ from ..database import get_db
 from ..deps import get_current_business_user
 from ..schemas import (
     BusinessMeResponse, BotConfigOutClient, BotConfigUpdateClient,
-    BusinessProfileOut, BusinessProfileUpdate, CallOut, PasswordChange,
+    BusinessProfileOut, BusinessProfileUpdate, CallOut, DocumentSuggestionAction,
+    PasswordChange,
 )
 from ..security import hash_password, verify_password
 from ..uploads import save_document, save_logo
@@ -159,4 +160,30 @@ def remove_my_document(
     db.commit()
     db.refresh(business)
     documents.process_business_document(db, business)  # borra los fragmentos viejos, ya sin PDF
+    return business
+
+
+@router.post("/profile/document-suggestions/accept", response_model=BusinessProfileOut)
+def accept_my_document_suggestion(
+    body: DocumentSuggestionAction,
+    db: Session = Depends(get_db),
+    user: models.BusinessUser = Depends(get_current_business_user),
+):
+    business = db.query(models.Business).filter(models.Business.id == user.business_id).first()
+    documents.accept_suggested_service(business, body.suggestion)
+    db.commit()
+    db.refresh(business)
+    return business
+
+
+@router.post("/profile/document-suggestions/dismiss", response_model=BusinessProfileOut)
+def dismiss_my_document_suggestion(
+    body: DocumentSuggestionAction,
+    db: Session = Depends(get_db),
+    user: models.BusinessUser = Depends(get_current_business_user),
+):
+    business = db.query(models.Business).filter(models.Business.id == user.business_id).first()
+    documents.dismiss_suggested_service(business, body.suggestion)
+    db.commit()
+    db.refresh(business)
     return business

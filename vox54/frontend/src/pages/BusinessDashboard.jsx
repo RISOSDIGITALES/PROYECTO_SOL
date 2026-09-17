@@ -244,6 +244,8 @@ export default function BusinessDashboard() {
                   onRemoveLogo={() => api.removeBusinessLogo(session.access_token, null, false)}
                   onUploadDocument={(file, onProgress) => api.uploadBusinessDocument(session.access_token, null, file, false, onProgress)}
                   onRemoveDocument={() => api.removeBusinessDocument(session.access_token, null, false)}
+                  onAcceptSuggestion={(s) => api.acceptDocumentSuggestion(session.access_token, null, s, false)}
+                  onDismissSuggestion={(s) => api.dismissDocumentSuggestion(session.access_token, null, s, false)}
                 />
               ) : (
                 !profileError && <div style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>Cargando…</div>

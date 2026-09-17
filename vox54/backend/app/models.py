@@ -1,4 +1,5 @@
 import datetime
+import json
 
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy.orm import relationship
@@ -96,6 +97,16 @@ class Business(Base):
     # cada vez que se sube o se borra un documento).
     info_document_url = Column(String(500), default="")
     info_document_name = Column(String(255), default="")
+    # Generados por documents.generate_document_insights() cada vez que se
+    # (re)procesa el PDF real — nunca escritos a mano. doc_summary es texto
+    # libre corto (confirma que el bot realmente leyó el contenido, no solo
+    # que lo guardó); doc_suggested_services_json es la lista cruda (ver la
+    # property de abajo) de servicios que el documento menciona y todavía no
+    # están en products_services — una SUGERENCIA, nunca se aplica sola,
+    # requiere que el negocio/agencia la acepte explícitamente (ver
+    # documents.accept_suggested_service).
+    doc_summary = Column(Text, default="")
+    doc_suggested_services_json = Column(Text, default="[]")
 
     created_at = Column(DateTime, default=utcnow)
 
@@ -107,6 +118,13 @@ class Business(Base):
     @property
     def bot_status(self) -> str | None:
         return self.bot_config.status if self.bot_config else None
+
+    @property
+    def doc_suggested_services(self) -> list[str]:
+        try:
+            return json.loads(self.doc_suggested_services_json or "[]")
+        except (TypeError, ValueError):
+            return []
 
 
 class DocumentChunk(Base):

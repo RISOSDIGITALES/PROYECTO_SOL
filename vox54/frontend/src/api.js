@@ -155,6 +155,10 @@ export const api = {
     requestUploadWithProgress(asAgency ? `/agency/businesses/${id}/info-document` : "/business/profile/info-document", { file, token, onProgress }),
   removeBusinessDocument: (token, id, asAgency) =>
     request(asAgency ? `/agency/businesses/${id}/info-document` : "/business/profile/info-document", { method: "DELETE", token }),
+  acceptDocumentSuggestion: (token, id, suggestion, asAgency) =>
+    request(asAgency ? `/agency/businesses/${id}/document-suggestions/accept` : "/business/profile/document-suggestions/accept", { method: "POST", body: { suggestion }, token }),
+  dismissDocumentSuggestion: (token, id, suggestion, asAgency) =>
+    request(asAgency ? `/agency/businesses/${id}/document-suggestions/dismiss` : "/business/profile/document-suggestions/dismiss", { method: "POST", body: { suggestion }, token }),
 
   // --- Registros: historial de llamadas de toda la agencia ---
   listAgencyCalls: (token, businessId) =>

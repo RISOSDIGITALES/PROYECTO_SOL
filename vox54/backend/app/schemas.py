@@ -307,8 +307,31 @@ class BusinessProfileOut(BaseModel):
     logo_url: str = ""
     info_document_url: str = ""
     info_document_name: str = ""
+    # Generados por documents.generate_document_insights() al procesar el
+    # PDF real — nunca editables a mano, solo lectura. doc_suggested_services
+    # se resuelve por la property de Business (parsea el JSON guardado),
+    # nunca directo desde una columna llamada igual.
+    doc_summary: str = ""
+    doc_suggested_services: list[str] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class DocumentSuggestionAction(BaseModel):
+    """Body real de /document-suggestions/accept y /dismiss — identifica la
+    sugerencia por su propio texto (no por índice) para no depender de que
+    la lista no se haya reordenado/regenerado entre que el negocio la vio y
+    el clic real."""
+
+    suggestion: str
+
+    @field_validator("suggestion")
+    @classmethod
+    def not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("no puede estar vacío")
+        return v
 
 
 class BusinessProfileUpdate(BaseModel):

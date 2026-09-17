@@ -21,6 +21,7 @@ dependencia nueva que acá no hace ninguna falta."""
 import json
 import os
 
+import httpx
 import numpy as np
 from pypdf import PdfReader
 from sqlalchemy.orm import Session
@@ -31,6 +32,13 @@ from .config import settings
 EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 CHUNK_MAX_CHARS = 800
 CHUNK_OVERLAP_CHARS = 100
+
+# Mismo proveedor y misma API compatible-con-OpenAI que ya usa el worker de
+# LiveKit para el LLM en tiempo real (ver worker/agent.py) — acá es una sola
+# llamada de una sola vez por documento, no en vivo, así que se usa el
+# modelo más capaz del catálogo en vez del más rápido.
+GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_INSIGHTS_MODEL = "llama-3.3-70b-versatile"
 
 _embedding_model = None
 
@@ -100,8 +108,15 @@ def process_business_document(db: Session, business: models.Business) -> int:
     viejos (si el negocio subió un PDF antes) y guarda los nuevos con su
     embedding real. Devuelve cuántos fragmentos quedaron. Si el negocio no
     tiene ningún documento cargado, o el PDF no tiene texto real extraíble,
-    deja al negocio sin fragmentos — nunca inventa contenido."""
+    deja al negocio sin fragmentos — nunca inventa contenido.
+
+    doc_summary/doc_suggested_services_json se limpian primero y solo se
+    vuelven a llenar en la rama de éxito (con chunks reales) — así un
+    documento borrado, corrupto o sin texto siempre deja al negocio sin
+    ningún resumen/sugerencia vieja colgando de un PDF que ya no está."""
     db.query(models.DocumentChunk).filter(models.DocumentChunk.business_id == business.id).delete()
+    business.doc_summary = ""
+    business.doc_suggested_services_json = "[]"
 
     if not business.info_document_url:
         db.commit()
@@ -138,8 +153,89 @@ def process_business_document(db: Session, business: models.Business) -> int:
             text=chunk,
             embedding_json=_serialize_embedding(embedding),
         ))
+
+    insights = generate_document_insights(text, business.products_services or "")
+    business.doc_summary = insights["summary"]
+    business.doc_suggested_services_json = json.dumps(insights["suggested_services"])
+
     db.commit()
     return len(chunks)
+
+
+def generate_document_insights(text: str, existing_services: str) -> dict:
+    """Le pide a una IA real (Groq) que lea el texto ya extraído del PDF y
+    devuelva (1) un resumen corto en español de lo que entendió — la forma
+    honesta de confirmarle al negocio que el bot realmente leyó su
+    documento, no solo que lo guardó — y (2) los servicios/productos reales
+    que el documento menciona y que todavía NO están en `existing_services`,
+    para sugerírselos (nunca se aplican solos, ver accept_suggested_service).
+
+    Sin GROQ_API_KEY configurada, o ante cualquier falla real (red, JSON mal
+    formado, límite de la API), devuelve resumen y sugerencias vacíos —
+    mismo criterio de "nunca inventar" que el resto de este módulo: sin un
+    dato real, se muestra vacío, nunca un relleno falso."""
+    if not settings.groq_api_key or not text.strip():
+        return {"summary": "", "suggested_services": []}
+
+    prompt = (
+        "Este es el texto real extraído de un documento que un negocio subió "
+        "para que su asistente de voz lo use como referencia.\n\n"
+        "--- SERVICIOS/PRODUCTOS YA CARGADOS POR EL NEGOCIO ---\n"
+        f"{existing_services.strip() or '(ninguno cargado todavía)'}\n\n"
+        f"--- TEXTO DEL DOCUMENTO ---\n{text[:12000]}\n\n"
+        "Devolvé SOLO un JSON con esta forma exacta, en español:\n"
+        '{"summary": "2-3 oraciones resumiendo qué información real trae '
+        'este documento (horarios, precios, servicios, políticas, etc.)", '
+        '"suggested_services": ["servicio o producto real mencionado en el '
+        'documento que NO esté ya en la lista de arriba", "..."]}\n'
+        "Si el documento no menciona ningún servicio/producto nuevo, "
+        "suggested_services debe ser una lista vacía. Nunca inventes nada "
+        "que no esté escrito en el texto del documento."
+    )
+    try:
+        response = httpx.post(
+            GROQ_CHAT_URL,
+            headers={"Authorization": f"Bearer {settings.groq_api_key}"},
+            json={
+                "model": GROQ_INSIGHTS_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "response_format": {"type": "json_object"},
+                "temperature": 0.2,
+            },
+            timeout=30.0,
+        )
+        response.raise_for_status()
+        content = response.json()["choices"][0]["message"]["content"]
+        parsed = json.loads(content)
+        return {
+            "summary": str(parsed.get("summary") or "").strip(),
+            "suggested_services": [
+                str(s).strip() for s in (parsed.get("suggested_services") or []) if str(s).strip()
+            ],
+        }
+    except Exception:
+        return {"summary": "", "suggested_services": []}
+
+
+def accept_suggested_service(business: models.Business, suggestion: str) -> None:
+    """Acepta una sugerencia real: la agrega como una línea nueva a
+    products_services (mismo formato de texto libre que ya usa ese campo,
+    una línea por producto) y la saca de la lista de pendientes. Nunca se
+    aplica sola — solo corre cuando el negocio o la agencia confirma con un
+    clic explícito (ver las rutas /document-suggestions/accept)."""
+    remaining = [s for s in business.doc_suggested_services if s != suggestion]
+    business.doc_suggested_services_json = json.dumps(remaining)
+    lines = [line for line in (business.products_services or "").splitlines() if line.strip()]
+    lines.append(suggestion)
+    business.products_services = "\n".join(lines)
+
+
+def dismiss_suggested_service(business: models.Business, suggestion: str) -> None:
+    """Descarta una sugerencia sin aplicarla a products_services — no vuelve
+    a aparecer hasta que el documento se reprocese de nuevo (por ejemplo si
+    se sube una versión nueva del PDF)."""
+    remaining = [s for s in business.doc_suggested_services if s != suggestion]
+    business.doc_suggested_services_json = json.dumps(remaining)
 
 
 def search_chunks(db: Session, business_id: int, query: str, top_k: int = 3) -> list[str]:

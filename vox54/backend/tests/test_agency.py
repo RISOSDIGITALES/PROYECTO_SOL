@@ -620,3 +620,44 @@ def test_subir_documento_que_no_es_pdf_falla(client, seed, agency_token):
         files={"file": ("archivo.docx", b"no es un pdf", "application/vnd.openxmlformats")},
     )
     assert res.status_code == 422
+
+
+def test_aceptar_sugerencia_de_documento_de_un_negocio_propio(client, seed, agency_token, db_session):
+    business_id = seed["business"].id
+    seed["business"].doc_suggested_services_json = '["Servicio sugerido"]'
+    db_session.commit()
+
+    res = client.post(
+        f"/agency/businesses/{business_id}/document-suggestions/accept",
+        headers=auth(agency_token),
+        json={"suggestion": "Servicio sugerido"},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert "Servicio sugerido" in body["products_services"]
+    assert body["doc_suggested_services"] == []
+
+
+def test_descartar_sugerencia_de_documento_de_un_negocio_propio(client, seed, agency_token, db_session):
+    business_id = seed["business"].id
+    seed["business"].doc_suggested_services_json = '["Servicio sugerido"]'
+    db_session.commit()
+
+    res = client.post(
+        f"/agency/businesses/{business_id}/document-suggestions/dismiss",
+        headers=auth(agency_token),
+        json={"suggestion": "Servicio sugerido"},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert "Servicio sugerido" not in (body["products_services"] or "")
+    assert body["doc_suggested_services"] == []
+
+
+def test_no_se_puede_aceptar_sugerencia_de_un_negocio_de_otra_agencia(client, seed, agency_token):
+    res = client.post(
+        "/agency/businesses/999/document-suggestions/accept",
+        headers=auth(agency_token),
+        json={"suggestion": "Lo que sea"},
+    )
+    assert res.status_code == 404

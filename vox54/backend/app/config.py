@@ -20,6 +20,13 @@ class Settings(BaseSettings):
     # /uploads via StaticFiles (ver main.py). Nunca en git: son archivos
     # reales de cada instalación, no código.
     upload_dir: str = "uploads"
+    # Para que documents.py le pida a una IA real un resumen del PDF subido
+    # y sugerencias de servicios no cargados todavía — mismo proveedor que ya
+    # usa el worker (Groq, API compatible con OpenAI). Vacía por default:
+    # sin esta key, la generación de insights se salta sola (nunca revienta
+    # la subida del documento), mismo criterio ya usado en el resto del
+    # proyecto para dependencias externas opcionales.
+    groq_api_key: str = ""
 
     model_config = SettingsConfigDict(env_file=".env")
 

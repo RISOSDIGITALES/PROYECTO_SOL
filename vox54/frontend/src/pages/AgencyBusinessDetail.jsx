@@ -183,6 +183,8 @@ export default function AgencyBusinessDetail() {
                 onRemoveLogo={() => api.removeBusinessLogo(session.access_token, id, true)}
                 onUploadDocument={(file, onProgress) => api.uploadBusinessDocument(session.access_token, id, file, true, onProgress)}
                 onRemoveDocument={() => api.removeBusinessDocument(session.access_token, id, true)}
+                onAcceptSuggestion={(s) => api.acceptDocumentSuggestion(session.access_token, id, s, true)}
+                onDismissSuggestion={(s) => api.dismissDocumentSuggestion(session.access_token, id, s, true)}
               />
             ) : (
               !profileError && <div style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>Cargando…</div>

@@ -84,6 +84,7 @@ const TIMEZONES = [
 export default function BusinessProfileForm({
   profile, onChange, onSave, saving, savedMessage, error,
   onUploadLogo, onRemoveLogo, onUploadDocument, onRemoveDocument,
+  onAcceptSuggestion, onDismissSuggestion,
 }) {
   // Estado local, no derivado de `profile` en cada render — si se
   // re-parseara el string en cada tecleo (incluyendo el eco que vuelve del
@@ -195,7 +196,12 @@ export default function BusinessProfileForm({
       // ningún % que medir desde acá, se comunica aparte más abajo
       // (docProgress===100 && uploadingDoc → "Procesando documento…").
       const updated = await onUploadDocument(file, setDocProgress);
-      onChange({ info_document_url: updated.info_document_url, info_document_name: updated.info_document_name });
+      onChange({
+        info_document_url: updated.info_document_url,
+        info_document_name: updated.info_document_name,
+        doc_summary: updated.doc_summary,
+        doc_suggested_services: updated.doc_suggested_services,
+      });
       burst(docBtnRef.current);
     } catch (err) {
       setUploadError(err.message);
@@ -209,9 +215,52 @@ export default function BusinessProfileForm({
     setUploadError("");
     try {
       const updated = await onRemoveDocument();
-      onChange({ info_document_url: updated.info_document_url, info_document_name: updated.info_document_name });
+      onChange({
+        info_document_url: updated.info_document_url,
+        info_document_name: updated.info_document_name,
+        doc_summary: updated.doc_summary,
+        doc_suggested_services: updated.doc_suggested_services,
+      });
     } catch (err) {
       setUploadError(err.message);
+    }
+  }
+
+  // Distinto de uploadingLogo/uploadingDoc -- guarda CUÁL sugerencia puntual
+  // está en curso (su propio texto, no un booleano), para deshabilitar solo
+  // los botones de esa fila sin bloquear el resto de la lista mientras corre.
+  const [suggestionBusy, setSuggestionBusy] = useState(null);
+
+  async function handleAcceptSuggestion(suggestion) {
+    if (!onAcceptSuggestion) return;
+    setUploadError("");
+    setSuggestionBusy(suggestion);
+    try {
+      const updated = await onAcceptSuggestion(suggestion);
+      // products_services cambió del lado del servidor (accept_suggested_service
+      // le agrega la línea ahí) -- hay que re-parsear el estado local de
+      // productItems también, no solo propagar el string via onChange, o la
+      // grilla de productos del formulario se queda desactualizada.
+      setProductItems(parseProducts(updated.products_services));
+      onChange({ products_services: updated.products_services, doc_suggested_services: updated.doc_suggested_services });
+    } catch (err) {
+      setUploadError(err.message);
+    } finally {
+      setSuggestionBusy(null);
+    }
+  }
+
+  async function handleDismissSuggestion(suggestion) {
+    if (!onDismissSuggestion) return;
+    setUploadError("");
+    setSuggestionBusy(suggestion);
+    try {
+      const updated = await onDismissSuggestion(suggestion);
+      onChange({ doc_suggested_services: updated.doc_suggested_services });
+    } catch (err) {
+      setUploadError(err.message);
+    } finally {
+      setSuggestionBusy(null);
     }
   }
 
@@ -294,6 +343,46 @@ export default function BusinessProfileForm({
             </p>
           </div>
         </div>
+
+        {/* Confirmación real de que el bot leyó el documento -- no aparece
+            hasta que el servidor termina de procesarlo (uploadingDoc en
+            "Procesando…" todavía no llegó a esto). Ninguno de los dos
+            bloques se muestra si no hay nada real que mostrar. */}
+        {profile.doc_summary && (
+          <div style={docInsightBoxStyle}>
+            <span style={insightLabelStyle}>🧠 Esto entendió tu asistente del documento</span>
+            <p style={{ fontSize: 13, color: "var(--ink)", margin: 0, lineHeight: 1.5 }}>{profile.doc_summary}</p>
+          </div>
+        )}
+
+        {(profile.doc_suggested_services || []).length > 0 && (
+          <div style={docInsightBoxStyle}>
+            <span style={insightLabelStyle}>Servicios detectados en el documento, sin agregar todavía</span>
+            <div style={{ display: "grid", gap: 8 }}>
+              {profile.doc_suggested_services.map((s) => (
+                <div key={s} style={suggestionRowStyle}>
+                  <span style={{ fontSize: 13, color: "var(--ink)", flex: 1, minWidth: 0 }}>{s}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleAcceptSuggestion(s)}
+                    disabled={suggestionBusy === s}
+                    className="vox54-btn small"
+                  >
+                    {suggestionBusy === s ? "…" : "+ Agregar"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDismissSuggestion(s)}
+                    disabled={suggestionBusy === s}
+                    style={removeLinkStyle}
+                  >
+                    Descartar
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <form onSubmit={onSave} style={{ display: "grid", gap: 20 }}>
@@ -575,6 +664,33 @@ const docProgressFillStyle = {
   borderRadius: 999,
   background: "var(--g54-blue)",
   transition: "width 0.2s ease",
+};
+
+const docInsightBoxStyle = {
+  padding: "14px 16px",
+  borderRadius: 10,
+  background: "var(--surface)",
+  border: "1px solid var(--border)",
+  display: "grid",
+  gap: 10,
+};
+
+const insightLabelStyle = {
+  fontSize: 11,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
+  color: "var(--ink-soft)",
+};
+
+const suggestionRowStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "8px 10px",
+  borderRadius: 8,
+  background: "var(--white)",
+  border: "1px solid var(--border)",
 };
 
 const docLinkStyle = {

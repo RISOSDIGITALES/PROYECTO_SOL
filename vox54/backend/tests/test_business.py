@@ -414,3 +414,42 @@ def test_un_negocio_no_puede_subir_documento_de_otro(client, seed, business_toke
     # negocio 2 nunca tuvo su propio endpoint apuntado a business1 — pero la
     # prueba real es que el documento de negocio 1 nunca se filtra al 2
     assert profile2.json()["info_document_name"] == ""
+
+
+def test_aceptar_sugerencia_de_documento_propia(client, seed, business_token, db_session):
+    seed["business"].doc_suggested_services_json = '["Servicio sugerido"]'
+    db_session.commit()
+
+    res = client.post(
+        "/business/profile/document-suggestions/accept",
+        headers=auth(business_token),
+        json={"suggestion": "Servicio sugerido"},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert "Servicio sugerido" in body["products_services"]
+    assert body["doc_suggested_services"] == []
+
+
+def test_descartar_sugerencia_de_documento_propia(client, seed, business_token, db_session):
+    seed["business"].doc_suggested_services_json = '["Servicio sugerido"]'
+    db_session.commit()
+
+    res = client.post(
+        "/business/profile/document-suggestions/dismiss",
+        headers=auth(business_token),
+        json={"suggestion": "Servicio sugerido"},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert "Servicio sugerido" not in (body["products_services"] or "")
+    assert body["doc_suggested_services"] == []
+
+
+def test_aceptar_sugerencia_vacia_da_422(client, seed, business_token):
+    res = client.post(
+        "/business/profile/document-suggestions/accept",
+        headers=auth(business_token),
+        json={"suggestion": "   "},
+    )
+    assert res.status_code == 422
