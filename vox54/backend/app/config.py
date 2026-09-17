@@ -27,6 +27,16 @@ class Settings(BaseSettings):
     # la subida del documento), mismo criterio ya usado en el resto del
     # proyecto para dependencias externas opcionales.
     groq_api_key: str = ""
+    # Alternativa real a groq_api_key, no un experimento -- confirmado
+    # 17-sep que Groq (via Cloudflare) rechaza cualquier llamada directa
+    # desde esta red con 403, sin importar el cliente HTTP ni si hay VPN de
+    # por medio. GROQ_RELAY_URL apunta a un webhook de n8n que reenvía la
+    # misma petición desde un servidor que sí llega a Groq sin problema (el
+    # mismo que ya usan Content AI/Ideas AI en producción) -- si está
+    # configurada, tiene prioridad sobre la llamada directa. Ver
+    # documents.generate_document_insights().
+    groq_relay_url: str = ""
+    groq_relay_secret: str = ""
 
     model_config = SettingsConfigDict(env_file=".env")
 

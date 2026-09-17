@@ -302,20 +302,24 @@ def test_busqueda_semantica_real_encuentra_por_significado_no_por_palabra_exacta
 
 
 # ---------------------------------------------------------------------------
-# generate_document_insights — resumen + sugerencias de servicios via Groq.
-# Nunca llama a la API real: sin key configurada corta sola (ya es el
-# comportamiento real en el .env de test, vacío), y con key se mockea
-# httpx.post para no depender de red ni de una cuenta real.
+# generate_document_insights — resumen + sugerencias de servicios via Groq
+# (directo o vía el relay de n8n, ver el docstring de la función). Nunca
+# llama a la red real: cada test fija explícitamente groq_api_key y
+# groq_relay_url (aunque el .env real de desarrollo ya tenga valores reales
+# cargados desde el 17-sep) y mockea httpx.post cuando corresponde, para que
+# el resultado nunca dependa de lo que haya en el .env de esta máquina.
 # ---------------------------------------------------------------------------
 
-def test_insights_sin_key_configurada_devuelve_vacio(monkeypatch):
+def test_insights_sin_key_ni_relay_configurados_devuelve_vacio(monkeypatch):
     monkeypatch.setattr(settings, "groq_api_key", "")
+    monkeypatch.setattr(settings, "groq_relay_url", "")
     result = documents.generate_document_insights("Texto real del documento.", "")
     assert result == {"summary": "", "suggested_services": []}
 
 
 def test_insights_con_texto_vacio_no_llama_a_groq(monkeypatch):
     monkeypatch.setattr(settings, "groq_api_key", "fake-key-de-prueba")
+    monkeypatch.setattr(settings, "groq_relay_url", "")
 
     def fail_if_called(*args, **kwargs):
         raise AssertionError("no debería llamar a Groq con texto vacío")
@@ -336,21 +340,61 @@ class _FakeGroqResponse:
         return {"choices": [{"message": {"content": json.dumps(self._payload)}}]}
 
 
-def test_insights_con_key_real_parsea_la_respuesta_de_groq(monkeypatch):
+def test_insights_con_key_directa_parsea_la_respuesta_de_groq(monkeypatch):
     monkeypatch.setattr(settings, "groq_api_key", "fake-key-de-prueba")
+    monkeypatch.setattr(settings, "groq_relay_url", "")
     fake_payload = {
         "summary": "El documento explica precios y horarios de atención.",
         "suggested_services": ["Instalación express", "Mantenimiento anual"],
     }
-    monkeypatch.setattr(documents.httpx, "post", lambda *a, **k: _FakeGroqResponse(fake_payload))
+
+    captured = {}
+
+    def fake_post(url, headers=None, **kwargs):
+        captured["url"] = url
+        captured["headers"] = headers
+        return _FakeGroqResponse(fake_payload)
+
+    monkeypatch.setattr(documents.httpx, "post", fake_post)
 
     result = documents.generate_document_insights("El precio es 500 y abrimos 8 a 5.", "Instalación estándar")
     assert result["summary"] == fake_payload["summary"]
     assert result["suggested_services"] == fake_payload["suggested_services"]
+    # confirma que sin relay configurado, sí llama a Groq directo con el
+    # header de Authorization -- no al revés (el relay usa otro header).
+    assert captured["url"] == documents.GROQ_CHAT_URL
+    assert "Authorization" in captured["headers"]
+
+
+def test_insights_con_relay_configurado_lo_usa_en_vez_del_directo(monkeypatch):
+    """Confirma que, cuando hay una URL de relay real (el caso real de hoy
+    en producción, ya que Groq bloquea la llamada directa desde esta red),
+    la llamada va al relay con el secreto correcto -- incluso si también
+    hay una groq_api_key configurada, el relay tiene prioridad."""
+    monkeypatch.setattr(settings, "groq_api_key", "una-key-que-no-deberia-usarse")
+    monkeypatch.setattr(settings, "groq_relay_url", "https://n8n.ejemplo.test/webhook/vox54-groq-proxy")
+    monkeypatch.setattr(settings, "groq_relay_secret", "secreto-de-prueba")
+    fake_payload = {"summary": "Resumen vía relay.", "suggested_services": ["Servicio X"]}
+
+    captured = {}
+
+    def fake_post(url, headers=None, **kwargs):
+        captured["url"] = url
+        captured["headers"] = headers
+        return _FakeGroqResponse(fake_payload)
+
+    monkeypatch.setattr(documents.httpx, "post", fake_post)
+
+    result = documents.generate_document_insights("Texto real del documento.", "")
+    assert result["summary"] == "Resumen vía relay."
+    assert captured["url"] == "https://n8n.ejemplo.test/webhook/vox54-groq-proxy"
+    assert captured["headers"] == {"X-Relay-Secret": "secreto-de-prueba"}
+    assert "Authorization" not in captured["headers"]
 
 
 def test_insights_ante_falla_de_red_devuelve_vacio_sin_reventar(monkeypatch):
     monkeypatch.setattr(settings, "groq_api_key", "fake-key-de-prueba")
+    monkeypatch.setattr(settings, "groq_relay_url", "")
 
     def raise_network_error(*args, **kwargs):
         raise ConnectionError("simulado — sin internet")
@@ -362,6 +406,7 @@ def test_insights_ante_falla_de_red_devuelve_vacio_sin_reventar(monkeypatch):
 
 def test_insights_ante_json_mal_formado_devuelve_vacio_sin_reventar(monkeypatch):
     monkeypatch.setattr(settings, "groq_api_key", "fake-key-de-prueba")
+    monkeypatch.setattr(settings, "groq_relay_url", "")
 
     class BadResponse:
         def raise_for_status(self):

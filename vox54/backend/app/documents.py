@@ -170,11 +170,22 @@ def generate_document_insights(text: str, existing_services: str) -> dict:
     que el documento menciona y que todavía NO están en `existing_services`,
     para sugerírselos (nunca se aplican solos, ver accept_suggested_service).
 
-    Sin GROQ_API_KEY configurada, o ante cualquier falla real (red, JSON mal
-    formado, límite de la API), devuelve resumen y sugerencias vacíos —
-    mismo criterio de "nunca inventar" que el resto de este módulo: sin un
-    dato real, se muestra vacío, nunca un relleno falso."""
-    if not settings.groq_api_key or not text.strip():
+    Sin GROQ_API_KEY ni GROQ_RELAY_URL configurados, o ante cualquier falla
+    real (red, JSON mal formado, límite de la API), devuelve resumen y
+    sugerencias vacíos — mismo criterio de "nunca inventar" que el resto de
+    este módulo: sin un dato real, se muestra vacío, nunca un relleno falso.
+
+    GROQ_RELAY_URL (opcional) — cuando la red donde corre este backend no
+    llega directo a Groq (confirmado 17-sep: Cloudflare devuelve 403 para
+    cualquier cliente HTTP, sin importar el key, el user-agent, ni el stack
+    de red usado — curl, httpx, WinHTTP, con y sin VPN, todos iguales), esta
+    misma llamada se reenvía a un webhook real de n8n que hace exactamente
+    la misma petición a Groq desde un servidor que sí llega sin problema
+    (el mismo que ya usan Content AI/Ideas AI en producción). El relay es
+    un proxy transparente — reenvía el mismo body y devuelve la misma forma
+    de respuesta que Groq, así el parseo de abajo no cambia según cuál
+    camino se haya usado."""
+    if (not settings.groq_api_key and not settings.groq_relay_url) or not text.strip():
         return {"summary": "", "suggested_services": []}
 
     prompt = (
@@ -192,10 +203,17 @@ def generate_document_insights(text: str, existing_services: str) -> dict:
         "suggested_services debe ser una lista vacía. Nunca inventes nada "
         "que no esté escrito en el texto del documento."
     )
+    if settings.groq_relay_url:
+        url = settings.groq_relay_url
+        headers = {"X-Relay-Secret": settings.groq_relay_secret}
+    else:
+        url = GROQ_CHAT_URL
+        headers = {"Authorization": f"Bearer {settings.groq_api_key}"}
+
     try:
         response = httpx.post(
-            GROQ_CHAT_URL,
-            headers={"Authorization": f"Bearer {settings.groq_api_key}"},
+            url,
+            headers=headers,
             json={
                 "model": GROQ_INSIGHTS_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
