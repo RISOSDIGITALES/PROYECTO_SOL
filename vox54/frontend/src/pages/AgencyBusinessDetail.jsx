@@ -94,6 +94,12 @@ export default function AgencyBusinessDetail() {
         products_services: profile.products_services,
         address: profile.address,
         phone: profile.phone,
+        timezone: profile.timezone,
+        city: profile.city,
+        website: profile.website,
+        contact_email: profile.contact_email,
+        value_proposition: profile.value_proposition,
+        industry: profile.industry,
       });
       setProfile(updated);
       setProfileSavedMessage("Guardado correctamente.");

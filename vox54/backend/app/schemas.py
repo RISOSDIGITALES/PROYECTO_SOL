@@ -291,6 +291,12 @@ class BusinessProfileOut(BaseModel):
     products_services: str
     address: str = ""
     phone: str = ""
+    timezone: str = ""
+    city: str = ""
+    website: str = ""
+    contact_email: str = ""
+    value_proposition: str = ""
+    industry: str = ""
     logo_url: str = ""
     info_document_url: str = ""
     info_document_name: str = ""
@@ -304,6 +310,12 @@ class BusinessProfileUpdate(BaseModel):
     products_services: str | None = None
     address: str | None = None
     phone: str | None = None
+    timezone: str | None = None
+    city: str | None = None
+    website: str | None = None
+    contact_email: str | None = None
+    value_proposition: str | None = None
+    industry: str | None = None
 
 
 class BusinessCreate(BaseModel):

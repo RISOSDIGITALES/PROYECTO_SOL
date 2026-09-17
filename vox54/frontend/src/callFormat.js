@@ -32,6 +32,17 @@ export function formatDateLong(iso) {
   return d.toLocaleString("es-NI", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
+// Fecha de HOY, sin argumento (a diferencia de las dos de arriba, que
+// formatean un registro real) — "Jueves, 17 de septiembre de 2026", para el
+// header del Home de agencia. `toLocaleDateString` en español devuelve el
+// día de la semana en minúscula ("jueves") — se capitaliza a mano la
+// primera letra, sin tocar el resto (evita el capitalizado de cada palabra
+// que sí usa el panel de G54, gramaticalmente incorrecto en español real).
+export function formatToday() {
+  const s = new Date().toLocaleDateString("es-NI", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 export const OUTCOME_LABEL = {
   completed: "Completada",
   transferred: "Transferida",

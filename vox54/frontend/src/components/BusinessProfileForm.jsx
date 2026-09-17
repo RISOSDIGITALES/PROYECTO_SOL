@@ -42,6 +42,30 @@ function serializeProducts(items) {
     .join("\n");
 }
 
+// Lista curada, no exhaustiva — cubre los husos reales donde ya hay negocios
+// (Miami/Managua entre ellos) más el resto de capitales de habla hispana más
+// comunes. String IANA real (no un offset numérico) para que el horario de
+// verano se resuelva solo, sin que nadie tenga que actualizar nada dos veces
+// al año.
+const TIMEZONES = [
+  { value: "", label: "Sin configurar" },
+  { value: "America/New_York", label: "Este de EE.UU. (Miami, Nueva York)" },
+  { value: "America/Chicago", label: "Centro de EE.UU." },
+  { value: "America/Denver", label: "Montaña de EE.UU." },
+  { value: "America/Los_Angeles", label: "Pacífico de EE.UU." },
+  { value: "America/Mexico_City", label: "Ciudad de México" },
+  { value: "America/Guatemala", label: "Guatemala" },
+  { value: "America/Tegucigalpa", label: "Honduras" },
+  { value: "America/Managua", label: "Nicaragua" },
+  { value: "America/Costa_Rica", label: "Costa Rica" },
+  { value: "America/Panama", label: "Panamá" },
+  { value: "America/Bogota", label: "Colombia" },
+  { value: "America/Lima", label: "Perú" },
+  { value: "America/Santiago", label: "Chile" },
+  { value: "America/Buenos_Aires", label: "Argentina" },
+  { value: "Europe/Madrid", label: "España" },
+];
+
 export default function BusinessProfileForm({
   profile, onChange, onSave, saving, savedMessage, error,
   onUploadLogo, onRemoveLogo, onUploadDocument, onRemoveDocument,
@@ -285,6 +309,70 @@ export default function BusinessProfileForm({
               />
             </Field>
           </div>
+
+          <div style={twoColStyle}>
+            <Field label="Ciudad">
+              <input
+                value={profile.city || ""}
+                onChange={(e) => onChange({ city: e.target.value })}
+                placeholder="Ej: Miami, FL"
+                style={rowInputStyle}
+              />
+            </Field>
+            <Field label="Zona horaria">
+              <select
+                value={profile.timezone || ""}
+                onChange={(e) => onChange({ timezone: e.target.value })}
+                style={rowInputStyle}
+              >
+                {TIMEZONES.map((tz) => (
+                  <option key={tz.value} value={tz.value}>{tz.label}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <p style={{ fontSize: 11.5, color: "var(--ink-softer)", margin: "-8px 0 0" }}>
+            Define en qué huso se interpreta el horario de atención de arriba, y en qué hora local se muestra el registro de llamadas.
+          </p>
+
+          <div style={twoColStyle}>
+            <Field label="Sitio web">
+              <input
+                value={profile.website || ""}
+                onChange={(e) => onChange({ website: e.target.value })}
+                placeholder="Ej: https://tuempresa.com"
+                style={rowInputStyle}
+              />
+            </Field>
+            <Field label="Correo de contacto">
+              <input
+                type="email"
+                value={profile.contact_email || ""}
+                onChange={(e) => onChange({ contact_email: e.target.value })}
+                placeholder="Ej: contacto@tuempresa.com"
+                style={rowInputStyle}
+              />
+            </Field>
+          </div>
+
+          <Field label="Rubro">
+            <input
+              value={profile.industry || ""}
+              onChange={(e) => onChange({ industry: e.target.value })}
+              placeholder="Ej: Embalaje industrial, Hotelería, Ferretería"
+              style={rowInputStyle}
+            />
+          </Field>
+
+          <Field label="Propuesta de valor (qué te diferencia)">
+            <textarea
+              value={profile.value_proposition || ""}
+              onChange={(e) => onChange({ value_proposition: e.target.value })}
+              rows={2}
+              placeholder="Ej: Único taller en Miami certificado ISPM-15 con entrega el mismo día."
+              style={textareaStyle}
+            />
+          </Field>
 
           <div>
             <span style={labelStyle}>Productos y servicios</span>

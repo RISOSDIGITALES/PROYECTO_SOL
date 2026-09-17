@@ -68,6 +68,27 @@ class Business(Base):
     products_services = Column(Text, default="")
     address = Column(String(255), default="")
     phone = Column(String(30), default="")
+    # --- Sumados a pedido de la usuaria, comparando contra el perfil de
+    # empresa real de G54 (Growth54) — le faltaban a Bubble 54 datos que sí
+    # importan para un bot de voz: en qué huso interpretar `hours` y mostrar
+    # la hora de la última llamada (`timezone`, string IANA real como
+    # "America/Managua" — no un offset numérico, para que el horario de
+    # verano se maneje solo), la ciudad (separada de `address`, útil para
+    # elegir el timezone y para mostrarla suelta en el panel), el sitio web,
+    # un email de contacto público del negocio (distinto del email de login
+    # del dueño en BusinessUser), la propuesta de valor (contexto real para
+    # que el LLM sepa qué diferencia a este negocio, más allá de la
+    # descripción genérica), y el rubro (para categorizar en el panel y
+    # darle contexto al bot). Deliberadamente NO se copiaron los campos de
+    # marketing de G54 (keywords, mercado objetivo, competidores) — eso es
+    # específico del módulo de contenidos/SEO de esa plataforma, sin ningún
+    # sentido para un agente de voz. ---
+    timezone = Column(String(50), default="")
+    city = Column(String(120), default="")
+    website = Column(String(255), default="")
+    contact_email = Column(String(255), default="")
+    value_proposition = Column(Text, default="")
+    industry = Column(String(120), default="")
     logo_url = Column(String(500), default="")
     # PDF real como fuente de información adicional — se guarda y se muestra
     # (nombre real + link) Y su contenido real ya se indexa: ver
