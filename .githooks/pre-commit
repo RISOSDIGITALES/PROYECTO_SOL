@@ -1,0 +1,42 @@
+#!/bin/sh
+# Bloquea cualquier commit que contenga un secreto real con formato conocido.
+# Instalado por decision del proyecto tras el incidente del 17-sep-2026
+# (token de Telegram de Marco expuesto 11 veces en el historial publico).
+
+FILES=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$FILES" ] && exit 0
+
+FOUND=0
+
+# patron -> nombre legible
+check_pattern() {
+  pattern="$1"
+  label="$2"
+  for f in $FILES; do
+    [ -f "$f" ] || continue
+    match=$(grep -nE "$pattern" "$f" 2>/dev/null)
+    if [ -n "$match" ]; then
+      echo ""
+      echo "BLOQUEADO: posible $label real en $f"
+      echo "$match" | cut -c1-140
+      FOUND=1
+    fi
+  done
+}
+
+check_pattern '[0-9]{8,10}:[A-Za-z0-9_-]{35}'   "token de bot de Telegram"
+check_pattern 'gsk_[A-Za-z0-9]{20,}'            "API key de Groq"
+check_pattern 'AIzaSy[A-Za-z0-9_-]{33}'         "API key de Gemini/Google"
+check_pattern 'EAA[A-Za-z0-9]{60,}'             "token de acceso de Facebook/Meta"
+check_pattern 'sk-or-v1-[a-f0-9]{64}'           "API key de OpenRouter"
+check_pattern 'ghp_[A-Za-z0-9]{36}'             "token personal de GitHub"
+check_pattern 'sk-[A-Za-z0-9]{32,}'             "API key estilo OpenAI/DeepSeek"
+
+if [ "$FOUND" = "1" ]; then
+  echo ""
+  echo "Commit cancelado. Si es un valor de ejemplo/placeholder, usa el prefijo REDACTED_"
+  echo "en vez del valor real. Si es un secreto real, sacalo del archivo antes de commitear."
+  exit 1
+fi
+
+exit 0
