@@ -42,6 +42,21 @@ function serializeProducts(items) {
     .join("\n");
 }
 
+// El % real (docProgress) solo mide la fase de transferencia -- una vez que
+// llega a 100, el archivo ya está en el servidor pero la promesa de
+// onUploadDocument todavía no resolvió porque sigue extrayendo el texto
+// real y calculando los embeddings (ver comentario largo en api.js). Sin
+// esta segunda etiqueta, un documento con contenido real se queda con
+// "Subiendo… 100%" fijo por varios segundos más, dando la misma sensación
+// de "esto no funciona" que reportó la usuaria -- ahora se explica qué
+// está pasando en esa segunda mitad de la espera, aunque no haya un % real
+// que mostrar ahí.
+function docStatusLabel(progress) {
+  if (progress === null || progress === undefined) return "Subiendo…";
+  if (progress < 100) return `Subiendo… ${progress}%`;
+  return "Procesando documento…";
+}
+
 // Lista curada, no exhaustiva — cubre los husos reales donde ya hay negocios
 // (Miami/Managua entre ellos) más el resto de capitales de habla hispana más
 // comunes. String IANA real (no un offset numérico) para que el horario de
@@ -117,6 +132,7 @@ export default function BusinessProfileForm({
 
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [docProgress, setDocProgress] = useState(null);
   const [uploadError, setUploadError] = useState("");
   const [logoDragOver, setLogoDragOver] = useState(false);
   const logoBtnRef = useRef(null);
@@ -169,14 +185,23 @@ export default function BusinessProfileForm({
     if (!file) return;
     setUploadError("");
     setUploadingDoc(true);
+    setDocProgress(0);
     try {
-      const updated = await onUploadDocument(file);
+      // onProgress solo cubre la transferencia real del archivo (rápida,
+      // hasta 15MB) -- el 100% se alcanza bastante antes de que la promesa
+      // resuelva, porque el servidor sigue trabajando después de recibirlo
+      // (extraer el texto real y calcular un embedding por fragmento,
+      // confirmado en vivo que puede tardar 10-15s). Ese tramo real, sin
+      // ningún % que medir desde acá, se comunica aparte más abajo
+      // (docProgress===100 && uploadingDoc → "Procesando documento…").
+      const updated = await onUploadDocument(file, setDocProgress);
       onChange({ info_document_url: updated.info_document_url, info_document_name: updated.info_document_name });
       burst(docBtnRef.current);
     } catch (err) {
       setUploadError(err.message);
     } finally {
       setUploadingDoc(false);
+      setDocProgress(null);
     }
   }
 
@@ -245,9 +270,9 @@ export default function BusinessProfileForm({
                 <a href={`${API_BASE}${profile.info_document_url}`} target="_blank" rel="noreferrer" style={docLinkStyle}>
                   📄 {profile.info_document_name || "Documento subido"}
                 </a>
-                <div style={{ display: "flex", gap: 10 }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   <label ref={docBtnRef} className="vox54-btn secondary small" style={{ cursor: "pointer" }}>
-                    {uploadingDoc ? "Subiendo…" : "Reemplazar"}
+                    {uploadingDoc ? docStatusLabel(docProgress) : "Reemplazar"}
                     <input type="file" accept="application/pdf" onChange={handleDocFile} style={{ display: "none" }} disabled={uploadingDoc} />
                   </label>
                   <button type="button" onClick={handleRemoveDoc} style={removeLinkStyle}>Quitar</button>
@@ -255,12 +280,17 @@ export default function BusinessProfileForm({
               </div>
             ) : (
               <label ref={docBtnRef} className="vox54-btn secondary small" style={{ cursor: "pointer", justifySelf: "start" }}>
-                {uploadingDoc ? "Subiendo…" : "Subir PDF"}
+                {uploadingDoc ? docStatusLabel(docProgress) : "Subir PDF"}
                 <input type="file" accept="application/pdf" onChange={handleDocFile} style={{ display: "none" }} disabled={uploadingDoc} />
               </label>
             )}
+            {uploadingDoc && (
+              <div style={docProgressTrackStyle}>
+                <div style={{ ...docProgressFillStyle, width: `${docProgress === 100 ? 100 : docProgress || 0}%` }} />
+              </div>
+            )}
             <p style={{ fontSize: 11.5, color: "var(--ink-softer)", margin: "8px 0 0" }}>
-              Se guarda como referencia del negocio. Usar su contenido como fuente real para que el bot responda es una función que todavía se está construyendo.
+              Se guarda como referencia del negocio, y su contenido real ya se usa como fuente para que el bot responda — un documento con más texto tarda algunos segundos en procesarse después de subirlo.
             </p>
           </div>
         </div>
@@ -331,8 +361,8 @@ export default function BusinessProfileForm({
               </select>
             </Field>
           </div>
-          <p style={{ fontSize: 11.5, color: "var(--ink-softer)", margin: "-8px 0 0" }}>
-            Define en qué huso se interpreta el horario de atención de arriba, y en qué hora local se muestra el registro de llamadas.
+          <p style={{ fontSize: 11.5, color: "var(--ink-softer)", margin: "-4px 0 4px" }}>
+            Afecta el horario de arriba y la hora de tus llamadas.
           </p>
 
           <div style={twoColStyle}>
@@ -525,6 +555,26 @@ const logoDropzoneDragStyle = {
   borderColor: "var(--g54-blue)",
   borderStyle: "solid",
   background: "rgba(45,91,255,0.06)",
+};
+
+// Barra real de progreso de subida -- solo mientras uploadingDoc está
+// activo. Al llegar a 100%, se queda llena (no desaparece) mientras dura la
+// fase de procesamiento del servidor -- confirma visualmente que la
+// transferencia sí terminó, en vez de dar la sensación de que se detuvo a
+// mitad de camino.
+const docProgressTrackStyle = {
+  marginTop: 10,
+  height: 5,
+  borderRadius: 999,
+  background: "var(--surface)",
+  overflow: "hidden",
+};
+
+const docProgressFillStyle = {
+  height: "100%",
+  borderRadius: 999,
+  background: "var(--g54-blue)",
+  transition: "width 0.2s ease",
 };
 
 const docLinkStyle = {

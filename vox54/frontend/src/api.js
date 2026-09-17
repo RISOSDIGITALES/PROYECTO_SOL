@@ -6,9 +6,11 @@
 // una URL real, o el navegador las resuelve contra el origen del frontend.
 export const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
-async function toResult(res) {
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
+// Compartida por toResult (fetch) y requestUploadWithProgress (XHR, que no
+// tiene un objeto Response real) -- mismo criterio de extracción de mensaje
+// para los dos, sin duplicarlo.
+function resolveResult(data, ok) {
+  if (!ok) {
     let message = "Ocurrió un error inesperado.";
     if (Array.isArray(data.detail)) {
       // errores de validación de Pydantic (422 nativo) — cuando el validador
@@ -24,6 +26,11 @@ async function toResult(res) {
     throw new Error(message);
   }
   return data;
+}
+
+async function toResult(res) {
+  const data = await res.json().catch(() => ({}));
+  return resolveResult(data, res.ok);
 }
 
 async function request(path, { method = "GET", body, token } = {}) {
@@ -49,6 +56,52 @@ async function requestUpload(path, { method = "POST", file, token }) {
 
   const res = await fetch(`${API_BASE}${path}`, { method, headers, body: form });
   return toResult(res);
+}
+
+// Misma subida que requestUpload, pero con progreso real de bytes
+// transferidos (onProgress, 0-100) -- fetch no expone esto de forma nativa
+// para el body de salida, así que acá sí hace falta XMLHttpRequest. Pensado
+// para el documento de información (hasta 15MB, puede tardar en subirse en
+// una conexión lenta), no para el logo (3MB, casi instantáneo siempre).
+//
+// Importante -- lo que tarda de verdad en el documento no es la subida en
+// sí (unos pocos MB, rápido incluso en 3G) sino el PROCESAMIENTO real del
+// lado del servidor después de recibirlo (extraer el texto del PDF y
+// calcular un embedding real por fragmento, ver app/documents.py) --
+// confirmado en vivo que puede tardar 10-15s. onProgress solo cubre la fase
+// de transferencia; quien llama debe mostrar un estado de "procesando"
+// aparte una vez que onProgress llega a 100 pero la promesa todavía no
+// resolvió -- no hay forma de medir un % real de esa segunda fase sin que
+// el servidor reporte su propio progreso, algo desproporcionado para un
+// documento por negocio.
+function requestUploadWithProgress(path, { file, token, onProgress }) {
+  return new Promise((resolve, reject) => {
+    const form = new FormData();
+    form.append("file", file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${API_BASE}${path}`);
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+
+    if (onProgress) {
+      xhr.upload.addEventListener("progress", (e) => {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      });
+    }
+
+    xhr.addEventListener("load", () => {
+      let data = {};
+      try { data = JSON.parse(xhr.responseText); } catch { /* respuesta vacía o no-JSON */ }
+      try {
+        resolve(resolveResult(data, xhr.status >= 200 && xhr.status < 300));
+      } catch (err) {
+        reject(err);
+      }
+    });
+    xhr.addEventListener("error", () => reject(new Error("No se pudo conectar con el servidor.")));
+
+    xhr.send(form);
+  });
 }
 
 export const api = {
@@ -98,8 +151,8 @@ export const api = {
     requestUpload(asAgency ? `/agency/businesses/${id}/logo` : "/business/profile/logo", { file, token }),
   removeBusinessLogo: (token, id, asAgency) =>
     request(asAgency ? `/agency/businesses/${id}/logo` : "/business/profile/logo", { method: "DELETE", token }),
-  uploadBusinessDocument: (token, id, file, asAgency) =>
-    requestUpload(asAgency ? `/agency/businesses/${id}/info-document` : "/business/profile/info-document", { file, token }),
+  uploadBusinessDocument: (token, id, file, asAgency, onProgress) =>
+    requestUploadWithProgress(asAgency ? `/agency/businesses/${id}/info-document` : "/business/profile/info-document", { file, token, onProgress }),
   removeBusinessDocument: (token, id, asAgency) =>
     request(asAgency ? `/agency/businesses/${id}/info-document` : "/business/profile/info-document", { method: "DELETE", token }),
 
