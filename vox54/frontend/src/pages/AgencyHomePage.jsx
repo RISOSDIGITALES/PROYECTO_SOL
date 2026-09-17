@@ -3,7 +3,8 @@ import { Link, useOutletContext } from "react-router-dom";
 import StatusPill from "../components/StatusPill";
 import Icon from "../components/Icon";
 import { api } from "../api";
-import { firstName, initials } from "../utils";
+import { firstName } from "../utils";
+import BrandMark from "../components/BrandMark";
 import { formatDate } from "../callFormat";
 
 // Landing real de la agencia (vive en /agencia) — bienvenida + progreso de
@@ -214,7 +215,7 @@ export default function AgencyHomePage() {
                   {businesses.map((b) => (
                     <Link key={b.id} to={`/agencia/negocios/${b.id}`} className="vox54-steprow" style={businessRowStyle}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                        <div className="vox54-avatar" style={avatarStyle}>{initials(b.name)}</div>
+                        <BrandMark logoUrl={b.logo_url} name={b.name} size={30} />
                         <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {b.name}
                         </span>
@@ -366,12 +367,4 @@ const businessRowStyle = {
   borderRadius: 10,
   textDecoration: "none",
   border: "1px solid var(--border)",
-};
-
-const avatarStyle = {
-  width: 30,
-  height: 30,
-  flexShrink: 0,
-  borderRadius: 8,
-  fontSize: 11.5,
 };

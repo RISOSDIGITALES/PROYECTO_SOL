@@ -25,6 +25,7 @@ def me(user: models.BusinessUser = Depends(get_current_business_user)):
         email=user.email,
         business_id=user.business_id,
         business_name=user.business.name,
+        business_logo_url=user.business.logo_url or "",
         agency_name=agency.name,
         agency_contact_email=agency.contact_email or "",
         agency_contact_phone=agency.contact_phone or "",

@@ -12,7 +12,7 @@ import TopBrandBar from "../components/TopBrandBar";
 import { useAuth } from "../AuthContext";
 import { useRequireRole } from "../useRequireRole";
 import { api } from "../api";
-import { initials } from "../utils";
+import BrandMark from "../components/BrandMark";
 import { burst } from "../burst";
 
 // Mismo tratamiento de menú que AgencyShell — vuelve a vivir a la
@@ -219,7 +219,7 @@ export default function BusinessDashboard() {
             {tab !== "config" && (
               <div className="vox54-panel" style={identityCardStyle}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <div className="vox54-avatar" style={avatarStyle}>{initials(me?.business_name)}</div>
+                  <BrandMark logoUrl={me?.business_logo_url} name={me?.business_name} size={40} />
                   <div>
                     <h1 style={{ fontSize: 18, color: "var(--ink)", margin: 0 }}>{me?.business_name || "…"}</h1>
                     <div style={{ fontSize: 12, color: "var(--ink-softer)", marginTop: 2 }}>Tu agente de voz</div>
@@ -242,7 +242,7 @@ export default function BusinessDashboard() {
                   error={profileError}
                   onUploadLogo={(file) => api.uploadBusinessLogo(session.access_token, null, file, false)}
                   onRemoveLogo={() => api.removeBusinessLogo(session.access_token, null, false)}
-                  onUploadDocument={(file) => api.uploadBusinessDocument(session.access_token, null, file, false)}
+                  onUploadDocument={(file, onProgress) => api.uploadBusinessDocument(session.access_token, null, file, false, onProgress)}
                   onRemoveDocument={() => api.removeBusinessDocument(session.access_token, null, false)}
                 />
               ) : (
@@ -386,14 +386,6 @@ const identityCardStyle = {
   gap: 16,
   padding: "16px 20px",
   marginBottom: 20,
-};
-
-const avatarStyle = {
-  width: 40,
-  height: 40,
-  flexShrink: 0,
-  borderRadius: 10,
-  fontSize: 14,
 };
 
 const accountCardStyle = {

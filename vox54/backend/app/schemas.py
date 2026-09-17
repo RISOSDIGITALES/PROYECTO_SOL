@@ -36,6 +36,7 @@ class AgencyBusinessSummary(BaseModel):
     id: int
     name: str
     bot_status: str | None = None
+    logo_url: str = ""
 
 
 class AgencyProfileOut(BaseModel):
@@ -78,6 +79,11 @@ class BusinessMeResponse(BaseModel):
     email: str
     business_id: int
     business_name: str
+    # Sin esto, el avatar de identidad del propio dashboard del negocio
+    # (BusinessDashboard) siempre caía a sus iniciales, aunque ya hubiera
+    # subido un logo real — este campo nunca vivió acá, solo en
+    # BusinessProfileOut, que /business/me no expone.
+    business_logo_url: str = ""
     # Un negocio no tiene ningún canal de soporte propio todavía — quien
     # atiende sus dudas reales es la agencia que lo gestiona, así que se le
     # muestra el nombre real de esa agencia en vez de inventar un contacto
@@ -239,6 +245,7 @@ class BusinessOut(BaseModel):
     id: int
     name: str
     bot_status: str | None = None
+    logo_url: str = ""
 
     model_config = ConfigDict(from_attributes=True)
 

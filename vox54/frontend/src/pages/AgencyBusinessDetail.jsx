@@ -3,8 +3,8 @@ import { useParams, Link, useOutletContext } from "react-router-dom";
 import StatusPill from "../components/StatusPill";
 import CallsList from "../components/CallsList";
 import BusinessProfileForm from "../components/BusinessProfileForm";
+import BrandMark from "../components/BrandMark";
 import { api } from "../api";
-import { initials } from "../utils";
 
 // Ficha completa de un negocio — todo lo que hay que saber de él en una
 // sola pantalla: identidad, su perfil real (resumen/horario/productos,
@@ -124,7 +124,7 @@ export default function AgencyBusinessDetail() {
           <div className="vox54-panel" style={{ padding: 24, marginTop: 12 }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <div className="vox54-avatar" style={avatarStyle}>{initials(business.name)}</div>
+                <BrandMark logoUrl={profile?.logo_url} name={business.name} size={44} />
                 <div>
                   {renaming ? (
                     <form onSubmit={handleRename} style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -181,7 +181,7 @@ export default function AgencyBusinessDetail() {
                 error={profileError}
                 onUploadLogo={(file) => api.uploadBusinessLogo(session.access_token, id, file, true)}
                 onRemoveLogo={() => api.removeBusinessLogo(session.access_token, id, true)}
-                onUploadDocument={(file) => api.uploadBusinessDocument(session.access_token, id, file, true)}
+                onUploadDocument={(file, onProgress) => api.uploadBusinessDocument(session.access_token, id, file, true, onProgress)}
                 onRemoveDocument={() => api.removeBusinessDocument(session.access_token, id, true)}
               />
             ) : (
@@ -227,14 +227,6 @@ const backLink = {
   fontSize: 12.5,
   color: "var(--ink-soft)",
   textDecoration: "none",
-};
-
-const avatarStyle = {
-  width: 44,
-  height: 44,
-  flexShrink: 0,
-  borderRadius: 10,
-  fontSize: 15,
 };
 
 const sectionTitleStyle = {

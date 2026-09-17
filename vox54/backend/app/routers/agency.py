@@ -65,7 +65,12 @@ def _agency_profile_out(db: Session, agency: models.Agency) -> AgencyProfileOut:
         logo_url=agency.logo_url or "",
         business_count=len(businesses),
         businesses=[
-            AgencyBusinessSummary(id=b.id, name=b.name, bot_status=b.bot_config.status if b.bot_config else None)
+            AgencyBusinessSummary(
+                id=b.id,
+                name=b.name,
+                bot_status=b.bot_config.status if b.bot_config else None,
+                logo_url=b.logo_url or "",
+            )
             for b in businesses
         ],
     )

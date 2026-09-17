@@ -4,7 +4,7 @@ import StatusPill from "../components/StatusPill";
 import CreateBusinessModal from "../components/CreateBusinessModal";
 import AgencyProfileRequiredModal from "../components/AgencyProfileRequiredModal";
 import { api } from "../api";
-import { initials } from "../utils";
+import BrandMark from "../components/BrandMark";
 import { useAgencyProfileDone } from "../useAgencyProfileDone";
 
 export default function AgencyBusinessesPage() {
@@ -59,7 +59,7 @@ export default function AgencyBusinessesPage() {
           {businesses.map((b) => (
             <Link key={b.id} to={`/agencia/negocios/${b.id}`} className="vox54-card" style={cardStyle}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-                <div className="vox54-avatar" style={avatarStyle}>{initials(b.name)}</div>
+                <BrandMark logoUrl={b.logo_url} name={b.name} size={40} />
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 14.5, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {b.name}
@@ -96,10 +96,3 @@ const cardStyle = {
   color: "var(--ink)",
 };
 
-const avatarStyle = {
-  width: 40,
-  height: 40,
-  flexShrink: 0,
-  borderRadius: 10,
-  fontSize: 14,
-};
