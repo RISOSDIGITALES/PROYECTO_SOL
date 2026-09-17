@@ -4,7 +4,7 @@ import StatusPill from "../components/StatusPill";
 import Icon from "../components/Icon";
 import { api } from "../api";
 import { firstName, initials } from "../utils";
-import { formatDate, formatToday } from "../callFormat";
+import { formatDate } from "../callFormat";
 
 // Landing real de la agencia (vive en /agencia) — bienvenida + progreso de
 // arranque + un resumen rápido de cada sección real del menú. "Negocios"
@@ -106,7 +106,7 @@ export default function AgencyHomePage() {
   return (
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
         <div style={heroStyle}>
-          <div style={eyebrowStyle}>Inicio · {formatToday()}</div>
+          <div style={eyebrowStyle}>Inicio</div>
           <h1 style={{ fontSize: 27, color: "var(--ink)", margin: "6px 0 4px" }}>
             Hola, {me ? firstName(me) || me.name : "…"}
           </h1>
