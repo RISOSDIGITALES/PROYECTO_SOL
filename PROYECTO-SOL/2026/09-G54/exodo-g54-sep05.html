@@ -158,11 +158,12 @@
     <h1>Éxodo — Pendientes para el ingeniero · <span>05 Sep 2026</span></h1>
     <p>Reemplaza a <code style="color:#a78bfa;background:transparent;border:none;">exodo-g54-ago22.html</code>. Este documento lista los pedidos abiertos por área — el historial de qué se confirmó resuelto y cuándo está abajo, plegado.</p>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> 8 pedidos activos</div>
+      <div class="meta-item"><div class="dot"></div> 9 pedidos activos</div>
     </div>
     <details class="header-updates">
-      <summary>Historial de actualizaciones (6 entradas)</summary>
+      <summary>Historial de actualizaciones (7 entradas)</summary>
       <ul>
+        <li><strong class="upd-date">17-sep (nuevo pedido: miniaturas de posts recortan la imagen):</strong> pedido de la usuaria, verificado en vivo antes de anotarlo — no es algo que podamos arreglar nosotros, es un bug del panel. Ver tarjeta nueva en "Panel — bug visual".</li>
         <li><strong class="upd-date">17-sep (reprobados los 8 con sesión real, un cambio real encontrado):</strong> el panel sigue sin redesplegar desde el 07-sep (mismo bundle exacto, <code>index-CpgTvMy3.js</code>, confirmado byte a byte) — así que "confirmación antes de regenerar estrategia" y el falso positivo de "Content AI no configurado" siguen exactamente igual (18 <code>confirm()</code> en el bundle, ninguno en el camino de <code>runStrategist()</code>; el mensaje de "no configurado" sigue siendo el <code>catch</code> genérico). Sin cambios tampoco en: los 5 candidatos de endpoint para "Ejecutar seguimiento IA"/"Generar cotización" (todos <code>404</code>); <code>OPTIONS /api/crm/deals/{id}</code> y <code>.../activities</code> (sin <code>DELETE</code> en ninguno); <code>GET /api/n8n/companies/{id}/rrss/analytics</code> (sigue <code>404</code>); y la estrategia real de Crating Express (sigue sin ningún campo <code>linea_base</code>). <strong style="color:#4ade80;">Hallazgo real — el filtro por <code>status</code> ya funciona de verdad</strong> en <code>GET /api/rrss/posts</code> y <code>GET /api/rrss/ideas</code> (bare, sesión): probado a fondo con los 4 valores reales de cada recurso (<code>publicado</code>/<code>borrador</code> en posts, <code>usada</code> en ideas) — cada llamada devuelve solo las filas de ese status exacto, algo que el 16-sep todavía devolvía <code>0</code> sin importar el filtro. No cambia el pedido en sí (sigue siendo del lado del panel, un toggle visual sobre los datos que ya trae) pero confirma que, si algún día conviene resolverlo por API en vez de en el cliente, la ruta ya está lista.</li>
         <li><strong class="upd-date">16-sep (nuevo pedido: filtro publicado/no publicado en Banco de Ideas y Posts):</strong> pedido de la usuaria — poder ver solo lo pendiente sin que se mezcle con el historial, sin perder ese historial. Probado en vivo antes de escribir el pedido: <code>?status=</code> no filtra nada en las rutas que el propio panel usa (<code>/api/rrss/posts</code>, <code>/api/rrss/ideas</code> con sesión) — devuelven <code>0</code> con el filtro puesto. Aclarado que no hace falta ningún cambio de backend para resolverlo: el panel ya trae la lista completa, alcanza con un filtro del lado del cliente sobre los datos que ya tiene.</li>
         <li><strong class="upd-date">16-sep (nuevo pedido: sugerencia de mejor hora para publicar):</strong> investigado a fondo antes de pedir nada — no existe hoy en ningún lado (doc de la API, código de nuestros agentes, ni el bundle del panel). Confirmado en vivo que hoy no se puede construir bien con datos reales: Crating Express tiene 0 posts publicados ahora mismo (todo en borrador), y el único dato nativo de Meta para esto (<code>online_followers</code> de Instagram) exige un mínimo de 100 seguidores — CE tiene 3, devuelve vacío. Se descartó explícitamente meter un horario genérico tipo "martes y jueves 11am" por no ser un dato real de la empresa. Reprobada la documentación de la API el mismo día — sin ningún cambio desde el 25-ago (byte a byte idéntica) y el bundle del panel también igual (<code>index-CpgTvMy3.js</code>).</li>
@@ -368,6 +369,24 @@
     </div>
   </div>
 
+
+  <!-- ============ PANEL — BUG VISUAL ============ -->
+  <div class="cat-header">
+    <span class="cat-icon">🖼️</span>
+    <span class="cat-title">Panel — bug visual</span>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">Las miniaturas de posts recortan la imagen — sobre todo el texto cerca de los bordes</div><div class="item-where">Panel › RRSS › Editor de Posts (vista de lista/tarjetas)</div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why">Pedido de la usuaria: las miniaturas de la lista de posts cortan la imagen, y en varios casos el título con texto que genera nuestro Image Generator queda parcialmente tapado o directamente fuera de cuadro. Investigado en vivo antes de anotarlo — <strong>no es un problema de las imágenes que generamos, es del contenedor de la miniatura en el panel.</strong></p>
+      <p class="item-why"><strong>Confirmado con el elemento real, no a simple vista</strong> (leído el estilo computado de las <code>&lt;img&gt;</code> reales de la lista): el contenedor de cada tarjeta está fijo a <code>207×207px</code>, siempre cuadrado, con <code>object-fit: cover</code> y <code>overflow: hidden</code> — sin importar el formato real de la imagen. Nuestro Image Generator AI genera en 3 formatos según el canal (cuadrada <code>1024×1024</code>, vertical <code>1024×1536</code>, horizontal <code>1536×1024</code> — confirmado leyendo los headers reales de 2 imágenes de posts en producción) — cualquier imagen que no sea exactamente cuadrada se recorta sí o sí para llenar ese cuadro fijo. De paso, el badge de la plataforma (Instagram/Facebook) se dibuja superpuesto en la esquina superior de la miniatura, justo donde suele caer el título con texto — tapándolo incluso cuando la imagen sí es cuadrada y no se recorta.</p>
+      <p class="item-why"><strong>Importante — no es general a todo el panel:</strong> en el editor completo de un post individual (la "Vista previa" grande, tipo publicación real de Facebook/Instagram) la misma imagen se ve perfecta, sin ningún recorte. El bug es exclusivo de las tarjetas chicas de la lista.</p>
+      <p class="item-why">Pedido concreto: que el contenedor de la miniatura use <code>object-fit: contain</code> (o un <code>aspect-ratio</code> que respete el formato real de cada imagen) en vez de <code>cover</code> forzado a un cuadrado — y, si es posible, mover el badge de plataforma a una esquina que no se superponga con el contenido de la imagen.</p>
+    </div>
+  </div>
 
   <!-- ============ FUNCIÓN NUEVA — FILTRO PUBLICADO/NO PUBLICADO ============ -->
   <div class="cat-header">
