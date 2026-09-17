@@ -1,15 +1,22 @@
 import Logo from "./Logo";
 import BrandMark from "./BrandMark";
+import LiveClock from "./LiveClock";
 
-// Franja superior, angosta y de ancho completo, con dos identidades
-// distintas conviviendo en la misma fila: el logo + nombre real del
-// cliente (agencia o negocio) pegados a la esquina de arriba a la
-// izquierda — exactamente donde tiene que estar, sin ningún hueco antes —
-// y "Bubble 54" (la marca de la plataforma) centrado en el medio, sin
-// importar el ancho que ocupe lo de la izquierda. Antes el logo del
-// cliente vivía adentro de la barra lateral, con el padding propio de esa
-// barra sumado a esta franja de encima — un hueco vacío real antes de
-// llegar a él, no la esquina.
+// Franja superior, angosta y de ancho completo, con tres cosas conviviendo
+// en la misma fila: el logo + nombre real del cliente (agencia o negocio)
+// pegados a la esquina de arriba a la izquierda — exactamente donde tiene
+// que estar, sin ningún hueco antes —, "Bubble 54" (la marca de la
+// plataforma) centrado en el medio sin importar el ancho que ocupe lo de
+// la izquierda, y el reloj real a la derecha. Antes el logo del cliente
+// vivía adentro de la barra lateral, con el padding propio de esa barra
+// sumado a esta franja de encima — un hueco vacío real antes de llegar a
+// él, no la esquina.
+//
+// El reloj vivió primero en la barra blanca de abajo (AgencyShell), junto
+// al nombre del usuario logueado — la usuaria señaló, con razón, que el
+// nombre de la agencia ya está visible acá mismo, así que mostrar además
+// "[nombre] Admin" en otra franja era redundante; se sacó esa franja del
+// todo y el reloj se movió acá, la única identidad que de verdad falta.
 export default function TopBrandBar({ logoUrl, name }) {
   return (
     <div className="g54-gradient" style={barStyle}>
@@ -19,6 +26,9 @@ export default function TopBrandBar({ logoUrl, name }) {
       </div>
       <div style={centerSlotStyle}>
         <Logo size="small" />
+      </div>
+      <div style={rightSlotStyle}>
+        <LiveClock />
       </div>
     </div>
   );
@@ -56,4 +66,13 @@ const centerSlotStyle = {
   left: "50%",
   top: "50%",
   transform: "translate(-50%, -50%)",
+};
+
+const rightSlotStyle = {
+  marginLeft: "auto",
+  paddingRight: 18,
+  position: "relative",
+  zIndex: 1,
+  display: "flex",
+  alignItems: "center",
 };

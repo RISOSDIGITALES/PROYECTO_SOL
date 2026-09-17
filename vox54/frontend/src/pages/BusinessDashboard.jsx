@@ -207,10 +207,6 @@ export default function BusinessDashboard() {
       </nav>
 
       <div style={contentColStyle}>
-        <div style={topbarStyle}>
-          <span style={{ color: "var(--ink-soft)", fontSize: 12.5, fontWeight: 600 }}>{me?.name}</span>
-        </div>
-
         <main style={mainScrollStyle}>
           {/* Identidad, llamadas y cuenta son contenido angosto por
               naturaleza (una tarjeta con 2 datos, filas de lista) — se
@@ -356,16 +352,6 @@ const contentColStyle = {
   // debajo de TopBrandBar, no directa del viewport. Mismo motivo que el
   // fix de .vox54-sidebar en theme.css.
   height: "100%",
-};
-
-const topbarStyle = {
-  flexShrink: 0,
-  padding: "14px 28px",
-  display: "flex",
-  justifyContent: "flex-end",
-  alignItems: "center",
-  borderBottom: "1px solid var(--border)",
-  background: "var(--white)",
 };
 
 const mainScrollStyle = {

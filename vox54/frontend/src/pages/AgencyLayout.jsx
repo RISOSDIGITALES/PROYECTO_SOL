@@ -33,7 +33,7 @@ export default function AgencyLayout() {
   if (!session) return null;
 
   return (
-    <AgencyShell userName={me?.name} onLogout={() => { logout(); navigate("/agencia/login"); }}>
+    <AgencyShell onLogout={() => { logout(); navigate("/agencia/login"); }}>
       {/* `me` viaja a las pantallas que lo necesitan para su propio
           contenido (Inicio, Configuración) vía useOutletContext(), sin que
           cada una tenga que volver a pedirlo. */}
