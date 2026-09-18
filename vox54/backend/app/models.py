@@ -184,7 +184,7 @@ class BotConfig(Base):
     business_id = Column(Integer, ForeignKey("businesses.id"), unique=True, nullable=False)
 
     # --- Telefonía ---
-    telephony_provider = Column(String(50), default="twilio")
+    telephony_provider = Column(String(50), default="livekit")
     telephony_trunk_id = Column(String(150), default="")  # SIP trunk / número que enruta la llamada
     phone_number = Column(String(30), default="")  # número real asignado al negocio
 

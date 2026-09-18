@@ -47,7 +47,7 @@ if not db.query(models.Agency).first():
 
     db.add(models.BotConfig(
         business_id=business1.id,
-        telephony_provider="twilio",
+        telephony_provider="livekit",
         stt_provider="deepgram",
         stt_model="nova-3",
         tts_provider="cartesia",
@@ -81,7 +81,7 @@ if not db.query(models.Agency).first():
 
     db.add(models.BotConfig(
         business_id=business2.id,
-        telephony_provider="twilio",
+        telephony_provider="livekit",
         stt_provider="deepgram",
         stt_model="nova-3",
         tts_provider="cartesia",

@@ -51,6 +51,7 @@ AI_PROVIDERS = [
 ]
 
 TELEPHONY_PROVIDERS = [
+    {"id": "livekit", "name": "LiveKit Cloud (número incluido, gratis para empezar)"},
     {"id": "twilio", "name": "Twilio"},
     {"id": "telnyx", "name": "Telnyx"},
 ]
