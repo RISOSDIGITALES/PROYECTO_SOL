@@ -79,3 +79,64 @@ describe("armado de requests", () => {
     expect(options.headers.Authorization).toBeUndefined();
   });
 });
+
+describe("sesión inválida (401 con token) -- bug real del 2026-09-18, la persona se quedaba viendo el error crudo en pantalla en vez de que la mandaran al login", () => {
+  let originalLocation;
+
+  beforeEach(() => {
+    localStorage.clear();
+    originalLocation = window.location;
+    delete window.location;
+    window.location = { href: "" };
+  });
+
+  afterEach(() => {
+    window.location = originalLocation;
+  });
+
+  it("agencia: limpia vox54_session y manda a /agencia/login", async () => {
+    localStorage.setItem("vox54_session", JSON.stringify({ access_token: "viejo", role: "agency", name: "Admin" }));
+    mockFetch(401, { detail: "Token inválido o expirado" });
+
+    await expect(api.agencyMe("token-viejo")).rejects.toThrow("Token inválido o expirado");
+
+    expect(localStorage.getItem("vox54_session")).toBeNull();
+    expect(window.location.href).toBe("/agencia/login");
+  });
+
+  it("negocio: usa el role guardado para mandar a /negocio/login en vez de al de agencia", async () => {
+    localStorage.setItem("vox54_session", JSON.stringify({ access_token: "viejo", role: "business", name: "Un Negocio" }));
+    mockFetch(401, { detail: "Token inválido o expirado" });
+
+    await expect(api.businessMe("token-viejo")).rejects.toThrow("Token inválido o expirado");
+
+    expect(window.location.href).toBe("/negocio/login");
+  });
+
+  it("sin ninguna sesión guardada en localStorage (caso raro pero posible), cae al login de agencia por default sin explotar", async () => {
+    mockFetch(401, { detail: "Token inválido o expirado" });
+    await expect(api.agencyMe("token-viejo")).rejects.toThrow();
+    expect(window.location.href).toBe("/agencia/login");
+  });
+
+  it("un 401 de LOGIN (sin token todavía) es un error de credenciales, no de sesión -- nunca dispara el redirect", async () => {
+    localStorage.setItem("vox54_session", JSON.stringify({ access_token: "algo", role: "agency" }));
+    mockFetch(401, { detail: "Email o contraseña incorrectos" });
+
+    await expect(api.agencyLogin("a@b.com", "mal")).rejects.toThrow("Email o contraseña incorrectos");
+
+    // ni se toca la sesión que hubiera (no debería haber, pero por las dudas) ni se redirige
+    expect(window.location.href).toBe("");
+    expect(localStorage.getItem("vox54_session")).not.toBeNull();
+  });
+
+  it("un 401 con token en una subida de archivo (requestUpload) también dispara el redirect", async () => {
+    localStorage.setItem("vox54_session", JSON.stringify({ access_token: "viejo", role: "agency" }));
+    mockFetch(401, { detail: "Token inválido o expirado" });
+    const file = new File(["contenido"], "logo.png", { type: "image/png" });
+
+    await expect(api.uploadAgencyLogo("token-viejo", file)).rejects.toThrow();
+
+    expect(window.location.href).toBe("/agencia/login");
+  });
+});

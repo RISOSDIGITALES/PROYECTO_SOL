@@ -33,6 +33,26 @@ async function toResult(res) {
   return resolveResult(data, res.ok);
 }
 
+// Un 401 en una llamada que YA llevaba un token (una sesión que dejó de
+// servir -- secreto rotado del lado del servidor, backend reiniciado con
+// otra base, o una expiración real) se mostraba como el mensaje crudo del
+// backend ("Token inválido o expirado") en cualquier pantalla, sin sacar a
+// nadie de ahí -- encontrado en vivo el 2026-09-18. Un 401 de LOGIN (sin
+// token todavía, ej. contraseña mal) nunca debe disparar esto -- ahí el
+// error real es que las credenciales están mal, no que la sesión expiró.
+function bounceToLoginIfSessionInvalid(status, token) {
+  if (status !== 401 || !token) return;
+  let role = null;
+  try {
+    const raw = localStorage.getItem("vox54_session");
+    role = raw ? JSON.parse(raw).role : null;
+  } catch {
+    // localStorage bloqueado/corrupto -- seguir igual al destino default de abajo
+  }
+  localStorage.removeItem("vox54_session");
+  window.location.href = role === "business" ? "/negocio/login" : "/agencia/login";
+}
+
 async function request(path, { method = "GET", body, token } = {}) {
   const headers = { "Content-Type": "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -42,6 +62,7 @@ async function request(path, { method = "GET", body, token } = {}) {
     headers,
     body: body ? JSON.stringify(body) : undefined,
   });
+  bounceToLoginIfSessionInvalid(res.status, token);
   return toResult(res);
 }
 
@@ -55,6 +76,7 @@ async function requestUpload(path, { method = "POST", file, token }) {
   form.append("file", file);
 
   const res = await fetch(`${API_BASE}${path}`, { method, headers, body: form });
+  bounceToLoginIfSessionInvalid(res.status, token);
   return toResult(res);
 }
 
@@ -90,6 +112,7 @@ function requestUploadWithProgress(path, { file, token, onProgress }) {
     }
 
     xhr.addEventListener("load", () => {
+      bounceToLoginIfSessionInvalid(xhr.status, token);
       let data = {};
       try { data = JSON.parse(xhr.responseText); } catch { /* respuesta vacía o no-JSON */ }
       try {
