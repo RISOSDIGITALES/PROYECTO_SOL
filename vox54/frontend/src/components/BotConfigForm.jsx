@@ -637,6 +637,7 @@ const toggleStyle = {
 const toggleKnobStyle = {
   position: "absolute",
   top: 2,
+  left: 0,
   width: 20,
   height: 20,
   borderRadius: "50%",
