@@ -38,9 +38,8 @@ function imgStyle(size) {
     width: size,
     height: size,
     borderRadius: Math.round(size * 0.27),
-    objectFit: "contain",
-    background: "rgba(255,255,255,0.92)",
-    padding: Math.round(size * 0.09),
+    objectFit: "cover",
+    objectPosition: "center",
     flexShrink: 0,
   };
 }
