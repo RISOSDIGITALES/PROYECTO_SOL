@@ -28,6 +28,7 @@ const baseConfig = {
   telephony_provider: "twilio",
   telephony_trunk_id: "",
   phone_number: "",
+  phone_mode: "",
   stt_provider: "deepgram",
   stt_model: "nova-3",
   tts_provider: "cartesia",
@@ -54,14 +55,22 @@ const baseConfig = {
 /** Envoltorio con estado real, igual al patrón que usan BusinessDashboard y
  * AgencyBusinessDetail — onChange hace un merge real, no un mock ciego, así
  * que el formulario recibe props actualizadas de verdad tras cada cambio. */
-function Wrapper({ initialConfig, onSave = vi.fn(), onChangeSpy, scope }) {
+function Wrapper({ initialConfig, onSave = vi.fn(), onChangeSpy, onActivatePhone = vi.fn(), scope }) {
   const [config, setConfig] = useState(initialConfig);
   function handleChange(patch) {
     onChangeSpy?.(patch);
     setConfig((prev) => ({ ...prev, ...patch }));
   }
   return (
-    <BotConfigForm config={config} catalog={catalog} onChange={handleChange} onSave={onSave} saving={false} scope={scope} />
+    <BotConfigForm
+      config={config}
+      catalog={catalog}
+      onChange={handleChange}
+      onSave={onSave}
+      onActivatePhone={onActivatePhone}
+      saving={false}
+      scope={scope}
+    />
   );
 }
 
@@ -192,5 +201,55 @@ describe("BotConfigForm — separación cliente/agencia", () => {
     expect(screen.getByText("Estado del agente")).toBeInTheDocument();
     expect(screen.getByText("Comportamiento del agente")).toBeInTheDocument();
     expect(screen.getByText("Control de la llamada")).toBeInTheDocument();
+  });
+});
+
+describe("BotConfigForm — activación real de número (self-service, mismo componente en los 2 scopes)", () => {
+  it("sin número todavía, ofrece las 2 opciones -- en agencia", () => {
+    render(<Wrapper initialConfig={baseConfig} scope="agency" />);
+    expect(screen.getByText("Quiero un número nuevo")).toBeInTheDocument();
+    expect(screen.getByText("Quiero usar mi número actual")).toBeInTheDocument();
+  });
+
+  it("sin número todavía, ofrece las 2 opciones -- en negocio por igual", () => {
+    render(<Wrapper initialConfig={baseConfig} scope="client" />);
+    expect(screen.getByText("Quiero un número nuevo")).toBeInTheDocument();
+    expect(screen.getByText("Quiero usar mi número actual")).toBeInTheDocument();
+  });
+
+  it("elegir 'número nuevo' llama a onActivatePhone con mode='new'", async () => {
+    const user = userEvent.setup();
+    const onActivatePhone = vi.fn().mockResolvedValue();
+    render(<Wrapper initialConfig={baseConfig} onActivatePhone={onActivatePhone} scope="agency" />);
+
+    await user.click(screen.getByText("Quiero un número nuevo"));
+
+    expect(onActivatePhone).toHaveBeenCalledWith("new");
+  });
+
+  it("elegir 'usar mi número actual' llama a onActivatePhone con mode='forward'", async () => {
+    const user = userEvent.setup();
+    const onActivatePhone = vi.fn().mockResolvedValue();
+    render(<Wrapper initialConfig={baseConfig} onActivatePhone={onActivatePhone} scope="client" />);
+
+    await user.click(screen.getByText("Quiero usar mi número actual"));
+
+    expect(onActivatePhone).toHaveBeenCalledWith("forward");
+  });
+
+  it("con un número ya asignado, muestra el número real en vez de las opciones", () => {
+    render(<Wrapper initialConfig={{ ...baseConfig, phone_number: "+17865550100", phone_mode: "new" }} scope="client" />);
+    expect(screen.getByText("+17865550100")).toBeInTheDocument();
+    expect(screen.queryByText("Quiero un número nuevo")).not.toBeInTheDocument();
+  });
+
+  it("un error real de activación (ej. Twilio sin configurar) se muestra tal cual, sin romper la pantalla", async () => {
+    const user = userEvent.setup();
+    const onActivatePhone = vi.fn().mockRejectedValue(new Error("La cuenta de Twilio todavía no está configurada en la plataforma."));
+    render(<Wrapper initialConfig={baseConfig} onActivatePhone={onActivatePhone} scope="agency" />);
+
+    await user.click(screen.getByText("Quiero un número nuevo"));
+
+    expect(await screen.findByText("La cuenta de Twilio todavía no está configurada en la plataforma.")).toBeInTheDocument();
   });
 });

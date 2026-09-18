@@ -134,6 +134,32 @@ def test_update_bot_config_silence_timeout_fuera_de_rango(client, seed, business
     assert res.status_code == 422
 
 
+def test_negocio_puede_activar_su_propio_telefono(client, seed, business_token, monkeypatch):
+    from app.routers import business as business_router
+
+    monkeypatch.setattr(business_router, "provision_phone_number", lambda *a, **k: "+13055550177")
+
+    res = client.post("/business/phone/activate", headers=auth(business_token), json={"mode": "new"})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["phone_number"] == "+13055550177"
+    assert body["phone_mode"] == "new"
+
+
+def test_negocio_activar_telefono_sin_twilio_da_422(client, seed, business_token, monkeypatch):
+    from app.routers import business as business_router
+    from app.telephony import TelephonyProvisionError
+
+    def fake_provision(*args, **kwargs):
+        raise TelephonyProvisionError("La cuenta de Twilio todavía no está configurada en la plataforma.")
+
+    monkeypatch.setattr(business_router, "provision_phone_number", fake_provision)
+
+    res = client.post("/business/phone/activate", headers=auth(business_token), json={"mode": "forward"})
+    assert res.status_code == 422
+    assert "Twilio" in res.json()["detail"]
+
+
 def test_me_incluye_el_nombre_de_la_agencia(client, seed, business_token):
     """Un negocio no tiene ningún canal de soporte propio — quien lo
     gestiona es su agencia, así que necesita saber cuál es."""

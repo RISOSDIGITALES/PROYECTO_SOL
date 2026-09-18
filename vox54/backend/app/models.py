@@ -187,6 +187,11 @@ class BotConfig(Base):
     telephony_provider = Column(String(50), default="livekit")
     telephony_trunk_id = Column(String(150), default="")  # SIP trunk / número que enruta la llamada
     phone_number = Column(String(30), default="")  # número real asignado al negocio
+    # "" (todavía nada) | "new" (el negocio publica este número como propio)
+    # | "forward" (el negocio sigue publicando el suyo de siempre y lo desvía
+    # hacia este) -- puramente informativo para la pantalla, telephony.py
+    # aprovisiona el mismo tipo de número real en los dos casos.
+    phone_mode = Column(String(20), default="")
 
     # --- Reconocimiento de voz (STT) ---
     stt_provider = Column(String(50), default="deepgram")

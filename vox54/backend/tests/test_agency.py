@@ -249,6 +249,70 @@ def test_patch_parcial_se_valida_contra_el_proveedor_ya_guardado(client, seed, a
     assert res.status_code == 422
 
 
+def test_activar_telefono_sin_twilio_configurado_da_422_con_mensaje_real(client, seed, agency_token, monkeypatch):
+    from app.routers import agency as agency_router
+    from app.telephony import TelephonyProvisionError
+
+    def fake_provision(*args, **kwargs):
+        raise TelephonyProvisionError("La cuenta de Twilio todavía no está configurada en la plataforma.")
+
+    monkeypatch.setattr(agency_router, "provision_phone_number", fake_provision)
+
+    business_id = seed["business"].id
+    res = client.post(
+        f"/agency/businesses/{business_id}/phone/activate",
+        headers=auth(agency_token),
+        json={"mode": "new"},
+    )
+    assert res.status_code == 422
+    assert "Twilio" in res.json()["detail"]
+
+
+def test_activar_telefono_nuevo_guarda_numero_y_modo(client, seed, agency_token, monkeypatch):
+    from app.routers import agency as agency_router
+
+    monkeypatch.setattr(agency_router, "provision_phone_number", lambda *a, **k: "+13055550199")
+
+    business_id = seed["business"].id
+    res = client.post(
+        f"/agency/businesses/{business_id}/phone/activate",
+        headers=auth(agency_token),
+        json={"mode": "new"},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["phone_number"] == "+13055550199"
+    assert body["phone_mode"] == "new"
+
+
+def test_activar_telefono_con_desvio_guarda_modo_forward(client, seed, agency_token, monkeypatch):
+    from app.routers import agency as agency_router
+
+    monkeypatch.setattr(agency_router, "provision_phone_number", lambda *a, **k: "+13055550188")
+
+    business_id = seed["business"].id
+    res = client.post(
+        f"/agency/businesses/{business_id}/phone/activate",
+        headers=auth(agency_token),
+        json={"mode": "forward"},
+    )
+    assert res.status_code == 200
+    assert res.json()["phone_mode"] == "forward"
+
+
+def test_activar_telefono_de_negocio_ajeno_da_404(client, seed, agency_token, monkeypatch):
+    from app.routers import agency as agency_router
+
+    monkeypatch.setattr(agency_router, "provision_phone_number", lambda *a, **k: "+13055550100")
+
+    res = client.post(
+        "/agency/businesses/999/phone/activate",
+        headers=auth(agency_token),
+        json={"mode": "new"},
+    )
+    assert res.status_code == 404
+
+
 def test_ver_llamadas_de_un_negocio_propio(client, seed, agency_token, db_session):
     from app import models
 

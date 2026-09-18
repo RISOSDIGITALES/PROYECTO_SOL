@@ -1,4 +1,5 @@
 import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
@@ -114,6 +115,7 @@ class BotConfigOut(BaseModel):
     telephony_provider: str
     telephony_trunk_id: str
     phone_number: str
+    phone_mode: str
     stt_provider: str
     stt_model: str
     tts_provider: str
@@ -218,6 +220,7 @@ class BotConfigOutClient(BaseModel):
 
     business_id: int
     phone_number: str
+    phone_mode: str
     ai_provider: str
     ai_model: str
     tts_provider: str
@@ -239,6 +242,15 @@ class BotConfigOutClient(BaseModel):
     voicemail_message: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PhoneActivateIn(BaseModel):
+    """`mode` decide solo el copy/las instrucciones que ve el cliente
+    ("publicá este número" vs. "desviá el tuyo hacia acá") -- el número real
+    que se compra y se conecta es exactamente el mismo camino en los dos
+    casos (ver telephony.provision_phone_number)."""
+
+    mode: Literal["new", "forward"]
 
 
 class BusinessOut(BaseModel):

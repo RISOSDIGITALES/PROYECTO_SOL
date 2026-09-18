@@ -37,6 +37,14 @@ class Settings(BaseSettings):
     # documents.generate_document_insights().
     groq_relay_url: str = ""
     groq_relay_secret: str = ""
+    # Cuenta REAL de Twilio de la plataforma (nunca del cliente) -- con esto
+    # vacío (default), telephony.provision_phone_number() nunca intenta
+    # ninguna llamada real, tira un error claro y legible en el panel en vez
+    # de fallar con un timeout o un 401 crudo de Twilio. Mismo criterio que
+    # groq_api_key: la funcionalidad se degrada sola, nunca inventa un
+    # número como si fuera real.
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
 
     model_config = SettingsConfigDict(env_file=".env")
 

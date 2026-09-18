@@ -9,10 +9,11 @@ from ..schemas import (
     BusinessOut, BusinessCreate, BusinessUpdate, BusinessDetailOut,
     BusinessProfileOut, BusinessProfileUpdate, DocumentSuggestionAction,
     BotConfigUpdate, BotConfigOut, CallOut, AgencyCallOut,
-    PasswordChange, AgentInventoryItem,
+    PasswordChange, AgentInventoryItem, PhoneActivateIn,
 )
 from ..uploads import save_document, save_logo
 from ..validators import bot_config_as_dict, validate_bot_config
+from ..telephony import TelephonyProvisionError, provision_phone_number
 from .. import documents, models
 
 router = APIRouter(prefix="/agency", tags=["agency"])
@@ -242,6 +243,30 @@ def update_business_bot_config(
     validate_bot_config(merged)
     for field, value in patch.items():
         setattr(config, field, value)
+    db.commit()
+    db.refresh(config)
+    return config
+
+
+@router.post("/businesses/{business_id}/phone/activate", response_model=BotConfigOut)
+def activate_business_phone(
+    business_id: int,
+    body: PhoneActivateIn,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    """Aprovisiona un número real de Twilio para este negocio -- mismo
+    camino real para "new" y "forward" (ver PhoneActivateIn), el `mode`
+    solo cambia qué instrucciones ve el cliente en el panel. Un
+    TelephonyProvisionError (ej. Twilio sin configurar) se traduce a 422
+    con el mensaje real, nunca se inventa un número para que "se vea bien"."""
+    business = _get_owned_business(db, user, business_id)
+    config = business.bot_config
+    try:
+        config.phone_number = provision_phone_number()
+    except TelephonyProvisionError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    config.phone_mode = body.mode
     db.commit()
     db.refresh(config)
     return config

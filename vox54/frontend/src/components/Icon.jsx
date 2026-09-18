@@ -77,6 +77,24 @@ const PATHS = {
       <path d="m4 17 5-5 3.5 3.5L16 12l4 5" />
     </>
   ),
+  // Los 3 de acá abajo son de PhoneActivation.jsx (conectar número real) —
+  // "desvío de llamadas" (dos flechas cruzadas), check de confirmación, y
+  // copiar al portapapeles.
+  forward: (
+    <>
+      <polyline points="17 2 22 7 17 12" />
+      <path d="M2 11V9a4 4 0 0 1 4-4h16" />
+      <polyline points="7 22 2 17 7 12" />
+      <path d="M22 13v2a4 4 0 0 1-4 4H2" />
+    </>
+  ),
+  check: <polyline points="20 6 9 17 4 12" />,
+  copy: (
+    <>
+      <rect x="9" y="9" width="13" height="13" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </>
+  ),
 };
 
 export default function Icon({ name, size = 22, className, style }) {

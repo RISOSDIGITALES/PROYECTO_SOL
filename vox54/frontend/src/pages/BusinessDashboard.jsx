@@ -79,6 +79,11 @@ export default function BusinessDashboard() {
     setSavedMessage("");
   }
 
+  async function handleActivatePhone(mode) {
+    const updated = await api.activateMyPhone(session.access_token, mode);
+    setConfig(updated);
+  }
+
   async function handleSave(e) {
     e.preventDefault();
     setError("");
@@ -259,6 +264,7 @@ export default function BusinessDashboard() {
                   catalog={catalog}
                   onChange={handleChange}
                   onSave={handleSave}
+                  onActivatePhone={handleActivatePhone}
                   saving={saving}
                   savedMessage={savedMessage}
                   error={error}

@@ -7,11 +7,12 @@ from ..deps import get_current_business_user
 from ..schemas import (
     BusinessMeResponse, BotConfigOutClient, BotConfigUpdateClient,
     BusinessProfileOut, BusinessProfileUpdate, CallOut, DocumentSuggestionAction,
-    PasswordChange,
+    PasswordChange, PhoneActivateIn,
 )
 from ..security import hash_password, verify_password
 from ..uploads import save_document, save_logo
 from ..validators import bot_config_as_dict, validate_bot_config
+from ..telephony import TelephonyProvisionError, provision_phone_number
 from .. import models
 
 router = APIRouter(prefix="/business", tags=["business"])
@@ -66,6 +67,26 @@ def update_bot_config(
     validate_bot_config(merged)  # 422 si algo no calza contra el catálogo — antes de tocar el objeto
     for field, value in patch.items():
         setattr(config, field, value)
+    db.commit()
+    db.refresh(config)
+    return config
+
+
+@router.post("/phone/activate", response_model=BotConfigOutClient)
+def activate_my_phone(
+    body: PhoneActivateIn,
+    db: Session = Depends(get_db),
+    user: models.BusinessUser = Depends(get_current_business_user),
+):
+    """Self-service real -- el propio negocio aprovisiona su número sin
+    pasar por la agencia. Mismo camino y mismos errores reales que su
+    espejo del lado de agencia (ver activate_business_phone)."""
+    config = db.query(models.BotConfig).filter(models.BotConfig.business_id == user.business_id).first()
+    try:
+        config.phone_number = provision_phone_number()
+    except TelephonyProvisionError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    config.phone_mode = body.mode
     db.commit()
     db.refresh(config)
     return config

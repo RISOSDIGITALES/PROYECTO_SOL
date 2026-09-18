@@ -14,7 +14,7 @@ from fastapi import HTTPException, status
 from . import catalog as catalog_data
 
 BOT_CONFIG_FIELDS = [
-    "telephony_provider", "telephony_trunk_id", "phone_number",
+    "telephony_provider", "telephony_trunk_id", "phone_number", "phone_mode",
     "stt_provider", "stt_model",
     "tts_provider", "tts_voice_id",
     "runtime_target",

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { burst } from "../burst";
+import PhoneActivation from "./PhoneActivation";
 
 /**
  * Formulario de configuración del agente de voz — reusado tanto por el panel
@@ -26,7 +27,7 @@ import { burst } from "../burst";
  * misma barrera, para no mostrarle a nadie un campo que después el
  * servidor va a ignorar en silencio.
  */
-export default function BotConfigForm({ config, catalog, onChange, onSave, saving, savedMessage, error, scope = "agency" }) {
+export default function BotConfigForm({ config, catalog, onChange, onSave, onActivatePhone, saving, savedMessage, error, scope = "agency" }) {
   const isAgency = scope === "agency";
   const aiModels = useMemo(() => {
     const provider = catalog.ai_providers.find((p) => p.id === config.ai_provider);
@@ -147,24 +148,13 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, savin
         </div>
       </Section>
 
-      {isAgency ? (
-        <Section title="Número">
-          <Field label="Número de teléfono asignado">
-            <input
-              value={config.phone_number}
-              onChange={(e) => onChange({ phone_number: e.target.value })}
-              placeholder="Sin asignar todavía"
-              style={inputStyle}
-            />
-          </Field>
-        </Section>
-      ) : (
-        <Section title="Tu número">
-          <Field label="Número de teléfono asignado">
-            <div style={readOnlyValueStyle}>{config.phone_number || "Sin asignar todavía — hablalo con tu agencia"}</div>
-          </Field>
-        </Section>
-      )}
+      <Section title={isAgency ? "Número" : "Tu número"}>
+        <PhoneActivation
+          phoneNumber={config.phone_number}
+          phoneMode={config.phone_mode}
+          onActivate={onActivatePhone}
+        />
+      </Section>
 
       {/* Modelo de IA y Voz del agente son personalización real de cara al
           cliente (Agencia o Negocio, los dos son clientes reales — ninguno
@@ -610,17 +600,6 @@ const advancedToggleStyle = {
   fontWeight: 600,
   color: "var(--ink-soft)",
   cursor: "pointer",
-};
-
-const readOnlyValueStyle = {
-  width: "100%",
-  padding: "10px 12px",
-  fontSize: 14,
-  color: "var(--ink)",
-  fontWeight: 600,
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  background: "var(--surface)",
 };
 
 const toggleStyle = {

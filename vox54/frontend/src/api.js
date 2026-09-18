@@ -144,8 +144,17 @@ export const api = {
     request(`/agency/businesses/${id}`, { method: "PATCH", body: { name }, token }),
   updateBusinessBotConfig: (token, id, body) =>
     request(`/agency/businesses/${id}/bot-config`, { method: "PUT", body, token }),
+  // Aprovisiona un numero real (Twilio, del lado de la plataforma -- nunca
+  // una cuenta del cliente) y lo conecta solo. `mode`: "new" (el negocio lo
+  // publica como propio) | "forward" (sigue con el suyo de siempre y lo
+  // desvia hacia este) -- mismo camino real en los dos casos, ver
+  // telephony.py en el backend.
+  activateBusinessPhone: (token, id, mode) =>
+    request(`/agency/businesses/${id}/phone/activate`, { method: "POST", body: { mode }, token }),
   getBotConfig: (token) => request("/business/bot-config", { token }),
   updateBotConfig: (token, body) => request("/business/bot-config", { method: "PUT", body, token }),
+  activateMyPhone: (token, mode) =>
+    request("/business/phone/activate", { method: "POST", body: { mode }, token }),
   listCalls: (token) => request("/business/calls", { token }),
   listBusinessCalls: (token, id) => request(`/agency/businesses/${id}/calls`, { token }),
   getCatalog: () => request("/catalog"),
