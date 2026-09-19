@@ -5,15 +5,17 @@ import CreateBusinessModal from "../components/CreateBusinessModal";
 import AgencyProfileRequiredModal from "../components/AgencyProfileRequiredModal";
 import { api } from "../api";
 import BrandMark from "../components/BrandMark";
-import { useAgencyProfileDone } from "../useAgencyProfileDone";
 
 export default function AgencyBusinessesPage() {
-  const { session } = useOutletContext();
+  // `profile` viene del layout (ya lo pide una sola vez) -- antes esta
+  // pantalla volvía a pedirlo por su cuenta en cada navegación acá vía
+  // useAgencyProfileDone, mismo tipo de duplicado ya corregido en Inicio.
+  const { session, profile } = useOutletContext();
   const [businesses, setBusinesses] = useState([]);
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [showProfileRequired, setShowProfileRequired] = useState(false);
-  const { done: agencyProfileDone } = useAgencyProfileDone(session?.access_token);
+  const agencyProfileDone = !!(profile && (profile.contact_email || profile.contact_phone || profile.logo_url));
 
   function handleCreateClick() {
     // Mismo gate que el picker de /agencia/agentes -- sin ningún dato real

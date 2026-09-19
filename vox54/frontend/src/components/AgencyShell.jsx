@@ -1,12 +1,8 @@
-import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Icon from "./Icon";
 import PoppableBubbles from "./PoppableBubbles";
 import TopBrandBar from "./TopBrandBar";
-import { useAuth } from "../AuthContext";
-import { api } from "../api";
 import { burst } from "../burst";
-import { AGENCY_PROFILE_EVENT } from "../agencyProfileEvents";
 
 // Shell compartido por todas las pantallas del lado de agencia. El menú
 // vuelve a vivir a la izquierda (después del experimento con el dock
@@ -41,12 +37,8 @@ const DOCK_BUBBLES = [
   { id: "d15", size: 9, style: { right: "-9%", top: "72%" }, delay: "-3.2s" },
 ];
 
-export default function AgencyShell({ onLogout, children }) {
+export default function AgencyShell({ onLogout, children, agencyName = "", agencyLogoUrl = "", pausedCount = 0 }) {
   const location = useLocation();
-  const { session } = useAuth();
-  const [pausedCount, setPausedCount] = useState(0);
-  const [agencyName, setAgencyName] = useState("");
-  const [agencyLogoUrl, setAgencyLogoUrl] = useState("");
 
   // "Inicio" es la landing (bienvenida + progreso + resumen), exclusiva de
   // /agencia — ya no comparte ruta con "Negocios", que se corrió a
@@ -67,40 +59,12 @@ export default function AgencyShell({ onLogout, children }) {
   const isRegistros = location.pathname.startsWith("/agencia/registros");
   const isConfig = location.pathname.startsWith("/agencia/configuracion");
 
-  useEffect(() => {
-    if (!session?.access_token) return;
-
-    // Nombre + logo real de la agencia para el tope de la barra lateral —
-    // llamada propia del shell, independiente de lo que cada pantalla ya
-    // pida para sí misma. Separada en su propia función porque, a
-    // diferencia del conteo de agentes pausados, esto necesita poder
-    // volver a correr sin que el componente se remonte: si se sube/quita
-    // un logo o se renombra la agencia desde AgencyProfilePage, este shell
-    // se enteraba solo en el próximo login — bug real reportado, ver
-    // agencyProfileEvents.js.
-    function refreshAgencyIdentity() {
-      api.agencyMe(session.access_token)
-        .then((me) => setAgencyName(me.agency_name || ""))
-        .catch(() => {});
-      // agencyMe() no trae logo_url (solo nombre/correo) — hace falta el
-      // perfil completo. Sin logo cargado, BrandMark cae solo a las
-      // iniciales, nunca queda sin nada.
-      api.getAgencyProfile(session.access_token)
-        .then((p) => setAgencyLogoUrl(p.logo_url || ""))
-        .catch(() => {});
-    }
-
-    // La burbuja de "Agentes" solo muestra un número real — cuántos bots
-    // propios están pausados ahora mismo — nunca un dato inventado. Sin
-    // ninguno pausado, no se muestra ninguna burbuja de aviso.
-    api.listAgents(session.access_token)
-      .then((agents) => setPausedCount(agents.filter((a) => a.bot_status === "paused").length))
-      .catch(() => {});
-
-    refreshAgencyIdentity();
-    window.addEventListener(AGENCY_PROFILE_EVENT, refreshAgencyIdentity);
-    return () => window.removeEventListener(AGENCY_PROFILE_EVENT, refreshAgencyIdentity);
-  }, [session]);
+  // `agencyName`/`agencyLogoUrl`/`pausedCount` ya no se piden acá -- vienen
+  // como props desde AgencyLayout, que es dueño único de `me`/`profile`/
+  // `agents` y se re-suscribe solo a agencyProfileEvents.js. Este shell se
+  // sigue enterando de un logo/nombre nuevo sin remontarse (mismo
+  // comportamiento de antes), solo que ya no dispara sus propias 3
+  // llamadas duplicadas para lograrlo.
 
   // Estallido real (flash+aro+partículas), igual al de las burbujas
   // decorativas — a pedido explícito, sin que el ícono desaparezca (nunca

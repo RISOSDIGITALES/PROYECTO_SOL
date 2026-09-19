@@ -5,7 +5,6 @@ import CreateBusinessModal from "../components/CreateBusinessModal";
 import BusinessPickerModal from "../components/BusinessPickerModal";
 import AgencyProfileRequiredModal from "../components/AgencyProfileRequiredModal";
 import { api } from "../api";
-import { useAgencyProfileDone } from "../useAgencyProfileDone";
 
 // Vista aparte de "Negocios" — esa es una grilla de tarjetas pensada para
 // entrar a editar un negocio puntual; esta es una tabla densa pensada para
@@ -20,7 +19,9 @@ import { useAgencyProfileDone } from "../useAgencyProfileDone";
 // pantalla, después de crear manda directo a configurar el bot nuevo (que
 // es lo que alguien mirando ESTE inventario en particular busca).
 export default function AgencyAgentsPage() {
-  const { session } = useOutletContext();
+  // `profile` viene del layout -- mismo criterio que AgencyBusinessesPage,
+  // ya no se vuelve a pedir acá.
+  const { session, profile } = useOutletContext();
   const navigate = useNavigate();
   const [agents, setAgents] = useState(null);
   const [catalog, setCatalog] = useState(null);
@@ -28,7 +29,7 @@ export default function AgencyAgentsPage() {
   const [showPicker, setShowPicker] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showProfileRequired, setShowProfileRequired] = useState(false);
-  const { done: agencyProfileDone } = useAgencyProfileDone(session?.access_token);
+  const agencyProfileDone = !!(profile && (profile.contact_email || profile.contact_phone || profile.logo_url));
 
   function refreshAgents() {
     api.listAgents(session.access_token).then(setAgents).catch((e) => setError(e.message));

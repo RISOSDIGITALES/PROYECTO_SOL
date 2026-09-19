@@ -35,20 +35,17 @@ const HUE = {
 };
 
 export default function AgencyHomePage() {
-  // `me` viene del layout (AgencyLayout ya lo pide una sola vez al
-  // loguearse) — esta pantalla pide solo lo que necesita para sí misma.
-  const { session, me } = useOutletContext();
-  const [profile, setProfile] = useState(null);
+  // `me`/`profile`/`agents` vienen del layout (AgencyLayout ya los pide una
+  // sola vez al loguearse, compartidos con el shell) — esta pantalla solo
+  // pide lo que de verdad es exclusivo suyo (negocios y llamadas).
+  const { session, me, profile, agents } = useOutletContext();
   const [businesses, setBusinesses] = useState(null);
-  const [agents, setAgents] = useState(null);
   const [calls, setCalls] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!session) return;
-    api.getAgencyProfile(session.access_token).then(setProfile).catch((e) => setError(e.message));
     api.listBusinesses(session.access_token).then(setBusinesses).catch((e) => setError(e.message));
-    api.listAgents(session.access_token).then(setAgents).catch((e) => setError(e.message));
     api.listAgencyCalls(session.access_token).then(setCalls).catch((e) => setError(e.message));
   }, [session]);
 
