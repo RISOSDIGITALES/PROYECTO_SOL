@@ -199,6 +199,14 @@ class BotConfig(Base):
     # hacia este) -- puramente informativo para la pantalla, telephony.py
     # aprovisiona el mismo tipo de número real en los dos casos.
     phone_mode = Column(String(20), default="")
+    # Incidente real del 2026-09-19: "forward" nunca pedía ni comprobaba el
+    # número real del negocio -- el botón compraba un número nuevo igual,
+    # sin preguntar nada. own_phone_number es el número que el negocio dice
+    # que es suyo; own_phone_verified solo pasa a True después de un
+    # check_phone_verification() real y exitoso (ver telephony.py) -- nunca
+    # se asume, nunca se guarda como verificado sin el código real correcto.
+    own_phone_number = Column(String(30), default="")
+    own_phone_verified = Column(Boolean, default=False)
 
     # --- Reconocimiento de voz (STT) ---
     stt_provider = Column(String(50), default="deepgram")

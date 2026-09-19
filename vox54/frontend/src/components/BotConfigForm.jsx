@@ -27,7 +27,7 @@ import PhoneActivation from "./PhoneActivation";
  * misma barrera, para no mostrarle a nadie un campo que después el
  * servidor va a ignorar en silencio.
  */
-export default function BotConfigForm({ config, catalog, onChange, onSave, onActivatePhone, saving, savedMessage, error, scope = "agency" }) {
+export default function BotConfigForm({ config, catalog, onChange, onSave, onActivatePhone, onVerifyPhoneStart, onVerifyPhoneCheck, saving, savedMessage, error, scope = "agency" }) {
   const isAgency = scope === "agency";
   const aiModels = useMemo(() => {
     const provider = catalog.ai_providers.find((p) => p.id === config.ai_provider);
@@ -153,6 +153,10 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, onAct
           phoneNumber={config.phone_number}
           phoneMode={config.phone_mode}
           onActivate={onActivatePhone}
+          ownPhoneNumber={config.own_phone_number}
+          ownPhoneVerified={config.own_phone_verified}
+          onVerifyStart={onVerifyPhoneStart}
+          onVerifyCheck={onVerifyPhoneCheck}
         />
       </Section>
 

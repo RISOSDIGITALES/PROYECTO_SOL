@@ -84,6 +84,17 @@ export default function BusinessDashboard() {
     setConfig(updated);
   }
 
+  async function handleVerifyPhoneStart(phoneNumber) {
+    await api.verifyMyPhoneStart(session.access_token, phoneNumber);
+    setConfig((prev) => ({ ...prev, own_phone_number: phoneNumber, own_phone_verified: false }));
+  }
+
+  async function handleVerifyPhoneCheck(phoneNumber, code) {
+    const result = await api.verifyMyPhoneCheck(session.access_token, phoneNumber, code);
+    if (result.verified) setConfig((prev) => ({ ...prev, own_phone_verified: true }));
+    return result;
+  }
+
   async function handleSave(e) {
     e.preventDefault();
     setError("");
@@ -265,6 +276,8 @@ export default function BusinessDashboard() {
                   onChange={handleChange}
                   onSave={handleSave}
                   onActivatePhone={handleActivatePhone}
+                  onVerifyPhoneStart={handleVerifyPhoneStart}
+                  onVerifyPhoneCheck={handleVerifyPhoneCheck}
                   saving={saving}
                   savedMessage={savedMessage}
                   error={error}

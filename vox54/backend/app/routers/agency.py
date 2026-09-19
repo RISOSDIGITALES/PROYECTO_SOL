@@ -13,10 +13,14 @@ from ..schemas import (
     BotConfigUpdate, BotConfigOut, CallOut, AgencyCallOut,
     PasswordChange, AgentInventoryItem, PhoneActivateIn,
     PlanUpdate, BusinessUsageOut,
+    PhoneVerifyStartIn, PhoneVerifyCheckIn, PhoneVerifyCheckOut,
 )
 from ..uploads import save_document, save_logo
 from ..validators import bot_config_as_dict, validate_bot_config
-from ..telephony import TelephonyProvisionError, provision_phone_number
+from ..telephony import (
+    TelephonyProvisionError, provision_phone_number,
+    start_phone_verification, check_phone_verification,
+)
 from .. import catalog, documents, models
 
 router = APIRouter(prefix="/agency", tags=["agency"])
@@ -313,6 +317,44 @@ def update_business_bot_config(
     return config
 
 
+@router.post("/businesses/{business_id}/phone/verify/start")
+def start_business_phone_verification(
+    business_id: int,
+    body: PhoneVerifyStartIn,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    business = _get_owned_business(db, user, business_id)
+    config = business.bot_config
+    try:
+        start_phone_verification(body.phone_number)
+    except TelephonyProvisionError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    config.own_phone_number = body.phone_number
+    config.own_phone_verified = False
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/businesses/{business_id}/phone/verify/check", response_model=PhoneVerifyCheckOut)
+def check_business_phone_verification(
+    business_id: int,
+    body: PhoneVerifyCheckIn,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    business = _get_owned_business(db, user, business_id)
+    config = business.bot_config
+    try:
+        ok = check_phone_verification(body.phone_number, body.code)
+    except TelephonyProvisionError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    if ok and config.own_phone_number == body.phone_number:
+        config.own_phone_verified = True
+        db.commit()
+    return PhoneVerifyCheckOut(verified=ok)
+
+
 @router.post("/businesses/{business_id}/phone/activate", response_model=BotConfigOut)
 def activate_business_phone(
     business_id: int,
@@ -324,9 +366,17 @@ def activate_business_phone(
     camino real para "new" y "forward" (ver PhoneActivateIn), el `mode`
     solo cambia qué instrucciones ve el cliente en el panel. Un
     TelephonyProvisionError (ej. Twilio sin configurar) se traduce a 422
-    con el mensaje real, nunca se inventa un número para que "se vea bien"."""
+    con el mensaje real, nunca se inventa un número para que "se vea bien".
+    "forward" exige verificación real ya hecha (ver phone/verify/*) --
+    incidente del 2026-09-19: antes compraba el número igual sin pedir el
+    propio del negocio."""
     business = _get_owned_business(db, user, business_id)
     config = business.bot_config
+    if body.mode == "forward" and not config.own_phone_verified:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Verificá el número real del negocio primero (mandale un código por SMS) antes de desviarlo.",
+        )
     try:
         config.phone_number = provision_phone_number()
     except TelephonyProvisionError as exc:

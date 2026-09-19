@@ -352,7 +352,10 @@ def test_activar_telefono_nuevo_guarda_numero_y_modo(client, seed, agency_token,
     assert body["phone_mode"] == "new"
 
 
-def test_activar_telefono_con_desvio_guarda_modo_forward(client, seed, agency_token, monkeypatch):
+def test_activar_telefono_con_desvio_sin_verificar_da_422(client, seed, agency_token, monkeypatch):
+    """Incidente real del 2026-09-19: antes esto compraba un número nuevo
+    sin pedir ni comprobar el número real del negocio. Ahora "forward" sin
+    verificación previa se rechaza -- nunca compra nada a ciegas."""
     from app.routers import agency as agency_router
 
     monkeypatch.setattr(agency_router, "provision_phone_number", lambda *a, **k: "+13055550188")
@@ -363,8 +366,87 @@ def test_activar_telefono_con_desvio_guarda_modo_forward(client, seed, agency_to
         headers=auth(agency_token),
         json={"mode": "forward"},
     )
+    assert res.status_code == 422
+
+
+def test_activar_telefono_con_desvio_ya_verificado_funciona(client, seed, agency_token, db_session, monkeypatch):
+    from app.routers import agency as agency_router
+
+    monkeypatch.setattr(agency_router, "provision_phone_number", lambda *a, **k: "+13055550188")
+
+    seed["business"].bot_config.own_phone_number = "+50588887777"
+    seed["business"].bot_config.own_phone_verified = True
+    db_session.commit()
+
+    res = client.post(
+        f"/agency/businesses/{seed['business'].id}/phone/activate",
+        headers=auth(agency_token),
+        json={"mode": "forward"},
+    )
     assert res.status_code == 200
     assert res.json()["phone_mode"] == "forward"
+
+
+def test_verificar_numero_propio_manda_codigo_y_queda_pendiente(client, seed, agency_token, monkeypatch):
+    from app.routers import agency as agency_router
+
+    monkeypatch.setattr(agency_router, "start_phone_verification", lambda phone: None)
+
+    business_id = seed["business"].id
+    res = client.post(
+        f"/agency/businesses/{business_id}/phone/verify/start",
+        headers=auth(agency_token),
+        json={"phone_number": "+50588887777"},
+    )
+    assert res.status_code == 200
+
+    detail = client.get(f"/agency/businesses/{business_id}", headers=auth(agency_token))
+    assert detail.json()["bot_config"]["own_phone_number"] == "+50588887777"
+    assert detail.json()["bot_config"]["own_phone_verified"] is False
+
+
+def test_verificar_numero_propio_codigo_correcto_marca_verificado(client, seed, agency_token, monkeypatch):
+    from app.routers import agency as agency_router
+
+    monkeypatch.setattr(agency_router, "start_phone_verification", lambda phone: None)
+    monkeypatch.setattr(agency_router, "check_phone_verification", lambda phone, code: True)
+
+    business_id = seed["business"].id
+    client.post(
+        f"/agency/businesses/{business_id}/phone/verify/start",
+        headers=auth(agency_token), json={"phone_number": "+50588887777"},
+    )
+    res = client.post(
+        f"/agency/businesses/{business_id}/phone/verify/check",
+        headers=auth(agency_token), json={"phone_number": "+50588887777", "code": "123456"},
+    )
+    assert res.status_code == 200
+    assert res.json()["verified"] is True
+
+    detail = client.get(f"/agency/businesses/{business_id}", headers=auth(agency_token))
+    assert detail.json()["bot_config"]["own_phone_verified"] is True
+
+
+def test_verificar_numero_propio_codigo_incorrecto_no_marca_verificado(client, seed, agency_token, monkeypatch):
+    from app.routers import agency as agency_router
+
+    monkeypatch.setattr(agency_router, "start_phone_verification", lambda phone: None)
+    monkeypatch.setattr(agency_router, "check_phone_verification", lambda phone, code: False)
+
+    business_id = seed["business"].id
+    client.post(
+        f"/agency/businesses/{business_id}/phone/verify/start",
+        headers=auth(agency_token), json={"phone_number": "+50588887777"},
+    )
+    res = client.post(
+        f"/agency/businesses/{business_id}/phone/verify/check",
+        headers=auth(agency_token), json={"phone_number": "+50588887777", "code": "000000"},
+    )
+    assert res.status_code == 200
+    assert res.json()["verified"] is False
+
+    detail = client.get(f"/agency/businesses/{business_id}", headers=auth(agency_token))
+    assert detail.json()["bot_config"]["own_phone_verified"] is False
 
 
 def test_activar_telefono_de_negocio_ajeno_da_404(client, seed, agency_token, monkeypatch):

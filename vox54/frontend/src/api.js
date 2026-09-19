@@ -156,10 +156,21 @@ export const api = {
   // telephony.py en el backend.
   activateBusinessPhone: (token, id, mode) =>
     request(`/agency/businesses/${id}/phone/activate`, { method: "POST", body: { mode }, token }),
+  // Incidente real del 2026-09-19: "usar mi propio número" compraba un
+  // número nuevo sin pedir ni comprobar el número real -- estos 2 confirman
+  // que el negocio de verdad es dueño del número antes de dejarlo desviar.
+  verifyBusinessPhoneStart: (token, id, phoneNumber) =>
+    request(`/agency/businesses/${id}/phone/verify/start`, { method: "POST", body: { phone_number: phoneNumber }, token }),
+  verifyBusinessPhoneCheck: (token, id, phoneNumber, code) =>
+    request(`/agency/businesses/${id}/phone/verify/check`, { method: "POST", body: { phone_number: phoneNumber, code }, token }),
   getBotConfig: (token) => request("/business/bot-config", { token }),
   updateBotConfig: (token, body) => request("/business/bot-config", { method: "PUT", body, token }),
   activateMyPhone: (token, mode) =>
     request("/business/phone/activate", { method: "POST", body: { mode }, token }),
+  verifyMyPhoneStart: (token, phoneNumber) =>
+    request("/business/phone/verify/start", { method: "POST", body: { phone_number: phoneNumber }, token }),
+  verifyMyPhoneCheck: (token, phoneNumber, code) =>
+    request("/business/phone/verify/check", { method: "POST", body: { phone_number: phoneNumber, code }, token }),
   listCalls: (token) => request("/business/calls", { token }),
   listBusinessCalls: (token, id) => request(`/agency/businesses/${id}/calls`, { token }),
   getCatalog: () => request("/catalog"),

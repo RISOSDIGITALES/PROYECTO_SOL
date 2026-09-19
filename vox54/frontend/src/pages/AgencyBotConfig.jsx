@@ -38,6 +38,17 @@ export default function AgencyBotConfig() {
     setConfig(updated);
   }
 
+  async function handleVerifyPhoneStart(phoneNumber) {
+    await api.verifyBusinessPhoneStart(session.access_token, id, phoneNumber);
+    setConfig((prev) => ({ ...prev, own_phone_number: phoneNumber, own_phone_verified: false }));
+  }
+
+  async function handleVerifyPhoneCheck(phoneNumber, code) {
+    const result = await api.verifyBusinessPhoneCheck(session.access_token, id, phoneNumber, code);
+    if (result.verified) setConfig((prev) => ({ ...prev, own_phone_verified: true }));
+    return result;
+  }
+
   async function handleSave(e) {
     e.preventDefault();
     setError("");
@@ -75,6 +86,8 @@ export default function AgencyBotConfig() {
             onChange={handleChange}
             onSave={handleSave}
             onActivatePhone={handleActivatePhone}
+            onVerifyPhoneStart={handleVerifyPhoneStart}
+            onVerifyPhoneCheck={handleVerifyPhoneCheck}
             saving={saving}
             savedMessage={savedMessage}
             error={error}

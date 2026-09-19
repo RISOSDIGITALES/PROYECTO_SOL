@@ -29,6 +29,8 @@ const baseConfig = {
   telephony_trunk_id: "",
   phone_number: "",
   phone_mode: "",
+  own_phone_number: "",
+  own_phone_verified: false,
   stt_provider: "deepgram",
   stt_model: "nova-3",
   tts_provider: "cartesia",
@@ -55,7 +57,10 @@ const baseConfig = {
 /** Envoltorio con estado real, igual al patrón que usan BusinessDashboard y
  * AgencyBusinessDetail — onChange hace un merge real, no un mock ciego, así
  * que el formulario recibe props actualizadas de verdad tras cada cambio. */
-function Wrapper({ initialConfig, onSave = vi.fn(), onChangeSpy, onActivatePhone = vi.fn(), scope }) {
+function Wrapper({
+  initialConfig, onSave = vi.fn(), onChangeSpy, onActivatePhone = vi.fn(),
+  onVerifyPhoneStart = vi.fn(), onVerifyPhoneCheck = vi.fn(), scope,
+}) {
   const [config, setConfig] = useState(initialConfig);
   function handleChange(patch) {
     onChangeSpy?.(patch);
@@ -68,6 +73,8 @@ function Wrapper({ initialConfig, onSave = vi.fn(), onChangeSpy, onActivatePhone
       onChange={handleChange}
       onSave={onSave}
       onActivatePhone={onActivatePhone}
+      onVerifyPhoneStart={onVerifyPhoneStart}
+      onVerifyPhoneCheck={onVerifyPhoneCheck}
       saving={false}
       scope={scope}
     />
@@ -227,14 +234,71 @@ describe("BotConfigForm — activación real de número (self-service, mismo com
     expect(onActivatePhone).toHaveBeenCalledWith("new");
   });
 
-  it("elegir 'usar mi número actual' llama a onActivatePhone con mode='forward'", async () => {
+  it("'usar mi número actual' ya NO activa de una -- pide verificar el número real primero (incidente 2026-09-19)", async () => {
     const user = userEvent.setup();
     const onActivatePhone = vi.fn().mockResolvedValue();
     render(<Wrapper initialConfig={baseConfig} onActivatePhone={onActivatePhone} scope="client" />);
 
     await user.click(screen.getByText("Quiero usar mi número actual"));
 
+    // Ya no dispara la compra directo -- pide el número real primero.
+    expect(onActivatePhone).not.toHaveBeenCalled();
+    expect(screen.getByPlaceholderText("+1 305 555 0100")).toBeInTheDocument();
+  });
+
+  it("flujo real completo: pedir número -> mandar código -> confirmarlo -> recién ahí activar 'forward'", async () => {
+    const user = userEvent.setup();
+    const onActivatePhone = vi.fn().mockResolvedValue();
+    const onVerifyPhoneStart = vi.fn().mockResolvedValue();
+    const onVerifyPhoneCheck = vi.fn().mockResolvedValue({ verified: true });
+    render(
+      <Wrapper
+        initialConfig={baseConfig}
+        onActivatePhone={onActivatePhone}
+        onVerifyPhoneStart={onVerifyPhoneStart}
+        onVerifyPhoneCheck={onVerifyPhoneCheck}
+        scope="client"
+      />
+    );
+
+    await user.click(screen.getByText("Quiero usar mi número actual"));
+    await user.type(screen.getByPlaceholderText("+1 305 555 0100"), "+17865551234");
+    await user.click(screen.getByText("Enviar código"));
+    expect(onVerifyPhoneStart).toHaveBeenCalledWith("+17865551234");
+
+    const codeInput = await screen.findByPlaceholderText("123456");
+    await user.type(codeInput, "123456");
+    await user.click(screen.getByText("Confirmar código"));
+    expect(onVerifyPhoneCheck).toHaveBeenCalledWith("+17865551234", "123456");
+
+    await user.click(await screen.findByText("Activar desvío a este número"));
     expect(onActivatePhone).toHaveBeenCalledWith("forward");
+  });
+
+  it("código incorrecto no activa nada y muestra el error real", async () => {
+    const user = userEvent.setup();
+    const onActivatePhone = vi.fn();
+    const onVerifyPhoneStart = vi.fn().mockResolvedValue();
+    const onVerifyPhoneCheck = vi.fn().mockResolvedValue({ verified: false });
+    render(
+      <Wrapper
+        initialConfig={baseConfig}
+        onActivatePhone={onActivatePhone}
+        onVerifyPhoneStart={onVerifyPhoneStart}
+        onVerifyPhoneCheck={onVerifyPhoneCheck}
+        scope="client"
+      />
+    );
+
+    await user.click(screen.getByText("Quiero usar mi número actual"));
+    await user.type(screen.getByPlaceholderText("+1 305 555 0100"), "+17865551234");
+    await user.click(screen.getByText("Enviar código"));
+    const codeInput = await screen.findByPlaceholderText("123456");
+    await user.type(codeInput, "000000");
+    await user.click(screen.getByText("Confirmar código"));
+
+    expect(await screen.findByText(/no es correcto/)).toBeInTheDocument();
+    expect(onActivatePhone).not.toHaveBeenCalled();
   });
 
   it("con un número ya asignado, muestra el número real en vez de las opciones", () => {

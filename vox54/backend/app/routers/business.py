@@ -7,12 +7,15 @@ from ..deps import get_current_business_user
 from ..schemas import (
     BusinessMeResponse, BotConfigOutClient, BotConfigUpdateClient,
     BusinessProfileOut, BusinessProfileUpdate, CallOut, DocumentSuggestionAction,
-    PasswordChange, PhoneActivateIn,
+    PasswordChange, PhoneActivateIn, PhoneVerifyStartIn, PhoneVerifyCheckIn, PhoneVerifyCheckOut,
 )
 from ..security import hash_password, verify_password
 from ..uploads import save_document, save_logo
 from ..validators import bot_config_as_dict, validate_bot_config
-from ..telephony import TelephonyProvisionError, provision_phone_number
+from ..telephony import (
+    TelephonyProvisionError, provision_phone_number,
+    start_phone_verification, check_phone_verification,
+)
 from .. import models
 
 router = APIRouter(prefix="/business", tags=["business"])
@@ -72,6 +75,44 @@ def update_bot_config(
     return config
 
 
+@router.post("/phone/verify/start")
+def start_my_phone_verification(
+    body: PhoneVerifyStartIn,
+    db: Session = Depends(get_db),
+    user: models.BusinessUser = Depends(get_current_business_user),
+):
+    """Manda un código real por SMS al número que el negocio dice que es
+    suyo. Incidente real del 2026-09-19: antes "usar mi propio número"
+    compraba un número nuevo sin pedir ni comprobar nada -- este paso (y
+    verify/check) son el fix real, no un formulario decorativo."""
+    config = db.query(models.BotConfig).filter(models.BotConfig.business_id == user.business_id).first()
+    try:
+        start_phone_verification(body.phone_number)
+    except TelephonyProvisionError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    config.own_phone_number = body.phone_number
+    config.own_phone_verified = False
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/phone/verify/check", response_model=PhoneVerifyCheckOut)
+def check_my_phone_verification(
+    body: PhoneVerifyCheckIn,
+    db: Session = Depends(get_db),
+    user: models.BusinessUser = Depends(get_current_business_user),
+):
+    config = db.query(models.BotConfig).filter(models.BotConfig.business_id == user.business_id).first()
+    try:
+        ok = check_phone_verification(body.phone_number, body.code)
+    except TelephonyProvisionError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    if ok and config.own_phone_number == body.phone_number:
+        config.own_phone_verified = True
+        db.commit()
+    return PhoneVerifyCheckOut(verified=ok)
+
+
 @router.post("/phone/activate", response_model=BotConfigOutClient)
 def activate_my_phone(
     body: PhoneActivateIn,
@@ -80,8 +121,15 @@ def activate_my_phone(
 ):
     """Self-service real -- el propio negocio aprovisiona su número sin
     pasar por la agencia. Mismo camino y mismos errores reales que su
-    espejo del lado de agencia (ver activate_business_phone)."""
+    espejo del lado de agencia (ver activate_business_phone). "forward"
+    exige verificación real ya hecha (ver phone/verify/*) -- incidente del
+    2026-09-19: antes compraba el número igual sin pedir el propio."""
     config = db.query(models.BotConfig).filter(models.BotConfig.business_id == user.business_id).first()
+    if body.mode == "forward" and not config.own_phone_verified:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Verificá tu número real primero (te mandamos un código por SMS) antes de desviarlo.",
+        )
     try:
         config.phone_number = provision_phone_number()
     except TelephonyProvisionError as exc:

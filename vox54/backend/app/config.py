@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     # número como si fuera real.
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
+    # Servicio real de Twilio Verify -- creado el 2026-09-19 tras un
+    # incidente real: el botón "usar mi propio número" compraba un número
+    # nuevo sin pedir ni verificar el número real del negocio (el `mode`
+    # nunca estuvo conectado a nada, solo cambiaba el texto). Sin este SID,
+    # start_phone_verification()/check_phone_verification() tiran el mismo
+    # tipo de error claro que TelephonyProvisionError, nunca fingen una
+    # verificación que no pasó.
+    twilio_verify_service_sid: str = ""
 
     model_config = SettingsConfigDict(env_file=".env")
 

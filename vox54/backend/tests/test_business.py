@@ -155,9 +155,46 @@ def test_negocio_activar_telefono_sin_twilio_da_422(client, seed, business_token
 
     monkeypatch.setattr(business_router, "provision_phone_number", fake_provision)
 
-    res = client.post("/business/phone/activate", headers=auth(business_token), json={"mode": "forward"})
+    res = client.post("/business/phone/activate", headers=auth(business_token), json={"mode": "new"})
     assert res.status_code == 422
     assert "Twilio" in res.json()["detail"]
+
+
+def test_negocio_activar_desvio_sin_verificar_da_422(client, seed, business_token, monkeypatch):
+    """Incidente real del 2026-09-19: "forward" sin haber verificado el
+    número propio antes se rechaza -- nunca compra un número a ciegas."""
+    from app.routers import business as business_router
+
+    monkeypatch.setattr(business_router, "provision_phone_number", lambda *a, **k: "+13055550177")
+
+    res = client.post("/business/phone/activate", headers=auth(business_token), json={"mode": "forward"})
+    assert res.status_code == 422
+    assert "erificá" in res.json()["detail"]
+
+
+def test_negocio_verifica_su_numero_y_luego_puede_desviar(client, seed, business_token, monkeypatch):
+    from app.routers import business as business_router
+
+    monkeypatch.setattr(business_router, "start_phone_verification", lambda phone: None)
+    monkeypatch.setattr(business_router, "check_phone_verification", lambda phone, code: True)
+    monkeypatch.setattr(business_router, "provision_phone_number", lambda *a, **k: "+13055550177")
+
+    start = client.post(
+        "/business/phone/verify/start", headers=auth(business_token),
+        json={"phone_number": "+17865551234"},
+    )
+    assert start.status_code == 200
+
+    check = client.post(
+        "/business/phone/verify/check", headers=auth(business_token),
+        json={"phone_number": "+17865551234", "code": "123456"},
+    )
+    assert check.status_code == 200
+    assert check.json()["verified"] is True
+
+    activate = client.post("/business/phone/activate", headers=auth(business_token), json={"mode": "forward"})
+    assert activate.status_code == 200
+    assert activate.json()["phone_mode"] == "forward"
 
 
 def test_me_incluye_el_nombre_de_la_agencia(client, seed, business_token):

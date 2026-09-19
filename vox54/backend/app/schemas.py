@@ -116,6 +116,13 @@ class BotConfigOut(BaseModel):
     telephony_trunk_id: str
     phone_number: str
     phone_mode: str
+    # Default -- WorkerBotConfigOut hereda este schema pero el worker.py
+    # arma su dict desde BOT_CONFIG_FIELDS (validators.py), que a propósito
+    # no incluye estos dos: el worker no necesita saber si el número propio
+    # ya está verificado, solo agencia/negocio. Sin default, esa
+    # construcción fallaba con "field required".
+    own_phone_number: str = ""
+    own_phone_verified: bool = False
     stt_provider: str
     stt_model: str
     tts_provider: str
@@ -221,6 +228,8 @@ class BotConfigOutClient(BaseModel):
     business_id: int
     phone_number: str
     phone_mode: str
+    own_phone_number: str
+    own_phone_verified: bool
     ai_provider: str
     ai_model: str
     tts_provider: str
@@ -245,12 +254,36 @@ class BotConfigOutClient(BaseModel):
 
 
 class PhoneActivateIn(BaseModel):
-    """`mode` decide solo el copy/las instrucciones que ve el cliente
-    ("publicá este número" vs. "desviá el tuyo hacia acá") -- el número real
-    que se compra y se conecta es exactamente el mismo camino en los dos
-    casos (ver telephony.provision_phone_number)."""
+    """`mode` decide el copy/las instrucciones que ve el cliente ("publicá
+    este número" vs. "desviá el tuyo hacia acá") -- el número real que se
+    compra y se conecta es el mismo camino en los dos casos (ver
+    telephony.provision_phone_number). Pero "forward" además EXIGE que
+    `BotConfig.own_phone_verified` ya sea True -- incidente real del
+    2026-09-19: antes se compraba el número igual sin pedir ni comprobar
+    cuál era el número real del negocio."""
 
     mode: Literal["new", "forward"]
+
+
+class PhoneVerifyStartIn(BaseModel):
+    phone_number: str
+
+    @field_validator("phone_number")
+    @classmethod
+    def looks_like_e164(cls, v: str) -> str:
+        v = v.strip()
+        if not v.startswith("+") or not v[1:].replace(" ", "").isdigit() or len(v) < 8:
+            raise ValueError("Usá el número completo con código de país, ej. +13055550123")
+        return v
+
+
+class PhoneVerifyCheckIn(BaseModel):
+    phone_number: str
+    code: str
+
+
+class PhoneVerifyCheckOut(BaseModel):
+    verified: bool
 
 
 class BusinessOut(BaseModel):
