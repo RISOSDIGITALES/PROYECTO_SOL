@@ -378,10 +378,38 @@ def activate_business_phone(
             "Verificá el número real del negocio primero (mandale un código por SMS) antes de desviarlo.",
         )
     try:
-        config.phone_number = provision_phone_number()
+        config.phone_number = provision_phone_number(db)
     except TelephonyProvisionError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     config.phone_mode = body.mode
+    db.commit()
+    db.refresh(config)
+    return config
+
+
+@router.post("/businesses/{business_id}/phone/release", response_model=BotConfigOut)
+def release_business_phone(
+    business_id: int,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    """Desconecta el número de este negocio SIN devolverlo a Twilio --
+    seguimos pagándolo y siendo dueños, pero queda libre para que
+    provision_phone_number() se lo reasigne gratis al próximo negocio que
+    active "número nuevo" (ver find_reusable_number en telephony.py). Pedido
+    real de la usuaria (2026-09-19): cuando un cliente se va, ese número es
+    nuestro, no de él -- no tiene sentido comprar uno nuevo para el
+    siguiente cliente mientras este quede pagado y sin usar.
+
+    Deliberadamente exclusivo de agencia -- soltar el número de un negocio
+    activo apaga su bot de golpe, no es una acción que el propio negocio
+    deba poder hacerse solo por accidente."""
+    business = _get_owned_business(db, user, business_id)
+    config = business.bot_config
+    config.phone_number = ""
+    config.phone_mode = ""
+    config.own_phone_number = ""
+    config.own_phone_verified = False
     db.commit()
     db.refresh(config)
     return config

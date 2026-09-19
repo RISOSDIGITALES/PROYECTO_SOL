@@ -387,6 +387,44 @@ def test_activar_telefono_con_desvio_ya_verificado_funciona(client, seed, agency
     assert res.json()["phone_mode"] == "forward"
 
 
+def test_liberar_numero_de_un_negocio_lo_desconecta_sin_borrarlo_de_twilio(client, seed, agency_token, db_session):
+    """Pedido real de la usuaria (2026-09-19): cuando un cliente se va, el
+    número sigue siendo nuestro -- soltarlo acá no llama a Twilio para
+    nada, solo lo desvincula local para que provision_phone_number() se lo
+    pueda dar al próximo negocio (ver test_telephony.py)."""
+    config = seed["business"].bot_config
+    config.phone_number = "+13055550111"
+    config.phone_mode = "new"
+    config.own_phone_number = "+17865551234"
+    config.own_phone_verified = True
+    db_session.commit()
+
+    res = client.post(
+        f"/agency/businesses/{seed['business'].id}/phone/release",
+        headers=auth(agency_token),
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["phone_number"] == ""
+    assert body["phone_mode"] == ""
+    assert body["own_phone_number"] == ""
+    assert body["own_phone_verified"] is False
+
+
+def test_liberar_numero_de_negocio_ajeno_da_404(client, seed, agency_token, db_session):
+    from app import models
+
+    otra_agencia = models.Agency(name="Otra Agencia Reuso")
+    db_session.add(otra_agencia)
+    db_session.flush()
+    negocio_ajeno = models.Business(agency_id=otra_agencia.id, name="Negocio Ajeno Reuso")
+    db_session.add(negocio_ajeno)
+    db_session.commit()
+
+    res = client.post(f"/agency/businesses/{negocio_ajeno.id}/phone/release", headers=auth(agency_token))
+    assert res.status_code == 404
+
+
 def test_verificar_numero_propio_manda_codigo_y_queda_pendiente(client, seed, agency_token, monkeypatch):
     from app.routers import agency as agency_router
 

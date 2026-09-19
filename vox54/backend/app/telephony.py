@@ -1,5 +1,7 @@
 import httpx
+from sqlalchemy.orm import Session
 
+from . import models
 from .config import settings
 
 TWILIO_BASE = "https://api.twilio.com/2010-04-01"
@@ -13,9 +15,40 @@ class TelephonyProvisionError(Exception):
     cada rama sigue tirando este mismo tipo con su propio mensaje real."""
 
 
-def provision_phone_number(country: str = "US") -> str:
-    """Busca y compra un número real de Twilio para la plataforma (nunca a
-    nombre del cliente) y lo devuelve en formato E.164 (ej. "+13055550123").
+def find_reusable_number(db: Session) -> str | None:
+    """Un número que ya compramos y pagamos, pero que hoy no está asignado
+    a ningún negocio -- typicamente porque un cliente se fue y alguien
+    liberó su número (ver release_business_phone en agency.py). Nunca lo
+    borramos de Twilio al liberarlo justo para poder reusarlo acá, gratis,
+    en vez de comprar uno nuevo cada vez. Devuelve None si no hay ninguno
+    libre -- nunca inventa uno."""
+    if not settings.twilio_account_sid or not settings.twilio_auth_token:
+        return None
+
+    sid = settings.twilio_account_sid
+    auth = (sid, settings.twilio_auth_token)
+    try:
+        with httpx.Client(auth=auth, timeout=15) as client:
+            owned = client.get(f"{TWILIO_BASE}/Accounts/{sid}/IncomingPhoneNumbers.json", params={"PageSize": 200})
+    except httpx.HTTPError:
+        return None
+    if owned.status_code != 200:
+        return None
+
+    owned_numbers = {n["phone_number"] for n in owned.json().get("incoming_phone_numbers", [])}
+    assigned_numbers = {
+        row[0] for row in db.query(models.BotConfig.phone_number).filter(models.BotConfig.phone_number != "").all()
+    }
+    free = owned_numbers - assigned_numbers
+    return next(iter(free), None)
+
+
+def provision_phone_number(db: Session, country: str = "US") -> str:
+    """Devuelve un número real de Twilio para asignarle a un negocio --
+    primero intenta REUSAR uno que ya compramos y quedó libre (gratis, sin
+    ninguna llamada de compra); solo si no hay ninguno, busca y compra uno
+    nuevo. Nunca a nombre del cliente, siempre en formato E.164 (ej.
+    "+13055550123").
 
     Sin TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN configurados, ni siquiera
     intenta la llamada -- tira TelephonyProvisionError de entrada. Es a
@@ -27,6 +60,10 @@ def provision_phone_number(country: str = "US") -> str:
             "La cuenta de Twilio todavía no está configurada en la plataforma "
             "(falta TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN)."
         )
+
+    reusable = find_reusable_number(db)
+    if reusable:
+        return reusable
 
     sid = settings.twilio_account_sid
     auth = (sid, settings.twilio_auth_token)

@@ -131,7 +131,7 @@ def activate_my_phone(
             "Verificá tu número real primero (te mandamos un código por SMS) antes de desviarlo.",
         )
     try:
-        config.phone_number = provision_phone_number()
+        config.phone_number = provision_phone_number(db)
     except TelephonyProvisionError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     config.phone_mode = body.mode

@@ -163,6 +163,11 @@ export const api = {
     request(`/agency/businesses/${id}/phone/verify/start`, { method: "POST", body: { phone_number: phoneNumber }, token }),
   verifyBusinessPhoneCheck: (token, id, phoneNumber, code) =>
     request(`/agency/businesses/${id}/phone/verify/check`, { method: "POST", body: { phone_number: phoneNumber, code }, token }),
+  // Desconecta el número SIN devolverlo a Twilio -- queda libre para el
+  // próximo negocio (ver find_reusable_number en el backend). Exclusivo
+  // de agencia.
+  releaseBusinessPhone: (token, id) =>
+    request(`/agency/businesses/${id}/phone/release`, { method: "POST", token }),
   getBotConfig: (token) => request("/business/bot-config", { token }),
   updateBotConfig: (token, body) => request("/business/bot-config", { method: "PUT", body, token }),
   activateMyPhone: (token, mode) =>

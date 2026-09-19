@@ -59,7 +59,7 @@ const baseConfig = {
  * que el formulario recibe props actualizadas de verdad tras cada cambio. */
 function Wrapper({
   initialConfig, onSave = vi.fn(), onChangeSpy, onActivatePhone = vi.fn(),
-  onVerifyPhoneStart = vi.fn(), onVerifyPhoneCheck = vi.fn(), scope,
+  onVerifyPhoneStart = vi.fn(), onVerifyPhoneCheck = vi.fn(), onReleasePhone, scope,
 }) {
   const [config, setConfig] = useState(initialConfig);
   function handleChange(patch) {
@@ -75,6 +75,7 @@ function Wrapper({
       onActivatePhone={onActivatePhone}
       onVerifyPhoneStart={onVerifyPhoneStart}
       onVerifyPhoneCheck={onVerifyPhoneCheck}
+      onReleasePhone={onReleasePhone}
       saving={false}
       scope={scope}
     />
@@ -320,6 +321,30 @@ describe("BotConfigForm — activación real de número (self-service, mismo com
     render(<Wrapper initialConfig={{ ...baseConfig, phone_number: "+17865550100", phone_mode: "new" }} scope="client" />);
     expect(screen.getByText("+17865550100")).toBeInTheDocument();
     expect(screen.queryByText("Quiero un número nuevo")).not.toBeInTheDocument();
+  });
+
+  it("liberar número: sin onReleasePhone (scope negocio) no muestra el link -- exclusivo de agencia", () => {
+    render(<Wrapper initialConfig={{ ...baseConfig, phone_number: "+17865550100", phone_mode: "new" }} scope="client" />);
+    expect(screen.queryByText(/Liberar este número/)).not.toBeInTheDocument();
+  });
+
+  it("liberar número: pedido real de la usuaria (2026-09-19) -- pide confirmar y no lo llama de un solo clic", async () => {
+    const user = userEvent.setup();
+    const onReleasePhone = vi.fn().mockResolvedValue();
+    render(
+      <Wrapper
+        initialConfig={{ ...baseConfig, phone_number: "+17865550100", phone_mode: "new" }}
+        onReleasePhone={onReleasePhone}
+        scope="agency"
+      />
+    );
+
+    await user.click(screen.getByText(/Liberar este número/));
+    expect(onReleasePhone).not.toHaveBeenCalled();
+    expect(screen.getByText(/sigue pagado y disponible/)).toBeInTheDocument();
+
+    await user.click(screen.getByText("Sí, liberar el número"));
+    expect(onReleasePhone).toHaveBeenCalled();
   });
 
   it("un error real de activación (ej. Twilio sin configurar) se muestra tal cual, sin romper la pantalla", async () => {

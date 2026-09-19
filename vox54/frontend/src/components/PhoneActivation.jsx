@@ -20,10 +20,16 @@ import Icon from "./Icon";
 // nuevo de una, sin pedir ni comprobar cuál era el número real del negocio.
 // Ahora ese camino primero manda un código real por SMS (Twilio Verify) y
 // solo activa el desvío después de un código correcto real.
+// `onRelease` -- opcional, solo lo pasa AgencyBotConfig.jsx (liberar el
+// número de un negocio es exclusivo de agencia, ver release_business_phone
+// en el backend). Pedido real de la usuaria (2026-09-19): un número que
+// compramos sigue siendo nuestro cuando un cliente se va -- esto lo
+// desconecta sin devolverlo a Twilio, para que el próximo negocio que
+// active "número nuevo" lo reciba gratis en vez de comprar otro.
 export default function PhoneActivation({
   phoneNumber, phoneMode, onActivate,
   ownPhoneNumber = "", ownPhoneVerified = false,
-  onVerifyStart, onVerifyCheck,
+  onVerifyStart, onVerifyCheck, onRelease,
 }) {
   const [activating, setActivating] = useState(null); // null | "new" | "forward"
   const [error, setError] = useState("");
@@ -40,6 +46,21 @@ export default function PhoneActivation({
   // bastaba para gastar plata real sin decir nada. Los dos ahora paran acá
   // primero: explican el costo real y piden un segundo clic a propósito.
   const [confirmingNew, setConfirmingNew] = useState(false);
+  const [confirmingRelease, setConfirmingRelease] = useState(false);
+  const [releasing, setReleasing] = useState(false);
+
+  async function handleRelease() {
+    setError("");
+    setReleasing(true);
+    try {
+      await onRelease();
+      setConfirmingRelease(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setReleasing(false);
+    }
+  }
 
   async function handleChoose(mode) {
     setError("");
@@ -126,6 +147,24 @@ export default function PhoneActivation({
           </p>
         ) : (
           <p style={helpTextStyle}>Ya está conectado — este es el número que atiende tu agente de voz.</p>
+        )}
+        {onRelease && !confirmingRelease && (
+          <button type="button" onClick={() => setConfirmingRelease(true)} style={releaseLinkStyle}>
+            Liberar este número (para reasignarlo a otro negocio)
+          </button>
+        )}
+        {onRelease && confirmingRelease && (
+          <div style={costNoticeStyle}>
+            El bot de este negocio deja de atender llamadas de inmediato. El número no se pierde -- sigue pagado y disponible para dárselo al próximo negocio que active "número nuevo".
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button type="button" disabled={releasing} onClick={handleRelease} className="vox54-btn small">
+                {releasing ? "Liberando…" : "Sí, liberar el número"}
+              </button>
+              <button type="button" className="vox54-btn secondary small" onClick={() => setConfirmingRelease(false)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
         )}
       </div>
     );
@@ -333,6 +372,19 @@ const costNoticeStyle = {
   border: "1px solid #fde68a",
   color: "#92400e",
   lineHeight: 1.4,
+};
+
+const releaseLinkStyle = {
+  background: "none",
+  border: "none",
+  padding: 0,
+  fontSize: 11.5,
+  color: "var(--ink-softer)",
+  textDecoration: "underline",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  textAlign: "left",
+  justifySelf: "start",
 };
 
 const errorBannerStyle = {

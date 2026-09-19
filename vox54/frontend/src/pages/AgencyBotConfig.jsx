@@ -49,6 +49,11 @@ export default function AgencyBotConfig() {
     return result;
   }
 
+  async function handleReleasePhone() {
+    const updated = await api.releaseBusinessPhone(session.access_token, id);
+    setConfig(updated);
+  }
+
   async function handleSave(e) {
     e.preventDefault();
     setError("");
@@ -88,6 +93,7 @@ export default function AgencyBotConfig() {
             onActivatePhone={handleActivatePhone}
             onVerifyPhoneStart={handleVerifyPhoneStart}
             onVerifyPhoneCheck={handleVerifyPhoneCheck}
+            onReleasePhone={handleReleasePhone}
             saving={saving}
             savedMessage={savedMessage}
             error={error}
