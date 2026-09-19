@@ -265,9 +265,29 @@ class BusinessOut(BaseModel):
 class BusinessDetailOut(BaseModel):
     id: int
     name: str
+    plan_id: str
     bot_config: BotConfigOut
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PlanUpdate(BaseModel):
+    plan_id: str
+
+
+class BusinessUsageOut(BaseModel):
+    """Uso real del mes calendario en curso contra el plan asignado -- suma
+    real de `Call.duration_seconds`, nunca un número inventado. Sin ningún
+    cobro real conectado todavía (ver el comentario en catalog.PLANS): esto
+    es la visibilidad de "cuánto va gastado", no una factura."""
+
+    plan: PlanOut
+    minutes_used: float
+    minutes_included: int
+    overage_minutes: float
+    estimated_bill_usd: float
+    period_start: datetime.date
+    period_end: datetime.date
 
 
 class AgentInventoryItem(BaseModel):
@@ -489,6 +509,14 @@ class OptionOut(BaseModel):
     name: str
 
 
+class PlanOut(BaseModel):
+    id: str
+    name: str
+    price_usd: float
+    included_minutes: int
+    overage_per_minute_usd: float
+
+
 class CatalogOut(BaseModel):
     ai_providers: list[AIProviderOut]
     stt_providers: list[AIProviderOut]  # mismo shape (id/name/models) que ai_providers
@@ -498,3 +526,4 @@ class CatalogOut(BaseModel):
     languages: list[OptionOut]
     statuses: list[OptionOut]
     first_message_modes: list[OptionOut]
+    plans: list[PlanOut]

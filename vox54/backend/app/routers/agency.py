@@ -1,3 +1,5 @@
+import datetime
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session, joinedload
 
@@ -10,11 +12,12 @@ from ..schemas import (
     BusinessProfileOut, BusinessProfileUpdate, DocumentSuggestionAction,
     BotConfigUpdate, BotConfigOut, CallOut, AgencyCallOut,
     PasswordChange, AgentInventoryItem, PhoneActivateIn,
+    PlanUpdate, BusinessUsageOut,
 )
 from ..uploads import save_document, save_logo
 from ..validators import bot_config_as_dict, validate_bot_config
 from ..telephony import TelephonyProvisionError, provision_phone_number
-from .. import documents, models
+from .. import catalog, documents, models
 
 router = APIRouter(prefix="/agency", tags=["agency"])
 
@@ -227,6 +230,68 @@ def update_business(
     db.commit()
     db.refresh(business)
     return business
+
+
+@router.put("/businesses/{business_id}/plan", response_model=BusinessDetailOut)
+def update_business_plan(
+    business_id: int,
+    body: PlanUpdate,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    """Asigna el plan comercial de este negocio -- solo la agencia, nunca el
+    propio negocio (mismo criterio que la infraestructura de BotConfig).
+    Rechaza cualquier id que no esté en el catálogo real en vez de guardar
+    un plan inventado."""
+    business = _get_owned_business(db, user, business_id)
+    valid_ids = {p["id"] for p in catalog.PLANS}
+    if body.plan_id not in valid_ids:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"Plan inválido: '{body.plan_id}'")
+    business.plan_id = body.plan_id
+    db.commit()
+    db.refresh(business)
+    return business
+
+
+@router.get("/businesses/{business_id}/usage", response_model=BusinessUsageOut)
+def get_business_usage(
+    business_id: int,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    """Uso real del mes calendario en curso -- suma `Call.duration_seconds`
+    de las llamadas reales que ya reportó el worker, nunca un número
+    estimado. Sin ningún cobro real conectado todavía (ver catalog.PLANS)."""
+    business = _get_owned_business(db, user, business_id)
+    plan = next((p for p in catalog.PLANS if p["id"] == business.plan_id), catalog.PLANS[0])
+
+    today = datetime.date.today()
+    period_start = today.replace(day=1)
+    next_month = period_start.replace(day=28) + datetime.timedelta(days=4)
+    period_end = next_month.replace(day=1) - datetime.timedelta(days=1)
+
+    seconds_used = (
+        db.query(models.Call)
+        .filter(
+            models.Call.business_id == business.id,
+            models.Call.started_at >= datetime.datetime.combine(period_start, datetime.time.min),
+        )
+        .with_entities(models.Call.duration_seconds)
+        .all()
+    )
+    minutes_used = sum(s[0] for s in seconds_used) / 60
+    overage_minutes = max(0.0, minutes_used - plan["included_minutes"])
+    estimated_bill = plan["price_usd"] + overage_minutes * plan["overage_per_minute_usd"]
+
+    return BusinessUsageOut(
+        plan=plan,
+        minutes_used=round(minutes_used, 2),
+        minutes_included=plan["included_minutes"],
+        overage_minutes=round(overage_minutes, 2),
+        estimated_bill_usd=round(estimated_bill, 2),
+        period_start=period_start,
+        period_end=period_end,
+    )
 
 
 @router.put("/businesses/{business_id}/bot-config", response_model=BotConfigOut)

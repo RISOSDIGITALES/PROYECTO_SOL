@@ -236,6 +236,73 @@ def test_actualizar_bot_config_voz_no_pertenece_al_proveedor(client, seed, agenc
     assert "errors" in res.json()["detail"]
 
 
+def test_catalogo_incluye_los_3_planes_reales(client):
+    res = client.get("/catalog")
+    assert res.status_code == 200
+    ids = {p["id"] for p in res.json()["plans"]}
+    assert ids == {"starter", "growth", "scale"}
+
+
+def test_asignar_plan_valido(client, seed, agency_token):
+    business_id = seed["business"].id
+    res = client.put(
+        f"/agency/businesses/{business_id}/plan",
+        headers=auth(agency_token),
+        json={"plan_id": "scale"},
+    )
+    assert res.status_code == 200
+    assert res.json()["plan_id"] == "scale"
+
+
+def test_asignar_plan_invalido_da_422(client, seed, agency_token):
+    business_id = seed["business"].id
+    res = client.put(
+        f"/agency/businesses/{business_id}/plan",
+        headers=auth(agency_token),
+        json={"plan_id": "plan-que-no-existe"},
+    )
+    assert res.status_code == 422
+
+
+def test_uso_del_negocio_sin_llamadas_da_cero(client, seed, agency_token):
+    business_id = seed["business"].id
+    res = client.get(f"/agency/businesses/{business_id}/usage", headers=auth(agency_token))
+    assert res.status_code == 200
+    body = res.json()
+    assert body["minutes_used"] == 0
+    assert body["overage_minutes"] == 0
+    assert body["estimated_bill_usd"] == body["plan"]["price_usd"]
+
+
+def test_uso_del_negocio_calcula_minutos_reales_y_excedente(client, seed, agency_token, db_session):
+    """Plan starter (300 min incluidos, $0.15/min excedente) con 320 minutos
+    reales de llamadas este mes -- confirma que suma duration_seconds real
+    (no inventa nada) y que el excedente se calcula contra lo incluido."""
+    from app import models
+
+    business = seed["business"]
+    business.plan_id = "starter"
+    db_session.commit()
+
+    hoy = datetime.datetime.combine(datetime.date.today().replace(day=1), datetime.time(10, 0))
+    db_session.add(models.Call(
+        business_id=business.id, started_at=hoy, ended_at=hoy + datetime.timedelta(minutes=200),
+        duration_seconds=200 * 60, outcome="completed",
+    ))
+    db_session.add(models.Call(
+        business_id=business.id, started_at=hoy, ended_at=hoy + datetime.timedelta(minutes=120),
+        duration_seconds=120 * 60, outcome="completed",
+    ))
+    db_session.commit()
+
+    res = client.get(f"/agency/businesses/{business.id}/usage", headers=auth(agency_token))
+    assert res.status_code == 200
+    body = res.json()
+    assert body["minutes_used"] == 320
+    assert body["overage_minutes"] == 20
+    assert body["estimated_bill_usd"] == pytest.approx(49 + 20 * 0.15)
+
+
 def test_patch_parcial_se_valida_contra_el_proveedor_ya_guardado(client, seed, agency_token):
     """Caso crítico: mandar solo ai_model, sin ai_provider, debe validarse
     contra el ai_provider que YA está en la base (groq por default) —

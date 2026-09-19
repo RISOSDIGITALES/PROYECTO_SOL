@@ -34,6 +34,7 @@ if not db.query(models.Agency).first():
         description="Empresa de embalajes de madera a medida en Miami — cajones, jaulas y cunas para carga industrial y de exportación.",
         hours="Lunes a viernes 8am–5pm, sábados 9am–1pm",
         products_services="Cajones cerrados a medida, jaulas abiertas, cunas para maquinaria, embalaje certificado ISPM-15 para exportación.",
+        plan_id="growth",
     )
     db.add(business1)
     db.flush()
@@ -68,6 +69,7 @@ if not db.query(models.Agency).first():
         description="Hotel boutique en Managua, Nicaragua — habitaciones, salones de eventos y servicio de restaurante.",
         hours="Recepción 24 horas, restaurante 6am–10pm",
         products_services="Habitaciones estándar y suites, salón de eventos para hasta 80 personas, desayuno incluido, servicio de transporte al aeropuerto.",
+        plan_id="starter",
     )
     db.add(business2)
     db.flush()

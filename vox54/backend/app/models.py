@@ -108,6 +108,13 @@ class Business(Base):
     doc_summary = Column(Text, default="")
     doc_suggested_services_json = Column(Text, default="[]")
 
+    # Plan comercial asignado -- ver catalog.PLANS. Hipotético (ítem del
+    # 2026-09-19): existe la asignación y el cálculo de uso real contra lo
+    # incluido, pero ningún cobro real está conectado todavía. Lo asigna la
+    # agencia, nunca el propio negocio (mismo criterio que la infraestructura
+    # de BotConfig).
+    plan_id = Column(String(30), default="starter")
+
     created_at = Column(DateTime, default=utcnow)
 
     agency = relationship("Agency", back_populates="businesses")

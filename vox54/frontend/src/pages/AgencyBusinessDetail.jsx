@@ -30,6 +30,9 @@ export default function AgencyBusinessDetail() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSavedMessage, setProfileSavedMessage] = useState("");
   const [catalog, setCatalog] = useState(null);
+  const [usage, setUsage] = useState(null);
+  const [usageError, setUsageError] = useState("");
+  const [planSaving, setPlanSaving] = useState(false);
 
   useEffect(() => {
     if (!session) return;
@@ -43,7 +46,23 @@ export default function AgencyBusinessDetail() {
     // versatile") en vez de "Llama 3.3 70B Versatile", mismo criterio que ya
     // se aplicó en BotConfigForm y en el Inventario de Agentes.
     api.getCatalog().then(setCatalog).catch(() => {});
+    api.getBusinessUsage(session.access_token, id).then(setUsage).catch((e) => setUsageError(e.message));
   }, [session, id]);
+
+  async function handlePlanChange(e) {
+    const planId = e.target.value;
+    setPlanSaving(true);
+    try {
+      const updated = await api.updateBusinessPlan(session.access_token, id, planId);
+      setBusiness((prev) => ({ ...prev, plan_id: updated.plan_id }));
+      const freshUsage = await api.getBusinessUsage(session.access_token, id);
+      setUsage(freshUsage);
+    } catch (err) {
+      setUsageError(err.message);
+    } finally {
+      setPlanSaving(false);
+    }
+  }
 
   function aiModelLabel(providerId, modelId) {
     if (!modelId) return "—";
@@ -193,6 +212,41 @@ export default function AgencyBusinessDetail() {
         )}
 
         {business && (
+          <div style={{ marginTop: 20 }}>
+            <div style={sectionTitleStyle}>Plan comercial</div>
+            <div className="vox54-panel" style={{ padding: 20, display: "grid", gap: 12 }}>
+              <Row label="Plan">
+                <select
+                  value={business.plan_id}
+                  onChange={handlePlanChange}
+                  disabled={planSaving || !catalog}
+                  style={planSelectStyle}
+                >
+                  {(catalog?.plans || []).map((p) => (
+                    <option key={p.id} value={p.id}>{p.name} — ${p.price_usd}/mes</option>
+                  ))}
+                </select>
+              </Row>
+              {usage && (
+                <>
+                  <Row label="Minutos usados este mes">
+                    {usage.minutes_used} / {usage.minutes_included} min
+                  </Row>
+                  {usage.overage_minutes > 0 && (
+                    <Row label="Excedente">{usage.overage_minutes} min extra</Row>
+                  )}
+                  <Row label="Estimado del mes">${usage.estimated_bill_usd}</Row>
+                </>
+              )}
+              {usageError && <div style={{ fontSize: 12.5, color: "var(--danger)" }}>{usageError}</div>}
+              <div style={{ fontSize: 11.5, color: "var(--ink-softer)" }}>
+                Hipotético — todavía no hay ningún cobro real conectado, solo el uso real medido.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {business && (
           <div style={twoColStyle}>
             <div>
               <div style={sectionTitleStyle}>Bot de voz</div>
@@ -265,6 +319,16 @@ const renameIconBtn = {
   lineHeight: 1,
   padding: 4,
   borderRadius: 6,
+};
+
+const planSelectStyle = {
+  fontSize: 13,
+  fontWeight: 600,
+  padding: "5px 8px",
+  border: "1px solid var(--border)",
+  borderRadius: 6,
+  color: "var(--ink)",
+  fontFamily: "var(--font)",
 };
 
 const renameInputStyle = {

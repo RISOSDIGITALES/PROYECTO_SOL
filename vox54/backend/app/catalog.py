@@ -129,3 +129,38 @@ FIRST_MESSAGE_MODES = [
     {"id": "assistant_first", "name": "El agente saluda primero"},
     {"id": "user_first", "name": "Espera a que hable el cliente"},
 ]
+
+# Planes comerciales -- HIPOTÉTICOS, documentados y acordados con la usuaria
+# el 2026-09-19 (ver el doc "Bubble 54 — Estructura de Planes"), calculados
+# sobre el costo real medido del stack (Twilio + LiveKit + Deepgram +
+# Cartesia + el LLM, ~$0.073/min) más un margen de 41-53% por cliente --
+# deliberadamente más bajo que el margen típico de una agencia revendedora
+# (50-85%) porque el objetivo explícito es ser la opción barata, no imitar
+# el precio de mercado solo porque el mercado lo tolera. Esto es la base de
+# datos real (catálogo + `Business.plan_id` + el cálculo de uso real contra
+# lo incluido) -- todavía NO hay ningún cobro real conectado (sin Stripe ni
+# ningún procesador de pagos), esa es una decisión de negocio aparte,
+# pendiente, no construida a propósito hasta que se confirme.
+PLANS = [
+    {
+        "id": "starter",
+        "name": "Arranque",
+        "price_usd": 49,
+        "included_minutes": 300,
+        "overage_per_minute_usd": 0.15,
+    },
+    {
+        "id": "growth",
+        "name": "Crecimiento",
+        "price_usd": 99,
+        "included_minutes": 700,
+        "overage_per_minute_usd": 0.13,
+    },
+    {
+        "id": "scale",
+        "name": "Escala",
+        "price_usd": 199,
+        "included_minutes": 1600,
+        "overage_per_minute_usd": 0.11,
+    },
+]

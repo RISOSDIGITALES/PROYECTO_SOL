@@ -17,4 +17,5 @@ def get_catalog():
         languages=catalog_data.LANGUAGES,
         statuses=catalog_data.STATUSES,
         first_message_modes=catalog_data.FIRST_MESSAGE_MODES,
+        plans=catalog_data.PLANS,
     )

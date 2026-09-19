@@ -144,6 +144,11 @@ export const api = {
     request(`/agency/businesses/${id}`, { method: "PATCH", body: { name }, token }),
   updateBusinessBotConfig: (token, id, body) =>
     request(`/agency/businesses/${id}/bot-config`, { method: "PUT", body, token }),
+  // Plan comercial hipotético (2026-09-19) -- ver catalog.PLANS. getBusinessUsage
+  // suma minutos reales del mes en curso, nunca un número estimado.
+  updateBusinessPlan: (token, id, planId) =>
+    request(`/agency/businesses/${id}/plan`, { method: "PUT", body: { plan_id: planId }, token }),
+  getBusinessUsage: (token, id) => request(`/agency/businesses/${id}/usage`, { token }),
   // Aprovisiona un numero real (Twilio, del lado de la plataforma -- nunca
   // una cuenta del cliente) y lo conecta solo. `mode`: "new" (el negocio lo
   // publica como propio) | "forward" (sigue con el suyo de siempre y lo
