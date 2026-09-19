@@ -1927,6 +1927,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ---
 
+### 2026-09-19 (Sábado)
+
+Arranqué con el corte de día de siempre en G54 y, cuando insistí en revisar si los posts de la semana pasada de Crating Express se habían publicado bien, confirmé que sí, sin ningún atascado desde hace semanas — y repasé uno por uno los bugs conocidos contra la plataforma real en vez de confiar en lo ya escrito. De ahí me metí con Camila, y terminé el día entero metida en la parte de telefonía de Bubble 54.
+
+Encontré y corregí un problema real de rendimiento (la pantalla de Inicio se quedaba pegada cargando por llamadas duplicadas) y de ahí me puse a entender de punta a punta cómo funciona una llamada de voz real — pedí que me lo explicaran paso a paso hasta entenderlo del todo, porque no me servía seguir construyendo sobre algo que no entendía. Con eso ya claro, armé una estructura de planes real con precios pensados para que el negocio deje ganancia sin ser tan caro para el cliente — la corregí varias veces porque los primeros números me salían imposibles, casi lo mismo que le cobraría una agencia — y hasta construir la base real en el sistema (sin conectar ningún cobro todavía, eso es aparte).
+
+Lo más importante del día fue un susto real: probando el flujo de activar el teléfono de un cliente, la opción de "usar mi número actual" me compró un número nuevo de verdad, sin preguntarme nada ni pedirme mi número — un bug serio, y se lo dije claro. Exigí que la verificación fuera real, no simulada, así que se construyó de cero con un código real por SMS antes de dejar activar un desvío de llamadas, más una confirmación explícita de costo antes de cualquier acción que gaste plata de verdad, y un sistema para que un número de un cliente que se va no se pierda, quede nuestro y se le pueda dar a otro. Cerré puliendo cómo se ve esa verificación — pasó de reemplazar toda la pantalla (que desconcertaba) a una ventanita flotante con la misma estética de burbuja de siempre, su botón de cerrar con el mismo sonido de siempre, y un texto que ya no suena a que le estoy diciendo ladrona al cliente. Todo probado en vivo contra la cuenta real de Twilio, sin ningún cobro de más después del susto inicial, y subido al repositorio.
+
+---
+
 ### 2026-09-18 (Viernes)
 
 Arranqué con el diagnóstico de siempre, todo limpio, y de ahí corregí un link que se iba a publicar mal en un post que salía en unas horas. Dejé Instagram de Crating Express publicando de nuevo — llevaba tiempo hablándole al servidor equivocado sin que nadie se diera cuenta, desde que migramos esa cuenta hace unas semanas — y avancé bastante con Camila: reactivé su correo real con una contraseña de aplicación nueva, le di el mismo diseño de marca que ya usamos en todos lados, y le corregí varios detalles para que hable de cada negocio real y no de una persona inventada.
