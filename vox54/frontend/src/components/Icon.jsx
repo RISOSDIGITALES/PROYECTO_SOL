@@ -95,6 +95,8 @@ const PATHS = {
       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
     </>
   ),
+  // Cerrar la ventana flotante de PhoneActivation.jsx (2026-09-19).
+  close: <path d="M6 6l12 12M18 6L6 18" />,
 };
 
 export default function Icon({ name, size = 22, className, style }) {

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Icon from "./Icon";
+import { burst } from "../burst";
 
 // Conectar el número real del bot -- reemplaza el campo de texto que la
 // agencia llenaba a mano (y el "hablalo con tu agencia" de solo lectura del
@@ -26,6 +27,15 @@ import Icon from "./Icon";
 // compramos sigue siendo nuestro cuando un cliente se va -- esto lo
 // desconecta sin devolverlo a Twilio, para que el próximo negocio que
 // active "número nuevo" lo reciba gratis en vez de comprar otro.
+//
+// Segundo pedido real de la usuaria (2026-09-19), sobre el propio flujo de
+// verificación: pasar de "número nuevo"/"mi número actual" al formulario de
+// verificación reemplazaba toda la tarjeta -- "desconcierta". Ahora el
+// formulario vive en una ventana flotante (con su X real, mismo sonido/
+// efecto "pop" que el resto de la plataforma vía burst.js) sobre las 2
+// opciones, que nunca desaparecen detrás. De paso, el texto de pedir el
+// número se reescribió -- "necesitamos confirmar que es tuyo de verdad"
+// sonaba a acusación, ahora es un pedido simple y neutral.
 export default function PhoneActivation({
   phoneNumber, phoneMode, onActivate,
   ownPhoneNumber = "", ownPhoneVerified = false,
@@ -35,8 +45,9 @@ export default function PhoneActivation({
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
 
-  // "choose" (2 botones) -> "verify-input" (pedir el número real) ->
-  // "verify-code" (pedir el código que llegó por SMS) -> activa solo.
+  // "choose" (nada abierto) -> "verify-input" (pedir el número real) ->
+  // "verify-code" (pedir el código que llegó por SMS) -> "verify-code-done".
+  // Todos menos "choose" abren la ventana flotante.
   const [forwardStep, setForwardStep] = useState(ownPhoneVerified ? "verify-code-done" : "choose");
   const [phoneInput, setPhoneInput] = useState(ownPhoneNumber);
   const [codeInput, setCodeInput] = useState("");
@@ -48,6 +59,19 @@ export default function PhoneActivation({
   const [confirmingNew, setConfirmingNew] = useState(false);
   const [confirmingRelease, setConfirmingRelease] = useState(false);
   const [releasing, setReleasing] = useState(false);
+
+  const modalOpen = confirmingNew || forwardStep !== "choose";
+
+  function closeModal() {
+    setError("");
+    setConfirmingNew(false);
+    setForwardStep("choose");
+  }
+
+  function handleCloseClick(e) {
+    burst(e.currentTarget);
+    closeModal();
+  }
 
   async function handleRelease() {
     setError("");
@@ -170,101 +194,9 @@ export default function PhoneActivation({
     );
   }
 
-  if (forwardStep === "verify-input") {
-    // <div>, no <form> -- PhoneActivation ya vive adentro del <form> real de
-    // BotConfigForm (el de "Guardar cambios"); un <form> anidado es HTML
-    // inválido y React lo marca como error de hidratación.
-    return (
-      <div style={{ display: "grid", gap: 10 }}>
-        {error && <div style={errorBannerStyle}>{error}</div>}
-        <p style={helpTextStyle}>
-          Necesitamos confirmar que ese número es tuyo de verdad -- te mandamos un código por SMS.
-        </p>
-        <input
-          type="tel"
-          placeholder="+1 305 555 0100"
-          value={phoneInput}
-          onChange={(e) => setPhoneInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && phoneInput.trim()) handleSendCode(); }}
-          style={phoneInputStyle}
-        />
-        <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" disabled={verifyBusy || !phoneInput.trim()} onClick={handleSendCode} className="vox54-btn small">
-            {verifyBusy ? "Enviando…" : "Enviar código"}
-          </button>
-          <button type="button" className="vox54-btn secondary small" onClick={() => { setError(""); setForwardStep("choose"); }}>
-            Cancelar
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (forwardStep === "verify-code") {
-    return (
-      <div style={{ display: "grid", gap: 10 }}>
-        {error && <div style={errorBannerStyle}>{error}</div>}
-        <p style={helpTextStyle}>Te mandamos un código de 6 dígitos a {phoneInput} -- escribilo acá.</p>
-        <input
-          type="text"
-          inputMode="numeric"
-          placeholder="123456"
-          value={codeInput}
-          onChange={(e) => setCodeInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && codeInput.trim()) handleCheckCode(); }}
-          style={phoneInputStyle}
-        />
-        <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" disabled={verifyBusy || !codeInput.trim()} onClick={handleCheckCode} className="vox54-btn small">
-            {verifyBusy ? "Confirmando…" : "Confirmar código"}
-          </button>
-          <button type="button" className="vox54-btn secondary small" onClick={() => { setError(""); setForwardStep("verify-input"); }}>
-            Volver
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (forwardStep === "verify-code-done") {
-    return (
-      <div style={{ display: "grid", gap: 10 }}>
-        {error && <div style={errorBannerStyle}>{error}</div>}
-        <p style={helpTextStyle}>
-          Confirmado -- {phoneInput || ownPhoneNumber} es realmente tuyo.
-        </p>
-        <div style={costNoticeStyle}>
-          Este paso compra un número real (el puente al que vas a desviar tu número de siempre) -- tiene un costo real (~$1.15/mes + uso), y no se puede deshacer.
-        </div>
-        <button type="button" onClick={handleActivateForward} className="vox54-btn small" style={{ alignSelf: "start" }}>
-          Sí, activar el desvío
-        </button>
-      </div>
-    );
-  }
-
-  if (confirmingNew) {
-    return (
-      <div style={{ display: "grid", gap: 10 }}>
-        {error && <div style={errorBannerStyle}>{error}</div>}
-        <div style={costNoticeStyle}>
-          Esto compra un número de teléfono real ahora mismo -- tiene un costo real (~$1.15/mes + uso), y no se puede deshacer.
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" onClick={() => handleChoose("new")} className="vox54-btn small">
-            Sí, comprar número nuevo
-          </button>
-          <button type="button" className="vox54-btn secondary small" onClick={() => { setError(""); setConfirmingNew(false); }}>
-            Cancelar
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ display: "grid", gap: 10 }}>
-      {error && <div style={errorBannerStyle}>{error}</div>}
+    <div style={{ display: "grid", gap: 10, position: "relative" }}>
+      {error && !modalOpen && <div style={errorBannerStyle}>{error}</div>}
       <button type="button" onClick={() => setConfirmingNew(true)} style={optionBtnStyle}>
         <span style={optionIconStyle}><Icon name="phone" size={17} /></span>
         <span style={{ textAlign: "left", flexGrow: 1, minWidth: 0 }}>
@@ -272,13 +204,103 @@ export default function PhoneActivation({
           <span style={optionDescStyle}>Te asignamos un número real al instante (tiene un costo real).</span>
         </span>
       </button>
-      <button type="button" onClick={() => { setError(""); setForwardStep("verify-input"); }} style={optionBtnStyle}>
+      <button type="button" onClick={() => setForwardStep("verify-input")} style={optionBtnStyle}>
         <span style={optionIconStyle}><Icon name="forward" size={17} /></span>
         <span style={{ textAlign: "left", flexGrow: 1, minWidth: 0 }}>
           <span style={optionTitleStyle}>Quiero usar mi número actual</span>
-          <span style={optionDescStyle}>Confirmamos que es tuyo con un código por SMS, después lo desviás gratis.</span>
+          <span style={optionDescStyle}>Te mandamos un código por SMS para verificarlo, después lo desviás gratis.</span>
         </span>
       </button>
+
+      {modalOpen && (
+        <div style={modalOverlayStyle} onClick={closeModal}>
+          <div className="g54-gradient" style={modalCardStyle} onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={handleCloseClick} style={modalCloseStyle} aria-label="Cerrar">
+              <Icon name="close" size={14} />
+            </button>
+
+            {error && <div style={errorBannerStyleOnDark}>{error}</div>}
+
+            {confirmingNew && (
+              <>
+                <p style={modalTextStyle}>
+                  Esto compra un número de teléfono real ahora mismo -- tiene un costo real (~$1.15/mes + uso), y no se puede deshacer.
+                </p>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button type="button" onClick={() => handleChoose("new")} className="vox54-btn small">
+                    Sí, comprar número nuevo
+                  </button>
+                  <button type="button" className="vox54-btn secondary small" onClick={closeModal}>
+                    Cancelar
+                  </button>
+                </div>
+              </>
+            )}
+
+            {forwardStep === "verify-input" && (
+              // <div>, no <form> -- PhoneActivation ya vive adentro del <form>
+              // real de BotConfigForm (el de "Guardar cambios"); un <form>
+              // anidado es HTML inválido y React lo marca como error de
+              // hidratación.
+              <>
+                <p style={modalTextStyle}>
+                  Escribí tu número y te vamos a mandar un código por SMS para verificarlo.
+                </p>
+                <input
+                  type="tel"
+                  autoFocus
+                  placeholder="+1 305 555 0100"
+                  value={phoneInput}
+                  onChange={(e) => setPhoneInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && phoneInput.trim()) handleSendCode(); }}
+                  style={modalInputStyle}
+                />
+                <button type="button" disabled={verifyBusy || !phoneInput.trim()} onClick={handleSendCode} className="vox54-btn small" style={{ alignSelf: "start" }}>
+                  {verifyBusy ? "Enviando…" : "Enviar código"}
+                </button>
+              </>
+            )}
+
+            {forwardStep === "verify-code" && (
+              <>
+                <p style={modalTextStyle}>Te mandamos un código de 6 dígitos a {phoneInput} -- escribilo acá.</p>
+                <input
+                  type="text"
+                  autoFocus
+                  inputMode="numeric"
+                  placeholder="123456"
+                  value={codeInput}
+                  onChange={(e) => setCodeInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && codeInput.trim()) handleCheckCode(); }}
+                  style={modalInputStyle}
+                />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button type="button" disabled={verifyBusy || !codeInput.trim()} onClick={handleCheckCode} className="vox54-btn small">
+                    {verifyBusy ? "Confirmando…" : "Confirmar código"}
+                  </button>
+                  <button type="button" className="vox54-btn secondary small" onClick={() => { setError(""); setForwardStep("verify-input"); }}>
+                    Volver
+                  </button>
+                </div>
+              </>
+            )}
+
+            {forwardStep === "verify-code-done" && (
+              <>
+                <p style={modalTextStyle}>
+                  Confirmado -- {phoneInput || ownPhoneNumber} es realmente tuyo.
+                </p>
+                <p style={{ ...modalTextStyle, opacity: 0.85 }}>
+                  Este paso compra un número real (el puente al que vas a desviar tu número de siempre) -- tiene un costo real (~$1.15/mes + uso), y no se puede deshacer.
+                </p>
+                <button type="button" onClick={handleActivateForward} className="vox54-btn small" style={{ alignSelf: "start" }}>
+                  Sí, activar el desvío
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -321,15 +343,6 @@ const optionDescStyle = {
   fontSize: 11.5,
   color: "var(--ink-softer)",
   marginTop: 1,
-};
-
-const phoneInputStyle = {
-  fontSize: 14,
-  padding: "8px 10px",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  fontFamily: "inherit",
-  maxWidth: 240,
 };
 
 const numberBoxStyle = {
@@ -395,6 +408,17 @@ const errorBannerStyle = {
   color: "var(--danger)",
 };
 
+// Sobre el fondo azul del modal, la versión clara de siempre no se lee --
+// misma info, con más contraste sobre el degradado.
+const errorBannerStyleOnDark = {
+  fontSize: 12,
+  padding: "8px 12px",
+  borderRadius: 8,
+  background: "rgba(255,255,255,0.16)",
+  border: "1px solid rgba(255,255,255,0.3)",
+  color: "#fff",
+};
+
 const spinnerStyle = {
   width: 16,
   height: 16,
@@ -402,6 +426,67 @@ const spinnerStyle = {
   border: "2px solid var(--border)",
   borderTopColor: "var(--g54-blue)",
   animation: "vox54-phone-spin 0.8s linear infinite",
+};
+
+// --- ventana flotante -- burbuja de vidrio sobre el mismo degradado azul
+// que ya usa el resto de la plataforma (sidebar, login) -- es justo ahí
+// donde el efecto de vidrio se lee bien; sobre el blanco de esta pantalla
+// casi desaparecía (ver theme.css). Las 2 opciones de siempre quedan
+// visibles detrás, atenuadas, nunca reemplazadas. ---
+const modalOverlayStyle = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(19,27,46,0.35)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 60,
+  padding: 20,
+};
+
+const modalCardStyle = {
+  position: "relative",
+  width: "100%",
+  maxWidth: 360,
+  padding: "26px 22px 22px",
+  borderRadius: 20,
+  border: "1px solid rgba(255,255,255,0.35)",
+  boxShadow: "0 24px 60px rgba(10,15,30,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+  display: "grid",
+  gap: 12,
+};
+
+const modalCloseStyle = {
+  position: "absolute",
+  top: 12,
+  right: 12,
+  width: 26,
+  height: 26,
+  borderRadius: "50%",
+  border: "1px solid rgba(255,255,255,0.4)",
+  background: "rgba(255,255,255,0.14)",
+  color: "#fff",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+};
+
+const modalTextStyle = {
+  fontSize: 13,
+  color: "rgba(255,255,255,0.92)",
+  lineHeight: 1.45,
+  margin: 0,
+};
+
+const modalInputStyle = {
+  fontSize: 15,
+  padding: "10px 12px",
+  border: "1px solid rgba(255,255,255,0.4)",
+  borderRadius: 10,
+  fontFamily: "inherit",
+  background: "rgba(255,255,255,0.14)",
+  color: "#fff",
 };
 
 // Único lugar que necesita esta animación -- inyectada una vez con un

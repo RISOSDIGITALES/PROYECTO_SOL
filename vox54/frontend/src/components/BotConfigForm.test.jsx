@@ -232,7 +232,7 @@ describe("BotConfigForm — activación real de número (self-service, mismo com
 
     await user.click(screen.getByText("Quiero un número nuevo"));
     expect(onActivatePhone).not.toHaveBeenCalled();
-    expect(screen.getByText(/costo real/)).toBeInTheDocument();
+    expect(screen.getByText(/Esto compra un número de teléfono real ahora mismo/)).toBeInTheDocument();
 
     await user.click(screen.getByText("Sí, comprar número nuevo"));
     expect(onActivatePhone).toHaveBeenCalledWith("new");
