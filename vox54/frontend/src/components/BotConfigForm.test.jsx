@@ -224,14 +224,29 @@ describe("BotConfigForm — activación real de número (self-service, mismo com
     expect(screen.getByText("Quiero usar mi número actual")).toBeInTheDocument();
   });
 
-  it("elegir 'número nuevo' llama a onActivatePhone con mode='new'", async () => {
+  it("'número nuevo' ya NO compra de un clic -- explica el costo real y pide confirmar (incidente 2026-09-19)", async () => {
     const user = userEvent.setup();
     const onActivatePhone = vi.fn().mockResolvedValue();
     render(<Wrapper initialConfig={baseConfig} onActivatePhone={onActivatePhone} scope="agency" />);
 
     await user.click(screen.getByText("Quiero un número nuevo"));
+    expect(onActivatePhone).not.toHaveBeenCalled();
+    expect(screen.getByText(/costo real/)).toBeInTheDocument();
 
+    await user.click(screen.getByText("Sí, comprar número nuevo"));
     expect(onActivatePhone).toHaveBeenCalledWith("new");
+  });
+
+  it("'número nuevo' -- cancelar en la confirmación no compra nada", async () => {
+    const user = userEvent.setup();
+    const onActivatePhone = vi.fn();
+    render(<Wrapper initialConfig={baseConfig} onActivatePhone={onActivatePhone} scope="agency" />);
+
+    await user.click(screen.getByText("Quiero un número nuevo"));
+    await user.click(screen.getByText("Cancelar"));
+
+    expect(onActivatePhone).not.toHaveBeenCalled();
+    expect(screen.getByText("Quiero un número nuevo")).toBeInTheDocument();
   });
 
   it("'usar mi número actual' ya NO activa de una -- pide verificar el número real primero (incidente 2026-09-19)", async () => {
@@ -271,7 +286,7 @@ describe("BotConfigForm — activación real de número (self-service, mismo com
     await user.click(screen.getByText("Confirmar código"));
     expect(onVerifyPhoneCheck).toHaveBeenCalledWith("+17865551234", "123456");
 
-    await user.click(await screen.findByText("Activar desvío a este número"));
+    await user.click(await screen.findByText("Sí, activar el desvío"));
     expect(onActivatePhone).toHaveBeenCalledWith("forward");
   });
 
@@ -313,6 +328,7 @@ describe("BotConfigForm — activación real de número (self-service, mismo com
     render(<Wrapper initialConfig={baseConfig} onActivatePhone={onActivatePhone} scope="agency" />);
 
     await user.click(screen.getByText("Quiero un número nuevo"));
+    await user.click(screen.getByText("Sí, comprar número nuevo"));
 
     expect(await screen.findByText("La cuenta de Twilio todavía no está configurada en la plataforma.")).toBeInTheDocument();
   });

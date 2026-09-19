@@ -35,6 +35,11 @@ export default function PhoneActivation({
   const [phoneInput, setPhoneInput] = useState(ownPhoneNumber);
   const [codeInput, setCodeInput] = useState("");
   const [verifyBusy, setVerifyBusy] = useState(false);
+  // Incidente real del 2026-09-19 (parte 2): ni "número nuevo" ni el botón
+  // final de "forward" explicaban que eso es una compra real -- un clic
+  // bastaba para gastar plata real sin decir nada. Los dos ahora paran acá
+  // primero: explican el costo real y piden un segundo clic a propósito.
+  const [confirmingNew, setConfirmingNew] = useState(false);
 
   async function handleChoose(mode) {
     setError("");
@@ -187,11 +192,33 @@ export default function PhoneActivation({
       <div style={{ display: "grid", gap: 10 }}>
         {error && <div style={errorBannerStyle}>{error}</div>}
         <p style={helpTextStyle}>
-          Confirmado -- {phoneInput || ownPhoneNumber} es realmente tuyo. Ahora sí, activamos el desvío.
+          Confirmado -- {phoneInput || ownPhoneNumber} es realmente tuyo.
         </p>
+        <div style={costNoticeStyle}>
+          Este paso compra un número real (el puente al que vas a desviar tu número de siempre) -- tiene un costo real (~$1.15/mes + uso), y no se puede deshacer.
+        </div>
         <button type="button" onClick={handleActivateForward} className="vox54-btn small" style={{ alignSelf: "start" }}>
-          Activar desvío a este número
+          Sí, activar el desvío
         </button>
+      </div>
+    );
+  }
+
+  if (confirmingNew) {
+    return (
+      <div style={{ display: "grid", gap: 10 }}>
+        {error && <div style={errorBannerStyle}>{error}</div>}
+        <div style={costNoticeStyle}>
+          Esto compra un número de teléfono real ahora mismo -- tiene un costo real (~$1.15/mes + uso), y no se puede deshacer.
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button type="button" onClick={() => handleChoose("new")} className="vox54-btn small">
+            Sí, comprar número nuevo
+          </button>
+          <button type="button" className="vox54-btn secondary small" onClick={() => { setError(""); setConfirmingNew(false); }}>
+            Cancelar
+          </button>
+        </div>
       </div>
     );
   }
@@ -199,11 +226,11 @@ export default function PhoneActivation({
   return (
     <div style={{ display: "grid", gap: 10 }}>
       {error && <div style={errorBannerStyle}>{error}</div>}
-      <button type="button" onClick={() => handleChoose("new")} style={optionBtnStyle}>
+      <button type="button" onClick={() => setConfirmingNew(true)} style={optionBtnStyle}>
         <span style={optionIconStyle}><Icon name="phone" size={17} /></span>
         <span style={{ textAlign: "left", flexGrow: 1, minWidth: 0 }}>
           <span style={optionTitleStyle}>Quiero un número nuevo</span>
-          <span style={optionDescStyle}>Te asignamos un número real al instante.</span>
+          <span style={optionDescStyle}>Te asignamos un número real al instante (tiene un costo real).</span>
         </span>
       </button>
       <button type="button" onClick={() => { setError(""); setForwardStep("verify-input"); }} style={optionBtnStyle}>
@@ -295,6 +322,16 @@ const helpTextStyle = {
   fontSize: 11.5,
   color: "var(--ink-softer)",
   margin: 0,
+  lineHeight: 1.4,
+};
+
+const costNoticeStyle = {
+  fontSize: 12,
+  padding: "10px 12px",
+  borderRadius: 8,
+  background: "#fffbeb",
+  border: "1px solid #fde68a",
+  color: "#92400e",
   lineHeight: 1.4,
 };
 
