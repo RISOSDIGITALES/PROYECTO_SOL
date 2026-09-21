@@ -3,12 +3,12 @@
   "name": "CE WhatsApp Engine — Marco",
   "description": null,
   "active": true,
-  "activeVersionId": "ac44d309-3c55-451c-9f3f-232bdfc44bd0",
+  "activeVersionId": "e874a060-c76a-4d45-b361-57894d2dbbf1",
   "createdAt": "2026-05-26T13:46:38.086Z",
-  "updatedAt": "2026-09-04T13:55:08.184Z",
+  "updatedAt": "2026-09-21T16:18:12.472Z",
   "isArchived": false,
-  "versionId": "ac44d309-3c55-451c-9f3f-232bdfc44bd0",
-  "versionCounter": 679,
+  "versionId": "e874a060-c76a-4d45-b361-57894d2dbbf1",
+  "versionCounter": 681,
   "sourceWorkflowId": null,
   "triggerCount": 3,
   "nodes": [
@@ -366,7 +366,8 @@
         "resume": "timeInterval",
         "amount": 4,
         "unit": "seconds"
-      }
+      },
+      "notes": "HUERFANO desde 21-sep: nunca tuvo conexion de salida real (confirmado con una ejecucion en vivo -- el mensaje se procesaba igual sin pasar por aca), asi que el candado de bot_pausado nunca bloqueaba nada. El gate real (bot_pausado + modos_respuesta) ahora vive antes de 'Marcar como Leido', reusando el mismo '¿Bot puede responder?' de siempre. Este nodo se dejo sin conectar en vez de borrarlo, por si alguna vez hizo falta un delay anti-duplicados real aca."
     },
     {
       "id": "n-merge",
@@ -953,7 +954,7 @@
           "conditions": [
             {
               "id": "cond-bot-active",
-              "leftValue": "={{ (() => { const d = $json?.data; if (!d || !Array.isArray(d) || d.length === 0) return true; return !(d[0].datos && d[0].datos.bot_pausado === true); })() }}",
+              "leftValue": "={{ (() => {\n  const d = $('🔍 Verificar Estado Lead').item.json?.data;\n  const botPausado = !!(d && Array.isArray(d) && d.length > 0 && d[0].datos && d[0].datos.bot_pausado === true);\n  if (botPausado) return false;\n  let modoOk = true;\n  try {\n    const cfg = $json;\n    if (cfg && cfg.modos_respuesta && cfg.modos_respuesta.whatsapp === 'solo_avisar') modoOk = false;\n  } catch (e) {}\n  return modoOk;\n})() }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
@@ -1471,6 +1472,32 @@
         "jsonBody": "={{ JSON.stringify($json) }}",
         "options": {}
       }
+    },
+    {
+      "id": "config-canales-bot-config-wa",
+      "name": "⚙️ Config Canales (bot-config)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        140,
+        344
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "https://apigrowth.mdarthurdigital.com/api/n8n/companies/1/bot-config",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer "
+            }
+          ]
+        },
+        "options": {}
+      },
+      "notes": "NEW 21-sep: lee modos_respuesta por canal (doc G54, 25-ago #73) -- si whatsapp='solo_avisar', el gate de al lado no deja pasar. onError continua (fail-open)."
     }
   ],
   "connections": {
@@ -1524,11 +1551,6 @@
         [
           {
             "node": "🔍 Verificar Estado Lead",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "✅ Marcar como Leído",
             "type": "main",
             "index": 0
           }
@@ -1835,7 +1857,7 @@
       "main": [
         [
           {
-            "node": "🔀 ¿Bot puede responder?",
+            "node": "⚙️ Config Canales (bot-config)",
             "type": "main",
             "index": 0
           }
@@ -1846,7 +1868,7 @@
       "main": [
         [
           {
-            "node": "⏱️ Esperar (anti-race)",
+            "node": "✅ Marcar como Leído",
             "type": "main",
             "index": 0
           }
@@ -2061,6 +2083,17 @@
           }
         ]
       ]
+    },
+    "⚙️ Config Canales (bot-config)": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Bot puede responder?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -2081,7 +2114,7 @@
     },
     "global": {
       "seenMessageIds": {
-        "wamid.final1": 1788533607775
+        "wamid.TEST_AUTO_1790007609": 1790007609535
       }
     }
   },
@@ -2122,7 +2155,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "ac44d309-3c55-451c-9f3f-232bdfc44bd0",
+    "versionId": "e874a060-c76a-4d45-b361-57894d2dbbf1",
     "workflowId": "zAhV8gEsXD8dCrXq",
     "nodes": [
       {
@@ -2479,7 +2512,8 @@
           "resume": "timeInterval",
           "amount": 4,
           "unit": "seconds"
-        }
+        },
+        "notes": "HUERFANO desde 21-sep: nunca tuvo conexion de salida real (confirmado con una ejecucion en vivo -- el mensaje se procesaba igual sin pasar por aca), asi que el candado de bot_pausado nunca bloqueaba nada. El gate real (bot_pausado + modos_respuesta) ahora vive antes de 'Marcar como Leido', reusando el mismo '¿Bot puede responder?' de siempre. Este nodo se dejo sin conectar en vez de borrarlo, por si alguna vez hizo falta un delay anti-duplicados real aca."
       },
       {
         "id": "n-merge",
@@ -3066,7 +3100,7 @@
             "conditions": [
               {
                 "id": "cond-bot-active",
-                "leftValue": "={{ (() => { const d = $json?.data; if (!d || !Array.isArray(d) || d.length === 0) return true; return !(d[0].datos && d[0].datos.bot_pausado === true); })() }}",
+                "leftValue": "={{ (() => {\n  const d = $('🔍 Verificar Estado Lead').item.json?.data;\n  const botPausado = !!(d && Array.isArray(d) && d.length > 0 && d[0].datos && d[0].datos.bot_pausado === true);\n  if (botPausado) return false;\n  let modoOk = true;\n  try {\n    const cfg = $json;\n    if (cfg && cfg.modos_respuesta && cfg.modos_respuesta.whatsapp === 'solo_avisar') modoOk = false;\n  } catch (e) {}\n  return modoOk;\n})() }}",
                 "rightValue": true,
                 "operator": {
                   "type": "boolean",
@@ -3584,6 +3618,32 @@
           "jsonBody": "={{ JSON.stringify($json) }}",
           "options": {}
         }
+      },
+      {
+        "id": "config-canales-bot-config-wa",
+        "name": "⚙️ Config Canales (bot-config)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          140,
+          344
+        ],
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "GET",
+          "url": "https://apigrowth.mdarthurdigital.com/api/n8n/companies/1/bot-config",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer "
+              }
+            ]
+          },
+          "options": {}
+        },
+        "notes": "NEW 21-sep: lee modos_respuesta por canal (doc G54, 25-ago #73) -- si whatsapp='solo_avisar', el gate de al lado no deja pasar. onError continua (fail-open)."
       }
     ],
     "connections": {
@@ -3637,11 +3697,6 @@
           [
             {
               "node": "🔍 Verificar Estado Lead",
-              "type": "main",
-              "index": 0
-            },
-            {
-              "node": "✅ Marcar como Leído",
               "type": "main",
               "index": 0
             }
@@ -3948,7 +4003,7 @@
         "main": [
           [
             {
-              "node": "🔀 ¿Bot puede responder?",
+              "node": "⚙️ Config Canales (bot-config)",
               "type": "main",
               "index": 0
             }
@@ -3959,7 +4014,7 @@
         "main": [
           [
             {
-              "node": "⏱️ Esperar (anti-race)",
+              "node": "✅ Marcar como Leído",
               "type": "main",
               "index": 0
             }
@@ -4174,6 +4229,17 @@
             }
           ]
         ]
+      },
+      "⚙️ Config Canales (bot-config)": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Bot puede responder?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -4181,16 +4247,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-04T13:55:08.195Z",
-    "updatedAt": "2026-09-04T13:55:08.195Z",
+    "createdAt": "2026-09-21T16:18:12.481Z",
+    "updatedAt": "2026-09-21T16:18:12.481Z",
     "workflowPublishHistory": [
       {
-        "id": 3081,
+        "id": 3184,
         "workflowId": "zAhV8gEsXD8dCrXq",
-        "versionId": "ac44d309-3c55-451c-9f3f-232bdfc44bd0",
+        "versionId": "e874a060-c76a-4d45-b361-57894d2dbbf1",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-04T13:55:08.793Z"
+        "createdAt": "2026-09-21T16:18:12.935Z"
       }
     ]
   }

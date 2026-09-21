@@ -3,12 +3,12 @@
   "name": "CE Telegram Engine — Marco",
   "description": null,
   "active": true,
-  "activeVersionId": "6b1ae2e5-977f-4635-828b-06f781b4c222",
+  "activeVersionId": "5cc620da-720c-40de-8f7c-b1ba379af314",
   "createdAt": "2026-07-23T15:36:21.963Z",
-  "updatedAt": "2026-09-17T13:27:22.412Z",
+  "updatedAt": "2026-09-21T16:08:10.643Z",
   "isArchived": false,
-  "versionId": "6b1ae2e5-977f-4635-828b-06f781b4c222",
-  "versionCounter": 25,
+  "versionId": "5cc620da-720c-40de-8f7c-b1ba379af314",
+  "versionCounter": 26,
   "sourceWorkflowId": null,
   "triggerCount": 2,
   "nodes": [
@@ -1055,7 +1055,7 @@
           "conditions": [
             {
               "id": "cond-bot-active-tg",
-              "leftValue": "={{ (() => { const d = $json?.data; if (!d || !Array.isArray(d) || d.length === 0) return true; return !(d[0].datos && d[0].datos.bot_pausado === true); })() }}",
+              "leftValue": "={{ (() => {\n  const d = $('🔍 Buscar Estado Lead (Handoff TG)').item.json?.data;\n  const botPausado = !!(d && Array.isArray(d) && d.length > 0 && d[0].datos && d[0].datos.bot_pausado === true);\n  if (botPausado) return false;\n  let modoOk = true;\n  try {\n    const cfg = $json;\n    if (cfg && cfg.modos_respuesta && cfg.modos_respuesta.telegram === 'solo_avisar') modoOk = false;\n  } catch (e) {}\n  return modoOk;\n})() }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
@@ -1321,6 +1321,36 @@
         "jsonBody": "={{ JSON.stringify($json) }}",
         "options": {}
       }
+    },
+    {
+      "id": "config-canales-bot-config-tg",
+      "name": "⚙️ Config Canales (bot-config, TG)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        810,
+        840
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/n8n/companies/' + $('🔧 Extraer Mensaje (Relevo G54)').item.json.empresaId + '/bot-config' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer g54_agent_produccion_2026"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "notes": "NEW 21-sep: lee modos_respuesta por canal (doc G54, 25-ago #73) -- si telegram='solo_avisar', el gate de al lado no deja pasar. onError continua (fail-open: si falla o la empresa no tiene bot-config, no bloquea a Marco)."
     }
   ],
   "connections": {
@@ -1762,7 +1792,7 @@
       "main": [
         [
           {
-            "node": "🔀 ¿Bot puede responder? (Telegram)",
+            "node": "⚙️ Config Canales (bot-config, TG)",
             "type": "main",
             "index": 0
           }
@@ -1875,6 +1905,17 @@
           }
         ]
       ]
+    },
+    "⚙️ Config Canales (bot-config, TG)": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Bot puede responder? (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -1884,7 +1925,7 @@
   "staticData": {
     "global": {
       "seenTgMessageIds": {
-        "999888777_9999_Hola, necesito cotizar una caja de madera": 1788531174088
+        "999888777_null_Hola quiero cotizar un cajon": 1790007303143
       }
     },
     "node:⏰ Chequeo Webhook (cada 30 min)": {
@@ -1920,7 +1961,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "6b1ae2e5-977f-4635-828b-06f781b4c222",
+    "versionId": "5cc620da-720c-40de-8f7c-b1ba379af314",
     "workflowId": "HaSG63Q9C2tGOLH3",
     "nodes": [
       {
@@ -2966,7 +3007,7 @@
             "conditions": [
               {
                 "id": "cond-bot-active-tg",
-                "leftValue": "={{ (() => { const d = $json?.data; if (!d || !Array.isArray(d) || d.length === 0) return true; return !(d[0].datos && d[0].datos.bot_pausado === true); })() }}",
+                "leftValue": "={{ (() => {\n  const d = $('🔍 Buscar Estado Lead (Handoff TG)').item.json?.data;\n  const botPausado = !!(d && Array.isArray(d) && d.length > 0 && d[0].datos && d[0].datos.bot_pausado === true);\n  if (botPausado) return false;\n  let modoOk = true;\n  try {\n    const cfg = $json;\n    if (cfg && cfg.modos_respuesta && cfg.modos_respuesta.telegram === 'solo_avisar') modoOk = false;\n  } catch (e) {}\n  return modoOk;\n})() }}",
                 "rightValue": true,
                 "operator": {
                   "type": "boolean",
@@ -3232,6 +3273,36 @@
           "jsonBody": "={{ JSON.stringify($json) }}",
           "options": {}
         }
+      },
+      {
+        "id": "config-canales-bot-config-tg",
+        "name": "⚙️ Config Canales (bot-config, TG)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          810,
+          840
+        ],
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "GET",
+          "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/n8n/companies/' + $('🔧 Extraer Mensaje (Relevo G54)').item.json.empresaId + '/bot-config' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer g54_agent_produccion_2026"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "notes": "NEW 21-sep: lee modos_respuesta por canal (doc G54, 25-ago #73) -- si telegram='solo_avisar', el gate de al lado no deja pasar. onError continua (fail-open: si falla o la empresa no tiene bot-config, no bloquea a Marco)."
       }
     ],
     "connections": {
@@ -3673,7 +3744,7 @@
         "main": [
           [
             {
-              "node": "🔀 ¿Bot puede responder? (Telegram)",
+              "node": "⚙️ Config Canales (bot-config, TG)",
               "type": "main",
               "index": 0
             }
@@ -3786,6 +3857,17 @@
             }
           ]
         ]
+      },
+      "⚙️ Config Canales (bot-config, TG)": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Bot puede responder? (Telegram)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -3793,16 +3875,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-17T13:27:22.422Z",
-    "updatedAt": "2026-09-17T13:27:22.422Z",
+    "createdAt": "2026-09-21T16:08:10.646Z",
+    "updatedAt": "2026-09-21T16:08:10.646Z",
     "workflowPublishHistory": [
       {
-        "id": 3151,
+        "id": 3182,
         "workflowId": "HaSG63Q9C2tGOLH3",
-        "versionId": "6b1ae2e5-977f-4635-828b-06f781b4c222",
+        "versionId": "5cc620da-720c-40de-8f7c-b1ba379af314",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-17T13:27:22.917Z"
+        "createdAt": "2026-09-21T16:08:10.972Z"
       }
     ]
   }
