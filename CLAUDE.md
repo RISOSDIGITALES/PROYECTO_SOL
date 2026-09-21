@@ -768,7 +768,7 @@ Cuando se migre a servidor propio (Node.js + Express + MariaDB), el login de Net
 
 # Bubble 54 (nombre provisorio, antes "Vox54") — Plataforma de agentes de voz
 
-Producto nuevo y separado de G54/RRSS/Nomify — un SaaS multiempresa para agentes de voz con IA (telefonía real vía LiveKit Agents, no relacionado con Marco/VAPI de Crating Express). Renombrado de "Vox54" a "Bubble 54" el 2026-09-01 junto con el rediseño del menú (ver más abajo) — el nombre del repo (carpeta `vox54/`) y el código interno quedaron tal cual, sin renombrar, para no romper referencias de infraestructura; solo cambió lo visible en la app (`Logo.jsx`, `index.html`, copy del login). El changelog numerado de abajo sigue usando "Vox54" en las entradas de antes de esa fecha porque describen el estado real de ese momento — no se reescribió el historial.
+Producto nuevo y separado de G54/RRSS/Nomify — un SaaS multiempresa para agentes de voz con IA (telefonía real vía LiveKit Agents, no relacionado con Marco/VAPI de Crating Express). Renombrado de "Vox54" a "Bubble 54" el 2026-09-01 junto con el rediseño del menú (ver más abajo) — en ese momento el nombre del repo (carpeta `vox54/`) y el código interno quedaron tal cual, sin renombrar, para no romper referencias de infraestructura; solo cambió lo visible en la app (`Logo.jsx`, `index.html`, copy del login). **Corregido el 2026-09-21, a pedido explícito de la usuaria ("cambia los nombres en todo el código y de los archivos que diga voz, a buble")**: la carpeta se renombró de verdad (`vox54/` → `bubble54/`, vía `git mv` para conservar el historial), y con ella todo el código interno — prefijo CSS (`vox54-` → `bubble54-`), la clave de `localStorage` de la sesión, el evento custom de preferencias, el atributo `data-*` de animación, el nombre del paquete en `package.json`, y la base de datos (`vox54.db` → `bubble54.db`). El changelog numerado de abajo sigue usando "vox54"/"Vox54" en las entradas de antes de esta fecha porque describen el estado real de ese momento (incluyendo nombres de clase CSS que ya no existen, renombrados o eliminados en pasadas posteriores) — no se reescribió el historial, mismo criterio que ya se aplicó con el rebrand de nombre visible del 01-sep.
 
 **Modelo de negocio:** una **agencia** (nosotros, u otra agencia que use la plataforma) gestiona varios **negocios** clientes, cada uno con su propio bot de voz configurable. Dos roles de login separados, cada uno con su propio JWT y su propia pantalla:
 - **Agencia** (`/agencia/login`) — ve y edita todos los negocios que gestiona, más la configuración de la agencia en sí.
@@ -778,14 +778,14 @@ Producto nuevo y separado de G54/RRSS/Nomify — un SaaS multiempresa para agent
 
 | Capa | Tecnología |
 |---|---|
-| Backend | FastAPI + SQLAlchemy 2.0 + Pydantic v2, SQLite (`vox54/backend/vox54.db`) |
+| Backend | FastAPI + SQLAlchemy 2.0 + Pydantic v2, SQLite (`bubble54/backend/bubble54.db`) |
 | Auth | JWT propio (`python-jose`), un token por rol (agency/business) |
 | Frontend | React + Vite, sin CSS framework — tokens propios en `theme.css` |
 
 ## Estructura del repo
 
 ```
-vox54/
+bubble54/
   backend/
     app/
       routers/agency.py, business.py, auth.py, catalog.py, worker.py
@@ -875,23 +875,23 @@ Antes una sola pantalla mezclaba la identidad del negocio con el formulario comp
 ## Cómo levantarlo
 
 ```bash
-# Backend (desde vox54/backend, con el venv activado) — puerto 8010, no 8000
+# Backend (desde bubble54/backend, con el venv activado) — puerto 8010, no 8000
 # (ver "proceso zombie" abajo); si no `--reload`, hay que reiniciarlo a mano
 # después de cada cambio de código real, o se sigue sirviendo la versión vieja.
 uvicorn app.main:app --port 8010
 python seed.py          # solo la primera vez, o para resetear datos demo
 
-# Frontend (desde vox54/frontend)
+# Frontend (desde bubble54/frontend)
 npm run dev              # sirve en :5173, lee VITE_API_BASE de .env
 ```
 
-**Cuidado conocido — proceso zombie en el puerto 8000:** en esta máquina, en algún momento el puerto 8000 quedó ocupado por un proceso que ningún método probó pudo matar (`taskkill`, PowerShell `Stop-Process`, `kill -9` nativo — todos lo reportan inexistente mientras el puerto sigue respondiendo con código viejo). Workaround aplicado: se levantó una instancia limpia en el **8010**, y `vox54/frontend/.env` (git-ignorado) tiene `VITE_API_BASE=http://localhost:8010` apuntando ahí. Si en una sesión nueva el puerto 8000 arranca limpio, se puede borrar ese `.env` y usar el 8000 de siempre — si vuelve a pasar, repetir el mismo workaround (otro puerto + `.env` local) en vez de perder tiempo insistiendo con matar el proceso viejo.
+**Cuidado conocido — proceso zombie en el puerto 8000:** en esta máquina, en algún momento el puerto 8000 quedó ocupado por un proceso que ningún método probó pudo matar (`taskkill`, PowerShell `Stop-Process`, `kill -9` nativo — todos lo reportan inexistente mientras el puerto sigue respondiendo con código viejo). Workaround aplicado: se levantó una instancia limpia en el **8010**, y `bubble54/frontend/.env` (git-ignorado) tiene `VITE_API_BASE=http://localhost:8010` apuntando ahí. Si en una sesión nueva el puerto 8000 arranca limpio, se puede borrar ese `.env` y usar el 8000 de siempre — si vuelve a pasar, repetir el mismo workaround (otro puerto + `.env` local) en vez de perder tiempo insistiendo con matar el proceso viejo.
 
 **Cuidado conocido — el servidor local no corre con `--reload`:** confirmado una vez con un bug real (ítem del 31-ago) que un cambio de schema ya probado y en verde en pytest no se reflejaba contra el servidor local porque el proceso llevaba corriendo desde una sesión anterior sin haberse reiniciado. Después de editar cualquier archivo de `backend/app/`, matar el proceso viejo (`netstat -ano | grep :8010` → `taskkill //PID <pid> //F`) y volver a levantarlo antes de dar por buena una verificación en vivo.
 
 ## Menú de burbujas (implementado 2026-09-01, vuelto a la izquierda el 02-sep)
 
-El sidebar plano y oscuro se reemplazó por burbujas de vidrio. Hubo un experimento intermedio (01-sep) de moverlas a un dock flotando abajo de la pantalla, sobre el fondo blanco de la página — se abandonó al día siguiente porque ahí el vidrio translúcido casi no se veía (esa era justo la queja real que lo hizo revertir). El diseño final volvió a la izquierda, pero sobre el fondo azul degradado real (`.g54-gradient`, el mismo de la intro del login) en vez del sidebar plano de antes — ahí el vidrio sí se lee. Diseñado primero como comparación de propuestas en un Artifact, afinado con la usuaria antes de tocar código real (mockup de referencia guardado en `vox54/design/menu-propuestas.html`, self-contenido, se abre directo con doble clic sin depender de ningún servidor — describe la versión de dock ya abandonada, queda como referencia histórica del proceso, no como el diseño vigente).
+El sidebar plano y oscuro se reemplazó por burbujas de vidrio. Hubo un experimento intermedio (01-sep) de moverlas a un dock flotando abajo de la pantalla, sobre el fondo blanco de la página — se abandonó al día siguiente porque ahí el vidrio translúcido casi no se veía (esa era justo la queja real que lo hizo revertir). El diseño final volvió a la izquierda, pero sobre el fondo azul degradado real (`.g54-gradient`, el mismo de la intro del login) en vez del sidebar plano de antes — ahí el vidrio sí se lee. Diseñado primero como comparación de propuestas en un Artifact, afinado con la usuaria antes de tocar código real (mockup de referencia guardado en `bubble54/design/menu-propuestas.html`, self-contenido, se abre directo con doble clic sin depender de ningún servidor — describe la versión de dock ya abandonada, queda como referencia histórica del proceso, no como el diseño vigente).
 
 **Arquitectura real:** `.vox54-sidebar` es una columna angosta de ancho fijo (176px) y alto completo (100vh), hermana — en una fila flex — de la columna de contenido (topbar + `<main>` con su propio scroll). Al ser un hermano de ancho fijo en una fila flex (no una capa flotando encima con `position:fixed`, ni tampoco el último ítem de una columna como era el dock), el menú nunca puede superponerse al contenido sin importar cuán largo sea — se lo cede automáticamente por construcción, sin ningún truco extra. `overflow:hidden` en la barra recorta a propósito las burbujas decorativas que asoman parcialmente por los bordes (varias usan `left`/`right` negativos, como si vinieran de más allá del panel).
 

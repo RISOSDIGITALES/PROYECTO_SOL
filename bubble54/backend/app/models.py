@@ -1,0 +1,297 @@
+import datetime
+import json
+
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean
+from sqlalchemy.orm import relationship
+
+from .database import Base
+
+
+def utcnow():
+    return datetime.datetime.utcnow()
+
+
+class Agency(Base):
+    __tablename__ = "agencies"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(150), nullable=False)
+
+    # --- Perfil de la agencia ---
+    # Antes esto era solo `name` + un conteo de negocios — una agencia real
+    # necesita un canal de contacto propio, no solo el nombre y el correo
+    # personal del admin logueado. También cierra un hueco real del lado del
+    # negocio: hasta ahora su único "canal de soporte" era el nombre de la
+    # agencia (ver BusinessMeResponse) sin ningún dato real para contactarla.
+    contact_email = Column(String(255), default="")
+    contact_phone = Column(String(30), default="")
+    website = Column(String(255), default="")
+    address = Column(String(255), default="")
+    # Ruta pública real (/uploads/logos/agency/...) — nunca el archivo en sí
+    # guardado en la base. Ver app/uploads.py.
+    logo_url = Column(String(500), default="")
+
+    created_at = Column(DateTime, default=utcnow)
+
+    users = relationship("AgencyUser", back_populates="agency", cascade="all, delete-orphan")
+    businesses = relationship("Business", back_populates="agency", cascade="all, delete-orphan")
+
+
+class AgencyUser(Base):
+    __tablename__ = "agency_users"
+
+    id = Column(Integer, primary_key=True)
+    agency_id = Column(Integer, ForeignKey("agencies.id"), nullable=False)
+    name = Column(String(150), nullable=False)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    agency = relationship("Agency", back_populates="users")
+
+
+class Business(Base):
+    __tablename__ = "businesses"
+
+    id = Column(Integer, primary_key=True)
+    agency_id = Column(Integer, ForeignKey("agencies.id"), nullable=False)
+    name = Column(String(150), nullable=False)
+
+    # --- Perfil real del negocio — lo que el bot necesita saber para
+    # responder, separado a propósito de BotConfig (que es infraestructura:
+    # telefonía/STT/TTS/modelo/prompt). Esto es el conocimiento de negocio en
+    # sí — a qué se dedica, cuándo atiende, qué vende — editable tanto por la
+    # agencia como por el propio negocio (nadie conoce mejor su horario real
+    # que el dueño). Texto libre a propósito: un catálogo estructurado por
+    # producto es una función mucho más grande, sin pedirse todavía. ---
+    description = Column(Text, default="")
+    hours = Column(Text, default="")
+    products_services = Column(Text, default="")
+    address = Column(String(255), default="")
+    phone = Column(String(30), default="")
+    # --- Sumados a pedido de la usuaria, comparando contra el perfil de
+    # empresa real de G54 (Growth54) — le faltaban a Bubble 54 datos que sí
+    # importan para un bot de voz: en qué huso interpretar `hours` y mostrar
+    # la hora de la última llamada (`timezone`, string IANA real como
+    # "America/Managua" — no un offset numérico, para que el horario de
+    # verano se maneje solo), la ciudad (separada de `address`, útil para
+    # elegir el timezone y para mostrarla suelta en el panel), el sitio web,
+    # un email de contacto público del negocio (distinto del email de login
+    # del dueño en BusinessUser), la propuesta de valor (contexto real para
+    # que el LLM sepa qué diferencia a este negocio, más allá de la
+    # descripción genérica), y el rubro (para categorizar en el panel y
+    # darle contexto al bot). Deliberadamente NO se copiaron los campos de
+    # marketing de G54 (keywords, mercado objetivo, competidores) — eso es
+    # específico del módulo de contenidos/SEO de esa plataforma, sin ningún
+    # sentido para un agente de voz. ---
+    timezone = Column(String(50), default="")
+    city = Column(String(120), default="")
+    website = Column(String(255), default="")
+    contact_email = Column(String(255), default="")
+    value_proposition = Column(Text, default="")
+    industry = Column(String(120), default="")
+    logo_url = Column(String(500), default="")
+    # PDF real como fuente de información adicional — se guarda y se muestra
+    # (nombre real + link) Y su contenido real ya se indexa: ver
+    # DocumentChunk más abajo (app/documents.py hace la extracción/embedding
+    # cada vez que se sube o se borra un documento).
+    info_document_url = Column(String(500), default="")
+    info_document_name = Column(String(255), default="")
+    # Generados por documents.generate_document_insights() cada vez que se
+    # (re)procesa el PDF real — nunca escritos a mano. doc_summary es texto
+    # libre corto (confirma que el bot realmente leyó el contenido, no solo
+    # que lo guardó); doc_suggested_services_json es la lista cruda (ver la
+    # property de abajo) de servicios que el documento menciona y todavía no
+    # están en products_services — una SUGERENCIA, nunca se aplica sola,
+    # requiere que el negocio/agencia la acepte explícitamente (ver
+    # documents.accept_suggested_service).
+    doc_summary = Column(Text, default="")
+    doc_suggested_services_json = Column(Text, default="[]")
+
+    # Plan comercial asignado -- ver catalog.PLANS. Hipotético (ítem del
+    # 2026-09-19): existe la asignación y el cálculo de uso real contra lo
+    # incluido, pero ningún cobro real está conectado todavía. Lo asigna la
+    # agencia, nunca el propio negocio (mismo criterio que la infraestructura
+    # de BotConfig).
+    plan_id = Column(String(30), default="starter")
+
+    created_at = Column(DateTime, default=utcnow)
+
+    agency = relationship("Agency", back_populates="businesses")
+    users = relationship("BusinessUser", back_populates="business", cascade="all, delete-orphan")
+    bot_config = relationship("BotConfig", back_populates="business", uselist=False, cascade="all, delete-orphan")
+    calls = relationship("Call", back_populates="business", cascade="all, delete-orphan", order_by="Call.started_at.desc()")
+
+    @property
+    def bot_status(self) -> str | None:
+        return self.bot_config.status if self.bot_config else None
+
+    @property
+    def doc_suggested_services(self) -> list[str]:
+        try:
+            return json.loads(self.doc_suggested_services_json or "[]")
+        except (TypeError, ValueError):
+            return []
+
+
+class DocumentChunk(Base):
+    """Un fragmento del PDF real de un negocio (`Business.info_document_url`),
+    ya con su embedding calculado — la pieza que le faltaba a la subida de
+    documentos (ver comentario en `Business.info_document_url`): antes el PDF
+    solo se guardaba y se mostraba, ahora su contenido real es lo que el
+    worker busca en cada llamada (ver `/worker/documents/search`).
+
+    El embedding se guarda como JSON (lista de floats) en vez de un tipo de
+    columna vectorial nativo — a esta escala (un PDF por negocio, unas pocas
+    docenas de fragmentos) comparar a mano en Python con NumPy es más que
+    suficiente, sin sumar una dependencia de base de datos vectorial que acá
+    no hace ninguna falta."""
+
+    __tablename__ = "document_chunks"
+
+    id = Column(Integer, primary_key=True)
+    business_id = Column(Integer, ForeignKey("businesses.id"), nullable=False, index=True)
+    chunk_index = Column(Integer, nullable=False)
+    text = Column(Text, nullable=False)
+    embedding_json = Column(Text, nullable=False)
+
+    business = relationship("Business")
+
+
+class BusinessUser(Base):
+    __tablename__ = "business_users"
+
+    id = Column(Integer, primary_key=True)
+    business_id = Column(Integer, ForeignKey("businesses.id"), nullable=False)
+    name = Column(String(150), nullable=False)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    business = relationship("Business", back_populates="users")
+
+
+class BotConfig(Base):
+    """Configuración del bot de voz de un negocio.
+
+    NO dependemos de VAPI (ni de ningún otro orquestador todo-en-uno) — el
+    pipeline de la llamada en tiempo real lo corre nuestro propio worker de
+    LiveKit Agents (ver `bubble54/worker/`), armado sobre 3 piezas intercambiables
+    e independientes: telefonía (Twilio/Telnyx), reconocimiento de voz/STT
+    (Deepgram/Groq Whisper), y síntesis de voz/TTS (Cartesia/ElevenLabs) — más
+    el proveedor de IA de siempre (Groq/OpenAI/Anthropic/Gemini) para el modelo
+    que piensa las respuestas. Investigado el 2026-08-29: ninguno de los
+    frameworks de código abierto (Pipecat, LiveKit Agents) tiene un objeto de
+    config declarativo — esta tabla ES esa capa, la seguimos necesitando
+    nosotros sea cual sea el motor de voz de abajo."""
+
+    __tablename__ = "bot_configs"
+
+    id = Column(Integer, primary_key=True)
+    business_id = Column(Integer, ForeignKey("businesses.id"), unique=True, nullable=False)
+
+    # --- Telefonía ---
+    telephony_provider = Column(String(50), default="livekit")
+    telephony_trunk_id = Column(String(150), default="")  # SIP trunk / número que enruta la llamada
+    phone_number = Column(String(30), default="")  # número real asignado al negocio
+    # "" (todavía nada) | "new" (el negocio publica este número como propio)
+    # | "forward" (el negocio sigue publicando el suyo de siempre y lo desvía
+    # hacia este) -- puramente informativo para la pantalla, telephony.py
+    # aprovisiona el mismo tipo de número real en los dos casos.
+    phone_mode = Column(String(20), default="")
+    # Incidente real del 2026-09-19: "forward" nunca pedía ni comprobaba el
+    # número real del negocio -- el botón compraba un número nuevo igual,
+    # sin preguntar nada. own_phone_number es el número que el negocio dice
+    # que es suyo; own_phone_verified solo pasa a True después de un
+    # check_phone_verification() real y exitoso (ver telephony.py) -- nunca
+    # se asume, nunca se guarda como verificado sin el código real correcto.
+    own_phone_number = Column(String(30), default="")
+    own_phone_verified = Column(Boolean, default=False)
+
+    # --- Reconocimiento de voz (STT) ---
+    stt_provider = Column(String(50), default="deepgram")
+    stt_model = Column(String(100), default="nova-3")
+
+    # --- Síntesis de voz (TTS) ---
+    tts_provider = Column(String(50), default="cartesia")
+    tts_voice_id = Column(String(100), default="")
+
+    # --- Orquestación (dónde corre el worker de LiveKit Agents) ---
+    runtime_target = Column(String(30), default="livekit_cloud")  # livekit_cloud | self_hosted
+
+    # --- IA ---
+    ai_provider = Column(String(50), default="groq")
+    ai_model = Column(String(100), default="llama-3.3-70b-versatile")
+    ai_api_key = Column(String(255), default="")  # vacío = usa la key compartida de la plataforma
+
+    # --- Comportamiento del agente ---
+    system_prompt = Column(Text, default="")
+    welcome_message = Column(Text, default="")
+    escalation_email = Column(String(255), default="")
+    language = Column(String(20), default="auto")  # es | en | auto
+    status = Column(String(20), default="paused")  # active | paused
+    # Si el agente usa el perfil real del negocio (Business.products_services)
+    # como contexto para responder, y si puede mencionar los precios que el
+    # propio negocio haya puesto ahí — apagado por default: mencionar un
+    # precio en voz, sin que el negocio lo haya pedido explícitamente, es un
+    # riesgo real (un precio viejo, mal cotizado, o que varía por caso).
+    use_products_services = Column(Boolean, default=True)
+    mention_prices = Column(Boolean, default=False)
+
+    # --- Control de la llamada ---
+    # Campos reales de conversación — investigados contra VAPI/Retell/Bland
+    # primero, y contra LiveKit Agents después: quién habla primero, cuándo
+    # cortar por silencio o por duración, si se puede interrumpir al agente,
+    # qué dice antes de colgar, y a qué humano transferir. `silence_timeout_seconds`
+    # mapea directo a `min_endpointing_delay` de LiveKit; el resto no tiene
+    # equivalente nativo en el framework — los implementa el worker como código.
+    first_message_mode = Column(String(30), default="assistant_first")
+    allow_interruptions = Column(Boolean, default=True)
+    silence_timeout_seconds = Column(Integer, default=30)
+    max_duration_seconds = Column(Integer, default=600)
+    end_call_message = Column(Text, default="")
+    transfer_phone_number = Column(String(30), default="")  # a dónde transferir con un humano
+    voicemail_detection_enabled = Column(Boolean, default=False)
+    voicemail_message = Column(Text, default="")
+
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    business = relationship("Business", back_populates="bot_config")
+
+
+class Call(Base):
+    """Resultado real de una llamada atendida por el worker — la visibilidad
+    de resultado que hasta ahora no existía: un negocio configuraba su bot
+    pero nunca veía qué pasó con ninguna llamada real. Solo el worker escribe
+    acá (ver POST /worker/calls, mismo secreto compartido que ya usa para
+    leer BotConfig) — nunca un negocio ni una agencia, para que este
+    historial sea siempre lo que realmente pasó, no algo editable a mano."""
+
+    __tablename__ = "calls"
+
+    id = Column(Integer, primary_key=True)
+    business_id = Column(Integer, ForeignKey("businesses.id"), nullable=False, index=True)
+
+    started_at = Column(DateTime, nullable=False)
+    ended_at = Column(DateTime, nullable=False)
+    duration_seconds = Column(Integer, nullable=False)
+
+    # Atributo SIP del participante remoto — puede no venir según el trunk/
+    # proveedor real que conecte cada negocio, por eso nullable en vez de
+    # exigirlo (ver el comentario de fetch en worker/agent.py).
+    caller_number = Column(String(30), nullable=True)
+
+    # completed | transferred | max_duration_reached | error — cómo terminó,
+    # nunca inventado: cada worker solo puede reportar una de las razones que
+    # su propio código realmente distingue.
+    outcome = Column(String(30), nullable=False, default="completed")
+
+    # JSON (lista de mensajes rol/contenido/timestamp) armado por
+    # ChatContext.to_dict() del lado del worker — se guarda como texto plano,
+    # sin parsear ni interpretar nada de su lado del backend.
+    transcript = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=utcnow)
+
+    business = relationship("Business", back_populates="calls")

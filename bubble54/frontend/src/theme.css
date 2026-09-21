@@ -1,0 +1,764 @@
+/* Paleta real de G54 — tomada de sops/plataforma/design-system-reportes-g54.html */
+:root {
+  --g54-blue: #2D5BFF;
+  --g54-blue-dark: #1E45D6;
+  --g54-navy: #131B2E;
+  --g54-green: #3FD68F;
+
+  --paper: #eef0f4;
+  --surface: #f9fafb;
+  --white: #ffffff;
+  --ink: #131B2E;
+  --ink-soft: #6b7280;
+  --ink-softer: #9ca3af;
+  --border: #e5e7eb;
+
+  --danger: #ef4444;
+  --success: #22c55e;
+
+  --radius: 12px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, Helvetica, sans-serif;
+  /* Voz de marca — redondeada, con onda de burbuja, reservada para el
+     logo y los títulos de cada pantalla. El texto de trabajo (tablas,
+     formularios, botones) se queda con --font, que sigue siendo el que
+     mejor lee en pantallas densas de datos. */
+  --font-display: "Fredoka", var(--font);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1, h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.g54-gradient {
+  background: linear-gradient(135deg, var(--g54-blue) 0%, var(--g54-blue-dark) 100%);
+}
+
+.g54-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: var(--g54-blue-dark);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  margin: 0 2px;
+  flex-shrink: 0;
+  /* burbuja de vidrio, no un círculo sólido — mismo truco que el resto de
+     las burbujas (brillo radial arriba a la izquierda + relleno
+     translúcido + reborde claro), pensada para leer bien tanto sobre el
+     degradado azul (topbar, login) como sobre cualquier fondo claro. */
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.8) 32%, rgba(255,255,255,0.6) 62%, rgba(255,255,255,0.45) 100%);
+  border: 1.5px solid rgba(255,255,255,0.9);
+  box-shadow:
+    inset 0 -4px 8px rgba(45,91,255,0.14),
+    inset 0 2px 5px rgba(255,255,255,0.95),
+    0 8px 18px -6px rgba(19,27,46,0.28);
+}
+
+.g54-lockup {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.g54-lockup span.word {
+  font-size: 26px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: -0.2px;
+  font-family: var(--font-display);
+}
+
+/* Estado de foco real para teclado — todos los inputs/selects del panel
+   ponen outline:none inline (para reemplazarlo por el borde propio del
+   estado normal), pero sin esto no queda NINGÚN indicador visual al
+   navegar con Tab, que es un hueco real de accesibilidad, no cosmético. */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--g54-blue);
+  outline-offset: 1px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--g54-blue) !important;
+}
+
+/* ============ Bubble UI — botones, badges y tarjetas ============
+   Consistencia moderada: la burbuja de vidrio se extiende a botones,
+   badges de estado y tarjetas — nunca a tablas, formularios ni inputs,
+   que se quedan limpios y planos a propósito (mismo criterio ya escrito
+   arriba para --font-display: la burbuja es acento de marca, no el
+   vehículo del texto de trabajo denso). */
+
+.bubble54-panel,
+.bubble54-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  position: relative;
+  overflow: hidden;
+}
+
+.bubble54-panel::before,
+.bubble54-card::before {
+  content: "";
+  position: absolute;
+  top: -35%;
+  left: -15%;
+  width: 65%;
+  height: 75%;
+  background: radial-gradient(circle, rgba(45,91,255,0.05), transparent 70%);
+  pointer-events: none;
+}
+
+.bubble54-card {
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
+}
+
+.bubble54-card:hover {
+  border-color: var(--g54-blue) !important;
+  box-shadow: 0 8px 22px rgba(45, 91, 255, 0.14);
+  transform: translateY(-2px);
+}
+
+/* fila de un checklist clickeable (ej. "Primeros pasos" del inicio de
+   agencia) — feedback de hover discreto, sin el lift de .bubble54-card, que
+   es demasiado para una fila fina de lista */
+.bubble54-steprow {
+  transition: background-color 0.12s ease;
+}
+
+.bubble54-steprow:hover {
+  background: var(--surface);
+}
+
+/* --- botones: pill de vidrio, mismo truco que .bubble54-navbubble pero
+   sólido (no translúcido) para que se lea bien sobre fondo claro --- */
+.bubble54-btn {
+  --tint: 147,197,253;
+  --glow: 45,91,255;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1.5px solid rgba(255,255,255,0.5);
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  background:
+    radial-gradient(circle at 28% 18%, rgba(255,255,255,0.55) 0%, transparent 55%),
+    linear-gradient(155deg, rgba(var(--tint),0.95) 0%, rgb(var(--glow)) 60%, rgb(var(--glow)) 100%);
+  box-shadow:
+    inset 0 -3px 6px rgba(0,0,0,0.1),
+    inset 0 1px 2px rgba(255,255,255,0.5),
+    0 10px 20px -12px rgba(var(--glow),0.6);
+  transition: transform 0.15s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.bubble54-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 -3px 6px rgba(0,0,0,0.1),
+    inset 0 1px 2px rgba(255,255,255,0.5),
+    0 14px 24px -12px rgba(var(--glow),0.68);
+}
+
+.bubble54-btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+.bubble54-btn:disabled { opacity: 0.55; cursor: default; }
+
+.bubble54-btn.secondary {
+  --glow: 100,116,139;
+  color: var(--ink-soft);
+  background:
+    radial-gradient(circle at 28% 18%, rgba(255,255,255,0.9) 0%, transparent 55%),
+    rgba(241,245,249,0.95);
+  border-color: var(--border);
+  box-shadow:
+    inset 0 1px 2px rgba(255,255,255,0.8),
+    0 4px 10px -6px rgba(19,27,46,0.12);
+}
+
+.bubble54-btn.secondary:hover:not(:disabled) {
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.8), 0 6px 14px -6px rgba(19,27,46,0.18);
+}
+
+.bubble54-btn.small { padding: 7px 14px; font-size: 12.5px; }
+
+/* --- avatares chicos (iniciales) — mismo relleno de vidrio, cuadrado --- */
+.bubble54-avatar {
+  --tint: 147,197,253;
+  --glow: 45,91,255;
+  color: #fff;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 28% 20%, rgba(255,255,255,0.55) 0%, transparent 55%),
+    linear-gradient(155deg, rgba(var(--tint),0.95) 0%, rgb(var(--glow)) 60%, rgb(var(--glow)) 100%);
+  box-shadow: inset 0 -2px 4px rgba(0,0,0,0.1), inset 0 1px 2px rgba(255,255,255,0.5);
+}
+
+/* --- badges / pills de estado: mismo relleno de vidrio, chico, en línea --- */
+.bubble54-pill {
+  --tint: 147,197,253;
+  --base: 219,234,254;
+  --glow: 45,91,255;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+  background:
+    radial-gradient(circle at 26% 20%, rgba(255,255,255,0.9) 0%, transparent 50%),
+    rgba(var(--base), 0.55);
+  border: 1px solid rgba(255,255,255,0.7);
+  box-shadow: 0 3px 8px -4px rgba(var(--glow), 0.35);
+  color: rgb(var(--glow));
+}
+
+.bubble54-pill .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(var(--glow));
+  flex-shrink: 0;
+}
+
+.bubble54-pill.green  { --tint: 134,239,172; --base: 220,252,231; --glow: 21,128,61; }
+.bubble54-pill.gray   { --tint: 203,213,225; --base: 241,245,249; --glow: 100,116,139; }
+.bubble54-pill.amber  { --tint: 253,224,71;  --base: 254,249,195; --glow: 161,98,7; }
+
+/* Mismo chip que .bubble54-pill, pero para vivir sobre el degradado azul de
+   TopBrandBar en vez de un fondo claro -- vidrio real (blanco translúcido)
+   en vez del tinte de color saturado, mismo criterio ya usado en
+   .bubble54-navbubble/.bubble54-amb para todo lo que vive sobre ese fondo. */
+.bubble54-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 4px 11px;
+  white-space: nowrap;
+  background: rgba(255,255,255,0.16);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.95);
+}
+
+.bubble54-clock .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4ade80;
+  flex-shrink: 0;
+}
+.bubble54-pill.red    { --tint: 252,165,165; --base: 254,226,226; --glow: 185,28,28; }
+
+/* ============ Menú de burbujas (AgencyShell) ============
+   Reemplaza el sidebar lateral — un campo de burbujas de vidrio flotando
+   abajo, cada una con su propio color, tamaño y ritmo, sin ninguna caja
+   ni barra que las encierre. Diseño aprobado en sops/ (mockup de referencia
+   en bubble54/design/menu-propuestas.html) antes de implementarlo acá. */
+
+@keyframes bubble54-floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-9px); }
+}
+
+/* mismo flote que bubble54-floaty pero con un margen de movimiento mucho más
+   chico — para las burbujas decorativas del fondo (bubble54-amb), que antes se
+   sentían demasiado sueltas moviéndose -9px sin importar su tamaño real */
+@keyframes bubble54-floaty-amb {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes bubble54-floaty-soft {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.04); }
+}
+
+@keyframes bubble54-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(0.8, 1.2); }
+  62% { transform: scale(1.16, 0.88); }
+  82% { transform: scale(0.95, 1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes bubble54-fadein {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* el "estallido" real de la burbuja — se infla de golpe con un pulso de
+   brillo (el momento del reviente) y recién ahí colapsa a la nada, en vez
+   de solo desvanecerse */
+@keyframes bubble54-burst {
+  0% { transform: scale(1); opacity: 1; filter: brightness(1); }
+  18% { transform: scale(1.55); opacity: 1; filter: brightness(1.7); }
+  46% { transform: scale(1.15); opacity: 0.85; filter: brightness(1.15); }
+  100% { transform: scale(0.1); opacity: 0; filter: brightness(1); }
+}
+
+/* destello blanco en el centro, el flash del propio estallido */
+@keyframes bubble54-flash {
+  0% { transform: scale(0.25); opacity: 0.95; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+/* onda expansiva del estallido — un aro que crece y se disuelve */
+@keyframes bubble54-shock {
+  0% { transform: scale(0.55); opacity: 0.9; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+/* partículas reales saliendo disparadas del centro — --tx/--ty los pone
+   cada burbuja en JS, según el ángulo y la distancia que le tocó */
+@keyframes bubble54-shard-fly {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0.15); opacity: 0; }
+}
+
+.bubble54-bubblefield {
+  position: relative;
+  flex-shrink: 0;
+  height: 150px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 26px;
+  padding-bottom: 26px;
+  pointer-events: none;
+}
+
+/* la misma idea del dock horizontal (.bubble54-bubblefield) pero como columna
+   angosta a lo alto de toda la pantalla — el menú de agencia/negocio volvió
+   a vivir a la izquierda, sobre el fondo azul degradado (.g54-gradient) en
+   vez del blanco de la página, donde las burbujas de vidrio sí se leen.
+   overflow:hidden recorta las burbujas ambiente que asoman fuera del ancho
+   angosto (varias usan left/right negativos a propósito, para que la mitad
+   quede oculta detrás del borde, como si vinieran de más allá del panel). */
+.bubble54-sidebar {
+  position: relative;
+  flex-shrink: 0;
+  width: 176px;
+  /* 100% en vez de un 100vh fijo — ahora vive dentro de una fila que a su
+     vez es un hijo flex (flex:1 1 auto; min-height:0) de la columna que
+     tiene el 100vh real (TopBrandBar arriba). Con 100vh fijo acá se
+     desbordaba por la altura de esa franja nueva. */
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Antes 26px arriba + el logo/badge propios de esta barra (ver historial
+     de .bubble54-sidebar-brand/.bubble54-agency-badge, retirados) — sumado a los
+     52px de TopBrandBar arriba, dejaba un hueco real antes del primer
+     ítem. El logo ya no vive acá — se movió a TopBrandBar, pegado a la
+     esquina — así que este padding vuelve a ser solo el respiro normal
+     de la lista, no espacio para nada más. */
+  padding: 18px 0 22px;
+}
+
+.bubble54-sidebar-main {
+  position: relative;
+  z-index: 2;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* flex-start (default), no center — un solo listado real ahora
+     (Inicio...Registros, Configuración, Salir juntos, ya no separados en
+     dos grupos anclados) tiene que fluir desde arriba, no repartirse
+     centrado en el espacio libre. Con center, cuando el contenido no
+     entraba en el alto disponible (ventana baja) desbordaba SIMÉTRICO —
+     para arriba y para abajo por igual — pisando lo que hubiera arriba y
+     abajo del propio elemento, sin importar overflow:hidden en el padre
+     (ese overflow solo recorta contra SU PROPIO borde, no contra los
+     hermanos de este). Con flex-start, si no entra, el desborde queda
+     siempre abajo — el comportamiento esperado de una lista, sin pisar
+     nada de arriba.
+     overflow-y:auto + la barra oculta (scrollbar-width/::-webkit-scrollbar
+     abajo) siguen de red de seguridad para ese caso — desplazable con la
+     rueda, sin ninguna barra visible ni scroll horizontal (overflow-x:
+     hidden, necesario porque el navegador trata overflow-x como auto
+     también en cuanto overflow-y deja de ser "visible", y las burbujas
+     decorativas que asoman a propósito fuera del ancho angosto ya cuentan
+     como desborde horizontal acá adentro). */
+  /* 28px, no 40 — con los 7 ítems ya juntos en una sola lista (antes eran
+     5 arriba + 2 anclados abajo, nunca competían por el mismo espacio),
+     40px de por medio dejaba a "Salir" fuera de vista incluso en una
+     ventana real de 1440x900 — obligaba a un scroll invisible para algo
+     tan básico como cerrar sesión. Con 28px entran los 7 sin scroll en
+     cualquier tamaño razonable, confirmado en vivo. */
+  gap: 28px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none; /* Firefox */
+  /* El flote (bubble54-floaty) mueve cada ícono hasta 9px hacia arriba de su
+     posición real — con la lista ya sin el espacio libre de antes
+     (justify-content:center dejaba margen arriba gratis), el primer
+     ítem ("Inicio") no tenía ningún respiro y el propio overflow-y:auto
+     le recortaba la punta en cada subida del flote, un corte real, no
+     solo apariencia. Este padding le da lugar al movimiento sin que la
+     caja lo recorte. */
+  padding-top: 10px;
+}
+
+.bubble54-sidebar-main::-webkit-scrollbar {
+  display: none; /* Chrome/Edge/Safari */
+}
+
+.bubble54-amb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  /* más transparentes que antes (0.32→0.16 de relleno) y con más brillo
+     real — el resplandor blanco de arriba-izquierda más grande y opaco,
+     más un glow hacia afuera con box-shadow, no solo el borde claro */
+  background:
+    radial-gradient(circle at 28% 22%, rgba(255,255,255,1) 0%, rgba(255,255,255,0.65) 26%, transparent 52%),
+    rgba(147, 197, 253, 0.16);
+  border: 1px solid rgba(255,255,255,0.75);
+  box-shadow: 0 0 14px -4px rgba(147, 197, 253, 0.55), inset 0 -3px 6px rgba(147, 197, 253, 0.12);
+  animation: bubble54-floaty-amb 5s ease-in-out infinite, bubble54-fadein 0.5s ease-out;
+}
+
+/* variante clickeable — solo donde de verdad hace falta (login, dock de
+   negocio/agencia), para no volver interactivas otras burbujas decorativas */
+.bubble54-amb.poppable {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.bubble54-amb.bursting {
+  animation: bubble54-burst 0.48s cubic-bezier(.22,.9,.35,1) forwards;
+}
+
+/* destello del centro — el primer instante del estallido, antes de que
+   se vea el aro expandirse */
+.bubble54-amb.bursting::before {
+  content: "";
+  position: absolute;
+  inset: -25%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.95), transparent 65%);
+  animation: bubble54-flash 0.3s ease-out forwards;
+}
+
+.bubble54-amb.bursting::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255,255,255,0.9);
+  animation: bubble54-shock 0.55s ease-out forwards;
+}
+
+.bubble54-amb.green {
+  background:
+    radial-gradient(circle at 28% 22%, rgba(255,255,255,1) 0%, rgba(255,255,255,0.65) 26%, transparent 52%),
+    rgba(63, 214, 143, 0.14);
+  box-shadow: 0 0 14px -4px rgba(63, 214, 143, 0.5), inset 0 -3px 6px rgba(63, 214, 143, 0.1);
+}
+
+.bubble54-amb.violet {
+  background:
+    radial-gradient(circle at 28% 22%, rgba(255,255,255,1) 0%, rgba(255,255,255,0.65) 26%, transparent 52%),
+    rgba(196, 181, 253, 0.16);
+  box-shadow: 0 0 14px -4px rgba(196, 181, 253, 0.5), inset 0 -3px 6px rgba(196, 181, 253, 0.12);
+}
+
+/* campo de partículas — hermano de la burbuja que estalla, con el mismo
+   tamaño/posición, para que las partículas no hereden el propio scale(0.1)
+   de la burbuja colapsando */
+.bubble54-shardfield {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Partículas más grandes y con más brillo que antes (6px→10px, glow más
+   fuerte) y con más recorrido/duración (bubble54-shard-fly 0.5s→0.65s) — a
+   pedido explícito ("apenas y se nota, hazlo más notable"), el efecto real
+   de siempre pero con más peso visual, sin cambiar el mecanismo. */
+.bubble54-shard {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, rgba(255,255,255,0.6) 55%, transparent 75%);
+  box-shadow: 0 0 10px rgba(255,255,255,0.9);
+  animation: bubble54-shard-fly 0.65s cubic-bezier(.16,.84,.44,1) forwards;
+}
+
+.bubble54-navcol {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font);
+  cursor: pointer;
+}
+
+/* Envoltorio SOLO para el flote — antes vivía en .bubble54-navcol y hacía
+   flotar el ícono Y el rectángulo del nombre juntos, a pedido explícito
+   de la usuaria el nombre se queda quieto, solo la burbuja se mueve. No
+   se le puso el flote directo a .bubble54-navbubble porque ese elemento ya
+   tiene su propio transform de hover/activo (scale) — un `animation`
+   infinito ahí adentro le gana la pulseada al hover en cada frame y el
+   scale nunca llega a verse. Un span de por medio, sin ningún otro
+   transform propio, deja que los dos efectos convivan sin pisarse: el
+   navegador compone el translateY del padre con el scale del hijo solo
+   con anidar los elementos, sin ningún truco extra. */
+.bubble54-navfloat {
+  display: inline-flex;
+  animation: bubble54-floaty 4.2s ease-in-out infinite;
+}
+
+.bubble54-navbubble {
+  --tint: 147,197,253;
+  --base: 219,234,254;
+  --glow: 45,91,255;
+  --size: 58px;
+  position: relative;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  font-family: var(--font);
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.55) 22%, transparent 46%),
+    radial-gradient(circle at 72% 82%, rgba(var(--tint),0.4), transparent 60%),
+    rgba(var(--base), 0.62);
+  border: 1.5px solid rgba(255,255,255,0.85);
+  box-shadow:
+    inset 0 -7px 12px rgba(var(--glow),0.14),
+    inset 0 2px 3px rgba(255,255,255,0.8),
+    0 14px 22px -12px rgba(var(--glow),0.4);
+  transition: transform 0.2s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s ease;
+}
+
+/* variedad de tono y tamaño por ítem — no todo el menú es el mismo azul */
+.bubble54-navbubble.hueB { --tint: 94,234,212; --base: 204,251,241; --glow: 20,184,166; --size: 62px; }
+.bubble54-navbubble.hueC { --tint: 196,181,253; --base: 237,233,254; --glow: 139,92,246; --size: 56px; }
+.bubble54-navbubble.hueD { --tint: 253,224,71; --base: 254,243,199; --glow: 217,119,6; --size: 56px; }
+/* "Agencia" (agencia) / "Negocio" (perfil, lado negocio) — rosa, distinto
+   de cualquier otro ítem del menú */
+.bubble54-navbubble.hueE { --tint: 249,168,212; --base: 252,231,243; --glow: 219,39,119; --size: 56px; }
+/* "Registros" — celeste, distinto del azul default (Negocios) y del verde
+   agua de hueB (Agentes) */
+.bubble54-navbubble.hueF { --tint: 125,211,252; --base: 224,242,254; --glow: 2,132,199; --size: 58px; }
+
+.bubble54-navbubble:hover { transform: scale(1.1); }
+
+/* El ícono real es un <svg> de trazo (Icon.jsx), no emoji — así su color
+   responde a CSS de verdad. En reposo usa el mismo tono que ya identifica a
+   cada burbuja (--glow), bien saturado contra el vidrio claro; activo pasa
+   a blanco, que es lo que mejor contrasta contra el degradado sólido de
+   `.active`. Antes el emoji no podía pintarse de ningún color — era
+   literalmente imposible subirle el contraste sin cambiar de ícono. */
+.bubble54-navbubble .icon {
+  color: rgb(var(--glow));
+  filter: drop-shadow(0 1px 1px rgba(19,27,46,0.1));
+}
+
+/* El bug real detrás de "la pantalla salta/parpadea" al elegir un ítem —
+   esto cambiaba width/height (70px, más grande que el tamaño de reposo de
+   cada hue) en vez de solo apariencia. .bubble54-sidebar-main centra sus
+   hijos (justify-content:center) en una columna flex — agrandar UN hijo de
+   verdad reacomoda el layout entero de la columna, un salto real, no
+   percibido. transform:scale() en cambio nunca participa del layout (es
+   puramente compuesto), así que el ítem se ve más grande sin mover a
+   ningún otro. */
+.bubble54-navbubble.active {
+  transform: scale(1.16);
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.5) 20%, transparent 46%),
+    radial-gradient(circle at 72% 85%, rgba(255,255,255,0.3), transparent 60%),
+    linear-gradient(155deg, rgba(var(--tint),0.95) 0%, rgb(var(--glow)) 55%, rgb(var(--glow)) 100%);
+  border-color: rgba(255,255,255,0.95);
+  box-shadow:
+    inset 0 -8px 14px rgba(var(--glow),0.4),
+    inset 0 2px 4px rgba(255,255,255,0.85),
+    0 0 0 7px rgba(var(--glow),0.16),
+    0 18px 30px -12px rgba(var(--glow),0.55);
+}
+
+.bubble54-navbubble.active .icon { color: #fff; }
+
+.bubble54-navbubble.exit {
+  --tint: 252,165,165;
+  --base: 254,226,226;
+  --glow: 239,68,68;
+  --size: 60px;
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.5) 22%, transparent 46%),
+    radial-gradient(circle at 72% 82%, rgba(var(--tint),0.4), transparent 60%),
+    rgba(var(--base), 0.7);
+  box-shadow:
+    inset 0 -7px 12px rgba(var(--glow),0.15),
+    inset 0 2px 3px rgba(255,255,255,0.8),
+    0 14px 22px -12px rgba(var(--glow),0.3);
+}
+
+.bubble54-navbubble.popping { animation: bubble54-pop 0.5s cubic-bezier(.34,1.56,.64,1); }
+
+/* Estallido "sin desaparecer" — flash + PARTÍCULAS (bubble54-shard-fly, igual
+   que en .bubble54-amb.bursting) + el pulso de escala/brillo del propio
+   elemento. SIN aro/onda expansiva — a pedido explícito de la usuaria
+   ("esa onda que dispara es horrible"), sacado del todo, no solo
+   suavizado. Antes acá vivía también un ::after con bubble54-shock-centered
+   (el aro) — eliminado junto con su keyframe. */
+@keyframes bubble54-burst-keep {
+  0% { transform: scale(1); filter: brightness(1); }
+  18% { transform: scale(1.55); filter: brightness(1.7); }
+  46% { transform: scale(1.15); filter: brightness(1.15); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+.bubble54-burstkeep {
+  animation: bubble54-burst-keep 0.42s cubic-bezier(.34,1.56,.64,1);
+}
+
+.bubble54-burstkeep::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--burst-size, 100%) * 1.5);
+  height: calc(var(--burst-size, 100%) * 1.5);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.95), transparent 65%);
+  animation: bubble54-flash-centered 0.3s ease-out forwards;
+  pointer-events: none;
+}
+
+/* Misma curva exacta que bubble54-flash (la de la burbuja real) — solo con
+   translate(-50%,-50%) horneado adentro del keyframe, porque acá el
+   tamaño es fijo en px (var(--burst-size)) y centrado a mano en vez de
+   inset-percentage sobre una caja ya cuadrada. */
+@keyframes bubble54-flash-centered {
+  0% { transform: translate(-50%, -50%) scale(0.25); opacity: 0.95; }
+  100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+}
+
+.bubble54-navlabel {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  background: rgba(255,255,255,0.75);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.bubble54-notif {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Mismo criterio de vidrio real que .bubble54-amb (relleno rgba de alpha
+     bajo + brillo blanco arriba-izquierda + glow hacia afuera) en vez del
+     rojo sólido de antes — transparente de verdad, no solo "más clarito". */
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,0.9), transparent 45%),
+    rgba(251,113,133,0.38);
+  border: 1.5px solid rgba(255,255,255,0.85);
+  box-shadow:
+    0 4px 10px -3px rgba(251,113,133,0.5),
+    inset 0 -2px 4px rgba(190,18,60,0.15);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(159,18,57,0.6);
+  animation: bubble54-floaty-soft 2.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble54-amb, .bubble54-navfloat, .bubble54-notif { animation: none; }
+  .bubble54-navbubble.popping, .bubble54-burstkeep { animation: none; }
+  /* estas tienen más especificidad que .bubble54-amb de arriba (2 clases, o
+     una pseudo-clase ::before/::after aparte) — sin declararlas acá
+     explícito seguirían animando aunque el usuario haya pedido menos
+     movimiento */
+  .bubble54-amb.bursting,
+  .bubble54-amb.bursting::before,
+  .bubble54-amb.bursting::after { animation: none; }
+  .bubble54-burstkeep::before { animation: none; }
+  .bubble54-shard { animation: none; opacity: 0; }
+}
+
+/* Mismo apagado de animaciones que la media query de arriba, pero
+   controlado por el interruptor real de la app (Configuración → Efectos),
+   no por la preferencia del sistema operativo — las dos señales se suman,
+   ninguna pisa a la otra (ver prefs.js, que pone este atributo en <html>).
+   burst()/playPopSound ya se frenan solos en JS antes de tocar el DOM
+   (ver burst.js) — este bloque cubre las animaciones puramente CSS que
+   corren solas todo el tiempo (el flote, el pulso del aviso de Agentes). */
+html[data-bubble54-motion="off"] .bubble54-amb,
+html[data-bubble54-motion="off"] .bubble54-navfloat,
+html[data-bubble54-motion="off"] .bubble54-notif { animation: none; }
+html[data-bubble54-motion="off"] .bubble54-navbubble.popping,
+html[data-bubble54-motion="off"] .bubble54-burstkeep { animation: none; }
+html[data-bubble54-motion="off"] .bubble54-amb.bursting,
+html[data-bubble54-motion="off"] .bubble54-amb.bursting::before,
+html[data-bubble54-motion="off"] .bubble54-amb.bursting::after { animation: none; }
+html[data-bubble54-motion="off"] .bubble54-burstkeep::before { animation: none; }
+html[data-bubble54-motion="off"] .bubble54-shard { animation: none; opacity: 0; }

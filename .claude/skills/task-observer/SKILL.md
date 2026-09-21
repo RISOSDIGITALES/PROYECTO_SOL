@@ -1,6 +1,6 @@
 ---
 name: task-observer
-description: Meta-skill que observa sesiones de trabajo sustantivas (varios pasos, uso de herramientas, un entregable real) y anota en observations.md los patrones que valdría la pena convertir algún día en una skill reutilizable — correcciones reales del usuario, flujos que se repiten, técnicas que funcionaron especialmente bien. Consultar al arrancar cualquier tarea de programación, diagnóstico o investigación de varios pasos en este repo (G54/n8n, Nomify, Vox54) — no en preguntas conversacionales cortas ni en un solo comando suelto. Nunca crea skills por su cuenta, solo deja candidatos anotados para revisión humana periódica.
+description: Meta-skill que observa sesiones de trabajo sustantivas (varios pasos, uso de herramientas, un entregable real) y anota en observations.md los patrones que valdría la pena convertir algún día en una skill reutilizable — correcciones reales del usuario, flujos que se repiten, técnicas que funcionaron especialmente bien. Consultar al arrancar cualquier tarea de programación, diagnóstico o investigación de varios pasos en este repo (G54/n8n, Nomify, Bubble 54) — no en preguntas conversacionales cortas ni en un solo comando suelto. Nunca crea skills por su cuenta, solo deja candidatos anotados para revisión humana periódica.
 ---
 
 # Task Observer
