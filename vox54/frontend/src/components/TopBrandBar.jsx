@@ -34,11 +34,21 @@ export default function TopBrandBar({ logoUrl, name }) {
   );
 }
 
+// Grid real de 3 columnas, no 3 elementos flotando por posicionamiento
+// absoluto -- antes el logo del centro vivía en `left:50%` fijo, sin
+// importar cuánto ocupara el nombre real de la izquierda (un nombre largo,
+// o simplemente un viewport angosto) lo pisaba de lleno, sin ningún límite
+// real que lo evitara. Con `grid-template-columns: minmax(0,1fr) auto
+// minmax(0,1fr)`, cada bloque vive en su propia columna real: la izquierda
+// y la derecha se reparten el resto del ancho y se achican (elipsis) antes
+// de invadir la columna del medio, que reserva exactamente lo que su
+// contenido necesita y nunca se mueve.
 const barStyle = {
   position: "relative",
   flexShrink: 0,
   height: 52,
-  display: "flex",
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
   alignItems: "center",
 };
 
@@ -49,7 +59,8 @@ const leftSlotStyle = {
   display: "flex",
   alignItems: "center",
   gap: 10,
-  maxWidth: "38%",
+  minWidth: 0,
+  overflow: "hidden",
 };
 
 const nameStyle = {
@@ -59,20 +70,30 @@ const nameStyle = {
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
+  minWidth: 0,
 };
 
 const centerSlotStyle = {
-  position: "absolute",
-  left: "50%",
-  top: "50%",
-  transform: "translate(-50%, -50%)",
+  justifySelf: "center",
+  display: "flex",
+  alignItems: "center",
 };
 
+// Sin `justifySelf: "end"` a propósito -- eso cambia el default de la
+// celda de "stretch" (llena el ancho real de la columna, así el
+// `overflow:hidden` de abajo sí puede recortar contra un borde real) a
+// "se achica al tamaño de su contenido" -- con eso, el reloj (que nunca
+// se abrevia, `white-space:nowrap`) volvía a su ancho natural y se salía
+// de su columna igual que antes del grid, pisando el logo del medio. La
+// celda ahora ocupa el ancho completo de su columna (stretch real) y el
+// alineado a la derecha se hace puertas adentro, con flexbox.
 const rightSlotStyle = {
-  marginLeft: "auto",
   paddingRight: 18,
   position: "relative",
   zIndex: 1,
   display: "flex",
   alignItems: "center",
+  justifyContent: "flex-end",
+  minWidth: 0,
+  overflow: "hidden",
 };
