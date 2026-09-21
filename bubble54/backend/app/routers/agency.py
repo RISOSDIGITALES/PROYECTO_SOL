@@ -1,15 +1,18 @@
 import datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 
 from ..database import get_db
 from ..deps import get_current_agency_user
+from ..exporting import calls_to_csv
 from ..security import hash_password, verify_password
 from ..schemas import (
     AgencyMeResponse, AgencyProfileOut, AgencyProfileUpdate, AgencyBusinessSummary,
     BusinessOut, BusinessCreate, BusinessUpdate, BusinessDetailOut,
-    BusinessProfileOut, BusinessProfileUpdate, DocumentSuggestionAction,
+    BusinessProfileOut, BusinessProfileUpdate, CustomerOut, CustomerUpdate,
+    DocumentSuggestionAction,
     BotConfigUpdate, BotConfigOut, CallOut, AgencyCallOut,
     PasswordChange, AgentInventoryItem, PhoneActivateIn,
     PlanUpdate, BusinessUsageOut,
@@ -431,6 +434,83 @@ def list_business_calls(
     )
 
 
+@router.get("/businesses/{business_id}/calls/export")
+def export_business_calls(
+    business_id: int,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    business = _get_owned_business(db, user, business_id)
+    calls = (
+        db.query(models.Call)
+        .filter(models.Call.business_id == business.id)
+        .order_by(models.Call.started_at.desc())
+        .all()
+    )
+    csv_text = calls_to_csv(calls)
+    # El nombre del negocio es texto libre real (lo pone la agencia) -- nunca
+    # va crudo dentro de un header HTTP, sanitizado a algo seguro primero.
+    safe_name = "".join(c for c in business.name if c.isalnum() or c in " -_").strip() or "negocio"
+    return StreamingResponse(
+        iter([csv_text]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="llamadas_{safe_name}.csv"'},
+    )
+
+
+@router.get("/businesses/{business_id}/customers", response_model=list[CustomerOut])
+def list_business_customers(
+    business_id: int,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    business = _get_owned_business(db, user, business_id)
+    return (
+        db.query(models.Customer)
+        .filter(models.Customer.business_id == business.id)
+        .order_by(models.Customer.last_call_at.desc())
+        .all()
+    )
+
+
+def _get_owned_customer(db: Session, user: models.AgencyUser, business_id: int, customer_id: int) -> models.Customer:
+    business = _get_owned_business(db, user, business_id)
+    customer = (
+        db.query(models.Customer)
+        .filter(models.Customer.id == customer_id, models.Customer.business_id == business.id)
+        .first()
+    )
+    if not customer:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Cliente no encontrado")
+    return customer
+
+
+@router.get("/businesses/{business_id}/customers/{customer_id}", response_model=CustomerOut)
+def get_business_customer(
+    business_id: int,
+    customer_id: int,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    return _get_owned_customer(db, user, business_id, customer_id)
+
+
+@router.patch("/businesses/{business_id}/customers/{customer_id}", response_model=CustomerOut)
+def update_business_customer(
+    business_id: int,
+    customer_id: int,
+    body: CustomerUpdate,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    customer = _get_owned_customer(db, user, business_id, customer_id)
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(customer, field, value)
+    db.commit()
+    db.refresh(customer)
+    return customer
+
+
 @router.get("/businesses/{business_id}/profile", response_model=BusinessProfileOut)
 def get_business_profile(
     business_id: int,
@@ -576,6 +656,29 @@ def list_agency_calls(
         q = q.filter(models.Call.business_id == business_id)
     calls = q.order_by(models.Call.started_at.desc()).limit(200).all()
     return [_agency_call_out(c) for c in calls]
+
+
+@router.get("/calls/export")
+def export_agency_calls(
+    business_id: int | None = None,
+    db: Session = Depends(get_db),
+    user: models.AgencyUser = Depends(get_current_agency_user),
+):
+    q = (
+        db.query(models.Call)
+        .options(joinedload(models.Call.business))
+        .join(models.Business, models.Call.business_id == models.Business.id)
+        .filter(models.Business.agency_id == user.agency_id)
+    )
+    if business_id is not None:
+        q = q.filter(models.Call.business_id == business_id)
+    calls = q.order_by(models.Call.started_at.desc()).all()
+    csv_text = calls_to_csv(calls, include_business_name=True)
+    return StreamingResponse(
+        iter([csv_text]),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="registros.csv"'},
+    )
 
 
 @router.get("/calls/{call_id}", response_model=AgencyCallOut)

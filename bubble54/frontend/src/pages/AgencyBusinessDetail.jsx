@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link, useOutletContext } from "react-router-dom";
 import StatusPill from "../components/StatusPill";
 import CallsList from "../components/CallsList";
+import CustomersList from "../components/CustomersList";
 import BusinessProfileForm from "../components/BusinessProfileForm";
 import BrandMark from "../components/BrandMark";
 import { api } from "../api";
@@ -25,6 +26,8 @@ export default function AgencyBusinessDetail() {
   const [renameSaving, setRenameSaving] = useState(false);
   const [calls, setCalls] = useState(null);
   const [callsError, setCallsError] = useState("");
+  const [customers, setCustomers] = useState(null);
+  const [customersError, setCustomersError] = useState("");
   const [profile, setProfile] = useState(null);
   const [profileError, setProfileError] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
@@ -45,6 +48,7 @@ export default function AgencyBusinessDetail() {
       .then(setBusiness)
       .catch((e) => setError(e.message));
     api.listBusinessCalls(session.access_token, id).then(setCalls).catch((e) => setCallsError(e.message));
+    api.listBusinessCustomers(session.access_token, id).then(setCustomers).catch((e) => setCustomersError(e.message));
     api.getBusinessProfile(session.access_token, id).then(setProfile).catch((e) => setProfileError(e.message));
     // Solo para resolver el nombre real del modelo de IA en el resumen de
     // abajo — sin esto se ve el id crudo del catálogo (ej. "llama-3.3-70b-
@@ -56,6 +60,11 @@ export default function AgencyBusinessDetail() {
 
   function handlePlanSelect(e) {
     setPendingPlanId(e.target.value);
+  }
+
+  async function handleUpdateCustomer(customerId, patch) {
+    const updated = await api.updateBusinessCustomer(session.access_token, id, customerId, patch);
+    setCustomers((prev) => prev.map((c) => (c.id === customerId ? updated : c)));
   }
 
   function cancelPlanChange() {
@@ -298,7 +307,22 @@ export default function AgencyBusinessDetail() {
 
             <div>
               <div style={sectionTitleStyle}>Llamadas recientes</div>
-              <CallsList calls={calls} loading={calls === null && !callsError} error={callsError} />
+              <CallsList
+                calls={calls}
+                loading={calls === null && !callsError}
+                error={callsError}
+                onExport={() => api.exportBusinessCalls(session.access_token, id)}
+              />
+            </div>
+
+            <div>
+              <div style={sectionTitleStyle}>Clientes</div>
+              <CustomersList
+                customers={customers}
+                loading={customers === null && !customersError}
+                error={customersError}
+                onUpdate={handleUpdateCustomer}
+              />
             </div>
           </div>
         )}

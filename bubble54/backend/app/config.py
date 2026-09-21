@@ -65,6 +65,26 @@ class Settings(BaseSettings):
     # formato E.164.
     twilio_reserved_numbers: str = "+17867880417"
 
+    # Correo real de recuperación de contraseña (2026-09-21, pedido explícito
+    # de la usuaria) -- reusa el mismo SMTP de Gmail ya usado en el resto del
+    # proyecto (n8n, credencial "Gmail SMTP — risosadmi", ver CLAUDE.md ítem
+    # 72), acá con su propio cliente SMTP en Python porque el backend de
+    # Bubble54 no pasa por n8n. Vacío por default -- sin esto, forgot_password
+    # tira un error real y legible en vez de fingir que mandó un correo que
+    # nunca salió (mismo criterio que twilio_account_sid/groq_api_key).
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_app_password: str = ""
+    # Nombre real que ve el destinatario del correo, no el email crudo.
+    smtp_from_name: str = "Bubble 54"
+    # Dominio real del panel -- para armar el link de "restablecer tu
+    # contraseña" (ej. https://tu-dominio/agencia/reset-password?token=...).
+    # Default de desarrollo; hay que fijarlo al dominio real antes de
+    # desplegar de verdad (mismo pendiente ya señalado para cors_origins).
+    frontend_base_url: str = "http://localhost:5173"
+    password_reset_token_expire_minutes: int = 30
+
     model_config = SettingsConfigDict(env_file=".env")
 
     @property

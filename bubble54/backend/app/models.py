@@ -291,7 +291,60 @@ class Call(Base):
     # ChatContext.to_dict() del lado del worker — se guarda como texto plano,
     # sin parsear ni interpretar nada de su lado del backend.
     transcript = Column(Text, nullable=True)
-
     created_at = Column(DateTime, default=utcnow)
 
     business = relationship("Business", back_populates="calls")
+
+
+class PasswordResetToken(Base):
+    """Un pedido real de "olvidé mi contraseña" -- nunca se guarda el token
+    en texto plano (mismo criterio que una contraseña: si la base se filtra,
+    un token ya usado o vencido no debe servir para nada, y uno vigente
+    tampoco debería quedar legible). `token_hash` es sha256 del token real
+    que se manda por correo -- no bcrypt: acá no hace falta el costo
+    computacional de bcrypt (pensado para resistir fuerza bruta sobre
+    contraseñas humanas cortas), el token ya es aleatorio y largo por
+    diseño (`secrets.token_urlsafe`), sha256 alcanza y es instantáneo."""
+
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True)
+    role = Column(String(10), nullable=False)  # "agency" | "business"
+    user_id = Column(Integer, nullable=False, index=True)
+    token_hash = Column(String(64), nullable=False, unique=True, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    used_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+
+
+class Customer(Base):
+    """CRM real por negocio -- a pedido explícito de la usuaria (2026-09-21).
+    Nace siempre desde una llamada real (`upsert_customer_from_call`,
+    llamado por el worker al reportar cada llamada vía POST /worker/calls) y
+    después se enriquece a mano (nombre, email, notas, etapa) -- nunca se
+    inventa un dato que no vino ni de una llamada real ni de que alguien lo
+    haya escrito. Clave real: (business_id, phone) -- mismo patrón de upsert
+    ya confirmado seguro en el CRM real de G54 (ver CLAUDE.md, ítem 323)."""
+
+    __tablename__ = "customers"
+
+    id = Column(Integer, primary_key=True)
+    business_id = Column(Integer, ForeignKey("businesses.id"), nullable=False, index=True)
+
+    phone = Column(String(30), nullable=False, index=True)
+    name = Column(String(150), default="")
+    email = Column(String(255), default="")
+    # new | contacted | customer | lost -- simple a propósito, ver
+    # validators.CUSTOMER_STAGES. Un pipeline tipo kanban con más de estas 4
+    # etapas es una función más grande, deliberadamente no construida hoy.
+    stage = Column(String(20), default="new")
+    tags = Column(Text, default="")  # texto libre separado por coma, mismo criterio que Business.products_services
+    notes = Column(Text, default="")
+
+    calls_count = Column(Integer, default=0)
+    last_call_at = Column(DateTime, nullable=True)
+
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    business = relationship("Business")

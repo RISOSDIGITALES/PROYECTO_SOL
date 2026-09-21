@@ -4,6 +4,7 @@ import Icon from "../components/Icon";
 import BotConfigForm from "../components/BotConfigForm";
 import BusinessProfileForm from "../components/BusinessProfileForm";
 import CallsList from "../components/CallsList";
+import CustomersList from "../components/CustomersList";
 import ChangePasswordForm from "../components/ChangePasswordForm";
 import PoppableBubbles from "../components/PoppableBubbles";
 import PrefsToggles from "../components/PrefsToggles";
@@ -64,6 +65,8 @@ export default function BusinessDashboard() {
   const [tab, setTab] = useState("calls");
   const [calls, setCalls] = useState(null);
   const [callsError, setCallsError] = useState("");
+  const [customers, setCustomers] = useState(null);
+  const [customersError, setCustomersError] = useState("");
 
   useEffect(() => {
     if (!session) return;
@@ -72,7 +75,13 @@ export default function BusinessDashboard() {
     api.getCatalog().then(setCatalog).catch((e) => setError(e.message));
     api.listCalls(session.access_token).then(setCalls).catch((e) => setCallsError(e.message));
     api.getMyProfile(session.access_token).then(setProfile).catch((e) => setProfileError(e.message));
+    api.listMyCustomers(session.access_token).then(setCustomers).catch((e) => setCustomersError(e.message));
   }, [session]);
+
+  async function handleUpdateCustomer(customerId, patch) {
+    const updated = await api.updateMyCustomer(session.access_token, customerId, patch);
+    setCustomers((prev) => prev.map((c) => (c.id === customerId ? updated : c)));
+  }
 
   function handleChange(patch) {
     setConfig((prev) => ({ ...prev, ...patch }));
@@ -184,6 +193,15 @@ export default function BusinessDashboard() {
             <span className="bubble54-navlabel">Llamadas</span>
           </button>
 
+          <button type="button" className="bubble54-navcol" onClick={(e) => goTo("clientes", e)}>
+            <span className="bubble54-navfloat" style={{ animationDelay: "-1.4s" }}>
+              <span className={`bubble54-navbubble hueD ${tab === "clientes" ? "active" : ""}`}>
+                <Icon name="users" className="icon" />
+              </span>
+            </span>
+            <span className="bubble54-navlabel">Clientes</span>
+          </button>
+
           <button type="button" className="bubble54-navcol" onClick={(e) => goTo("negocio", e)}>
             <span className="bubble54-navfloat" style={{ animationDelay: "-2.4s" }}>
               <span className={`bubble54-navbubble hueE ${tab === "negocio" ? "active" : ""}`}>
@@ -245,7 +263,23 @@ export default function BusinessDashboard() {
               </div>
             )}
 
-            {tab === "calls" && <CallsList calls={calls} loading={calls === null && !callsError} error={callsError} />}
+            {tab === "calls" && (
+              <CallsList
+                calls={calls}
+                loading={calls === null && !callsError}
+                error={callsError}
+                onExport={() => api.exportMyCalls(session.access_token)}
+              />
+            )}
+
+            {tab === "clientes" && (
+              <CustomersList
+                customers={customers}
+                loading={customers === null && !customersError}
+                error={customersError}
+                onUpdate={handleUpdateCustomer}
+              />
+            )}
 
             {tab === "negocio" && (
               profile ? (

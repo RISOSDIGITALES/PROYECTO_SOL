@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from .. import documents
 from ..database import get_db
 from ..deps import get_current_business_user
+from ..exporting import calls_to_csv
 from ..schemas import (
     BusinessMeResponse, BotConfigOutClient, BotConfigUpdateClient,
-    BusinessProfileOut, BusinessProfileUpdate, CallOut, DocumentSuggestionAction,
+    BusinessProfileOut, BusinessProfileUpdate, CallOut, CustomerOut, CustomerUpdate,
+    DocumentSuggestionAction,
     PasswordChange, PhoneActivateIn, PhoneVerifyStartIn, PhoneVerifyCheckIn, PhoneVerifyCheckOut,
 )
 from ..security import hash_password, verify_password
@@ -152,6 +155,77 @@ def list_calls(
         .limit(100)
         .all()
     )
+
+
+@router.get("/calls/export")
+def export_calls(
+    db: Session = Depends(get_db),
+    user: models.BusinessUser = Depends(get_current_business_user),
+):
+    """CSV real, solo para quien ya está logueado como este negocio -- nunca
+    un link público (decisión explícita del 2026-09-21, mismo criterio de
+    privacidad que G54 ya aplicó una vez: transcripciones y números reales
+    de clientes no deberían quedar accesibles a cualquiera con un link)."""
+    calls = (
+        db.query(models.Call)
+        .filter(models.Call.business_id == user.business_id)
+        .order_by(models.Call.started_at.desc())
+        .all()
+    )
+    csv_text = calls_to_csv(calls)
+    return StreamingResponse(
+        iter([csv_text]),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="llamadas.csv"'},
+    )
+
+
+@router.get("/customers", response_model=list[CustomerOut])
+def list_my_customers(
+    db: Session = Depends(get_db),
+    user: models.BusinessUser = Depends(get_current_business_user),
+):
+    return (
+        db.query(models.Customer)
+        .filter(models.Customer.business_id == user.business_id)
+        .order_by(models.Customer.last_call_at.desc())
+        .all()
+    )
+
+
+def _get_my_customer(db: Session, user: models.BusinessUser, customer_id: int) -> models.Customer:
+    customer = (
+        db.query(models.Customer)
+        .filter(models.Customer.id == customer_id, models.Customer.business_id == user.business_id)
+        .first()
+    )
+    if not customer:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Cliente no encontrado")
+    return customer
+
+
+@router.get("/customers/{customer_id}", response_model=CustomerOut)
+def get_my_customer(
+    customer_id: int,
+    db: Session = Depends(get_db),
+    user: models.BusinessUser = Depends(get_current_business_user),
+):
+    return _get_my_customer(db, user, customer_id)
+
+
+@router.patch("/customers/{customer_id}", response_model=CustomerOut)
+def update_my_customer(
+    customer_id: int,
+    body: CustomerUpdate,
+    db: Session = Depends(get_db),
+    user: models.BusinessUser = Depends(get_current_business_user),
+):
+    customer = _get_my_customer(db, user, customer_id)
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(customer, field, value)
+    db.commit()
+    db.refresh(customer)
+    return customer
 
 
 @router.get("/profile", response_model=BusinessProfileOut)

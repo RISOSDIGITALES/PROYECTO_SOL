@@ -354,6 +354,36 @@ def test_lista_de_llamadas_reales(client, seed, business_token, db_session):
     assert data[0]["duration_seconds"] == 180
 
 
+def test_exportar_mis_llamadas_da_un_csv_real(client, seed, business_token, db_session):
+    from app import models
+
+    db_session.add(models.Call(
+        business_id=seed["business"].id,
+        started_at=datetime.datetime(2026, 9, 1, 10, 0, 0),
+        ended_at=datetime.datetime(2026, 9, 1, 10, 3, 0),
+        duration_seconds=180,
+        caller_number="+17865551234",
+        outcome="completed",
+        transcript="Hola, gracias por llamar",
+    ))
+    db_session.commit()
+
+    res = client.get("/business/calls/export", headers=auth(business_token))
+    assert res.status_code == 200
+    assert res.headers["content-type"].startswith("text/csv")
+    assert 'filename="llamadas.csv"' in res.headers["content-disposition"]
+    body = res.text
+    assert "+17865551234" in body
+    assert "Hola, gracias por llamar" in body
+
+
+def test_exportar_llamadas_sin_ninguna_da_csv_solo_con_encabezado(client, seed, business_token):
+    res = client.get("/business/calls/export", headers=auth(business_token))
+    assert res.status_code == 200
+    lines = [l for l in res.text.strip().splitlines() if l]
+    assert len(lines) == 1  # solo el encabezado
+
+
 def test_un_negocio_nunca_ve_las_llamadas_de_otro(client, seed, business_token, db_session):
     from app import models
     from app.security import hash_password

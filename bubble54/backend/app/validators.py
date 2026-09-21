@@ -34,6 +34,9 @@ VALID_FIRST_MESSAGE_MODES = {opt["id"] for opt in catalog_data.FIRST_MESSAGE_MOD
 VALID_TELEPHONY_PROVIDERS = {opt["id"] for opt in catalog_data.TELEPHONY_PROVIDERS}
 VALID_RUNTIME_TARGETS = {opt["id"] for opt in catalog_data.RUNTIME_TARGETS}
 
+# CRM real por negocio (2026-09-21) -- simple a propósito, ver models.Customer.
+CUSTOMER_STAGES = {"new", "contacted", "customer", "lost"}
+
 
 def bot_config_as_dict(config) -> dict:
     return {field: getattr(config, field) for field in BOT_CONFIG_FIELDS}

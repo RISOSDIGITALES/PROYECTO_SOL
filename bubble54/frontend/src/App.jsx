@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./AuthContext";
 import LoginPage from "./pages/LoginPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import AgencyLayout from "./pages/AgencyLayout";
 import AgencyHomePage from "./pages/AgencyHomePage";
 import AgencyProfilePage from "./pages/AgencyProfilePage";
@@ -22,6 +24,10 @@ export default function App() {
           <Route path="/" element={<Navigate to="/agencia/login" replace />} />
           <Route path="/agencia/login" element={<LoginPage role="agency" />} />
           <Route path="/negocio/login" element={<LoginPage role="business" />} />
+          <Route path="/agencia/olvide" element={<ForgotPasswordPage role="agency" />} />
+          <Route path="/negocio/olvide" element={<ForgotPasswordPage role="business" />} />
+          <Route path="/agencia/reset-password" element={<ResetPasswordPage role="agency" />} />
+          <Route path="/negocio/reset-password" element={<ResetPasswordPage role="business" />} />
           <Route element={<AgencyLayout />}>
             <Route path="/agencia" element={<AgencyHomePage />} />
             <Route path="/agencia/perfil" element={<AgencyProfilePage />} />

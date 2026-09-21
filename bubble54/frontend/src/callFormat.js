@@ -45,3 +45,20 @@ export const OUTCOME_HUE = {
   max_duration_reached: "amber",
   error: "red",
 };
+
+// CRM real por negocio (2026-09-21) -- simple a propósito, ver
+// app/validators.py::CUSTOMER_STAGES del backend (misma lista, ahí es la
+// fuente de verdad que valida; acá solo el nombre para mostrar).
+export const CUSTOMER_STAGE_LABEL = {
+  new: "Nuevo",
+  contacted: "Contactado",
+  customer: "Cliente",
+  lost: "Perdido",
+};
+
+export const CUSTOMER_STAGE_HUE = {
+  new: "",
+  contacted: "amber",
+  customer: "green",
+  lost: "red",
+};

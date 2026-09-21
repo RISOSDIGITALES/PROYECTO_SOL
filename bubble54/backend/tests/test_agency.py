@@ -727,6 +727,108 @@ def test_registros_no_incluye_llamadas_de_otra_agencia(client, seed, agency_toke
     assert res.json() == []
 
 
+def test_exportar_registros_da_un_csv_con_nombre_de_negocio(client, seed, agency_token, db_session):
+    from app import models
+
+    business2 = models.Business(agency_id=seed["agency"].id, name="Negocio 2")
+    db_session.add(business2)
+    db_session.flush()
+    db_session.add(models.Call(
+        business_id=seed["business"].id, started_at=datetime.datetime(2026, 9, 1, 10, 0, 0),
+        ended_at=datetime.datetime(2026, 9, 1, 10, 1, 0), duration_seconds=60,
+        caller_number="+17865551111", outcome="completed",
+    ))
+    db_session.add(models.Call(
+        business_id=business2.id, started_at=datetime.datetime(2026, 9, 1, 11, 0, 0),
+        ended_at=datetime.datetime(2026, 9, 1, 11, 2, 0), duration_seconds=120,
+        caller_number="+17865552222", outcome="transferred",
+    ))
+    db_session.commit()
+
+    res = client.get("/agency/calls/export", headers=auth(agency_token))
+    assert res.status_code == 200
+    assert res.headers["content-type"].startswith("text/csv")
+    body = res.text
+    assert "Negocio de Prueba" in body
+    assert "Negocio 2" in body
+    assert "+17865551111" in body
+    assert "+17865552222" in body
+
+
+def test_exportar_registros_filtra_por_business_id(client, seed, agency_token, db_session):
+    from app import models
+
+    business2 = models.Business(agency_id=seed["agency"].id, name="Negocio 2")
+    db_session.add(business2)
+    db_session.flush()
+    db_session.add(models.Call(
+        business_id=seed["business"].id, started_at=datetime.datetime(2026, 9, 1, 10, 0, 0),
+        ended_at=datetime.datetime(2026, 9, 1, 10, 1, 0), duration_seconds=60, outcome="completed",
+    ))
+    db_session.add(models.Call(
+        business_id=business2.id, started_at=datetime.datetime(2026, 9, 1, 11, 0, 0),
+        ended_at=datetime.datetime(2026, 9, 1, 11, 2, 0), duration_seconds=120, outcome="completed",
+    ))
+    db_session.commit()
+
+    res = client.get(f"/agency/calls/export?business_id={business2.id}", headers=auth(agency_token))
+    assert res.status_code == 200
+    lines = [l for l in res.text.strip().splitlines() if l]
+    assert len(lines) == 2  # encabezado + 1 sola llamada
+    assert "Negocio 2" in res.text
+    assert "Negocio de Prueba" not in res.text
+
+
+def test_exportar_registros_no_incluye_otra_agencia(client, seed, agency_token, db_session):
+    from app import models
+
+    otra_agencia = models.Agency(name="Otra Agencia")
+    db_session.add(otra_agencia)
+    db_session.flush()
+    negocio_ajeno = models.Business(agency_id=otra_agencia.id, name="Negocio Ajeno")
+    db_session.add(negocio_ajeno)
+    db_session.flush()
+    db_session.add(models.Call(
+        business_id=negocio_ajeno.id, started_at=datetime.datetime(2026, 9, 1, 10, 0, 0),
+        ended_at=datetime.datetime(2026, 9, 1, 10, 1, 0), duration_seconds=60, outcome="completed",
+    ))
+    db_session.commit()
+
+    res = client.get("/agency/calls/export", headers=auth(agency_token))
+    lines = [l for l in res.text.strip().splitlines() if l]
+    assert len(lines) == 1  # solo el encabezado
+    assert "Negocio Ajeno" not in res.text
+
+
+def test_exportar_llamadas_de_un_negocio_propio(client, seed, agency_token, db_session):
+    from app import models
+
+    db_session.add(models.Call(
+        business_id=seed["business"].id, started_at=datetime.datetime(2026, 9, 1, 10, 0, 0),
+        ended_at=datetime.datetime(2026, 9, 1, 10, 1, 0), duration_seconds=60,
+        caller_number="+17865559999", outcome="completed",
+    ))
+    db_session.commit()
+
+    res = client.get(f"/agency/businesses/{seed['business'].id}/calls/export", headers=auth(agency_token))
+    assert res.status_code == 200
+    assert "+17865559999" in res.text
+
+
+def test_exportar_llamadas_de_un_negocio_ajeno_da_404(client, seed, agency_token, db_session):
+    from app import models
+
+    otra_agencia = models.Agency(name="Otra Agencia 2")
+    db_session.add(otra_agencia)
+    db_session.flush()
+    negocio_ajeno = models.Business(agency_id=otra_agencia.id, name="Negocio Ajeno 2")
+    db_session.add(negocio_ajeno)
+    db_session.commit()
+
+    res = client.get(f"/agency/businesses/{negocio_ajeno.id}/calls/export", headers=auth(agency_token))
+    assert res.status_code == 404
+
+
 def test_ver_el_detalle_de_una_llamada_real(client, seed, agency_token, db_session):
     from app import models
 

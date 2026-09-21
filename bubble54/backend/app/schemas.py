@@ -110,6 +110,29 @@ class PasswordChange(BaseModel):
         return v
 
 
+class PasswordForgotRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordForgotResponse(BaseModel):
+    # Siempre el mismo mensaje exista o no ese email -- nunca revela si una
+    # cuenta real está registrada con ese correo.
+    ok: bool = True
+    message: str = "Si ese correo tiene una cuenta, te llegó un enlace para restablecer tu contraseña."
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def min_length(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("la contraseña nueva debe tener al menos 8 caracteres")
+        return v
+
+
 class BotConfigOut(BaseModel):
     business_id: int
     telephony_provider: str
@@ -487,6 +510,45 @@ class AgencyCallOut(CallOut):
 
     business_id: int
     business_name: str
+
+
+class CustomerOut(BaseModel):
+    id: int
+    business_id: int
+    phone: str
+    name: str
+    email: str
+    stage: str
+    tags: str
+    notes: str
+    calls_count: int
+    last_call_at: datetime.datetime | None
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CustomerUpdate(BaseModel):
+    """Todo opcional -- un PATCH real, nunca hace falta mandar el objeto
+    completo para cambiar solo la etapa o agregar una nota. `phone` y los
+    contadores (`calls_count`/`last_call_at`) no están acá a propósito: solo
+    los escribe el upsert real desde una llamada, nunca un PATCH a mano."""
+
+    name: str | None = None
+    email: str | None = None
+    stage: str | None = None
+    tags: str | None = None
+    notes: str | None = None
+
+    @field_validator("stage")
+    @classmethod
+    def stage_valida(cls, v: str | None) -> str | None:
+        from .validators import CUSTOMER_STAGES
+
+        if v is not None and v not in CUSTOMER_STAGES:
+            raise ValueError(f"stage inválido: '{v}' (válidos: {', '.join(sorted(CUSTOMER_STAGES))})")
+        return v
 
 
 class WorkerBotConfigOut(BotConfigOut):

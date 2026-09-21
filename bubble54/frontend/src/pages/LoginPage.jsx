@@ -105,6 +105,13 @@ export default function LoginPage({ role }) {
           </button>
 
           <Link
+            to={isAgency ? "/agencia/olvide" : "/negocio/olvide"}
+            style={{ fontSize: 12.5, color: "var(--ink-soft)", textAlign: "center", textDecoration: "none" }}
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
+
+          <Link
             to={isAgency ? "/negocio/login" : "/agencia/login"}
             style={{ fontSize: 12.5, color: "var(--ink-soft)", textAlign: "center", textDecoration: "none" }}
           >

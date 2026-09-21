@@ -127,11 +127,51 @@ function requestUploadWithProgress(path, { file, token, onProgress }) {
   });
 }
 
+// Descarga real de un archivo autenticado (CSV de llamadas, 2026-09-21) --
+// no se puede usar un <a href> plano porque el token va en el header
+// Authorization, no en la URL (un token en la URL queda en el historial del
+// navegador y en logs del servidor). Se pide con fetch, se arma un blob, y
+// se dispara la descarga con un <a> temporal.
+async function requestDownload(path, { token, filenameFallback }) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  bounceToLoginIfSessionInvalid(res.status, token);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    resolveResult(data, false); // siempre tira -- solo nos interesa el mensaje real de error
+  }
+  const disposition = res.headers.get("Content-Disposition") || "";
+  const match = disposition.match(/filename="([^"]+)"/);
+  const filename = match ? match[1] : filenameFallback;
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export const api = {
   agencyLogin: (email, password) =>
     request("/auth/agency/login", { method: "POST", body: { email, password } }),
   businessLogin: (email, password) =>
     request("/auth/business/login", { method: "POST", body: { email, password } }),
+  // Recuperación de contraseña por correo (2026-09-21) -- sin token, no
+  // llevan Authorization: son las 2 únicas llamadas de auth que ocurren
+  // antes de tener ninguna sesión real.
+  agencyForgotPassword: (email) =>
+    request("/auth/agency/password/forgot", { method: "POST", body: { email } }),
+  businessForgotPassword: (email) =>
+    request("/auth/business/password/forgot", { method: "POST", body: { email } }),
+  agencyResetPassword: (token, newPassword) =>
+    request("/auth/agency/password/reset", { method: "POST", body: { token, new_password: newPassword } }),
+  businessResetPassword: (token, newPassword) =>
+    request("/auth/business/password/reset", { method: "POST", body: { token, new_password: newPassword } }),
   agencyMe: (token) => request("/agency/me", { token }),
   businessMe: (token) => request("/business/me", { token }),
   changeAgencyPassword: (token, body) => request("/agency/me/password", { method: "PUT", body, token }),
@@ -178,6 +218,14 @@ export const api = {
     request("/business/phone/verify/check", { method: "POST", body: { phone_number: phoneNumber, code }, token }),
   listCalls: (token) => request("/business/calls", { token }),
   listBusinessCalls: (token, id) => request(`/agency/businesses/${id}/calls`, { token }),
+  exportMyCalls: (token) => requestDownload("/business/calls/export", { token, filenameFallback: "llamadas.csv" }),
+  exportBusinessCalls: (token, id) =>
+    requestDownload(`/agency/businesses/${id}/calls/export`, { token, filenameFallback: "llamadas.csv" }),
+  exportAgencyCalls: (token, businessId) =>
+    requestDownload(businessId ? `/agency/calls/export?business_id=${businessId}` : "/agency/calls/export", {
+      token,
+      filenameFallback: "registros.csv",
+    }),
   getCatalog: () => request("/catalog"),
 
   // --- Perfil de la agencia ---
@@ -217,4 +265,13 @@ export const api = {
   listAgencyCalls: (token, businessId) =>
     request(businessId ? `/agency/calls?business_id=${businessId}` : "/agency/calls", { token }),
   getAgencyCall: (token, callId) => request(`/agency/calls/${callId}`, { token }),
+
+  // --- CRM real por negocio (2026-09-21) -- todo cliente nace de una
+  // llamada real (ver worker/agent.py), acá solo se lee y se enriquece a
+  // mano (nombre, notas, etapa). ---
+  listMyCustomers: (token) => request("/business/customers", { token }),
+  updateMyCustomer: (token, id, body) => request(`/business/customers/${id}`, { method: "PATCH", body, token }),
+  listBusinessCustomers: (token, id) => request(`/agency/businesses/${id}/customers`, { token }),
+  updateBusinessCustomer: (token, businessId, customerId, body) =>
+    request(`/agency/businesses/${businessId}/customers/${customerId}`, { method: "PATCH", body, token }),
 };

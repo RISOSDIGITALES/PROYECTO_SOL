@@ -8,7 +8,21 @@ import EmptyCallsState from "./EmptyCallsState";
 // cualquier negocio suyo) — mismos datos reales, misma tabla, sin ninguna
 // llamada de ejemplo inventada: si `calls` viene vacío, es porque
 // todavía no hubo ninguna llamada real, y así se dice.
-export default function CallsList({ calls, loading, error }) {
+// `onExport`, opcional -- descarga real de CSV (ver api.js, 2026-09-21).
+// Nunca un link público: solo aparece cuando quien mira esto ya está
+// logueado, y usa el mismo token de esa sesión.
+export default function CallsList({ calls, loading, error, onExport }) {
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      await onExport();
+    } finally {
+      setExporting(false);
+    }
+  }
+
   if (loading) {
     return <div style={{ color: "var(--ink-soft)", fontSize: 13.5 }}>Cargando llamadas…</div>;
   }
@@ -26,6 +40,13 @@ export default function CallsList({ calls, loading, error }) {
 
   return (
     <div style={{ display: "grid", gap: 10 }}>
+      {onExport && (
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <button type="button" onClick={handleExport} disabled={exporting} className="bubble54-btn" style={{ fontSize: 12.5, padding: "7px 14px" }}>
+            {exporting ? "Descargando…" : "⬇ Descargar CSV"}
+          </button>
+        </div>
+      )}
       {calls.map((call) => (
         <CallRow key={call.id} call={call} />
       ))}

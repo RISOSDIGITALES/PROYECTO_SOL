@@ -67,6 +67,16 @@ const PATHS = {
       <path d="M4.5 20a7.5 7.5 0 0 1 15 0" />
     </>
   ),
+  // Clientes reales del CRM (2026-09-21) -- dos personas, distinto del
+  // `user` de "Cuenta" (una sola persona, la cuenta propia logueada).
+  users: (
+    <>
+      <circle cx="9" cy="8.5" r="3" />
+      <path d="M3.5 19.5a5.5 5.5 0 0 1 11 0" />
+      <path d="M15 8.2a2.6 2.6 0 1 1 0 5.2" />
+      <path d="M15.5 14.3c2.2.4 3.9 1.9 4 5.2" />
+    </>
+  ),
   // Logo/imagen — usado en la dropzone de BusinessProfileForm, no en el
   // menú, pero mismo criterio: un ícono de trazo real en vez de un emoji
   // (🖼️) que no responde a color.

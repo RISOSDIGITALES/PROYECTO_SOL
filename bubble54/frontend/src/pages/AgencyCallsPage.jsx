@@ -15,6 +15,18 @@ export default function AgencyCallsPage() {
   const [calls, setCalls] = useState(null);
   const [businessFilter, setBusinessFilter] = useState("");
   const [error, setError] = useState("");
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      await api.exportAgencyCalls(session.access_token, businessFilter || undefined);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   useEffect(() => {
     if (!session) return;
@@ -40,19 +52,26 @@ export default function AgencyCallsPage() {
               El historial real de llamadas de todos tus negocios, en un solo lugar.
             </p>
           </div>
-          {businesses && businesses.length > 1 && (
-            <select
-              value={businessFilter}
-              onChange={(e) => setBusinessFilter(e.target.value)}
-              style={filterStyle}
-              aria-label="Filtrar por negocio"
-            >
-              <option value="">Todos los negocios</option>
-              {businesses.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-          )}
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            {businesses && businesses.length > 1 && (
+              <select
+                value={businessFilter}
+                onChange={(e) => setBusinessFilter(e.target.value)}
+                style={filterStyle}
+                aria-label="Filtrar por negocio"
+              >
+                <option value="">Todos los negocios</option>
+                {businesses.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            )}
+            {calls && calls.length > 0 && (
+              <button type="button" onClick={handleExport} disabled={exporting} className="bubble54-btn" style={{ whiteSpace: "nowrap" }}>
+                {exporting ? "Descargando…" : "⬇ Descargar CSV"}
+              </button>
+            )}
+          </div>
         </div>
 
         {error && <div style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</div>}

@@ -11,7 +11,7 @@ a mano, para que ese historial sea siempre lo que realmente pasó.
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from .. import documents
+from .. import crm, documents
 from ..database import get_db
 from ..deps import require_worker_secret
 from ..schemas import CallOut, CallReport, DocumentSearchOut, DocumentSearchRequest, WorkerBotConfigOut
@@ -96,6 +96,8 @@ def report_call(body: CallReport, db: Session = Depends(get_db)):
         transcript=body.transcript,
     )
     db.add(call)
+    db.flush()
+    crm.upsert_customer_from_call(db, call)
     db.commit()
     db.refresh(call)
     return call
