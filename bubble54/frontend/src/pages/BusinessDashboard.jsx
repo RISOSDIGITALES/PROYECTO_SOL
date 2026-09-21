@@ -241,7 +241,7 @@ export default function BusinessDashboard() {
       </nav>
 
       <div style={contentColStyle}>
-        <main style={mainScrollStyle}>
+        <main className="bubble54-main-scroll" style={mainScrollStyle}>
           {/* Identidad, llamadas y cuenta son contenido angosto por
               naturaleza (una tarjeta con 2 datos, filas de lista) — se
               quedan en una columna de lectura cómoda. La config del bot en

@@ -170,7 +170,7 @@ export default function AgencyShell({ onLogout, children, agencyName = "", agenc
             contenido nunca quede tapado — acá ni hace falta el truco: al
             ser la barra un hermano de ancho fijo en una fila flex, nunca
             puede superponerse al contenido, se lo cede automáticamente. */}
-        <main style={mainScrollStyle}>{children}</main>
+        <main className="bubble54-main-scroll" style={mainScrollStyle}>{children}</main>
       </div>
       </div>
     </div>

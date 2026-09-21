@@ -66,9 +66,10 @@ function CallRow({ call }) {
         style={{
           width: "100%",
           display: "flex",
+          flexWrap: "wrap",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: 12,
+          gap: "4px 12px",
           padding: "12px 16px",
           background: "none",
           border: "none",
@@ -82,7 +83,7 @@ function CallRow({ call }) {
             <div style={{ fontSize: 11.5, color: "var(--ink-softer)" }}>{call.caller_number || "Número no disponible"}</div>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
           <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{formatDuration(call.duration_seconds)}</span>
           <OutcomeBadge outcome={call.outcome} />
           {messages.length > 0 && (

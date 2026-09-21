@@ -123,7 +123,7 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, onAct
           pantallas anchas (se acomodaban tantas como entraran por ancho, no
           por cuántas hay), dejando "Voz del agente" sola y feo en su propia
           fila. Acá siempre son 2 y 2. */}
-      <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+      <div className="bubble54-form-row-2" style={{ gridColumn: "1 / -1", display: "grid", gap: 20 }}>
         <Section title="Estado del agente">
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <button
@@ -541,7 +541,7 @@ function AdvancedSection({ children }) {
 }
 
 function Row({ children }) {
-  return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>{children}</div>;
+  return <div className="bubble54-form-row-2" style={{ display: "grid", gap: 14 }}>{children}</div>;
 }
 
 function Field({ label, children }) {

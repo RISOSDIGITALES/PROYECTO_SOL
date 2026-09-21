@@ -762,3 +762,111 @@ html[data-bubble54-motion="off"] .bubble54-amb.bursting::before,
 html[data-bubble54-motion="off"] .bubble54-amb.bursting::after { animation: none; }
 html[data-bubble54-motion="off"] .bubble54-burstkeep::before { animation: none; }
 html[data-bubble54-motion="off"] .bubble54-shard { animation: none; opacity: 0; }
+
+/* Par de campos en 2 columnas fijas de BotConfigForm.jsx (las 4 tarjetas de
+   arriba + cada fila dentro de "Control de la llamada") -- el ancho de
+   columna vive acá, no como `style` inline, para que la media query de
+   celular de más abajo pueda pisarlo de verdad: un `style={{
+   gridTemplateColumns }}` inline siempre le gana a cualquier regla de un
+   archivo CSS por más específica o más tardía que sea (fue el primer
+   intento de este mismo fix, no funcionaba por esto exacto). */
+.bubble54-form-row-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* =====================================================================
+   Celular real (2026-09-21) -- hallazgo de la auditoría de facilidad de
+   uso: probado a 375px (un iPhone común), la barra de navegación nunca
+   colapsaba -- se quedaba como columna fija de 176px con burbujas
+   grandes, ocupando casi la mitad del celular para siempre, y el reloj
+   de TopBrandBar (fecha + hora + huso, un string largo con
+   white-space:nowrap, sin ninguna elipsis) no entraba en su columna del
+   grid y quedaba cortado a la mitad por el overflow:hidden del
+   contenedor. Ningún breakpoint existía en todo este archivo hasta hoy.
+
+   Patrón elegido: la misma barra de burbujas, pero como barra inferior
+   fija (bottom nav) en vez de columna lateral -- el lenguaje visual no
+   cambia, sólo la orientación; es el patrón esperado en un celular real
+   y ya hay exactamente 5-7 ítems por barra, el tamaño justo para eso.
+   ===================================================================== */
+@media (max-width: 640px) {
+  /* El reloj es redundante con el del propio celular -- en vez de seguir
+     recortándolo a la mitad, se oculta entero y se le da ese espacio al
+     nombre real del cliente (agencia o negocio), que sí es información
+     real y propia de esta pantalla. */
+  .bubble54-clock {
+    display: none;
+  }
+
+  .bubble54-sidebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    padding: 6px 4px;
+    z-index: 50;
+    /* Ahora apoyada contra el borde de ABAJO de la pantalla, no el de la
+       derecha -- la sombra tiene que salir hacia arriba, no a un costado. */
+    box-shadow: 0 -6px 20px rgba(19,27,46,0.28);
+  }
+
+  .bubble54-sidebar-main {
+    flex-direction: row;
+    width: 100%;
+    justify-content: space-around;
+    align-items: center;
+    gap: 2px;
+    padding-top: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .bubble54-navcol {
+    gap: 3px;
+    flex-shrink: 0;
+  }
+
+  /* Un solo tamaño chico para las 7 burbujas -- en la barra lateral cada
+     hue tiene su propio --size (56-62px) para variar el ritmo visual de
+     una columna vertical larga; en una fila horizontal angosta esa misma
+     variedad solo hace que salten de alto entre sí. Hay que pisar cada
+     selector de hue con su propia clase (misma especificidad que la
+     regla original) porque una sola `.bubble54-navbubble { --size }` acá
+     perdería contra `.bubble54-navbubble.hueB` de más arriba, media
+     query o no -- los media queries no le suman especificidad a nada. */
+  .bubble54-navbubble,
+  .bubble54-navbubble.hueB,
+  .bubble54-navbubble.hueC,
+  .bubble54-navbubble.hueD,
+  .bubble54-navbubble.hueE,
+  .bubble54-navbubble.hueF,
+  .bubble54-navbubble.exit {
+    --size: 40px;
+  }
+
+  .bubble54-navlabel {
+    font-size: 9.5px;
+    padding: 2px 6px;
+  }
+
+  /* Espacio real al fondo del contenido para que la barra fija de abajo
+     nunca tape la última fila -- ver className="bubble54-main-scroll"
+     agregado a <main> en AgencyShell.jsx/BusinessDashboard.jsx. */
+  .bubble54-main-scroll {
+    padding-bottom: 84px;
+  }
+
+  /* Encontrado en la misma revisión: BotConfigForm.jsx tiene 2 grids con
+     `gridTemplateColumns: "1fr 1fr"` fijo (las 4 tarjetas de arriba, y
+     cada par de campos dentro de "Control de la llamada") -- a diferencia
+     de los demás grids del formulario (repeat(auto-fit, minmax(...))),
+     estos nunca colapsaban, cortando el campo de la derecha en un celular
+     real. */
+  .bubble54-form-row-2 {
+    grid-template-columns: 1fr;
+  }
+}
