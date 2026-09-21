@@ -1481,6 +1481,15 @@ Pendiente real, no técnico: falta que la usuaria abra la cuenta real de Twilio 
 
 **Pendiente real, menor, encontrado en el camino pero fuera de este punto puntual — no bloqueante:** la fila de "Productos y servicios" (nombre + precio + botón de quitar) sigue algo angosta en celular real, y el texto de ayuda bajo cada ítem de "Primeros pasos" (agencia) se corta un poco en el borde derecho — ninguno de los dos rompe la función, quedan para una pasada de pulido menor.
 
+364. **Bubble 54 — análisis real de facilidad de uso para el cliente (negocio), a pedido explícito de la usuaria, navegado en vivo en los 2 roles y en celular real antes de escribir nada — lista de pendientes guardada acá para retomar** (2026-09-21, misma sesión): el punto 1 (menú que no colapsaba en celular) ya quedó resuelto en el ítem 363. Quedan pendientes, en el orden en que se armó la lista con la usuaria:
+
+2. **Pantalla de bienvenida para el negocio**, espejo de la que ya tiene la agencia ("Primeros pasos") — hoy el negocio entra directo a "Llamadas" (vacío si es nuevo) sin ninguna guía de qué hacer primero (perfil completo / bot configurado / número activo).
+3. **Indicador real de "perfil completo"** (%) + un aviso específico si falta la zona horaria, porque afecta de verdad cómo se interpreta el horario y cómo se muestra la hora de las llamadas — confirmado en vivo que nuestro propio cliente piloto (Crating Express) tiene 6 campos del perfil sin cargar (dirección, ciudad, zona horaria, sitio web, rubro, propuesta de valor) sin que nada se lo avise.
+4. **Tooltips o texto de ayuda en los campos técnicos de Configuración** — "Proveedor: Groq", "Llama 3.3 70B Versatile", "Corte por silencio (segundos)" se le muestran al dueño de un negocio real sin ninguna explicación de qué significan ni cómo afectan al bot.
+5. **Ocultar o marcar "próximamente" el toggle de "Detectar buzón de voz"** — el propio código (`worker/agent.py`) documenta que no tiene ninguna lógica real implementada todavía, pero se ve en el panel idéntico a cualquier otra opción que sí funciona.
+6. **Plantillas o ejemplos de prompt del sistema** según el rubro — hoy es una caja de texto en blanco (con lo que ya cargó Content AI como único punto de partida), pese a ser el campo con más impacto real en cómo suena el bot.
+7. **Dejar escuchar la voz antes de elegirla** — depende de tener una cuenta real de Cartesia conectada (hoy "son solo etiquetas", según el propio texto del panel); bloqueado hasta entonces, no es un pendiente de código nuestro.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
