@@ -3,12 +3,12 @@
   "name": "CE WhatsApp Engine — Marco",
   "description": null,
   "active": true,
-  "activeVersionId": "e874a060-c76a-4d45-b361-57894d2dbbf1",
+  "activeVersionId": "07594de5-b600-4276-aa9a-af5694ef4c3a",
   "createdAt": "2026-05-26T13:46:38.086Z",
-  "updatedAt": "2026-09-21T16:18:12.472Z",
+  "updatedAt": "2026-09-21T16:48:44.087Z",
   "isArchived": false,
-  "versionId": "e874a060-c76a-4d45-b361-57894d2dbbf1",
-  "versionCounter": 681,
+  "versionId": "07594de5-b600-4276-aa9a-af5694ef4c3a",
+  "versionCounter": 684,
   "sourceWorkflowId": null,
   "triggerCount": 3,
   "nodes": [
@@ -868,7 +868,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('📩 Webhook Respuesta Manual').item.json.body.phone, type: 'text', text: { body: $('📩 Webhook Respuesta Manual').item.json.body.mensaje } }) }}",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('🔍 Normalizar y Validar (Manual WA)').item.json.phoneDigits, type: 'text', text: { body: $('🔍 Normalizar y Validar (Manual WA)').item.json.mensaje } }) }}",
         "options": {}
       }
     },
@@ -899,7 +899,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: $('📩 Webhook Respuesta Manual').item.json.body.phone, canal: 'whatsapp', messages: [{ rol: 'bot', contenido: $('📩 Webhook Respuesta Manual').item.json.body.mensaje }], datos_calificacion: { bot_pausado: true, motivo: 'Vendedor tomó control manual', fecha: new Date().toISOString() } }) }}",
+        "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: $('🔍 Normalizar y Validar (Manual WA)').item.json.phoneE164, canal: 'whatsapp', messages: [{ rol: 'bot', contenido: $('🔍 Normalizar y Validar (Manual WA)').item.json.mensaje }], datos_calificacion: { bot_pausado: true, motivo: 'Vendedor tomó control manual', fecha: new Date().toISOString() } }) }}",
         "options": {
           "retry": {
             "enabled": true,
@@ -921,7 +921,7 @@
       ],
       "parameters": {
         "method": "GET",
-        "url": "=https://apigrowth.mdarthurdigital.com/api/n8n/companies/1/wa/leads?phone={{ encodeURIComponent($('🔧 Extraer Mensaje y Teléfono').item.json.telefono) }}",
+        "url": "=https://apigrowth.mdarthurdigital.com/api/n8n/companies/1/wa/leads?phone={{ encodeURIComponent('+' + $('🔧 Extraer Mensaje y Teléfono').item.json.telefono) }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -1060,7 +1060,7 @@
           "parameters": [
             {
               "name": "phone",
-              "value": "={{ $('📝 Armar Mensaje Final').item.json.telefono }}"
+              "value": "={{ '+' + $('📝 Armar Mensaje Final').item.json.telefono }}"
             }
           ]
         },
@@ -1498,6 +1498,79 @@
         "options": {}
       },
       "notes": "NEW 21-sep: lee modos_respuesta por canal (doc G54, 25-ago #73) -- si whatsapp='solo_avisar', el gate de al lado no deja pasar. onError continua (fail-open)."
+    },
+    {
+      "id": "normalizar-validar-manual-wa",
+      "name": "🔍 Normalizar y Validar (Manual WA)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -688,
+        744
+      ],
+      "parameters": {
+        "jsCode": "const body = $json.body || {};\nconst phoneRaw = (body.phone || '').toString().trim();\nconst mensaje = (body.mensaje || '').toString().trim();\n\n// Normalizar a solo digitos (sin '+', espacios, guiones) -- mismo criterio que\n// usa el resto de Marco al comparar/guardar telefonos.\nconst phoneDigits = phoneRaw.replace(/[^0-9]/g, '');\n\nlet motivo = null;\nif (!phoneDigits) motivo = 'Falta un telefono valido en el body (campo phone).';\nelse if (phoneDigits.length < 8) motivo = 'El telefono tiene muy pocos digitos: \"' + phoneRaw + '\".';\nelse if (!mensaje) motivo = 'Falta el mensaje a enviar (campo mensaje).';\n\nreturn [{ json: {\n  valido: !motivo,\n  motivo,\n  phoneDigits,        // sin '+' -- formato que espera la API real de WhatsApp (Meta)\n  phoneE164: phoneDigits ? ('+' + phoneDigits) : '',  // con '+' -- formato real usado por G54 (ver SW05)\n  mensaje,\n} }];"
+      }
+    },
+    {
+      "id": "gate-datos-validos-manual-wa",
+      "name": "🔀 ¿Datos Válidos? (Manual WA)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -508,
+        744
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-datos-validos",
+              "leftValue": "={{ $json.valido }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "alertar-datos-invalidos-manual-wa",
+      "name": "📧 Alertar Datos Inválidos (Manual WA)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -508,
+        864
+      ],
+      "parameters": {
+        "fromEmail": "Alerta Marco <risosadmi@gmail.com>",
+        "toEmail": "risosadmi@gmail.com",
+        "subject": "⚠️ Respuesta manual de Marco rechazada -- datos inválidos",
+        "html": "={{ 'El webhook de respuesta manual (marco-manual-ce) recibió datos inválidos y no se mandó ningún mensaje.<br><br>Motivo: ' + ($json.motivo || 'desconocido') + '<br>Teléfono recibido: \"' + (($json.body && $json.body.phone) || '') + '\"<br>Mensaje recibido: \"' + (($json.body && $json.body.mensaje) || '') + '\"' }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "smtp": {
+          "id": "iWBBSSe5AWsCMo89",
+          "name": "Gmail SMTP — risosadmi"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "1c2bc657-01e4-46a3-9e8e-2b7e42af92c7"
     }
   ],
   "connections": {
@@ -1824,7 +1897,7 @@
             "index": 0
           },
           {
-            "node": "⚙️ Config WA Manual",
+            "node": "🔍 Normalizar y Validar (Manual WA)",
             "type": "main",
             "index": 0
           }
@@ -2094,6 +2167,35 @@
           }
         ]
       ]
+    },
+    "🔍 Normalizar y Validar (Manual WA)": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Datos Válidos? (Manual WA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Datos Válidos? (Manual WA)": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config WA Manual",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📧 Alertar Datos Inválidos (Manual WA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -2114,7 +2216,7 @@
     },
     "global": {
       "seenMessageIds": {
-        "wamid.TEST_AUTO_1790007609": 1790007609535
+        "wamid.TEST_CRMLINK_1790009473": 1790009473139
       }
     }
   },
@@ -2155,7 +2257,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "e874a060-c76a-4d45-b361-57894d2dbbf1",
+    "versionId": "07594de5-b600-4276-aa9a-af5694ef4c3a",
     "workflowId": "zAhV8gEsXD8dCrXq",
     "nodes": [
       {
@@ -3014,7 +3116,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('📩 Webhook Respuesta Manual').item.json.body.phone, type: 'text', text: { body: $('📩 Webhook Respuesta Manual').item.json.body.mensaje } }) }}",
+          "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('🔍 Normalizar y Validar (Manual WA)').item.json.phoneDigits, type: 'text', text: { body: $('🔍 Normalizar y Validar (Manual WA)').item.json.mensaje } }) }}",
           "options": {}
         }
       },
@@ -3045,7 +3147,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: $('📩 Webhook Respuesta Manual').item.json.body.phone, canal: 'whatsapp', messages: [{ rol: 'bot', contenido: $('📩 Webhook Respuesta Manual').item.json.body.mensaje }], datos_calificacion: { bot_pausado: true, motivo: 'Vendedor tomó control manual', fecha: new Date().toISOString() } }) }}",
+          "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: $('🔍 Normalizar y Validar (Manual WA)').item.json.phoneE164, canal: 'whatsapp', messages: [{ rol: 'bot', contenido: $('🔍 Normalizar y Validar (Manual WA)').item.json.mensaje }], datos_calificacion: { bot_pausado: true, motivo: 'Vendedor tomó control manual', fecha: new Date().toISOString() } }) }}",
           "options": {
             "retry": {
               "enabled": true,
@@ -3067,7 +3169,7 @@
         ],
         "parameters": {
           "method": "GET",
-          "url": "=https://apigrowth.mdarthurdigital.com/api/n8n/companies/1/wa/leads?phone={{ encodeURIComponent($('🔧 Extraer Mensaje y Teléfono').item.json.telefono) }}",
+          "url": "=https://apigrowth.mdarthurdigital.com/api/n8n/companies/1/wa/leads?phone={{ encodeURIComponent('+' + $('🔧 Extraer Mensaje y Teléfono').item.json.telefono) }}",
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
@@ -3206,7 +3308,7 @@
             "parameters": [
               {
                 "name": "phone",
-                "value": "={{ $('📝 Armar Mensaje Final').item.json.telefono }}"
+                "value": "={{ '+' + $('📝 Armar Mensaje Final').item.json.telefono }}"
               }
             ]
           },
@@ -3644,6 +3746,79 @@
           "options": {}
         },
         "notes": "NEW 21-sep: lee modos_respuesta por canal (doc G54, 25-ago #73) -- si whatsapp='solo_avisar', el gate de al lado no deja pasar. onError continua (fail-open)."
+      },
+      {
+        "id": "normalizar-validar-manual-wa",
+        "name": "🔍 Normalizar y Validar (Manual WA)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -688,
+          744
+        ],
+        "parameters": {
+          "jsCode": "const body = $json.body || {};\nconst phoneRaw = (body.phone || '').toString().trim();\nconst mensaje = (body.mensaje || '').toString().trim();\n\n// Normalizar a solo digitos (sin '+', espacios, guiones) -- mismo criterio que\n// usa el resto de Marco al comparar/guardar telefonos.\nconst phoneDigits = phoneRaw.replace(/[^0-9]/g, '');\n\nlet motivo = null;\nif (!phoneDigits) motivo = 'Falta un telefono valido en el body (campo phone).';\nelse if (phoneDigits.length < 8) motivo = 'El telefono tiene muy pocos digitos: \"' + phoneRaw + '\".';\nelse if (!mensaje) motivo = 'Falta el mensaje a enviar (campo mensaje).';\n\nreturn [{ json: {\n  valido: !motivo,\n  motivo,\n  phoneDigits,        // sin '+' -- formato que espera la API real de WhatsApp (Meta)\n  phoneE164: phoneDigits ? ('+' + phoneDigits) : '',  // con '+' -- formato real usado por G54 (ver SW05)\n  mensaje,\n} }];"
+        }
+      },
+      {
+        "id": "gate-datos-validos-manual-wa",
+        "name": "🔀 ¿Datos Válidos? (Manual WA)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          -508,
+          744
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "cond-datos-validos",
+                "leftValue": "={{ $json.valido }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "alertar-datos-invalidos-manual-wa",
+        "name": "📧 Alertar Datos Inválidos (Manual WA)",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 2.1,
+        "position": [
+          -508,
+          864
+        ],
+        "parameters": {
+          "fromEmail": "Alerta Marco <risosadmi@gmail.com>",
+          "toEmail": "risosadmi@gmail.com",
+          "subject": "⚠️ Respuesta manual de Marco rechazada -- datos inválidos",
+          "html": "={{ 'El webhook de respuesta manual (marco-manual-ce) recibió datos inválidos y no se mandó ningún mensaje.<br><br>Motivo: ' + ($json.motivo || 'desconocido') + '<br>Teléfono recibido: \"' + (($json.body && $json.body.phone) || '') + '\"<br>Mensaje recibido: \"' + (($json.body && $json.body.mensaje) || '') + '\"' }}",
+          "options": {
+            "appendAttribution": false
+          }
+        },
+        "credentials": {
+          "smtp": {
+            "id": "iWBBSSe5AWsCMo89",
+            "name": "Gmail SMTP — risosadmi"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "webhookId": "1c2bc657-01e4-46a3-9e8e-2b7e42af92c7"
       }
     ],
     "connections": {
@@ -3970,7 +4145,7 @@
               "index": 0
             },
             {
-              "node": "⚙️ Config WA Manual",
+              "node": "🔍 Normalizar y Validar (Manual WA)",
               "type": "main",
               "index": 0
             }
@@ -4240,6 +4415,35 @@
             }
           ]
         ]
+      },
+      "🔍 Normalizar y Validar (Manual WA)": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Datos Válidos? (Manual WA)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Datos Válidos? (Manual WA)": {
+        "main": [
+          [
+            {
+              "node": "⚙️ Config WA Manual",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📧 Alertar Datos Inválidos (Manual WA)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -4247,16 +4451,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-21T16:18:12.481Z",
-    "updatedAt": "2026-09-21T16:18:12.481Z",
+    "createdAt": "2026-09-21T16:48:44.093Z",
+    "updatedAt": "2026-09-21T16:48:44.093Z",
     "workflowPublishHistory": [
       {
-        "id": 3184,
+        "id": 3188,
         "workflowId": "zAhV8gEsXD8dCrXq",
-        "versionId": "e874a060-c76a-4d45-b361-57894d2dbbf1",
+        "versionId": "07594de5-b600-4276-aa9a-af5694ef4c3a",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-21T16:18:12.935Z"
+        "createdAt": "2026-09-21T16:48:44.514Z"
       }
     ]
   }
