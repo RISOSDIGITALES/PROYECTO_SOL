@@ -56,16 +56,22 @@ function CustomerRow({ customer, onUpdate }) {
 
   return (
     <div className="bubble54-panel" style={{ padding: "14px 16px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, cursor: "pointer" }} onClick={() => setOpen(!open)}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, color: "var(--ink)", fontSize: 14 }}>
+      {/* `flexWrap: "wrap"` real -- encontrado en vivo el 2026-09-21: en un
+          contenedor angosto (la ficha de un negocio del lado de agencia,
+          más angosta que el dashboard del propio negocio) el grupo de la
+          derecha nunca se achicaba (flexShrink:0 en los 4 juntos) y el
+          nombre/teléfono de la izquierda quedaban comprimidos hasta
+          superponerse en vez de bajar de línea. */}
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "6px 12px", cursor: "pointer" }} onClick={() => setOpen(!open)}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: "1 1 160px", overflow: "hidden" }}>
+          <div style={{ fontWeight: 700, color: "var(--ink)", fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {customer.name || customer.phone}
           </div>
           {customer.name && (
-            <div style={{ fontSize: 12.5, color: "var(--ink-soft)", fontVariantNumeric: "tabular-nums" }}>{customer.phone}</div>
+            <div style={{ fontSize: 12.5, color: "var(--ink-soft)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", flexShrink: 0 }}>{customer.phone}</div>
           )}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 14, justifyContent: "flex-end" }}>
           <span style={{ fontSize: 12, color: "var(--ink-softer)" }}>
             {customer.calls_count} {customer.calls_count === 1 ? "llamada" : "llamadas"}
           </span>

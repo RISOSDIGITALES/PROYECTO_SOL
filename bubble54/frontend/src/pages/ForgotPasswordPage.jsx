@@ -1,11 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import Logo from "../components/Logo";
+import AuthShell, { formStyle, formEyebrowStyle, formHeadingStyle, inputStyle, linkRowStyle } from "../components/AuthShell";
 import { api } from "../api";
 
-// Mismo layout de 2 paneles que LoginPage, sin duplicar sus estilos --
-// re-exportados acá porque son privados a ese archivo (no vale la pena
-// levantar un módulo de estilos compartido para 2 pantallas).
 export default function ForgotPasswordPage({ role }) {
   const isAgency = role === "agency";
   const [email, setEmail] = useState("");
@@ -30,14 +27,16 @@ export default function ForgotPasswordPage({ role }) {
   }
 
   return (
-    <div style={pageStyle}>
-      <div style={cardStyle}>
-        <Logo />
-        <h2 style={{ fontSize: 22, color: "var(--ink)", margin: "18px 0 4px" }}>Recuperar tu contraseña</h2>
-        <p style={{ fontSize: 13.5, color: "var(--ink-soft)", margin: "0 0 20px", lineHeight: 1.5 }}>
-          Escribí el correo de tu cuenta de {isAgency ? "agencia" : "negocio"} — si existe, te mandamos un enlace
-          real para restablecerla.
-        </p>
+    <AuthShell
+      eyebrow={isAgency ? "Acceso de agencia" : "Acceso de negocio"}
+      heading="Recuperá el acceso a tu cuenta."
+      copy="Te mandamos un enlace real por correo, con vencimiento, para que puedas volver a entrar sin depender de nadie más."
+    >
+      <div style={formStyle}>
+        <div style={{ marginBottom: 6 }}>
+          <div style={formEyebrowStyle}>Recuperar contraseña</div>
+          <h2 style={formHeadingStyle}>¿Olvidaste tu contraseña?</h2>
+        </div>
 
         {sent ? (
           <div style={{ fontSize: 13.5, color: "var(--ink)", background: "#f0fdf4", padding: "14px 16px", borderRadius: 10, lineHeight: 1.5 }}>
@@ -45,7 +44,7 @@ export default function ForgotPasswordPage({ role }) {
             (y spam, por las dudas).
           </div>
         ) : (
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <input
               type="email"
               value={email}
@@ -65,41 +64,10 @@ export default function ForgotPasswordPage({ role }) {
           </form>
         )}
 
-        <Link
-          to={isAgency ? "/agencia/login" : "/negocio/login"}
-          style={{ display: "block", marginTop: 18, fontSize: 12.5, color: "var(--ink-soft)", textAlign: "center", textDecoration: "none" }}
-        >
+        <Link to={isAgency ? "/agencia/login" : "/negocio/login"} style={linkRowStyle}>
           ← Volver al login
         </Link>
       </div>
-    </div>
+    </AuthShell>
   );
 }
-
-const pageStyle = {
-  minHeight: "100vh",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  background: "var(--paper)",
-  padding: 24,
-};
-
-const cardStyle = {
-  width: "100%",
-  maxWidth: 380,
-  background: "var(--white)",
-  borderRadius: 16,
-  padding: "32px 28px",
-  boxShadow: "0 8px 30px rgba(20,30,60,0.08)",
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "10px 12px",
-  fontSize: 14,
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  outline: "none",
-  fontFamily: "var(--font)",
-};

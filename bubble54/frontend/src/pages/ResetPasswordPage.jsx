@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import Logo from "../components/Logo";
+import AuthShell, { formStyle, formEyebrowStyle, formHeadingStyle, labelStyle, inputStyle, linkRowStyle } from "../components/AuthShell";
 import { api } from "../api";
 
 export default function ResetPasswordPage({ role }) {
@@ -32,21 +32,27 @@ export default function ResetPasswordPage({ role }) {
   }
 
   return (
-    <div style={pageStyle}>
-      <div style={cardStyle}>
-        <Logo />
-        <h2 style={{ fontSize: 22, color: "var(--ink)", margin: "18px 0 4px" }}>Restablecer tu contraseña</h2>
+    <AuthShell
+      eyebrow={isAgency ? "Acceso de agencia" : "Acceso de negocio"}
+      heading="Restablecé tu contraseña."
+      copy="Elegí una nueva contraseña real para tu cuenta — el enlace que te mandamos por correo solo sirve una vez."
+    >
+      <div style={formStyle}>
+        <div style={{ marginBottom: 6 }}>
+          <div style={formEyebrowStyle}>Contraseña nueva</div>
+          <h2 style={formHeadingStyle}>Restablecer tu contraseña</h2>
+        </div>
 
         {!token ? (
-          <div style={{ fontSize: 13.5, color: "var(--danger)", background: "#fef2f2", padding: "14px 16px", borderRadius: 10, marginTop: 12 }}>
+          <div style={{ fontSize: 13.5, color: "var(--danger)", background: "#fef2f2", padding: "14px 16px", borderRadius: 10 }}>
             Este enlace no trae ningún token real — pedí uno nuevo desde "¿Olvidaste tu contraseña?".
           </div>
         ) : done ? (
-          <div style={{ fontSize: 13.5, color: "var(--ink)", background: "#f0fdf4", padding: "14px 16px", borderRadius: 10, marginTop: 12, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 13.5, color: "var(--ink)", background: "#f0fdf4", padding: "14px 16px", borderRadius: 10, lineHeight: 1.5 }}>
             Contraseña actualizada. Ya podés entrar con la nueva.
           </div>
         ) : (
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 16 }}>
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
               <label style={labelStyle}>Contraseña nueva</label>
               <input
@@ -81,49 +87,10 @@ export default function ResetPasswordPage({ role }) {
           </form>
         )}
 
-        <Link
-          to={isAgency ? "/agencia/login" : "/negocio/login"}
-          style={{ display: "block", marginTop: 18, fontSize: 12.5, color: "var(--ink-soft)", textAlign: "center", textDecoration: "none" }}
-        >
+        <Link to={isAgency ? "/agencia/login" : "/negocio/login"} style={linkRowStyle}>
           ← Volver al login
         </Link>
       </div>
-    </div>
+    </AuthShell>
   );
 }
-
-const pageStyle = {
-  minHeight: "100vh",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  background: "var(--paper)",
-  padding: 24,
-};
-
-const cardStyle = {
-  width: "100%",
-  maxWidth: 380,
-  background: "var(--white)",
-  borderRadius: 16,
-  padding: "32px 28px",
-  boxShadow: "0 8px 30px rgba(20,30,60,0.08)",
-};
-
-const labelStyle = {
-  display: "block",
-  fontSize: 12.5,
-  fontWeight: 600,
-  color: "var(--ink-soft)",
-  marginBottom: 6,
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "10px 12px",
-  fontSize: 14,
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  outline: "none",
-  fontFamily: "var(--font)",
-};

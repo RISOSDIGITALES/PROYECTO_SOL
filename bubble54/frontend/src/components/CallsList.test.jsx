@@ -1,7 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CallsList from "./CallsList";
+
+const oneCall = [
+  { id: 1, started_at: "2026-09-01T10:00:00Z", duration_seconds: 30, caller_number: "+17865551234", outcome: "completed", transcript: null },
+];
 
 describe("CallsList", () => {
   it("con calls=null y loading, muestra el estado de carga", () => {
@@ -78,5 +82,19 @@ describe("CallsList", () => {
       />
     );
     expect(screen.getByText("Error")).toBeInTheDocument();
+  });
+
+  it("sin onExport, no muestra ningún botón de descarga", () => {
+    render(<CallsList calls={oneCall} loading={false} />);
+    expect(screen.queryByText("⬇ Descargar CSV")).not.toBeInTheDocument();
+  });
+
+  it("con onExport, el botón real dispara la descarga real al clickearlo", async () => {
+    const user = userEvent.setup();
+    const onExport = vi.fn().mockResolvedValue(undefined);
+    render(<CallsList calls={oneCall} loading={false} onExport={onExport} />);
+
+    await user.click(screen.getByText("⬇ Descargar CSV"));
+    expect(onExport).toHaveBeenCalledTimes(1);
   });
 });
