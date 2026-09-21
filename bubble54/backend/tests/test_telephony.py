@@ -161,3 +161,44 @@ def test_find_reusable_number_sin_credenciales_devuelve_none_sin_llamar_a_twilio
     with patch("app.telephony.httpx.Client") as mock_client_cls:
         assert telephony.find_reusable_number(db_session) is None
         mock_client_cls.assert_not_called()
+
+
+def test_nunca_reusa_un_numero_reservado_de_otro_sistema(monkeypatch, db_session):
+    """Incidente real del 2026-09-21: con un número reservado (Marco/VAPI) y
+    uno genuinamente libre, ambos "no asignados" en bot_configs de Bubble54
+    -- el número reservado nunca debe salir elegido, sin importar el orden
+    de iteración real del set."""
+    _con_credenciales(monkeypatch)
+    monkeypatch.setattr(settings, "twilio_reserved_numbers", "+17867880417")
+
+    owned_resp = MagicMock(status_code=200)
+    owned_resp.json.return_value = {"incoming_phone_numbers": [
+        {"phone_number": "+17867880417"},  # reservado -- nunca elegible
+        {"phone_number": "+16506585078"},  # genuinamente libre
+    ]}
+    owned_client = _fake_client(get_response=owned_resp)
+
+    with patch("app.telephony.httpx.Client", return_value=owned_client):
+        number = telephony.provision_phone_number(db_session)
+
+    assert number == "+16506585078"
+
+
+def test_find_reusable_number_es_reproducible_entre_llamadas(monkeypatch, db_session):
+    """Mismo escenario, sin ningún número reservado -- confirma que ya no
+    depende de next(iter(set)) (no determinístico entre procesos): llamado
+    varias veces seguidas, siempre devuelve lo mismo."""
+    _con_credenciales(monkeypatch)
+    monkeypatch.setattr(settings, "twilio_reserved_numbers", "")
+
+    owned_resp = MagicMock(status_code=200)
+    owned_resp.json.return_value = {"incoming_phone_numbers": [
+        {"phone_number": "+16506585078"},
+        {"phone_number": "+17867880417"},
+    ]}
+    owned_client = _fake_client(get_response=owned_resp)
+
+    with patch("app.telephony.httpx.Client", return_value=owned_client):
+        resultados = {telephony.find_reusable_number(db_session) for _ in range(20)}
+
+    assert len(resultados) == 1

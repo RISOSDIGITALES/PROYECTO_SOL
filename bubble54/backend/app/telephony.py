@@ -39,8 +39,17 @@ def find_reusable_number(db: Session) -> str | None:
     assigned_numbers = {
         row[0] for row in db.query(models.BotConfig.phone_number).filter(models.BotConfig.phone_number != "").all()
     }
-    free = owned_numbers - assigned_numbers
-    return next(iter(free), None)
+    # Nunca reusar un número que pertenece a otro sistema real dentro de la
+    # misma cuenta de Twilio (ver twilio_reserved_numbers_list) -- ningún
+    # bot_config de Bubble54 lo tiene asignado, pero eso no lo vuelve libre.
+    reserved_numbers = set(settings.twilio_reserved_numbers_list)
+    free = owned_numbers - assigned_numbers - reserved_numbers
+    # sorted(), no next(iter(...)) -- un set de Python no garantiza el mismo
+    # orden de iteración entre procesos (hash randomization), así que sin
+    # esto la elección real podía variar según qué proceso corriera. Con un
+    # orden fijo, "cuál número toca" es predecible y reproducible.
+    candidates = sorted(free)
+    return candidates[0] if candidates else None
 
 
 def provision_phone_number(db: Session, country: str = "US") -> str:

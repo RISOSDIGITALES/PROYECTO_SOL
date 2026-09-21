@@ -53,12 +53,27 @@ class Settings(BaseSettings):
     # tipo de error claro que TelephonyProvisionError, nunca fingen una
     # verificación que no pasó.
     twilio_verify_service_sid: str = ""
+    # Números reales de la MISMA cuenta de Twilio que pertenecen a un sistema
+    # completamente distinto de Bubble54 (ej. Marco/Alex, gestionado por
+    # n8n+VAPI para Crating Express) -- nunca deben considerarse "libres para
+    # reusar" en find_reusable_number(), aunque Twilio los liste como propios
+    # y ningún bot_config de Bubble54 los tenga asignados todavía. Incidente
+    # real del 2026-09-21: sin esta exclusión, find_reusable_number() eligió
+    # el número real de Marco en vez del huérfano disponible -- el orden de
+    # iteración de un set de Python no es determinístico entre procesos, así
+    # que confiar en "no está en bot_configs" no alcanza. Separados por coma,
+    # formato E.164.
+    twilio_reserved_numbers: str = "+17867880417"
 
     model_config = SettingsConfigDict(env_file=".env")
 
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def twilio_reserved_numbers_list(self) -> list[str]:
+        return [n.strip() for n in self.twilio_reserved_numbers.split(",") if n.strip()]
 
 
 settings = Settings()
