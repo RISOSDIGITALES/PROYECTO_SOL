@@ -26,6 +26,9 @@ export default function AgencyProfilePage() {
   const [logoError, setLogoError] = useState("");
   const [logoDragOver, setLogoDragOver] = useState(false);
   const logoBtnRef = useRef(null);
+  // Mismo criterio que BusinessProfileForm — quitar el logo no tiene
+  // deshacer, así que exige un segundo clic real antes de ejecutar.
+  const [confirmingLogoRemove, setConfirmingLogoRemove] = useState(false);
 
   useEffect(() => {
     if (!session) return;
@@ -63,6 +66,7 @@ export default function AgencyProfilePage() {
 
   async function handleRemoveLogo() {
     setLogoError("");
+    setConfirmingLogoRemove(false);
     try {
       const updated = await api.removeAgencyLogo(session.access_token);
       setProfile((prev) => ({ ...prev, logo_url: updated.logo_url }));
@@ -151,7 +155,15 @@ export default function AgencyProfilePage() {
                       {uploadingLogo ? "Subiendo…" : profile.logo_url ? "Hacé clic en el logo para cambiarlo" : "Hacé clic o arrastrá una imagen acá"}
                     </span>
                     {profile.logo_url && (
-                      <button type="button" onClick={handleRemoveLogo} style={removeLinkStyle}>Quitar logo</button>
+                      confirmingLogoRemove ? (
+                        <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <span style={{ fontSize: 11.5, color: "var(--danger)" }}>¿Seguro?</span>
+                          <button type="button" onClick={handleRemoveLogo} style={removeLinkStyle}>Sí, quitar</button>
+                          <button type="button" onClick={() => setConfirmingLogoRemove(false)} style={cancelLinkStyle}>Cancelar</button>
+                        </span>
+                      ) : (
+                        <button type="button" onClick={() => setConfirmingLogoRemove(true)} style={removeLinkStyle}>Quitar logo</button>
+                      )
                     )}
                   </div>
                 </div>
@@ -348,4 +360,14 @@ const removeLinkStyle = {
   cursor: "pointer",
   padding: 0,
   justifySelf: "start",
+};
+
+const cancelLinkStyle = {
+  background: "none",
+  border: "none",
+  color: "var(--ink-soft)",
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: "pointer",
+  padding: 0,
 };

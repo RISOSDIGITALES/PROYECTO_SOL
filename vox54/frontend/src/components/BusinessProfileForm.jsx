@@ -138,6 +138,11 @@ export default function BusinessProfileForm({
   const [logoDragOver, setLogoDragOver] = useState(false);
   const logoBtnRef = useRef(null);
   const docBtnRef = useRef(null);
+  // Quitar el logo o el documento no tiene deshacer -- un segundo clic real
+  // de confirmación, no window.confirm(), mismo criterio de este proyecto
+  // (ver PhoneActivation.jsx) de nunca usar el diálogo nativo del navegador.
+  const [confirmingLogoRemove, setConfirmingLogoRemove] = useState(false);
+  const [confirmingDocRemove, setConfirmingDocRemove] = useState(false);
 
   // Núcleo compartido — tanto elegir el archivo desde el <input> como
   // soltarlo arriba de la dropzone terminan en la misma subida real, sin
@@ -172,6 +177,7 @@ export default function BusinessProfileForm({
 
   async function handleRemoveLogo() {
     setUploadError("");
+    setConfirmingLogoRemove(false);
     try {
       const updated = await onRemoveLogo();
       onChange({ logo_url: updated.logo_url });
@@ -213,6 +219,7 @@ export default function BusinessProfileForm({
 
   async function handleRemoveDoc() {
     setUploadError("");
+    setConfirmingDocRemove(false);
     try {
       const updated = await onRemoveDocument();
       onChange({
@@ -306,7 +313,15 @@ export default function BusinessProfileForm({
                   {uploadingLogo ? "Subiendo…" : profile.logo_url ? "Hacé clic en el logo para cambiarlo" : "Hacé clic o arrastrá una imagen acá"}
                 </span>
                 {profile.logo_url && (
-                  <button type="button" onClick={handleRemoveLogo} style={removeLinkStyle}>Quitar logo</button>
+                  confirmingLogoRemove ? (
+                    <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <span style={{ fontSize: 11.5, color: "var(--danger)" }}>¿Seguro?</span>
+                      <button type="button" onClick={handleRemoveLogo} style={removeLinkStyle}>Sí, quitar</button>
+                      <button type="button" onClick={() => setConfirmingLogoRemove(false)} style={cancelLinkStyle}>Cancelar</button>
+                    </span>
+                  ) : (
+                    <button type="button" onClick={() => setConfirmingLogoRemove(true)} style={removeLinkStyle}>Quitar logo</button>
+                  )
                 )}
               </div>
             </div>
@@ -324,7 +339,15 @@ export default function BusinessProfileForm({
                     {uploadingDoc ? docStatusLabel(docProgress) : "Reemplazar"}
                     <input type="file" accept="application/pdf" onChange={handleDocFile} style={{ display: "none" }} disabled={uploadingDoc} />
                   </label>
-                  <button type="button" onClick={handleRemoveDoc} style={removeLinkStyle}>Quitar</button>
+                  {confirmingDocRemove ? (
+                    <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <span style={{ fontSize: 11.5, color: "var(--danger)" }}>¿Seguro?</span>
+                      <button type="button" onClick={handleRemoveDoc} style={removeLinkStyle}>Sí, quitar</button>
+                      <button type="button" onClick={() => setConfirmingDocRemove(false)} style={cancelLinkStyle}>Cancelar</button>
+                    </span>
+                  ) : (
+                    <button type="button" onClick={() => setConfirmingDocRemove(true)} style={removeLinkStyle}>Quitar</button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -714,4 +737,14 @@ const removeLinkStyle = {
   cursor: "pointer",
   padding: 0,
   justifySelf: "start",
+};
+
+const cancelLinkStyle = {
+  background: "none",
+  border: "none",
+  color: "var(--ink-soft)",
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: "pointer",
+  padding: 0,
 };

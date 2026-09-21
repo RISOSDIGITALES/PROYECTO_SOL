@@ -33,6 +33,11 @@ export default function AgencyBusinessDetail() {
   const [usage, setUsage] = useState(null);
   const [usageError, setUsageError] = useState("");
   const [planSaving, setPlanSaving] = useState(false);
+  // Cambiar el plan tiene impacto real en el precio mensual del negocio -- el
+  // <select> ya no dispara el cambio solo, arma un plan "pendiente" hasta que
+  // se confirma explícitamente cuánto va a costar; si se cancela, el <select>
+  // vuelve solo al plan real porque su value sigue atado a business.plan_id.
+  const [pendingPlanId, setPendingPlanId] = useState(null);
 
   useEffect(() => {
     if (!session) return;
@@ -49,19 +54,34 @@ export default function AgencyBusinessDetail() {
     api.getBusinessUsage(session.access_token, id).then(setUsage).catch((e) => setUsageError(e.message));
   }, [session, id]);
 
-  async function handlePlanChange(e) {
-    const planId = e.target.value;
+  function handlePlanSelect(e) {
+    setPendingPlanId(e.target.value);
+  }
+
+  function cancelPlanChange() {
+    setPendingPlanId(null);
+  }
+
+  async function confirmPlanChange() {
+    if (!pendingPlanId) return;
     setPlanSaving(true);
+    setUsageError("");
     try {
-      const updated = await api.updateBusinessPlan(session.access_token, id, planId);
+      const updated = await api.updateBusinessPlan(session.access_token, id, pendingPlanId);
       setBusiness((prev) => ({ ...prev, plan_id: updated.plan_id }));
       const freshUsage = await api.getBusinessUsage(session.access_token, id);
       setUsage(freshUsage);
+      setPendingPlanId(null);
     } catch (err) {
       setUsageError(err.message);
     } finally {
       setPlanSaving(false);
     }
+  }
+
+  function planLabel(planId) {
+    const p = catalog?.plans?.find((pl) => pl.id === planId);
+    return p ? `${p.name} — $${p.price_usd}/mes` : planId;
   }
 
   function aiModelLabel(providerId, modelId) {
@@ -217,8 +237,8 @@ export default function AgencyBusinessDetail() {
             <div className="vox54-panel" style={{ padding: 20, display: "grid", gap: 12 }}>
               <Row label="Plan">
                 <select
-                  value={business.plan_id}
-                  onChange={handlePlanChange}
+                  value={pendingPlanId ?? business.plan_id}
+                  onChange={handlePlanSelect}
                   disabled={planSaving || !catalog}
                   style={planSelectStyle}
                 >
@@ -227,6 +247,22 @@ export default function AgencyBusinessDetail() {
                   ))}
                 </select>
               </Row>
+              {pendingPlanId && pendingPlanId !== business.plan_id && (
+                <div style={planConfirmBoxStyle}>
+                  <span style={{ fontSize: 12.5, color: "var(--ink)" }}>
+                    Vas a cambiar el plan de <strong>{planLabel(business.plan_id)}</strong> a{" "}
+                    <strong>{planLabel(pendingPlanId)}</strong>.
+                  </span>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button type="button" onClick={confirmPlanChange} disabled={planSaving} className="vox54-btn small">
+                      {planSaving ? "Cambiando…" : "Confirmar cambio de plan"}
+                    </button>
+                    <button type="button" onClick={cancelPlanChange} disabled={planSaving} className="vox54-btn secondary small">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
               {usage && (
                 <>
                   <Row label="Minutos usados este mes">
@@ -319,6 +355,16 @@ const renameIconBtn = {
   lineHeight: 1,
   padding: 4,
   borderRadius: 6,
+};
+
+const planConfirmBoxStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 10,
+  padding: "12px 14px",
+  borderRadius: 10,
+  background: "#fffbeb",
+  border: "1px solid #fde68a",
 };
 
 const planSelectStyle = {
