@@ -12,7 +12,19 @@ from app.config import settings
 from app.database import Base, get_db
 from app.main import app
 from app.security import hash_password
-from app import models
+from app import models, rate_limit
+
+
+@pytest.fixture(autouse=True)
+def isolated_rate_limit():
+    """El limitador de intentos de login (`app/rate_limit.py`) vive en un
+    dict de módulo, en memoria del propio proceso -- sin esto, los intentos
+    fallidos de un test (ej. probar una contraseña incorrecta) se
+    acumularían contra el siguiente test que use el mismo email, y un test
+    de "demasiados intentos" podría bloquear sin querer a otro test real."""
+    rate_limit._failures.clear()
+    yield
+    rate_limit._failures.clear()
 
 
 @pytest.fixture(autouse=True)

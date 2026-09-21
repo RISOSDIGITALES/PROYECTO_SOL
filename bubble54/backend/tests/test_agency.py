@@ -1,6 +1,9 @@
 import datetime
+from pathlib import Path
 
 import pytest
+
+from app.config import settings
 
 
 @pytest.fixture()
@@ -11,6 +14,14 @@ def agency_token(client, seed):
 
 def auth(token):
     return {"Authorization": f"Bearer {token}"}
+
+
+def _upload_path_for(logo_url: str) -> Path:
+    """Convierte una URL real de logo ("/uploads/logos/agency/x.svg") en el
+    path real en disco, dentro del directorio aislado del test
+    (`isolated_upload_dir`, conftest.py) -- para poder leer el contenido
+    real que quedó guardado, no solo confiar en el código de respuesta."""
+    return Path(settings.upload_dir) / logo_url.removeprefix("/uploads/")
 
 
 def test_me_incluye_desde_cuando_es_miembro(client, seed, agency_token):
@@ -789,6 +800,52 @@ def test_subir_logo_de_agencia_tipo_invalido_falla(client, seed, agency_token):
         "/agency/profile/logo",
         headers=auth(agency_token),
         files={"file": ("nota.txt", b"esto no es una imagen", "text/plain")},
+    )
+    assert res.status_code == 422
+
+
+# --- Sanitización real de SVG -- auditoría del 2026-09-21: un logo SVG se
+# sirve público sin login (StaticFiles), así que un <script> embebido sería
+# XSS real contra quien abra el link. Se parsea y se limpia antes de
+# guardar, nunca se guarda "tal cual llegó". ---
+
+def test_svg_con_script_se_limpia_antes_de_guardar(client, seed, agency_token):
+    svg_malicioso = b'<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script><circle r="5"/></svg>'
+    res = client.post(
+        "/agency/profile/logo",
+        headers=auth(agency_token),
+        files={"file": ("logo.svg", svg_malicioso, "image/svg+xml")},
+    )
+    assert res.status_code == 200
+
+    saved_path = _upload_path_for(res.json()["logo_url"])
+    saved = saved_path.read_bytes()
+    assert b"<script" not in saved
+    assert b"circle" in saved  # el resto del logo real se conserva
+
+
+def test_svg_con_atributo_on_se_limpia(client, seed, agency_token):
+    svg_malicioso = (
+        b'<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)">'
+        b'<rect onclick="alert(2)" width="1" height="1"/></svg>'
+    )
+    res = client.post(
+        "/agency/profile/logo",
+        headers=auth(agency_token),
+        files={"file": ("logo.svg", svg_malicioso, "image/svg+xml")},
+    )
+    assert res.status_code == 200
+
+    saved = _upload_path_for(res.json()["logo_url"]).read_bytes()
+    assert b"onload" not in saved
+    assert b"onclick" not in saved
+
+
+def test_svg_invalido_como_xml_se_rechaza(client, seed, agency_token):
+    res = client.post(
+        "/agency/profile/logo",
+        headers=auth(agency_token),
+        files={"file": ("logo.svg", b"<svg><esto-nunca-cierra>", "image/svg+xml")},
     )
     assert res.status_code == 422
 

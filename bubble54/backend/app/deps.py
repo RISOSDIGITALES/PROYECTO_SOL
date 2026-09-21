@@ -1,3 +1,5 @@
+import hmac
+
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
@@ -14,8 +16,16 @@ def require_worker_secret(x_worker_secret: str | None = Header(default=None)) ->
     """El worker de LiveKit Agents es un servicio, no una persona — no tiene
     sesión de negocio/agencia, así que se autentica con un secreto compartido
     fijo en vez de un JWT de usuario. Mismo criterio que el AGENT_TOKEN que ya
-    usa el resto de la plataforma G54 para llamadas agente-a-agente."""
-    if not x_worker_secret or x_worker_secret != settings.worker_secret:
+    usa el resto de la plataforma G54 para llamadas agente-a-agente.
+
+    Quien tenga este secreto puede leer la config completa (y a futuro
+    cualquier ai_api_key propia) de CUALQUIER negocio -- hay que tratarlo con
+    el mismo cuidado que una contraseña real de base de datos, nunca en git.
+    `hmac.compare_digest` en vez de `!=` -- auditoría del 2026-09-21: una
+    comparación normal de strings corta apenas encuentra la primera
+    diferencia, lo que en teoría deja un canal de timing para adivinar el
+    secreto carácter por carácter."""
+    if not x_worker_secret or not hmac.compare_digest(x_worker_secret, settings.worker_secret):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Worker secret inválido o ausente")
 
 

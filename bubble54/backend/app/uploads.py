@@ -1,5 +1,6 @@
 import os
 import uuid
+import xml.etree.ElementTree as ET
 
 from fastapi import HTTPException, UploadFile, status
 
@@ -29,6 +30,36 @@ def _write(data: bytes, subdir: str, prefix: str, ext: str) -> str:
     return f"/uploads/{subdir}/{fname}".replace("\\", "/")
 
 
+def _sanitize_svg(data: bytes) -> bytes:
+    """Un SVG puede llevar <script> real y atributos on*="..." -- un logo
+    subido y servido público sin pasar por esto sería un vector de XSS
+    real contra quien abra el link directo (encontrado en la auditoría del
+    2026-09-21). Se parsea de verdad (ElementTree, no una regex sobre texto
+    XML) y se sacan los nodos/atributos peligrosos antes de guardar -- si el
+    archivo ni siquiera es XML válido, se rechaza en vez de guardarlo tal
+    cual "por las dudas"."""
+    try:
+        root = ET.fromstring(data)
+    except ET.ParseError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "El SVG no es un XML válido.") from exc
+
+    DANGEROUS_TAGS = {"script", "foreignObject", "iframe"}
+    for parent in root.iter():
+        for child in list(parent):
+            tag = child.tag.split("}")[-1]  # sin el namespace de SVG
+            if tag in DANGEROUS_TAGS:
+                parent.remove(child)
+
+    for el in root.iter():
+        for attr in list(el.attrib):
+            name = attr.split("}")[-1]
+            value = el.attrib[attr]
+            if name.lower().startswith("on") or "javascript:" in value.lower():
+                del el.attrib[attr]
+
+    return ET.tostring(root, encoding="utf-8")
+
+
 async def save_logo(file: UploadFile, subdir: str, prefix: str) -> str:
     ext = ALLOWED_LOGO_EXT.get(file.content_type)
     if not ext:
@@ -41,6 +72,8 @@ async def save_logo(file: UploadFile, subdir: str, prefix: str) -> str:
         raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "El logo no puede pesar más de 3MB.")
     if len(data) == 0:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "El archivo llegó vacío.")
+    if ext == "svg":
+        data = _sanitize_svg(data)
     return _write(data, subdir, prefix, ext)
 
 
