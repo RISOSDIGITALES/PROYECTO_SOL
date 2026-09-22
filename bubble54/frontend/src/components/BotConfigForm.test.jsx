@@ -125,16 +125,65 @@ describe("BotConfigForm — toggles", () => {
     expect(onChangeSpy).toHaveBeenCalledWith({ allow_interruptions: false });
   });
 
-  it("el campo de mensaje de buzón de voz solo aparece cuando el toggle está activado", async () => {
+  it("el toggle de buzón de voz está deshabilitado y marcado 'Próximamente' -- todavía no hay ninguna detección real implementada", async () => {
     const user = userEvent.setup();
-    render(<Wrapper initialConfig={{ ...baseConfig, voicemail_detection_enabled: false }} />);
+    const onChangeSpy = vi.fn();
+    render(<Wrapper initialConfig={{ ...baseConfig, voicemail_detection_enabled: false }} onChangeSpy={onChangeSpy} />);
 
+    expect(screen.getByText("Próximamente")).toBeInTheDocument();
     expect(screen.queryByLabelText("Mensaje a dejar en el buzón")).not.toBeInTheDocument();
 
     const toggle = screen.getByText("Detectar buzón de voz").parentElement.querySelector("button");
-    await user.click(toggle);
+    expect(toggle).toBeDisabled();
 
-    expect(await screen.findByLabelText("Mensaje a dejar en el buzón")).toBeInTheDocument();
+    await user.click(toggle);
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText("Mensaje a dejar en el buzón")).not.toBeInTheDocument();
+  });
+
+  it("si un negocio ya tenía el buzón de voz activado de antes, el mensaje sigue visible aunque el toggle ya no se pueda tocar", () => {
+    render(<Wrapper initialConfig={{ ...baseConfig, voicemail_detection_enabled: true, voicemail_message: "Ya te llamamos de vuelta." }} />);
+    expect(screen.getByLabelText("Mensaje a dejar en el buzón")).toBeInTheDocument();
+  });
+});
+
+describe("BotConfigForm — plantillas de prompt del sistema", () => {
+  it("con el prompt vacío, aplica la plantilla directo sin pedir confirmación", async () => {
+    const user = userEvent.setup();
+    const onChangeSpy = vi.fn();
+    render(<Wrapper initialConfig={{ ...baseConfig, system_prompt: "" }} onChangeSpy={onChangeSpy} />);
+
+    await user.click(screen.getByRole("button", { name: "Recepción general" }));
+
+    expect(onChangeSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ system_prompt: expect.stringContaining("Sos el agente de voz de [Nombre del negocio]") })
+    );
+    expect(screen.queryByText(/¿Seguro/)).not.toBeInTheDocument();
+  });
+
+  it("con un prompt real ya escrito, pide confirmar antes de reemplazarlo", async () => {
+    const user = userEvent.setup();
+    const onChangeSpy = vi.fn();
+    render(<Wrapper initialConfig={{ ...baseConfig, system_prompt: "Mi prompt real ya escrito a mano." }} onChangeSpy={onChangeSpy} />);
+
+    await user.click(screen.getByRole("button", { name: "Ventas y cotizaciones" }));
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    expect(screen.getByText(/reemplazar el prompt actual/)).toBeInTheDocument();
+
+    await user.click(screen.getByText("Sí, reemplazar"));
+    expect(onChangeSpy).toHaveBeenCalledWith(expect.objectContaining({ system_prompt: expect.stringContaining("ventas") }));
+  });
+
+  it("cancelar la confirmación no toca el prompt", async () => {
+    const user = userEvent.setup();
+    const onChangeSpy = vi.fn();
+    render(<Wrapper initialConfig={{ ...baseConfig, system_prompt: "Mi prompt real." }} onChangeSpy={onChangeSpy} />);
+
+    await user.click(screen.getByRole("button", { name: "Soporte / atención al cliente" }));
+    await user.click(screen.getByText("Cancelar"));
+
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    expect(screen.queryByText(/reemplazar el prompt actual/)).not.toBeInTheDocument();
   });
 });
 

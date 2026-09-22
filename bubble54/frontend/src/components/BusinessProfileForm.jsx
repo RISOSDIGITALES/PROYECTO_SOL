@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { burst } from "../burst";
 import { API_BASE } from "../api";
 import Icon from "./Icon";
+import { profileCompleteness } from "../profileCompleteness";
 
 // El conocimiento real de un negocio — a qué se dedica, cuándo atiende, qué
 // vende — separado a propósito de BotConfigForm (infraestructura del bot:
@@ -271,8 +272,35 @@ export default function BusinessProfileForm({
     }
   }
 
+  const { percent: profilePercent, missing: profileMissing } = profileCompleteness(profile);
+
   return (
     <div style={{ display: "grid", gap: 20 }}>
+      {/* Nunca inventa un número -- se calcula de verdad contando cuántos de
+          los 10 campos de texto reales están cargados (ver
+          profileCompleteness.js, compartido con el checklist de "Primeros
+          pasos" del negocio). Sin esto, un perfil a medio llenar se veía
+          exactamente igual que uno completo -- no había ninguna señal de que
+          el bot le falta contexto real para responder bien. */}
+      <div className="bubble54-panel" style={{ padding: "16px 20px", display: "grid", gap: 8 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: "2px 12px" }}>
+          <span style={labelStyle}>Perfil {profilePercent}% completo</span>
+          {profileMissing.length > 0 && (
+            <span style={{ fontSize: 11.5, color: "var(--ink-softer)" }}>
+              Falta: {profileMissing.join(", ")}
+            </span>
+          )}
+        </div>
+        <div style={progressTrackStyle}>
+          <div style={{ ...progressFillStyle, width: `${profilePercent}%` }} />
+        </div>
+        {!profile.timezone && (
+          <div style={timezoneWarningStyle}>
+            ⚠ Sin zona horaria configurada — afecta cómo se interpreta tu horario de atención y la hora real que ve tu negocio en cada llamada.
+          </div>
+        )}
+      </div>
+
       {/* Logo + documento son subidas reales e independientes del guardado
           de texto de abajo — cada archivo se sube apenas se elige, no
           espera al botón "Guardar cambios" (son dos endpoints reales
@@ -688,6 +716,30 @@ const docProgressFillStyle = {
   borderRadius: 999,
   background: "var(--g54-blue)",
   transition: "width 0.2s ease",
+};
+
+const progressTrackStyle = {
+  height: 6,
+  borderRadius: 999,
+  background: "var(--surface)",
+  overflow: "hidden",
+};
+
+const progressFillStyle = {
+  height: "100%",
+  borderRadius: 999,
+  background: "var(--g54-blue)",
+  transition: "width 0.2s ease",
+};
+
+const timezoneWarningStyle = {
+  fontSize: 12,
+  color: "#92400E",
+  background: "#FFFBEB",
+  border: "1px solid #FDE68A",
+  borderRadius: 8,
+  padding: "8px 10px",
+  lineHeight: 1.5,
 };
 
 const docInsightBoxStyle = {

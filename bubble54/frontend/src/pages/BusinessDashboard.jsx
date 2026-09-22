@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "../components/Icon";
 import BotConfigForm from "../components/BotConfigForm";
+import BusinessHome from "../components/BusinessHome";
 import BusinessProfileForm from "../components/BusinessProfileForm";
 import CallsList from "../components/CallsList";
 import CustomersList from "../components/CustomersList";
@@ -60,9 +61,11 @@ export default function BusinessDashboard() {
   const [profileError, setProfileError] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSavedMessage, setProfileSavedMessage] = useState("");
-  // "Llamadas" primero, no "Configuración" — lo que le importa a un cliente
-  // real es qué pasó, no ajustar perillas; la config queda a un clic.
-  const [tab, setTab] = useState("calls");
+  // "Inicio" primero -- antes era "Llamadas", pero un negocio recién creado
+  // entraba directo a una lista vacía sin ninguna guía de qué hacer primero
+  // (perfil completo, número asignado, bot activo). "Inicio" da esa guía;
+  // "Llamadas" sigue siendo el segundo tab, a un clic.
+  const [tab, setTab] = useState("inicio");
   const [calls, setCalls] = useState(null);
   const [callsError, setCallsError] = useState("");
   const [customers, setCustomers] = useState(null);
@@ -183,6 +186,15 @@ export default function BusinessDashboard() {
         {/* Un solo listado, sin ítems anclados aparte — el logo/nombre
             del negocio ya no vive acá, se movió a TopBrandBar. */}
         <div className="bubble54-sidebar-main">
+          <button type="button" className="bubble54-navcol" onClick={(e) => goTo("inicio", e)}>
+            <span className="bubble54-navfloat" style={{ animationDelay: "-0.9s" }}>
+              <span className={`bubble54-navbubble hueF ${tab === "inicio" ? "active" : ""}`}>
+                <Icon name="home" className="icon" />
+              </span>
+            </span>
+            <span className="bubble54-navlabel">Inicio</span>
+          </button>
+
           <button type="button" className="bubble54-navcol" onClick={(e) => goTo("calls", e)}>
             <span className="bubble54-navfloat" style={{ animationDelay: "-0.6s" }}>
               <span className={`bubble54-navbubble ${tab === "calls" ? "active" : ""}`}>
@@ -250,7 +262,9 @@ export default function BusinessDashboard() {
               se note — antes todo compartía el mismo maxWidth angosto y
               el formulario se veía diminuto en medio de una pantalla ancha. */}
           <div style={tab === "config" ? wideWrapStyle : narrowWrapStyle}>
-            {tab !== "config" && (
+            {/* "Inicio" ya tiene su propio saludo (BusinessHome) -- repetir
+                la tarjeta de identidad arriba sería redundante. */}
+            {tab !== "config" && tab !== "inicio" && (
               <div className="bubble54-panel" style={identityCardStyle}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                   <BrandMark logoUrl={me?.business_logo_url} name={me?.business_name} size={40} />
@@ -261,6 +275,10 @@ export default function BusinessDashboard() {
                 </div>
                 {config && <StatusPill status={config.status} />}
               </div>
+            )}
+
+            {tab === "inicio" && (
+              <BusinessHome me={me} config={config} profile={profile} calls={calls} onNavigateTab={setTab} />
             )}
 
             {tab === "calls" && (

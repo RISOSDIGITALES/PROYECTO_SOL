@@ -2,6 +2,55 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { burst } from "../burst";
 import PhoneActivation from "./PhoneActivation";
 
+// Plantillas de arranque para el prompt del sistema -- hoy es una caja de
+// texto en blanco (más lo que ya cargó Content AI, si algo), sin ningún
+// punto de partida real para quien nunca escribió un prompt de IA. Genéricas
+// a propósito (con [Nombre del negocio] como placeholder que cada negocio
+// completa) -- no inventan datos reales de ningún negocio puntual, solo dan
+// una estructura razonable para adaptar.
+const PROMPT_TEMPLATES = [
+  {
+    id: "recepcion",
+    label: "Recepción general",
+    text: `Sos el agente de voz de [Nombre del negocio]. Atendés llamadas entrantes con un tono cordial y profesional.
+
+- Saludá, preguntá el nombre de quien llama y en qué podés ayudar.
+- Respondé solo con la información real que tenés cargada (horario, dirección, servicios) — nunca inventes un dato que no tengas.
+- Si preguntan algo que no sabés, ofrecé anotar el mensaje o transferir la llamada.
+- Cerrá la llamada de forma breve y amable.`,
+  },
+  {
+    id: "ventas",
+    label: "Ventas y cotizaciones",
+    text: `Sos el agente de voz de [Nombre del negocio], enfocado en atender consultas de ventas.
+
+- Identificá qué producto o servicio le interesa a quien llama.
+- Usá el catálogo real de productos y servicios cargado para responder — nunca inventes precios ni disponibilidad que no tengas.
+- Si no podés cotizar en el momento, ofrecé que un vendedor lo llame de vuelta.
+- Antes de cerrar, pedí un dato de contacto (nombre y teléfono) para poder darle seguimiento.`,
+  },
+  {
+    id: "soporte",
+    label: "Soporte / atención al cliente",
+    text: `Sos el agente de voz de [Nombre del negocio], especializado en resolver dudas de clientes existentes.
+
+- Escuchá el problema completo antes de responder.
+- Respondé solo con información real que tengas cargada — si no estás seguro, decilo con honestidad en vez de adivinar.
+- Para reclamos o problemas que no puedas resolver por teléfono, ofrecé transferir a un humano o anotar los datos para que lo llamen de vuelta.
+- Mantené un tono paciente y empático en todo momento.`,
+  },
+  {
+    id: "reservas",
+    label: "Reservas y turnos",
+    text: `Sos el agente de voz de [Nombre del negocio]. Tu tarea principal es coordinar reservas o turnos.
+
+- Preguntá fecha, hora y el servicio o cantidad de personas que necesita quien llama.
+- Confirmá el horario de atención real antes de ofrecer un turno.
+- Si no podés confirmar disponibilidad en el momento, anotá los datos del cliente y avisá que le confirman por otro medio.
+- Repetí los datos de la reserva en voz alta antes de cerrar, para confirmar que quedaron bien anotados.`,
+  },
+];
+
 /**
  * Formulario de configuración del agente de voz — reusado tanto por el panel
  * de negocio (edita su propio bot) como por el panel de agencia (edita el bot
@@ -103,6 +152,25 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, onAct
     if (savedMessage) burst(saveBtnRef.current);
   }, [savedMessage]);
 
+  // Plantilla pendiente de confirmar -- si ya hay un prompt real escrito,
+  // aplicar una plantilla lo reemplazaría sin avisar; mismo criterio de
+  // confirmación explícita de 2 clics que ya usa este proyecto en todos
+  // lados (nunca window.confirm), no solo para acciones que cuestan plata.
+  const [confirmingTemplate, setConfirmingTemplate] = useState(null);
+
+  function handleApplyTemplate(template) {
+    if (!config.system_prompt || !config.system_prompt.trim()) {
+      onChange({ system_prompt: template.text });
+      return;
+    }
+    setConfirmingTemplate(template);
+  }
+
+  function confirmApplyTemplate() {
+    onChange({ system_prompt: confirmingTemplate.text });
+    setConfirmingTemplate(null);
+  }
+
   return (
     <form onSubmit={onSave} style={{ display: "grid", gap: 24 }}>
       {error && <div style={{ ...bannerStyle("danger"), gridColumn: "1 / -1" }}>{error}</div>}
@@ -166,7 +234,7 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, onAct
           es "nuestra" vista interna) — visibles en los dos scopes. Lo que
           sigue siendo exclusivo de infraestructura (telefonía/SIP/STT/API
           key propia) vive más abajo, en <AdvancedSection>. */}
-      <Section title="Modelo de IA">
+      <Section title="Modelo de IA" hint="El proveedor es el servicio que 'piensa' la respuesta de tu agente. El modelo es qué tan rápido y sofisticado es ese pensamiento — uno más grande entiende mejor casos complicados, pero puede tardar un poco más en contestar.">
         <Row>
           <Field label="Proveedor">
             <select
@@ -314,11 +382,47 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, onAct
             style={{ ...inputStyle, resize: "vertical", fontFamily: "var(--font)" }}
           />
         </Field>
+
+        <div>
+          <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--ink-soft)" }}>
+            ¿No sabés por dónde arrancar? Elegí una plantilla según tu rubro:
+          </span>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+            {PROMPT_TEMPLATES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => handleApplyTemplate(t)}
+                className="bubble54-btn secondary small"
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {confirmingTemplate && (
+            <div style={templateConfirmBoxStyle}>
+              <span style={{ fontSize: 12.5, color: "var(--ink)" }}>
+                Esto va a reemplazar el prompt actual por la plantilla de "{confirmingTemplate.label}". ¿Seguro?
+              </span>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button type="button" onClick={confirmApplyTemplate} className="bubble54-btn small">
+                  Sí, reemplazar
+                </button>
+                <button type="button" onClick={() => setConfirmingTemplate(null)} style={cancelLinkStyle}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </Section>
 
       <Section title="Control de la llamada" full>
         <Row>
-          <Field label="Quién habla primero">
+          <Field
+            label="Quién habla primero"
+            hint="'El agente saluda primero' hace que tu bot hable apenas atiende la llamada, sin esperar a que la persona diga algo."
+          >
             <select
               value={config.first_message_mode}
               onChange={(e) => onChange({ first_message_mode: e.target.value })}
@@ -329,7 +433,10 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, onAct
               ))}
             </select>
           </Field>
-          <Field label="Corte por silencio (segundos)">
+          <Field
+            label="Corte por silencio (segundos)"
+            hint="Si quien llama se queda callado más de este tiempo, el agente asume que terminó de hablar (o que se cortó) y sigue con la conversación."
+          >
             <input
               type="number"
               min={5}
@@ -364,7 +471,10 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, onAct
         </div>
 
         <Row>
-          <Field label="Duración máxima de la llamada (segundos)">
+          <Field
+            label="Duración máxima de la llamada (segundos)"
+            hint="Corta la llamada automáticamente al llegar a este tiempo — una red de seguridad contra llamadas que quedan colgadas sin colgar de verdad."
+          >
             <input
               type="number"
               min={30}
@@ -374,7 +484,10 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, onAct
               style={inputStyle}
             />
           </Field>
-          <Field label="Transferir a un humano (número, opcional)">
+          <Field
+            label="Transferir a un humano (número, opcional)"
+            hint="Si el agente no puede resolver algo, puede pasarle la llamada en vivo a este número."
+          >
             <input
               value={config.transfer_phone_number}
               onChange={(e) => onChange({ transfer_phone_number: e.target.value })}
@@ -392,13 +505,27 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, onAct
           />
         </Field>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        {/* Todavía no hay ninguna heurística real para distinguir un buzón
+            de voz de una persona atendiendo (ver la nota en agent.py) — un
+            toggle que se puede prender pero que no hace nada es peor que no
+            tenerlo, porque el negocio cree que está protegido y no lo está.
+            Deshabilitado a propósito, marcado "Próximamente" en vez de
+            escondido del todo -- así el negocio sabe que existe y que
+            todavía no funciona, no que se le ocultó algo. Si alguien ya
+            tenía el campo en true de antes de este cambio, el mensaje sigue
+            visible para no perder ese dato, aunque el toggle en sí ya no se
+            pueda tocar. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
           <button
             type="button"
-            onClick={() => onChange({ voicemail_detection_enabled: !config.voicemail_detection_enabled })}
+            disabled
+            aria-disabled="true"
+            title="Todavía no hay ninguna forma confiable de detectar un buzón de voz real — en construcción."
             style={{
               ...toggleStyle,
               flexShrink: 0,
+              cursor: "not-allowed",
+              opacity: 0.55,
               background: config.voicemail_detection_enabled ? "var(--success)" : "var(--border)",
             }}
           >
@@ -409,10 +536,18 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, onAct
               }}
             />
           </button>
-          <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink-soft)" }}>
             Detectar buzón de voz
           </span>
+          <span className="bubble54-pill amber">
+            <span className="dot" />
+            Próximamente
+          </span>
         </div>
+        <p style={fieldHintStyle}>
+          Todavía estamos construyendo una forma confiable de distinguir un buzón de voz real de una persona
+          atendiendo — por ahora este campo no hace nada, aunque lo actives.
+        </p>
         {config.voicemail_detection_enabled && (
           <Field label="Mensaje a dejar en el buzón">
             <input
@@ -508,12 +643,13 @@ export default function BotConfigForm({ config, catalog, onChange, onSave, onAct
   );
 }
 
-function Section({ title, full, children }) {
+function Section({ title, hint, full, children }) {
   return (
     <div className="bubble54-panel" style={{ padding: 20, gridColumn: full ? "1 / -1" : undefined }}>
-      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-soft)", marginBottom: 14 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-soft)", marginBottom: hint ? 4 : 14 }}>
         {title}
       </div>
+      {hint && <p style={sectionHintStyle}>{hint}</p>}
       <div style={{ display: "grid", gap: 14 }}>{children}</div>
     </div>
   );
@@ -544,14 +680,17 @@ function Row({ children }) {
   return <div className="bubble54-form-row-2" style={{ display: "grid", gap: 14 }}>{children}</div>;
 }
 
-function Field({ label, children }) {
+function Field({ label, hint, children }) {
   // El label envuelve el campo (en vez de ser un hermano suelto) para que
   // quede asociado de verdad — sin esto, un lector de pantalla nunca anuncia
-  // qué campo es cuál, aunque se vea bien a simple vista.
+  // qué campo es cuál, aunque se vea bien a simple vista. `hint` es texto de
+  // ayuda en criollo debajo del campo -- para quien no sabe qué significa
+  // "proveedor" o "corte por silencio" sin haberlo armado uno mismo.
   return (
     <label style={{ display: "block" }}>
       <span style={labelStyle}>{label}</span>
       {children}
+      {hint && <span style={fieldHintStyle}>{hint}</span>}
     </label>
   );
 }
@@ -580,6 +719,22 @@ const labelStyle = {
   fontWeight: 600,
   color: "var(--ink-soft)",
   marginBottom: 6,
+};
+
+const fieldHintStyle = {
+  display: "block",
+  marginTop: 5,
+  fontSize: 11,
+  fontWeight: 400,
+  color: "var(--ink-softer)",
+  lineHeight: 1.4,
+};
+
+const sectionHintStyle = {
+  fontSize: 11.5,
+  color: "var(--ink-softer)",
+  lineHeight: 1.45,
+  margin: "0 0 12px",
 };
 
 const inputStyle = {
@@ -616,6 +771,26 @@ const toggleStyle = {
   cursor: "pointer",
   padding: 0,
   transition: "background 0.15s ease",
+};
+
+const templateConfirmBoxStyle = {
+  marginTop: 10,
+  padding: "10px 12px",
+  borderRadius: 8,
+  background: "#FFFBEB",
+  border: "1px solid #FDE68A",
+  display: "grid",
+  gap: 8,
+};
+
+const cancelLinkStyle = {
+  background: "none",
+  border: "none",
+  color: "var(--ink-soft)",
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: "pointer",
+  padding: 0,
 };
 
 const toggleKnobStyle = {
