@@ -5,10 +5,10 @@
   "active": false,
   "activeVersionId": null,
   "createdAt": "2026-09-04T17:15:43.325Z",
-  "updatedAt": "2026-09-18T15:21:32.164Z",
+  "updatedAt": "2026-09-22T13:46:30.660Z",
   "isArchived": false,
-  "versionId": "1707425e-8e46-4654-9647-1a8eb855daab",
-  "versionCounter": 3,
+  "versionId": "94f35db9-0038-4004-913f-35460a133340",
+  "versionCounter": 4,
   "sourceWorkflowId": null,
   "triggerCount": 0,
   "nodes": [
@@ -559,7 +559,7 @@
       ],
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "\nconst lead = $json;\n\nlet query = '';\ntry { query = $('\\U0001F527 Construir Query de Búsqueda').item.json.query || ''; } catch (e) {}\nlet company_id = null;\ntry { company_id = Number($('\\U0001F527 Extraer Parámetros').item.json.company_id); } catch (e) {}\n\nif (!lead.telefono) {\n  return [{ json: { tiene_telefono: false, nombre: lead.nombre, email: lead.email || '', motivo: 'Se encontró el negocio pero sin teléfono real — el CRM de G54 guarda leads por teléfono, no se pudo persistir.' } }];\n}\n\nconst origenLabel = ({\n  hunter: 'Hunter.io',\n  scraping_contact: 'la página /contact del sitio',\n  scraping_about: 'la página /about del sitio',\n  '': 'ninguna fuente',\n})[lead.origen_email || ''] || 'ninguna fuente';\n\nconst notas = [\n  'Lead encontrado por Prospección AI' + (query ? (' (búsqueda: \"' + query + '\")') : '') + '.',\n  lead.web ? ('Sitio: ' + lead.web) : 'Sin sitio web conocido.',\n  lead.email ? ('Email encontrado vía ' + origenLabel + ': ' + lead.email) : 'No se encontró ningún email real.',\n  lead.rating ? ('Rating en Google: ' + lead.rating) : '',\n  lead.direccion ? ('Dirección: ' + lead.direccion) : '',\n].filter(Boolean).join(' ');\n\nreturn [{ json: {\n  tiene_telefono: true,\n  company_id,\n  telefono: lead.telefono,\n  nombre: lead.nombre,\n  origen: 'prospeccion', // ya no hace falta el workaround -- confirmado real y estable desde el 17-sep\n  temperatura: 'bajo',\n  notas,\n  email: lead.email || '',\n} }];\n"
+        "jsCode": "\nconst lead = $json;\n\nlet query = '';\ntry { query = $('🔧 Construir Query de Búsqueda').item.json.query || ''; } catch (e) {}\nlet company_id = null;\ntry { company_id = Number($('🔧 Extraer Parámetros').item.json.company_id); } catch (e) {}\n\n// Sin teléfono NI email -- no hay ningún identificador real para guardar en el CRM\nif (!lead.telefono && !lead.email) {\n  return [{ json: { descartado: true, nombre: lead.nombre, motivo: 'Se encontró el negocio pero sin teléfono ni email real -- el CRM de G54 no tiene con qué identificarlo.' } }];\n}\n\nconst origenLabel = ({\n  hunter: 'Hunter.io',\n  scraping_contact: 'la página /contact del sitio',\n  scraping_about: 'la página /about del sitio',\n  '': 'ninguna fuente',\n})[lead.origen_email || ''] || 'ninguna fuente';\n\nconst notas = [\n  'Lead encontrado por Prospección AI' + (query ? (' (búsqueda: \"' + query + '\")') : '') + '.',\n  lead.web ? ('Sitio: ' + lead.web) : 'Sin sitio web conocido.',\n  lead.email ? ('Email encontrado vía ' + origenLabel + ': ' + lead.email) : 'No se encontró ningún email real.',\n  lead.rating ? ('Rating en Google: ' + lead.rating) : '',\n  lead.direccion ? ('Dirección: ' + lead.direccion) : '',\n].filter(Boolean).join(' ');\n\nconst payload = {\n  puede_guardar: true,\n  tiene_telefono: !!lead.telefono,\n  company_id,\n  nombre: lead.nombre,\n  origen: 'prospeccion', // ya no hace falta el workaround -- confirmado real y estable desde el 17-sep\n  temperatura: 'bajo',\n  notas,\n  email: lead.email || '',\n};\n// sin teléfono -- el CRM ya dedupea por email cuando el teléfono viene vacío (confirmado en vivo 22-sep)\nif (lead.telefono) payload.telefono = lead.telefono;\n\nreturn [{ json: payload }];\n"
       }
     },
     {
@@ -581,7 +581,7 @@
           "conditions": [
             {
               "id": "c1",
-              "leftValue": "={{ $json.tiene_telefono }}",
+              "leftValue": "={{ $json.puede_guardar }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
@@ -626,7 +626,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ company_id: $json.company_id, telefono: $json.telefono, nombre: $json.nombre, origen: $json.origen, temperatura: $json.temperatura, notas: $json.notas }) }}"
+        "jsonBody": "={{ JSON.stringify({ company_id: $json.company_id, telefono: $json.telefono, email: $json.email, nombre: $json.nombre, origen: $json.origen, temperatura: $json.temperatura, notas: $json.notas }) }}"
       },
       "onError": "continueRegularOutput"
     },
@@ -672,7 +672,7 @@
       ],
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const prev = $('🔧 CRM: Preparar Payload (Prospección)').item.json;\nreturn [{ json: { guardado_confirmado: true, deal_id: $json.deal.id, nombre: prev.nombre, email: prev.email || '' } }];"
+        "jsCode": "const prev = $('🔧 CRM: Preparar Payload (Prospección)').item.json;\nreturn [{ json: { guardado_confirmado: true, deal_id: $json.deal.id, nombre: prev.nombre, email: prev.email || '', tiene_telefono: prev.tiene_telefono } }];"
       }
     },
     {
@@ -712,7 +712,7 @@
       ],
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "\nconst raw = $input.all();\nconst items = (raw[0] && raw[0].json && raw[0].json.data) ? raw[0].json.data : raw.map(i => i.json);\n\n// Caso de salida temprana: un solo item con sinResultados/valido:false, sin ningún lead real procesado\nif (items.length === 1 && (items[0].sinResultados === true || items[0].valido === false)) {\n  return [{ json: { ok: true, encontrados: 0, guardados: 0, motivo: items[0].motivo } }];\n}\n\nlet encontrados = items.length;\nlet sinContacto = 0, sinTelefono = 0, conEmail = 0, sinEmail = 0, guardadosOk = 0, guardadosFallidos = 0;\n\nfor (const it of items) {\n  if (it.descartado) { sinContacto++; continue; }\n  if (it.tiene_telefono === false) { sinTelefono++; if (it.email) conEmail++; else sinEmail++; continue; }\n  if (it.guardado_confirmado === true) { guardadosOk++; if (it.email) conEmail++; else sinEmail++; continue; }\n  if (it.guardado_confirmado === false) { guardadosFallidos++; if (it.email) conEmail++; else sinEmail++; continue; }\n}\n\nreturn [{ json: {\n  ok: true,\n  encontrados,\n  sin_contacto: sinContacto,\n  sin_telefono: sinTelefono,\n  con_email: conEmail,\n  sin_email: sinEmail,\n  guardados: guardadosOk,\n  guardados_fallidos: guardadosFallidos,\n} }];\n"
+        "jsCode": "\nconst raw = $input.all();\nconst items = (raw[0] && raw[0].json && raw[0].json.data) ? raw[0].json.data : raw.map(i => i.json);\n\n// Caso de salida temprana: un solo item con sinResultados/valido:false, sin ningún lead real procesado\nif (items.length === 1 && (items[0].sinResultados === true || items[0].valido === false)) {\n  return [{ json: { ok: true, encontrados: 0, guardados: 0, motivo: items[0].motivo } }];\n}\n\nlet encontrados = items.length;\nlet sinContacto = 0, conEmail = 0, sinEmail = 0, guardadosOk = 0, guardadosSoloEmail = 0, guardadosFallidos = 0;\n\nfor (const it of items) {\n  if (it.descartado) { sinContacto++; continue; }\n  if (it.email) conEmail++; else sinEmail++;\n  if (it.guardado_confirmado === true) {\n    guardadosOk++;\n    if (it.tiene_telefono === false) guardadosSoloEmail++;\n    continue;\n  }\n  if (it.guardado_confirmado === false) { guardadosFallidos++; continue; }\n}\n\nreturn [{ json: {\n  ok: true,\n  encontrados,\n  sin_contacto: sinContacto,\n  con_email: conEmail,\n  sin_email: sinEmail,\n  guardados: guardadosOk,\n  guardados_solo_email: guardadosSoloEmail,\n  guardados_fallidos: guardadosFallidos,\n} }];\n"
       }
     },
     {
@@ -1146,28 +1146,7 @@
     "executionOrder": "v1"
   },
   "staticData": null,
-  "pinData": null,
   "meta": null,
   "tags": [],
-  "shared": [
-    {
-      "role": "workflow:owner",
-      "workflowId": "jg5SENgRpe2wLBTn",
-      "projectId": "scK6yPpEmlkikl67",
-      "project": {
-        "id": "scK6yPpEmlkikl67",
-        "name": "Solange  Torrez <risosadmi@gmail.com>",
-        "type": "personal",
-        "icon": null,
-        "description": null,
-        "customTelemetryTags": [],
-        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-03-16T19:56:18.866Z",
-        "updatedAt": "2026-03-16T19:58:01.773Z"
-      },
-      "createdAt": "2026-09-04T17:15:43.338Z",
-      "updatedAt": "2026-09-04T17:15:43.338Z"
-    }
-  ],
   "activeVersion": null
 }
