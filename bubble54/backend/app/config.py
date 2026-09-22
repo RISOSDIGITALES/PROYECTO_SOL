@@ -73,7 +73,11 @@ class Settings(BaseSettings):
     # tira un error real y legible en vez de fingir que mandó un correo que
     # nunca salió (mismo criterio que twilio_account_sid/groq_api_key).
     smtp_host: str = "smtp.gmail.com"
-    smtp_port: int = 587
+    # 465 (SSL directo), no 587 (STARTTLS) -- confirmado en vivo el 22-sep
+    # que este entorno bloquea el 587 saliente (TCP timeout puro, mismo tipo
+    # de bloqueo de red ya visto con Groq) pero el 465 conecta bien. Gmail
+    # soporta los dos igual de bien, así que no hace falta ningún relay.
+    smtp_port: int = 465
     smtp_user: str = ""
     smtp_app_password: str = ""
     # Nombre real que ve el destinatario del correo, no el email crudo.
