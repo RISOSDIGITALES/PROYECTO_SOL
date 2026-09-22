@@ -548,12 +548,13 @@ export default function BusinessProfileForm({
             <span style={labelStyle}>Productos y servicios</span>
             <div style={{ display: "grid", gap: 8 }}>
               {productItems.map((item, i) => (
-                <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <div key={i} className="bubble54-product-row" style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <input
                     value={item.name}
                     onChange={(e) => updateProductItem(i, { name: e.target.value })}
                     placeholder="Ej: Cajones cerrados a medida"
-                    style={{ ...rowInputStyle, flex: 1 }}
+                    className="bubble54-product-name"
+                    style={rowInputStyle}
                   />
                   <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                     <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>$</span>

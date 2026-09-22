@@ -115,7 +115,7 @@ export default function AgencyHomePage() {
 
         {error && <div style={{ color: "var(--danger)", marginBottom: 16 }}>{error}</div>}
 
-        <div style={colsStyle}>
+        <div className="bubble54-cols-460" style={colsStyle}>
           {/* Columna izquierda — lo que hay que hacer, y lo último que pasó */}
           <div style={{ display: "grid", gap: 20, alignContent: "start" }}>
             {!loading && !allDone && (
@@ -277,9 +277,12 @@ const heroStyle = {
 // columna apila sus propias tarjetas con flujo natural, así que nunca
 // queda una celda huérfana al final de la fila por cómo cae el conteo de
 // tarjetas, algo que sí pasaba con el auto-fit de tarjetas individuales.
+// `gridTemplateColumns` vive en la clase CSS `.bubble54-cols-460`
+// (theme.css), no acá -- un valor puesto como `style` inline le gana
+// siempre a la media query de celular, mismo bug ya corregido una vez
+// en BotConfigForm (ítem 363), ahora evitado acá desde el principio.
 const colsStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(460px, 1fr))",
   gap: 20,
   alignItems: "start",
 };
