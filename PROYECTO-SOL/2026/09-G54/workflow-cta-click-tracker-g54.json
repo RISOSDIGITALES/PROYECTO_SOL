@@ -1,5 +1,16 @@
 {
+  "id": "JN2vRUznkOXlej8q",
   "name": "🔗 CTA Click Tracker (G54)",
+  "description": null,
+  "active": true,
+  "activeVersionId": "5e44d7be-e140-45fe-828b-7815ee6e0621",
+  "createdAt": "2026-07-31T17:38:29.798Z",
+  "updatedAt": "2026-09-28T16:05:28.855Z",
+  "isArchived": false,
+  "versionId": "5e44d7be-e140-45fe-828b-7815ee6e0621",
+  "versionCounter": 3,
+  "sourceWorkflowId": null,
+  "triggerCount": 1,
   "nodes": [
     {
       "id": "webhook-click",
@@ -39,7 +50,7 @@
             {
               "id": "g54-agent-token",
               "name": "G54_AGENT_TOKEN",
-              "value": "REDACTED_AGENT_TOKEN",
+              "value": "REDACTED_G54_AGENT_TOKEN",
               "type": "string"
             }
           ]
@@ -57,7 +68,7 @@
       ],
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const q = $('🔔 Webhook: Clic CTA').item.json.query || {};\nconst company = q.company || '';\nconst platform = (q.platform === 'instagram') ? 'instagram' : 'facebook';\nconst dest = q.dest || '';\n// Solo redirige a http(s) real — evita que este endpoint se use como open-redirect genérico\nconst destValida = typeof dest === 'string' && /^https?:\\/\\//.test(dest);\nconst hoy = new Date().toISOString().slice(0, 10);\n\nreturn [{\n  json: { company, platform, dest, destValida, hoy }\n}];"
+        "jsCode": "const wh = $('🔔 Webhook: Clic CTA').item.json;\nconst q = wh.query || {};\nconst company = q.company || '';\nconst platform = (q.platform === 'instagram') ? 'instagram' : 'facebook';\nconst dest = q.dest || '';\n// Solo redirige a http(s) real — evita que este endpoint se use como open-redirect genérico\nconst destValida = typeof dest === 'string' && /^https?:\\/\\//.test(dest);\nconst hoy = new Date().toISOString().slice(0, 10);\n// Bots y crawlers (vista previa de Facebook, buscadores, IA) también \"visitan\" el link.\n// Revisado 28-sep: ~80% de los clics registrados eran de bots (facebookexternalhit,\n// linkfluence, Googlebot, GPTBot). Se los redirige igual, pero no se suman como clic.\nconst ua = String((wh.headers || {})['user-agent'] || '');\nconst esBot = !ua || /bot|crawl|spider|facebookexternalhit|facebookcatalog|meta-externalagent|slurp|preview|linkfluence|headless|python-requests|curl|wget/i.test(ua);\n\nreturn [{\n  json: { company, platform, dest, destValida, hoy, esBot }\n}];\n"
       }
     },
     {
@@ -171,6 +182,40 @@
           "responseCode": 400
         }
       }
+    },
+    {
+      "id": "es-persona-if",
+      "name": "🤖 ¿Es una persona?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        180
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "p1",
+              "leftValue": "={{ $('🔧 Preparar Click').item.json.esBot }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
     }
   ],
   "connections": {
@@ -211,7 +256,7 @@
       "main": [
         [
           {
-            "node": "💾 G54: Sumar Clic",
+            "node": "🤖 ¿Es una persona?",
             "type": "main",
             "index": 0
           }
@@ -235,9 +280,362 @@
           }
         ]
       ]
+    },
+    "🤖 ¿Es una persona?": {
+      "main": [
+        [
+          {
+            "node": "💾 G54: Sumar Clic",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📤 Redirigir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
+  "nodeGroups": [],
   "settings": {
     "executionOrder": "v1"
+  },
+  "staticData": null,
+  "pinData": null,
+  "meta": null,
+  "tags": [],
+  "shared": [
+    {
+      "role": "workflow:owner",
+      "workflowId": "JN2vRUznkOXlej8q",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-07-31T17:38:29.810Z",
+      "updatedAt": "2026-07-31T17:38:29.810Z"
+    }
+  ],
+  "activeVersion": {
+    "versionId": "5e44d7be-e140-45fe-828b-7815ee6e0621",
+    "workflowId": "JN2vRUznkOXlej8q",
+    "nodes": [
+      {
+        "id": "webhook-click",
+        "name": "🔔 Webhook: Clic CTA",
+        "type": "n8n-nodes-base.webhook",
+        "position": [
+          200,
+          300
+        ],
+        "typeVersion": 2,
+        "parameters": {
+          "httpMethod": "GET",
+          "path": "cta-click-g54",
+          "options": {},
+          "responseMode": "responseNode"
+        },
+        "webhookId": "c16fb858-4df9-4b44-af9e-11149655aa43"
+      },
+      {
+        "id": "config-node",
+        "name": "⚙️ Config Growth54",
+        "type": "n8n-nodes-base.set",
+        "position": [
+          420,
+          300
+        ],
+        "typeVersion": 3.4,
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "g54-base-url",
+                "name": "G54_BASE_URL",
+                "value": "https://apigrowth.mdarthurdigital.com",
+                "type": "string"
+              },
+              {
+                "id": "g54-agent-token",
+                "name": "G54_AGENT_TOKEN",
+                "value": "REDACTED_G54_AGENT_TOKEN",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "preparar-click",
+        "name": "🔧 Preparar Click",
+        "type": "n8n-nodes-base.code",
+        "position": [
+          640,
+          300
+        ],
+        "typeVersion": 2,
+        "parameters": {
+          "jsCode": "const wh = $('🔔 Webhook: Clic CTA').item.json;\nconst q = wh.query || {};\nconst company = q.company || '';\nconst platform = (q.platform === 'instagram') ? 'instagram' : 'facebook';\nconst dest = q.dest || '';\n// Solo redirige a http(s) real — evita que este endpoint se use como open-redirect genérico\nconst destValida = typeof dest === 'string' && /^https?:\\/\\//.test(dest);\nconst hoy = new Date().toISOString().slice(0, 10);\n// Bots y crawlers (vista previa de Facebook, buscadores, IA) también \"visitan\" el link.\n// Revisado 28-sep: ~80% de los clics registrados eran de bots (facebookexternalhit,\n// linkfluence, Googlebot, GPTBot). Se los redirige igual, pero no se suman como clic.\nconst ua = String((wh.headers || {})['user-agent'] || '');\nconst esBot = !ua || /bot|crawl|spider|facebookexternalhit|facebookcatalog|meta-externalagent|slurp|preview|linkfluence|headless|python-requests|curl|wget/i.test(ua);\n\nreturn [{\n  json: { company, platform, dest, destValida, hoy, esBot }\n}];\n"
+        }
+      },
+      {
+        "id": "if-dest-valida",
+        "name": "🔀 ¿Dest válida?",
+        "type": "n8n-nodes-base.if",
+        "position": [
+          860,
+          300
+        ],
+        "typeVersion": 2.2,
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 1
+            },
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.destValida }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "sumar-clic",
+        "name": "💾 G54: Sumar Clic",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          1080,
+          200
+        ],
+        "typeVersion": 4.1,
+        "onError": "continueRegularOutput",
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/agent/rrss/metricas' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config Growth54').item.json.G54_AGENT_TOKEN }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "options": {},
+          "jsonBody": "={{ ({ company_id: parseInt($('🔧 Preparar Click').item.json.company) || null, metricas: [{ platform: $('🔧 Preparar Click').item.json.platform, period_start: $('🔧 Preparar Click').item.json.hoy, period_end: $('🔧 Preparar Click').item.json.hoy, clics: 1 }] }) }}"
+        }
+      },
+      {
+        "id": "responder-redirect",
+        "name": "📤 Redirigir",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "position": [
+          1300,
+          200
+        ],
+        "typeVersion": 1.1,
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "",
+          "options": {
+            "responseCode": 302,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Location",
+                  "value": "={{ $('🔧 Preparar Click').item.json.dest }}"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "responder-error",
+        "name": "❌ Responder Error",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "position": [
+          1080,
+          420
+        ],
+        "typeVersion": 1.1,
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "Link inválido.",
+          "options": {
+            "responseCode": 400
+          }
+        }
+      },
+      {
+        "id": "es-persona-if",
+        "name": "🤖 ¿Es una persona?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1080,
+          180
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 1
+            },
+            "conditions": [
+              {
+                "id": "p1",
+                "leftValue": "={{ $('🔧 Preparar Click').item.json.esBot }}",
+                "rightValue": false,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "false",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      }
+    ],
+    "connections": {
+      "🔔 Webhook: Clic CTA": {
+        "main": [
+          [
+            {
+              "node": "⚙️ Config Growth54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "⚙️ Config Growth54": {
+        "main": [
+          [
+            {
+              "node": "🔧 Preparar Click",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Preparar Click": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Dest válida?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Dest válida?": {
+        "main": [
+          [
+            {
+              "node": "🤖 ¿Es una persona?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "❌ Responder Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "💾 G54: Sumar Clic": {
+        "main": [
+          [
+            {
+              "node": "📤 Redirigir",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 ¿Es una persona?": {
+        "main": [
+          [
+            {
+              "node": "💾 G54: Sumar Clic",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📤 Redirigir",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "createdAt": "2026-09-28T16:05:28.857Z",
+    "updatedAt": "2026-09-28T16:05:28.857Z",
+    "workflowPublishHistory": [
+      {
+        "id": 3212,
+        "workflowId": "JN2vRUznkOXlej8q",
+        "versionId": "5e44d7be-e140-45fe-828b-7815ee6e0621",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-09-28T16:05:29.090Z"
+      }
+    ]
   }
 }
