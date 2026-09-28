@@ -31,6 +31,29 @@ check_pattern 'EAA[A-Za-z0-9]{60,}'             "token de acceso de Facebook/Met
 check_pattern 'sk-or-v1-[a-f0-9]{64}'           "API key de OpenRouter"
 check_pattern 'ghp_[A-Za-z0-9]{36}'             "token personal de GitHub"
 check_pattern 'sk-[A-Za-z0-9]{32,}'             "API key estilo OpenAI/DeepSeek"
+check_pattern 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[A-Za-z0-9_-]{40,}\.[A-Za-z0-9_-]{20,}' "token JWT (API de n8n u otro)"
+check_pattern 'nfp_[A-Za-z0-9]{30,}'            "token personal de Netlify"
+check_pattern 'IGAA[A-Za-z0-9_-]{60,}'          "token de Instagram"
+check_pattern 'pat[A-Za-z0-9]{14}\.[a-f0-9]{60,}' "token personal de Airtable"
+
+# Secretos propios del proyecto que no tienen un formato reconocible (token de agente de G54,
+# contraseña maestra, etc.): se leen de .secrets.local.md (fuera de git, formato NOMBRE=valor)
+# y se busca el valor literal en lo que se va a commitear. Agregado 2026-09-28.
+SECRETS_FILE="$(git rev-parse --show-toplevel)/.secrets.local.md"
+if [ -f "$SECRETS_FILE" ]; then
+  grep -E '^[A-Z0-9_]+=.{8,}$' "$SECRETS_FILE" | while IFS='=' read -r name value; do
+    for f in $FILES; do
+      [ -f "$f" ] || continue
+      [ "$f" = ".secrets.local.md" ] && continue
+      if grep -qF "$value" "$f" 2>/dev/null; then
+        echo ""
+        echo "BLOQUEADO: $f contiene el valor real de $name (de .secrets.local.md)"
+        echo "1" > "$(git rev-parse --git-dir)/.secret_found"
+      fi
+    done
+  done
+  if [ -f "$(git rev-parse --git-dir)/.secret_found" ]; then rm -f "$(git rev-parse --git-dir)/.secret_found"; FOUND=1; fi
+fi
 
 if [ "$FOUND" = "1" ]; then
   echo ""
