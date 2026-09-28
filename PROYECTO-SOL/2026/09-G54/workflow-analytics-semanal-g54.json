@@ -3,12 +3,12 @@
   "name": "📊 Analytics AI Semanal — G54",
   "description": null,
   "active": true,
-  "activeVersionId": "8b7c5940-c365-4716-a176-11cdf952da85",
+  "activeVersionId": "832a502d-3191-45f1-8c82-af34edc7711f",
   "createdAt": "2026-06-12T20:28:34.750Z",
-  "updatedAt": "2026-09-28T17:18:17.139Z",
+  "updatedAt": "2026-09-28T17:43:51.797Z",
   "isArchived": false,
-  "versionId": "8b7c5940-c365-4716-a176-11cdf952da85",
-  "versionCounter": 33,
+  "versionId": "832a502d-3191-45f1-8c82-af34edc7711f",
+  "versionCounter": 34,
   "sourceWorkflowId": null,
   "triggerCount": 2,
   "nodes": [
@@ -304,59 +304,6 @@
       "onError": "continueRegularOutput",
       "continueOnFail": true,
       "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "jsCode": "// Reescrito 28-sep: antes armaba el contexto de la IA leyendo métricas de Facebook que ni\n// se pedían (reach/impressions/engaged_users → siempre 0), trataba los totales de cuenta de\n// Instagram como si fueran una lista de posts, y le decía a la IA \"últimos 30 días\" en un\n// reporte semanal. Ahora usa exactamente los mismos números que se guardan en G54\n// (📊 Preparar Métricas G54, que corre antes), así el reporte y el panel dicen lo mismo.\nconst config = $('⚙️ Config Growth54').item.json;\nconst empresa = ($('📊 Obtener Perfil Empresa').item?.json || {}).data || {};\nconst estrategia = ($('🎯 Obtener Estrategia G54').item?.json || {}).data || {};\nconst posts = ($('📝 Obtener Posts Publicados G54').item?.json || {}).data || [];\nconst leads = ($('💼 Obtener Leads G54').item?.json || {}).data || [];\nconst m = $('📊 Preparar Métricas G54').item.json;\n\nconst desde = m.period_start, hasta = m.period_end;\nconst enSemana = f => { const d = (f || '').slice(0, 10); return d && d >= desde && d <= hasta; };\n\n// Posts publicados de la semana, por red (dato de G54)\nconst postsSemana = posts.filter(p => (p.status || 'publicado') === 'publicado' && enSemana(p.fecha_publicada || p.fecha_programada));\nconst postsPorPlataforma = postsSemana.reduce((acc, p) => { const pl = p.platform || 'sin_plataforma'; acc[pl] = (acc[pl] || 0) + 1; return acc; }, {});\n\n// Leads de la semana\nconst leadsSemana = leads.filter(l => enSemana(l.created_at || l.fecha || l.ultima_actividad));\nconst totalLeads = leadsSemana.length;\nconst leadsCalientes = leadsSemana.filter(l => (l.clasificacion || '').toLowerCase() === 'caliente').length;\nconst leadsTibios = leadsSemana.filter(l => (l.clasificacion || '').toLowerCase() === 'tibio').length;\nconst leadsPorOrigen = leadsSemana.reduce((acc, l) => { const o = l.origen || 'desconocido'; acc[o] = (acc[o] || 0) + 1; return acc; }, {});\n\nconst fb = m.fb || {}, ig = m.ig || {};\nconst kpis = estrategia.kpis || [];\nconst pilares = estrategia.pilares || [];\nconst nombreEmpresa = empresa.name || 'la empresa';\n\nconst contextoAnalytics = `EMPRESA: ${nombreEmpresa}\nOBJETIVO ESTRATÉGICO: ${estrategia.objetivo || ''}\nAUDIENCIA: ${estrategia.audiencia || ''}\nPILARES DE CONTENIDO: ${Array.isArray(pilares) ? pilares.join(', ') : pilares}\nKPIs DEFINIDOS: ${Array.isArray(kpis) ? kpis.join(', ') : kpis}\nPERÍODO: semana del ${desde} al ${hasta} (7 días)\n\n--- FACEBOOK (datos reales de Meta, solo posts de esta semana) ---\nPosts: ${fb.posts || 0} · Alcance: ${fb.alcance || 0} · Visualizaciones: ${fb.impresiones || 0} · Reacciones: ${fb.reacciones || 0} · Comentarios: ${fb.comentarios || 0} · Compartidos: ${fb.compartidos || 0} · Clics: ${fb.clics || 0}\nVisitas a la página: ${fb.visitas_perfil || 0} · Seguidores nuevos: ${fb.seguidores_nuevos || 0}\nDetalle por post:\n${(fb.detalle || []).length ? JSON.stringify(fb.detalle, null, 2) : 'Sin posts de Facebook en la semana'}\n\n--- INSTAGRAM (datos reales de Meta, totales de la cuenta en la semana) ---\nAlcance: ${ig.alcance || 0} · Visualizaciones: ${ig.impresiones || 0} · Interacciones: ${ig.engagement || 0} · Guardados: ${ig.guardados || 0} · Compartidos: ${ig.compartidos || 0} · Visitas al perfil: ${ig.visitas_perfil || 0} · Clics al sitio: ${ig.clics || 0}\n\n--- LINKEDIN ---\nSin métricas: el token actual no tiene permiso de estadísticas (no inventar números de LinkedIn).\n\n--- CONVERSIÓN EN LA SEMANA (G54) ---\nLeads: ${totalLeads} · Calientes: ${leadsCalientes} · Tibios: ${leadsTibios}\nPor origen: ${JSON.stringify(leadsPorOrigen)}\nTasa de calificación: ${totalLeads > 0 ? Math.round((leadsCalientes / totalLeads) * 100) : 0}%\n\nIMPORTANTE: usa solo estos números. Si un valor es 0 o no hay datos, dilo tal cual — nunca estimes ni inventes métricas.`;\n\nreturn [{ json: {\n  contextoAnalytics,\n  nombreEmpresa,\n  emailEmpresa: (empresa.emails || [])[0] || '',\n  // el endpoint de posts de G54 que usa este workflow no trae los ya publicados — se usa el conteo real de Meta\n  totalPosts: fb.posts || 0,\n  totalLeads,\n  leadsCalientes,\n  periodoAnalisis: 7\n} }];\n"
-      },
-      "id": "preparar-datos",
-      "name": "🔧 Preparar Datos Analytics",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2160,
-        480
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.groq.com/openai/v1/chat/completions",
-        "sendHeaders": false,
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  \"model\": \"openai/gpt-oss-120b\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Actúa como un analista senior de marketing orgánico basado en SEO, AEO y GEO.\\n\\nTu función es analizar datos y optimizar la estrategia de contenido.\\n\\nDebes:\\n1. Identificar contenido de alto rendimiento\\n2. Detectar contenido de bajo rendimiento\\n3. Analizar keywords y temas que generan más engagement (SEO)\\n4. Analizar preguntas frecuentes e interacciones útiles (AEO)\\n5. Evaluar qué estructuras de contenido funcionan mejor (GEO)\\n6. Detectar patrones: horarios, formatos, temas\\n7. Proponer optimizaciones claras y accionables\\n\\nIMPORTANTE — FORMATOS:\\nG54 publica automáticamente imagen estática y post de texto.\\nSi recomiendas un formato diferente (carrusel, reel, video, story), márcalo explícitamente con la etiqueta [Recomendación manual — fuera de G54] para que el cliente sepa que debe ejecutarlo por su cuenta desde Meta Business Suite.\\n\\nEntrega EXACTAMENTE en este formato:\\nREPORTE:\\nTOP CONTENIDO:\\nBAJO RENDIMIENTO:\\nINSIGHTS SEO:\\nINSIGHTS AEO:\\nINSIGHTS GEO:\\nINSIGHTS CONVERSIÓN:\\nRECOMENDACIONES:\\n\\nSé claro, accionable y orientado a mejora continua. Sin relleno.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": $('🔧 Preparar Datos Analytics').item.json.contextoAnalytics\n    }\n  ],\n  \"temperature\": 0.5,\n  \"max_tokens\": 4000, \"reasoning_effort\": \"low\"\n}) }}",
-        "options": {},
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "groqApi"
-      },
-      "id": "groq-analytics",
-      "name": "🤖 Groq: Analytics AI",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2400,
-        480
-      ],
-      "credentials": {
-        "groqApi": {
-          "id": "jORffbRhRNohHT1B",
-          "name": "Groq API"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const groqRaw = $('🤖 Groq: Analytics AI').item.json;\nconst texto = groqRaw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`(?:^|\\\\n)\\\\*{0,2}\\\\s*${label}\\\\s*\\\\*{0,2}[:\\\\s]+([\\\\s\\\\S]*?)(?=\\\\n\\\\*{0,2}[A-ZÁÉÍÓÚ][A-ZÁÉÍÓÚ\\\\s]+\\\\*{0,2}:|$)`, 'i');\n  const match = texto.match(regex);\n  return (match?.[1] || '').trim();\n};\n\nconst reporte = get('REPORTE');\nconst topContenido = get('TOP CONTENIDO');\nconst bajoRendimiento = get('BAJO RENDIMIENTO');\nconst insightsSEO = get('INSIGHTS SEO');\nconst insightsAEO = get('INSIGHTS AEO');\nconst insightsGEO = get('INSIGHTS GEO');\nconst insightsConversion = get('INSIGHTS CONVERSI[ÓO]N');\nconst recomendaciones = get('RECOMENDACIONES');\n\nconst datos = $('🔧 Preparar Datos Analytics').item.json;\n\nreturn [{ json: {\n  reporte,\n  topContenido,\n  bajoRendimiento,\n  insightsSEO,\n  insightsAEO,\n  insightsGEO,\n  insightsConversion,\n  recomendaciones,\n  texto_completo: texto,\n  nombreEmpresa: datos.nombreEmpresa,\n  emailEmpresa: datos.emailEmpresa,\n  totalPosts: datos.totalPosts,\n  totalLeads: datos.totalLeads,\n  leadsCalientes: datos.leadsCalientes,\n  periodoAnalisis: datos.periodoAnalisis\n}}];"
-      },
-      "id": "parsear-reporte",
-      "name": "🔍 Parsear Reporte Analytics",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2640,
-        480
-      ]
     },
     {
       "id": "prep-metricas-g54",
@@ -736,44 +683,11 @@
         ]
       ]
     },
-    "🔧 Preparar Datos Analytics": {
-      "main": [
-        [
-          {
-            "node": "🤖 Groq: Analytics AI",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🤖 Groq: Analytics AI": {
-      "main": [
-        [
-          {
-            "node": "🔍 Parsear Reporte Analytics",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔍 Parsear Reporte Analytics": {
-      "main": [
-        [
-          {
-            "node": "💾 Guardar Métricas en G54",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "📊 Preparar Métricas G54": {
       "main": [
         [
           {
-            "node": "🔧 Preparar Datos Analytics",
+            "node": "💾 Guardar Métricas en G54",
             "type": "main",
             "index": 0
           }
@@ -927,7 +841,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "8b7c5940-c365-4716-a176-11cdf952da85",
+    "versionId": "832a502d-3191-45f1-8c82-af34edc7711f",
     "workflowId": "EX9K1AZwKeouSJ9G",
     "nodes": [
       {
@@ -1222,59 +1136,6 @@
         "onError": "continueRegularOutput",
         "continueOnFail": true,
         "alwaysOutputData": true
-      },
-      {
-        "parameters": {
-          "jsCode": "// Reescrito 28-sep: antes armaba el contexto de la IA leyendo métricas de Facebook que ni\n// se pedían (reach/impressions/engaged_users → siempre 0), trataba los totales de cuenta de\n// Instagram como si fueran una lista de posts, y le decía a la IA \"últimos 30 días\" en un\n// reporte semanal. Ahora usa exactamente los mismos números que se guardan en G54\n// (📊 Preparar Métricas G54, que corre antes), así el reporte y el panel dicen lo mismo.\nconst config = $('⚙️ Config Growth54').item.json;\nconst empresa = ($('📊 Obtener Perfil Empresa').item?.json || {}).data || {};\nconst estrategia = ($('🎯 Obtener Estrategia G54').item?.json || {}).data || {};\nconst posts = ($('📝 Obtener Posts Publicados G54').item?.json || {}).data || [];\nconst leads = ($('💼 Obtener Leads G54').item?.json || {}).data || [];\nconst m = $('📊 Preparar Métricas G54').item.json;\n\nconst desde = m.period_start, hasta = m.period_end;\nconst enSemana = f => { const d = (f || '').slice(0, 10); return d && d >= desde && d <= hasta; };\n\n// Posts publicados de la semana, por red (dato de G54)\nconst postsSemana = posts.filter(p => (p.status || 'publicado') === 'publicado' && enSemana(p.fecha_publicada || p.fecha_programada));\nconst postsPorPlataforma = postsSemana.reduce((acc, p) => { const pl = p.platform || 'sin_plataforma'; acc[pl] = (acc[pl] || 0) + 1; return acc; }, {});\n\n// Leads de la semana\nconst leadsSemana = leads.filter(l => enSemana(l.created_at || l.fecha || l.ultima_actividad));\nconst totalLeads = leadsSemana.length;\nconst leadsCalientes = leadsSemana.filter(l => (l.clasificacion || '').toLowerCase() === 'caliente').length;\nconst leadsTibios = leadsSemana.filter(l => (l.clasificacion || '').toLowerCase() === 'tibio').length;\nconst leadsPorOrigen = leadsSemana.reduce((acc, l) => { const o = l.origen || 'desconocido'; acc[o] = (acc[o] || 0) + 1; return acc; }, {});\n\nconst fb = m.fb || {}, ig = m.ig || {};\nconst kpis = estrategia.kpis || [];\nconst pilares = estrategia.pilares || [];\nconst nombreEmpresa = empresa.name || 'la empresa';\n\nconst contextoAnalytics = `EMPRESA: ${nombreEmpresa}\nOBJETIVO ESTRATÉGICO: ${estrategia.objetivo || ''}\nAUDIENCIA: ${estrategia.audiencia || ''}\nPILARES DE CONTENIDO: ${Array.isArray(pilares) ? pilares.join(', ') : pilares}\nKPIs DEFINIDOS: ${Array.isArray(kpis) ? kpis.join(', ') : kpis}\nPERÍODO: semana del ${desde} al ${hasta} (7 días)\n\n--- FACEBOOK (datos reales de Meta, solo posts de esta semana) ---\nPosts: ${fb.posts || 0} · Alcance: ${fb.alcance || 0} · Visualizaciones: ${fb.impresiones || 0} · Reacciones: ${fb.reacciones || 0} · Comentarios: ${fb.comentarios || 0} · Compartidos: ${fb.compartidos || 0} · Clics: ${fb.clics || 0}\nVisitas a la página: ${fb.visitas_perfil || 0} · Seguidores nuevos: ${fb.seguidores_nuevos || 0}\nDetalle por post:\n${(fb.detalle || []).length ? JSON.stringify(fb.detalle, null, 2) : 'Sin posts de Facebook en la semana'}\n\n--- INSTAGRAM (datos reales de Meta, totales de la cuenta en la semana) ---\nAlcance: ${ig.alcance || 0} · Visualizaciones: ${ig.impresiones || 0} · Interacciones: ${ig.engagement || 0} · Guardados: ${ig.guardados || 0} · Compartidos: ${ig.compartidos || 0} · Visitas al perfil: ${ig.visitas_perfil || 0} · Clics al sitio: ${ig.clics || 0}\n\n--- LINKEDIN ---\nSin métricas: el token actual no tiene permiso de estadísticas (no inventar números de LinkedIn).\n\n--- CONVERSIÓN EN LA SEMANA (G54) ---\nLeads: ${totalLeads} · Calientes: ${leadsCalientes} · Tibios: ${leadsTibios}\nPor origen: ${JSON.stringify(leadsPorOrigen)}\nTasa de calificación: ${totalLeads > 0 ? Math.round((leadsCalientes / totalLeads) * 100) : 0}%\n\nIMPORTANTE: usa solo estos números. Si un valor es 0 o no hay datos, dilo tal cual — nunca estimes ni inventes métricas.`;\n\nreturn [{ json: {\n  contextoAnalytics,\n  nombreEmpresa,\n  emailEmpresa: (empresa.emails || [])[0] || '',\n  // el endpoint de posts de G54 que usa este workflow no trae los ya publicados — se usa el conteo real de Meta\n  totalPosts: fb.posts || 0,\n  totalLeads,\n  leadsCalientes,\n  periodoAnalisis: 7\n} }];\n"
-        },
-        "id": "preparar-datos",
-        "name": "🔧 Preparar Datos Analytics",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          2160,
-          480
-        ]
-      },
-      {
-        "parameters": {
-          "method": "POST",
-          "url": "https://api.groq.com/openai/v1/chat/completions",
-          "sendHeaders": false,
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({\n  \"model\": \"openai/gpt-oss-120b\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Actúa como un analista senior de marketing orgánico basado en SEO, AEO y GEO.\\n\\nTu función es analizar datos y optimizar la estrategia de contenido.\\n\\nDebes:\\n1. Identificar contenido de alto rendimiento\\n2. Detectar contenido de bajo rendimiento\\n3. Analizar keywords y temas que generan más engagement (SEO)\\n4. Analizar preguntas frecuentes e interacciones útiles (AEO)\\n5. Evaluar qué estructuras de contenido funcionan mejor (GEO)\\n6. Detectar patrones: horarios, formatos, temas\\n7. Proponer optimizaciones claras y accionables\\n\\nIMPORTANTE — FORMATOS:\\nG54 publica automáticamente imagen estática y post de texto.\\nSi recomiendas un formato diferente (carrusel, reel, video, story), márcalo explícitamente con la etiqueta [Recomendación manual — fuera de G54] para que el cliente sepa que debe ejecutarlo por su cuenta desde Meta Business Suite.\\n\\nEntrega EXACTAMENTE en este formato:\\nREPORTE:\\nTOP CONTENIDO:\\nBAJO RENDIMIENTO:\\nINSIGHTS SEO:\\nINSIGHTS AEO:\\nINSIGHTS GEO:\\nINSIGHTS CONVERSIÓN:\\nRECOMENDACIONES:\\n\\nSé claro, accionable y orientado a mejora continua. Sin relleno.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": $('🔧 Preparar Datos Analytics').item.json.contextoAnalytics\n    }\n  ],\n  \"temperature\": 0.5,\n  \"max_tokens\": 4000, \"reasoning_effort\": \"low\"\n}) }}",
-          "options": {},
-          "authentication": "predefinedCredentialType",
-          "nodeCredentialType": "groqApi"
-        },
-        "id": "groq-analytics",
-        "name": "🤖 Groq: Analytics AI",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          2400,
-          480
-        ],
-        "credentials": {
-          "groqApi": {
-            "id": "jORffbRhRNohHT1B",
-            "name": "Groq API"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "jsCode": "const groqRaw = $('🤖 Groq: Analytics AI').item.json;\nconst texto = groqRaw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`(?:^|\\\\n)\\\\*{0,2}\\\\s*${label}\\\\s*\\\\*{0,2}[:\\\\s]+([\\\\s\\\\S]*?)(?=\\\\n\\\\*{0,2}[A-ZÁÉÍÓÚ][A-ZÁÉÍÓÚ\\\\s]+\\\\*{0,2}:|$)`, 'i');\n  const match = texto.match(regex);\n  return (match?.[1] || '').trim();\n};\n\nconst reporte = get('REPORTE');\nconst topContenido = get('TOP CONTENIDO');\nconst bajoRendimiento = get('BAJO RENDIMIENTO');\nconst insightsSEO = get('INSIGHTS SEO');\nconst insightsAEO = get('INSIGHTS AEO');\nconst insightsGEO = get('INSIGHTS GEO');\nconst insightsConversion = get('INSIGHTS CONVERSI[ÓO]N');\nconst recomendaciones = get('RECOMENDACIONES');\n\nconst datos = $('🔧 Preparar Datos Analytics').item.json;\n\nreturn [{ json: {\n  reporte,\n  topContenido,\n  bajoRendimiento,\n  insightsSEO,\n  insightsAEO,\n  insightsGEO,\n  insightsConversion,\n  recomendaciones,\n  texto_completo: texto,\n  nombreEmpresa: datos.nombreEmpresa,\n  emailEmpresa: datos.emailEmpresa,\n  totalPosts: datos.totalPosts,\n  totalLeads: datos.totalLeads,\n  leadsCalientes: datos.leadsCalientes,\n  periodoAnalisis: datos.periodoAnalisis\n}}];"
-        },
-        "id": "parsear-reporte",
-        "name": "🔍 Parsear Reporte Analytics",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          2640,
-          480
-        ]
       },
       {
         "id": "prep-metricas-g54",
@@ -1654,44 +1515,11 @@
           ]
         ]
       },
-      "🔧 Preparar Datos Analytics": {
-        "main": [
-          [
-            {
-              "node": "🤖 Groq: Analytics AI",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🤖 Groq: Analytics AI": {
-        "main": [
-          [
-            {
-              "node": "🔍 Parsear Reporte Analytics",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔍 Parsear Reporte Analytics": {
-        "main": [
-          [
-            {
-              "node": "💾 Guardar Métricas en G54",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
       "📊 Preparar Métricas G54": {
         "main": [
           [
             {
-              "node": "🔧 Preparar Datos Analytics",
+              "node": "💾 Guardar Métricas en G54",
               "type": "main",
               "index": 0
             }
@@ -1810,16 +1638,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-28T17:18:17.142Z",
-    "updatedAt": "2026-09-28T17:18:17.142Z",
+    "createdAt": "2026-09-28T17:43:51.800Z",
+    "updatedAt": "2026-09-28T17:43:51.800Z",
     "workflowPublishHistory": [
       {
-        "id": 3248,
+        "id": 3258,
         "workflowId": "EX9K1AZwKeouSJ9G",
-        "versionId": "8b7c5940-c365-4716-a176-11cdf952da85",
+        "versionId": "832a502d-3191-45f1-8c82-af34edc7711f",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-28T17:18:17.423Z"
+        "createdAt": "2026-09-28T17:43:52.098Z"
       }
     ]
   }
