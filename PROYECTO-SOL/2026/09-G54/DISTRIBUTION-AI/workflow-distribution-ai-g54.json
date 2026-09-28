@@ -3,12 +3,12 @@
   "name": "📢 Distribution AI — RRSS G54 v1.0",
   "description": null,
   "active": true,
-  "activeVersionId": "2406c0b1-5323-4d7c-af3b-a37abfff0b52",
+  "activeVersionId": "5b80669e-7796-4211-baaf-f24e619cb099",
   "createdAt": "2026-06-25T16:00:34.918Z",
-  "updatedAt": "2026-09-18T15:11:46.982Z",
+  "updatedAt": "2026-09-28T17:30:30.379Z",
   "isArchived": false,
-  "versionId": "2406c0b1-5323-4d7c-af3b-a37abfff0b52",
-  "versionCounter": 88,
+  "versionId": "5b80669e-7796-4211-baaf-f24e619cb099",
+  "versionCounter": 89,
   "sourceWorkflowId": null,
   "triggerCount": 1,
   "nodes": [
@@ -31,7 +31,7 @@
             {
               "id": "a3",
               "name": "G54_AGENT_TOKEN",
-              "value": "REDACTED_AGENT_TOKEN",
+              "value": "REDACTED_G54_AGENT_TOKEN",
               "type": "string"
             },
             {
@@ -67,7 +67,7 @@
             {
               "id": "a9",
               "name": "G54_MASTER_PASSWORD",
-              "value": "REDACTED_MASTER_PASSWORD",
+              "value": "REDACTED_G54_MASTER_PASSWORD",
               "type": "string"
             }
           ]
@@ -130,7 +130,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Procesa TODOS los items que llegaron (uno por post pendiente), no solo el primero\nconst items = $input.all();\nconst result = [];\nfor (const item of items) {\n  const p = item.json;\n  if (p && p.id) {\n    result.push({ json: p });\n  } else if (p) {\n    const posts = Array.isArray(p) ? p : (p.data || []);\n    for (const post of posts) result.push({ json: post });\n  }\n}\nreturn result;"
+        "jsCode": "// Procesa TODOS los items que llegaron (uno por post pendiente), no solo el primero\nconst items = $input.all();\nlet result = [];\nfor (const item of items) {\n  const p = item.json;\n  if (p && p.id) {\n    result.push({ json: p });\n  } else if (p) {\n    const posts = Array.isArray(p) ? p : (p.data || []);\n    for (const post of posts) result.push({ json: post });\n  }\n}\n\n// Fix 28-sep — publicaciones duplicadas del 22-sep: cada alarma llamaba con solo company_id y\n// publicaba TODO lo pendiente. Una alarma vieja (de un post ya reprogramado) sonando a la misma\n// hora que la de otro post generaba dos corridas simultáneas que publicaban el mismo post dos veces.\n// Si la llamada viene de una alarma (trae post_id), se publica SOLO ese post y SOLO si su\n// fecha_programada sigue siendo la de la alarma (si se reprogramó, la alarma vieja no hace nada).\nlet body = {};\ntry { body = $('🌐 Webhook: Publicar Post').first().json.body || {}; } catch (e) {}\nif (body.post_id) {\n  const alarmaMs = body.fecha_programada ? new Date(body.fecha_programada).getTime() : null;\n  result = result.filter(r => {\n    if (String(r.json.id) !== String(body.post_id)) return false;\n    if (!alarmaMs || !r.json.fecha_programada) return true;\n    return Math.abs(new Date(r.json.fecha_programada).getTime() - alarmaMs) <= 90 * 1000;\n  });\n}\nreturn result;\n"
       },
       "id": "norm-posts",
       "name": "🔧 Normalizar Posts",
@@ -2312,7 +2312,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "2406c0b1-5323-4d7c-af3b-a37abfff0b52",
+    "versionId": "5b80669e-7796-4211-baaf-f24e619cb099",
     "workflowId": "IRCoya91PKPjpT1T",
     "nodes": [
       {
@@ -2334,7 +2334,7 @@
               {
                 "id": "a3",
                 "name": "G54_AGENT_TOKEN",
-                "value": "REDACTED_AGENT_TOKEN",
+                "value": "REDACTED_G54_AGENT_TOKEN",
                 "type": "string"
               },
               {
@@ -2370,7 +2370,7 @@
               {
                 "id": "a9",
                 "name": "G54_MASTER_PASSWORD",
-                "value": "REDACTED_MASTER_PASSWORD",
+                "value": "REDACTED_G54_MASTER_PASSWORD",
                 "type": "string"
               }
             ]
@@ -2433,7 +2433,7 @@
       },
       {
         "parameters": {
-          "jsCode": "// Procesa TODOS los items que llegaron (uno por post pendiente), no solo el primero\nconst items = $input.all();\nconst result = [];\nfor (const item of items) {\n  const p = item.json;\n  if (p && p.id) {\n    result.push({ json: p });\n  } else if (p) {\n    const posts = Array.isArray(p) ? p : (p.data || []);\n    for (const post of posts) result.push({ json: post });\n  }\n}\nreturn result;"
+          "jsCode": "// Procesa TODOS los items que llegaron (uno por post pendiente), no solo el primero\nconst items = $input.all();\nlet result = [];\nfor (const item of items) {\n  const p = item.json;\n  if (p && p.id) {\n    result.push({ json: p });\n  } else if (p) {\n    const posts = Array.isArray(p) ? p : (p.data || []);\n    for (const post of posts) result.push({ json: post });\n  }\n}\n\n// Fix 28-sep — publicaciones duplicadas del 22-sep: cada alarma llamaba con solo company_id y\n// publicaba TODO lo pendiente. Una alarma vieja (de un post ya reprogramado) sonando a la misma\n// hora que la de otro post generaba dos corridas simultáneas que publicaban el mismo post dos veces.\n// Si la llamada viene de una alarma (trae post_id), se publica SOLO ese post y SOLO si su\n// fecha_programada sigue siendo la de la alarma (si se reprogramó, la alarma vieja no hace nada).\nlet body = {};\ntry { body = $('🌐 Webhook: Publicar Post').first().json.body || {}; } catch (e) {}\nif (body.post_id) {\n  const alarmaMs = body.fecha_programada ? new Date(body.fecha_programada).getTime() : null;\n  result = result.filter(r => {\n    if (String(r.json.id) !== String(body.post_id)) return false;\n    if (!alarmaMs || !r.json.fecha_programada) return true;\n    return Math.abs(new Date(r.json.fecha_programada).getTime() - alarmaMs) <= 90 * 1000;\n  });\n}\nreturn result;\n"
         },
         "id": "norm-posts",
         "name": "🔧 Normalizar Posts",
@@ -4579,16 +4579,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-18T15:11:46.993Z",
-    "updatedAt": "2026-09-18T15:11:46.993Z",
+    "createdAt": "2026-09-28T17:30:30.389Z",
+    "updatedAt": "2026-09-28T17:30:30.389Z",
     "workflowPublishHistory": [
       {
-        "id": 3156,
+        "id": 3252,
         "workflowId": "IRCoya91PKPjpT1T",
-        "versionId": "2406c0b1-5323-4d7c-af3b-a37abfff0b52",
+        "versionId": "5b80669e-7796-4211-baaf-f24e619cb099",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-18T15:11:47.512Z"
+        "createdAt": "2026-09-28T17:30:30.694Z"
       }
     ]
   }
