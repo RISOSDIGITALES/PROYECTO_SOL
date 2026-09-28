@@ -3,12 +3,12 @@
   "name": "CE WhatsApp Engine — Marco",
   "description": null,
   "active": true,
-  "activeVersionId": "07594de5-b600-4276-aa9a-af5694ef4c3a",
+  "activeVersionId": "e59521f6-ffd1-4379-a237-08c2a746ff1c",
   "createdAt": "2026-05-26T13:46:38.086Z",
-  "updatedAt": "2026-09-21T16:48:44.087Z",
+  "updatedAt": "2026-09-28T13:54:12.514Z",
   "isArchived": false,
-  "versionId": "07594de5-b600-4276-aa9a-af5694ef4c3a",
-  "versionCounter": 684,
+  "versionId": "e59521f6-ffd1-4379-a237-08c2a746ff1c",
+  "versionCounter": 685,
   "sourceWorkflowId": null,
   "triggerCount": 3,
   "nodes": [
@@ -215,7 +215,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Reconstrucción de base (27-ago): el fetch original (GET /api/n8n/companies/{id}/wa/leads\n// con hours_inactive/status) nunca funcionó — ese endpoint exige un teléfono puntual, no\n// sirve para listar. Reemplazado por /api/whatsapp/conversations (confirmado funcionando).\n// El estado \"ya se mandó/ya se notificó\" tampoco se podía trackear por clasificacion (se\n// descarta en silencio) — ahora vive en datos_calificacion, con lectura-mezcla-escritura\n// para no borrar los datos reales que Marco ya recolectó del cliente.\nconst cData = $('📋 Obtener Conversaciones (Follow-up)').first().json;\nconst conversaciones = (cData && cData.data) || [];\n\nconst boardData = $('📋 Obtener CRM Board (Follow-up)').first().json;\n// Mapa wa_contact_id -> etapa real del negocio, para no auto-seguir leads que ya\n// gestiona una persona (negociación en curso, cerrado o perdido).\nconst etapaPorContacto = {};\nif (boardData && typeof boardData === 'object') {\n  for (const [etapa, deals] of Object.entries(boardData)) {\n    if (!Array.isArray(deals)) continue;\n    for (const d of deals) {\n      if (d.wa_contact_id) etapaPorContacto[d.wa_contact_id] = etapa;\n    }\n  }\n}\nconst etapasBloqueadas = ['closed', 'lost', 'negotiation', 'proposal'];\n\nconst now = new Date();\nconst results = [];\n\nfor (const conv of conversaciones) {\n  const contact = conv.contact || {};\n  const waContactId = conv.wa_contact_id || contact.id;\n  const etapa = etapaPorContacto[waContactId];\n  if (etapa && etapasBloqueadas.includes(etapa)) continue;\n\n  const dc = contact.datos_calificacion || {};\n  if (dc.followup_notificado) continue; // ya se hizo todo lo posible con este lead\n\n  const ultimaInteraccion = new Date(conv.updated_at || conv.created_at);\n  const horasDiff = (now - ultimaInteraccion) / (1000 * 60 * 60);\n\n  let tipoAccion = null;\n  if (!dc.followup_23h_enviado_en && horasDiff >= 23) {\n    tipoAccion = 'enviar_23h';\n  } else if (dc.followup_23h_enviado_en) {\n    const horasDesdeEnvio = (now - new Date(dc.followup_23h_enviado_en)) / (1000 * 60 * 60);\n    // ~49h desde el envío del primer follow-up ≈ 72h reales desde el silencio original.\n    if (!isNaN(horasDesdeEnvio) && horasDesdeEnvio >= 49) tipoAccion = 'notificar';\n  }\n\n  if (tipoAccion) {\n    results.push({ json: {\n      telefono: (contact.phone || '').replace(/^\\+/, ''),\n      nombre: contact.name || 'cliente',\n      tipoAccion,\n      datosCalificacionActuales: dc\n    } });\n  }\n}\nreturn results;\n"
+        "jsCode": "// Reconstrucción de base (27-ago): el fetch original (GET /api/n8n/companies/{id}/wa/leads\n// con hours_inactive/status) nunca funcionó — ese endpoint exige un teléfono puntual, no\n// sirve para listar. Reemplazado por /api/whatsapp/conversations (confirmado funcionando).\n// El estado \"ya se mandó/ya se notificó\" tampoco se podía trackear por clasificacion (se\n// descarta en silencio) — ahora vive en datos_calificacion, con lectura-mezcla-escritura\n// para no borrar los datos reales que Marco ya recolectó del cliente.\nconst cData = $('📋 Obtener Conversaciones (Follow-up)').first().json;\nconst conversaciones = (cData && cData.data) || [];\n\nconst boardData = $('📋 Obtener CRM Board (Follow-up)').first().json;\n// Mapa wa_contact_id -> etapa real del negocio, para no auto-seguir leads que ya\n// gestiona una persona (negociación en curso, cerrado o perdido).\nconst etapaPorContacto = {};\nif (boardData && typeof boardData === 'object') {\n  for (const [etapa, deals] of Object.entries(boardData)) {\n    if (!Array.isArray(deals)) continue;\n    for (const d of deals) {\n      if (d.wa_contact_id) etapaPorContacto[d.wa_contact_id] = etapa;\n    }\n  }\n}\nconst etapasBloqueadas = ['closed', 'lost', 'negotiation', 'proposal'];\n\nconst now = new Date();\nconst results = [];\n\nfor (const conv of conversaciones) {\n  const contact = conv.contact || {};\n\n  // Solo teléfonos reales de WhatsApp (dígitos). Los contactos con ID sintético\n  // (tg_..., fb_..., de Telegram/Facebook guardados por el relevo) no son números\n  // de WhatsApp: mandarles un follow-up por la Cloud API siempre rebota (fix 28-sep).\n  const telLimpio = (contact.phone || '').replace(/^\\+/, '');\n  if (!/^\\d{8,15}$/.test(telLimpio)) continue;\n  const waContactId = conv.wa_contact_id || contact.id;\n  const etapa = etapaPorContacto[waContactId];\n  if (etapa && etapasBloqueadas.includes(etapa)) continue;\n\n  const dc = contact.datos_calificacion || {};\n  if (dc.followup_notificado) continue; // ya se hizo todo lo posible con este lead\n\n  const ultimaInteraccion = new Date(conv.updated_at || conv.created_at);\n  const horasDiff = (now - ultimaInteraccion) / (1000 * 60 * 60);\n\n  let tipoAccion = null;\n  if (!dc.followup_23h_enviado_en && horasDiff >= 23) {\n    tipoAccion = 'enviar_23h';\n  } else if (dc.followup_23h_enviado_en) {\n    const horasDesdeEnvio = (now - new Date(dc.followup_23h_enviado_en)) / (1000 * 60 * 60);\n    // ~49h desde el envío del primer follow-up ≈ 72h reales desde el silencio original.\n    if (!isNaN(horasDesdeEnvio) && horasDesdeEnvio >= 49) tipoAccion = 'notificar';\n  }\n\n  if (tipoAccion) {\n    results.push({ json: {\n      telefono: (contact.phone || '').replace(/^\\+/, ''),\n      nombre: contact.name || 'cliente',\n      tipoAccion,\n      datosCalificacionActuales: dc\n    } });\n  }\n}\nreturn results;\n"
       },
       "id": "2f08aeac-7fa5-48b5-9ad2-8a177e0ca547",
       "name": "🔧 Procesar Follow-ups",
@@ -300,7 +300,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: '+' + $('🔧 Procesar Follow-ups').item.json.telefono, nombre: $('🔧 Procesar Follow-ups').item.json.nombre, canal: 'whatsapp', datos_calificacion: { ...($('🔧 Procesar Follow-ups').item.json.datosCalificacionActuales || {}), followup_23h_enviado_en: new Date().toISOString() }, messages: [{ rol: 'bot', contenido: '[interno] follow-up de 23h enviado', sent_at: new Date().toISOString() }] }) }}",
+        "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: '+' + $('🔧 Procesar Follow-ups').item.json.telefono, nombre: $('🔧 Procesar Follow-ups').item.json.nombre, canal: 'whatsapp', datos_calificacion: { ...($('🔧 Procesar Follow-ups').item.json.datosCalificacionActuales || {}), followup_23h_enviado_en: new Date().toISOString() }, messages: [{ rol: 'bot', contenido: '[interno] follow-up de 23h enviado' }] }) }}",
         "options": {}
       },
       "id": "f5a8fd8c-aac2-434a-bff0-6318dc1d7e9f",
@@ -1307,7 +1307,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: '+' + $('🔧 Procesar Follow-ups').item.json.telefono, nombre: $('🔧 Procesar Follow-ups').item.json.nombre, canal: 'whatsapp', datos_calificacion: { ...($('🔧 Procesar Follow-ups').item.json.datosCalificacionActuales || {}), followup_notificado: true }, messages: [{ rol: 'bot', contenido: '[interno] follow-up 72h notificado al vendedor', sent_at: new Date().toISOString() }] }) }}",
+        "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: '+' + $('🔧 Procesar Follow-ups').item.json.telefono, nombre: $('🔧 Procesar Follow-ups').item.json.nombre, canal: 'whatsapp', datos_calificacion: { ...($('🔧 Procesar Follow-ups').item.json.datosCalificacionActuales || {}), followup_notificado: true }, messages: [{ rol: 'bot', contenido: '[interno] follow-up 72h notificado al vendedor' }] }) }}",
         "options": {}
       }
     },
@@ -1334,7 +1334,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_MASTER_PASSWORD' }) }}",
         "options": {}
       }
     },
@@ -2216,7 +2216,7 @@
     },
     "global": {
       "seenMessageIds": {
-        "wamid.TEST_CRMLINK_1790009473": 1790009473139
+        "wamid.TEST341540e22c974793": 1790107742960
       }
     }
   },
@@ -2257,7 +2257,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "07594de5-b600-4276-aa9a-af5694ef4c3a",
+    "versionId": "e59521f6-ffd1-4379-a237-08c2a746ff1c",
     "workflowId": "zAhV8gEsXD8dCrXq",
     "nodes": [
       {
@@ -2463,7 +2463,7 @@
       },
       {
         "parameters": {
-          "jsCode": "// Reconstrucción de base (27-ago): el fetch original (GET /api/n8n/companies/{id}/wa/leads\n// con hours_inactive/status) nunca funcionó — ese endpoint exige un teléfono puntual, no\n// sirve para listar. Reemplazado por /api/whatsapp/conversations (confirmado funcionando).\n// El estado \"ya se mandó/ya se notificó\" tampoco se podía trackear por clasificacion (se\n// descarta en silencio) — ahora vive en datos_calificacion, con lectura-mezcla-escritura\n// para no borrar los datos reales que Marco ya recolectó del cliente.\nconst cData = $('📋 Obtener Conversaciones (Follow-up)').first().json;\nconst conversaciones = (cData && cData.data) || [];\n\nconst boardData = $('📋 Obtener CRM Board (Follow-up)').first().json;\n// Mapa wa_contact_id -> etapa real del negocio, para no auto-seguir leads que ya\n// gestiona una persona (negociación en curso, cerrado o perdido).\nconst etapaPorContacto = {};\nif (boardData && typeof boardData === 'object') {\n  for (const [etapa, deals] of Object.entries(boardData)) {\n    if (!Array.isArray(deals)) continue;\n    for (const d of deals) {\n      if (d.wa_contact_id) etapaPorContacto[d.wa_contact_id] = etapa;\n    }\n  }\n}\nconst etapasBloqueadas = ['closed', 'lost', 'negotiation', 'proposal'];\n\nconst now = new Date();\nconst results = [];\n\nfor (const conv of conversaciones) {\n  const contact = conv.contact || {};\n  const waContactId = conv.wa_contact_id || contact.id;\n  const etapa = etapaPorContacto[waContactId];\n  if (etapa && etapasBloqueadas.includes(etapa)) continue;\n\n  const dc = contact.datos_calificacion || {};\n  if (dc.followup_notificado) continue; // ya se hizo todo lo posible con este lead\n\n  const ultimaInteraccion = new Date(conv.updated_at || conv.created_at);\n  const horasDiff = (now - ultimaInteraccion) / (1000 * 60 * 60);\n\n  let tipoAccion = null;\n  if (!dc.followup_23h_enviado_en && horasDiff >= 23) {\n    tipoAccion = 'enviar_23h';\n  } else if (dc.followup_23h_enviado_en) {\n    const horasDesdeEnvio = (now - new Date(dc.followup_23h_enviado_en)) / (1000 * 60 * 60);\n    // ~49h desde el envío del primer follow-up ≈ 72h reales desde el silencio original.\n    if (!isNaN(horasDesdeEnvio) && horasDesdeEnvio >= 49) tipoAccion = 'notificar';\n  }\n\n  if (tipoAccion) {\n    results.push({ json: {\n      telefono: (contact.phone || '').replace(/^\\+/, ''),\n      nombre: contact.name || 'cliente',\n      tipoAccion,\n      datosCalificacionActuales: dc\n    } });\n  }\n}\nreturn results;\n"
+          "jsCode": "// Reconstrucción de base (27-ago): el fetch original (GET /api/n8n/companies/{id}/wa/leads\n// con hours_inactive/status) nunca funcionó — ese endpoint exige un teléfono puntual, no\n// sirve para listar. Reemplazado por /api/whatsapp/conversations (confirmado funcionando).\n// El estado \"ya se mandó/ya se notificó\" tampoco se podía trackear por clasificacion (se\n// descarta en silencio) — ahora vive en datos_calificacion, con lectura-mezcla-escritura\n// para no borrar los datos reales que Marco ya recolectó del cliente.\nconst cData = $('📋 Obtener Conversaciones (Follow-up)').first().json;\nconst conversaciones = (cData && cData.data) || [];\n\nconst boardData = $('📋 Obtener CRM Board (Follow-up)').first().json;\n// Mapa wa_contact_id -> etapa real del negocio, para no auto-seguir leads que ya\n// gestiona una persona (negociación en curso, cerrado o perdido).\nconst etapaPorContacto = {};\nif (boardData && typeof boardData === 'object') {\n  for (const [etapa, deals] of Object.entries(boardData)) {\n    if (!Array.isArray(deals)) continue;\n    for (const d of deals) {\n      if (d.wa_contact_id) etapaPorContacto[d.wa_contact_id] = etapa;\n    }\n  }\n}\nconst etapasBloqueadas = ['closed', 'lost', 'negotiation', 'proposal'];\n\nconst now = new Date();\nconst results = [];\n\nfor (const conv of conversaciones) {\n  const contact = conv.contact || {};\n\n  // Solo teléfonos reales de WhatsApp (dígitos). Los contactos con ID sintético\n  // (tg_..., fb_..., de Telegram/Facebook guardados por el relevo) no son números\n  // de WhatsApp: mandarles un follow-up por la Cloud API siempre rebota (fix 28-sep).\n  const telLimpio = (contact.phone || '').replace(/^\\+/, '');\n  if (!/^\\d{8,15}$/.test(telLimpio)) continue;\n  const waContactId = conv.wa_contact_id || contact.id;\n  const etapa = etapaPorContacto[waContactId];\n  if (etapa && etapasBloqueadas.includes(etapa)) continue;\n\n  const dc = contact.datos_calificacion || {};\n  if (dc.followup_notificado) continue; // ya se hizo todo lo posible con este lead\n\n  const ultimaInteraccion = new Date(conv.updated_at || conv.created_at);\n  const horasDiff = (now - ultimaInteraccion) / (1000 * 60 * 60);\n\n  let tipoAccion = null;\n  if (!dc.followup_23h_enviado_en && horasDiff >= 23) {\n    tipoAccion = 'enviar_23h';\n  } else if (dc.followup_23h_enviado_en) {\n    const horasDesdeEnvio = (now - new Date(dc.followup_23h_enviado_en)) / (1000 * 60 * 60);\n    // ~49h desde el envío del primer follow-up ≈ 72h reales desde el silencio original.\n    if (!isNaN(horasDesdeEnvio) && horasDesdeEnvio >= 49) tipoAccion = 'notificar';\n  }\n\n  if (tipoAccion) {\n    results.push({ json: {\n      telefono: (contact.phone || '').replace(/^\\+/, ''),\n      nombre: contact.name || 'cliente',\n      tipoAccion,\n      datosCalificacionActuales: dc\n    } });\n  }\n}\nreturn results;\n"
         },
         "id": "2f08aeac-7fa5-48b5-9ad2-8a177e0ca547",
         "name": "🔧 Procesar Follow-ups",
@@ -2548,7 +2548,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: '+' + $('🔧 Procesar Follow-ups').item.json.telefono, nombre: $('🔧 Procesar Follow-ups').item.json.nombre, canal: 'whatsapp', datos_calificacion: { ...($('🔧 Procesar Follow-ups').item.json.datosCalificacionActuales || {}), followup_23h_enviado_en: new Date().toISOString() }, messages: [{ rol: 'bot', contenido: '[interno] follow-up de 23h enviado', sent_at: new Date().toISOString() }] }) }}",
+          "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: '+' + $('🔧 Procesar Follow-ups').item.json.telefono, nombre: $('🔧 Procesar Follow-ups').item.json.nombre, canal: 'whatsapp', datos_calificacion: { ...($('🔧 Procesar Follow-ups').item.json.datosCalificacionActuales || {}), followup_23h_enviado_en: new Date().toISOString() }, messages: [{ rol: 'bot', contenido: '[interno] follow-up de 23h enviado' }] }) }}",
           "options": {}
         },
         "id": "f5a8fd8c-aac2-434a-bff0-6318dc1d7e9f",
@@ -3555,7 +3555,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: '+' + $('🔧 Procesar Follow-ups').item.json.telefono, nombre: $('🔧 Procesar Follow-ups').item.json.nombre, canal: 'whatsapp', datos_calificacion: { ...($('🔧 Procesar Follow-ups').item.json.datosCalificacionActuales || {}), followup_notificado: true }, messages: [{ rol: 'bot', contenido: '[interno] follow-up 72h notificado al vendedor', sent_at: new Date().toISOString() }] }) }}",
+          "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: '+' + $('🔧 Procesar Follow-ups').item.json.telefono, nombre: $('🔧 Procesar Follow-ups').item.json.nombre, canal: 'whatsapp', datos_calificacion: { ...($('🔧 Procesar Follow-ups').item.json.datosCalificacionActuales || {}), followup_notificado: true }, messages: [{ rol: 'bot', contenido: '[interno] follow-up 72h notificado al vendedor' }] }) }}",
           "options": {}
         }
       },
@@ -3582,7 +3582,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
+          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_MASTER_PASSWORD' }) }}",
           "options": {}
         }
       },
@@ -4451,16 +4451,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-21T16:48:44.093Z",
-    "updatedAt": "2026-09-21T16:48:44.093Z",
+    "createdAt": "2026-09-28T13:54:12.518Z",
+    "updatedAt": "2026-09-28T13:54:12.518Z",
     "workflowPublishHistory": [
       {
-        "id": 3188,
+        "id": 3200,
         "workflowId": "zAhV8gEsXD8dCrXq",
-        "versionId": "07594de5-b600-4276-aa9a-af5694ef4c3a",
+        "versionId": "e59521f6-ffd1-4379-a237-08c2a746ff1c",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-21T16:48:44.514Z"
+        "createdAt": "2026-09-28T13:54:12.867Z"
       }
     ]
   }
