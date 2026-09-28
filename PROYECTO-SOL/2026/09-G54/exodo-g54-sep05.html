@@ -161,8 +161,9 @@
       <div class="meta-item"><div class="dot"></div> 14 pedidos activos</div>
     </div>
     <details class="header-updates">
-      <summary>Historial de actualizaciones (17 entradas)</summary>
+      <summary>Historial de actualizaciones (18 entradas)</summary>
       <ul>
+        <li><strong class="upd-date">28-sep (pedido de botones reescrito):</strong> la tarjeta del botón de Analytics estaba planteada como "que el botón actual mande semanal" — reescrita como lo que realmente se necesita: un botón por acción (métricas de la semana / informe mensual / refrescar), aclarando que lo que corre detrás de cada uno ya lo configuramos nosotros en Configuración de Agentes.</li>
         <li><strong class="upd-date">28-sep (repaso antes de enviar):</strong> datos puestos al día (posts publicados, tratos de prueba, disparo de Distribution AI, motivo real de la falta de LinkedIn), sacado el texto histórico que ya no aporta (recuadro de Camila, párrafo de "Llamar por WhatsApp"), contador corregido a la cantidad real de tarjetas, y agregado el pedido de que "Negocios" no cuente tratos perdidos.</li>
         <li><strong class="upd-date">28-sep (nuevo pedido: archivos por Telegram):</strong> confirmado que el relevo de Telegram solo reenvía texto — fotos, audios y documentos que un cliente le manda a Marco por Telegram nunca llegan a n8n. Agregada tarjeta en Backend.</li>
         <li><strong class="upd-date">28-sep (reabierta la tarjeta de Métricas — corrección nuestra):</strong> la habíamos dado por resuelta esta misma mañana; comparada punto por punto contra la maqueta del 12-ago, faltan 4 piezas de pantalla (bloque Demanda propio, ingresos y retención, leads por semana, consistencia de contenido). Reabierta con solo lo que falta. En el mismo repaso se encontraron y corrigieron 4 bugs de nuestro lado en Analytics Semanal (Instagram guardado siempre en 0, guardados/compartidos/visitas/seguidores nunca enviados, impresiones copiadas del alcance, y cada lunes la semana se guardaba duplicada) y se filtraron los bots del rastreador de clics (~80% de los clics registrados eran de bots).</li>
@@ -195,13 +196,19 @@
 
   <div class="item-card">
     <div class="item-header">
-      <div><div class="item-title">El botón para traer métricas frescas volvió a disparar el reporte mensual en vez del semanal</div><div class="item-where">Panel › Métricas RRSS — botones "Refrescar" y "Analytics AI"</div></div>
+      <div><div class="item-title">Un botón por cada acción de Analytics — hoy hay uno solo y dispara siempre el informe mensual</div><div class="item-where">Panel › Métricas RRSS — botones "Refrescar" y "Analytics AI"</div></div>
       <span class="badge nuevo">Regresión</span>
     </div>
     <div class="item-body">
-      <p class="item-why"><strong>No es un pedido nuevo:</strong> es el I-7 del Éxodo del 14-jul ("Botón de refresh manual de métricas"), resuelto y confirmado por la usuaria en el panel el 27-jul — ese botón disparaba el Analytics <strong>semanal</strong> y traía datos nuevos de Meta. Con el rediseño de la pantalla (22-sep) ese comportamiento se perdió.</p>
-      <p class="item-why"><strong>Cómo está hoy</strong> (leído en el bundle real <code>index-5jIl5Nxl.js</code>): <strong>"Refrescar"</strong> solo vuelve a leer lo guardado (<code>/metricas</code>, <code>/top-posts</code>, <code>/weekly</code>, <code>/panel</code> — los 4 responden bien) — como las métricas de Meta se guardan una vez por semana, apretarlo no cambia ningún número de alcance/engagement/clics. <strong>"Analytics AI"</strong> llama <code>POST /api/rrss/run-analytics</code> <em>sin body</em>, y según la propia doc sin <code>periodo</code> se dispara la fila <code>rrss_analytics</code> — el reporte <strong>mensual</strong> (<code>analytics-meta-reporte</code>): cada clic crea un informe mensual nuevo en "Informes", y el panel recarga a los 6 segundos, antes de que ese reporte termine, así que los números nuevos igual no se ven.</p>
-      <p class="item-why"><strong>Pedido concreto:</strong> en la pantalla de Métricas, que el botón "Analytics AI" mande <code>{"periodo":"semanal"}</code> (ya soportado por la API desde el 25-ago, y <code>rrss_analytics_weekly</code> ya está registrado y activo apuntando a <code>analytics-semanal-g54</code>) — y que después de disparar no recargue a los 6 s fijos, sino que avise algo como "Trayendo métricas de Meta, refrescá en un minuto" (o reintente la lectura un par de veces). El disparo del reporte mensual puede quedar donde tenga sentido (Informes), no en el botón de refrescar métricas.</p>
+      <p class="item-why"><strong>Qué pasa hoy:</strong> hay un solo botón, "Analytics AI", que llama <code>POST /api/rrss/run-analytics</code> sin <code>periodo</code> — o sea, siempre el <strong>informe mensual</strong>. No hay forma de pedir desde el panel solo las métricas frescas de la semana. Antes del rediseño del 22-sep sí la había (I-7 del Éxodo del 14-jul, confirmado el 27-jul).</p>
+      <p class="item-why"><strong>Pedido concreto — un botón por acción:</strong></p>
+      <ul class="item-why">
+        <li><strong>"Actualizar métricas de la semana"</strong> → <code>POST /api/rrss/run-analytics</code> con <code>{"periodo":"semanal"}</code>.</li>
+        <li><strong>"Generar informe mensual"</strong> → <code>POST /api/rrss/run-analytics</code> con <code>{"periodo":"mensual"}</code> (puede vivir en Métricas o en Informes, donde tenga más sentido).</li>
+        <li><strong>"Refrescar"</strong> → queda como está: solo vuelve a leer lo guardado.</li>
+        <li>Después de disparar cualquiera de los dos primeros: un aviso tipo <em>"Trayendo datos de Meta, listo en un minuto"</em> en vez de recargar a los 6 segundos fijos (el agente tarda más que eso y los números nuevos no llegan a verse).</li>
+      </ul>
+      <p class="item-why"><strong>Lo que no hace falta que toquen:</strong> qué hace cada botón por detrás lo configuramos nosotros en "Configuración de Agentes" — <code>rrss_analytics_weekly</code> ya apunta a nuestro agente semanal y <code>rrss_analytics</code> al mensual. Solo necesitamos que el panel tenga los dos botones y mande el <code>periodo</code> correcto en cada uno.</p>
     </div>
   </div>
 
