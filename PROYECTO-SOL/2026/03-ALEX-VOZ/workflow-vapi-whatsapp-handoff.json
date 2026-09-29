@@ -3,12 +3,12 @@
   "name": "📞→💬 VAPI → WhatsApp Handoff",
   "description": null,
   "active": true,
-  "activeVersionId": "55795ff5-2a09-4a31-b661-2e8a386c893a",
+  "activeVersionId": "27f94dbd-6a52-4908-a61e-bf1b8602113b",
   "createdAt": "2026-06-18T17:58:10.857Z",
-  "updatedAt": "2026-09-28T16:46:51.889Z",
+  "updatedAt": "2026-09-29T20:42:12.157Z",
   "isArchived": false,
-  "versionId": "55795ff5-2a09-4a31-b661-2e8a386c893a",
-  "versionCounter": 18,
+  "versionId": "27f94dbd-6a52-4908-a61e-bf1b8602113b",
+  "versionCounter": 19,
   "sourceWorkflowId": null,
   "triggerCount": 1,
   "nodes": [
@@ -219,6 +219,60 @@
           "name": "WhatsApp Cloud API — Marco (CE)"
         }
       }
+    },
+    {
+      "id": "974c6bf1-af96-46fa-8c1f-8c8271369970",
+      "name": "🔀 ¿Reenviar a Voice Agent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -900,
+        1732
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "5948d4b2-50b4-4680-b84a-a06a933cb360",
+              "leftValue": "={{ $json.body.message.type }}",
+              "rightValue": "end-of-call-report",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "notes": "29-sep: VAPI solo manda sus eventos a este webhook (server.url). El reporte de fin de llamada se reenvía al Voice Agent (vapi-ce-calls), que es el que guarda la llamada en G54 y el CRM."
+    },
+    {
+      "id": "9423da47-7b9d-40a4-a12d-f42702e7cdf5",
+      "name": "📨 Reenviar a Voice Agent (G54)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -680,
+        1732
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.mdarthurdigital.com/webhook/vapi-ce-calls",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -232,6 +286,11 @@
           },
           {
             "node": "🔀 ¿Es end-of-call exitoso?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔀 ¿Reenviar a Voice Agent?",
             "type": "main",
             "index": 0
           }
@@ -286,6 +345,18 @@
           }
         ]
       ]
+    },
+    "🔀 ¿Reenviar a Voice Agent?": {
+      "main": [
+        [
+          {
+            "node": "📨 Reenviar a Voice Agent (G54)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
     }
   },
   "nodeGroups": [],
@@ -326,7 +397,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "55795ff5-2a09-4a31-b661-2e8a386c893a",
+    "versionId": "27f94dbd-6a52-4908-a61e-bf1b8602113b",
     "workflowId": "6UWT1GHKZVvCDcc6",
     "nodes": [
       {
@@ -536,6 +607,60 @@
             "name": "WhatsApp Cloud API — Marco (CE)"
           }
         }
+      },
+      {
+        "id": "974c6bf1-af96-46fa-8c1f-8c8271369970",
+        "name": "🔀 ¿Reenviar a Voice Agent?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          -900,
+          1732
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "5948d4b2-50b4-4680-b84a-a06a933cb360",
+                "leftValue": "={{ $json.body.message.type }}",
+                "rightValue": "end-of-call-report",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ]
+          },
+          "options": {}
+        },
+        "notes": "29-sep: VAPI solo manda sus eventos a este webhook (server.url). El reporte de fin de llamada se reenvía al Voice Agent (vapi-ce-calls), que es el que guarda la llamada en G54 y el CRM."
+      },
+      {
+        "id": "9423da47-7b9d-40a4-a12d-f42702e7cdf5",
+        "name": "📨 Reenviar a Voice Agent (G54)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -680,
+          1732
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://n8n.mdarthurdigital.com/webhook/vapi-ce-calls",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json.body) }}",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "onError": "continueRegularOutput"
       }
     ],
     "connections": {
@@ -549,6 +674,11 @@
             },
             {
               "node": "🔀 ¿Es end-of-call exitoso?",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "🔀 ¿Reenviar a Voice Agent?",
               "type": "main",
               "index": 0
             }
@@ -603,6 +733,18 @@
             }
           ]
         ]
+      },
+      "🔀 ¿Reenviar a Voice Agent?": {
+        "main": [
+          [
+            {
+              "node": "📨 Reenviar a Voice Agent (G54)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          []
+        ]
       }
     },
     "nodeGroups": [],
@@ -610,16 +752,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-28T16:46:51.891Z",
-    "updatedAt": "2026-09-28T16:46:51.891Z",
+    "createdAt": "2026-09-29T20:42:12.160Z",
+    "updatedAt": "2026-09-29T20:42:12.160Z",
     "workflowPublishHistory": [
       {
-        "id": 3226,
+        "id": 3266,
         "workflowId": "6UWT1GHKZVvCDcc6",
-        "versionId": "55795ff5-2a09-4a31-b661-2e8a386c893a",
+        "versionId": "27f94dbd-6a52-4908-a61e-bf1b8602113b",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-28T16:46:52.126Z"
+        "createdAt": "2026-09-29T20:42:12.428Z"
       }
     ]
   }
