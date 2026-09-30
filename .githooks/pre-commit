@@ -3,8 +3,13 @@
 # Instalado por decision del proyecto tras el incidente del 17-sep-2026
 # (token de Telegram de Marco expuesto 11 veces en el historial publico).
 
-FILES=$(git diff --cached --name-only --diff-filter=ACM)
+# core.quotepath=off: sin esto git escapa los nombres con tildes (M\303\263dulo) y el hook
+# no encontraba el archivo y lo salteaba entero. IFS de salto de linea para nombres con
+# espacios. (Bug real, 2026-09-30.)
+FILES=$(git -c core.quotepath=off diff --cached --name-only --diff-filter=ACM)
 [ -z "$FILES" ] && exit 0
+IFS='
+'
 
 FOUND=0
 
@@ -41,7 +46,8 @@ check_pattern 'pat[A-Za-z0-9]{14}\.[a-f0-9]{60,}' "token personal de Airtable"
 # y se busca el valor literal en lo que se va a commitear. Agregado 2026-09-28.
 SECRETS_FILE="$(git rev-parse --show-toplevel)/.secrets.local.md"
 if [ -f "$SECRETS_FILE" ]; then
-  grep -E '^[A-Z0-9_]+=.{8,}$' "$SECRETS_FILE" | while IFS='=' read -r name value; do
+  # tr -d '\r': el archivo tiene fin de linea CRLF y sin esto ningun valor coincidia (bug real, 2026-09-30)
+  tr -d '\r' < "$SECRETS_FILE" | grep -E '^[A-Z0-9_]+=.{8,}$' | while IFS='=' read -r name value; do
     for f in $FILES; do
       [ -f "$f" ] || continue
       [ "$f" = ".secrets.local.md" ] && continue
