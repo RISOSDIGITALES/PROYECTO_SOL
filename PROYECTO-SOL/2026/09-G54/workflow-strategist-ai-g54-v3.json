@@ -3,14 +3,14 @@
   "name": "🧠 Strategist AI — RRSS G54 v3.0 (Tendencias)",
   "description": null,
   "active": true,
-  "activeVersionId": "24620ef1-b1f1-4dcf-b63e-890221d98986",
+  "activeVersionId": "7fffa098-f5cf-495f-9702-bef212b59169",
   "createdAt": "2026-06-20T20:02:45.580Z",
-  "updatedAt": "2026-08-19T17:07:15.112Z",
+  "updatedAt": "2026-09-30T20:14:42.739Z",
   "isArchived": false,
-  "versionId": "24620ef1-b1f1-4dcf-b63e-890221d98986",
-  "versionCounter": 30,
+  "versionId": "7fffa098-f5cf-495f-9702-bef212b59169",
+  "versionCounter": 41,
   "sourceWorkflowId": null,
-  "triggerCount": 1,
+  "triggerCount": 2,
   "nodes": [
     {
       "parameters": {},
@@ -42,7 +42,7 @@
             {
               "id": "g54-agent-token",
               "name": "G54_AGENT_TOKEN",
-              "value": "REDACTED_AGENT_TOKEN",
+              "value": "REDACTED_G54_AGENT_TOKEN",
               "type": "string"
             },
             {
@@ -498,7 +498,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_MASTER_PASSWORD' }) }}",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
         "options": {}
       }
     },
@@ -533,6 +533,283 @@
         "jsonBody": "={{ JSON.stringify({ company_id: Number($('⚙️ Config G54').item.json.G54_COMPANY_ID) }) }}",
         "options": {}
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        }
+      },
+      "id": "if-groq-ok-strategist",
+      "name": "🔀 ¿Groq OK? (Strategist)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        630
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'glm-4.5-flash',\n  messages: [\n    { role: 'system', content: 'Eres un estratega senior de marketing digital especializado en SEO, AEO y GEO. Responde ÚNICAMENTE con JSON válido, sin markdown ni texto adicional.' },\n    { role: 'user',   content: $('🔧 Preparar Contexto').item.json.prompt }\n  ],\n  temperature: 0.7,\n  max_tokens: 8000\n}) }}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "zhipu-fallback-strategist",
+      "name": "🤖 Zhipu: Fallback IA (Strategist)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        780
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "rWF3VkYbayILPZTH",
+          "name": "Zhipu GLM � Fallback IA (G54)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/rrss/metricas?company_id=' + ( $('⚙️ Config G54').isExecuted ? $('⚙️ Config G54').item.json.G54_COMPANY_ID : $('🔔 Webhook: Marcar Evento').item.json.body.company_id ) + '&from=' + $now.minus({days:30}).toFormat('yyyy-MM-dd') + '&to=' + $now.toFormat('yyyy-MM-dd') }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + ( $('🔐 G54: Login (Plataformas)').isExecuted ? $('🔐 G54: Login (Plataformas)').item.json.access_token : $('🔐 G54: Login (Evento)').item.json.access_token ) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "lb-metricas",
+      "name": "📊 Línea Base: Métricas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2600,
+        464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/whatsapp/conversations?per_page=100' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + ( $('🔐 G54: Login (Plataformas)').isExecuted ? $('🔐 G54: Login (Plataformas)').item.json.access_token : $('🔐 G54: Login (Evento)').item.json.access_token ) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "lb-leads",
+      "name": "📊 Línea Base: Leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2800,
+        464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/crm/board' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + ( $('🔐 G54: Login (Plataformas)').isExecuted ? $('🔐 G54: Login (Plataformas)').item.json.access_token : $('🔐 G54: Login (Evento)').item.json.access_token ) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "lb-crm",
+      "name": "📊 Línea Base: CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3000,
+        464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const esEvento = $('🔔 Webhook: Marcar Evento').isExecuted;\n\nlet companyId, modo, descripcion;\nif (esEvento) {\n  const body = $('🔔 Webhook: Marcar Evento').first().json.body || {};\n  companyId = Number(body.company_id);\n  descripcion = String(body.descripcion || 'Evento sin descripción').trim();\n  modo = 'linea_base_evento';\n} else {\n  companyId = Number($('⚙️ Config G54').item.json.G54_COMPANY_ID);\n  descripcion = '';\n  modo = 'linea_base';\n}\n\nconst metricas = $('📊 Línea Base: Métricas').first().json;\nconst leads = $('📊 Línea Base: Leads').first().json;\nconst crm = $('📊 Línea Base: CRM').first().json;\n\n// Con onError:continueRegularOutput en el nodo, si la llamada falla este item\n// llega vacío ({}) — nunca rompe la captura de la línea base por faltar el nombre.\nconst empRaw = $('🏢 Línea Base: Obtener Empresa').first().json || {};\nconst emp = empRaw.data || empRaw || {};\nconst companyName = emp.name || '';\nconst city = emp.base_city || '';\n\nfunction sumMetric(rows, campo) {\n  if (!Array.isArray(rows)) return 0;\n  return rows.reduce((acc, r) => acc + (Number(r[campo]) || 0), 0);\n}\n\nconst metricasRows = (metricas && metricas.data) || [];\nconst alcance = sumMetric(metricasRows, 'alcance_total');\nconst engagement = sumMetric(metricasRows, 'engagement_total');\nconst leadsMetricas = sumMetric(metricasRows, 'leads_total');\n\n// Mismo criterio que las métricas de arriba (ventana de 30 días) — la lectura de\n// \"hoy\" en Analytics V3 cuenta leads del período (últimos 30 días), no el total\n// histórico de conversaciones. Sin este filtro, la línea base comparaba un total\n// acumulado de siempre contra un número acotado al período, dos cosas distintas.\nconst hace30dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);\nconst leadsArr = ((leads && leads.data) || []).filter(c => c.created_at && new Date(c.created_at) >= hace30dias);\nconst totalLeadsConversaciones = leadsArr.length;\n\nlet deals = 0;\nlet ventasCerradas = 0;\n// \"Negocios en el CRM\" = pipeline activo real, nunca lost ni closed — mismo criterio\n// que la lectura de \"hoy\" en Analytics V3, para que la línea base y la comparación\n// futura midan siempre lo mismo. lost es basura acumulada sin forma de borrarse hoy.\nconst ETAPAS_ACTIVAS = ['new', 'qualifying', 'proposal', 'negotiation'];\nif (crm && typeof crm === 'object') {\n  for (const [etapa, v] of Object.entries(crm)) {\n    if (!Array.isArray(v)) continue;\n    if (ETAPAS_ACTIVAS.includes(etapa)) deals += v.length;\n    if (etapa === 'closed') {\n      ventasCerradas += v.reduce((acc, d) => acc + (Number(d.valor_estimado) || 0), 0);\n    }\n  }\n}\n\nconst fecha = new Date().toISOString().slice(0, 10);\nconst fechaLegible = new Date(fecha + 'T12:00:00').toLocaleDateString('es-NI', { day: 'numeric', month: 'long', year: 'numeric' });\nconst titulo = modo === 'linea_base_evento'\n  ? ('Evento — ' + descripcion + ' — ' + fecha)\n  : ('Línea base — ' + fecha);\n\nconst baseline = {\n  fecha,\n  company_id: companyId,\n  descripcion,\n  alcance_total: alcance,\n  engagement_total: engagement,\n  leads_total_metricas: leadsMetricas,\n  leads_total_conversaciones: totalLeadsConversaciones,\n  deals_total: deals,\n  ventas_cerradas: ventasCerradas,\n};\n\n// Mismo header/logo que ya usa el reporte real de Analytics V3 — reusado tal cual,\n// no un estilo nuevo. Solo cambia el eyebrow y el contenido del cuerpo.\nconst eyebrow = modo === 'linea_base_evento'\n  ? 'EVENTO MARCADO · MÓDULO 1 — RRSS'\n  : 'PUNTO DE PARTIDA DE LA ESTRATEGIA · MÓDULO 1 — RRSS';\n\nconst descripcionTexto = modo === 'linea_base_evento'\n  ? ('Referencia marcada a mano para medir el antes/después de un cambio puntual: <strong>' + descripcion + '</strong>.')\n  : 'Foto del estado real de la cuenta al iniciar (o regenerar) la estrategia. Sirve como punto de comparación para medir el progreso real en los reportes periódicos.';\n\nfunction statCard(icon, val, label) {\n  return `<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;\"><tr><td width=\"4\" style=\"background:#2D5BFF;border-radius:10px 0 0 10px;font-size:0;\">&nbsp;</td><td style=\"padding:12px 12px 10px;\"><div style=\"font-size:15px;margin-bottom:3px;\">${icon}</div><div style=\"font-size:20px;font-weight:800;color:#111827;line-height:1;\">${val}</div><div style=\"font-size:9px;color:#9ca3af;margin-top:7px;text-transform:uppercase;letter-spacing:.05em;\">${label}</div></td></tr></table>`;\n}\nfunction statsRow(c1, c2, c3) {\n  return `<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td width=\"32%\">${c1}</td><td width=\"2%\">&nbsp;</td><td width=\"32%\">${c2}</td><td width=\"2%\">&nbsp;</td><td width=\"32%\">${c3}</td></tr></table>`;\n}\n\nconst html = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>${titulo}</title></head>\n<body style=\"margin:0;padding:32px 16px;background:#eef0f4;font-family:Arial,'Helvetica Neue',sans-serif;\">\n<table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 auto;\">\n<tr><td style=\"background:linear-gradient(135deg,#2D5BFF 0%,#1E45D6 100%);border-radius:12px 12px 0 0;padding:26px 28px 24px;\">\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td>\n    <table cellpadding=\"0\" cellspacing=\"0\"><tr>\n      <td style=\"vertical-align:middle;\"><span style=\"font-size:20px;font-weight:600;color:#fff;letter-spacing:-0.3px;font-family:Arial,sans-serif;\">Growth</span></td>\n      <td style=\"vertical-align:middle;padding:0 1px;\"><div style=\"width:25px;height:25px;background:#fff;border-radius:50%;text-align:center;line-height:25px;color:#2D5BFF;font-size:18px;font-weight:800;letter-spacing:-0.8px;font-family:Arial,sans-serif;display:inline-block;\">54</div></td>\n      <td style=\"vertical-align:middle;\"><span style=\"font-size:20px;font-weight:600;color:#fff;letter-spacing:-0.3px;font-family:Arial,sans-serif;\">ai</span></td>\n    </tr></table>\n    <div style=\"margin-top:18px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#CFE0FF;font-weight:700;\">${eyebrow}</div>\n    <div style=\"font-size:21px;font-weight:600;color:#fff;margin-top:4px;\">${companyName}${city ? ` <span style=\"color:#BFD4FF;font-weight:400;font-size:14px;\">— ${city}</span>` : ''}</div>\n  </td></tr></table>\n  <table cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:16px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:8px;\"><tr>\n    <td style=\"padding:8px 14px;\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;background:#3FD68F;margin-right:8px;\">&nbsp;</span><span style=\"font-size:12.5px;color:#fff;font-weight:600;\">${fechaLegible}</span></td>\n  </tr></table>\n</td></tr>\n<tr><td style=\"background:#fff;border:1px solid #e5e7eb;border-top:none;padding:22px 24px;\">\n  <p style=\"font-size:12.5px;color:#64748b;margin:0 0 18px;line-height:1.55;\">${descripcionTexto}</p>\n  ${statsRow(\n    statCard('📣', alcance.toLocaleString('es-NI'), 'Alcance (30 días)'),\n    statCard('💬', engagement.toLocaleString('es-NI'), 'Engagement (30 días)'),\n    statCard('💎', leadsMetricas.toLocaleString('es-NI'), 'Leads (métricas)')\n  )}\n  <div style=\"height:10px;\">&nbsp;</div>\n  ${statsRow(\n    statCard('📱', totalLeadsConversaciones.toLocaleString('es-NI'), 'Conversaciones WA'),\n    statCard('🤝', deals.toLocaleString('es-NI'), 'Negocios en CRM'),\n    statCard('💰', '$' + ventasCerradas.toLocaleString('es-NI'), 'Ventas cerradas')\n  )}\n</td></tr>\n<tr><td style=\"background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;padding:14px 24px;text-align:center;\">\n  <span style=\"font-size:10.5px;color:#9ca3af;\">Growth54ai — punto de referencia interno para medir progreso, no un resultado del período</span>\n</td></tr>\n</table>\n</body></html>` + `<!-- LINEA_BASE_JSON: ${JSON.stringify(baseline)} -->`;\n\nreturn [{\n  json: {\n    company_id: companyId,\n    titulo,\n    periodo_inicio: fecha,\n    periodo_fin: fecha,\n    modo,\n    html,\n    baseline,\n  }\n}];\n"
+      },
+      "id": "lb-armar",
+      "name": "🔧 Armar Línea Base",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3200,
+        464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Guarda la línea base en el campo linea_base de la estrategia (G54, 29-sep), no como\n// informe: antes quedaba en la lista de Informes que ve el cliente. El campo solo se\n// escribe con POST /api/agent/rrss/estrategia, que hace updateOrCreate por empresa, así\n// que se reenvía la estrategia vigente completa (probado el 30-sep: ningún campo cambia).\n// Formato: { version: 1, inicio: {...}, eventos: [{...}] } — inicio es el punto de\n// partida de la estrategia; eventos, los \"Marcar evento\" posteriores (últimos 20).\nconst BASE = 'https://apigrowth.mdarthurdigital.com';\nconst AGENT = 'Bearer REDACTED_G54_AGENT_TOKEN';\nconst it = $input.first().json;\nconst bl = it.baseline;\nconst companyId = Number(it.company_id);\nconst SKIP = ['id', 'created_at', 'updated_at', 'generated_at', 'generated_by', 'link_origen', 'link_resuelto', 'linea_base'];\n\nconst resp = await this.helpers.httpRequest({\n  method: 'GET', url: `${BASE}/api/n8n/companies/${companyId}/rrss/estrategia`,\n  headers: { Authorization: AGENT }, json: true,\n});\nconst est = resp && (resp.data || resp);\nif (!est || !est.id) {\n  return [{ json: { ok: false, motivo: 'La empresa no tiene estrategia: no hay dónde guardar la línea base.', company_id: companyId } }];\n}\nconst prev = (est.linea_base && typeof est.linea_base === 'object' && est.linea_base.version === 1)\n  ? est.linea_base : { version: 1, inicio: null, eventos: [] };\nlet lb;\nif (it.modo === 'linea_base_evento') {\n  lb = { ...prev, eventos: [...(prev.eventos || []), bl].slice(-20) };\n} else {\n  // Estrategia nueva: nuevo punto de partida, los eventos de la anterior ya no aplican.\n  lb = { version: 1, inicio: bl, eventos: [] };\n}\nconst body = {};\nfor (const [k, v] of Object.entries(est)) if (!SKIP.includes(k)) body[k] = v;\nfor (const k of ['fecha_inicio', 'fecha_fin']) if (body[k]) body[k] = String(body[k]).slice(0, 10);\nbody.company_id = companyId;\nbody.linea_base = lb;\nconst r = await this.helpers.httpRequest({\n  method: 'POST', url: `${BASE}/api/agent/rrss/estrategia`,\n  headers: { Authorization: AGENT, 'Content-Type': 'application/json' }, body, json: true,\n});\nreturn [{ json: { ok: !!(r && r.ok), company_id: companyId, modo: it.modo, fecha: bl.fecha } }];"
+      },
+      "id": "lb-guardar",
+      "name": "💾 G54: Guardar Línea Base",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3400,
+        464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "marcar-evento-g54",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "wh-evento",
+      "name": "🔔 Webhook: Marcar Evento",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        2800,
+        204
+      ],
+      "webhookId": "7d5c08a9-3071-48ac-8c4c-3eeb86541eb6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/auth/login",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
+        "options": {}
+      },
+      "id": "login-evento",
+      "name": "🔐 G54: Login (Evento)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3000,
+        204
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/auth/switch-company",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Evento)').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: Number($('🔔 Webhook: Marcar Evento').item.json.body.company_id) }) }}",
+        "options": {}
+      },
+      "id": "switch-evento",
+      "name": "🏢 G54: Cambiar Empresa (Evento)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3200,
+        204
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/n8n/companies/' + ( $('⚙️ Config G54').isExecuted ? $('⚙️ Config G54').item.json.G54_COMPANY_ID : $('🔔 Webhook: Marcar Evento').item.json.body.company_id ) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer "
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "linea-base-obtener-empresa",
+      "name": "🏢 Línea Base: Obtener Empresa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1904,
+        900
+      ],
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -635,7 +912,7 @@
       "main": [
         [
           {
-            "node": "🔍 Parsear Estrategia",
+            "node": "🔀 ¿Groq OK? (Strategist)",
             "type": "main",
             "index": 0
           }
@@ -658,6 +935,11 @@
         [
           {
             "node": "📢 Llamar Ideas AI (Semana 1)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📊 Línea Base: Métricas",
             "type": "main",
             "index": 0
           }
@@ -729,6 +1011,123 @@
           }
         ]
       ]
+    },
+    "🔀 ¿Groq OK? (Strategist)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Estrategia",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🤖 Zhipu: Fallback IA (Strategist)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Zhipu: Fallback IA (Strategist)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Estrategia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Línea Base: Métricas": {
+      "main": [
+        [
+          {
+            "node": "📊 Línea Base: Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Línea Base: Leads": {
+      "main": [
+        [
+          {
+            "node": "📊 Línea Base: CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Línea Base: CRM": {
+      "main": [
+        [
+          {
+            "node": "🏢 Línea Base: Obtener Empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Armar Línea Base": {
+      "main": [
+        [
+          {
+            "node": "💾 G54: Guardar Línea Base",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔔 Webhook: Marcar Evento": {
+      "main": [
+        [
+          {
+            "node": "🔐 G54: Login (Evento)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔐 G54: Login (Evento)": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa (Evento)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 G54: Cambiar Empresa (Evento)": {
+      "main": [
+        [
+          {
+            "node": "📊 Línea Base: Métricas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 Línea Base: Obtener Empresa": {
+      "main": [
+        [
+          {
+            "node": "🔧 Armar Línea Base",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -763,7 +1162,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "24620ef1-b1f1-4dcf-b63e-890221d98986",
+    "versionId": "7fffa098-f5cf-495f-9702-bef212b59169",
     "workflowId": "S62o0wcXq8Wfj67S",
     "nodes": [
       {
@@ -796,7 +1195,7 @@
               {
                 "id": "g54-agent-token",
                 "name": "G54_AGENT_TOKEN",
-                "value": "REDACTED_AGENT_TOKEN",
+                "value": "REDACTED_G54_AGENT_TOKEN",
                 "type": "string"
               },
               {
@@ -1252,7 +1651,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_MASTER_PASSWORD' }) }}",
+          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
           "options": {}
         }
       },
@@ -1287,6 +1686,283 @@
           "jsonBody": "={{ JSON.stringify({ company_id: Number($('⚙️ Config G54').item.json.G54_COMPANY_ID) }) }}",
           "options": {}
         }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "1",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty"
+                }
+              }
+            ]
+          }
+        },
+        "id": "if-groq-ok-strategist",
+        "name": "🔀 ¿Groq OK? (Strategist)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1920,
+          630
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({\n  model: 'glm-4.5-flash',\n  messages: [\n    { role: 'system', content: 'Eres un estratega senior de marketing digital especializado en SEO, AEO y GEO. Responde ÚNICAMENTE con JSON válido, sin markdown ni texto adicional.' },\n    { role: 'user',   content: $('🔧 Preparar Contexto').item.json.prompt }\n  ],\n  temperature: 0.7,\n  max_tokens: 8000\n}) }}",
+          "options": {},
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth"
+        },
+        "id": "zhipu-fallback-strategist",
+        "name": "🤖 Zhipu: Fallback IA (Strategist)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1920,
+          780
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "rWF3VkYbayILPZTH",
+            "name": "Zhipu GLM � Fallback IA (G54)"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/rrss/metricas?company_id=' + ( $('⚙️ Config G54').isExecuted ? $('⚙️ Config G54').item.json.G54_COMPANY_ID : $('🔔 Webhook: Marcar Evento').item.json.body.company_id ) + '&from=' + $now.minus({days:30}).toFormat('yyyy-MM-dd') + '&to=' + $now.toFormat('yyyy-MM-dd') }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + ( $('🔐 G54: Login (Plataformas)').isExecuted ? $('🔐 G54: Login (Plataformas)').item.json.access_token : $('🔐 G54: Login (Evento)').item.json.access_token ) }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "lb-metricas",
+        "name": "📊 Línea Base: Métricas",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2600,
+          464
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/whatsapp/conversations?per_page=100' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + ( $('🔐 G54: Login (Plataformas)').isExecuted ? $('🔐 G54: Login (Plataformas)').item.json.access_token : $('🔐 G54: Login (Evento)').item.json.access_token ) }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "lb-leads",
+        "name": "📊 Línea Base: Leads",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2800,
+          464
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/crm/board' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + ( $('🔐 G54: Login (Plataformas)').isExecuted ? $('🔐 G54: Login (Plataformas)').item.json.access_token : $('🔐 G54: Login (Evento)').item.json.access_token ) }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "lb-crm",
+        "name": "📊 Línea Base: CRM",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3000,
+          464
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const esEvento = $('🔔 Webhook: Marcar Evento').isExecuted;\n\nlet companyId, modo, descripcion;\nif (esEvento) {\n  const body = $('🔔 Webhook: Marcar Evento').first().json.body || {};\n  companyId = Number(body.company_id);\n  descripcion = String(body.descripcion || 'Evento sin descripción').trim();\n  modo = 'linea_base_evento';\n} else {\n  companyId = Number($('⚙️ Config G54').item.json.G54_COMPANY_ID);\n  descripcion = '';\n  modo = 'linea_base';\n}\n\nconst metricas = $('📊 Línea Base: Métricas').first().json;\nconst leads = $('📊 Línea Base: Leads').first().json;\nconst crm = $('📊 Línea Base: CRM').first().json;\n\n// Con onError:continueRegularOutput en el nodo, si la llamada falla este item\n// llega vacío ({}) — nunca rompe la captura de la línea base por faltar el nombre.\nconst empRaw = $('🏢 Línea Base: Obtener Empresa').first().json || {};\nconst emp = empRaw.data || empRaw || {};\nconst companyName = emp.name || '';\nconst city = emp.base_city || '';\n\nfunction sumMetric(rows, campo) {\n  if (!Array.isArray(rows)) return 0;\n  return rows.reduce((acc, r) => acc + (Number(r[campo]) || 0), 0);\n}\n\nconst metricasRows = (metricas && metricas.data) || [];\nconst alcance = sumMetric(metricasRows, 'alcance_total');\nconst engagement = sumMetric(metricasRows, 'engagement_total');\nconst leadsMetricas = sumMetric(metricasRows, 'leads_total');\n\n// Mismo criterio que las métricas de arriba (ventana de 30 días) — la lectura de\n// \"hoy\" en Analytics V3 cuenta leads del período (últimos 30 días), no el total\n// histórico de conversaciones. Sin este filtro, la línea base comparaba un total\n// acumulado de siempre contra un número acotado al período, dos cosas distintas.\nconst hace30dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);\nconst leadsArr = ((leads && leads.data) || []).filter(c => c.created_at && new Date(c.created_at) >= hace30dias);\nconst totalLeadsConversaciones = leadsArr.length;\n\nlet deals = 0;\nlet ventasCerradas = 0;\n// \"Negocios en el CRM\" = pipeline activo real, nunca lost ni closed — mismo criterio\n// que la lectura de \"hoy\" en Analytics V3, para que la línea base y la comparación\n// futura midan siempre lo mismo. lost es basura acumulada sin forma de borrarse hoy.\nconst ETAPAS_ACTIVAS = ['new', 'qualifying', 'proposal', 'negotiation'];\nif (crm && typeof crm === 'object') {\n  for (const [etapa, v] of Object.entries(crm)) {\n    if (!Array.isArray(v)) continue;\n    if (ETAPAS_ACTIVAS.includes(etapa)) deals += v.length;\n    if (etapa === 'closed') {\n      ventasCerradas += v.reduce((acc, d) => acc + (Number(d.valor_estimado) || 0), 0);\n    }\n  }\n}\n\nconst fecha = new Date().toISOString().slice(0, 10);\nconst fechaLegible = new Date(fecha + 'T12:00:00').toLocaleDateString('es-NI', { day: 'numeric', month: 'long', year: 'numeric' });\nconst titulo = modo === 'linea_base_evento'\n  ? ('Evento — ' + descripcion + ' — ' + fecha)\n  : ('Línea base — ' + fecha);\n\nconst baseline = {\n  fecha,\n  company_id: companyId,\n  descripcion,\n  alcance_total: alcance,\n  engagement_total: engagement,\n  leads_total_metricas: leadsMetricas,\n  leads_total_conversaciones: totalLeadsConversaciones,\n  deals_total: deals,\n  ventas_cerradas: ventasCerradas,\n};\n\n// Mismo header/logo que ya usa el reporte real de Analytics V3 — reusado tal cual,\n// no un estilo nuevo. Solo cambia el eyebrow y el contenido del cuerpo.\nconst eyebrow = modo === 'linea_base_evento'\n  ? 'EVENTO MARCADO · MÓDULO 1 — RRSS'\n  : 'PUNTO DE PARTIDA DE LA ESTRATEGIA · MÓDULO 1 — RRSS';\n\nconst descripcionTexto = modo === 'linea_base_evento'\n  ? ('Referencia marcada a mano para medir el antes/después de un cambio puntual: <strong>' + descripcion + '</strong>.')\n  : 'Foto del estado real de la cuenta al iniciar (o regenerar) la estrategia. Sirve como punto de comparación para medir el progreso real en los reportes periódicos.';\n\nfunction statCard(icon, val, label) {\n  return `<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;\"><tr><td width=\"4\" style=\"background:#2D5BFF;border-radius:10px 0 0 10px;font-size:0;\">&nbsp;</td><td style=\"padding:12px 12px 10px;\"><div style=\"font-size:15px;margin-bottom:3px;\">${icon}</div><div style=\"font-size:20px;font-weight:800;color:#111827;line-height:1;\">${val}</div><div style=\"font-size:9px;color:#9ca3af;margin-top:7px;text-transform:uppercase;letter-spacing:.05em;\">${label}</div></td></tr></table>`;\n}\nfunction statsRow(c1, c2, c3) {\n  return `<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td width=\"32%\">${c1}</td><td width=\"2%\">&nbsp;</td><td width=\"32%\">${c2}</td><td width=\"2%\">&nbsp;</td><td width=\"32%\">${c3}</td></tr></table>`;\n}\n\nconst html = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>${titulo}</title></head>\n<body style=\"margin:0;padding:32px 16px;background:#eef0f4;font-family:Arial,'Helvetica Neue',sans-serif;\">\n<table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 auto;\">\n<tr><td style=\"background:linear-gradient(135deg,#2D5BFF 0%,#1E45D6 100%);border-radius:12px 12px 0 0;padding:26px 28px 24px;\">\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td>\n    <table cellpadding=\"0\" cellspacing=\"0\"><tr>\n      <td style=\"vertical-align:middle;\"><span style=\"font-size:20px;font-weight:600;color:#fff;letter-spacing:-0.3px;font-family:Arial,sans-serif;\">Growth</span></td>\n      <td style=\"vertical-align:middle;padding:0 1px;\"><div style=\"width:25px;height:25px;background:#fff;border-radius:50%;text-align:center;line-height:25px;color:#2D5BFF;font-size:18px;font-weight:800;letter-spacing:-0.8px;font-family:Arial,sans-serif;display:inline-block;\">54</div></td>\n      <td style=\"vertical-align:middle;\"><span style=\"font-size:20px;font-weight:600;color:#fff;letter-spacing:-0.3px;font-family:Arial,sans-serif;\">ai</span></td>\n    </tr></table>\n    <div style=\"margin-top:18px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#CFE0FF;font-weight:700;\">${eyebrow}</div>\n    <div style=\"font-size:21px;font-weight:600;color:#fff;margin-top:4px;\">${companyName}${city ? ` <span style=\"color:#BFD4FF;font-weight:400;font-size:14px;\">— ${city}</span>` : ''}</div>\n  </td></tr></table>\n  <table cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:16px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:8px;\"><tr>\n    <td style=\"padding:8px 14px;\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;background:#3FD68F;margin-right:8px;\">&nbsp;</span><span style=\"font-size:12.5px;color:#fff;font-weight:600;\">${fechaLegible}</span></td>\n  </tr></table>\n</td></tr>\n<tr><td style=\"background:#fff;border:1px solid #e5e7eb;border-top:none;padding:22px 24px;\">\n  <p style=\"font-size:12.5px;color:#64748b;margin:0 0 18px;line-height:1.55;\">${descripcionTexto}</p>\n  ${statsRow(\n    statCard('📣', alcance.toLocaleString('es-NI'), 'Alcance (30 días)'),\n    statCard('💬', engagement.toLocaleString('es-NI'), 'Engagement (30 días)'),\n    statCard('💎', leadsMetricas.toLocaleString('es-NI'), 'Leads (métricas)')\n  )}\n  <div style=\"height:10px;\">&nbsp;</div>\n  ${statsRow(\n    statCard('📱', totalLeadsConversaciones.toLocaleString('es-NI'), 'Conversaciones WA'),\n    statCard('🤝', deals.toLocaleString('es-NI'), 'Negocios en CRM'),\n    statCard('💰', '$' + ventasCerradas.toLocaleString('es-NI'), 'Ventas cerradas')\n  )}\n</td></tr>\n<tr><td style=\"background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;padding:14px 24px;text-align:center;\">\n  <span style=\"font-size:10.5px;color:#9ca3af;\">Growth54ai — punto de referencia interno para medir progreso, no un resultado del período</span>\n</td></tr>\n</table>\n</body></html>` + `<!-- LINEA_BASE_JSON: ${JSON.stringify(baseline)} -->`;\n\nreturn [{\n  json: {\n    company_id: companyId,\n    titulo,\n    periodo_inicio: fecha,\n    periodo_fin: fecha,\n    modo,\n    html,\n    baseline,\n  }\n}];\n"
+        },
+        "id": "lb-armar",
+        "name": "🔧 Armar Línea Base",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3200,
+          464
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Guarda la línea base en el campo linea_base de la estrategia (G54, 29-sep), no como\n// informe: antes quedaba en la lista de Informes que ve el cliente. El campo solo se\n// escribe con POST /api/agent/rrss/estrategia, que hace updateOrCreate por empresa, así\n// que se reenvía la estrategia vigente completa (probado el 30-sep: ningún campo cambia).\n// Formato: { version: 1, inicio: {...}, eventos: [{...}] } — inicio es el punto de\n// partida de la estrategia; eventos, los \"Marcar evento\" posteriores (últimos 20).\nconst BASE = 'https://apigrowth.mdarthurdigital.com';\nconst AGENT = 'Bearer REDACTED_G54_AGENT_TOKEN';\nconst it = $input.first().json;\nconst bl = it.baseline;\nconst companyId = Number(it.company_id);\nconst SKIP = ['id', 'created_at', 'updated_at', 'generated_at', 'generated_by', 'link_origen', 'link_resuelto', 'linea_base'];\n\nconst resp = await this.helpers.httpRequest({\n  method: 'GET', url: `${BASE}/api/n8n/companies/${companyId}/rrss/estrategia`,\n  headers: { Authorization: AGENT }, json: true,\n});\nconst est = resp && (resp.data || resp);\nif (!est || !est.id) {\n  return [{ json: { ok: false, motivo: 'La empresa no tiene estrategia: no hay dónde guardar la línea base.', company_id: companyId } }];\n}\nconst prev = (est.linea_base && typeof est.linea_base === 'object' && est.linea_base.version === 1)\n  ? est.linea_base : { version: 1, inicio: null, eventos: [] };\nlet lb;\nif (it.modo === 'linea_base_evento') {\n  lb = { ...prev, eventos: [...(prev.eventos || []), bl].slice(-20) };\n} else {\n  // Estrategia nueva: nuevo punto de partida, los eventos de la anterior ya no aplican.\n  lb = { version: 1, inicio: bl, eventos: [] };\n}\nconst body = {};\nfor (const [k, v] of Object.entries(est)) if (!SKIP.includes(k)) body[k] = v;\nfor (const k of ['fecha_inicio', 'fecha_fin']) if (body[k]) body[k] = String(body[k]).slice(0, 10);\nbody.company_id = companyId;\nbody.linea_base = lb;\nconst r = await this.helpers.httpRequest({\n  method: 'POST', url: `${BASE}/api/agent/rrss/estrategia`,\n  headers: { Authorization: AGENT, 'Content-Type': 'application/json' }, body, json: true,\n});\nreturn [{ json: { ok: !!(r && r.ok), company_id: companyId, modo: it.modo, fecha: bl.fecha } }];"
+        },
+        "id": "lb-guardar",
+        "name": "💾 G54: Guardar Línea Base",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3400,
+          464
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "marcar-evento-g54",
+          "responseMode": "onReceived",
+          "options": {}
+        },
+        "id": "wh-evento",
+        "name": "🔔 Webhook: Marcar Evento",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          2800,
+          204
+        ],
+        "webhookId": "7d5c08a9-3071-48ac-8c4c-3eeb86541eb6"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://apigrowth.mdarthurdigital.com/api/auth/login",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
+          "options": {}
+        },
+        "id": "login-evento",
+        "name": "🔐 G54: Login (Evento)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3000,
+          204
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://apigrowth.mdarthurdigital.com/api/auth/switch-company",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login (Evento)').item.json.access_token }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ company_id: Number($('🔔 Webhook: Marcar Evento').item.json.body.company_id) }) }}",
+          "options": {}
+        },
+        "id": "switch-evento",
+        "name": "🏢 G54: Cambiar Empresa (Evento)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3200,
+          204
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/n8n/companies/' + ( $('⚙️ Config G54').isExecuted ? $('⚙️ Config G54').item.json.G54_COMPANY_ID : $('🔔 Webhook: Marcar Evento').item.json.body.company_id ) }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer "
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "linea-base-obtener-empresa",
+        "name": "🏢 Línea Base: Obtener Empresa",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1904,
+          900
+        ],
+        "onError": "continueRegularOutput"
       }
     ],
     "connections": {
@@ -1389,7 +2065,7 @@
         "main": [
           [
             {
-              "node": "🔍 Parsear Estrategia",
+              "node": "🔀 ¿Groq OK? (Strategist)",
               "type": "main",
               "index": 0
             }
@@ -1412,6 +2088,11 @@
           [
             {
               "node": "📢 Llamar Ideas AI (Semana 1)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "📊 Línea Base: Métricas",
               "type": "main",
               "index": 0
             }
@@ -1483,6 +2164,123 @@
             }
           ]
         ]
+      },
+      "🔀 ¿Groq OK? (Strategist)": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Estrategia",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🤖 Zhipu: Fallback IA (Strategist)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 Zhipu: Fallback IA (Strategist)": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Estrategia",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📊 Línea Base: Métricas": {
+        "main": [
+          [
+            {
+              "node": "📊 Línea Base: Leads",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📊 Línea Base: Leads": {
+        "main": [
+          [
+            {
+              "node": "📊 Línea Base: CRM",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📊 Línea Base: CRM": {
+        "main": [
+          [
+            {
+              "node": "🏢 Línea Base: Obtener Empresa",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Armar Línea Base": {
+        "main": [
+          [
+            {
+              "node": "💾 G54: Guardar Línea Base",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔔 Webhook: Marcar Evento": {
+        "main": [
+          [
+            {
+              "node": "🔐 G54: Login (Evento)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔐 G54: Login (Evento)": {
+        "main": [
+          [
+            {
+              "node": "🏢 G54: Cambiar Empresa (Evento)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🏢 G54: Cambiar Empresa (Evento)": {
+        "main": [
+          [
+            {
+              "node": "📊 Línea Base: Métricas",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🏢 Línea Base: Obtener Empresa": {
+        "main": [
+          [
+            {
+              "node": "🔧 Armar Línea Base",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -1490,16 +2288,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-08-19T17:07:15.115Z",
-    "updatedAt": "2026-08-19T17:07:15.115Z",
+    "createdAt": "2026-09-30T20:14:42.745Z",
+    "updatedAt": "2026-09-30T20:14:42.745Z",
     "workflowPublishHistory": [
       {
-        "id": 2903,
+        "id": 3291,
         "workflowId": "S62o0wcXq8Wfj67S",
-        "versionId": "24620ef1-b1f1-4dcf-b63e-890221d98986",
+        "versionId": "7fffa098-f5cf-495f-9702-bef212b59169",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-08-19T17:07:15.510Z"
+        "createdAt": "2026-09-30T20:14:43.000Z"
       }
     ]
   }
