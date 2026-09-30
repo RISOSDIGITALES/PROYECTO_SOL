@@ -27,6 +27,19 @@
 > **En una máquina nueva o un clon fresco del repo, el hook NO se activa solo** — correr una sola vez: `git config core.hooksPath .githooks`. Sin ese paso, el archivo existe en el repo pero git sigue mirando `.git/hooks/` y lo ignora.
 > **Actualizado 2026-09-28:** el `G54_AGENT_TOKEN` dejó de ser una excepción. Este repo es público, así que ningún secreto real vive en archivos versionados: el token de la API de n8n, el de Netlify, la key de VAPI, el `G54_AGENT_TOKEN` y la contraseña maestra de G54 están en **`.secrets.local.md`** (raíz del repo, en `.gitignore`, formato `NOMBRE=valor`). El hook también lee ese archivo y bloquea cualquier commit que contenga alguno de esos valores.
 
+## Pruebas pendientes (lista viva, actualizada el 2026-09-30)
+
+Cambios ya hechos y probados por partes (código de producción con entradas simuladas o flujos temporales), que todavía no se confirmaron con un caso real de punta a punta. Al confirmar uno, sacarlo de acá y anotarlo en el ítem del changelog que corresponda.
+
+1. **Foto real a Marco por WhatsApp** (ítem 399): la visión de imágenes estaba rota desde el 22-sep. Mandar una foto de algo para embalar: Marco tiene que responder según lo que se ve.
+2. **Foto, nota de voz y PDF a Marco por Telegram** (ítems 397 y 399): la foto se analiza, el audio se transcribe y el PDF se lee. Revisar la ejecución de `CE Telegram Engine — Marco` y `06 Procesador de Medios`.
+3. **"Ejecutar seguimiento IA" enviado de verdad** (ítem 397): en la Ficha 360 de un lead que haya escrito por WhatsApp hace menos de 24h (puede ser el número de la usuaria). El mensaje de 24h tiene que llegar, quedar en la conversación y dejar una nota en el trato. Probar también dos clics seguidos (el segundo no manda). Ojo: G54 responde `ok:true` aunque no se envíe (pedido en el Éxodo).
+4. **"Actualizar semana" en Métricas RRSS** (panel del 30-sep): tiene que disparar `📊 Analytics AI Semanal — G54` con `periodo:"semanal"`. Probarlo un lunes, después de la corrida automática, para no guardar una semana a medias.
+5. **Línea base al regenerar una estrategia** (ítem 398): `linea_base.inicio` se tiene que reemplazar con la fecha nueva, `eventos` tiene que quedar vacío, y no tiene que aparecer ningún informe "Línea base" en Informes.
+6. **Informe mensual del 28-oct** (ítem 398): tiene que comparar contra la línea base del campo `linea_base`, sin buscar el informe #34, que ya no existe.
+7. **Logo en los correos de Camila** (ítem 398): cuando Walter haga la pantalla de carga de `logo_url`, mandar un correo de prueba y ver el logo en la cabecera.
+8. **Botón "Ejecutar" de Prospección (paso 7):** bloqueado. El flujo `jg5SENgRpe2wLBTn` está apagado por falta de la key de Google Places; falta que la usuaria decida si se saca la key o se le pide a Walter ocultar el botón.
+
 ## Qué es este proyecto
 
 Tres líneas de trabajo en un mismo repositorio:
