@@ -1,0 +1,1454 @@
+{
+  "id": "E7axtRDYCL8AbtgO",
+  "name": "📨 Seguimiento IA manual — G54 (wa_followup)",
+  "description": null,
+  "active": true,
+  "activeVersionId": "c1550b23-1a19-4a89-a37d-8980d5df4465",
+  "createdAt": "2026-09-30T20:02:26.450Z",
+  "updatedAt": "2026-09-30T20:02:26.450Z",
+  "isArchived": false,
+  "versionId": "c1550b23-1a19-4a89-a37d-8980d5df4465",
+  "versionCounter": 1,
+  "sourceWorkflowId": null,
+  "triggerCount": 1,
+  "nodes": [
+    {
+      "id": "f6d12f69-17b9-4bc3-ac42-d2d067235774",
+      "name": "📋 INFO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "width": 640,
+        "height": 220,
+        "content": "## Seguimiento IA manual — key wa_followup (30-sep)\nLo llama G54 al tocar \"Ejecutar seguimiento IA\" en la Ficha 360 (POST /api/crm/deals/{id}/run-seguimiento). Manda el mensaje de 24h de la empresa por WhatsApp y deja nota en el trato.\n- El teléfono tiene que coincidir con el del trato, y el trato ser de esa empresa.\n- No manda a tratos cerrados o perdidos, ni dos veces en 10 min.\n- Pasadas 24h desde el último mensaje del cliente WhatsApp lo rechaza (131047): queda anotado en el trato."
+      }
+    },
+    {
+      "id": "e09e31ab-12b4-4320-89bb-6d53b52fd35c",
+      "name": "🔔 Webhook G54 (wa_followup)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "cb7f077a-99f3-4de2-b12c-cbbb717b489a",
+      "parameters": {
+        "path": "wa-followup-g54",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "688b1e7f-76bd-4901-84ea-e6871004bb22",
+      "name": "⚙️ Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "G54_BASE_URL",
+              "value": "https://apigrowth.mdarthurdigital.com",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "G54_AGENT_TOKEN",
+              "value": "REDACTED_G54_AGENT_TOKEN",
+              "type": "string"
+            },
+            {
+              "id": "c3",
+              "name": "G54_MASTER_EMAIL",
+              "value": "master@growth54.local",
+              "type": "string"
+            },
+            {
+              "id": "c4",
+              "name": "G54_MASTER_PASSWORD",
+              "value": "REDACTED_G54_MASTER_PASSWORD",
+              "type": "string"
+            },
+            {
+              "id": "c5",
+              "name": "ANTIREPETICION_MIN",
+              "value": 10,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f026aa80-886c-48cb-8c1e-21108cdf7ea3",
+      "name": "🔧 Leer Pedido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const b = $('🔔 Webhook G54 (wa_followup)').first().json.body || {};\nreturn [{ json: {\n  company_id: Number(b.company_id) || null,\n  deal_id: Number(b.deal_id) || null,\n  telefono: String(b.telefono || ''),\n  nombre: b.nombre || '',\n  user_id: b.trigger?.user_id ?? null,\n} }];"
+      }
+    },
+    {
+      "id": "2d690f26-f591-46f2-8a71-5a63660f07bd",
+      "name": "🔐 G54: Login",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config').first().json.G54_BASE_URL  + '/api/auth/login' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config').first().json.G54_MASTER_EMAIL, password: $('⚙️ Config').first().json.G54_MASTER_PASSWORD }) }}"
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "e39cf99f-332c-4c5e-ba76-61ef29010e96",
+      "name": "🏢 G54: Cambiar Empresa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config').first().json.G54_BASE_URL  + '/api/auth/switch-company' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login').first().json.access_token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ company_id: $('🔧 Leer Pedido').first().json.company_id }) }}"
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "7c04f776-58c7-40f7-8897-dba7ffee412b",
+      "name": "📋 G54: Leer Trato",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config').first().json.G54_BASE_URL  + '/api/crm/deals/' + $('🔧 Leer Pedido').first().json.deal_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login').first().json.access_token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "1e510de9-24b6-43f3-8788-21d112f0ecd4",
+      "name": "🔎 Validar Envío",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// No se confía en el teléfono que llega en el body: tiene que ser el del trato, y el\n// trato tiene que ser de la empresa del pedido. Así nadie puede usar este webhook\n// para mandar WhatsApp a cualquier número.\nconst p = $('🔧 Leer Pedido').first().json;\nconst cfg = $('⚙️ Config').first().json;\nconst raw = $input.first().json || {};\nconst deal = raw.data || raw;\nconst digits = s => String(s || '').replace(/\\D/g, '');\nlet motivo = null;\nif (!$('🔐 G54: Login').first().json.access_token) motivo = 'No se pudo iniciar sesión en G54.';\nelse if (!p.company_id || !p.deal_id) motivo = 'Faltan company_id o deal_id.';\nelse if (!deal || !deal.id) motivo = 'No se encontró el trato en esa empresa.';\nelse if (Number(deal.company_id) !== p.company_id) motivo = 'El trato no es de esa empresa.';\nconst tel = digits(p.telefono);\nif (!motivo && !/^\\d{8,15}$/.test(tel)) motivo = 'El contacto no tiene un número de WhatsApp (por ejemplo, es de Telegram).';\nconst telTrato = digits(deal.telefono || deal.contact?.phone);\nif (!motivo && telTrato && telTrato !== tel) motivo = 'El teléfono no coincide con el del trato.';\nif (!motivo && !telTrato && !deal.wa_contact_id) motivo = 'El trato no tiene un teléfono asociado.';\nif (!motivo && ['closed', 'lost'].includes(deal.etapa)) motivo = `El trato está en la etapa \"${deal.etapa}\": no se le hace seguimiento.`;\n// Anti-repetición: un clic doble o repetido no manda dos mensajes.\nconst sd = $getWorkflowStaticData('global');\nsd.ultimoEnvio = sd.ultimoEnvio || {};\nconst ahora = Date.now();\nconst prev = sd.ultimoEnvio[p.deal_id];\nif (!motivo && prev && ahora - prev < cfg.ANTIREPETICION_MIN * 60000) {\n  motivo = `Ya se mandó un seguimiento a este lead hace menos de ${cfg.ANTIREPETICION_MIN} minutos.`;\n}\nif (!motivo) sd.ultimoEnvio[p.deal_id] = ahora;\nreturn [{ json: { puede: !motivo, motivo, telefono: tel, deal_id: p.deal_id, company_id: p.company_id,\n                  nombre: p.nombre || deal.nombre || '' } }];"
+      }
+    },
+    {
+      "id": "70b6bbe2-83cb-48d9-8980-3545efb5aefa",
+      "name": "🔀 ¿Se puede enviar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "192dfd67-b5f2-4369-aa76-bc35d362abf9",
+              "leftValue": "={{ $json.puede }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "28ace2c5-c6f1-4e31-b2bb-b143fccfde71",
+      "name": "📋 G54: Config WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        180
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config').first().json.G54_BASE_URL  + '/api/whatsapp/config' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login').first().json.access_token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "bed2c58d-d373-4e7c-b6b0-816f22b6eae1",
+      "name": "🔑 G54: Datos del bot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        180
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config').first().json.G54_BASE_URL  + '/api/agent/wa/empresa-by-phone/' + ($json.data?.phone_number_id || $json.phone_number_id || 'x') }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config').first().json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "088f9399-b7ed-47d8-a8d5-c06e27e58523",
+      "name": "📤 Enviar Seguimiento WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        180
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://graph.facebook.com/v19.0/' + ($json.data?.phone_number_id || $json.phone_number_id) + '/messages' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + ($('🔑 G54: Datos del bot').first().json.data?.wa_access_token || $('🔑 G54: Datos del bot').first().json.wa_access_token) }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('🔎 Validar Envío').first().json.telefono, type: 'text', text: { body: ($('🔑 G54: Datos del bot').first().json.data?.msg_followup_24h || $('🔑 G54: Datos del bot').first().json.msg_followup_24h) } }) }}"
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "542984bf-019a-49b1-986f-0b1bf4e749c5",
+      "name": "🧾 Resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const v = $('🔎 Validar Envío').first().json;\nconst bot = (() => { try { const j = $('🔑 G54: Datos del bot').first().json; return j.data || j; } catch (e) { return {}; } })();\nconst msg = bot.msg_followup_24h || '';\nlet enviado = false, motivo = v.motivo;\nif (v.puede) {\n  const r = (() => { try { return $('📤 Enviar Seguimiento WhatsApp').first().json; } catch (e) { return {}; } })();\n  if (!bot.phone_number_id || !bot.wa_access_token) motivo = 'La empresa no tiene WhatsApp configurado.';\n  else if (!msg) motivo = 'La empresa no tiene cargado el mensaje de seguimiento de 24h.';\n  else if (r.messages && r.messages[0]?.id) enviado = true;\n  else {\n    const code = r.error?.code;\n    motivo = code === 131047\n      ? 'Pasaron más de 24 horas desde el último mensaje del cliente: WhatsApp solo deja escribirle con una plantilla aprobada.'\n      : 'WhatsApp rechazó el mensaje' + (r.error?.message ? ': ' + r.error.message : '.');\n  }\n}\nif (!enviado) { const sd = $getWorkflowStaticData('global'); if (sd.ultimoEnvio) delete sd.ultimoEnvio[v.deal_id]; }\nreturn [{ json: { ok: enviado, motivo: enviado ? null : motivo, mensaje: enviado ? msg : null,\n                  telefono: v.telefono, deal_id: v.deal_id, company_id: v.company_id, nombre: v.nombre } }];"
+      }
+    },
+    {
+      "id": "a1c8cf03-b08a-44fa-a2ac-568d057ef92a",
+      "name": "🔀 ¿Se envió?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "5a887a7b-6e62-479c-b9cd-63c2b36ffd31",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "6f9a2ecc-5b0a-444b-ae2d-49d1ff17ffe4",
+      "name": "💬 G54: Registrar en la conversación",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2860,
+        180
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config').first().json.G54_BASE_URL  + '/api/agent/whatsapp/inbound' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('⚙️ Config').first().json.G54_AGENT_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ empresa_id: $('🧾 Resultado').first().json.company_id, phone: '+' + $('🧾 Resultado').first().json.telefono, nombre: $('🧾 Resultado').first().json.nombre, canal: 'whatsapp', messages: [{ rol: 'bot', contenido: $('🧾 Resultado').first().json.mensaje }] }) }}"
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "12f3cc4f-f55b-4e92-ac4a-71a5e04996f6",
+      "name": "📌 G54: Nota en el trato",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3080,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config').first().json.G54_BASE_URL  + '/api/crm/deals/' + $('🧾 Resultado').first().json.deal_id + '/activities' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login').first().json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tipo: 'sistema', contenido: $('🧾 Resultado').first().json.ok ? 'Seguimiento IA (manual, desde la Ficha 360): mensaje de 24h enviado por WhatsApp.' : 'Seguimiento IA (manual, desde la Ficha 360): no se envió. ' + $('🧾 Resultado').first().json.motivo }) }}"
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "16d97171-b966-4b2e-b810-a89da825c466",
+      "name": "✅ Responder a G54",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3300,
+        300
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: $('🧾 Resultado').first().json.ok, motivo: $('🧾 Resultado').first().json.motivo }) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "🔔 Webhook G54 (wa_followup)": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Config": {
+      "main": [
+        [
+          {
+            "node": "🔧 Leer Pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Leer Pedido": {
+      "main": [
+        [
+          {
+            "node": "🔐 G54: Login",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔐 G54: Login": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 G54: Cambiar Empresa": {
+      "main": [
+        [
+          {
+            "node": "📋 G54: Leer Trato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 G54: Leer Trato": {
+      "main": [
+        [
+          {
+            "node": "🔎 Validar Envío",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔎 Validar Envío": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Se puede enviar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Se puede enviar?": {
+      "main": [
+        [
+          {
+            "node": "📋 G54: Config WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🧾 Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 G54: Config WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "🔑 G54: Datos del bot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔑 G54: Datos del bot": {
+      "main": [
+        [
+          {
+            "node": "📤 Enviar Seguimiento WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Enviar Seguimiento WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "🧾 Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧾 Resultado": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Se envió?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Se envió?": {
+      "main": [
+        [
+          {
+            "node": "💬 G54: Registrar en la conversación",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📌 G54: Nota en el trato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💬 G54: Registrar en la conversación": {
+      "main": [
+        [
+          {
+            "node": "📌 G54: Nota en el trato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📌 G54: Nota en el trato": {
+      "main": [
+        [
+          {
+            "node": "✅ Responder a G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodeGroups": [],
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "CKOju9JVnSMymfKv"
+  },
+  "staticData": {
+    "global": {
+      "ultimoEnvio": {}
+    }
+  },
+  "pinData": null,
+  "meta": null,
+  "tags": [],
+  "shared": [
+    {
+      "role": "workflow:owner",
+      "workflowId": "E7axtRDYCL8AbtgO",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-09-30T20:02:26.456Z",
+      "updatedAt": "2026-09-30T20:02:26.456Z"
+    }
+  ],
+  "activeVersion": {
+    "versionId": "c1550b23-1a19-4a89-a37d-8980d5df4465",
+    "workflowId": "E7axtRDYCL8AbtgO",
+    "nodes": [
+      {
+        "id": "f6d12f69-17b9-4bc3-ac42-d2d067235774",
+        "name": "📋 INFO",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          0,
+          0
+        ],
+        "parameters": {
+          "width": 640,
+          "height": 220,
+          "content": "## Seguimiento IA manual — key wa_followup (30-sep)\nLo llama G54 al tocar \"Ejecutar seguimiento IA\" en la Ficha 360 (POST /api/crm/deals/{id}/run-seguimiento). Manda el mensaje de 24h de la empresa por WhatsApp y deja nota en el trato.\n- El teléfono tiene que coincidir con el del trato, y el trato ser de esa empresa.\n- No manda a tratos cerrados o perdidos, ni dos veces en 10 min.\n- Pasadas 24h desde el último mensaje del cliente WhatsApp lo rechaza (131047): queda anotado en el trato."
+        }
+      },
+      {
+        "id": "e09e31ab-12b4-4320-89bb-6d53b52fd35c",
+        "name": "🔔 Webhook G54 (wa_followup)",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          0,
+          300
+        ],
+        "webhookId": "cb7f077a-99f3-4de2-b12c-cbbb717b489a",
+        "parameters": {
+          "path": "wa-followup-g54",
+          "httpMethod": "POST",
+          "responseMode": "responseNode",
+          "options": {}
+        }
+      },
+      {
+        "id": "688b1e7f-76bd-4901-84ea-e6871004bb22",
+        "name": "⚙️ Config",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          220,
+          300
+        ],
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "c1",
+                "name": "G54_BASE_URL",
+                "value": "https://apigrowth.mdarthurdigital.com",
+                "type": "string"
+              },
+              {
+                "id": "c2",
+                "name": "G54_AGENT_TOKEN",
+                "value": "REDACTED_G54_AGENT_TOKEN",
+                "type": "string"
+              },
+              {
+                "id": "c3",
+                "name": "G54_MASTER_EMAIL",
+                "value": "master@growth54.local",
+                "type": "string"
+              },
+              {
+                "id": "c4",
+                "name": "G54_MASTER_PASSWORD",
+                "value": "REDACTED_G54_MASTER_PASSWORD",
+                "type": "string"
+              },
+              {
+                "id": "c5",
+                "name": "ANTIREPETICION_MIN",
+                "value": 10,
+                "type": "number"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "f026aa80-886c-48cb-8c1e-21108cdf7ea3",
+        "name": "🔧 Leer Pedido",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          440,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const b = $('🔔 Webhook G54 (wa_followup)').first().json.body || {};\nreturn [{ json: {\n  company_id: Number(b.company_id) || null,\n  deal_id: Number(b.deal_id) || null,\n  telefono: String(b.telefono || ''),\n  nombre: b.nombre || '',\n  user_id: b.trigger?.user_id ?? null,\n} }];"
+        }
+      },
+      {
+        "id": "2d690f26-f591-46f2-8a71-5a63660f07bd",
+        "name": "🔐 G54: Login",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          660,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config').first().json.G54_BASE_URL  + '/api/auth/login' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": false,
+                "neverError": true
+              }
+            }
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config').first().json.G54_MASTER_EMAIL, password: $('⚙️ Config').first().json.G54_MASTER_PASSWORD }) }}"
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true
+      },
+      {
+        "id": "e39cf99f-332c-4c5e-ba76-61ef29010e96",
+        "name": "🏢 G54: Cambiar Empresa",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          880,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config').first().json.G54_BASE_URL  + '/api/auth/switch-company' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login').first().json.access_token }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": false,
+                "neverError": true
+              }
+            }
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ company_id: $('🔧 Leer Pedido').first().json.company_id }) }}"
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true
+      },
+      {
+        "id": "7c04f776-58c7-40f7-8897-dba7ffee412b",
+        "name": "📋 G54: Leer Trato",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1100,
+          300
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ $('⚙️ Config').first().json.G54_BASE_URL  + '/api/crm/deals/' + $('🔧 Leer Pedido').first().json.deal_id }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login').first().json.access_token }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": false,
+                "neverError": true
+              }
+            }
+          }
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true
+      },
+      {
+        "id": "1e510de9-24b6-43f3-8788-21d112f0ecd4",
+        "name": "🔎 Validar Envío",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1320,
+          300
+        ],
+        "parameters": {
+          "jsCode": "// No se confía en el teléfono que llega en el body: tiene que ser el del trato, y el\n// trato tiene que ser de la empresa del pedido. Así nadie puede usar este webhook\n// para mandar WhatsApp a cualquier número.\nconst p = $('🔧 Leer Pedido').first().json;\nconst cfg = $('⚙️ Config').first().json;\nconst raw = $input.first().json || {};\nconst deal = raw.data || raw;\nconst digits = s => String(s || '').replace(/\\D/g, '');\nlet motivo = null;\nif (!$('🔐 G54: Login').first().json.access_token) motivo = 'No se pudo iniciar sesión en G54.';\nelse if (!p.company_id || !p.deal_id) motivo = 'Faltan company_id o deal_id.';\nelse if (!deal || !deal.id) motivo = 'No se encontró el trato en esa empresa.';\nelse if (Number(deal.company_id) !== p.company_id) motivo = 'El trato no es de esa empresa.';\nconst tel = digits(p.telefono);\nif (!motivo && !/^\\d{8,15}$/.test(tel)) motivo = 'El contacto no tiene un número de WhatsApp (por ejemplo, es de Telegram).';\nconst telTrato = digits(deal.telefono || deal.contact?.phone);\nif (!motivo && telTrato && telTrato !== tel) motivo = 'El teléfono no coincide con el del trato.';\nif (!motivo && !telTrato && !deal.wa_contact_id) motivo = 'El trato no tiene un teléfono asociado.';\nif (!motivo && ['closed', 'lost'].includes(deal.etapa)) motivo = `El trato está en la etapa \"${deal.etapa}\": no se le hace seguimiento.`;\n// Anti-repetición: un clic doble o repetido no manda dos mensajes.\nconst sd = $getWorkflowStaticData('global');\nsd.ultimoEnvio = sd.ultimoEnvio || {};\nconst ahora = Date.now();\nconst prev = sd.ultimoEnvio[p.deal_id];\nif (!motivo && prev && ahora - prev < cfg.ANTIREPETICION_MIN * 60000) {\n  motivo = `Ya se mandó un seguimiento a este lead hace menos de ${cfg.ANTIREPETICION_MIN} minutos.`;\n}\nif (!motivo) sd.ultimoEnvio[p.deal_id] = ahora;\nreturn [{ json: { puede: !motivo, motivo, telefono: tel, deal_id: p.deal_id, company_id: p.company_id,\n                  nombre: p.nombre || deal.nombre || '' } }];"
+        }
+      },
+      {
+        "id": "70b6bbe2-83cb-48d9-8980-3545efb5aefa",
+        "name": "🔀 ¿Se puede enviar?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1540,
+          300
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "192dfd67-b5f2-4369-aa76-bc35d362abf9",
+                "leftValue": "={{ $json.puede }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "28ace2c5-c6f1-4e31-b2bb-b143fccfde71",
+        "name": "📋 G54: Config WhatsApp",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1760,
+          180
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ $('⚙️ Config').first().json.G54_BASE_URL  + '/api/whatsapp/config' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login').first().json.access_token }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": false,
+                "neverError": true
+              }
+            }
+          }
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true
+      },
+      {
+        "id": "bed2c58d-d373-4e7c-b6b0-816f22b6eae1",
+        "name": "🔑 G54: Datos del bot",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1980,
+          180
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ $('⚙️ Config').first().json.G54_BASE_URL  + '/api/agent/wa/empresa-by-phone/' + ($json.data?.phone_number_id || $json.phone_number_id || 'x') }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config').first().json.G54_AGENT_TOKEN }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": false,
+                "neverError": true
+              }
+            }
+          }
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true
+      },
+      {
+        "id": "088f9399-b7ed-47d8-a8d5-c06e27e58523",
+        "name": "📤 Enviar Seguimiento WhatsApp",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2200,
+          180
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "={{ 'https://graph.facebook.com/v19.0/' + ($json.data?.phone_number_id || $json.phone_number_id) + '/messages' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + ($('🔑 G54: Datos del bot').first().json.data?.wa_access_token || $('🔑 G54: Datos del bot').first().json.wa_access_token) }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": false,
+                "neverError": true
+              }
+            }
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('🔎 Validar Envío').first().json.telefono, type: 'text', text: { body: ($('🔑 G54: Datos del bot').first().json.data?.msg_followup_24h || $('🔑 G54: Datos del bot').first().json.msg_followup_24h) } }) }}"
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true
+      },
+      {
+        "id": "542984bf-019a-49b1-986f-0b1bf4e749c5",
+        "name": "🧾 Resultado",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2420,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const v = $('🔎 Validar Envío').first().json;\nconst bot = (() => { try { const j = $('🔑 G54: Datos del bot').first().json; return j.data || j; } catch (e) { return {}; } })();\nconst msg = bot.msg_followup_24h || '';\nlet enviado = false, motivo = v.motivo;\nif (v.puede) {\n  const r = (() => { try { return $('📤 Enviar Seguimiento WhatsApp').first().json; } catch (e) { return {}; } })();\n  if (!bot.phone_number_id || !bot.wa_access_token) motivo = 'La empresa no tiene WhatsApp configurado.';\n  else if (!msg) motivo = 'La empresa no tiene cargado el mensaje de seguimiento de 24h.';\n  else if (r.messages && r.messages[0]?.id) enviado = true;\n  else {\n    const code = r.error?.code;\n    motivo = code === 131047\n      ? 'Pasaron más de 24 horas desde el último mensaje del cliente: WhatsApp solo deja escribirle con una plantilla aprobada.'\n      : 'WhatsApp rechazó el mensaje' + (r.error?.message ? ': ' + r.error.message : '.');\n  }\n}\nif (!enviado) { const sd = $getWorkflowStaticData('global'); if (sd.ultimoEnvio) delete sd.ultimoEnvio[v.deal_id]; }\nreturn [{ json: { ok: enviado, motivo: enviado ? null : motivo, mensaje: enviado ? msg : null,\n                  telefono: v.telefono, deal_id: v.deal_id, company_id: v.company_id, nombre: v.nombre } }];"
+        }
+      },
+      {
+        "id": "a1c8cf03-b08a-44fa-a2ac-568d057ef92a",
+        "name": "🔀 ¿Se envió?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          2640,
+          300
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "5a887a7b-6e62-479c-b9cd-63c2b36ffd31",
+                "leftValue": "={{ $json.ok }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "6f9a2ecc-5b0a-444b-ae2d-49d1ff17ffe4",
+        "name": "💬 G54: Registrar en la conversación",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2860,
+          180
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config').first().json.G54_BASE_URL  + '/api/agent/whatsapp/inbound' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('⚙️ Config').first().json.G54_AGENT_TOKEN }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": false,
+                "neverError": true
+              }
+            }
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ empresa_id: $('🧾 Resultado').first().json.company_id, phone: '+' + $('🧾 Resultado').first().json.telefono, nombre: $('🧾 Resultado').first().json.nombre, canal: 'whatsapp', messages: [{ rol: 'bot', contenido: $('🧾 Resultado').first().json.mensaje }] }) }}"
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true
+      },
+      {
+        "id": "12f3cc4f-f55b-4e92-ac4a-71a5e04996f6",
+        "name": "📌 G54: Nota en el trato",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3080,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config').first().json.G54_BASE_URL  + '/api/crm/deals/' + $('🧾 Resultado').first().json.deal_id + '/activities' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login').first().json.access_token }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": false,
+                "neverError": true
+              }
+            }
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ tipo: 'sistema', contenido: $('🧾 Resultado').first().json.ok ? 'Seguimiento IA (manual, desde la Ficha 360): mensaje de 24h enviado por WhatsApp.' : 'Seguimiento IA (manual, desde la Ficha 360): no se envió. ' + $('🧾 Resultado').first().json.motivo }) }}"
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true
+      },
+      {
+        "id": "16d97171-b966-4b2e-b810-a89da825c466",
+        "name": "✅ Responder a G54",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          3300,
+          300
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ ok: $('🧾 Resultado').first().json.ok, motivo: $('🧾 Resultado').first().json.motivo }) }}",
+          "options": {}
+        }
+      }
+    ],
+    "connections": {
+      "🔔 Webhook G54 (wa_followup)": {
+        "main": [
+          [
+            {
+              "node": "⚙️ Config",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "⚙️ Config": {
+        "main": [
+          [
+            {
+              "node": "🔧 Leer Pedido",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Leer Pedido": {
+        "main": [
+          [
+            {
+              "node": "🔐 G54: Login",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔐 G54: Login": {
+        "main": [
+          [
+            {
+              "node": "🏢 G54: Cambiar Empresa",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🏢 G54: Cambiar Empresa": {
+        "main": [
+          [
+            {
+              "node": "📋 G54: Leer Trato",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📋 G54: Leer Trato": {
+        "main": [
+          [
+            {
+              "node": "🔎 Validar Envío",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔎 Validar Envío": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Se puede enviar?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Se puede enviar?": {
+        "main": [
+          [
+            {
+              "node": "📋 G54: Config WhatsApp",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🧾 Resultado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📋 G54: Config WhatsApp": {
+        "main": [
+          [
+            {
+              "node": "🔑 G54: Datos del bot",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔑 G54: Datos del bot": {
+        "main": [
+          [
+            {
+              "node": "📤 Enviar Seguimiento WhatsApp",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📤 Enviar Seguimiento WhatsApp": {
+        "main": [
+          [
+            {
+              "node": "🧾 Resultado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧾 Resultado": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Se envió?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Se envió?": {
+        "main": [
+          [
+            {
+              "node": "💬 G54: Registrar en la conversación",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📌 G54: Nota en el trato",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "💬 G54: Registrar en la conversación": {
+        "main": [
+          [
+            {
+              "node": "📌 G54: Nota en el trato",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📌 G54: Nota en el trato": {
+        "main": [
+          [
+            {
+              "node": "✅ Responder a G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "createdAt": "2026-09-30T20:02:26.460Z",
+    "updatedAt": "2026-09-30T20:02:26.460Z",
+    "workflowPublishHistory": [
+      {
+        "id": 3289,
+        "workflowId": "E7axtRDYCL8AbtgO",
+        "versionId": "c1550b23-1a19-4a89-a37d-8980d5df4465",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-09-30T20:02:27.120Z"
+      }
+    ]
+  }
+}

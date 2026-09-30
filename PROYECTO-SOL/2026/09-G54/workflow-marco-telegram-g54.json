@@ -3,12 +3,12 @@
   "name": "CE Telegram Engine — Marco",
   "description": null,
   "active": true,
-  "activeVersionId": "39a15693-db6b-459d-9e63-82ec336fd7a6",
+  "activeVersionId": "7fd61abc-5f11-4142-88fc-3a9c748b3fbe",
   "createdAt": "2026-07-23T15:36:21.963Z",
-  "updatedAt": "2026-09-30T13:51:16.862Z",
+  "updatedAt": "2026-09-30T19:59:22.685Z",
   "isArchived": false,
-  "versionId": "39a15693-db6b-459d-9e63-82ec336fd7a6",
-  "versionCounter": 31,
+  "versionId": "7fd61abc-5f11-4142-88fc-3a9c748b3fbe",
+  "versionCounter": 32,
   "sourceWorkflowId": null,
   "triggerCount": 2,
   "nodes": [
@@ -700,7 +700,7 @@
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst body = $json.body || $json;\nconst chatId = body.chat_id;\nconst texto = (body.texto || '').trim();\nconst conversationId = body.conversation_id;\nconst contactId = body.contact_id;\nconst nombreContacto = body.nombre || '';\nconst empresaId = body.empresa_id;\n\nif (!chatId || !texto) {\n  return [{ json: { skip: true, skipReason: 'sin_chat_id_o_texto' } }];\n}\n\n// Deduplicación — G54 no manda un ID único de mensaje en el relevo, se arma con chat+conversación+texto+ventana de tiempo\nif (!staticData.seenTgMessageIds) staticData.seenTgMessageIds = {};\nconst now = Date.now();\nObject.keys(staticData.seenTgMessageIds).forEach(id => {\n  if (now - staticData.seenTgMessageIds[id] > 60000) delete staticData.seenTgMessageIds[id];\n});\nconst dedupeKey = `${chatId}_${conversationId}_${texto}`;\nif (staticData.seenTgMessageIds[dedupeKey]) {\n  return [{ json: { skip: true, skipReason: 'duplicate_message' } }];\n}\nstaticData.seenTgMessageIds[dedupeKey] = now;\n\nreturn [{\n  json: {\n    telefono: 'tg_' + chatId,\n    chatId,\n    texto,\n    nombreContacto,\n    conversationId,\n    contactId,\n    empresaId,\n    tipoMensaje: 'text',\n    skip: false\n  }\n}];"
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst body = $json.body || $json;\nconst chatId = body.chat_id;\nconst texto = (body.texto || '').trim();\nconst conversationId = body.conversation_id;\nconst contactId = body.contact_id;\nconst nombreContacto = body.nombre || '';\nconst empresaId = body.empresa_id;\n\n// Adjuntos (G54, 29-sep): fotos, notas de voz, audio y documentos llegan con\n// file_id + tipo_adjunto (+ mime_type en voice/audio/document). `texto` es el pie, si vino.\nconst fileId = body.file_id || null;\nconst tipoAdjunto = body.tipo_adjunto || null;\nlet tipoMensaje = 'text', mimeType = null;\nif (fileId) {\n  if (tipoAdjunto === 'photo') { tipoMensaje = 'image'; mimeType = 'image/jpeg'; }\n  else if (tipoAdjunto === 'voice') { tipoMensaje = 'audio'; mimeType = body.mime_type || 'audio/ogg'; }\n  else if (tipoAdjunto === 'audio') { tipoMensaje = 'audio'; mimeType = body.mime_type || 'audio/mpeg'; }\n  else { mimeType = body.mime_type || 'application/octet-stream'; tipoMensaje = mimeType === 'application/pdf' ? 'pdf' : 'document'; }\n}\n\nif (!chatId || (!texto && !fileId)) {\n  return [{ json: { skip: true, skipReason: 'sin_chat_id_ni_contenido' } }];\n}\n\n// Deduplicación — G54 no manda un ID único de mensaje en el relevo, se arma con chat+conversación+contenido+ventana de tiempo\nif (!staticData.seenTgMessageIds) staticData.seenTgMessageIds = {};\nconst now = Date.now();\nObject.keys(staticData.seenTgMessageIds).forEach(id => {\n  if (now - staticData.seenTgMessageIds[id] > 60000) delete staticData.seenTgMessageIds[id];\n});\nconst dedupeKey = `${chatId}_${conversationId}_${fileId || ''}_${texto}`;\nif (staticData.seenTgMessageIds[dedupeKey]) {\n  return [{ json: { skip: true, skipReason: 'duplicate_message' } }];\n}\nstaticData.seenTgMessageIds[dedupeKey] = now;\n\nreturn [{\n  json: {\n    telefono: 'tg_' + chatId,\n    chatId,\n    texto,\n    nombreContacto,\n    conversationId,\n    contactId,\n    empresaId,\n    tipoMensaje,\n    fileId,\n    mimeType,\n    skip: false\n  }\n}];"
       }
     },
     {
@@ -760,7 +760,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' }) }}",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
         "options": {}
       }
     },
@@ -855,7 +855,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
             },
             {
               "name": "Accept",
@@ -930,7 +930,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
             },
             {
               "name": "Content-Type",
@@ -1025,7 +1025,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
             },
             {
               "name": "Accept",
@@ -1109,7 +1109,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: \"master@growth54.local\", password: \"<G54_MASTER_PASSWORD — ver .secrets.local.md>\" }) }}",
+        "jsonBody": "={{ JSON.stringify({ email: \"master@growth54.local\", password: \"REDACTED_G54_MASTER_PASSWORD\" }) }}",
         "options": {}
       },
       "id": "login-manual-tg",
@@ -1233,7 +1233,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
             },
             {
               "name": "Content-Type",
@@ -1305,7 +1305,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
             },
             {
               "name": "Content-Type",
@@ -1341,7 +1341,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
             },
             {
               "name": "Accept",
@@ -1355,7 +1355,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Reconstruye telefono/texto/nombreContacto desde el extractor real -- el nodo de bot-config (HTTP) que corre justo antes sobreescribe $json entero con la respuesta de la API, perdiendo estos campos. Mismo patron ya usado en el motor de WhatsApp (nodo \\\"Preparar Contexto\\\"), que Telegram nunca tuvo.\nconst ext = $('🔧 Extraer Mensaje (Relevo G54)').first().json;\nreturn [{ json: { telefono: ext.telefono, texto: ext.texto, nombreContacto: ext.nombreContacto || '' } }];"
+        "jsCode": "// Reconstruye telefono/texto/nombreContacto desde el extractor real -- el nodo de bot-config (HTTP) que corre justo antes sobreescribe $json entero con la respuesta de la API, perdiendo estos campos. Mismo patron ya usado en el motor de WhatsApp (nodo \"Preparar Contexto\"), que Telegram nunca tuvo.\n// Desde el 30-sep tambien pasa el adjunto (fileId/mimeType/tipoMensaje), si vino.\nconst ext = $('🔧 Extraer Mensaje (Relevo G54)').first().json;\nreturn [{ json: { telefono: ext.telefono, texto: ext.texto, nombreContacto: ext.nombreContacto || '', fileId: ext.fileId || null, mimeType: ext.mimeType || null, tipoMensaje: ext.tipoMensaje || 'text' } }];"
       },
       "id": "preparar-contexto-tg",
       "name": "🔗 Preparar Contexto (TG)",
@@ -1365,6 +1365,82 @@
         790,
         650
       ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "relevo-archivo",
+              "leftValue": "={{ !!$json.fileId }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "5b477150-35d6-4a6a-82e3-bbe79f4b8d63",
+      "name": "🔀 ¿Relevo trae archivo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1010,
+        650
+      ]
+    },
+    {
+      "id": "58e162ab-9167-42a5-a9a4-f86870f519a5",
+      "name": "🔧 Preparar Medio (Relevo)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1230,
+        490
+      ],
+      "parameters": {
+        "jsCode": "const c = $json;\nreturn [{ json: {\n  media_id: c.fileId,\n  mime_type: c.mimeType,\n  caption: c.texto || '',\n  platform: 'telegram',\n  phone_number_id: '',\n  gemini_api_key: ''\n} }];"
+      }
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": "5GU89AeWsBZ86FWa",
+        "mode": "once",
+        "inputData": "={{ [{ json: $json }] }}"
+      },
+      "id": "498d7441-829f-4d56-b259-4b356d2ceff9",
+      "name": "▶️ 06 Procesador de Medios (Relevo)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        1450,
+        490
+      ],
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "d1c2d2d5-0dba-4f74-bfb9-1853932b7bdd",
+      "name": "🔧 Combinar Texto de Medio (Relevo)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1670,
+        490
+      ],
+      "parameters": {
+        "jsCode": "// Convierte el adjunto en texto para Marco: transcripción del audio, descripción de la\n// imagen o contenido del documento (06 Procesador de Medios). Si no se pudo abrir, Marco\n// igual se entera de que llegó algo, en vez de no ver nada.\nconst r = $input.first().json || {};\nconst c = $('🔗 Preparar Contexto (TG)').first().json;\nconst etiquetas = { image: 'una imagen', audio: 'un audio', pdf: 'un documento PDF', document: 'un documento' };\nconst que = etiquetas[c.tipoMensaje] || 'un archivo';\nconst ok = r && !r.error && r.texto && !String(r.texto).startsWith('[Medio recibido pero no procesado');\nlet texto = ok ? `[Cliente envió ${que}] ${r.texto}` : `[Cliente envió ${que}, pero no se pudo abrir]`;\nif (c.texto) texto += `\\nMensaje del cliente: ${c.texto}`;\nreturn [{ json: { telefono: c.telefono, texto, nombreContacto: c.nombreContacto, tipoMensaje: c.tipoMensaje } }];"
+      }
     }
   ],
   "connections": {
@@ -1939,6 +2015,57 @@
       "main": [
         [
           {
+            "node": "🔀 ¿Relevo trae archivo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Relevo trae archivo?": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Medio (Relevo)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🌐 Detectar Idioma Entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Medio (Relevo)": {
+      "main": [
+        [
+          {
+            "node": "▶️ 06 Procesador de Medios (Relevo)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ 06 Procesador de Medios (Relevo)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Combinar Texto de Medio (Relevo)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Combinar Texto de Medio (Relevo)": {
+      "main": [
+        [
+          {
             "node": "🌐 Detectar Idioma Entrada",
             "type": "main",
             "index": 0
@@ -1992,7 +2119,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "39a15693-db6b-459d-9e63-82ec336fd7a6",
+    "versionId": "7fd61abc-5f11-4142-88fc-3a9c748b3fbe",
     "workflowId": "HaSG63Q9C2tGOLH3",
     "nodes": [
       {
@@ -2683,7 +2810,7 @@
         ],
         "parameters": {
           "mode": "runOnceForAllItems",
-          "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst body = $json.body || $json;\nconst chatId = body.chat_id;\nconst texto = (body.texto || '').trim();\nconst conversationId = body.conversation_id;\nconst contactId = body.contact_id;\nconst nombreContacto = body.nombre || '';\nconst empresaId = body.empresa_id;\n\nif (!chatId || !texto) {\n  return [{ json: { skip: true, skipReason: 'sin_chat_id_o_texto' } }];\n}\n\n// Deduplicación — G54 no manda un ID único de mensaje en el relevo, se arma con chat+conversación+texto+ventana de tiempo\nif (!staticData.seenTgMessageIds) staticData.seenTgMessageIds = {};\nconst now = Date.now();\nObject.keys(staticData.seenTgMessageIds).forEach(id => {\n  if (now - staticData.seenTgMessageIds[id] > 60000) delete staticData.seenTgMessageIds[id];\n});\nconst dedupeKey = `${chatId}_${conversationId}_${texto}`;\nif (staticData.seenTgMessageIds[dedupeKey]) {\n  return [{ json: { skip: true, skipReason: 'duplicate_message' } }];\n}\nstaticData.seenTgMessageIds[dedupeKey] = now;\n\nreturn [{\n  json: {\n    telefono: 'tg_' + chatId,\n    chatId,\n    texto,\n    nombreContacto,\n    conversationId,\n    contactId,\n    empresaId,\n    tipoMensaje: 'text',\n    skip: false\n  }\n}];"
+          "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst body = $json.body || $json;\nconst chatId = body.chat_id;\nconst texto = (body.texto || '').trim();\nconst conversationId = body.conversation_id;\nconst contactId = body.contact_id;\nconst nombreContacto = body.nombre || '';\nconst empresaId = body.empresa_id;\n\n// Adjuntos (G54, 29-sep): fotos, notas de voz, audio y documentos llegan con\n// file_id + tipo_adjunto (+ mime_type en voice/audio/document). `texto` es el pie, si vino.\nconst fileId = body.file_id || null;\nconst tipoAdjunto = body.tipo_adjunto || null;\nlet tipoMensaje = 'text', mimeType = null;\nif (fileId) {\n  if (tipoAdjunto === 'photo') { tipoMensaje = 'image'; mimeType = 'image/jpeg'; }\n  else if (tipoAdjunto === 'voice') { tipoMensaje = 'audio'; mimeType = body.mime_type || 'audio/ogg'; }\n  else if (tipoAdjunto === 'audio') { tipoMensaje = 'audio'; mimeType = body.mime_type || 'audio/mpeg'; }\n  else { mimeType = body.mime_type || 'application/octet-stream'; tipoMensaje = mimeType === 'application/pdf' ? 'pdf' : 'document'; }\n}\n\nif (!chatId || (!texto && !fileId)) {\n  return [{ json: { skip: true, skipReason: 'sin_chat_id_ni_contenido' } }];\n}\n\n// Deduplicación — G54 no manda un ID único de mensaje en el relevo, se arma con chat+conversación+contenido+ventana de tiempo\nif (!staticData.seenTgMessageIds) staticData.seenTgMessageIds = {};\nconst now = Date.now();\nObject.keys(staticData.seenTgMessageIds).forEach(id => {\n  if (now - staticData.seenTgMessageIds[id] > 60000) delete staticData.seenTgMessageIds[id];\n});\nconst dedupeKey = `${chatId}_${conversationId}_${fileId || ''}_${texto}`;\nif (staticData.seenTgMessageIds[dedupeKey]) {\n  return [{ json: { skip: true, skipReason: 'duplicate_message' } }];\n}\nstaticData.seenTgMessageIds[dedupeKey] = now;\n\nreturn [{\n  json: {\n    telefono: 'tg_' + chatId,\n    chatId,\n    texto,\n    nombreContacto,\n    conversationId,\n    contactId,\n    empresaId,\n    tipoMensaje,\n    fileId,\n    mimeType,\n    skip: false\n  }\n}];"
         }
       },
       {
@@ -2743,7 +2870,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' }) }}",
+          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
           "options": {}
         }
       },
@@ -2838,7 +2965,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
               },
               {
                 "name": "Accept",
@@ -2913,7 +3040,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
               },
               {
                 "name": "Content-Type",
@@ -3008,7 +3135,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
               },
               {
                 "name": "Accept",
@@ -3092,7 +3219,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ email: \"master@growth54.local\", password: \"<G54_MASTER_PASSWORD — ver .secrets.local.md>\" }) }}",
+          "jsonBody": "={{ JSON.stringify({ email: \"master@growth54.local\", password: \"REDACTED_G54_MASTER_PASSWORD\" }) }}",
           "options": {}
         },
         "id": "login-manual-tg",
@@ -3216,7 +3343,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
               },
               {
                 "name": "Content-Type",
@@ -3288,7 +3415,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
               },
               {
                 "name": "Content-Type",
@@ -3324,7 +3451,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
               },
               {
                 "name": "Accept",
@@ -3338,7 +3465,7 @@
       },
       {
         "parameters": {
-          "jsCode": "// Reconstruye telefono/texto/nombreContacto desde el extractor real -- el nodo de bot-config (HTTP) que corre justo antes sobreescribe $json entero con la respuesta de la API, perdiendo estos campos. Mismo patron ya usado en el motor de WhatsApp (nodo \\\"Preparar Contexto\\\"), que Telegram nunca tuvo.\nconst ext = $('🔧 Extraer Mensaje (Relevo G54)').first().json;\nreturn [{ json: { telefono: ext.telefono, texto: ext.texto, nombreContacto: ext.nombreContacto || '' } }];"
+          "jsCode": "// Reconstruye telefono/texto/nombreContacto desde el extractor real -- el nodo de bot-config (HTTP) que corre justo antes sobreescribe $json entero con la respuesta de la API, perdiendo estos campos. Mismo patron ya usado en el motor de WhatsApp (nodo \"Preparar Contexto\"), que Telegram nunca tuvo.\n// Desde el 30-sep tambien pasa el adjunto (fileId/mimeType/tipoMensaje), si vino.\nconst ext = $('🔧 Extraer Mensaje (Relevo G54)').first().json;\nreturn [{ json: { telefono: ext.telefono, texto: ext.texto, nombreContacto: ext.nombreContacto || '', fileId: ext.fileId || null, mimeType: ext.mimeType || null, tipoMensaje: ext.tipoMensaje || 'text' } }];"
         },
         "id": "preparar-contexto-tg",
         "name": "🔗 Preparar Contexto (TG)",
@@ -3348,6 +3475,82 @@
           790,
           650
         ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "relevo-archivo",
+                "leftValue": "={{ !!$json.fileId }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        },
+        "id": "5b477150-35d6-4a6a-82e3-bbe79f4b8d63",
+        "name": "🔀 ¿Relevo trae archivo?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1010,
+          650
+        ]
+      },
+      {
+        "id": "58e162ab-9167-42a5-a9a4-f86870f519a5",
+        "name": "🔧 Preparar Medio (Relevo)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1230,
+          490
+        ],
+        "parameters": {
+          "jsCode": "const c = $json;\nreturn [{ json: {\n  media_id: c.fileId,\n  mime_type: c.mimeType,\n  caption: c.texto || '',\n  platform: 'telegram',\n  phone_number_id: '',\n  gemini_api_key: ''\n} }];"
+        }
+      },
+      {
+        "parameters": {
+          "source": "database",
+          "workflowId": "5GU89AeWsBZ86FWa",
+          "mode": "once",
+          "inputData": "={{ [{ json: $json }] }}"
+        },
+        "id": "498d7441-829f-4d56-b259-4b356d2ceff9",
+        "name": "▶️ 06 Procesador de Medios (Relevo)",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          1450,
+          490
+        ],
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true
+      },
+      {
+        "id": "d1c2d2d5-0dba-4f74-bfb9-1853932b7bdd",
+        "name": "🔧 Combinar Texto de Medio (Relevo)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1670,
+          490
+        ],
+        "parameters": {
+          "jsCode": "// Convierte el adjunto en texto para Marco: transcripción del audio, descripción de la\n// imagen o contenido del documento (06 Procesador de Medios). Si no se pudo abrir, Marco\n// igual se entera de que llegó algo, en vez de no ver nada.\nconst r = $input.first().json || {};\nconst c = $('🔗 Preparar Contexto (TG)').first().json;\nconst etiquetas = { image: 'una imagen', audio: 'un audio', pdf: 'un documento PDF', document: 'un documento' };\nconst que = etiquetas[c.tipoMensaje] || 'un archivo';\nconst ok = r && !r.error && r.texto && !String(r.texto).startsWith('[Medio recibido pero no procesado');\nlet texto = ok ? `[Cliente envió ${que}] ${r.texto}` : `[Cliente envió ${que}, pero no se pudo abrir]`;\nif (c.texto) texto += `\\nMensaje del cliente: ${c.texto}`;\nreturn [{ json: { telefono: c.telefono, texto, nombreContacto: c.nombreContacto, tipoMensaje: c.tipoMensaje } }];"
+        }
       }
     ],
     "connections": {
@@ -3922,6 +4125,57 @@
         "main": [
           [
             {
+              "node": "🔀 ¿Relevo trae archivo?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Relevo trae archivo?": {
+        "main": [
+          [
+            {
+              "node": "🔧 Preparar Medio (Relevo)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🌐 Detectar Idioma Entrada",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Preparar Medio (Relevo)": {
+        "main": [
+          [
+            {
+              "node": "▶️ 06 Procesador de Medios (Relevo)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "▶️ 06 Procesador de Medios (Relevo)": {
+        "main": [
+          [
+            {
+              "node": "🔧 Combinar Texto de Medio (Relevo)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Combinar Texto de Medio (Relevo)": {
+        "main": [
+          [
+            {
               "node": "🌐 Detectar Idioma Entrada",
               "type": "main",
               "index": 0
@@ -3935,16 +4189,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-30T13:51:16.865Z",
-    "updatedAt": "2026-09-30T13:51:16.865Z",
+    "createdAt": "2026-09-30T19:59:22.688Z",
+    "updatedAt": "2026-09-30T19:59:22.688Z",
     "workflowPublishHistory": [
       {
-        "id": 3284,
+        "id": 3288,
         "workflowId": "HaSG63Q9C2tGOLH3",
-        "versionId": "39a15693-db6b-459d-9e63-82ec336fd7a6",
+        "versionId": "7fd61abc-5f11-4142-88fc-3a9c748b3fbe",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-30T13:51:17.136Z"
+        "createdAt": "2026-09-30T19:59:23.017Z"
       }
     ]
   }

@@ -3,12 +3,12 @@
   "name": "Marco CE — 06 Procesador de Medios",
   "description": null,
   "active": true,
-  "activeVersionId": "991d23e3-1328-45a8-9950-0b3e8e3b88d8",
+  "activeVersionId": "0199934f-161f-4cc9-8377-af2b4750852f",
   "createdAt": "2026-07-04T15:12:32.233Z",
-  "updatedAt": "2026-09-28T17:43:25.850Z",
+  "updatedAt": "2026-09-30T19:59:20.816Z",
   "isArchived": false,
-  "versionId": "991d23e3-1328-45a8-9950-0b3e8e3b88d8",
-  "versionCounter": 17,
+  "versionId": "0199934f-161f-4cc9-8377-af2b4750852f",
+  "versionCounter": 18,
   "sourceWorkflowId": null,
   "triggerCount": 0,
   "nodes": [
@@ -498,61 +498,6 @@
       ]
     },
     {
-      "parameters": {
-        "method": "GET",
-        "url": "=https://api.telegram.org/botTELEGRAM_BOT_TOKEN_PENDIENTE/getFile?file_id={{ $json.media_id }}",
-        "options": {},
-        "onError": "continueRegularOutput"
-      },
-      "id": "sw06-tg-getfile",
-      "name": "📁 TG: getFile",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        80,
-        260
-      ],
-      "notes": "Token del bot de Telegram quitado 28-sep: el que estaba acá era el revocado tras el incidente del 17-sep (daba 401). Esta rama solo sirve si llega un archivo por Telegram, y hoy el relevo de G54 no reenvía archivos. Si algún día lo hace, cargar el token vigente (no en texto plano en el código).",
-      "notesInFlow": true
-    },
-    {
-      "parameters": {
-        "jsCode": "const resp = $input.first().json;\nconst filePath = resp?.result?.file_path;\nconst BOT_TOKEN = '';\nconst fileUrl = filePath ? `https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}` : '';\nreturn [{ json: { file_url: fileUrl } }];"
-      },
-      "id": "sw06-tg-construir-url",
-      "name": "🔧 TG: Construir URL Descarga",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        320,
-        260
-      ],
-      "notes": "Token del bot de Telegram quitado 28-sep: el que estaba acá era el revocado tras el incidente del 17-sep (daba 401). Esta rama solo sirve si llega un archivo por Telegram, y hoy el relevo de G54 no reenvía archivos. Si algún día lo hace, cargar el token vigente (no en texto plano en el código).",
-      "notesInFlow": true
-    },
-    {
-      "parameters": {
-        "method": "GET",
-        "url": "={{ $json.file_url }}",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "file"
-            }
-          }
-        },
-        "onError": "continueRegularOutput"
-      },
-      "id": "sw06-tg-descargar",
-      "name": "📦 TG: Descargar Archivo",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        560,
-        260
-      ]
-    },
-    {
       "id": "sw06-excel-extract",
       "name": "📊 n8n: Extraer Excel",
       "type": "n8n-nodes-base.extractFromFile",
@@ -695,6 +640,31 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "5c60561e-ac1b-41bb-a71b-627bf0ea2fe8",
+      "name": "📁 TG: Descargar Archivo (bot)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        80,
+        260
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "telegramApi": {
+          "id": "QDPLJdTRChEFaEDG",
+          "name": "Telegram Marco Bot"
+        }
+      },
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.media_id }}",
+        "download": true,
+        "additionalFields": {}
+      },
+      "notes": "Descarga el archivo con la credencial del bot guardada en n8n (antes: token escrito en la URL, revocado desde el 17-sep). Si falla sigue igual y Marco recibe el aviso de archivo sin abrir.",
+      "webhookId": "3100478a-2c90-48a4-92bb-dd7c1f802f94"
     }
   ],
   "connections": {
@@ -902,7 +872,7 @@
       "main": [
         [
           {
-            "node": "📁 TG: getFile",
+            "node": "📁 TG: Descargar Archivo (bot)",
             "type": "main",
             "index": 0
           }
@@ -910,39 +880,6 @@
         [
           {
             "node": "🔑 Obtener Config WA (G54)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📁 TG: getFile": {
-      "main": [
-        [
-          {
-            "node": "🔧 TG: Construir URL Descarga",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔧 TG: Construir URL Descarga": {
-      "main": [
-        [
-          {
-            "node": "📦 TG: Descargar Archivo",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📦 TG: Descargar Archivo": {
-      "main": [
-        [
-          {
-            "node": "🔧 Leer Binario y Tipo",
             "type": "main",
             "index": 0
           }
@@ -1043,6 +980,17 @@
           }
         ]
       ]
+    },
+    "📁 TG: Descargar Archivo (bot)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Leer Binario y Tipo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -1074,7 +1022,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "991d23e3-1328-45a8-9950-0b3e8e3b88d8",
+    "versionId": "0199934f-161f-4cc9-8377-af2b4750852f",
     "workflowId": "5GU89AeWsBZ86FWa",
     "nodes": [
       {
@@ -1563,61 +1511,6 @@
         ]
       },
       {
-        "parameters": {
-          "method": "GET",
-          "url": "=https://api.telegram.org/botTELEGRAM_BOT_TOKEN_PENDIENTE/getFile?file_id={{ $json.media_id }}",
-          "options": {},
-          "onError": "continueRegularOutput"
-        },
-        "id": "sw06-tg-getfile",
-        "name": "📁 TG: getFile",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          80,
-          260
-        ],
-        "notes": "Token del bot de Telegram quitado 28-sep: el que estaba acá era el revocado tras el incidente del 17-sep (daba 401). Esta rama solo sirve si llega un archivo por Telegram, y hoy el relevo de G54 no reenvía archivos. Si algún día lo hace, cargar el token vigente (no en texto plano en el código).",
-        "notesInFlow": true
-      },
-      {
-        "parameters": {
-          "jsCode": "const resp = $input.first().json;\nconst filePath = resp?.result?.file_path;\nconst BOT_TOKEN = '';\nconst fileUrl = filePath ? `https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}` : '';\nreturn [{ json: { file_url: fileUrl } }];"
-        },
-        "id": "sw06-tg-construir-url",
-        "name": "🔧 TG: Construir URL Descarga",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          320,
-          260
-        ],
-        "notes": "Token del bot de Telegram quitado 28-sep: el que estaba acá era el revocado tras el incidente del 17-sep (daba 401). Esta rama solo sirve si llega un archivo por Telegram, y hoy el relevo de G54 no reenvía archivos. Si algún día lo hace, cargar el token vigente (no en texto plano en el código).",
-        "notesInFlow": true
-      },
-      {
-        "parameters": {
-          "method": "GET",
-          "url": "={{ $json.file_url }}",
-          "options": {
-            "response": {
-              "response": {
-                "responseFormat": "file"
-              }
-            }
-          },
-          "onError": "continueRegularOutput"
-        },
-        "id": "sw06-tg-descargar",
-        "name": "📦 TG: Descargar Archivo",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          560,
-          260
-        ]
-      },
-      {
         "id": "sw06-excel-extract",
         "name": "📊 n8n: Extraer Excel",
         "type": "n8n-nodes-base.extractFromFile",
@@ -1760,6 +1653,31 @@
           }
         },
         "onError": "continueRegularOutput"
+      },
+      {
+        "id": "5c60561e-ac1b-41bb-a71b-627bf0ea2fe8",
+        "name": "📁 TG: Descargar Archivo (bot)",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          80,
+          260
+        ],
+        "onError": "continueRegularOutput",
+        "credentials": {
+          "telegramApi": {
+            "id": "QDPLJdTRChEFaEDG",
+            "name": "Telegram Marco Bot"
+          }
+        },
+        "parameters": {
+          "resource": "file",
+          "fileId": "={{ $json.media_id }}",
+          "download": true,
+          "additionalFields": {}
+        },
+        "notes": "Descarga el archivo con la credencial del bot guardada en n8n (antes: token escrito en la URL, revocado desde el 17-sep). Si falla sigue igual y Marco recibe el aviso de archivo sin abrir.",
+        "webhookId": "3100478a-2c90-48a4-92bb-dd7c1f802f94"
       }
     ],
     "connections": {
@@ -1967,7 +1885,7 @@
         "main": [
           [
             {
-              "node": "📁 TG: getFile",
+              "node": "📁 TG: Descargar Archivo (bot)",
               "type": "main",
               "index": 0
             }
@@ -1975,39 +1893,6 @@
           [
             {
               "node": "🔑 Obtener Config WA (G54)",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "📁 TG: getFile": {
-        "main": [
-          [
-            {
-              "node": "🔧 TG: Construir URL Descarga",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔧 TG: Construir URL Descarga": {
-        "main": [
-          [
-            {
-              "node": "📦 TG: Descargar Archivo",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "📦 TG: Descargar Archivo": {
-        "main": [
-          [
-            {
-              "node": "🔧 Leer Binario y Tipo",
               "type": "main",
               "index": 0
             }
@@ -2108,6 +1993,17 @@
             }
           ]
         ]
+      },
+      "📁 TG: Descargar Archivo (bot)": {
+        "main": [
+          [
+            {
+              "node": "🔧 Leer Binario y Tipo",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -2115,16 +2011,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-28T17:43:25.857Z",
-    "updatedAt": "2026-09-28T17:43:25.857Z",
+    "createdAt": "2026-09-30T19:59:20.821Z",
+    "updatedAt": "2026-09-30T19:59:20.821Z",
     "workflowPublishHistory": [
       {
-        "id": 3256,
+        "id": 3286,
         "workflowId": "5GU89AeWsBZ86FWa",
-        "versionId": "991d23e3-1328-45a8-9950-0b3e8e3b88d8",
+        "versionId": "0199934f-161f-4cc9-8377-af2b4750852f",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-28T17:43:26.225Z"
+        "createdAt": "2026-09-30T19:59:21.095Z"
       }
     ]
   }
