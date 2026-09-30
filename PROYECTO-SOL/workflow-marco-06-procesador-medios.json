@@ -3,12 +3,12 @@
   "name": "Marco CE — 06 Procesador de Medios",
   "description": null,
   "active": true,
-  "activeVersionId": "0199934f-161f-4cc9-8377-af2b4750852f",
+  "activeVersionId": "b45c2fd5-14ad-4ea0-9c73-36093efef85b",
   "createdAt": "2026-07-04T15:12:32.233Z",
-  "updatedAt": "2026-09-30T19:59:20.816Z",
+  "updatedAt": "2026-09-30T20:30:04.760Z",
   "isArchived": false,
-  "versionId": "0199934f-161f-4cc9-8377-af2b4750852f",
-  "versionCounter": 18,
+  "versionId": "b45c2fd5-14ad-4ea0-9c73-36093efef85b",
+  "versionCounter": 20,
   "sourceWorkflowId": null,
   "triggerCount": 0,
   "nodes": [
@@ -283,7 +283,7 @@
         260
       ],
       "parameters": {
-        "jsCode": "const d = $input.first().json;\nconst caption = d.caption ? `El cliente adjuntó este texto con la imagen: \"${d.caption}\". ` : '';\nconst prompt = `${caption}Eres el asistente de ventas Marco de Crating Express (empresa de embalaje industrial en Miami). Analiza esta imagen enviada por un cliente y extrae toda la información relevante para una cotización de embalaje: describe el objeto/artículo visible, sus dimensiones aproximadas si son visibles, materiales, estado, cualquier texto o etiqueta relevante, y cualquier detalle que ayude a cotizar un cajón o embalaje de madera. Sé específico y práctico.`;\n\nlet proxyUrl;\ntry {\n  const tgUrl = $('\\U0001f527 TG: Construir URL Descarga').first().json.file_url;\n  proxyUrl = tgUrl || `https://n8n.mdarthurdigital.com/webhook/media-proxy-g54?media_id=${encodeURIComponent(d.media_id)}&phone_number_id=${encodeURIComponent(d.phone_number_id)}&secret=REDACTED_G54_AGENT_TOKEN`;\n} catch (e) {\n  proxyUrl = `https://n8n.mdarthurdigital.com/webhook/media-proxy-g54?media_id=${encodeURIComponent(d.media_id)}&phone_number_id=${encodeURIComponent(d.phone_number_id)}&secret=REDACTED_G54_AGENT_TOKEN`;\n}\n\nfunction buildBody(model) {\n  return JSON.stringify({\n    model,\n    messages: [{\n      role: 'user',\n      content: [\n        { type: 'text', text: prompt },\n        { type: 'image_url', image_url: { url: proxyUrl } }\n      ]\n    }],\n    temperature: 0.2,\n    max_tokens: 800\n  });\n}\n\n// Primario: modelo PAGO real (Gemini 2.5 Flash Lite via OpenRouter) -- confiable, sin el limite\n// de tasa compartido global que tiene cualquier modelo \":free\" de OpenRouter (confirmado en vivo\n// el 22-sep: 3 intentos aislados, todos 429, con el modelo gratis viejo). Costo real: ~$0.0000001\n// por token, negociable frente al riesgo de dejar a un cliente real sin respuesta.\n// Respaldo: el mismo modelo gratis que se usaba antes, solo por si el pago llegara a fallar\n// por otra razon puntual (outage, cuota agotada del lado nuestro).\nreturn [{ json: { bodyPrimario: buildBody('google/gemini-2.5-flash-lite'), bodyFallback: buildBody('google/gemma-4-26b-a4b-it:free'), mimeType: d.mimeType, caption: d.caption } }];"
+        "jsCode": "const d = $input.first().json;\nconst caption = d.caption ? `El cliente adjuntó este texto con la imagen: \"${d.caption}\". ` : '';\nconst prompt = `${caption}Eres el asistente de ventas Marco de Crating Express (empresa de embalaje industrial en Miami). Analiza esta imagen enviada por un cliente y extrae toda la información relevante para una cotización de embalaje: describe el objeto/artículo visible, sus dimensiones aproximadas si son visibles, materiales, estado, cualquier texto o etiqueta relevante, y cualquier detalle que ayude a cotizar un cajón o embalaje de madera. Sé específico y práctico.`;\n\n// Telegram (30-sep): la imagen va embebida como data URL desde el binario ya descargado con\n// la credencial del bot. Antes se armaba una URL de descarga con el token del bot adentro y se\n// le pasaba al modelo de visión, es decir, se le mandaba el token a un tercero.\n// WhatsApp: sin cambios, el proxy propio (Media Proxy G54) le da al modelo una URL pública.\nlet proxyUrl = `https://n8n.mdarthurdigital.com/webhook/media-proxy-g54?media_id=${encodeURIComponent(d.media_id)}&phone_number_id=${encodeURIComponent(d.phone_number_id)}&secret=REDACTED_G54_AGENT_TOKEN`;\nif (!d.phone_number_id) {\n  try {\n    const buf = await this.helpers.getBinaryDataBuffer(0, 'data');\n    if (buf && buf.length) proxyUrl = `data:${d.mimeType || 'image/jpeg'};base64,${buf.toString('base64')}`;\n  } catch (e) { /* sin binario: queda la URL del proxy, que fallará y Marco recibe el aviso */ }\n}\n\nfunction buildBody(model) {\n  return JSON.stringify({\n    model,\n    messages: [{\n      role: 'user',\n      content: [\n        { type: 'text', text: prompt },\n        { type: 'image_url', image_url: { url: proxyUrl } }\n      ]\n    }],\n    temperature: 0.2,\n    max_tokens: 800\n  });\n}\n\n// Primario: modelo PAGO real (Gemini 2.5 Flash Lite via OpenRouter) -- confiable, sin el limite\n// de tasa compartido global que tiene cualquier modelo \":free\" de OpenRouter (confirmado en vivo\n// el 22-sep: 3 intentos aislados, todos 429, con el modelo gratis viejo). Costo real: ~$0.0000001\n// por token, negociable frente al riesgo de dejar a un cliente real sin respuesta.\n// Respaldo: el mismo modelo gratis que se usaba antes, solo por si el pago llegara a fallar\n// por otra razon puntual (outage, cuota agotada del lado nuestro).\nreturn [{ json: { bodyPrimario: buildBody('google/gemini-2.5-flash-lite'), bodyFallback: buildBody('google/gemma-4-26b-a4b-it:free'), mimeType: d.mimeType, caption: d.caption } }];"
       }
     },
     {
@@ -301,7 +301,7 @@
         "authentication": "genericCredentialType",
         "sendBody": true,
         "specifyBody": "string",
-        "body": "={{ $json.body }}",
+        "body": "={{ $json.bodyPrimario }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -335,7 +335,7 @@
         260
       ],
       "parameters": {
-        "jsCode": "const resp = $input.first().json;\nconst descripcion = resp.choices?.[0]?.message?.content;\nconst caption = $('\\U0001f527 Preparar Body Imagen').first().json.caption || '';\n\nif (!descripcion) {\n  // Ni el modelo primario ni el de respaldo lograron analizar la imagen -- este marcador\n  // dispara la regla de escalacion a un especialista en el prompt de Marco (nunca improvisar).\n  return [{ json: {\n    texto: '[No se pudo procesar el archivo enviado]',\n    media_ref: { type: 'image', descripcion: null },\n    media_type: 'image'\n  }}];\n}\n\nconst captionExtra = caption ? ` El cliente escribió: \"${caption}\".` : '';\nconst texto = `[Imagen recibida]:${captionExtra} ${descripcion}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'image', descripcion },\n  media_type: 'image'\n}}];"
+        "jsCode": "const resp = $input.first().json;\nconst descripcion = resp.choices?.[0]?.message?.content;\nconst caption = $('🔧 Preparar Body Imagen').first().json.caption || '';\n\nif (!descripcion) {\n  // Ni el modelo primario ni el de respaldo lograron analizar la imagen -- este marcador\n  // dispara la regla de escalacion a un especialista en el prompt de Marco (nunca improvisar).\n  return [{ json: {\n    texto: '[No se pudo procesar el archivo enviado]',\n    media_ref: { type: 'image', descripcion: null },\n    media_type: 'image'\n  }}];\n}\n\nconst captionExtra = caption ? ` El cliente escribió: \"${caption}\".` : '';\nconst texto = `[Imagen recibida]:${captionExtra} ${descripcion}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'image', descripcion },\n  media_type: 'image'\n}}];"
       }
     },
     {
@@ -395,7 +395,7 @@
         740
       ],
       "parameters": {
-        "jsCode": "const inp = $('\\U0001f527 Leer Binario y Tipo').first().json;\nconst esVideo = inp.mediaCategory === 'video';\n// Video: no hay forma real de analizar el contenido hoy (extraer un frame requeriria ffmpeg,\n// no disponible en este entorno) -- en vez de solo pedirle al cliente que re-escriba en texto\n// lo que ya mostro en el video (la mayoria no lo va a hacer), se escala directo a un especialista\n// -- el mismo marcador que ya usan audio/imagen/PDF cuando fallan.\n// Formato de archivo genuinamente no soportado (no es video): se mantiene el mensaje anterior,\n// pidiendole un formato que SI funciona (PDF o imagen) en vez de escalar de una.\nconst texto = esVideo\n  ? '[No se pudo procesar el archivo enviado]'\n  : `[Archivo recibido: ${inp.filename || 'archivo'}]: El cliente envió un archivo en formato no soportado (${inp.mimeType}). Por favor pídele que lo envíe en PDF o imagen.`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: esVideo ? 'video' : 'archivo', filename: inp.filename },\n  media_type: esVideo ? 'video' : 'archivo'\n}}];"
+        "jsCode": "const inp = $('🔧 Leer Binario y Tipo').first().json;\nconst esVideo = inp.mediaCategory === 'video';\n// Video: no hay forma real de analizar el contenido hoy (extraer un frame requeriria ffmpeg,\n// no disponible en este entorno) -- en vez de solo pedirle al cliente que re-escriba en texto\n// lo que ya mostro en el video (la mayoria no lo va a hacer), se escala directo a un especialista\n// -- el mismo marcador que ya usan audio/imagen/PDF cuando fallan.\n// Formato de archivo genuinamente no soportado (no es video): se mantiene el mensaje anterior,\n// pidiendole un formato que SI funciona (PDF o imagen) en vez de escalar de una.\nconst texto = esVideo\n  ? '[No se pudo procesar el archivo enviado]'\n  : `[Archivo recibido: ${inp.filename || 'archivo'}]: El cliente envió un archivo en formato no soportado (${inp.mimeType}). Por favor pídele que lo envíe en PDF o imagen.`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: esVideo ? 'video' : 'archivo', filename: inp.filename },\n  media_type: esVideo ? 'video' : 'archivo'\n}}];"
       }
     },
     {
@@ -609,7 +609,7 @@
         "authentication": "genericCredentialType",
         "sendBody": true,
         "specifyBody": "string",
-        "body": "={{ $json.body }}",
+        "body": "={{ $('🔧 Preparar Body Imagen').first().json.bodyFallback }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -1022,7 +1022,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "0199934f-161f-4cc9-8377-af2b4750852f",
+    "versionId": "b45c2fd5-14ad-4ea0-9c73-36093efef85b",
     "workflowId": "5GU89AeWsBZ86FWa",
     "nodes": [
       {
@@ -1296,7 +1296,7 @@
           260
         ],
         "parameters": {
-          "jsCode": "const d = $input.first().json;\nconst caption = d.caption ? `El cliente adjuntó este texto con la imagen: \"${d.caption}\". ` : '';\nconst prompt = `${caption}Eres el asistente de ventas Marco de Crating Express (empresa de embalaje industrial en Miami). Analiza esta imagen enviada por un cliente y extrae toda la información relevante para una cotización de embalaje: describe el objeto/artículo visible, sus dimensiones aproximadas si son visibles, materiales, estado, cualquier texto o etiqueta relevante, y cualquier detalle que ayude a cotizar un cajón o embalaje de madera. Sé específico y práctico.`;\n\nlet proxyUrl;\ntry {\n  const tgUrl = $('\\U0001f527 TG: Construir URL Descarga').first().json.file_url;\n  proxyUrl = tgUrl || `https://n8n.mdarthurdigital.com/webhook/media-proxy-g54?media_id=${encodeURIComponent(d.media_id)}&phone_number_id=${encodeURIComponent(d.phone_number_id)}&secret=REDACTED_G54_AGENT_TOKEN`;\n} catch (e) {\n  proxyUrl = `https://n8n.mdarthurdigital.com/webhook/media-proxy-g54?media_id=${encodeURIComponent(d.media_id)}&phone_number_id=${encodeURIComponent(d.phone_number_id)}&secret=REDACTED_G54_AGENT_TOKEN`;\n}\n\nfunction buildBody(model) {\n  return JSON.stringify({\n    model,\n    messages: [{\n      role: 'user',\n      content: [\n        { type: 'text', text: prompt },\n        { type: 'image_url', image_url: { url: proxyUrl } }\n      ]\n    }],\n    temperature: 0.2,\n    max_tokens: 800\n  });\n}\n\n// Primario: modelo PAGO real (Gemini 2.5 Flash Lite via OpenRouter) -- confiable, sin el limite\n// de tasa compartido global que tiene cualquier modelo \":free\" de OpenRouter (confirmado en vivo\n// el 22-sep: 3 intentos aislados, todos 429, con el modelo gratis viejo). Costo real: ~$0.0000001\n// por token, negociable frente al riesgo de dejar a un cliente real sin respuesta.\n// Respaldo: el mismo modelo gratis que se usaba antes, solo por si el pago llegara a fallar\n// por otra razon puntual (outage, cuota agotada del lado nuestro).\nreturn [{ json: { bodyPrimario: buildBody('google/gemini-2.5-flash-lite'), bodyFallback: buildBody('google/gemma-4-26b-a4b-it:free'), mimeType: d.mimeType, caption: d.caption } }];"
+          "jsCode": "const d = $input.first().json;\nconst caption = d.caption ? `El cliente adjuntó este texto con la imagen: \"${d.caption}\". ` : '';\nconst prompt = `${caption}Eres el asistente de ventas Marco de Crating Express (empresa de embalaje industrial en Miami). Analiza esta imagen enviada por un cliente y extrae toda la información relevante para una cotización de embalaje: describe el objeto/artículo visible, sus dimensiones aproximadas si son visibles, materiales, estado, cualquier texto o etiqueta relevante, y cualquier detalle que ayude a cotizar un cajón o embalaje de madera. Sé específico y práctico.`;\n\n// Telegram (30-sep): la imagen va embebida como data URL desde el binario ya descargado con\n// la credencial del bot. Antes se armaba una URL de descarga con el token del bot adentro y se\n// le pasaba al modelo de visión, es decir, se le mandaba el token a un tercero.\n// WhatsApp: sin cambios, el proxy propio (Media Proxy G54) le da al modelo una URL pública.\nlet proxyUrl = `https://n8n.mdarthurdigital.com/webhook/media-proxy-g54?media_id=${encodeURIComponent(d.media_id)}&phone_number_id=${encodeURIComponent(d.phone_number_id)}&secret=REDACTED_G54_AGENT_TOKEN`;\nif (!d.phone_number_id) {\n  try {\n    const buf = await this.helpers.getBinaryDataBuffer(0, 'data');\n    if (buf && buf.length) proxyUrl = `data:${d.mimeType || 'image/jpeg'};base64,${buf.toString('base64')}`;\n  } catch (e) { /* sin binario: queda la URL del proxy, que fallará y Marco recibe el aviso */ }\n}\n\nfunction buildBody(model) {\n  return JSON.stringify({\n    model,\n    messages: [{\n      role: 'user',\n      content: [\n        { type: 'text', text: prompt },\n        { type: 'image_url', image_url: { url: proxyUrl } }\n      ]\n    }],\n    temperature: 0.2,\n    max_tokens: 800\n  });\n}\n\n// Primario: modelo PAGO real (Gemini 2.5 Flash Lite via OpenRouter) -- confiable, sin el limite\n// de tasa compartido global que tiene cualquier modelo \":free\" de OpenRouter (confirmado en vivo\n// el 22-sep: 3 intentos aislados, todos 429, con el modelo gratis viejo). Costo real: ~$0.0000001\n// por token, negociable frente al riesgo de dejar a un cliente real sin respuesta.\n// Respaldo: el mismo modelo gratis que se usaba antes, solo por si el pago llegara a fallar\n// por otra razon puntual (outage, cuota agotada del lado nuestro).\nreturn [{ json: { bodyPrimario: buildBody('google/gemini-2.5-flash-lite'), bodyFallback: buildBody('google/gemma-4-26b-a4b-it:free'), mimeType: d.mimeType, caption: d.caption } }];"
         }
       },
       {
@@ -1314,7 +1314,7 @@
           "authentication": "genericCredentialType",
           "sendBody": true,
           "specifyBody": "string",
-          "body": "={{ $json.body }}",
+          "body": "={{ $json.bodyPrimario }}",
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
@@ -1348,7 +1348,7 @@
           260
         ],
         "parameters": {
-          "jsCode": "const resp = $input.first().json;\nconst descripcion = resp.choices?.[0]?.message?.content;\nconst caption = $('\\U0001f527 Preparar Body Imagen').first().json.caption || '';\n\nif (!descripcion) {\n  // Ni el modelo primario ni el de respaldo lograron analizar la imagen -- este marcador\n  // dispara la regla de escalacion a un especialista en el prompt de Marco (nunca improvisar).\n  return [{ json: {\n    texto: '[No se pudo procesar el archivo enviado]',\n    media_ref: { type: 'image', descripcion: null },\n    media_type: 'image'\n  }}];\n}\n\nconst captionExtra = caption ? ` El cliente escribió: \"${caption}\".` : '';\nconst texto = `[Imagen recibida]:${captionExtra} ${descripcion}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'image', descripcion },\n  media_type: 'image'\n}}];"
+          "jsCode": "const resp = $input.first().json;\nconst descripcion = resp.choices?.[0]?.message?.content;\nconst caption = $('🔧 Preparar Body Imagen').first().json.caption || '';\n\nif (!descripcion) {\n  // Ni el modelo primario ni el de respaldo lograron analizar la imagen -- este marcador\n  // dispara la regla de escalacion a un especialista en el prompt de Marco (nunca improvisar).\n  return [{ json: {\n    texto: '[No se pudo procesar el archivo enviado]',\n    media_ref: { type: 'image', descripcion: null },\n    media_type: 'image'\n  }}];\n}\n\nconst captionExtra = caption ? ` El cliente escribió: \"${caption}\".` : '';\nconst texto = `[Imagen recibida]:${captionExtra} ${descripcion}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'image', descripcion },\n  media_type: 'image'\n}}];"
         }
       },
       {
@@ -1408,7 +1408,7 @@
           740
         ],
         "parameters": {
-          "jsCode": "const inp = $('\\U0001f527 Leer Binario y Tipo').first().json;\nconst esVideo = inp.mediaCategory === 'video';\n// Video: no hay forma real de analizar el contenido hoy (extraer un frame requeriria ffmpeg,\n// no disponible en este entorno) -- en vez de solo pedirle al cliente que re-escriba en texto\n// lo que ya mostro en el video (la mayoria no lo va a hacer), se escala directo a un especialista\n// -- el mismo marcador que ya usan audio/imagen/PDF cuando fallan.\n// Formato de archivo genuinamente no soportado (no es video): se mantiene el mensaje anterior,\n// pidiendole un formato que SI funciona (PDF o imagen) en vez de escalar de una.\nconst texto = esVideo\n  ? '[No se pudo procesar el archivo enviado]'\n  : `[Archivo recibido: ${inp.filename || 'archivo'}]: El cliente envió un archivo en formato no soportado (${inp.mimeType}). Por favor pídele que lo envíe en PDF o imagen.`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: esVideo ? 'video' : 'archivo', filename: inp.filename },\n  media_type: esVideo ? 'video' : 'archivo'\n}}];"
+          "jsCode": "const inp = $('🔧 Leer Binario y Tipo').first().json;\nconst esVideo = inp.mediaCategory === 'video';\n// Video: no hay forma real de analizar el contenido hoy (extraer un frame requeriria ffmpeg,\n// no disponible en este entorno) -- en vez de solo pedirle al cliente que re-escriba en texto\n// lo que ya mostro en el video (la mayoria no lo va a hacer), se escala directo a un especialista\n// -- el mismo marcador que ya usan audio/imagen/PDF cuando fallan.\n// Formato de archivo genuinamente no soportado (no es video): se mantiene el mensaje anterior,\n// pidiendole un formato que SI funciona (PDF o imagen) en vez de escalar de una.\nconst texto = esVideo\n  ? '[No se pudo procesar el archivo enviado]'\n  : `[Archivo recibido: ${inp.filename || 'archivo'}]: El cliente envió un archivo en formato no soportado (${inp.mimeType}). Por favor pídele que lo envíe en PDF o imagen.`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: esVideo ? 'video' : 'archivo', filename: inp.filename },\n  media_type: esVideo ? 'video' : 'archivo'\n}}];"
         }
       },
       {
@@ -1622,7 +1622,7 @@
           "authentication": "genericCredentialType",
           "sendBody": true,
           "specifyBody": "string",
-          "body": "={{ $json.body }}",
+          "body": "={{ $('🔧 Preparar Body Imagen').first().json.bodyFallback }}",
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
@@ -2011,16 +2011,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-30T19:59:20.821Z",
-    "updatedAt": "2026-09-30T19:59:20.821Z",
+    "createdAt": "2026-09-30T20:30:04.763Z",
+    "updatedAt": "2026-09-30T20:30:04.763Z",
     "workflowPublishHistory": [
       {
-        "id": 3286,
+        "id": 3299,
         "workflowId": "5GU89AeWsBZ86FWa",
-        "versionId": "0199934f-161f-4cc9-8377-af2b4750852f",
+        "versionId": "b45c2fd5-14ad-4ea0-9c73-36093efef85b",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-30T19:59:21.095Z"
+        "createdAt": "2026-09-30T20:30:05.038Z"
       }
     ]
   }
