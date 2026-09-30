@@ -3,12 +3,12 @@
   "name": "CE Telegram Engine — Marco",
   "description": null,
   "active": true,
-  "activeVersionId": "03e447f3-987a-4464-afab-73e0eedd4bfb",
+  "activeVersionId": "3bd7e6e5-276f-40a5-99b7-0d1bfd9172a7",
   "createdAt": "2026-07-23T15:36:21.963Z",
-  "updatedAt": "2026-09-29T20:45:07.868Z",
+  "updatedAt": "2026-09-30T13:32:11.063Z",
   "isArchived": false,
-  "versionId": "03e447f3-987a-4464-afab-73e0eedd4bfb",
-  "versionCounter": 28,
+  "versionId": "3bd7e6e5-276f-40a5-99b7-0d1bfd9172a7",
+  "versionCounter": 30,
   "sourceWorkflowId": null,
   "triggerCount": 2,
   "nodes": [
@@ -846,7 +846,7 @@
           "parameters": [
             {
               "name": "phone",
-              "value": "={{ $('📝 Armar Mensaje Final').item.json.telefono }}"
+              "value": "={{ '+' + String($('📝 Armar Mensaje Final').item.json.telefono || '').replace('+', '') }}"
             }
           ]
         },
@@ -864,7 +864,8 @@
           ]
         },
         "options": {}
-      }
+      },
+      "alwaysOutputData": true
     },
     {
       "id": "crm-nota-tg",
@@ -1283,7 +1284,7 @@
       ],
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const armado = $('📝 Armar Mensaje Final').item.json;\nconst telefono = armado.telefono;\n\nlet wa_contact_id = null;\ntry {\n  const contactData = $('🔍 Buscar Contact ID (CRM Telegram)').item.json.data || [];\n  wa_contact_id = contactData[0]?.id || null;\n} catch (e) { /* si fallo el lookup, seguimos sin el vinculo */ }\n\nconst temperatura = ({Caliente:'alto', Consulta:'medio'})[armado.clasificacion] || 'bajo';\n\nreturn [{ json: {\n  company_id: 1,\n  telefono,\n  nombre: armado.datosRecolectados?.nombre_cliente || telefono,\n  origen: 'whatsapp',\n  wa_contact_id,\n  temperatura,\n  notas: 'Lead generado/actualizado por Marco (Telegram CE)',\n}}];"
+        "jsCode": "const armado = $('📝 Armar Mensaje Final').item.json;\nconst telefono = armado.telefono;\n\n// Vinculo con el contacto de G54: primero el contact_id que manda el relevo de G54 (el dato\n// mas directo), si no el lookup por telefono. G54 guarda el telefono con \"+\" (+tg_<chat>) y\n// el lookup se hacia sin \"+\", asi que nunca encontraba nada y el trato quedaba sin vinculo\n// (corregido 2026-09-30).\nlet wa_contact_id = null;\ntry { wa_contact_id = $('🔧 Extraer Mensaje (Relevo G54)').first().json.contactId || null; } catch (e) {}\nif (!wa_contact_id) {\n  try {\n    const contactData = $('🔍 Buscar Contact ID (CRM Telegram)').item.json.data || [];\n    wa_contact_id = contactData[0]?.id || null;\n  } catch (e) { /* si fallo el lookup, seguimos sin el vinculo */ }\n}\n\nconst temperatura = ({Caliente:'alto', Consulta:'medio'})[armado.clasificacion] || 'bajo';\n\nreturn [{ json: {\n  company_id: 1,\n  telefono,\n  nombre: armado.datosRecolectados?.nombre_cliente || telefono,\n  origen: 'whatsapp',\n  wa_contact_id,\n  temperatura,\n  notas: 'Lead generado/actualizado por Marco (Telegram CE)',\n}}];"
       }
     },
     {
@@ -1953,7 +1954,7 @@
   "staticData": {
     "global": {
       "seenTgMessageIds": {
-        "999000111_null_Sí, por favor": 1790714724285
+        "999000777_null_Hola, necesito una cotizacion de un cajon": 1790775149326
       }
     },
     "node:⏰ Chequeo Webhook (cada 30 min)": {
@@ -1989,7 +1990,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "03e447f3-987a-4464-afab-73e0eedd4bfb",
+    "versionId": "3bd7e6e5-276f-40a5-99b7-0d1bfd9172a7",
     "workflowId": "HaSG63Q9C2tGOLH3",
     "nodes": [
       {
@@ -2826,7 +2827,7 @@
             "parameters": [
               {
                 "name": "phone",
-                "value": "={{ $('📝 Armar Mensaje Final').item.json.telefono }}"
+                "value": "={{ '+' + String($('📝 Armar Mensaje Final').item.json.telefono || '').replace('+', '') }}"
               }
             ]
           },
@@ -2844,7 +2845,8 @@
             ]
           },
           "options": {}
-        }
+        },
+        "alwaysOutputData": true
       },
       {
         "id": "crm-nota-tg",
@@ -3263,7 +3265,7 @@
         ],
         "typeVersion": 2,
         "parameters": {
-          "jsCode": "const armado = $('📝 Armar Mensaje Final').item.json;\nconst telefono = armado.telefono;\n\nlet wa_contact_id = null;\ntry {\n  const contactData = $('🔍 Buscar Contact ID (CRM Telegram)').item.json.data || [];\n  wa_contact_id = contactData[0]?.id || null;\n} catch (e) { /* si fallo el lookup, seguimos sin el vinculo */ }\n\nconst temperatura = ({Caliente:'alto', Consulta:'medio'})[armado.clasificacion] || 'bajo';\n\nreturn [{ json: {\n  company_id: 1,\n  telefono,\n  nombre: armado.datosRecolectados?.nombre_cliente || telefono,\n  origen: 'whatsapp',\n  wa_contact_id,\n  temperatura,\n  notas: 'Lead generado/actualizado por Marco (Telegram CE)',\n}}];"
+          "jsCode": "const armado = $('📝 Armar Mensaje Final').item.json;\nconst telefono = armado.telefono;\n\n// Vinculo con el contacto de G54: primero el contact_id que manda el relevo de G54 (el dato\n// mas directo), si no el lookup por telefono. G54 guarda el telefono con \"+\" (+tg_<chat>) y\n// el lookup se hacia sin \"+\", asi que nunca encontraba nada y el trato quedaba sin vinculo\n// (corregido 2026-09-30).\nlet wa_contact_id = null;\ntry { wa_contact_id = $('🔧 Extraer Mensaje (Relevo G54)').first().json.contactId || null; } catch (e) {}\nif (!wa_contact_id) {\n  try {\n    const contactData = $('🔍 Buscar Contact ID (CRM Telegram)').item.json.data || [];\n    wa_contact_id = contactData[0]?.id || null;\n  } catch (e) { /* si fallo el lookup, seguimos sin el vinculo */ }\n}\n\nconst temperatura = ({Caliente:'alto', Consulta:'medio'})[armado.clasificacion] || 'bajo';\n\nreturn [{ json: {\n  company_id: 1,\n  telefono,\n  nombre: armado.datosRecolectados?.nombre_cliente || telefono,\n  origen: 'whatsapp',\n  wa_contact_id,\n  temperatura,\n  notas: 'Lead generado/actualizado por Marco (Telegram CE)',\n}}];"
         }
       },
       {
@@ -3931,16 +3933,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-29T20:45:07.873Z",
-    "updatedAt": "2026-09-29T20:45:07.873Z",
+    "createdAt": "2026-09-30T13:32:11.066Z",
+    "updatedAt": "2026-09-30T13:32:11.066Z",
     "workflowPublishHistory": [
       {
-        "id": 3268,
+        "id": 3274,
         "workflowId": "HaSG63Q9C2tGOLH3",
-        "versionId": "03e447f3-987a-4464-afab-73e0eedd4bfb",
+        "versionId": "3bd7e6e5-276f-40a5-99b7-0d1bfd9172a7",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-29T20:45:08.187Z"
+        "createdAt": "2026-09-30T13:32:11.372Z"
       }
     ]
   }
