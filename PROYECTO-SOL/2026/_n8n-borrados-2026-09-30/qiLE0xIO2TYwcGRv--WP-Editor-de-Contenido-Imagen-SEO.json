@@ -1,0 +1,1166 @@
+{
+  "id": "qiLE0xIO2TYwcGRv",
+  "name": "✏️ WP — Editor de Contenido + Imagen + SEO",
+  "description": null,
+  "active": false,
+  "activeVersionId": null,
+  "createdAt": "2026-06-08T20:14:26.721Z",
+  "updatedAt": "2026-06-30T17:01:04.442Z",
+  "isArchived": false,
+  "versionId": "d8a49eac-6339-4af4-b5f3-59a13ad65bc7",
+  "versionCounter": 9,
+  "sourceWorkflowId": null,
+  "triggerCount": 0,
+  "nodes": [
+    {
+      "id": "b472727a-f12a-4516-8af3-7b7656fb336c",
+      "name": "▶️ Ejecutar Manualmente",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        220,
+        400
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "752c8f27-6fc6-4cf6-8dea-c2c96e8e6ab6",
+      "name": "⚙️ Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        400
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2febfe7d-6515-4f5c-b518-4454c4d8fb80",
+              "name": "wp_site_url",
+              "value": "https://cratingexpress.com",
+              "type": "string"
+            },
+            {
+              "id": "a1b2c3d4-0001-0001-0001-000000000001",
+              "name": "modo",
+              "value": "editar",
+              "type": "string"
+            },
+            {
+              "id": "627ee4a4-37ec-4a16-9b82-74a7823c6410",
+              "name": "content_id",
+              "value": "16815",
+              "type": "string"
+            },
+            {
+              "id": "a1b2c3d4-0001-0001-0001-000000000002",
+              "name": "tipo_nuevo",
+              "value": "post",
+              "type": "string"
+            },
+            {
+              "id": "87cd55fc-7453-4aeb-99ca-823a4ec619a1",
+              "name": "nuevo_titulo",
+              "value": "[TEST EDITADO] Post de prueba — Builder Detection v2",
+              "type": "string"
+            },
+            {
+              "id": "9eba8f83-b42e-4058-94c2-7fb9bf77c1f1",
+              "name": "nuevo_contenido",
+              "value": "Contenido actualizado via workflow. Primer párrafo editado correctamente.\n\nSegundo párrafo también editado. Custom wood crating Miami — updated content.",
+              "type": "string"
+            },
+            {
+              "id": "cd33a5d4-930e-48d9-8612-7d182fc306bb",
+              "name": "image_url",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "a1b2c3d4-0001-0001-0001-000000000003",
+              "name": "estado_publicacion",
+              "value": "draft",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-0002-0002-0002-000000000001",
+      "name": "🔀 ¿Crear o Editar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        660,
+        400
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "a1b2c3d4-0002-cond-0001",
+              "leftValue": "={{ $json.modo }}",
+              "rightValue": "crear",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0003-0003-0003-000000000001",
+      "name": "🔍 Obtener Post de Referencia (Builder)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        240
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config').item.json.wp_site_url }}/wp-json/wp/v2/posts?per_page=1&_fields=id,content,meta",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi"
+      },
+      "credentials": {
+        "wordpressApi": {
+          "id": "zz9tevIHnfrOstlc",
+          "name": "Wordpress account CE"
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0004-0004-0004-000000000001",
+      "name": "🔧 Detectar Builder y Preparar Creación",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        240
+      ],
+      "parameters": {
+        "jsCode": "const config = $('⚙️ Config').item.json;\n\n// Detectar builder desde post de referencia\nlet builderType = 'gutenberg'; // default seguro\ntry {\n  const posts = $('🔍 Obtener Post de Referencia (Builder)').item.json;\n  const refPost = Array.isArray(posts) ? posts[0] : posts;\n  if (refPost) {\n    const raw = refPost.content?.raw || refPost.content?.rendered || '';\n    const meta = refPost.meta || {};\n    if (raw.includes('[et_pb_')) {\n      builderType = 'divi';\n    } else if (raw.includes('<!-- wp:')) {\n      builderType = 'gutenberg';\n    } else if (meta._elementor_data && meta._elementor_data.length > 10) {\n      builderType = 'elementor';\n    } else if (raw.includes('elementor-section') || raw.includes('data-elementor-type')) {\n      builderType = 'elementor';\n    } else if (raw.trim().length > 0) {\n      builderType = 'classic';\n    }\n  }\n} catch(e) {}\n\n// Construir el contenido en el formato del builder detectado\nconst titulo = config.nuevo_titulo || 'Nuevo contenido';\nconst contenidoRaw = config.nuevo_contenido || '';\nconst tipoNuevo = config.tipo_nuevo || 'post';\n\nfunction buildGutenberg(texto) {\n  const parrafos = texto.split('\\n').filter(p => p.trim().length > 0);\n  return parrafos.map(p => `<!-- wp:paragraph -->\\n<p>${p.trim()}</p>\\n<!-- /wp:paragraph -->`).join('\\n\\n');\n}\n\nfunction buildDivi(texto) {\n  const parrafos = texto.split('\\n').filter(p => p.trim().length > 0);\n  const textContent = parrafos.map(p => `<p>${p.trim()}</p>`).join('\\n');\n  return `[et_pb_section fb_built=\"1\" _builder_version=\"4.0\"]\\n[et_pb_row _builder_version=\"4.0\"]\\n[et_pb_column type=\"4_4\" _builder_version=\"4.0\"]\\n[et_pb_text _builder_version=\"4.0\"]\\n${textContent}\\n[/et_pb_text]\\n[/et_pb_column]\\n[/et_pb_row]\\n[/et_pb_section]`;\n}\n\nfunction buildClassic(texto) {\n  const parrafos = texto.split('\\n').filter(p => p.trim().length > 0);\n  return parrafos.map(p => `<p>${p.trim()}</p>`).join('\\n');\n}\n\nlet wpContent = '';\nif (builderType === 'divi') {\n  wpContent = buildDivi(contenidoRaw);\n} else if (builderType === 'gutenberg') {\n  wpContent = buildGutenberg(contenidoRaw);\n} else {\n  wpContent = buildClassic(contenidoRaw);\n}\n\nreturn [{ json: {\n  wp_site_url: config.wp_site_url,\n  tipo_nuevo: tipoNuevo,\n  nuevo_titulo: titulo,\n  wpContent,\n  builderType,\n  image_url: config.image_url,\n  estado_publicacion: config.estado_publicacion || 'draft'\n}}];"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0005-0005-0005-000000000001",
+      "name": "⬇️ Descargar Imagen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        140
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('🔧 Detectar Builder y Preparar Creación').item.json.image_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0006-0006-0006-000000000001",
+      "name": "🔀 ¿Crear Post o Página?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        240
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "a1b2c3d4-0006-cond-0001",
+              "leftValue": "={{ $('🔧 Detectar Builder y Preparar Creación').item.json.tipo_nuevo }}",
+              "rightValue": "post",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0007-0007-0007-000000000001",
+      "name": "✅ Crear Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        140
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('🔧 Detectar Builder y Preparar Creación').item.json.wp_site_url }}/wp-json/wp/v2/posts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ title: $('🔧 Detectar Builder y Preparar Creación').item.json.nuevo_titulo, content: $('🔧 Detectar Builder y Preparar Creación').item.json.wpContent, status: $('🔧 Detectar Builder y Preparar Creación').item.json.estado_publicacion, ...((() => { try { const m = $('📸 Subir Imagen a WP Media').item.json; return m && m.id ? { featured_media: m.id } : {}; } catch(e) { return {}; } })()) }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "wordpressApi": {
+          "id": "zz9tevIHnfrOstlc",
+          "name": "Wordpress account CE"
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0008-0008-0008-000000000001",
+      "name": "✅ Crear Página",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        340
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('🔧 Detectar Builder y Preparar Creación').item.json.wp_site_url }}/wp-json/wp/v2/pages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ title: $('🔧 Detectar Builder y Preparar Creación').item.json.nuevo_titulo, content: $('🔧 Detectar Builder y Preparar Creación').item.json.wpContent, status: $('🔧 Detectar Builder y Preparar Creación').item.json.estado_publicacion, ...((() => { try { const m = $('📸 Subir Imagen a WP Media').item.json; return m && m.id ? { featured_media: m.id } : {}; } catch(e) { return {}; } })()) }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "wordpressApi": {
+          "id": "zz9tevIHnfrOstlc",
+          "name": "Wordpress account CE"
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0009-0009-0009-000000000001",
+      "name": "🔧 Consolidar Resultado Creación",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        240
+      ],
+      "parameters": {
+        "jsCode": "let resultado = {};\ntry {\n  const post = $('✅ Crear Post').item.json;\n  if (post && post.id) resultado = post;\n} catch(e) {}\ntry {\n  const page = $('✅ Crear Página').item.json;\n  if (page && page.id && !resultado.id) resultado = page;\n} catch(e) {}\n\nconst ctx = $('🔧 Detectar Builder y Preparar Creación').item.json;\n\nreturn [{ json: {\n  tipo: ctx.tipo_nuevo,\n  content_id: String(resultado.id || ''),\n  wp_site_url: ctx.wp_site_url,\n  builderType: ctx.builderType,\n  nuevo_id: resultado.id || null,\n  nuevo_url: resultado.link || '',\n  titulo: resultado.title?.rendered || ctx.nuevo_titulo,\n  estado: resultado.status || 'desconocido'\n}}];"
+      }
+    },
+    {
+      "id": "7164ae6d-0ee4-4436-b9b9-ecbc9d163790",
+      "name": "🔍 Detectar Tipo: Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        520
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config').item.json.wp_site_url }}/wp-json/wp/v2/posts/{{ $('⚙️ Config').item.json.content_id }}",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi"
+      },
+      "credentials": {
+        "wordpressApi": {
+          "id": "zz9tevIHnfrOstlc",
+          "name": "Wordpress account CE"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "94ab0208-af91-481e-9d39-738f1a4a791e",
+      "name": "🔀 ¿Es Post?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        520
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "bb9c649b-b9c2-4431-a10a-9cab32f8617b",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "970d9ddc-fc2d-4e59-ad57-403b74e1a2d7",
+      "name": "🔍 Detectar Tipo: Página",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        640
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config').item.json.wp_site_url }}/wp-json/wp/v2/pages/{{ $('⚙️ Config').item.json.content_id }}",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi"
+      },
+      "credentials": {
+        "wordpressApi": {
+          "id": "zz9tevIHnfrOstlc",
+          "name": "Wordpress account CE"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "dd683929-bd22-410d-a803-7022324bfa75",
+      "name": "🔧 Consolidar Tipo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        520
+      ],
+      "parameters": {
+        "jsCode": "\nconst config = $('⚙️ Config').item.json;\nlet tipo = 'desconocido';\nlet datos = {};\n\ntry {\n  const post = $('🔍 Detectar Tipo: Post').item.json;\n  if (post && post.id) { tipo = 'post'; datos = post; }\n} catch(e) {}\n\ntry {\n  const page = $('🔍 Detectar Tipo: Página').item.json;\n  if (page && page.id && tipo === 'desconocido') { tipo = 'página'; datos = page; }\n} catch(e) {}\n\nreturn [{\n  json: {\n    tipo,\n    content_id: config.content_id,\n    wp_site_url: config.wp_site_url,\n    nuevo_titulo: config.nuevo_titulo,\n    nuevo_contenido: config.nuevo_contenido,\n    image_url: config.image_url,\n    titulo_actual: datos.title?.rendered || '',\n    estado_actual: datos.status || '',\n    url_actual: datos.link || ''\n  }\n}];\n"
+      }
+    },
+    {
+      "id": "77b1591a-5595-46f6-9a43-558b01551b7c",
+      "name": "🔀 ¿Subir Imagen?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        520
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "6b3731ec-32c0-4d11-ae16-492d26ae3a7f",
+              "leftValue": "={{ $json.image_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "d79d1c84-1372-480c-986b-75b0ce96d7e6",
+      "name": "📸 Subir Imagen a Media Library",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        400
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('🔧 Consolidar Tipo').item.json.wp_site_url }}/wp-json/wp/v2/media",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Disposition",
+              "value": "attachment; filename=\"featured-image.jpg\""
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "source_url",
+              "value": "={{ $('🔧 Consolidar Tipo').item.json.image_url }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "wordpressApi": {
+          "id": "zz9tevIHnfrOstlc",
+          "name": "Wordpress account CE"
+        }
+      }
+    },
+    {
+      "id": "cc38d76f-f27d-477f-a1f7-0a7953333ffb",
+      "name": "🔧 Preparar Actualización",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        520
+      ],
+      "parameters": {
+        "jsCode": "\nconst ctx = $('🔧 Consolidar Tipo').item.json;\nconst body = {};\n\nif (ctx.nuevo_titulo && ctx.nuevo_titulo.trim() !== '') {\n  body.title = ctx.nuevo_titulo.trim();\n}\nif (ctx.nuevo_contenido && ctx.nuevo_contenido.trim() !== '') {\n  body.content = ctx.nuevo_contenido.trim();\n}\n\nlet media_id = null;\ntry {\n  const media = $('📸 Subir Imagen a Media Library').item.json;\n  if (media && media.id) {\n    body.featured_media = media.id;\n    media_id = media.id;\n  }\n} catch(e) {}\n\nreturn [{ json: { body: JSON.stringify(body), tipo: ctx.tipo, content_id: ctx.content_id, wp_site_url: ctx.wp_site_url, media_id } }];\n"
+      }
+    },
+    {
+      "id": "4db5647d-a58e-4bc1-a220-af5eb7f607b5",
+      "name": "🔀 ¿Actualizar Post o Página?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        520
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "cf4acfe6-1a23-4401-b374-0d804d3ec9c1",
+              "leftValue": "={{ $json.tipo === 'post' ? 'si' : '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "22261314-e38a-46d6-a1a9-5690687c124e",
+      "name": "✏️ Actualizar Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        400
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.wp_site_url }}/wp-json/wp/v2/posts/{{ $json.content_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {}
+      },
+      "credentials": {
+        "wordpressApi": {
+          "id": "zz9tevIHnfrOstlc",
+          "name": "Wordpress account CE"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "89fbd67b-84cb-4258-b650-450042049a1d",
+      "name": "✏️ Actualizar Página",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        640
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.wp_site_url }}/wp-json/wp/v2/pages/{{ $json.content_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $('🔧 Preparar Actualización').item.json.body }}",
+        "options": {}
+      },
+      "credentials": {
+        "wordpressApi": {
+          "id": "zz9tevIHnfrOstlc",
+          "name": "Wordpress account CE"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "ceb8db2d-b6a0-40b8-a9bd-8c9315f75267",
+      "name": "🔍 WP: Listar Namespaces REST",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3080,
+        480
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('🔧 Preparar SEO').item.json.wp_site_url }}/wp-json/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi",
+        "options": {}
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "wordpressApi": {
+          "id": "zz9tevIHnfrOstlc",
+          "name": "Wordpress account CE"
+        }
+      }
+    },
+    {
+      "id": "150919b2-c8e5-4c47-b281-1300cf4dbb64",
+      "name": "🗺️ WP: Verificar Sitemap REST",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3300,
+        480
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('🔧 Preparar SEO').item.json.wp_site_url }}/wp-json/rankmath/v1/sitemap?sitemap=index",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi",
+        "options": {}
+      },
+      "continueOnFail": true,
+      "credentials": {
+        "wordpressApi": {
+          "id": "zz9tevIHnfrOstlc",
+          "name": "Wordpress account CE"
+        }
+      }
+    },
+    {
+      "id": "5171a97d-b060-4be9-88ff-a2f70454cb1e",
+      "name": "🤖 Verificar robots.txt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3080,
+        640
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('🔧 Preparar SEO').item.json.wp_site_url }}/robots.txt",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,text/plain,*/*"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "en-US,en;q=0.9"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "fa5176a3-559e-4f88-8baa-9dcc0d79978c",
+      "name": "🗺️ Verificar Sitemap Nativo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3300,
+        640
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('🔧 Preparar SEO').item.json.wp_site_url }}/sitemap_index.xml",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "application/xml,text/xml,*/*"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "61c11cfe-05c7-4514-9c87-8bb287505a6f",
+      "name": "🗺️ Verificar Sitemap Plugin",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3520,
+        640
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('🔧 Preparar SEO').item.json.wp_site_url }}/sitemap_index.xml",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "application/xml,text/xml,*/*"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "5dbadd1a-244a-429d-9914-df2279304074",
+      "name": "📊 Reporte Final SEO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3740,
+        560
+      ],
+      "parameters": {
+        "jsCode": "\nlet siteUrl = '';\ntry { siteUrl = $('🔧 Preparar SEO').item.json.wp_site_url; } catch(e) {}\nif (!siteUrl) { try { siteUrl = $('🔧 Detectar Builder y Preparar Creación').item.json.wp_site_url; } catch(e) {} }\n\nlet tipo_contenido = 'desconocido';\nlet content_id = '';\nlet builder_detectado = '';\ntry { tipo_contenido = $('🔧 Consolidar Tipo').item.json.tipo; content_id = $('🔧 Consolidar Tipo').item.json.content_id; } catch(e) {}\ntry { if (!tipo_contenido || tipo_contenido === 'desconocido') { const c = $('🔧 Consolidar Resultado Creación').item.json; tipo_contenido = c.tipo; content_id = String(c.nuevo_id||''); builder_detectado = c.builderType; } } catch(e) {}\n\n// Plugin SEO via namespaces\nlet plugin_seo = 'Ninguno detectado';\nlet plugin_seo_ok = false;\nlet sitemap_url = 'No encontrado';\nlet sitemap_tipo = 'N/A';\ntry {\n  const ns = $('🔍 WP: Listar Namespaces REST').item.json;\n  const namespaces = ns.namespaces || [];\n  if (namespaces.includes('rankmath/v1')) { plugin_seo = 'Rank Math'; plugin_seo_ok = true; }\n  else if (namespaces.includes('yoast/v1')) { plugin_seo = 'Yoast SEO'; plugin_seo_ok = true; }\n} catch(e) {}\n\n// Sitemap via Rank Math REST o fallback directo\ntry {\n  const sm = $('🗺️ WP: Verificar Sitemap REST').item.json;\n  if (sm && (sm.body || sm.xml || sm.url || JSON.stringify(sm).includes('sitemap'))) {\n    sitemap_url = siteUrl + '/sitemap_index.xml';\n    sitemap_tipo = plugin_seo !== 'Ninguno detectado' ? plugin_seo : 'Plugin SEO';\n  }\n} catch(e) {}\n\n// Sitemap fallback — check direct XML nodes\nif (sitemap_url === 'No encontrado') {\n  try {\n    const sn = $('🗺️ Verificar Sitemap Nativo').item.json;\n    const body = typeof sn === 'string' ? sn : JSON.stringify(sn);\n    if (body.includes('urlset') || body.includes('sitemapindex')) {\n      sitemap_url = siteUrl + '/wp-sitemap.xml';\n      sitemap_tipo = 'Nativo WordPress';\n    }\n  } catch(e) {}\n}\nif (sitemap_url === 'No encontrado') {\n  try {\n    const sp = $('🗺️ Verificar Sitemap Plugin').item.json;\n    const body = typeof sp === 'string' ? sp : JSON.stringify(sp);\n    if (body.includes('urlset') || body.includes('sitemapindex')) {\n      sitemap_url = siteUrl + '/sitemap_index.xml';\n      sitemap_tipo = plugin_seo !== 'Ninguno detectado' ? plugin_seo : 'Plugin SEO';\n    }\n  } catch(e) {}\n}\n\n// robots.txt\nlet robots_ok = false;\nlet robots_tiene_sitemap = false;\ntry {\n  const r = $('🤖 Verificar robots.txt').item;\n  const body = typeof r.json === 'string' ? r.json : (r.body || '');\n  robots_ok = body.includes('User-agent');\n  robots_tiene_sitemap = body.toLowerCase().includes('sitemap');\n  if (robots_ok && !sitemap_url.includes('http')) {\n    const match = body.match(/Sitemap:\\s*(https?:\\/\\/[^\\s]+)/i);\n    if (match) { sitemap_url = match[1]; sitemap_tipo = 'Desde robots.txt'; }\n  }\n} catch(e) {}\n\nconst recomendaciones = [];\nif (!plugin_seo_ok) recomendaciones.push('⚠️ No se detectó plugin SEO activo (Rank Math o Yoast)');\nif (!robots_ok) recomendaciones.push('⚠️ robots.txt no accesible externamente (verificar en navegador: ' + siteUrl + '/robots.txt)');\nelse if (!robots_tiene_sitemap && sitemap_url !== 'No encontrado') recomendaciones.push('⚠️ robots.txt no incluye directiva Sitemap: ' + sitemap_url);\nif (sitemap_url === 'No encontrado') recomendaciones.push('⚠️ Sitemap no detectado — activar en el plugin SEO');\n\nreturn [{ json: {\n  tipo_contenido,\n  content_id,\n  builder_detectado: builder_detectado || '(modo editar)',\n  plugin_seo,\n  plugin_seo_activo: plugin_seo_ok,\n  sitemap_url,\n  sitemap_tipo,\n  robots_txt_accesible: robots_ok,\n  robots_tiene_directiva_sitemap: robots_tiene_sitemap,\n  recomendaciones: recomendaciones.length ? recomendaciones : ['✅ Todo en orden'],\n}}];\n"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0011-0011-0011-000000000001",
+      "name": "🔧 Preparar SEO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        480
+      ],
+      "parameters": {
+        "jsCode": "let wp_site_url = '';\nlet tipo = '';\nlet content_id = '';\n\n// Intentar ruta creación\ntry {\n  const c = $('🔧 Consolidar Resultado Creación').item.json;\n  if (c && c.wp_site_url) { wp_site_url = c.wp_site_url; tipo = c.tipo; content_id = String(c.nuevo_id || ''); }\n} catch(e) {}\n\n// Intentar ruta edición\nif (!wp_site_url) {\n  try {\n    const e = $('🔧 Consolidar Tipo').item.json;\n    if (e && e.wp_site_url) { wp_site_url = e.wp_site_url; tipo = e.tipo; content_id = e.content_id; }\n  } catch(e) {}\n}\n\nreturn [{ json: { wp_site_url, tipo, content_id } }];"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0012-0012-0012-000000000001",
+      "name": "📸 Subir Imagen a WP Media",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        140
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('🔧 Detectar Builder y Preparar Creación').item.json.wp_site_url }}/wp-json/wp/v2/media",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Disposition",
+              "value": "attachment; filename=\"featured-image.jpg\""
+            },
+            {
+              "name": "Content-Type",
+              "value": "image/jpeg"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "credentials": {
+        "wordpressApi": {
+          "id": "zz9tevIHnfrOstlc",
+          "name": "Wordpress account CE"
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0013-0013-0013-000000000001",
+      "name": "🔀 ¿Tiene Imagen? (Crear)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        240
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "a1b2c3d4-0013-cond",
+              "leftValue": "={{ $('🔧 Detectar Builder y Preparar Creación').item.json.image_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "▶️ Ejecutar Manualmente": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Config": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Crear o Editar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Crear o Editar?": {
+      "main": [
+        [
+          {
+            "node": "🔍 Obtener Post de Referencia (Builder)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔍 Detectar Tipo: Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Obtener Post de Referencia (Builder)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Detectar Builder y Preparar Creación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Detectar Builder y Preparar Creación": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Tiene Imagen? (Crear)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Crear Post o Página?": {
+      "main": [
+        [
+          {
+            "node": "✅ Crear Post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "✅ Crear Página",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Crear Post": {
+      "main": [
+        [
+          {
+            "node": "🔧 Consolidar Resultado Creación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Crear Página": {
+      "main": [
+        [
+          {
+            "node": "🔧 Consolidar Resultado Creación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Consolidar Resultado Creación": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar SEO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Detectar Tipo: Post": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Es Post?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Es Post?": {
+      "main": [
+        [
+          {
+            "node": "🔧 Consolidar Tipo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔍 Detectar Tipo: Página",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Detectar Tipo: Página": {
+      "main": [
+        [
+          {
+            "node": "🔧 Consolidar Tipo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Consolidar Tipo": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Subir Imagen?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Subir Imagen?": {
+      "main": [
+        [
+          {
+            "node": "📸 Subir Imagen a Media Library",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Preparar Actualización",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📸 Subir Imagen a Media Library": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Actualización",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Actualización": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Actualizar Post o Página?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Actualizar Post o Página?": {
+      "main": [
+        [
+          {
+            "node": "✏️ Actualizar Post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "✏️ Actualizar Página",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✏️ Actualizar Post": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar SEO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✏️ Actualizar Página": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar SEO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 WP: Listar Namespaces REST": {
+      "main": [
+        [
+          {
+            "node": "🗺️ WP: Verificar Sitemap REST",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🗺️ WP: Verificar Sitemap REST": {
+      "main": [
+        [
+          {
+            "node": "🤖 Verificar robots.txt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Verificar robots.txt": {
+      "main": [
+        [
+          {
+            "node": "🗺️ Verificar Sitemap Nativo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🗺️ Verificar Sitemap Nativo": {
+      "main": [
+        [
+          {
+            "node": "🗺️ Verificar Sitemap Plugin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🗺️ Verificar Sitemap Plugin": {
+      "main": [
+        [
+          {
+            "node": "📊 Reporte Final SEO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar SEO": {
+      "main": [
+        [
+          {
+            "node": "🔍 WP: Listar Namespaces REST",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⬇️ Descargar Imagen": {
+      "main": [
+        [
+          {
+            "node": "📸 Subir Imagen a WP Media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📸 Subir Imagen a WP Media": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Crear Post o Página?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Tiene Imagen? (Crear)": {
+      "main": [
+        [
+          {
+            "node": "⬇️ Descargar Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔀 ¿Crear Post o Página?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodeGroups": [],
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "pinData": null,
+  "meta": null,
+  "tags": [],
+  "shared": [
+    {
+      "role": "workflow:owner",
+      "workflowId": "qiLE0xIO2TYwcGRv",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-06-08T20:14:26.726Z",
+      "updatedAt": "2026-06-08T20:14:26.726Z"
+    }
+  ],
+  "activeVersion": null
+}

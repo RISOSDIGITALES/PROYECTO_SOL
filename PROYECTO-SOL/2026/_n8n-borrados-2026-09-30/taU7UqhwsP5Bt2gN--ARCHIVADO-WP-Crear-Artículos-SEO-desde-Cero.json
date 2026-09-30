@@ -1,0 +1,616 @@
+{
+  "id": "taU7UqhwsP5Bt2gN",
+  "name": "[ARCHIVADO] WP - Crear Artículos SEO desde Cero",
+  "description": null,
+  "active": false,
+  "activeVersionId": null,
+  "createdAt": "2026-03-28T19:21:12.857Z",
+  "updatedAt": "2026-08-24T19:48:37.000Z",
+  "isArchived": true,
+  "versionId": "e38b23e2-5011-4add-86a2-d0bca485d2b9",
+  "versionCounter": 56,
+  "sourceWorkflowId": null,
+  "triggerCount": 0,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## WP - Crear Artículos SEO desde Cero\n\n**Credenciales necesarias:**\n- `SEARCH KEYWORDS` — Google Search Console OAuth2\n- `WP Crating Express` — WordPress API (usuario + contraseña de aplicación)\n- `Email RRSS` — Gmail OAuth2\n\n**Qué hace:**\n1. Obtiene keywords reales de GSC\n2. Detecta el builder de WP (Divi/Gutenberg/Classic)\n3. Genera un artículo SEO completo con IA\n4. Crea el borrador en WordPress con placeholders de imagen\n5. Notifica por email con el link al borrador",
+        "height": 280,
+        "width": 350
+      },
+      "id": "sticky-info",
+      "name": "📋 CONFIGURACIÓN",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        208
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "trigger-manual",
+      "name": "▶️ Ejecutar Manualmente",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                3
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "trigger-schedule",
+      "name": "⏰ Trigger Semanal (Miércoles 8am)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/tblkmBqXrpmGcTNUM",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "maxRecords",
+              "value": "1"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": []
+        },
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "get-empresa",
+      "name": "📊 Obtener Perfil Empresa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        336,
+        96
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ZyqxmqBJAc8692Bx",
+          "name": "Airtable Token — Crating Express"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://searchconsole.googleapis.com/webmasters/v3/sites/sc-domain%3Acratingexpress.com/searchAnalytics/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ new Date(Date.now() - 90*24*60*60*1000).toISOString().split('T')[0] }}\",\n  \"endDate\": \"{{ new Date().toISOString().split('T')[0] }}\",\n  \"dimensions\": [\"query\"],\n  \"rowLimit\": 25,\n  \"orderBy\": [{\"fieldName\": \"clicks\", \"sortOrder\": \"DESCENDING\"}]\n}",
+        "options": {}
+      },
+      "id": "gsc-keywords",
+      "name": "🔍 GSC: Top Keywords",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        528,
+        304
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "7t2xPBRoZ9Zn8Xys",
+          "name": "SEARCH KEYWORDS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const empresa   = $('📊 Obtener Perfil Empresa').item.json.records[0]?.fields || {};\nconst wpPosts   = $('🔎 Detectar Builder WP').item.json;\nconst wpPages   = $('🔗 Obtener Páginas WP').item.json;\n\n// ── Keyword ingresada por el usuario ──────────────────────────\nlet keywordPrincipal = 'hostel en managua';\ntry {\n  keywordPrincipal = $('✏️ KEYWORD (editar aquí)').item.json.keyword || keywordPrincipal;\n} catch(e) {\n  // Nodo no ejecutado aún (solo pasa al probar pasos individuales)\n}\n\n// ── Detectar Builder ──────────────────────────────────────────\nlet builderType = 'classic';\nconst wpArr = Array.isArray(wpPosts) ? wpPosts : [];\nconst sampleContent = wpArr[0]?.content?.raw || wpArr[0]?.content?.rendered || '';\nif      (sampleContent.includes('[et_pb_'))             builderType = 'divi';\nelse if (sampleContent.includes('<!-- wp:'))            builderType = 'gutenberg';\nelse if (sampleContent.includes('elementor-section'))   builderType = 'elementor';\n\n// ── Páginas WP para links internos ────────────────────────────\nlet paginasWP = [];\ntry {\n  const pages = Array.isArray(wpPages) ? wpPages : [];\n  paginasWP = pages\n    .filter(p => p.link && p.title?.rendered)\n    .map(p => ({ titulo: p.title.rendered, url: p.link, slug: p.slug }));\n} catch(e) {}\n\nconst instrucciones_ia = empresa['Instrucciones_IA'] || '';\n\nreturn [{\n  json: {\n    empresa_nombre:          empresa['\\uFEFFnombre_empresa'] || empresa['nombre_empresa'] || 'Orison Hostels',\n    empresa_descripcion:     empresa['descripción_corta'] || '',\n    empresa_propuesta_valor: empresa['propuesta_valor'] || '',\n    empresa_ciudad:          empresa['ciudad base'] || '',\n    empresa_web:             empresa['sitio_web'] || 'orisonhostels.com',\n    instrucciones_ia,\n    keywordPrincipal,\n    builderType,\n    paginasWP\n  }\n}];"
+      },
+      "id": "preparar-contexto",
+      "name": "🔧 Preparar Contexto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $vars.GROQ_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\": \"llama-3.3-70b-versatile\", \"messages\": [{\"role\": \"system\", \"content\": \"You are an expert SEO and AEO (Answer Engine Optimization) content strategist for wood packaging and crating services in Miami. You write authoritative, conversion-focused blog articles that rank on Google AND get featured in AI-generated answers. CRITICAL RULES: (1) NEVER invent statistics, percentages, or data — only use verifiable industry facts or company-specific information provided. (2) If you need to reference a fact, only include it if it is widely accepted in the industry. (3) Always respond with valid JSON only.\"}, {\"role\": \"user\", \"content\": {{ JSON.stringify('Create a complete SEO-AEO blog article in ENGLISH for the following company and keyword.\\n\\n' +'**COMPANY:** ' + $json.empresa_nombre + '\\n' +'**DESCRIPTION:** ' + $json.empresa_descripcion + '\\n' +'**VALUE PROPOSITION:** ' + $json.empresa_propuesta_valor + '\\n' +'**CITY:** ' + $json.empresa_ciudad + '\\n' +'**WEBSITE:** ' + $json.empresa_web + '\\n\\n' +'**TARGET KEYWORD:** ' + $json.keywordPrincipal + '\\n' +($json.hasGSCData ? '**RELATED KEYWORDS (real GSC data):**\\n' + $json.keywordsGSC + '\\n\\n' : '') +($json.paginasWP.length > 0 ? '**EXISTING INTERNAL PAGES (use 2-3 as internal links where relevant):**\\n' + $json.paginasWP.map(p => '- ' + p.titulo + ': ' + p.url).join('\\n') + '\\n\\n' : '') +($json.instrucciones_ia ? '**BUSINESS RULES:**\\n' + $json.instrucciones_ia + '\\n\\n' : '') +'**ARTICLE REQUIREMENTS:**\\n' +'- H1: Compelling, keyword-rich, under 60 chars. Format it as a direct answer or strong statement that both users and AI engines will find immediately useful.\\n' +'- Structure: 1 intro paragraph (hook + problem) → 3-4 H2 sections → FAQ → CTA\\n' +'- Each H2 can have 1-2 H3 sub-points if needed\\n' +'- Minimum 2 image placeholders distributed across the article\\n' +'- Keyword density: use the target keyword naturally 6-8 times across the full article\\n' +'- Internal links: embed 2-3 links to existing internal pages naturally within paragraph text\\n' +'- Total body text: 650-850 words (not counting H1/H2/H3/FAQ)\\n' +'- FAQ: 4-5 questions that mirror real search queries about the topic. Answers must be concise (2-4 sentences), direct, and factually accurate. NO invented data.\\n' +'- CTA: guide reader to request a quote, mention the city and the wooden crating speciality\\n\\n' +'Return ONLY this JSON structure:\\n' +'{\"titulo_h1\": \"...\", \"slug\": \"...\", \"meta_descripcion\": \"...(max 155 chars, includes keyword)...\", \"keyword_principal\": \"...\", \"tiempo_lectura\": 4, ' +'\"intro\": \"Opening paragraph text (hook + problem, 60-80 words)\", ' +'\"secciones\": [{\"tipo\": \"h2|h3|parrafo|imagen|lista|cta|link_interno\", \"texto\": \"...\", \"items\": [], \"alt_sugerido\": \"...\", \"descripcion_imagen\": \"...\", \"url\": \"...\", \"anchor\": \"...\"}], ' +'\"faq\": [{\"pregunta\": \"Question?\", \"respuesta\": \"Concise direct answer, no invented data.\"}], ' +'\"cta_texto\": \"...\"}') }}}], \"temperature\": 0.6, \"max_tokens\": 5000, \"response_format\": {\"type\": \"json_object\"}}",
+        "options": {}
+      },
+      "id": "groq-articulo",
+      "name": "🤖 Groq: Generar Artículo SEO",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1072,
+        304
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.choices[0].message.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-groq-ok",
+      "name": "🔀 ¿Groq OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={{ $vars.GEMINI_API_KEY }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"contents\": [{\"role\": \"user\", \"parts\": [{\"text\": {{ JSON.stringify('Create a complete SEO-AEO blog article in ENGLISH.\\n\\n' +'**COMPANY:** ' + $('🔧 Preparar Contexto').item.json.empresa_nombre + '\\n' +'**DESCRIPTION:** ' + $('🔧 Preparar Contexto').item.json.empresa_descripcion + '\\n' +'**CITY:** ' + $('🔧 Preparar Contexto').item.json.empresa_ciudad + '\\n' +'**WEBSITE:** ' + $('🔧 Preparar Contexto').item.json.empresa_web + '\\n\\n' +'**TARGET KEYWORD:** ' + $('🔧 Preparar Contexto').item.json.keywordPrincipal + '\\n' +($('🔧 Preparar Contexto').item.json.hasGSCData ? '**RELATED KEYWORDS:**\\n' + $('🔧 Preparar Contexto').item.json.keywordsGSC + '\\n\\n' : '') +($('🔧 Preparar Contexto').item.json.paginasWP.length > 0 ? '**INTERNAL PAGES:**\\n' + $('🔧 Preparar Contexto').item.json.paginasWP.map(p => '- ' + p.titulo + ': ' + p.url).join('\\n') + '\\n\\n' : '') +($('🔧 Preparar Contexto').item.json.instrucciones_ia ? '**BUSINESS RULES:**\\n' + $('🔧 Preparar Contexto').item.json.instrucciones_ia + '\\n\\n' : '') +'H1 under 60 chars, keyword-rich. Structure: intro → 3-4 H2 sections → FAQ (4-5 Q&A) → CTA. 650-850 words body. Keyword density 6-8x. No invented statistics. JSON: {\"titulo_h1\":\"\",\"slug\":\"\",\"meta_descripcion\":\"\",\"keyword_principal\":\"\",\"tiempo_lectura\":4,\"intro\":\"\",\"secciones\":[{\"tipo\":\"h2|h3|parrafo|imagen|lista|cta\",\"texto\":\"\",\"items\":[],\"alt_sugerido\":\"\",\"descripcion_imagen\":\"\"}],\"faq\":[{\"pregunta\":\"\",\"respuesta\":\"\"}],\"cta_texto\":\"\"}') }}}]}], \"systemInstruction\": {\"parts\": [{\"text\": \"Expert SEO-AEO content writer for wood packaging in Miami. Valid JSON only. Never invent statistics.\"}]}, \"generationConfig\": {\"temperature\": 0.6, \"maxOutputTokens\": 5000, \"responseMimeType\": \"application/json\"}}",
+        "options": {}
+      },
+      "id": "gemini-articulo",
+      "name": "🤖 Gemini: Artículo (Fallback)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1328,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst raw = $input.item.json.choices?.[0]?.message?.content\n  || $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text\n  || '{}';\n\nlet art;\ntry { art = JSON.parse(raw); }\ncatch(e) {\n  const match = raw.match(/\\{[\\s\\S]*\\}/);\n  art = match ? JSON.parse(match[0]) : {};\n}\n\nconst ctx = $('🔧 Preparar Contexto').item.json;\n\nreturn [{\n  json: {\n    ...ctx,\n    titulo_h1:         art.titulo_h1 || art.titulo || art.title || 'Untitled',\n    slug:              art.slug || 'new-post',\n    meta_descripcion:  art.meta_descripcion || art.meta_description || '',\n    keyword_principal: art.keyword_principal || ctx.keywordPrincipal,\n    tiempo_lectura:    art.tiempo_lectura || art.reading_time || 4,\n    intro:             art.intro || '',\n    secciones:         art.secciones || art.sections || [],\n    faq:               art.faq || [],\n    cta_texto:         art.cta_texto || art.cta || ''\n  }\n}];\n"
+      },
+      "id": "parsear-articulo",
+      "name": "🔍 Parsear Artículo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst { secciones, faq, intro, titulo_h1, cta_texto, builderType, empresa_web } = $input.item.json;\n\nlet imgCounter = 0;\n\n// ─── FAQ Schema.org HTML ──────────────────────────────────────\nfunction buildFaqHtml(faqItems) {\n  if (!faqItems || faqItems.length === 0) return '';\n  const items = faqItems.map(f => `\n  <div itemscope itemprop=\"mainEntity\" itemtype=\"https://schema.org/Question\">\n    <h3 itemprop=\"name\">${f.pregunta}</h3>\n    <div itemscope itemprop=\"acceptedAnswer\" itemtype=\"https://schema.org/Answer\">\n      <p itemprop=\"text\">${f.respuesta}</p>\n    </div>\n  </div>`).join('\\n');\n  return `\\n<h2>Frequently Asked Questions</h2>\\n<div itemscope itemtype=\"https://schema.org/FAQPage\">\\n${items}\\n</div>`;\n}\n\n// ─── CTA HTML ─────────────────────────────────────────────────\nfunction buildCtaHtml(texto) {\n  const t = texto || `Ready to protect your shipment with custom wood crating in Miami?`;\n  return `<p><strong>${t}</strong></p>\\n<p><a href=\"https://${empresa_web}/request-a-quote/\">Request a Free Quote →</a></p>`;\n}\n\n// ─── Construir sección individual ─────────────────────────────\nfunction buildSection(s, tag) {\n  // tag = 'html' | 'divi' | 'gutenberg'\n  if (s.tipo === 'h2') {\n    if (tag === 'gutenberg') return `<!-- wp:heading {\"level\":2} -->\\n<h2>${s.texto}</h2>\\n<!-- /wp:heading -->`;\n    return `<h2>${s.texto}</h2>`;\n  }\n  if (s.tipo === 'h3') {\n    if (tag === 'gutenberg') return `<!-- wp:heading {\"level\":3} -->\\n<h3>${s.texto}</h3>\\n<!-- /wp:heading -->`;\n    return `<h3>${s.texto}</h3>`;\n  }\n  if (s.tipo === 'parrafo') {\n    if (tag === 'gutenberg') return `<!-- wp:paragraph -->\\n<p>${s.texto}</p>\\n<!-- /wp:paragraph -->`;\n    return `<p>${s.texto}</p>`;\n  }\n  if (s.tipo === 'lista') {\n    const items = (s.items||[]).map(i=>`<li>${i}</li>`).join('\\n');\n    const html = `<ul>\\n${items}\\n</ul>`;\n    if (tag === 'gutenberg') return `<!-- wp:list -->\\n${html}\\n<!-- /wp:list -->`;\n    return html;\n  }\n  if (s.tipo === 'imagen') {\n    imgCounter++;\n    const alt = s.alt_sugerido || `Wood crating Miami - image ${imgCounter}`;\n    const desc = s.descripcion_imagen ? `<!-- Imagen ${imgCounter}: ${s.descripcion_imagen} -->` : '';\n    if (tag === 'gutenberg') {\n      return `<!-- wp:image -->\\n<figure class=\"wp-block-image\">${desc}\\n<img src=\"##IMAGEN_${imgCounter}##\" alt=\"${alt}\"/>\\n</figure>\\n<!-- /wp:image -->`;\n    }\n    return `${desc}\\n<img src=\"##IMAGEN_${imgCounter}##\" alt=\"${alt}\" style=\"max-width:100%;height:auto;\" />`;\n  }\n  if (s.tipo === 'cta') {\n    const html = buildCtaHtml(s.texto);\n    if (tag === 'gutenberg') return `<!-- wp:paragraph -->\\n${html}\\n<!-- /wp:paragraph -->`;\n    return html;\n  }\n  if (s.tipo === 'link_interno') {\n    const html = `<p><a href=\"${s.url || '#'}\">${s.anchor || s.texto}</a></p>`;\n    if (tag === 'gutenberg') return `<!-- wp:paragraph -->\\n${html}\\n<!-- /wp:paragraph -->`;\n    return html;\n  }\n  return '';\n}\n\n// ─── DIVI ─────────────────────────────────────────────────────\nfunction buildDivi() {\n  let textBuffer = `<p>${intro}</p>\\n`;\n  let blocks = [];\n\n  function flushText() {\n    if (textBuffer.trim()) {\n      blocks.push(`[et_pb_text _builder_version=\"4.0\"]${textBuffer}[/et_pb_text]`);\n      textBuffer = '';\n    }\n  }\n\n  for (const s of secciones) {\n    if (s.tipo === 'imagen') {\n      flushText();\n      imgCounter++;\n      const alt = s.alt_sugerido || `Wood crating Miami - ${imgCounter}`;\n      const desc = s.descripcion_imagen ? `\\n<!-- Imagen ${imgCounter}: ${s.descripcion_imagen} -->` : '';\n      blocks.push(`[et_pb_image src=\"##IMAGEN_${imgCounter}##\" alt=\"${alt}\" _builder_version=\"4.0\"][/et_pb_image]${desc}`);\n    } else {\n      textBuffer += buildSection(s, 'html') + '\\n';\n    }\n  }\n\n  // FAQ\n  textBuffer += buildFaqHtml(faq) + '\\n';\n  // CTA final\n  textBuffer += buildCtaHtml(cta_texto) + '\\n';\n  flushText();\n\n  return (\n    `[et_pb_section fb_built=\"1\" _builder_version=\"4.0\"]\\n`+\n    `[et_pb_row _builder_version=\"4.0\"]\\n`+\n    `[et_pb_column type=\"4_4\" _builder_version=\"4.0\"]\\n\\n`+\n    blocks.join('\\n\\n')+\n    `\\n\\n[/et_pb_column]\\n[/et_pb_row]\\n[/et_pb_section]`\n  );\n}\n\n// ─── GUTENBERG ────────────────────────────────────────────────\nfunction buildGutenberg() {\n  const parts = [];\n  parts.push(`<!-- wp:paragraph -->\\n<p>${intro}</p>\\n<!-- /wp:paragraph -->`);\n  for (const s of secciones) {\n    const block = buildSection(s, 'gutenberg');\n    if (block) parts.push(block);\n  }\n  // FAQ\n  if (faq && faq.length > 0) {\n    parts.push(`<!-- wp:heading {\"level\":2} -->\\n<h2>Frequently Asked Questions</h2>\\n<!-- /wp:heading -->`);\n    for (const f of faq) {\n      parts.push(\n        `<!-- wp:heading {\"level\":3} -->\\n<h3 itemprop=\"name\">${f.pregunta}</h3>\\n<!-- /wp:heading -->\\n`+\n        `<!-- wp:paragraph -->\\n<p itemprop=\"text\">${f.respuesta}</p>\\n<!-- /wp:paragraph -->`\n      );\n    }\n  }\n  // CTA\n  parts.push(\n    `<!-- wp:paragraph -->\\n<p><strong>${cta_texto || 'Get your free quote today!'}</strong></p>\\n<!-- /wp:paragraph -->\\n`+\n    `<!-- wp:buttons -->\\n<div class=\"wp-block-buttons\"><div class=\"wp-block-button\">`+\n    `<a class=\"wp-block-button__link\" href=\"https://${empresa_web}/request-a-quote/\">Request a Free Quote</a>`+\n    `</div></div>\\n<!-- /wp:buttons -->`\n  );\n  return parts.join('\\n\\n');\n}\n\n// ─── CLASSIC / HTML ───────────────────────────────────────────\nfunction buildClassic() {\n  let html = `<p>${intro}</p>\\n`;\n  for (const s of secciones) {\n    html += buildSection(s, 'html') + '\\n';\n  }\n  html += buildFaqHtml(faq) + '\\n';\n  html += buildCtaHtml(cta_texto) + '\\n';\n  return html;\n}\n\nlet wpContent = '';\nif      (builderType === 'divi')       wpContent = buildDivi();\nelse if (builderType === 'gutenberg')  wpContent = buildGutenberg();\nelse                                   wpContent = buildClassic();\n\nreturn [{\n  json: {\n    ...$input.item.json,\n    wpContent,\n    imgCount: imgCounter\n  }\n}];\n"
+      },
+      "id": "construir-contenido",
+      "name": "🔧 Construir Contenido para WP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://help.orisonhostels.com/wp-json/wp/v2/posts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic REDACTED_WORDPRESS_APP_PASSWORD_ORISON"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: $json.titulo_h1, content: $json.wpContent, slug: $json.slug, status: 'draft', excerpt: $json.meta_descripcion }) }}",
+        "options": {}
+      },
+      "id": "crear-post-wp",
+      "name": "📝 Crear Borrador en WordPress",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2112,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "risosadmi@gmail.com",
+        "subject": "='📝 Nuevo borrador creado: ' + $('🔍 Parsear Artículo').item.json.titulo",
+        "message": "=<div style='font-family:Arial,sans-serif;max-width:650px;margin:0 auto;color:#333'><div style='background:#1a1a2e;color:white;padding:20px;border-radius:8px 8px 0 0'><h2 style='margin:0'>📝 Nuevo Artículo SEO Creado</h2><p style='margin:5px 0 0;opacity:.8'>Builder detectado: {{ $('🔧 Preparar Contexto').item.json.builderType }}</p></div><div style='border:1px solid #ddd;padding:20px;border-top:none'><h3>{{ $('🔍 Parsear Artículo').item.json.titulo }}</h3><table style='width:100%;border-collapse:collapse'><tr><td style='padding:6px;color:#666'>🔑 Keyword principal</td><td style='padding:6px'><strong>{{ $('🔍 Parsear Artículo').item.json.keyword_principal }}</strong></td></tr><tr style='background:#f8f8f8'><td style='padding:6px;color:#666'>🐌 Slug</td><td style='padding:6px'>/{{ $('🔍 Parsear Artículo').item.json.slug }}</td></tr><tr><td style='padding:6px;color:#666'>⏱ Tiempo lectura</td><td style='padding:6px'>{{ $('🔍 Parsear Artículo').item.json.tiempo_lectura }} min</td></tr><tr style='background:#f8f8f8'><td style='padding:6px;color:#666'>🖼️ Imágenes a colocar</td><td style='padding:6px'>{{ $json.imgCount }} placeholders (##IMAGEN_N##)</td></tr></table><div style='background:#fff3cd;border-left:4px solid #ffc107;padding:12px;margin:15px 0;border-radius:4px'><p style='margin:0'><strong>📋 Meta descripción:</strong><br>{{ $('🔍 Parsear Artículo').item.json.meta_descripcion }}</p></div><div style='text-align:center;margin:25px 0'><a href='{{ $json.link }}' style='display:inline-block;background:#1a1a2e;color:white;padding:14px 30px;border-radius:6px;text-decoration:none;font-weight:bold'>✏️ Abrir Borrador en WordPress</a></div><p style='color:#888;font-size:13px'>Reemplaza los marcadores <code>##IMAGEN_N##</code> con las imágenes correspondientes antes de publicar.</p></div></div>",
+        "options": {}
+      },
+      "id": "notificar-email",
+      "name": "📧 Notificar Artículo Creado",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2368,
+        304
+      ],
+      "webhookId": "bb5ffcdb-6bdf-432d-8ffa-e0428d6684db",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TESHSjzjMCpCxBBk",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://help.orisonhostels.com/wp-json/wp/v2/pages",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "per_page",
+              "value": "20"
+            },
+            {
+              "name": "status",
+              "value": "publish"
+            },
+            {
+              "name": "_fields",
+              "value": "id,title,link,slug"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "obtener-paginas-wp",
+      "name": "🔗 Obtener Páginas WP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://help.orisonhostels.com/wp-json/wp/v2/posts",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "per_page",
+              "value": "1"
+            },
+            {
+              "name": "status",
+              "value": "publish"
+            },
+            {
+              "name": "_fields",
+              "value": "id,content"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "detectar-builder",
+      "name": "🔎 Detectar Builder WP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        528,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f3b8327a-ce7e-4f69-91dc-b80277c545ff",
+              "name": "",
+              "value": "EMBALAJE DE MOTOS",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-keyword",
+      "name": "✏️ KEYWORD (editar aquí)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        304
+      ]
+    }
+  ],
+  "connections": {
+    "⏰ Trigger Semanal (Miércoles 8am)": {
+      "main": [
+        [
+          {
+            "node": "📊 Obtener Perfil Empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Obtener Perfil Empresa": {
+      "main": [
+        [
+          {
+            "node": "🔎 Detectar Builder WP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Contexto": {
+      "main": [
+        [
+          {
+            "node": "🤖 Groq: Generar Artículo SEO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Groq: Generar Artículo SEO": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Groq OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Groq OK?": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Artículo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🤖 Gemini: Artículo (Fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Gemini: Artículo (Fallback)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Artículo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Parsear Artículo": {
+      "main": [
+        [
+          {
+            "node": "🔧 Construir Contenido para WP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Construir Contenido para WP": {
+      "main": [
+        [
+          {
+            "node": "📝 Crear Borrador en WordPress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Crear Borrador en WordPress": {
+      "main": [
+        [
+          {
+            "node": "📧 Notificar Artículo Creado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 Obtener Páginas WP": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Contexto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔎 Detectar Builder WP": {
+      "main": [
+        [
+          {
+            "node": "🔗 Obtener Páginas WP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ Ejecutar Manualmente": {
+      "main": [
+        [
+          {
+            "node": "✏️ KEYWORD (editar aquí)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✏️ KEYWORD (editar aquí)": {
+      "main": [
+        [
+          {
+            "node": "📊 Obtener Perfil Empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodeGroups": [],
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [
+    {
+      "id": "hcnMCnSNqDdoaLJZ",
+      "name": "wordpress",
+      "createdAt": "2026-04-16T17:44:15.453Z",
+      "updatedAt": "2026-04-16T17:44:15.453Z"
+    }
+  ],
+  "shared": [
+    {
+      "role": "workflow:owner",
+      "workflowId": "taU7UqhwsP5Bt2gN",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-03-28T19:21:12.865Z",
+      "updatedAt": "2026-03-28T19:21:12.865Z"
+    }
+  ],
+  "activeVersion": null
+}
