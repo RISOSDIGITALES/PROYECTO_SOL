@@ -39,6 +39,7 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 6. **Informe mensual del 28-oct** (ítem 398): tiene que comparar contra la línea base del campo `linea_base`, sin buscar el informe #34, que ya no existe.
 7. **Logo en los correos de Camila** (ítem 398): cuando Walter haga la pantalla de carga de `logo_url`, mandar un correo de prueba y ver el logo en la cabecera.
 8. **Botón "Ejecutar" de Prospección (paso 7):** bloqueado. El flujo `jg5SENgRpe2wLBTn` está apagado por falta de la key de Google Places; falta que la usuaria decida si se saca la key o se le pide a Walter ocultar el botón.
+9. **Llamada real a Marco por teléfono (VAPI)** (encontrado el 01-oct): el asistente sigue con `groq / llama-3.3-70b-versatile`, y Groq ya responde 404 `model_not_found` a ese modelo con nuestra cuenta (confirmado por el relay de Bubble). La última llamada real, del 29-sep, salió bien, pero no se sabe si VAPI usa nuestra cuenta de Groq o la suya. Llamar al +1 786-788-0417: si Marco no contesta o corta, cambiar el modelo del asistente (por ejemplo a `openai/gpt-oss-120b` en Groq, si VAPI lo ofrece).
 
 ## Qué es este proyecto
 
