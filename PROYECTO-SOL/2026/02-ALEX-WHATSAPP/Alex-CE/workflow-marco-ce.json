@@ -3,12 +3,12 @@
   "name": "CE WhatsApp Engine — Marco",
   "description": null,
   "active": true,
-  "activeVersionId": "945151fd-decc-4e57-8d14-772bf66b4801",
+  "activeVersionId": "7fd2badb-e8ac-4e06-8927-acc63d96862f",
   "createdAt": "2026-05-26T13:46:38.086Z",
-  "updatedAt": "2026-09-30T13:51:14.541Z",
+  "updatedAt": "2026-10-01T15:50:45.820Z",
   "isArchived": false,
-  "versionId": "945151fd-decc-4e57-8d14-772bf66b4801",
-  "versionCounter": 687,
+  "versionId": "7fd2badb-e8ac-4e06-8927-acc63d96862f",
+  "versionCounter": 688,
   "sourceWorkflowId": null,
   "triggerCount": 3,
   "nodes": [
@@ -1571,6 +1571,56 @@
       },
       "onError": "continueRegularOutput",
       "webhookId": "1c2bc657-01e4-46a3-9e8e-2b7e42af92c7"
+    },
+    {
+      "id": "ba900c69-ed4b-4b43-9a48-60cc193fc75d",
+      "name": "🔒 ¿Llamada autorizada? (marco-manual-ce)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -728,
+        464
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "8c4cd583-50fe-46f3-b544-dde859d42fe9",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "4b9c48f2-33c3-41f7-b747-f4512bd0161d",
+      "name": "⛔ Responder 403 (no autorizado) (marco-manual-ce)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -508,
+        364
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\": false, \"error\": \"no autorizado\"}",
+        "options": {
+          "responseCode": 403
+        }
+      }
     }
   ],
   "connections": {
@@ -1897,12 +1947,7 @@
       "main": [
         [
           {
-            "node": "✅ Responder OK a G54",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "🔍 Normalizar y Validar (Manual WA)",
+            "node": "🔒 ¿Llamada autorizada? (marco-manual-ce)",
             "type": "main",
             "index": 0
           }
@@ -2201,6 +2246,29 @@
           }
         ]
       ]
+    },
+    "🔒 ¿Llamada autorizada? (marco-manual-ce)": {
+      "main": [
+        [
+          {
+            "node": "✅ Responder OK a G54",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔍 Normalizar y Validar (Manual WA)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⛔ Responder 403 (no autorizado) (marco-manual-ce)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -2264,7 +2332,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "945151fd-decc-4e57-8d14-772bf66b4801",
+    "versionId": "7fd2badb-e8ac-4e06-8927-acc63d96862f",
     "workflowId": "zAhV8gEsXD8dCrXq",
     "nodes": [
       {
@@ -3826,6 +3894,56 @@
         },
         "onError": "continueRegularOutput",
         "webhookId": "1c2bc657-01e4-46a3-9e8e-2b7e42af92c7"
+      },
+      {
+        "id": "ba900c69-ed4b-4b43-9a48-60cc193fc75d",
+        "name": "🔒 ¿Llamada autorizada? (marco-manual-ce)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          -728,
+          464
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "8c4cd583-50fe-46f3-b544-dde859d42fe9",
+                "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "4b9c48f2-33c3-41f7-b747-f4512bd0161d",
+        "name": "⛔ Responder 403 (no autorizado) (marco-manual-ce)",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          -508,
+          364
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "{\"ok\": false, \"error\": \"no autorizado\"}",
+          "options": {
+            "responseCode": 403
+          }
+        }
       }
     ],
     "connections": {
@@ -4152,12 +4270,7 @@
         "main": [
           [
             {
-              "node": "✅ Responder OK a G54",
-              "type": "main",
-              "index": 0
-            },
-            {
-              "node": "🔍 Normalizar y Validar (Manual WA)",
+              "node": "🔒 ¿Llamada autorizada? (marco-manual-ce)",
               "type": "main",
               "index": 0
             }
@@ -4456,6 +4569,29 @@
             }
           ]
         ]
+      },
+      "🔒 ¿Llamada autorizada? (marco-manual-ce)": {
+        "main": [
+          [
+            {
+              "node": "✅ Responder OK a G54",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "🔍 Normalizar y Validar (Manual WA)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "⛔ Responder 403 (no autorizado) (marco-manual-ce)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -4463,16 +4599,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-30T13:51:14.546Z",
-    "updatedAt": "2026-09-30T13:51:14.546Z",
+    "createdAt": "2026-10-01T15:50:45.823Z",
+    "updatedAt": "2026-10-01T15:50:45.823Z",
     "workflowPublishHistory": [
       {
-        "id": 3282,
+        "id": 3313,
         "workflowId": "zAhV8gEsXD8dCrXq",
-        "versionId": "945151fd-decc-4e57-8d14-772bf66b4801",
+        "versionId": "7fd2badb-e8ac-4e06-8927-acc63d96862f",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-30T13:51:14.873Z"
+        "createdAt": "2026-10-01T15:50:46.162Z"
       }
     ]
   }

@@ -3,12 +3,12 @@
   "name": "CE Telegram Engine — Marco",
   "description": null,
   "active": true,
-  "activeVersionId": "7fd61abc-5f11-4142-88fc-3a9c748b3fbe",
+  "activeVersionId": "8355b0c2-b203-41fb-a552-ba484602fe8d",
   "createdAt": "2026-07-23T15:36:21.963Z",
-  "updatedAt": "2026-09-30T19:59:22.685Z",
+  "updatedAt": "2026-10-01T15:50:30.614Z",
   "isArchived": false,
-  "versionId": "7fd61abc-5f11-4142-88fc-3a9c748b3fbe",
-  "versionCounter": 32,
+  "versionId": "8355b0c2-b203-41fb-a552-ba484602fe8d",
+  "versionCounter": 33,
   "sourceWorkflowId": null,
   "triggerCount": 2,
   "nodes": [
@@ -760,7 +760,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' }) }}",
         "options": {}
       }
     },
@@ -855,7 +855,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Accept",
@@ -930,7 +930,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Content-Type",
@@ -1025,7 +1025,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Accept",
@@ -1109,7 +1109,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: \"master@growth54.local\", password: \"REDACTED_G54_MASTER_PASSWORD\" }) }}",
+        "jsonBody": "={{ JSON.stringify({ email: \"master@growth54.local\", password: \"<G54_MASTER_PASSWORD — ver .secrets.local.md>\" }) }}",
         "options": {}
       },
       "id": "login-manual-tg",
@@ -1233,7 +1233,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Content-Type",
@@ -1305,7 +1305,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Content-Type",
@@ -1341,7 +1341,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Accept",
@@ -1440,6 +1440,56 @@
       ],
       "parameters": {
         "jsCode": "// Convierte el adjunto en texto para Marco: transcripción del audio, descripción de la\n// imagen o contenido del documento (06 Procesador de Medios). Si no se pudo abrir, Marco\n// igual se entera de que llegó algo, en vez de no ver nada.\nconst r = $input.first().json || {};\nconst c = $('🔗 Preparar Contexto (TG)').first().json;\nconst etiquetas = { image: 'una imagen', audio: 'un audio', pdf: 'un documento PDF', document: 'un documento' };\nconst que = etiquetas[c.tipoMensaje] || 'un archivo';\nconst ok = r && !r.error && r.texto && !String(r.texto).startsWith('[Medio recibido pero no procesado');\nlet texto = ok ? `[Cliente envió ${que}] ${r.texto}` : `[Cliente envió ${que}, pero no se pudo abrir]`;\nif (c.texto) texto += `\\nMensaje del cliente: ${c.texto}`;\nreturn [{ json: { telefono: c.telefono, texto, nombreContacto: c.nombreContacto, tipoMensaje: c.tipoMensaje } }];"
+      }
+    },
+    {
+      "id": "f41ab693-2ef8-40b2-bd1d-e898ad4ced5a",
+      "name": "🔒 ¿Llamada autorizada? (telegram-manual-g54)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        560,
+        1140
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "2b533fb9-9df7-4564-95cf-9fa84e9b004b",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e07d6614-b577-469b-b479-4be3fbe44da5",
+      "name": "⛔ Responder 403 (no autorizado) (telegram-manual-g54)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        1040
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\": false, \"error\": \"no autorizado\"}",
+        "options": {
+          "responseCode": 403
+        }
       }
     }
   ],
@@ -1909,7 +1959,7 @@
       "main": [
         [
           {
-            "node": "🔐 G54: Login (Manual TG)",
+            "node": "🔒 ¿Llamada autorizada? (telegram-manual-g54)",
             "type": "main",
             "index": 0
           }
@@ -2072,6 +2122,24 @@
           }
         ]
       ]
+    },
+    "🔒 ¿Llamada autorizada? (telegram-manual-g54)": {
+      "main": [
+        [
+          {
+            "node": "🔐 G54: Login (Manual TG)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⛔ Responder 403 (no autorizado) (telegram-manual-g54)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -2119,7 +2187,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "7fd61abc-5f11-4142-88fc-3a9c748b3fbe",
+    "versionId": "8355b0c2-b203-41fb-a552-ba484602fe8d",
     "workflowId": "HaSG63Q9C2tGOLH3",
     "nodes": [
       {
@@ -2870,7 +2938,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
+          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' }) }}",
           "options": {}
         }
       },
@@ -2965,7 +3033,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Accept",
@@ -3040,7 +3108,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Content-Type",
@@ -3135,7 +3203,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Accept",
@@ -3219,7 +3287,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ email: \"master@growth54.local\", password: \"REDACTED_G54_MASTER_PASSWORD\" }) }}",
+          "jsonBody": "={{ JSON.stringify({ email: \"master@growth54.local\", password: \"<G54_MASTER_PASSWORD — ver .secrets.local.md>\" }) }}",
           "options": {}
         },
         "id": "login-manual-tg",
@@ -3343,7 +3411,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Content-Type",
@@ -3415,7 +3483,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Content-Type",
@@ -3451,7 +3519,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Accept",
@@ -3550,6 +3618,56 @@
         ],
         "parameters": {
           "jsCode": "// Convierte el adjunto en texto para Marco: transcripción del audio, descripción de la\n// imagen o contenido del documento (06 Procesador de Medios). Si no se pudo abrir, Marco\n// igual se entera de que llegó algo, en vez de no ver nada.\nconst r = $input.first().json || {};\nconst c = $('🔗 Preparar Contexto (TG)').first().json;\nconst etiquetas = { image: 'una imagen', audio: 'un audio', pdf: 'un documento PDF', document: 'un documento' };\nconst que = etiquetas[c.tipoMensaje] || 'un archivo';\nconst ok = r && !r.error && r.texto && !String(r.texto).startsWith('[Medio recibido pero no procesado');\nlet texto = ok ? `[Cliente envió ${que}] ${r.texto}` : `[Cliente envió ${que}, pero no se pudo abrir]`;\nif (c.texto) texto += `\\nMensaje del cliente: ${c.texto}`;\nreturn [{ json: { telefono: c.telefono, texto, nombreContacto: c.nombreContacto, tipoMensaje: c.tipoMensaje } }];"
+        }
+      },
+      {
+        "id": "f41ab693-2ef8-40b2-bd1d-e898ad4ced5a",
+        "name": "🔒 ¿Llamada autorizada? (telegram-manual-g54)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          560,
+          1140
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "2b533fb9-9df7-4564-95cf-9fa84e9b004b",
+                "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "e07d6614-b577-469b-b479-4be3fbe44da5",
+        "name": "⛔ Responder 403 (no autorizado) (telegram-manual-g54)",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          780,
+          1040
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "{\"ok\": false, \"error\": \"no autorizado\"}",
+          "options": {
+            "responseCode": 403
+          }
         }
       }
     ],
@@ -4019,7 +4137,7 @@
         "main": [
           [
             {
-              "node": "🔐 G54: Login (Manual TG)",
+              "node": "🔒 ¿Llamada autorizada? (telegram-manual-g54)",
               "type": "main",
               "index": 0
             }
@@ -4182,6 +4300,24 @@
             }
           ]
         ]
+      },
+      "🔒 ¿Llamada autorizada? (telegram-manual-g54)": {
+        "main": [
+          [
+            {
+              "node": "🔐 G54: Login (Manual TG)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "⛔ Responder 403 (no autorizado) (telegram-manual-g54)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -4189,16 +4325,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-30T19:59:22.688Z",
-    "updatedAt": "2026-09-30T19:59:22.688Z",
+    "createdAt": "2026-10-01T15:50:30.622Z",
+    "updatedAt": "2026-10-01T15:50:30.622Z",
     "workflowPublishHistory": [
       {
-        "id": 3288,
+        "id": 3309,
         "workflowId": "HaSG63Q9C2tGOLH3",
-        "versionId": "7fd61abc-5f11-4142-88fc-3a9c748b3fbe",
+        "versionId": "8355b0c2-b203-41fb-a552-ba484602fe8d",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-30T19:59:23.017Z"
+        "createdAt": "2026-10-01T15:50:31.043Z"
       }
     ]
   }

@@ -3,12 +3,12 @@
   "name": "💬 Sales AI — Motor de Conversación G54",
   "description": null,
   "active": true,
-  "activeVersionId": "7fa57f9a-8706-4f50-b2e8-57f267bd92ad",
+  "activeVersionId": "7aac24de-7fcb-49d2-8e19-577d89550672",
   "createdAt": "2026-06-20T00:45:39.368Z",
-  "updatedAt": "2026-09-28T16:46:50.255Z",
+  "updatedAt": "2026-10-01T15:50:40.500Z",
   "isArchived": false,
-  "versionId": "7fa57f9a-8706-4f50-b2e8-57f267bd92ad",
-  "versionCounter": 74,
+  "versionId": "7aac24de-7fcb-49d2-8e19-577d89550672",
+  "versionCounter": 75,
   "sourceWorkflowId": null,
   "triggerCount": 4,
   "nodes": [
@@ -55,7 +55,7 @@
             {
               "id": "a3",
               "name": "G54_AGENT_TOKEN",
-              "value": "REDACTED_G54_AGENT_TOKEN",
+              "value": "<G54_AGENT_TOKEN — ver .secrets.local.md>",
               "type": "string"
             },
             {
@@ -73,7 +73,7 @@
             {
               "id": "crm-pass",
               "name": "G54_MASTER_PASSWORD",
-              "value": "REDACTED_G54_MASTER_PASSWORD",
+              "value": "<G54_MASTER_PASSWORD — ver .secrets.local.md>",
               "type": "string"
             }
           ]
@@ -906,7 +906,7 @@
             {
               "id": "f3",
               "name": "G54_AGENT_TOKEN",
-              "value": "REDACTED_G54_AGENT_TOKEN",
+              "value": "<G54_AGENT_TOKEN — ver .secrets.local.md>",
               "type": "string"
             },
             {
@@ -924,7 +924,7 @@
             {
               "id": "f6",
               "name": "G54_MASTER_PASSWORD",
-              "value": "REDACTED_G54_MASTER_PASSWORD",
+              "value": "<G54_MASTER_PASSWORD — ver .secrets.local.md>",
               "type": "string"
             }
           ]
@@ -1026,7 +1026,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             }
           ]
         },
@@ -1082,7 +1082,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Content-Type",
@@ -1714,7 +1714,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' }) }}",
         "options": {}
       },
       "id": "tg-login-sales",
@@ -1846,7 +1846,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' }) }}",
         "options": {}
       }
     },
@@ -2025,7 +2025,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Accept",
@@ -2469,6 +2469,56 @@
         "jsonBody": "={{ JSON.stringify($json) }}",
         "options": {}
       }
+    },
+    {
+      "id": "cc8c036d-dc9b-4ea1-8869-07cbcc9a8e73",
+      "name": "🔒 ¿Llamada autorizada? (sales-ai-manual)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -120,
+        500
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "8c9ce211-951c-4826-9e3e-e284c574bbcc",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "77380c62-f051-41de-8e85-7fb049305cbc",
+      "name": "⛔ Responder 403 (no autorizado) (sales-ai-manual)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        100,
+        400
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\": false, \"error\": \"no autorizado\"}",
+        "options": {
+          "responseCode": 403
+        }
+      }
     }
   ],
   "connections": {
@@ -2872,12 +2922,7 @@
       "main": [
         [
           {
-            "node": "✅ Responder OK a G54",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "⚙️ Config WA Manual",
+            "node": "🔒 ¿Llamada autorizada? (sales-ai-manual)",
             "type": "main",
             "index": 0
           }
@@ -3441,6 +3486,29 @@
           }
         ]
       ]
+    },
+    "🔒 ¿Llamada autorizada? (sales-ai-manual)": {
+      "main": [
+        [
+          {
+            "node": "✅ Responder OK a G54",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "⚙️ Config WA Manual",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⛔ Responder 403 (no autorizado) (sales-ai-manual)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -3484,7 +3552,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "7fa57f9a-8706-4f50-b2e8-57f267bd92ad",
+    "versionId": "7aac24de-7fcb-49d2-8e19-577d89550672",
     "workflowId": "otycsrxrMEMuxuwD",
     "nodes": [
       {
@@ -3530,7 +3598,7 @@
               {
                 "id": "a3",
                 "name": "G54_AGENT_TOKEN",
-                "value": "REDACTED_G54_AGENT_TOKEN",
+                "value": "<G54_AGENT_TOKEN — ver .secrets.local.md>",
                 "type": "string"
               },
               {
@@ -3548,7 +3616,7 @@
               {
                 "id": "crm-pass",
                 "name": "G54_MASTER_PASSWORD",
-                "value": "REDACTED_G54_MASTER_PASSWORD",
+                "value": "<G54_MASTER_PASSWORD — ver .secrets.local.md>",
                 "type": "string"
               }
             ]
@@ -4381,7 +4449,7 @@
               {
                 "id": "f3",
                 "name": "G54_AGENT_TOKEN",
-                "value": "REDACTED_G54_AGENT_TOKEN",
+                "value": "<G54_AGENT_TOKEN — ver .secrets.local.md>",
                 "type": "string"
               },
               {
@@ -4399,7 +4467,7 @@
               {
                 "id": "f6",
                 "name": "G54_MASTER_PASSWORD",
-                "value": "REDACTED_G54_MASTER_PASSWORD",
+                "value": "<G54_MASTER_PASSWORD — ver .secrets.local.md>",
                 "type": "string"
               }
             ]
@@ -4501,7 +4569,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               }
             ]
           },
@@ -4557,7 +4625,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Content-Type",
@@ -5189,7 +5257,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
+          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' }) }}",
           "options": {}
         },
         "id": "tg-login-sales",
@@ -5321,7 +5389,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
+          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' }) }}",
           "options": {}
         }
       },
@@ -5500,7 +5568,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Accept",
@@ -5944,6 +6012,56 @@
           "jsonBody": "={{ JSON.stringify($json) }}",
           "options": {}
         }
+      },
+      {
+        "id": "cc8c036d-dc9b-4ea1-8869-07cbcc9a8e73",
+        "name": "🔒 ¿Llamada autorizada? (sales-ai-manual)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          -120,
+          500
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "8c9ce211-951c-4826-9e3e-e284c574bbcc",
+                "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "77380c62-f051-41de-8e85-7fb049305cbc",
+        "name": "⛔ Responder 403 (no autorizado) (sales-ai-manual)",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          100,
+          400
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "{\"ok\": false, \"error\": \"no autorizado\"}",
+          "options": {
+            "responseCode": 403
+          }
+        }
       }
     ],
     "connections": {
@@ -6347,12 +6465,7 @@
         "main": [
           [
             {
-              "node": "✅ Responder OK a G54",
-              "type": "main",
-              "index": 0
-            },
-            {
-              "node": "⚙️ Config WA Manual",
+              "node": "🔒 ¿Llamada autorizada? (sales-ai-manual)",
               "type": "main",
               "index": 0
             }
@@ -6916,6 +7029,29 @@
             }
           ]
         ]
+      },
+      "🔒 ¿Llamada autorizada? (sales-ai-manual)": {
+        "main": [
+          [
+            {
+              "node": "✅ Responder OK a G54",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "⚙️ Config WA Manual",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "⛔ Responder 403 (no autorizado) (sales-ai-manual)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -6923,16 +7059,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-28T16:46:50.259Z",
-    "updatedAt": "2026-09-28T16:46:50.259Z",
+    "createdAt": "2026-10-01T15:50:40.504Z",
+    "updatedAt": "2026-10-01T15:50:40.504Z",
     "workflowPublishHistory": [
       {
-        "id": 3224,
+        "id": 3311,
         "workflowId": "otycsrxrMEMuxuwD",
-        "versionId": "7fa57f9a-8706-4f50-b2e8-57f267bd92ad",
+        "versionId": "7aac24de-7fcb-49d2-8e19-577d89550672",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-28T16:46:50.597Z"
+        "createdAt": "2026-10-01T15:50:41.001Z"
       }
     ]
   }
