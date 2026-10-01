@@ -2090,6 +2090,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ---
 
+### 2026-10-01 (Jueves)
+
+Arranqué el día pasándole al ingeniero las credenciales que me pidió para Bubble y con la revisión de siempre de G54, todo en orden. Después pedí una inspección de seguridad completa de Bubble y una comparación con la competencia, y salieron varios huecos reales: los códigos por SMS se podían pedir sin límite y los pagaba nuestra cuenta de Twilio, una agencia podía quedarse con el número de otro negocio y los PDF de los negocios quedaban públicos, entre otros. Los fuimos cerrando todos durante la mañana, junto con cifrar las transcripciones y dejar un registro de quién cambia qué. También encontré que la rama que el ingeniero iba a desplegar estaba vieja, así que eso se lo tengo que avisar. En G54 cerré los webhooks que podían mandar mensajes como si fuera Marco, cuidando que las respuestas manuales del panel siguieran funcionando.
+
+Pregunté qué pasaría si diez empresas usan Bubble a la vez y apareció un error real: los números nuevos nunca se conectaban al puente de llamadas. Lo arreglamos, y una prueba de carga terminó sin errores con 100 llamadas al mismo tiempo, aunque los planes gratis de Groq y Cartesia siguen siendo el límite. Sumamos el aviso de "asistente virtual" en el saludo, que en Florida es obligatorio, y armé la agenda propia dentro de Bubble para que el agente reserve citas durante la llamada. De paso supimos que Groq retiró los modelos Llama y que Marco por teléfono todavía usa uno, así que tengo que llamarlo para confirmar que sigue contestando.
+
+En la tarde revisé qué de lo que resolvió el ingeniero en el Éxodo sirvió. Generé una estrategia nueva para Crating Express y la línea base no se veía: resultó que sí se guarda y se muestra en el informe mensual, pero los números venían inflados por tratos de prueba, así que borramos 104, regeneré la estrategia y quedó limpia. Probamos el botón de seguimiento IA, el de Camila y el informe mensual, agregamos una revisión que frena los posts rotos antes de publicarlos, y dejé un lead de prueba para confirmar mañana a las 2:30 que el seguimiento automático sale solo. Cerré con una última revisión de seguridad sin hallazgos y el Éxodo con 6 pedidos listos para el ingeniero.
+
+---
+
 ### 2026-09-29 (Martes)
 
 Arranqué con la rutina de siempre en G54, todo en orden, borré los borradores viejos de Orison y me metí de lleno en Bubble. Conecté Deepgram, que por fin me dejó entrar, armé un catálogo real de voces en inglés y español con vista previa para escucharlas, y revisé unos cambios que el ingeniero había subido sin avisar: el único que servía era la corrección de un error de versión de Python, así que lo traje y dejé lo demás aparte. Después pedí tres cosas que me habían solicitado: un solo login donde la cuenta decide si entra como agencia o como negocio, que todo corriera sobre MySQL y no sobre SQLite (lo rehice entero, pruebas incluidas), y una sección de Ayuda con buscador tipo Google, guías paso a paso y preguntas frecuentes. De paso armé el documento técnico para programadores, reordené el menú, ensanché los campos y dejé la letra Fredoka en todo el sistema porque me encantó cómo se veía.
