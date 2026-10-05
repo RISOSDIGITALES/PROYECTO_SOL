@@ -3,12 +3,12 @@
   "name": "Marco CE — 06 Procesador de Medios",
   "description": null,
   "active": true,
-  "activeVersionId": "b45c2fd5-14ad-4ea0-9c73-36093efef85b",
+  "activeVersionId": "ef9d93ad-5de4-473d-b4ff-66a736530967",
   "createdAt": "2026-07-04T15:12:32.233Z",
-  "updatedAt": "2026-09-30T20:30:04.760Z",
+  "updatedAt": "2026-10-05T19:09:48.028Z",
   "isArchived": false,
-  "versionId": "b45c2fd5-14ad-4ea0-9c73-36093efef85b",
-  "versionCounter": 20,
+  "versionId": "ef9d93ad-5de4-473d-b4ff-66a736530967",
+  "versionCounter": 21,
   "sourceWorkflowId": null,
   "triggerCount": 0,
   "nodes": [
@@ -89,7 +89,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "const inp = $('📥 Recibir Datos Medio').first().json;\nconst binary = $input.first().binary;\n\n// Get base64 from binary data\nconst binaryKey = Object.keys(binary || {})[0] || 'data';\nconst fileData = binary?.[binaryKey];\nconst base64 = fileData?.data || '';\nconst mimeType = inp.mime_type || fileData?.mimeType || 'application/octet-stream';\nconst filename = inp.filename || fileData?.fileName || 'archivo';\nconst caption = inp.caption || '';\nconst geminiKey = inp.gemini_api_key || $vars.GEMINI_API_KEY || '';\nconst convertApiKey = inp.convert_api_key || '';\n\n// Classify type\nlet mediaCategory;\nif (mimeType.startsWith('image/')) {\n  mediaCategory = 'image';\n} else if (mimeType.startsWith('audio/') || mimeType.startsWith('video/ogg')) {\n  mediaCategory = 'audio';\n} else if (mimeType === 'application/pdf') {\n  mediaCategory = 'pdf';\n} else if (['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',\n            'application/vnd.ms-excel'].includes(mimeType)) {\n  // Excel se procesa localmente en n8n (extractFromFile), sin API externa —\n  // separado de 'office' (Word/PowerPoint), que sigue necesitando ConvertAPI.\n  mediaCategory = 'excel';\n} else if (['application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n            'application/msword',\n            'application/vnd.openxmlformats-officedocument.presentationml.presentation'\n           ].includes(mimeType)) {\n  mediaCategory = 'office';\n} else if (mimeType.startsWith('video/')) {\n  mediaCategory = 'video';\n} else {\n  mediaCategory = 'unknown';\n}\n\nconst media_id = inp.media_id || '';\nconst phone_number_id = inp.phone_number_id || '';\n\nreturn [{ json: { base64, mimeType, filename, caption, mediaCategory, geminiKey, convertApiKey, media_id, phone_number_id }, binary }];"
+        "jsCode": "const inp = $('📥 Recibir Datos Medio').first().json;\nconst binary = $input.first().binary;\n\n// Get base64 from binary data\nconst binaryKey = Object.keys(binary || {})[0] || 'data';\nconst fileData = binary?.[binaryKey];\nconst base64 = fileData?.data || '';\nconst mimeType = inp.mime_type || fileData?.mimeType || 'application/octet-stream';\nconst filename = inp.filename || fileData?.fileName || 'archivo';\nconst caption = inp.caption || '';\nconst geminiKey = inp.gemini_api_key || $vars.GEMINI_API_KEY || '';\nconst convertApiKey = inp.convert_api_key || '';\n\n// Classify type\nlet mediaCategory;\nif (mimeType.startsWith('image/')) {\n  mediaCategory = 'image';\n} else if (mimeType.startsWith('audio/') || mimeType.startsWith('video/ogg')) {\n  mediaCategory = 'audio';\n} else if (mimeType === 'application/pdf') {\n  mediaCategory = 'pdf';\n} else if (['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',\n            'application/vnd.ms-excel'].includes(mimeType)) {\n  // Excel se procesa localmente en n8n (extractFromFile), sin API externa —\n  // separado de 'office' (Word/PowerPoint), que sigue necesitando ConvertAPI.\n  mediaCategory = 'excel';\n} else if (['application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n            'application/msword',\n            'application/vnd.openxmlformats-officedocument.presentationml.presentation'\n           ].includes(mimeType)) {\n  mediaCategory = 'office';\n} else if (mimeType.startsWith('video/')) {\n  mediaCategory = 'video';\n} else {\n  mediaCategory = 'unknown';\n}\n\n// AUDIO_EXT: Groq Whisper decide el formato por la extension del nombre del archivo y rechaza\n// \".oga\" (notas de voz de Telegram) o un nombre sin extension (audios de WhatsApp). Se normaliza\n// el nombre segun el mime type, y el binario se deja siempre bajo la clave \"data\".\nif (mediaCategory === 'audio' && fileData) {\n  const ext = mimeType.includes('mpeg') ? 'mp3' : mimeType.includes('mp4') || mimeType.includes('m4a') ? 'm4a'\n    : mimeType.includes('wav') ? 'wav' : mimeType.includes('webm') ? 'webm' : 'ogg';\n  fileData.fileName = 'audio.' + ext;\n  fileData.fileExtension = ext;\n  if (binaryKey !== 'data') { binary.data = fileData; delete binary[binaryKey]; }\n}\nconst media_id = inp.media_id || '';\nconst phone_number_id = inp.phone_number_id || '';\n\nreturn [{ json: { base64, mimeType, filename, caption, mediaCategory, geminiKey, convertApiKey, media_id, phone_number_id }, binary }];"
       }
     },
     {
@@ -230,16 +230,15 @@
         "url": "https://api.groq.com/openai/v1/audio/transcriptions",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "groqApi",
-        "credentials": {
-          "groqApi": {
-            "id": "jORffbRhRNohHT1B",
-            "name": "Groq account"
-          }
-        },
         "sendBody": true,
         "contentType": "multipart-form-data",
         "bodyParameters": {
           "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
             {
               "name": "model",
               "value": "whisper-large-v3"
@@ -247,18 +246,18 @@
             {
               "name": "response_format",
               "value": "text"
-            },
-            {
-              "name": "language",
-              "value": ""
             }
           ]
         },
-        "sendBinaryData": true,
-        "binaryPropertyName": "data",
         "options": {}
       },
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq API"
+        }
+      }
     },
     {
       "id": "sw06-audio-result",
@@ -270,7 +269,7 @@
         100
       ],
       "parameters": {
-        "jsCode": "const transcripcion = ($input.first().json.body || $input.first().json || '').toString().trim();\nconst texto = `[Audio transcrito]: ${transcripcion}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'audio', transcripcion },\n  media_type: 'audio'\n}}];"
+        "jsCode": "const r = $input.first().json || {};\n// Groq con response_format=text devuelve texto plano (n8n lo deja en \"data\" o \"body\").\n// Si falla (error, vacio) se usa el marcador que dispara la escalacion a un especialista en el\n// prompt de Marco, en vez de pasarle \"[object Object]\".\nlet transcripcion = '';\nif (!r.error) {\n  const v = typeof r === 'string' ? r : (r.data ?? r.body ?? r.text ?? '');\n  transcripcion = (typeof v === 'string' ? v : '').trim();\n}\nif (!transcripcion) {\n  return [{ json: { texto: '[No se pudo procesar el archivo enviado]', media_ref: { type: 'audio', transcripcion: null }, media_type: 'audio' } }];\n}\nreturn [{ json: { texto: `[Audio transcrito]: ${transcripcion}`, media_ref: { type: 'audio', transcripcion }, media_type: 'audio' } }];"
       }
     },
     {
@@ -1022,7 +1021,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "b45c2fd5-14ad-4ea0-9c73-36093efef85b",
+    "versionId": "ef9d93ad-5de4-473d-b4ff-66a736530967",
     "workflowId": "5GU89AeWsBZ86FWa",
     "nodes": [
       {
@@ -1102,7 +1101,7 @@
           300
         ],
         "parameters": {
-          "jsCode": "const inp = $('📥 Recibir Datos Medio').first().json;\nconst binary = $input.first().binary;\n\n// Get base64 from binary data\nconst binaryKey = Object.keys(binary || {})[0] || 'data';\nconst fileData = binary?.[binaryKey];\nconst base64 = fileData?.data || '';\nconst mimeType = inp.mime_type || fileData?.mimeType || 'application/octet-stream';\nconst filename = inp.filename || fileData?.fileName || 'archivo';\nconst caption = inp.caption || '';\nconst geminiKey = inp.gemini_api_key || $vars.GEMINI_API_KEY || '';\nconst convertApiKey = inp.convert_api_key || '';\n\n// Classify type\nlet mediaCategory;\nif (mimeType.startsWith('image/')) {\n  mediaCategory = 'image';\n} else if (mimeType.startsWith('audio/') || mimeType.startsWith('video/ogg')) {\n  mediaCategory = 'audio';\n} else if (mimeType === 'application/pdf') {\n  mediaCategory = 'pdf';\n} else if (['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',\n            'application/vnd.ms-excel'].includes(mimeType)) {\n  // Excel se procesa localmente en n8n (extractFromFile), sin API externa —\n  // separado de 'office' (Word/PowerPoint), que sigue necesitando ConvertAPI.\n  mediaCategory = 'excel';\n} else if (['application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n            'application/msword',\n            'application/vnd.openxmlformats-officedocument.presentationml.presentation'\n           ].includes(mimeType)) {\n  mediaCategory = 'office';\n} else if (mimeType.startsWith('video/')) {\n  mediaCategory = 'video';\n} else {\n  mediaCategory = 'unknown';\n}\n\nconst media_id = inp.media_id || '';\nconst phone_number_id = inp.phone_number_id || '';\n\nreturn [{ json: { base64, mimeType, filename, caption, mediaCategory, geminiKey, convertApiKey, media_id, phone_number_id }, binary }];"
+          "jsCode": "const inp = $('📥 Recibir Datos Medio').first().json;\nconst binary = $input.first().binary;\n\n// Get base64 from binary data\nconst binaryKey = Object.keys(binary || {})[0] || 'data';\nconst fileData = binary?.[binaryKey];\nconst base64 = fileData?.data || '';\nconst mimeType = inp.mime_type || fileData?.mimeType || 'application/octet-stream';\nconst filename = inp.filename || fileData?.fileName || 'archivo';\nconst caption = inp.caption || '';\nconst geminiKey = inp.gemini_api_key || $vars.GEMINI_API_KEY || '';\nconst convertApiKey = inp.convert_api_key || '';\n\n// Classify type\nlet mediaCategory;\nif (mimeType.startsWith('image/')) {\n  mediaCategory = 'image';\n} else if (mimeType.startsWith('audio/') || mimeType.startsWith('video/ogg')) {\n  mediaCategory = 'audio';\n} else if (mimeType === 'application/pdf') {\n  mediaCategory = 'pdf';\n} else if (['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',\n            'application/vnd.ms-excel'].includes(mimeType)) {\n  // Excel se procesa localmente en n8n (extractFromFile), sin API externa —\n  // separado de 'office' (Word/PowerPoint), que sigue necesitando ConvertAPI.\n  mediaCategory = 'excel';\n} else if (['application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n            'application/msword',\n            'application/vnd.openxmlformats-officedocument.presentationml.presentation'\n           ].includes(mimeType)) {\n  mediaCategory = 'office';\n} else if (mimeType.startsWith('video/')) {\n  mediaCategory = 'video';\n} else {\n  mediaCategory = 'unknown';\n}\n\n// AUDIO_EXT: Groq Whisper decide el formato por la extension del nombre del archivo y rechaza\n// \".oga\" (notas de voz de Telegram) o un nombre sin extension (audios de WhatsApp). Se normaliza\n// el nombre segun el mime type, y el binario se deja siempre bajo la clave \"data\".\nif (mediaCategory === 'audio' && fileData) {\n  const ext = mimeType.includes('mpeg') ? 'mp3' : mimeType.includes('mp4') || mimeType.includes('m4a') ? 'm4a'\n    : mimeType.includes('wav') ? 'wav' : mimeType.includes('webm') ? 'webm' : 'ogg';\n  fileData.fileName = 'audio.' + ext;\n  fileData.fileExtension = ext;\n  if (binaryKey !== 'data') { binary.data = fileData; delete binary[binaryKey]; }\n}\nconst media_id = inp.media_id || '';\nconst phone_number_id = inp.phone_number_id || '';\n\nreturn [{ json: { base64, mimeType, filename, caption, mediaCategory, geminiKey, convertApiKey, media_id, phone_number_id }, binary }];"
         }
       },
       {
@@ -1243,16 +1242,15 @@
           "url": "https://api.groq.com/openai/v1/audio/transcriptions",
           "authentication": "predefinedCredentialType",
           "nodeCredentialType": "groqApi",
-          "credentials": {
-            "groqApi": {
-              "id": "jORffbRhRNohHT1B",
-              "name": "Groq account"
-            }
-          },
           "sendBody": true,
           "contentType": "multipart-form-data",
           "bodyParameters": {
             "parameters": [
+              {
+                "parameterType": "formBinaryData",
+                "name": "file",
+                "inputDataFieldName": "data"
+              },
               {
                 "name": "model",
                 "value": "whisper-large-v3"
@@ -1260,18 +1258,18 @@
               {
                 "name": "response_format",
                 "value": "text"
-              },
-              {
-                "name": "language",
-                "value": ""
               }
             ]
           },
-          "sendBinaryData": true,
-          "binaryPropertyName": "data",
           "options": {}
         },
-        "onError": "continueRegularOutput"
+        "onError": "continueRegularOutput",
+        "credentials": {
+          "groqApi": {
+            "id": "jORffbRhRNohHT1B",
+            "name": "Groq API"
+          }
+        }
       },
       {
         "id": "sw06-audio-result",
@@ -1283,7 +1281,7 @@
           100
         ],
         "parameters": {
-          "jsCode": "const transcripcion = ($input.first().json.body || $input.first().json || '').toString().trim();\nconst texto = `[Audio transcrito]: ${transcripcion}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'audio', transcripcion },\n  media_type: 'audio'\n}}];"
+          "jsCode": "const r = $input.first().json || {};\n// Groq con response_format=text devuelve texto plano (n8n lo deja en \"data\" o \"body\").\n// Si falla (error, vacio) se usa el marcador que dispara la escalacion a un especialista en el\n// prompt de Marco, en vez de pasarle \"[object Object]\".\nlet transcripcion = '';\nif (!r.error) {\n  const v = typeof r === 'string' ? r : (r.data ?? r.body ?? r.text ?? '');\n  transcripcion = (typeof v === 'string' ? v : '').trim();\n}\nif (!transcripcion) {\n  return [{ json: { texto: '[No se pudo procesar el archivo enviado]', media_ref: { type: 'audio', transcripcion: null }, media_type: 'audio' } }];\n}\nreturn [{ json: { texto: `[Audio transcrito]: ${transcripcion}`, media_ref: { type: 'audio', transcripcion }, media_type: 'audio' } }];"
         }
       },
       {
@@ -2011,16 +2009,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-30T20:30:04.763Z",
-    "updatedAt": "2026-09-30T20:30:04.763Z",
+    "createdAt": "2026-10-05T19:09:48.032Z",
+    "updatedAt": "2026-10-05T19:09:48.032Z",
     "workflowPublishHistory": [
       {
-        "id": 3299,
+        "id": 3319,
         "workflowId": "5GU89AeWsBZ86FWa",
-        "versionId": "b45c2fd5-14ad-4ea0-9c73-36093efef85b",
+        "versionId": "ef9d93ad-5de4-473d-b4ff-66a736530967",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-30T20:30:05.038Z"
+        "createdAt": "2026-10-05T19:09:48.292Z"
       }
     ]
   }
