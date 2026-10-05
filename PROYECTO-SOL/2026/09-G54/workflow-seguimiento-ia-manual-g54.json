@@ -3,12 +3,12 @@
   "name": "📨 Seguimiento IA manual — G54 (wa_followup)",
   "description": null,
   "active": true,
-  "activeVersionId": "89ab1225-d307-41b9-8938-d4996a475ce0",
+  "activeVersionId": "77ed0d24-90e0-465a-a15b-907553cc5e57",
   "createdAt": "2026-09-30T20:02:26.450Z",
-  "updatedAt": "2026-10-01T15:50:25.532Z",
+  "updatedAt": "2026-10-05T19:23:10.962Z",
   "isArchived": false,
-  "versionId": "89ab1225-d307-41b9-8938-d4996a475ce0",
-  "versionCounter": 2,
+  "versionId": "77ed0d24-90e0-465a-a15b-907553cc5e57",
+  "versionCounter": 4,
   "sourceWorkflowId": null,
   "triggerCount": 1,
   "nodes": [
@@ -65,7 +65,7 @@
             {
               "id": "c2",
               "name": "G54_AGENT_TOKEN",
-              "value": "<G54_AGENT_TOKEN — ver .secrets.local.md>",
+              "value": "REDACTED_G54_AGENT_TOKEN",
               "type": "string"
             },
             {
@@ -77,7 +77,7 @@
             {
               "id": "c4",
               "name": "G54_MASTER_PASSWORD",
-              "value": "<G54_MASTER_PASSWORD — ver .secrets.local.md>",
+              "value": "REDACTED_G54_MASTER_PASSWORD",
               "type": "string"
             },
             {
@@ -227,7 +227,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "// No se confía en el teléfono que llega en el body: tiene que ser el del trato, y el\n// trato tiene que ser de la empresa del pedido. Así nadie puede usar este webhook\n// para mandar WhatsApp a cualquier número.\nconst p = $('🔧 Leer Pedido').first().json;\nconst cfg = $('⚙️ Config').first().json;\nconst raw = $input.first().json || {};\nconst deal = raw.data || raw;\nconst digits = s => String(s || '').replace(/\\D/g, '');\nlet motivo = null;\nif (!$('🔐 G54: Login').first().json.access_token) motivo = 'No se pudo iniciar sesión en G54.';\nelse if (!p.company_id || !p.deal_id) motivo = 'Faltan company_id o deal_id.';\nelse if (!deal || !deal.id) motivo = 'No se encontró el trato en esa empresa.';\nelse if (Number(deal.company_id) !== p.company_id) motivo = 'El trato no es de esa empresa.';\nconst tel = digits(p.telefono);\nif (!motivo && !/^\\d{8,15}$/.test(tel)) motivo = 'El contacto no tiene un número de WhatsApp (por ejemplo, es de Telegram).';\nconst telTrato = digits(deal.telefono || deal.contact?.phone);\nif (!motivo && telTrato && telTrato !== tel) motivo = 'El teléfono no coincide con el del trato.';\nif (!motivo && !telTrato && !deal.wa_contact_id) motivo = 'El trato no tiene un teléfono asociado.';\nif (!motivo && ['closed', 'lost'].includes(deal.etapa)) motivo = `El trato está en la etapa \"${deal.etapa}\": no se le hace seguimiento.`;\n// Anti-repetición: un clic doble o repetido no manda dos mensajes.\nconst sd = $getWorkflowStaticData('global');\nsd.ultimoEnvio = sd.ultimoEnvio || {};\nconst ahora = Date.now();\nconst prev = sd.ultimoEnvio[p.deal_id];\nif (!motivo && prev && ahora - prev < cfg.ANTIREPETICION_MIN * 60000) {\n  motivo = `Ya se mandó un seguimiento a este lead hace menos de ${cfg.ANTIREPETICION_MIN} minutos.`;\n}\nif (!motivo) sd.ultimoEnvio[p.deal_id] = ahora;\nreturn [{ json: { puede: !motivo, motivo, telefono: tel, deal_id: p.deal_id, company_id: p.company_id,\n                  nombre: p.nombre || deal.nombre || '' } }];"
+        "jsCode": "// No se confía en el teléfono que llega en el body: tiene que ser el del trato, y el\n// trato tiene que ser de la empresa del pedido. Así nadie puede usar este webhook\n// para mandar mensajes a cualquier número.\n// Canal (05-oct): se manda por el canal real del contacto vinculado al trato. G54 guarda el\n// teléfono de un contacto de Telegram sin el \"tg_\" (ej. \"5146818762\"), que parece un número\n// de WhatsApp válido; el 05-oct eso mandó un WhatsApp a un número ajeno (Meta no lo entregó).\n// Telegram se manda por la conversación de Telegram de G54; Facebook/Instagram no se manejan.\nconst p = $('🔧 Leer Pedido').first().json;\nconst cfg = $('⚙️ Config').first().json;\nconst raw = $input.first().json || {};\nconst deal = raw.data || raw;\nconst digits = s => String(s || '').replace(/\\D/g, '');\nlet motivo = null;\nif (!$('🔐 G54: Login').first().json.access_token) motivo = 'No se pudo iniciar sesión en G54.';\nelse if (!p.company_id || !p.deal_id) motivo = 'Faltan company_id o deal_id.';\nelse if (!deal || !deal.id) motivo = 'No se encontró el trato en esa empresa.';\nelse if (Number(deal.company_id) !== p.company_id) motivo = 'El trato no es de esa empresa.';\n\nconst canalContacto = String(deal.contact?.canal || '').toLowerCase();\nconst origen = String(deal.origen || '').toLowerCase();\nconst esTelegram = canalContacto === 'telegram' || origen === 'telegram' || /tg_/i.test(String(deal.contact?.phone || ''));\nconst canal = esTelegram ? 'telegram' : 'whatsapp';\nconst tel = digits(p.telefono);\nlet telegramConversationId = null;\n\nif (!motivo && (['facebook', 'instagram'].includes(canalContacto) || ['facebook', 'instagram'].includes(origen))) {\n  motivo = 'El contacto es de ' + (canalContacto || origen) + ': este botón solo manda por WhatsApp o Telegram.';\n}\nif (!motivo && canal === 'telegram') {\n  const convs = Array.isArray(deal.contact?.conversations) ? deal.contact.conversations : [];\n  const conv = convs.find(c => String(c.canal || '').toLowerCase() === 'telegram') || null;\n  telegramConversationId = conv ? conv.id : null;\n  if (!telegramConversationId) motivo = 'No se encontró la conversación de Telegram de este contacto.';\n}\nif (!motivo && canal === 'whatsapp') {\n  if (!/^\\d{8,15}$/.test(tel)) motivo = 'El contacto no tiene un número de WhatsApp válido.';\n  const telTrato = digits(deal.telefono || deal.contact?.phone);\n  if (!motivo && telTrato && telTrato !== tel) motivo = 'El teléfono no coincide con el del trato.';\n  if (!motivo && !telTrato && !deal.wa_contact_id) motivo = 'El trato no tiene un teléfono asociado.';\n  if (!motivo && deal.contact && deal.contact.phone && /[^+\\d]/.test(deal.contact.phone)) motivo = 'El contacto no tiene un número de WhatsApp válido.';\n}\nif (!motivo && ['closed', 'lost'].includes(deal.etapa)) motivo = `El trato está en la etapa \"${deal.etapa}\": no se le hace seguimiento.`;\n// Anti-repetición: un clic doble o repetido no manda dos mensajes.\nconst sd = $getWorkflowStaticData('global');\nsd.ultimoEnvio = sd.ultimoEnvio || {};\nconst ahora = Date.now();\nconst prev = sd.ultimoEnvio[p.deal_id];\nif (!motivo && prev && ahora - prev < cfg.ANTIREPETICION_MIN * 60000) {\n  motivo = `Ya se mandó un seguimiento a este lead hace menos de ${cfg.ANTIREPETICION_MIN} minutos.`;\n}\nif (!motivo) sd.ultimoEnvio[p.deal_id] = ahora;\nreturn [{ json: { puede: !motivo, motivo, canal, telegramConversationId, telefono: tel, deal_id: p.deal_id,\n                  company_id: p.company_id, nombre: p.nombre || deal.nombre || '' } }];\n"
       }
     },
     {
@@ -387,7 +387,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "const v = $('🔎 Validar Envío').first().json;\nconst bot = (() => { try { const j = $('🔑 G54: Datos del bot').first().json; return j.data || j; } catch (e) { return {}; } })();\nconst msg = bot.msg_followup_24h || '';\nlet enviado = false, motivo = v.motivo;\nif (v.puede) {\n  const r = (() => { try { return $('📤 Enviar Seguimiento WhatsApp').first().json; } catch (e) { return {}; } })();\n  if (!bot.phone_number_id || !bot.wa_access_token) motivo = 'La empresa no tiene WhatsApp configurado.';\n  else if (!msg) motivo = 'La empresa no tiene cargado el mensaje de seguimiento de 24h.';\n  else if (r.messages && r.messages[0]?.id) enviado = true;\n  else {\n    const code = r.error?.code;\n    motivo = code === 131047\n      ? 'Pasaron más de 24 horas desde el último mensaje del cliente: WhatsApp solo deja escribirle con una plantilla aprobada.'\n      : 'WhatsApp rechazó el mensaje' + (r.error?.message ? ': ' + r.error.message : '.');\n  }\n}\nif (!enviado) { const sd = $getWorkflowStaticData('global'); if (sd.ultimoEnvio) delete sd.ultimoEnvio[v.deal_id]; }\nreturn [{ json: { ok: enviado, motivo: enviado ? null : motivo, mensaje: enviado ? msg : null,\n                  telefono: v.telefono, deal_id: v.deal_id, company_id: v.company_id, nombre: v.nombre } }];"
+        "jsCode": "const v = $('🔎 Validar Envío').first().json;\nconst bot = (() => { try { const j = $('🔑 G54: Datos del bot').first().json; return j.data || j; } catch (e) { return {}; } })();\nconst msg = bot.msg_followup_24h || '';\nlet enviado = false, motivo = v.motivo;\nif (v.puede) {\n  if (!msg) motivo = 'La empresa no tiene cargado el mensaje de seguimiento de 24h.';\n  else if (v.canal === 'telegram') {\n    const r = (() => { try { return $('📤 Enviar Seguimiento Telegram').first().json; } catch (e) { return {}; } })();\n    if (r.ok === true || r.data?.id) enviado = true;\n    else motivo = 'Telegram rechazó el mensaje' + (r.message ? ': ' + r.message : '.');\n  } else {\n    const r = (() => { try { return $('📤 Enviar Seguimiento WhatsApp').first().json; } catch (e) { return {}; } })();\n    if (!bot.phone_number_id || !bot.wa_access_token) motivo = 'La empresa no tiene WhatsApp configurado.';\n    else if (r.messages && r.messages[0]?.id) enviado = true;\n    else {\n      const code = r.error?.code;\n      motivo = code === 131047\n        ? 'Pasaron más de 24 horas desde el último mensaje del cliente: WhatsApp solo deja escribirle con una plantilla aprobada.'\n        : 'WhatsApp rechazó el mensaje' + (r.error?.message ? ': ' + r.error.message : '.');\n    }\n  }\n}\nif (!enviado) { const sd = $getWorkflowStaticData('global'); if (sd.ultimoEnvio) delete sd.ultimoEnvio[v.deal_id]; }\nreturn [{ json: { ok: enviado, motivo: enviado ? null : motivo, mensaje: enviado ? msg : null, canal: v.canal,\n                  telefono: v.telefono, deal_id: v.deal_id, company_id: v.company_id, nombre: v.nombre } }];\n"
       }
     },
     {
@@ -502,7 +502,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ tipo: 'sistema', contenido: $('🧾 Resultado').first().json.ok ? 'Seguimiento IA (manual, desde la Ficha 360): mensaje de 24h enviado por WhatsApp.' : 'Seguimiento IA (manual, desde la Ficha 360): no se envió. ' + $('🧾 Resultado').first().json.motivo }) }}"
+        "jsonBody": "={{ JSON.stringify({ tipo: 'sistema', contenido: $('🧾 Resultado').first().json.ok ? 'Seguimiento IA (manual, desde la Ficha 360): mensaje de 24h enviado por ' + ($('🧾 Resultado').first().json.canal === 'telegram' ? 'Telegram' : 'WhatsApp') + '.' : 'Seguimiento IA (manual, desde la Ficha 360): no se envió. ' + $('🧾 Resultado').first().json.motivo }) }}"
       },
       "onError": "continueRegularOutput",
       "alwaysOutputData": true
@@ -541,7 +541,7 @@
           "conditions": [
             {
               "id": "64502cd2-b157-4094-8d86-85f11ed062bb",
-              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -570,6 +570,112 @@
         "options": {
           "responseCode": 403
         }
+      }
+    },
+    {
+      "id": "fu-btn-canal",
+      "name": "🔀 ¿Por Telegram?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2180,
+        -20
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "fu-btn-canal-c",
+              "leftValue": "={{ $('🔎 Validar Envío').first().json.canal }}",
+              "rightValue": "telegram",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "fu-btn-tg",
+      "name": "📤 Enviar Seguimiento Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        -20
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config').first().json.G54_BASE_URL + '/api/telegram/reply' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login').first().json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ conversation_id: $('🔎 Validar Envío').first().json.telegramConversationId, message: ($('🔑 G54: Datos del bot').first().json.data?.msg_followup_24h || $('🔑 G54: Datos del bot').first().json.msg_followup_24h || '') }) }}"
+      }
+    },
+    {
+      "id": "fu-btn-reg",
+      "name": "🔀 ¿Registrar? (solo WhatsApp)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        180
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "fu-btn-reg-c",
+              "leftValue": "={{ $('🧾 Resultado').first().json.canal }}",
+              "rightValue": "whatsapp",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
       }
     }
   ],
@@ -684,7 +790,7 @@
       "main": [
         [
           {
-            "node": "📤 Enviar Seguimiento WhatsApp",
+            "node": "🔀 ¿Por Telegram?",
             "type": "main",
             "index": 0
           }
@@ -717,7 +823,7 @@
       "main": [
         [
           {
-            "node": "💬 G54: Registrar en la conversación",
+            "node": "🔀 ¿Registrar? (solo WhatsApp)",
             "type": "main",
             "index": 0
           }
@@ -770,6 +876,53 @@
           }
         ]
       ]
+    },
+    "🔀 ¿Por Telegram?": {
+      "main": [
+        [
+          {
+            "node": "📤 Enviar Seguimiento Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📤 Enviar Seguimiento WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Enviar Seguimiento Telegram": {
+      "main": [
+        [
+          {
+            "node": "🧾 Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Registrar? (solo WhatsApp)": {
+      "main": [
+        [
+          {
+            "node": "💬 G54: Registrar en la conversación",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📌 G54: Nota en el trato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -779,7 +932,10 @@
   },
   "staticData": {
     "global": {
-      "ultimoEnvio": {}
+      "ultimoEnvio": {
+        "201": 1790882540512,
+        "209": 1790885820291
+      }
     }
   },
   "pinData": null,
@@ -806,7 +962,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "89ab1225-d307-41b9-8938-d4996a475ce0",
+    "versionId": "77ed0d24-90e0-465a-a15b-907553cc5e57",
     "workflowId": "E7axtRDYCL8AbtgO",
     "nodes": [
       {
@@ -862,7 +1018,7 @@
               {
                 "id": "c2",
                 "name": "G54_AGENT_TOKEN",
-                "value": "<G54_AGENT_TOKEN — ver .secrets.local.md>",
+                "value": "REDACTED_G54_AGENT_TOKEN",
                 "type": "string"
               },
               {
@@ -874,7 +1030,7 @@
               {
                 "id": "c4",
                 "name": "G54_MASTER_PASSWORD",
-                "value": "<G54_MASTER_PASSWORD — ver .secrets.local.md>",
+                "value": "REDACTED_G54_MASTER_PASSWORD",
                 "type": "string"
               },
               {
@@ -1024,7 +1180,7 @@
           300
         ],
         "parameters": {
-          "jsCode": "// No se confía en el teléfono que llega en el body: tiene que ser el del trato, y el\n// trato tiene que ser de la empresa del pedido. Así nadie puede usar este webhook\n// para mandar WhatsApp a cualquier número.\nconst p = $('🔧 Leer Pedido').first().json;\nconst cfg = $('⚙️ Config').first().json;\nconst raw = $input.first().json || {};\nconst deal = raw.data || raw;\nconst digits = s => String(s || '').replace(/\\D/g, '');\nlet motivo = null;\nif (!$('🔐 G54: Login').first().json.access_token) motivo = 'No se pudo iniciar sesión en G54.';\nelse if (!p.company_id || !p.deal_id) motivo = 'Faltan company_id o deal_id.';\nelse if (!deal || !deal.id) motivo = 'No se encontró el trato en esa empresa.';\nelse if (Number(deal.company_id) !== p.company_id) motivo = 'El trato no es de esa empresa.';\nconst tel = digits(p.telefono);\nif (!motivo && !/^\\d{8,15}$/.test(tel)) motivo = 'El contacto no tiene un número de WhatsApp (por ejemplo, es de Telegram).';\nconst telTrato = digits(deal.telefono || deal.contact?.phone);\nif (!motivo && telTrato && telTrato !== tel) motivo = 'El teléfono no coincide con el del trato.';\nif (!motivo && !telTrato && !deal.wa_contact_id) motivo = 'El trato no tiene un teléfono asociado.';\nif (!motivo && ['closed', 'lost'].includes(deal.etapa)) motivo = `El trato está en la etapa \"${deal.etapa}\": no se le hace seguimiento.`;\n// Anti-repetición: un clic doble o repetido no manda dos mensajes.\nconst sd = $getWorkflowStaticData('global');\nsd.ultimoEnvio = sd.ultimoEnvio || {};\nconst ahora = Date.now();\nconst prev = sd.ultimoEnvio[p.deal_id];\nif (!motivo && prev && ahora - prev < cfg.ANTIREPETICION_MIN * 60000) {\n  motivo = `Ya se mandó un seguimiento a este lead hace menos de ${cfg.ANTIREPETICION_MIN} minutos.`;\n}\nif (!motivo) sd.ultimoEnvio[p.deal_id] = ahora;\nreturn [{ json: { puede: !motivo, motivo, telefono: tel, deal_id: p.deal_id, company_id: p.company_id,\n                  nombre: p.nombre || deal.nombre || '' } }];"
+          "jsCode": "// No se confía en el teléfono que llega en el body: tiene que ser el del trato, y el\n// trato tiene que ser de la empresa del pedido. Así nadie puede usar este webhook\n// para mandar mensajes a cualquier número.\n// Canal (05-oct): se manda por el canal real del contacto vinculado al trato. G54 guarda el\n// teléfono de un contacto de Telegram sin el \"tg_\" (ej. \"5146818762\"), que parece un número\n// de WhatsApp válido; el 05-oct eso mandó un WhatsApp a un número ajeno (Meta no lo entregó).\n// Telegram se manda por la conversación de Telegram de G54; Facebook/Instagram no se manejan.\nconst p = $('🔧 Leer Pedido').first().json;\nconst cfg = $('⚙️ Config').first().json;\nconst raw = $input.first().json || {};\nconst deal = raw.data || raw;\nconst digits = s => String(s || '').replace(/\\D/g, '');\nlet motivo = null;\nif (!$('🔐 G54: Login').first().json.access_token) motivo = 'No se pudo iniciar sesión en G54.';\nelse if (!p.company_id || !p.deal_id) motivo = 'Faltan company_id o deal_id.';\nelse if (!deal || !deal.id) motivo = 'No se encontró el trato en esa empresa.';\nelse if (Number(deal.company_id) !== p.company_id) motivo = 'El trato no es de esa empresa.';\n\nconst canalContacto = String(deal.contact?.canal || '').toLowerCase();\nconst origen = String(deal.origen || '').toLowerCase();\nconst esTelegram = canalContacto === 'telegram' || origen === 'telegram' || /tg_/i.test(String(deal.contact?.phone || ''));\nconst canal = esTelegram ? 'telegram' : 'whatsapp';\nconst tel = digits(p.telefono);\nlet telegramConversationId = null;\n\nif (!motivo && (['facebook', 'instagram'].includes(canalContacto) || ['facebook', 'instagram'].includes(origen))) {\n  motivo = 'El contacto es de ' + (canalContacto || origen) + ': este botón solo manda por WhatsApp o Telegram.';\n}\nif (!motivo && canal === 'telegram') {\n  const convs = Array.isArray(deal.contact?.conversations) ? deal.contact.conversations : [];\n  const conv = convs.find(c => String(c.canal || '').toLowerCase() === 'telegram') || null;\n  telegramConversationId = conv ? conv.id : null;\n  if (!telegramConversationId) motivo = 'No se encontró la conversación de Telegram de este contacto.';\n}\nif (!motivo && canal === 'whatsapp') {\n  if (!/^\\d{8,15}$/.test(tel)) motivo = 'El contacto no tiene un número de WhatsApp válido.';\n  const telTrato = digits(deal.telefono || deal.contact?.phone);\n  if (!motivo && telTrato && telTrato !== tel) motivo = 'El teléfono no coincide con el del trato.';\n  if (!motivo && !telTrato && !deal.wa_contact_id) motivo = 'El trato no tiene un teléfono asociado.';\n  if (!motivo && deal.contact && deal.contact.phone && /[^+\\d]/.test(deal.contact.phone)) motivo = 'El contacto no tiene un número de WhatsApp válido.';\n}\nif (!motivo && ['closed', 'lost'].includes(deal.etapa)) motivo = `El trato está en la etapa \"${deal.etapa}\": no se le hace seguimiento.`;\n// Anti-repetición: un clic doble o repetido no manda dos mensajes.\nconst sd = $getWorkflowStaticData('global');\nsd.ultimoEnvio = sd.ultimoEnvio || {};\nconst ahora = Date.now();\nconst prev = sd.ultimoEnvio[p.deal_id];\nif (!motivo && prev && ahora - prev < cfg.ANTIREPETICION_MIN * 60000) {\n  motivo = `Ya se mandó un seguimiento a este lead hace menos de ${cfg.ANTIREPETICION_MIN} minutos.`;\n}\nif (!motivo) sd.ultimoEnvio[p.deal_id] = ahora;\nreturn [{ json: { puede: !motivo, motivo, canal, telegramConversationId, telefono: tel, deal_id: p.deal_id,\n                  company_id: p.company_id, nombre: p.nombre || deal.nombre || '' } }];\n"
         }
       },
       {
@@ -1184,7 +1340,7 @@
           300
         ],
         "parameters": {
-          "jsCode": "const v = $('🔎 Validar Envío').first().json;\nconst bot = (() => { try { const j = $('🔑 G54: Datos del bot').first().json; return j.data || j; } catch (e) { return {}; } })();\nconst msg = bot.msg_followup_24h || '';\nlet enviado = false, motivo = v.motivo;\nif (v.puede) {\n  const r = (() => { try { return $('📤 Enviar Seguimiento WhatsApp').first().json; } catch (e) { return {}; } })();\n  if (!bot.phone_number_id || !bot.wa_access_token) motivo = 'La empresa no tiene WhatsApp configurado.';\n  else if (!msg) motivo = 'La empresa no tiene cargado el mensaje de seguimiento de 24h.';\n  else if (r.messages && r.messages[0]?.id) enviado = true;\n  else {\n    const code = r.error?.code;\n    motivo = code === 131047\n      ? 'Pasaron más de 24 horas desde el último mensaje del cliente: WhatsApp solo deja escribirle con una plantilla aprobada.'\n      : 'WhatsApp rechazó el mensaje' + (r.error?.message ? ': ' + r.error.message : '.');\n  }\n}\nif (!enviado) { const sd = $getWorkflowStaticData('global'); if (sd.ultimoEnvio) delete sd.ultimoEnvio[v.deal_id]; }\nreturn [{ json: { ok: enviado, motivo: enviado ? null : motivo, mensaje: enviado ? msg : null,\n                  telefono: v.telefono, deal_id: v.deal_id, company_id: v.company_id, nombre: v.nombre } }];"
+          "jsCode": "const v = $('🔎 Validar Envío').first().json;\nconst bot = (() => { try { const j = $('🔑 G54: Datos del bot').first().json; return j.data || j; } catch (e) { return {}; } })();\nconst msg = bot.msg_followup_24h || '';\nlet enviado = false, motivo = v.motivo;\nif (v.puede) {\n  if (!msg) motivo = 'La empresa no tiene cargado el mensaje de seguimiento de 24h.';\n  else if (v.canal === 'telegram') {\n    const r = (() => { try { return $('📤 Enviar Seguimiento Telegram').first().json; } catch (e) { return {}; } })();\n    if (r.ok === true || r.data?.id) enviado = true;\n    else motivo = 'Telegram rechazó el mensaje' + (r.message ? ': ' + r.message : '.');\n  } else {\n    const r = (() => { try { return $('📤 Enviar Seguimiento WhatsApp').first().json; } catch (e) { return {}; } })();\n    if (!bot.phone_number_id || !bot.wa_access_token) motivo = 'La empresa no tiene WhatsApp configurado.';\n    else if (r.messages && r.messages[0]?.id) enviado = true;\n    else {\n      const code = r.error?.code;\n      motivo = code === 131047\n        ? 'Pasaron más de 24 horas desde el último mensaje del cliente: WhatsApp solo deja escribirle con una plantilla aprobada.'\n        : 'WhatsApp rechazó el mensaje' + (r.error?.message ? ': ' + r.error.message : '.');\n    }\n  }\n}\nif (!enviado) { const sd = $getWorkflowStaticData('global'); if (sd.ultimoEnvio) delete sd.ultimoEnvio[v.deal_id]; }\nreturn [{ json: { ok: enviado, motivo: enviado ? null : motivo, mensaje: enviado ? msg : null, canal: v.canal,\n                  telefono: v.telefono, deal_id: v.deal_id, company_id: v.company_id, nombre: v.nombre } }];\n"
         }
       },
       {
@@ -1299,7 +1455,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ tipo: 'sistema', contenido: $('🧾 Resultado').first().json.ok ? 'Seguimiento IA (manual, desde la Ficha 360): mensaje de 24h enviado por WhatsApp.' : 'Seguimiento IA (manual, desde la Ficha 360): no se envió. ' + $('🧾 Resultado').first().json.motivo }) }}"
+          "jsonBody": "={{ JSON.stringify({ tipo: 'sistema', contenido: $('🧾 Resultado').first().json.ok ? 'Seguimiento IA (manual, desde la Ficha 360): mensaje de 24h enviado por ' + ($('🧾 Resultado').first().json.canal === 'telegram' ? 'Telegram' : 'WhatsApp') + '.' : 'Seguimiento IA (manual, desde la Ficha 360): no se envió. ' + $('🧾 Resultado').first().json.motivo }) }}"
         },
         "onError": "continueRegularOutput",
         "alwaysOutputData": true
@@ -1338,7 +1494,7 @@
             "conditions": [
               {
                 "id": "64502cd2-b157-4094-8d86-85f11ed062bb",
-                "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
+                "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
                 "rightValue": "",
                 "operator": {
                   "type": "boolean",
@@ -1367,6 +1523,112 @@
           "options": {
             "responseCode": 403
           }
+        }
+      },
+      {
+        "id": "fu-btn-canal",
+        "name": "🔀 ¿Por Telegram?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          2180,
+          -20
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "fu-btn-canal-c",
+                "leftValue": "={{ $('🔎 Validar Envío').first().json.canal }}",
+                "rightValue": "telegram",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "fu-btn-tg",
+        "name": "📤 Enviar Seguimiento Telegram",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2400,
+          -20
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $('⚙️ Config').first().json.G54_BASE_URL + '/api/telegram/reply' }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login').first().json.access_token }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": false,
+                "neverError": true
+              }
+            }
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ conversation_id: $('🔎 Validar Envío').first().json.telegramConversationId, message: ($('🔑 G54: Datos del bot').first().json.data?.msg_followup_24h || $('🔑 G54: Datos del bot').first().json.msg_followup_24h || '') }) }}"
+        }
+      },
+      {
+        "id": "fu-btn-reg",
+        "name": "🔀 ¿Registrar? (solo WhatsApp)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          2640,
+          180
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "fu-btn-reg-c",
+                "leftValue": "={{ $('🧾 Resultado').first().json.canal }}",
+                "rightValue": "whatsapp",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
         }
       }
     ],
@@ -1481,7 +1743,7 @@
         "main": [
           [
             {
-              "node": "📤 Enviar Seguimiento WhatsApp",
+              "node": "🔀 ¿Por Telegram?",
               "type": "main",
               "index": 0
             }
@@ -1514,7 +1776,7 @@
         "main": [
           [
             {
-              "node": "💬 G54: Registrar en la conversación",
+              "node": "🔀 ¿Registrar? (solo WhatsApp)",
               "type": "main",
               "index": 0
             }
@@ -1567,6 +1829,53 @@
             }
           ]
         ]
+      },
+      "🔀 ¿Por Telegram?": {
+        "main": [
+          [
+            {
+              "node": "📤 Enviar Seguimiento Telegram",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📤 Enviar Seguimiento WhatsApp",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📤 Enviar Seguimiento Telegram": {
+        "main": [
+          [
+            {
+              "node": "🧾 Resultado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Registrar? (solo WhatsApp)": {
+        "main": [
+          [
+            {
+              "node": "💬 G54: Registrar en la conversación",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📌 G54: Nota en el trato",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -1574,16 +1883,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-10-01T15:50:25.535Z",
-    "updatedAt": "2026-10-01T15:50:25.535Z",
+    "createdAt": "2026-10-05T19:23:10.965Z",
+    "updatedAt": "2026-10-05T19:23:10.965Z",
     "workflowPublishHistory": [
       {
-        "id": 3307,
+        "id": 3327,
         "workflowId": "E7axtRDYCL8AbtgO",
-        "versionId": "89ab1225-d307-41b9-8938-d4996a475ce0",
+        "versionId": "77ed0d24-90e0-465a-a15b-907553cc5e57",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-10-01T15:50:25.958Z"
+        "createdAt": "2026-10-05T19:23:11.227Z"
       }
     ]
   }

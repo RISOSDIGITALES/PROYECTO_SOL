@@ -3,12 +3,12 @@
   "name": "CE WhatsApp Engine — Marco",
   "description": null,
   "active": true,
-  "activeVersionId": "7fd2badb-e8ac-4e06-8927-acc63d96862f",
+  "activeVersionId": "85e757cd-a5f2-4f0f-89d7-6757456b7af1",
   "createdAt": "2026-05-26T13:46:38.086Z",
-  "updatedAt": "2026-10-01T15:50:45.820Z",
+  "updatedAt": "2026-10-05T19:21:07.618Z",
   "isArchived": false,
-  "versionId": "7fd2badb-e8ac-4e06-8927-acc63d96862f",
-  "versionCounter": 688,
+  "versionId": "85e757cd-a5f2-4f0f-89d7-6757456b7af1",
+  "versionCounter": 689,
   "sourceWorkflowId": null,
   "triggerCount": 3,
   "nodes": [
@@ -215,7 +215,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Reconstrucción de base (27-ago): el fetch original (GET /api/n8n/companies/{id}/wa/leads\n// con hours_inactive/status) nunca funcionó — ese endpoint exige un teléfono puntual, no\n// sirve para listar. Reemplazado por /api/whatsapp/conversations (confirmado funcionando).\n// El estado \"ya se mandó/ya se notificó\" tampoco se podía trackear por clasificacion (se\n// descarta en silencio) — ahora vive en datos_calificacion, con lectura-mezcla-escritura\n// para no borrar los datos reales que Marco ya recolectó del cliente.\nconst cData = $('📋 Obtener Conversaciones (Follow-up)').first().json;\nconst conversaciones = (cData && cData.data) || [];\n\nconst boardData = $('📋 Obtener CRM Board (Follow-up)').first().json;\n// Mapa wa_contact_id -> etapa real del negocio, para no auto-seguir leads que ya\n// gestiona una persona (negociación en curso, cerrado o perdido).\nconst etapaPorContacto = {};\nif (boardData && typeof boardData === 'object') {\n  for (const [etapa, deals] of Object.entries(boardData)) {\n    if (!Array.isArray(deals)) continue;\n    for (const d of deals) {\n      if (d.wa_contact_id) etapaPorContacto[d.wa_contact_id] = etapa;\n    }\n  }\n}\nconst etapasBloqueadas = ['closed', 'lost', 'negotiation', 'proposal'];\n\nconst now = new Date();\nconst results = [];\n\nfor (const conv of conversaciones) {\n  const contact = conv.contact || {};\n\n  // Solo teléfonos reales de WhatsApp (dígitos). Los contactos con ID sintético\n  // (tg_..., fb_..., de Telegram/Facebook guardados por el relevo) no son números\n  // de WhatsApp: mandarles un follow-up por la Cloud API siempre rebota (fix 28-sep).\n  const telLimpio = (contact.phone || '').replace(/^\\+/, '');\n  if (!/^\\d{8,15}$/.test(telLimpio)) continue;\n  const waContactId = conv.wa_contact_id || contact.id;\n  const etapa = etapaPorContacto[waContactId];\n  if (etapa && etapasBloqueadas.includes(etapa)) continue;\n\n  const dc = contact.datos_calificacion || {};\n  if (dc.followup_notificado) continue; // ya se hizo todo lo posible con este lead\n\n  const ultimaInteraccion = new Date(conv.updated_at || conv.created_at);\n  const horasDiff = (now - ultimaInteraccion) / (1000 * 60 * 60);\n\n  let tipoAccion = null;\n  if (!dc.followup_23h_enviado_en && horasDiff >= 23) {\n    tipoAccion = 'enviar_23h';\n  } else if (dc.followup_23h_enviado_en) {\n    const horasDesdeEnvio = (now - new Date(dc.followup_23h_enviado_en)) / (1000 * 60 * 60);\n    // ~49h desde el envío del primer follow-up ≈ 72h reales desde el silencio original.\n    if (!isNaN(horasDesdeEnvio) && horasDesdeEnvio >= 49) tipoAccion = 'notificar';\n  }\n\n  if (tipoAccion) {\n    results.push({ json: {\n      telefono: (contact.phone || '').replace(/^\\+/, ''),\n      nombre: contact.name || 'cliente',\n      tipoAccion,\n      datosCalificacionActuales: dc\n    } });\n  }\n}\nreturn results;\n"
+        "jsCode": "// Reconstrucción de base (27-ago): el fetch original (GET /api/n8n/companies/{id}/wa/leads\n// con hours_inactive/status) nunca funcionó — ese endpoint exige un teléfono puntual, no\n// sirve para listar. Reemplazado por /api/whatsapp/conversations (confirmado funcionando).\n// El estado \"ya se mandó/ya se notificó\" tampoco se podía trackear por clasificacion (se\n// descarta en silencio) — ahora vive en datos_calificacion, con lectura-mezcla-escritura\n// para no borrar los datos reales que Marco ya recolectó del cliente.\nconst cData = $('📋 Obtener Conversaciones (Follow-up)').first().json;\nconst conversaciones = (cData && cData.data) || [];\n\nconst boardData = $('📋 Obtener CRM Board (Follow-up)').first().json;\n// Mapa wa_contact_id -> etapa real del negocio, para no auto-seguir leads que ya\n// gestiona una persona (negociación en curso, cerrado o perdido).\nconst etapaPorContacto = {};\nif (boardData && typeof boardData === 'object') {\n  for (const [etapa, deals] of Object.entries(boardData)) {\n    if (!Array.isArray(deals)) continue;\n    for (const d of deals) {\n      if (d.wa_contact_id) etapaPorContacto[d.wa_contact_id] = etapa;\n    }\n  }\n}\nconst etapasBloqueadas = ['closed', 'lost', 'negotiation', 'proposal'];\n\n// Seguimiento automático solo en el \"caso claro\" (decisión 05-oct): el lead dejó la\n// conversación pendiente y nadie más se está ocupando. Quedan para el botón manual de la\n// Ficha 360: los escalados a un especialista y las consultas (tipo_flujo \"consulta\").\nconst esCasoClaro = dc => !dc.escalada_enviada && dc.tipo_flujo !== 'consulta';\n\nconst now = new Date();\nconst results = [];\n\nfor (const conv of conversaciones) {\n  const contact = conv.contact || {};\n\n  // Solo teléfonos reales de WhatsApp (dígitos). Los contactos con ID sintético\n  // (tg_..., fb_..., de Telegram/Facebook guardados por el relevo) no son números\n  // de WhatsApp: mandarles un follow-up por la Cloud API siempre rebota (fix 28-sep).\n  const telLimpio = (contact.phone || '').replace(/^\\+/, '');\n  if (!/^\\d{8,15}$/.test(telLimpio)) continue;\n  const waContactId = conv.wa_contact_id || contact.id;\n  const etapa = etapaPorContacto[waContactId];\n  if (etapa && etapasBloqueadas.includes(etapa)) continue;\n\n  const dc = contact.datos_calificacion || {};\n  if (dc.followup_notificado) continue; // ya se hizo todo lo posible con este lead\n  if (!esCasoClaro(dc)) continue;\n\n  const ultimaInteraccion = new Date(conv.updated_at || conv.created_at);\n  const horasDiff = (now - ultimaInteraccion) / (1000 * 60 * 60);\n\n  let tipoAccion = null;\n  if (!dc.followup_23h_enviado_en && horasDiff >= 23) {\n    tipoAccion = 'enviar_23h';\n  } else if (dc.followup_23h_enviado_en) {\n    const horasDesdeEnvio = (now - new Date(dc.followup_23h_enviado_en)) / (1000 * 60 * 60);\n    // ~49h desde el envío del primer follow-up ≈ 72h reales desde el silencio original.\n    if (!isNaN(horasDesdeEnvio) && horasDesdeEnvio >= 49) tipoAccion = 'notificar';\n  }\n\n  if (tipoAccion) {\n    results.push({ json: {\n      telefono: (contact.phone || '').replace(/^\\+/, ''),\n      nombre: contact.name || 'cliente',\n      tipoAccion,\n      canal: 'whatsapp',\n      datosCalificacionActuales: dc\n    } });\n  }\n}\n\n// ── Telegram (05-oct) ───────────────────────────────────────────────────────\n// Telegram no tiene ventana de 24h. La hora de la última actividad sale de la conversación\n// de Telegram de G54 (la del relevo); los datos y las marcas (followup_23h_enviado_en,\n// followup_notificado, escalada_enviada, tipo_flujo) viven en el registro que Marco guarda\n// como \"+tg_<chat>\", el mismo que actualizan los nodos \"Marcar\".\nconst tgData = (() => { try { return $('📋 Obtener Conversaciones Telegram (Follow-up)').first().json; } catch (e) { return {}; } })();\nconst tgConvs = (tgData && Array.isArray(tgData.data)) ? tgData.data : [];\nconst dcPorTelefono = {};\nfor (const conv of conversaciones) {\n  const ph = String((conv.contact && conv.contact.phone) || '').replace(/^\\+/, '');\n  if (/^tg_\\d+$/.test(ph)) dcPorTelefono[ph] = conv.contact.datos_calificacion || {};\n}\nfor (const conv of tgConvs) {\n  const contact = conv.contact || {};\n  const chatId = String(contact.external_id || '').replace(/\\D/g, '');\n  if (!chatId) continue;\n  const telefono = 'tg_' + chatId;\n  const etapa = etapaPorContacto[conv.wa_contact_id || contact.id];\n  if (etapa && etapasBloqueadas.includes(etapa)) continue;\n  const dc = dcPorTelefono[telefono] || {};\n  if (dc.followup_notificado || !esCasoClaro(dc)) continue;\n  const horasDiff = (now - new Date(conv.updated_at || conv.created_at)) / 36e5;\n  let tipoAccion = null;\n  if (!dc.followup_23h_enviado_en && horasDiff >= 23) tipoAccion = 'enviar_23h';\n  else if (dc.followup_23h_enviado_en) {\n    const h = (now - new Date(dc.followup_23h_enviado_en)) / 36e5;\n    if (!isNaN(h) && h >= 49) tipoAccion = 'notificar';\n  }\n  if (tipoAccion) results.push({ json: {\n    telefono, nombre: contact.name || dc.nombre_cliente || 'cliente', tipoAccion,\n    canal: 'telegram', telegramConversationId: conv.id, datosCalificacionActuales: dc\n  } });\n}\nreturn results;\n"
       },
       "id": "2f08aeac-7fa5-48b5-9ad2-8a177e0ca547",
       "name": "🔧 Procesar Follow-ups",
@@ -235,7 +235,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
             }
           ]
         },
@@ -290,7 +290,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
             },
             {
               "name": "Content-Type",
@@ -834,7 +834,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
             }
           ]
         },
@@ -889,7 +889,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
             },
             {
               "name": "Content-Type",
@@ -1069,7 +1069,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
             },
             {
               "name": "Accept",
@@ -1143,7 +1143,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
             },
             {
               "name": "Content-Type",
@@ -1297,7 +1297,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
             },
             {
               "name": "Content-Type",
@@ -1334,7 +1334,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' }) }}",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
         "options": {}
       }
     },
@@ -1455,7 +1455,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
             },
             {
               "name": "Content-Type",
@@ -1591,7 +1591,7 @@
           "conditions": [
             {
               "id": "8c4cd583-50fe-46f3-b544-dde859d42fe9",
-              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -1620,6 +1620,117 @@
         "options": {
           "responseCode": 403
         }
+      }
+    },
+    {
+      "id": "fu-tg-list",
+      "name": "📋 Obtener Conversaciones Telegram (Follow-up)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -204,
+        512
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://apigrowth.mdarthurdigital.com/api/telegram/conversations",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Follow-up)').item.json.access_token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "fu-canal-if",
+      "name": "🔀 ¿Canal Telegram? (Follow-up)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -152,
+        672
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "fu-canal-cond",
+              "leftValue": "={{ $('🔧 Procesar Follow-ups').item.json.canal }}",
+              "rightValue": "telegram",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "fu-tg-send",
+      "name": "📤 Enviar Follow-up Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        48,
+        492
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/telegram/reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('🔐 G54: Login (Follow-up)').first().json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ conversation_id: $('🔧 Procesar Follow-ups').item.json.telegramConversationId, message: $('📊 Config para Follow-up').item.json.msg_followup_24h }) }}",
+        "options": {}
       }
     }
   ],
@@ -2106,7 +2217,7 @@
       "main": [
         [
           {
-            "node": "📤 Enviar Follow-up WhatsApp",
+            "node": "🔀 ¿Canal Telegram? (Follow-up)",
             "type": "main",
             "index": 0
           }
@@ -2178,7 +2289,7 @@
       "main": [
         [
           {
-            "node": "🔧 Procesar Follow-ups",
+            "node": "📋 Obtener Conversaciones Telegram (Follow-up)",
             "type": "main",
             "index": 0
           }
@@ -2269,6 +2380,46 @@
           }
         ]
       ]
+    },
+    "📋 Obtener Conversaciones Telegram (Follow-up)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Procesar Follow-ups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Canal Telegram? (Follow-up)": {
+      "main": [
+        [
+          {
+            "node": "📤 Enviar Follow-up Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📤 Enviar Follow-up WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Enviar Follow-up Telegram": {
+      "main": [
+        [
+          {
+            "node": "🔄 Marcar 23h Enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -2332,7 +2483,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "7fd2badb-e8ac-4e06-8927-acc63d96862f",
+    "versionId": "85e757cd-a5f2-4f0f-89d7-6757456b7af1",
     "workflowId": "zAhV8gEsXD8dCrXq",
     "nodes": [
       {
@@ -2538,7 +2689,7 @@
       },
       {
         "parameters": {
-          "jsCode": "// Reconstrucción de base (27-ago): el fetch original (GET /api/n8n/companies/{id}/wa/leads\n// con hours_inactive/status) nunca funcionó — ese endpoint exige un teléfono puntual, no\n// sirve para listar. Reemplazado por /api/whatsapp/conversations (confirmado funcionando).\n// El estado \"ya se mandó/ya se notificó\" tampoco se podía trackear por clasificacion (se\n// descarta en silencio) — ahora vive en datos_calificacion, con lectura-mezcla-escritura\n// para no borrar los datos reales que Marco ya recolectó del cliente.\nconst cData = $('📋 Obtener Conversaciones (Follow-up)').first().json;\nconst conversaciones = (cData && cData.data) || [];\n\nconst boardData = $('📋 Obtener CRM Board (Follow-up)').first().json;\n// Mapa wa_contact_id -> etapa real del negocio, para no auto-seguir leads que ya\n// gestiona una persona (negociación en curso, cerrado o perdido).\nconst etapaPorContacto = {};\nif (boardData && typeof boardData === 'object') {\n  for (const [etapa, deals] of Object.entries(boardData)) {\n    if (!Array.isArray(deals)) continue;\n    for (const d of deals) {\n      if (d.wa_contact_id) etapaPorContacto[d.wa_contact_id] = etapa;\n    }\n  }\n}\nconst etapasBloqueadas = ['closed', 'lost', 'negotiation', 'proposal'];\n\nconst now = new Date();\nconst results = [];\n\nfor (const conv of conversaciones) {\n  const contact = conv.contact || {};\n\n  // Solo teléfonos reales de WhatsApp (dígitos). Los contactos con ID sintético\n  // (tg_..., fb_..., de Telegram/Facebook guardados por el relevo) no son números\n  // de WhatsApp: mandarles un follow-up por la Cloud API siempre rebota (fix 28-sep).\n  const telLimpio = (contact.phone || '').replace(/^\\+/, '');\n  if (!/^\\d{8,15}$/.test(telLimpio)) continue;\n  const waContactId = conv.wa_contact_id || contact.id;\n  const etapa = etapaPorContacto[waContactId];\n  if (etapa && etapasBloqueadas.includes(etapa)) continue;\n\n  const dc = contact.datos_calificacion || {};\n  if (dc.followup_notificado) continue; // ya se hizo todo lo posible con este lead\n\n  const ultimaInteraccion = new Date(conv.updated_at || conv.created_at);\n  const horasDiff = (now - ultimaInteraccion) / (1000 * 60 * 60);\n\n  let tipoAccion = null;\n  if (!dc.followup_23h_enviado_en && horasDiff >= 23) {\n    tipoAccion = 'enviar_23h';\n  } else if (dc.followup_23h_enviado_en) {\n    const horasDesdeEnvio = (now - new Date(dc.followup_23h_enviado_en)) / (1000 * 60 * 60);\n    // ~49h desde el envío del primer follow-up ≈ 72h reales desde el silencio original.\n    if (!isNaN(horasDesdeEnvio) && horasDesdeEnvio >= 49) tipoAccion = 'notificar';\n  }\n\n  if (tipoAccion) {\n    results.push({ json: {\n      telefono: (contact.phone || '').replace(/^\\+/, ''),\n      nombre: contact.name || 'cliente',\n      tipoAccion,\n      datosCalificacionActuales: dc\n    } });\n  }\n}\nreturn results;\n"
+          "jsCode": "// Reconstrucción de base (27-ago): el fetch original (GET /api/n8n/companies/{id}/wa/leads\n// con hours_inactive/status) nunca funcionó — ese endpoint exige un teléfono puntual, no\n// sirve para listar. Reemplazado por /api/whatsapp/conversations (confirmado funcionando).\n// El estado \"ya se mandó/ya se notificó\" tampoco se podía trackear por clasificacion (se\n// descarta en silencio) — ahora vive en datos_calificacion, con lectura-mezcla-escritura\n// para no borrar los datos reales que Marco ya recolectó del cliente.\nconst cData = $('📋 Obtener Conversaciones (Follow-up)').first().json;\nconst conversaciones = (cData && cData.data) || [];\n\nconst boardData = $('📋 Obtener CRM Board (Follow-up)').first().json;\n// Mapa wa_contact_id -> etapa real del negocio, para no auto-seguir leads que ya\n// gestiona una persona (negociación en curso, cerrado o perdido).\nconst etapaPorContacto = {};\nif (boardData && typeof boardData === 'object') {\n  for (const [etapa, deals] of Object.entries(boardData)) {\n    if (!Array.isArray(deals)) continue;\n    for (const d of deals) {\n      if (d.wa_contact_id) etapaPorContacto[d.wa_contact_id] = etapa;\n    }\n  }\n}\nconst etapasBloqueadas = ['closed', 'lost', 'negotiation', 'proposal'];\n\n// Seguimiento automático solo en el \"caso claro\" (decisión 05-oct): el lead dejó la\n// conversación pendiente y nadie más se está ocupando. Quedan para el botón manual de la\n// Ficha 360: los escalados a un especialista y las consultas (tipo_flujo \"consulta\").\nconst esCasoClaro = dc => !dc.escalada_enviada && dc.tipo_flujo !== 'consulta';\n\nconst now = new Date();\nconst results = [];\n\nfor (const conv of conversaciones) {\n  const contact = conv.contact || {};\n\n  // Solo teléfonos reales de WhatsApp (dígitos). Los contactos con ID sintético\n  // (tg_..., fb_..., de Telegram/Facebook guardados por el relevo) no son números\n  // de WhatsApp: mandarles un follow-up por la Cloud API siempre rebota (fix 28-sep).\n  const telLimpio = (contact.phone || '').replace(/^\\+/, '');\n  if (!/^\\d{8,15}$/.test(telLimpio)) continue;\n  const waContactId = conv.wa_contact_id || contact.id;\n  const etapa = etapaPorContacto[waContactId];\n  if (etapa && etapasBloqueadas.includes(etapa)) continue;\n\n  const dc = contact.datos_calificacion || {};\n  if (dc.followup_notificado) continue; // ya se hizo todo lo posible con este lead\n  if (!esCasoClaro(dc)) continue;\n\n  const ultimaInteraccion = new Date(conv.updated_at || conv.created_at);\n  const horasDiff = (now - ultimaInteraccion) / (1000 * 60 * 60);\n\n  let tipoAccion = null;\n  if (!dc.followup_23h_enviado_en && horasDiff >= 23) {\n    tipoAccion = 'enviar_23h';\n  } else if (dc.followup_23h_enviado_en) {\n    const horasDesdeEnvio = (now - new Date(dc.followup_23h_enviado_en)) / (1000 * 60 * 60);\n    // ~49h desde el envío del primer follow-up ≈ 72h reales desde el silencio original.\n    if (!isNaN(horasDesdeEnvio) && horasDesdeEnvio >= 49) tipoAccion = 'notificar';\n  }\n\n  if (tipoAccion) {\n    results.push({ json: {\n      telefono: (contact.phone || '').replace(/^\\+/, ''),\n      nombre: contact.name || 'cliente',\n      tipoAccion,\n      canal: 'whatsapp',\n      datosCalificacionActuales: dc\n    } });\n  }\n}\n\n// ── Telegram (05-oct) ───────────────────────────────────────────────────────\n// Telegram no tiene ventana de 24h. La hora de la última actividad sale de la conversación\n// de Telegram de G54 (la del relevo); los datos y las marcas (followup_23h_enviado_en,\n// followup_notificado, escalada_enviada, tipo_flujo) viven en el registro que Marco guarda\n// como \"+tg_<chat>\", el mismo que actualizan los nodos \"Marcar\".\nconst tgData = (() => { try { return $('📋 Obtener Conversaciones Telegram (Follow-up)').first().json; } catch (e) { return {}; } })();\nconst tgConvs = (tgData && Array.isArray(tgData.data)) ? tgData.data : [];\nconst dcPorTelefono = {};\nfor (const conv of conversaciones) {\n  const ph = String((conv.contact && conv.contact.phone) || '').replace(/^\\+/, '');\n  if (/^tg_\\d+$/.test(ph)) dcPorTelefono[ph] = conv.contact.datos_calificacion || {};\n}\nfor (const conv of tgConvs) {\n  const contact = conv.contact || {};\n  const chatId = String(contact.external_id || '').replace(/\\D/g, '');\n  if (!chatId) continue;\n  const telefono = 'tg_' + chatId;\n  const etapa = etapaPorContacto[conv.wa_contact_id || contact.id];\n  if (etapa && etapasBloqueadas.includes(etapa)) continue;\n  const dc = dcPorTelefono[telefono] || {};\n  if (dc.followup_notificado || !esCasoClaro(dc)) continue;\n  const horasDiff = (now - new Date(conv.updated_at || conv.created_at)) / 36e5;\n  let tipoAccion = null;\n  if (!dc.followup_23h_enviado_en && horasDiff >= 23) tipoAccion = 'enviar_23h';\n  else if (dc.followup_23h_enviado_en) {\n    const h = (now - new Date(dc.followup_23h_enviado_en)) / 36e5;\n    if (!isNaN(h) && h >= 49) tipoAccion = 'notificar';\n  }\n  if (tipoAccion) results.push({ json: {\n    telefono, nombre: contact.name || dc.nombre_cliente || 'cliente', tipoAccion,\n    canal: 'telegram', telegramConversationId: conv.id, datosCalificacionActuales: dc\n  } });\n}\nreturn results;\n"
         },
         "id": "2f08aeac-7fa5-48b5-9ad2-8a177e0ca547",
         "name": "🔧 Procesar Follow-ups",
@@ -2558,7 +2709,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
               }
             ]
           },
@@ -2613,7 +2764,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
               },
               {
                 "name": "Content-Type",
@@ -3157,7 +3308,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
               }
             ]
           },
@@ -3212,7 +3363,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
               },
               {
                 "name": "Content-Type",
@@ -3392,7 +3543,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
               },
               {
                 "name": "Accept",
@@ -3466,7 +3617,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
               },
               {
                 "name": "Content-Type",
@@ -3620,7 +3771,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
               },
               {
                 "name": "Content-Type",
@@ -3657,7 +3808,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' }) }}",
+          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
           "options": {}
         }
       },
@@ -3778,7 +3929,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
               },
               {
                 "name": "Content-Type",
@@ -3914,7 +4065,7 @@
             "conditions": [
               {
                 "id": "8c4cd583-50fe-46f3-b544-dde859d42fe9",
-                "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
+                "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
                 "rightValue": "",
                 "operator": {
                   "type": "boolean",
@@ -3943,6 +4094,117 @@
           "options": {
             "responseCode": 403
           }
+        }
+      },
+      {
+        "id": "fu-tg-list",
+        "name": "📋 Obtener Conversaciones Telegram (Follow-up)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -204,
+          512
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "https://apigrowth.mdarthurdigital.com/api/telegram/conversations",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "per_page",
+                "value": "100"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login (Follow-up)').item.json.access_token }}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "alwaysOutputData": true
+      },
+      {
+        "id": "fu-canal-if",
+        "name": "🔀 ¿Canal Telegram? (Follow-up)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          -152,
+          672
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "fu-canal-cond",
+                "leftValue": "={{ $('🔧 Procesar Follow-ups').item.json.canal }}",
+                "rightValue": "telegram",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "fu-tg-send",
+        "name": "📤 Enviar Follow-up Telegram",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          48,
+          492
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://apigrowth.mdarthurdigital.com/api/telegram/reply",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $('🔐 G54: Login (Follow-up)').first().json.access_token }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ conversation_id: $('🔧 Procesar Follow-ups').item.json.telegramConversationId, message: $('📊 Config para Follow-up').item.json.msg_followup_24h }) }}",
+          "options": {}
         }
       }
     ],
@@ -4429,7 +4691,7 @@
         "main": [
           [
             {
-              "node": "📤 Enviar Follow-up WhatsApp",
+              "node": "🔀 ¿Canal Telegram? (Follow-up)",
               "type": "main",
               "index": 0
             }
@@ -4501,7 +4763,7 @@
         "main": [
           [
             {
-              "node": "🔧 Procesar Follow-ups",
+              "node": "📋 Obtener Conversaciones Telegram (Follow-up)",
               "type": "main",
               "index": 0
             }
@@ -4592,6 +4854,46 @@
             }
           ]
         ]
+      },
+      "📋 Obtener Conversaciones Telegram (Follow-up)": {
+        "main": [
+          [
+            {
+              "node": "🔧 Procesar Follow-ups",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Canal Telegram? (Follow-up)": {
+        "main": [
+          [
+            {
+              "node": "📤 Enviar Follow-up Telegram",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📤 Enviar Follow-up WhatsApp",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📤 Enviar Follow-up Telegram": {
+        "main": [
+          [
+            {
+              "node": "🔄 Marcar 23h Enviado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -4599,16 +4901,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-10-01T15:50:45.823Z",
-    "updatedAt": "2026-10-01T15:50:45.823Z",
+    "createdAt": "2026-10-05T19:21:07.625Z",
+    "updatedAt": "2026-10-05T19:21:07.625Z",
     "workflowPublishHistory": [
       {
-        "id": 3313,
+        "id": 3325,
         "workflowId": "zAhV8gEsXD8dCrXq",
-        "versionId": "7fd2badb-e8ac-4e06-8927-acc63d96862f",
+        "versionId": "85e757cd-a5f2-4f0f-89d7-6757456b7af1",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-10-01T15:50:46.162Z"
+        "createdAt": "2026-10-05T19:21:08.012Z"
       }
     ]
   }
