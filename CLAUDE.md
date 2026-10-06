@@ -2099,6 +2099,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ---
 
+### 2026-10-06 (Martes)
+
+Arranqué con la rutina de G54: todo en orden y nada nuevo del Éxodo; de paso confirmé que el post de Facebook del 8 de agosto ya no tiene el link técnico. Después retomé Bubble. En la tarjeta del número quedó primero mi número propio y el de EE. UU. como puente. La llamada de prueba no salía por dos errores nuestros (el interruptor activado sin guardar y una pieza de código que no existía); los corregimos y por fin el agente me llamó y conversamos, la primera llamada real de punta a punta. Le sacamos el "(demo)" a los negocios, las llamadas de prueba ahora aparecen marcadas en Registros y sin crear clientes, y las listas se actualizan solas.
+
+Luego armamos el desvío: una ventana con los códigos según el país del número, opción de teléfono fijo, una guía completa en Ayuda y una comprobación automática que llama a mi número y avisa si funciona. Al probarlo con mi línea, la operadora aceptó el código pero no completó la llamada hacia el número de EE. UU. De paso encontramos un error grave nuestro de ayer: ninguna llamada entrante era atendida, porque el agente y la llamada se quedaban esperándose; ya quedó corregido.
+
+Con eso investigamos números locales en Telnyx: abrí la cuenta, saqué la API y los precios reales mostraron que un número de Nicaragua cuesta $60 al mes, igual que Honduras, mientras EE. UU., Canadá, Europa y Brasil cuestan entre $0.50 y $3. La conclusión es que hoy Bubble es rentable sobre todo en EE. UU. (el mercado hispano), y que para Nicaragua hace falta una empresa local y negociar con Claro o Tigo. Lo dejé en un documento para Don Marc con las decisiones que necesitamos, y también respondí la consulta del ingeniero sobre anuncios pagados desde G54: se puede, pero no está construido. Ahí cerré el día, con todo subido a los dos repositorios.
+
+---
+
 ### 2026-10-05 (Lunes)
 
 Arranqué con la rutina de siempre: todo en orden en G54, el reporte semanal corrió solo por primera vez con la cadena nueva y confirmé que el seguimiento automático de 23 horas sale solo. Aprobé ideas y dejé la semana programada con 13 posts, dos por día hasta el domingo; borré un post de prueba y entendí por qué algunas imágenes salen con letras deformes (el modo de texto de los canales). Probé a Marco por Telegram: la foto funcionó, pero la nota de voz no, porque la transcripción estaba rota desde el 30 de septiembre, y quedó arreglada. Con el seguimiento de leads salió algo serio: al probar el botón sobre mi trato de Telegram se mandó un WhatsApp a un número ajeno de Montreal, que por suerte no se entregó. Ahora el botón usa el canal real del contacto, funciona también por Telegram (lo probé y me llegó) y el automático solo le escribe a quien dejó la conversación pendiente, no a los que ya pasaron a un especialista ni a las consultas.
