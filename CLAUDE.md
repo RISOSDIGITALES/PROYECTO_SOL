@@ -2101,6 +2101,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ---
 
+### 2026-10-07 (Miércoles)
+
+Arranqué con la rutina de siempre en G54, todo en orden, y pedí el documento de números por país para Don Marc en HTML. Con la decisión de enfocar Bubble al 100 % en EE. UU. y Canadá me puse a refinar el inglés: encontramos que la voz del agente no cambiaba de idioma cuando el cliente hablaba en inglés y que nada le pedía a la IA contestar en inglés. Lo arreglamos junto con los códigos de desvío según la operadora (Verizon, AT&T, T-Mobile), y después tradujimos el panel completo con varios agentes en paralelo, sumando elegir el idioma al crear la cuenta y el resumen de llamadas, los correos y el SMS en inglés.
+
+Al ver la pantalla de ingreso me di cuenta de que no había forma de crear una cuenta nueva, así que armamos el registro de agencias con confirmación de correo y una cuenta de prueba que no puede gastar en Twilio hasta que Growth54 la apruebe. Me registré con mi correo y llegaron los dos correos, así que pedí darles el estilo de Bubble, hacer más sencillo agregar productos y arreglar que el formulario de crear negocio se me cerró solo (se cerraba con cualquier clic afuera). El selector de idioma también quedó como burbujas de verdad.
+
+Por la tarde pedí una revisión completa de Bubble: el código está bien conectado y los servicios responden, pero el agente de voz no está corriendo ni el sistema publicado, el saldo de Twilio está en 9.91 dólares y con el plan gratis de Groq solo alcanza para unas cinco llamadas al día (el plan pago cuesta menos de un centavo por llamada, eso lo comunico yo al equipo). Revisamos el inglés de punta a punta y las instrucciones del agente ahora van en inglés cuando atiende en inglés; arreglamos los puntos de facilidad de uso (zona horaria y voz al crear un negocio, la ficha en pestañas, borrar negocios, errores visibles y llamadas perdidas registradas), y cerré construyendo el correo de escalación con el estilo de Bubble, que avisa cuando el agente no puede resolver algo. Quedó todo subido; falta la llamada de prueba en inglés para escucharlo de verdad.
+
+---
+
 ### 2026-10-06 (Martes)
 
 Arranqué con la rutina de G54: todo en orden y nada nuevo del Éxodo; de paso confirmé que el post de Facebook del 8 de agosto ya no tiene el link técnico. Después retomé Bubble. En la tarjeta del número quedó primero mi número propio y el de EE. UU. como puente. La llamada de prueba no salía por dos errores nuestros (el interruptor activado sin guardar y una pieza de código que no existía); los corregimos y por fin el agente me llamó y conversamos, la primera llamada real de punta a punta. Le sacamos el "(demo)" a los negocios, las llamadas de prueba ahora aparecen marcadas en Registros y sin crear clientes, y las listas se actualizan solas.
