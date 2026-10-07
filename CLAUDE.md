@@ -1533,6 +1533,8 @@ Con eso en mano, el 4to pendiente (configurar Twilio) resultó ser algo que se p
 
 407. **Corte de día 06-oct — diagnóstico limpio** (2026-10-06): 30 workflows (29 activos), 0 errores desde el 30-sep (el último sigue siendo la prueba propia del Procesador de Medios). Vigía cada 2h exacto, Gmail Monitor y el seguimiento automático de Marco cada hora sin errores (primeras corridas con la rama nueva de Telegram del ítem 406). Distribution publicó el #192 (Facebook) el 05-oct 18:00 con ID de Meta; quedan 12 posts programados del 06 al 11-oct, con sus 12 alarmas exactas en espera, ninguno con el link crudo de n8n. Orison sin posts. G54 sano; docs y bundle del panel (`index-DQOw7Ddq.js`) sin cambios.
 
+408. **Corte de día 07-oct — diagnóstico limpio** (2026-10-07): 30 workflows (29 activos), 0 errores desde el 30-sep. Desde el 06-oct: Marco, Gmail Monitor y Vigía sin errores; Distribution corrió 2 veces el 06-oct (14:00 y 18:00) sin errores. Quedan 10 posts programados del 07 al 11-oct, con sus 10 alarmas exactas en espera, todos con imagen y sin el link crudo de n8n. G54 sano; docs y bundle del panel (`index-DQOw7Ddq.js`) sin cambios. A pedido de la usuaria, el documento de números por país para Don Marc (06-oct) se rehízo en HTML: `Bubble-54/docs/Bubble54-numeros-por-pais-2026-10-06.html` (mismo contenido que el Word, con el gráfico de precios por país redibujado).
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
