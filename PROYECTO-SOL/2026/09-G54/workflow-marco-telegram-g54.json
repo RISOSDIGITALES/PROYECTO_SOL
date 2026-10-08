@@ -3,12 +3,12 @@
   "name": "CE Telegram Engine — Marco",
   "description": null,
   "active": true,
-  "activeVersionId": "0c89f1ef-07fe-4091-8070-40ed52308476",
+  "activeVersionId": "506f647f-ce80-4e3a-9ade-ccb952846604",
   "createdAt": "2026-07-23T15:36:21.963Z",
-  "updatedAt": "2026-10-05T19:17:57.122Z",
+  "updatedAt": "2026-10-08T16:34:12.115Z",
   "isArchived": false,
-  "versionId": "0c89f1ef-07fe-4091-8070-40ed52308476",
-  "versionCounter": 34,
+  "versionId": "506f647f-ce80-4e3a-9ade-ccb952846604",
+  "versionCounter": 35,
   "sourceWorkflowId": null,
   "triggerCount": 2,
   "nodes": [
@@ -700,7 +700,7 @@
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst body = $json.body || $json;\nconst chatId = body.chat_id;\nconst texto = (body.texto || '').trim();\nconst conversationId = body.conversation_id;\nconst contactId = body.contact_id;\nconst nombreContacto = body.nombre || '';\nconst empresaId = body.empresa_id;\n\n// Adjuntos (G54, 29-sep): fotos, notas de voz, audio y documentos llegan con\n// file_id + tipo_adjunto (+ mime_type en voice/audio/document). `texto` es el pie, si vino.\nconst fileId = body.file_id || null;\nconst tipoAdjunto = body.tipo_adjunto || null;\nlet tipoMensaje = 'text', mimeType = null;\nif (fileId) {\n  if (tipoAdjunto === 'photo') { tipoMensaje = 'image'; mimeType = 'image/jpeg'; }\n  else if (tipoAdjunto === 'voice') { tipoMensaje = 'audio'; mimeType = body.mime_type || 'audio/ogg'; }\n  else if (tipoAdjunto === 'audio') { tipoMensaje = 'audio'; mimeType = body.mime_type || 'audio/mpeg'; }\n  else { mimeType = body.mime_type || 'application/octet-stream'; tipoMensaje = mimeType === 'application/pdf' ? 'pdf' : 'document'; }\n}\n\nif (!chatId || (!texto && !fileId)) {\n  return [{ json: { skip: true, skipReason: 'sin_chat_id_ni_contenido' } }];\n}\n\n// Deduplicación — G54 no manda un ID único de mensaje en el relevo, se arma con chat+conversación+contenido+ventana de tiempo\nif (!staticData.seenTgMessageIds) staticData.seenTgMessageIds = {};\nconst now = Date.now();\nObject.keys(staticData.seenTgMessageIds).forEach(id => {\n  if (now - staticData.seenTgMessageIds[id] > 60000) delete staticData.seenTgMessageIds[id];\n});\nconst dedupeKey = `${chatId}_${conversationId}_${fileId || ''}_${texto}`;\nif (staticData.seenTgMessageIds[dedupeKey]) {\n  return [{ json: { skip: true, skipReason: 'duplicate_message' } }];\n}\nstaticData.seenTgMessageIds[dedupeKey] = now;\n\nreturn [{\n  json: {\n    telefono: 'tg_' + chatId,\n    chatId,\n    texto,\n    nombreContacto,\n    conversationId,\n    contactId,\n    empresaId,\n    tipoMensaje,\n    fileId,\n    mimeType,\n    skip: false\n  }\n}];"
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst body = $json.body || $json;\nconst chatId = body.chat_id;\nlet texto = (body.texto || '').trim();\n\n// Código de origen de una publicación (Content AI lo pone en cada post: \"P\" + id de la idea,\n// ej. \"Hola P456\"). Se saca del texto que lee la IA y se guarda aparte para anotarlo en el CRM.\nlet origenPost = null;\n{\n  const mO = String(texto || '').match(/(?:^|[\\s\\[(])P-?(\\d{2,7})(?=$|[\\s\\])\\.,!?])/i);\n  if (mO) {\n    origenPost = Number(mO[1]);\n    texto = String(texto).replace(/[\\[(]?\\bP-?\\d{2,7}\\b[\\])]?[,.:;]?/i, ' ').replace(/\\s+/g, ' ').replace(/^\\s*[,.:;]\\s*/, '').trim() || 'Hola';\n  }\n}\nconst conversationId = body.conversation_id;\nconst contactId = body.contact_id;\nconst nombreContacto = body.nombre || '';\nconst empresaId = body.empresa_id;\n\n// Adjuntos (G54, 29-sep): fotos, notas de voz, audio y documentos llegan con\n// file_id + tipo_adjunto (+ mime_type en voice/audio/document). `texto` es el pie, si vino.\nconst fileId = body.file_id || null;\nconst tipoAdjunto = body.tipo_adjunto || null;\nlet tipoMensaje = 'text', mimeType = null;\nif (fileId) {\n  if (tipoAdjunto === 'photo') { tipoMensaje = 'image'; mimeType = 'image/jpeg'; }\n  else if (tipoAdjunto === 'voice') { tipoMensaje = 'audio'; mimeType = body.mime_type || 'audio/ogg'; }\n  else if (tipoAdjunto === 'audio') { tipoMensaje = 'audio'; mimeType = body.mime_type || 'audio/mpeg'; }\n  else { mimeType = body.mime_type || 'application/octet-stream'; tipoMensaje = mimeType === 'application/pdf' ? 'pdf' : 'document'; }\n}\n\nif (!chatId || (!texto && !fileId)) {\n  return [{ json: { skip: true, skipReason: 'sin_chat_id_ni_contenido' } }];\n}\n\n// Deduplicación — G54 no manda un ID único de mensaje en el relevo, se arma con chat+conversación+contenido+ventana de tiempo\nif (!staticData.seenTgMessageIds) staticData.seenTgMessageIds = {};\nconst now = Date.now();\nObject.keys(staticData.seenTgMessageIds).forEach(id => {\n  if (now - staticData.seenTgMessageIds[id] > 60000) delete staticData.seenTgMessageIds[id];\n});\nconst dedupeKey = `${chatId}_${conversationId}_${fileId || ''}_${texto}`;\nif (staticData.seenTgMessageIds[dedupeKey]) {\n  return [{ json: { skip: true, skipReason: 'duplicate_message' } }];\n}\nstaticData.seenTgMessageIds[dedupeKey] = now;\n\nreturn [{\n  json: {\n    telefono: 'tg_' + chatId,\n    chatId,\n    texto,\n    nombreContacto,\n    conversationId,\n    contactId,\n    empresaId,\n    tipoMensaje,\n    fileId,\n    mimeType,\n    origenPost,\n    skip: false\n  }\n}];"
       }
     },
     {
@@ -760,7 +760,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' }) }}",
         "options": {}
       }
     },
@@ -855,7 +855,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Accept",
@@ -877,7 +877,7 @@
       ],
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const dealResp = $json.deal || {};\nconst dealId = dealResp.id || null;\n\nlet contenido = null;\ntry {\n  const armado = $('📝 Armar Mensaje Final').item.json;\n  const clasificacion = armado.clasificacion || '';\n  if (clasificacion === 'Caliente') {\n    contenido = 'Marco (Telegram): cliente acepto cotizacion, clasificado como lead caliente.';\n  } else if (clasificacion === 'Consulta') {\n    contenido = 'Marco (Telegram): consulta escalada a un especialista.';\n  }\n} catch (e) { /* si no se puede leer, no se loggea nada */ }\n\nreturn [{ json: { dealId, contenido, deberiaLoggear: !!(dealId && contenido) } }];"
+        "jsCode": "const dealResp = $json.deal || {};\nconst dealId = dealResp.id || null;\n\nconst partes = [];\ntry {\n  const origenPost = $('🔧 Extraer Mensaje (Relevo G54)').first().json.origenPost;\n  if (origenPost) partes.push('Origen: llegó desde la publicación P' + origenPost + ' (idea ' + origenPost + ').');\n} catch (e) { /* sin código de origen */ }\nlet contenido = null;\ntry {\n  const armado = $('📝 Armar Mensaje Final').item.json;\n  const clasificacion = armado.clasificacion || '';\n  if (clasificacion === 'Caliente') {\n    contenido = 'Marco (Telegram): cliente acepto cotizacion, clasificado como lead caliente.';\n  } else if (clasificacion === 'Consulta') {\n    contenido = 'Marco (Telegram): consulta escalada a un especialista.';\n  }\n} catch (e) { /* si no se puede leer, no se loggea nada */ }\n\nif (contenido) partes.push(contenido);\ncontenido = partes.length ? partes.join(' ') : null;\nreturn [{ json: { dealId, contenido, deberiaLoggear: !!(dealId && contenido) } }];"
       }
     },
     {
@@ -930,7 +930,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Content-Type",
@@ -1025,7 +1025,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Accept",
@@ -1109,7 +1109,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: \"master@growth54.local\", password: \"REDACTED_G54_MASTER_PASSWORD\" }) }}",
+        "jsonBody": "={{ JSON.stringify({ email: \"master@growth54.local\", password: \"<G54_MASTER_PASSWORD — ver .secrets.local.md>\" }) }}",
         "options": {}
       },
       "id": "login-manual-tg",
@@ -1233,7 +1233,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Content-Type",
@@ -1305,7 +1305,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Content-Type",
@@ -1341,7 +1341,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Accept",
@@ -1461,7 +1461,7 @@
           "conditions": [
             {
               "id": "2b533fb9-9df7-4564-95cf-9fa84e9b004b",
-              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -2186,7 +2186,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "0c89f1ef-07fe-4091-8070-40ed52308476",
+    "versionId": "506f647f-ce80-4e3a-9ade-ccb952846604",
     "workflowId": "HaSG63Q9C2tGOLH3",
     "nodes": [
       {
@@ -2877,7 +2877,7 @@
         ],
         "parameters": {
           "mode": "runOnceForAllItems",
-          "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst body = $json.body || $json;\nconst chatId = body.chat_id;\nconst texto = (body.texto || '').trim();\nconst conversationId = body.conversation_id;\nconst contactId = body.contact_id;\nconst nombreContacto = body.nombre || '';\nconst empresaId = body.empresa_id;\n\n// Adjuntos (G54, 29-sep): fotos, notas de voz, audio y documentos llegan con\n// file_id + tipo_adjunto (+ mime_type en voice/audio/document). `texto` es el pie, si vino.\nconst fileId = body.file_id || null;\nconst tipoAdjunto = body.tipo_adjunto || null;\nlet tipoMensaje = 'text', mimeType = null;\nif (fileId) {\n  if (tipoAdjunto === 'photo') { tipoMensaje = 'image'; mimeType = 'image/jpeg'; }\n  else if (tipoAdjunto === 'voice') { tipoMensaje = 'audio'; mimeType = body.mime_type || 'audio/ogg'; }\n  else if (tipoAdjunto === 'audio') { tipoMensaje = 'audio'; mimeType = body.mime_type || 'audio/mpeg'; }\n  else { mimeType = body.mime_type || 'application/octet-stream'; tipoMensaje = mimeType === 'application/pdf' ? 'pdf' : 'document'; }\n}\n\nif (!chatId || (!texto && !fileId)) {\n  return [{ json: { skip: true, skipReason: 'sin_chat_id_ni_contenido' } }];\n}\n\n// Deduplicación — G54 no manda un ID único de mensaje en el relevo, se arma con chat+conversación+contenido+ventana de tiempo\nif (!staticData.seenTgMessageIds) staticData.seenTgMessageIds = {};\nconst now = Date.now();\nObject.keys(staticData.seenTgMessageIds).forEach(id => {\n  if (now - staticData.seenTgMessageIds[id] > 60000) delete staticData.seenTgMessageIds[id];\n});\nconst dedupeKey = `${chatId}_${conversationId}_${fileId || ''}_${texto}`;\nif (staticData.seenTgMessageIds[dedupeKey]) {\n  return [{ json: { skip: true, skipReason: 'duplicate_message' } }];\n}\nstaticData.seenTgMessageIds[dedupeKey] = now;\n\nreturn [{\n  json: {\n    telefono: 'tg_' + chatId,\n    chatId,\n    texto,\n    nombreContacto,\n    conversationId,\n    contactId,\n    empresaId,\n    tipoMensaje,\n    fileId,\n    mimeType,\n    skip: false\n  }\n}];"
+          "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst body = $json.body || $json;\nconst chatId = body.chat_id;\nlet texto = (body.texto || '').trim();\n\n// Código de origen de una publicación (Content AI lo pone en cada post: \"P\" + id de la idea,\n// ej. \"Hola P456\"). Se saca del texto que lee la IA y se guarda aparte para anotarlo en el CRM.\nlet origenPost = null;\n{\n  const mO = String(texto || '').match(/(?:^|[\\s\\[(])P-?(\\d{2,7})(?=$|[\\s\\])\\.,!?])/i);\n  if (mO) {\n    origenPost = Number(mO[1]);\n    texto = String(texto).replace(/[\\[(]?\\bP-?\\d{2,7}\\b[\\])]?[,.:;]?/i, ' ').replace(/\\s+/g, ' ').replace(/^\\s*[,.:;]\\s*/, '').trim() || 'Hola';\n  }\n}\nconst conversationId = body.conversation_id;\nconst contactId = body.contact_id;\nconst nombreContacto = body.nombre || '';\nconst empresaId = body.empresa_id;\n\n// Adjuntos (G54, 29-sep): fotos, notas de voz, audio y documentos llegan con\n// file_id + tipo_adjunto (+ mime_type en voice/audio/document). `texto` es el pie, si vino.\nconst fileId = body.file_id || null;\nconst tipoAdjunto = body.tipo_adjunto || null;\nlet tipoMensaje = 'text', mimeType = null;\nif (fileId) {\n  if (tipoAdjunto === 'photo') { tipoMensaje = 'image'; mimeType = 'image/jpeg'; }\n  else if (tipoAdjunto === 'voice') { tipoMensaje = 'audio'; mimeType = body.mime_type || 'audio/ogg'; }\n  else if (tipoAdjunto === 'audio') { tipoMensaje = 'audio'; mimeType = body.mime_type || 'audio/mpeg'; }\n  else { mimeType = body.mime_type || 'application/octet-stream'; tipoMensaje = mimeType === 'application/pdf' ? 'pdf' : 'document'; }\n}\n\nif (!chatId || (!texto && !fileId)) {\n  return [{ json: { skip: true, skipReason: 'sin_chat_id_ni_contenido' } }];\n}\n\n// Deduplicación — G54 no manda un ID único de mensaje en el relevo, se arma con chat+conversación+contenido+ventana de tiempo\nif (!staticData.seenTgMessageIds) staticData.seenTgMessageIds = {};\nconst now = Date.now();\nObject.keys(staticData.seenTgMessageIds).forEach(id => {\n  if (now - staticData.seenTgMessageIds[id] > 60000) delete staticData.seenTgMessageIds[id];\n});\nconst dedupeKey = `${chatId}_${conversationId}_${fileId || ''}_${texto}`;\nif (staticData.seenTgMessageIds[dedupeKey]) {\n  return [{ json: { skip: true, skipReason: 'duplicate_message' } }];\n}\nstaticData.seenTgMessageIds[dedupeKey] = now;\n\nreturn [{\n  json: {\n    telefono: 'tg_' + chatId,\n    chatId,\n    texto,\n    nombreContacto,\n    conversationId,\n    contactId,\n    empresaId,\n    tipoMensaje,\n    fileId,\n    mimeType,\n    origenPost,\n    skip: false\n  }\n}];"
         }
       },
       {
@@ -2937,7 +2937,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
+          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' }) }}",
           "options": {}
         }
       },
@@ -3032,7 +3032,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Accept",
@@ -3054,7 +3054,7 @@
         ],
         "typeVersion": 2,
         "parameters": {
-          "jsCode": "const dealResp = $json.deal || {};\nconst dealId = dealResp.id || null;\n\nlet contenido = null;\ntry {\n  const armado = $('📝 Armar Mensaje Final').item.json;\n  const clasificacion = armado.clasificacion || '';\n  if (clasificacion === 'Caliente') {\n    contenido = 'Marco (Telegram): cliente acepto cotizacion, clasificado como lead caliente.';\n  } else if (clasificacion === 'Consulta') {\n    contenido = 'Marco (Telegram): consulta escalada a un especialista.';\n  }\n} catch (e) { /* si no se puede leer, no se loggea nada */ }\n\nreturn [{ json: { dealId, contenido, deberiaLoggear: !!(dealId && contenido) } }];"
+          "jsCode": "const dealResp = $json.deal || {};\nconst dealId = dealResp.id || null;\n\nconst partes = [];\ntry {\n  const origenPost = $('🔧 Extraer Mensaje (Relevo G54)').first().json.origenPost;\n  if (origenPost) partes.push('Origen: llegó desde la publicación P' + origenPost + ' (idea ' + origenPost + ').');\n} catch (e) { /* sin código de origen */ }\nlet contenido = null;\ntry {\n  const armado = $('📝 Armar Mensaje Final').item.json;\n  const clasificacion = armado.clasificacion || '';\n  if (clasificacion === 'Caliente') {\n    contenido = 'Marco (Telegram): cliente acepto cotizacion, clasificado como lead caliente.';\n  } else if (clasificacion === 'Consulta') {\n    contenido = 'Marco (Telegram): consulta escalada a un especialista.';\n  }\n} catch (e) { /* si no se puede leer, no se loggea nada */ }\n\nif (contenido) partes.push(contenido);\ncontenido = partes.length ? partes.join(' ') : null;\nreturn [{ json: { dealId, contenido, deberiaLoggear: !!(dealId && contenido) } }];"
         }
       },
       {
@@ -3107,7 +3107,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Content-Type",
@@ -3202,7 +3202,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Accept",
@@ -3286,7 +3286,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ email: \"master@growth54.local\", password: \"REDACTED_G54_MASTER_PASSWORD\" }) }}",
+          "jsonBody": "={{ JSON.stringify({ email: \"master@growth54.local\", password: \"<G54_MASTER_PASSWORD — ver .secrets.local.md>\" }) }}",
           "options": {}
         },
         "id": "login-manual-tg",
@@ -3410,7 +3410,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Content-Type",
@@ -3482,7 +3482,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Content-Type",
@@ -3518,7 +3518,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Accept",
@@ -3638,7 +3638,7 @@
             "conditions": [
               {
                 "id": "2b533fb9-9df7-4564-95cf-9fa84e9b004b",
-                "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
+                "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
                 "rightValue": "",
                 "operator": {
                   "type": "boolean",
@@ -4324,16 +4324,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-10-05T19:17:57.127Z",
-    "updatedAt": "2026-10-05T19:17:57.127Z",
+    "createdAt": "2026-10-08T16:34:12.118Z",
+    "updatedAt": "2026-10-08T16:34:12.118Z",
     "workflowPublishHistory": [
       {
-        "id": 3323,
+        "id": 3350,
         "workflowId": "HaSG63Q9C2tGOLH3",
-        "versionId": "0c89f1ef-07fe-4091-8070-40ed52308476",
+        "versionId": "506f647f-ce80-4e3a-9ade-ccb952846604",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-10-05T19:17:57.462Z"
+        "createdAt": "2026-10-08T16:34:12.498Z"
       }
     ]
   }
