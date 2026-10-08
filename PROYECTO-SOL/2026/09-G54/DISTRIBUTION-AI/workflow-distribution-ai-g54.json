@@ -3,12 +3,12 @@
   "name": "📢 Distribution AI — RRSS G54 v1.0",
   "description": null,
   "active": true,
-  "activeVersionId": "c3ad7a1e-d68e-4c4e-88e4-6adc03cec99d",
+  "activeVersionId": "d4abbc5d-67cc-418c-aa3e-45164dd52dbb",
   "createdAt": "2026-06-25T16:00:34.918Z",
-  "updatedAt": "2026-09-30T13:44:39.248Z",
+  "updatedAt": "2026-10-08T15:42:13.985Z",
   "isArchived": false,
-  "versionId": "c3ad7a1e-d68e-4c4e-88e4-6adc03cec99d",
-  "versionCounter": 90,
+  "versionId": "d4abbc5d-67cc-418c-aa3e-45164dd52dbb",
+  "versionCounter": 92,
   "sourceWorkflowId": null,
   "triggerCount": 1,
   "nodes": [
@@ -620,7 +620,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst config = $('⚙️ Config Distribution').item.json;\nconst tokens = $('🏢 Aplicar Tokens Empresa').item.json;\nconst webhookBody = $('🌐 Webhook: Publicar Post').item?.json?.body || {};\n\nconst resultados = [];\nfor (const item of items) {\n  const p = item.json;\n  const f = p.fields || p;\n\n  const post_id        = p.id || p.record_id || '';\n  const copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || '';\n  const copy_instagram = f.copy_instagram || f.Post_Instagram_EN || '';\n  const copy_linkedin  = f.copy_linkedin || '';\n  const imagen_url     = f.imagen_url     || f.imagen || '';\n  const video_url      = f.video_url      || p.video_url || '';\n  const platform       = f.platform || p.platform || 'Facebook';\n  const content_type   = webhookBody.content_type || f.content_type || p.content_type || 'post';\n  const isLinkedIn     = platform === 'LinkedIn';\n  const isInstagram    = platform === 'Instagram';\n\n  const FB_ACCESS_TOKEN = tokens.FB_ACCESS_TOKEN || p.access_token || '';\n  const FB_PAGE_ID = p.fb_page_id || p.page_id || config.FB_PAGE_ID || '';\n  const IG_USER_ID = p.instagram_account_id || tokens.IG_USER_ID || '';\n\n  // to-publish ya resuelve esto por post, en los mismos campos genéricos que usa para FB —\n  // page_id/access_token, según la plataforma del post — sin necesitar ningún mapa ni endpoint\n  // aparte. Confirmado en vivo el 11-ago con un post real de LinkedIn.\n  const LINKEDIN_ACCESS_TOKEN = isLinkedIn ? (p.access_token || '') : '';\n  const LINKEDIN_ORGANIZATION_ID = isLinkedIn ? (p.page_id || p.organization_id || '') : '';\n\n  // Instagram -- algunas cuentas quedan migradas a 'Instagram API with Instagram\n  // Login' (token con prefijo IGAA) que nunca funciona contra graph.facebook.com\n  // ni con el instagram_account_id de G54 (ID del viejo esquema ligado a la Página\n  // de FB) -- confirmado 18-sep con Crating Express. Se resuelve en vivo con /me\n  // (sin hardcodear ningún ID por empresa); si la cuenta sigue en el esquema viejo\n  // (FB-linked), esta llamada falla limpio y cae al comportamiento de siempre.\n  let IG_API_HOST = 'https://graph.facebook.com';\n  let IG_PUBLISH_ID = IG_USER_ID;\n  if (isInstagram && IG_USER_ID && FB_ACCESS_TOKEN) {\n    try {\n      const meRes = await this.helpers.httpRequest({\n        method: 'GET',\n        url: 'https://graph.instagram.com/v19.0/me',\n        qs: { fields: 'id', access_token: FB_ACCESS_TOKEN },\n        json: true\n      });\n      if (meRes && meRes.id) {\n        IG_API_HOST = 'https://graph.instagram.com';\n        IG_PUBLISH_ID = meRes.id;\n      }\n    } catch (e) {\n      // se queda con el fallback de siempre: graph.facebook.com + IG_USER_ID\n    }\n  }\n\n  resultados.push({ json: {\n    post_id, copy_facebook, copy_instagram, copy_linkedin, imagen_url, video_url,\n    has_image: !!imagen_url, has_video: !!video_url, platform, content_type,\n    FB_ACCESS_TOKEN, FB_PAGE_ID, IG_USER_ID, IG_API_HOST, IG_PUBLISH_ID,\n    LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORGANIZATION_ID\n  } });\n}\nreturn resultados;"
+        "jsCode": "const items = $input.all();\nconst config = $('⚙️ Config Distribution').item.json;\nconst tokens = $('🏢 Aplicar Tokens Empresa').item.json;\nconst webhookBody = $('🌐 Webhook: Publicar Post').item?.json?.body || {};\n\nconst resultados = [];\nfor (const item of items) {\n  const p = item.json;\n  const f = p.fields || p;\n\n  const post_id        = p.id || p.record_id || '';\n  const copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || '';\n  const copy_instagram = f.copy_instagram || f.Post_Instagram_EN || '';\n  const copy_linkedin  = f.copy_linkedin || '';\n  const imagen_url     = f.imagen_url     || f.imagen || '';\n  const video_url      = f.video_url      || p.video_url || '';\n  const platform       = f.platform || p.platform || 'Facebook';\n  // G54 no tiene un campo de tipo de contenido en el post: un post con video_url en Facebook o Instagram\n  // es un Reel. Sin esto, un video adjunto nunca tomaba la rama de Reel (la alarma solo manda post_id)\n  // y se publicaba como imagen/texto. LinkedIn no tiene rama de Reel, así que ahí no se deriva.\n  const content_type   = webhookBody.content_type || f.content_type || p.content_type\n    || ((video_url && platform !== 'LinkedIn') ? 'reel' : 'post');\n  const isLinkedIn     = platform === 'LinkedIn';\n  const isInstagram    = platform === 'Instagram';\n\n  const FB_ACCESS_TOKEN = tokens.FB_ACCESS_TOKEN || p.access_token || '';\n  const FB_PAGE_ID = p.fb_page_id || p.page_id || config.FB_PAGE_ID || '';\n  const IG_USER_ID = p.instagram_account_id || tokens.IG_USER_ID || '';\n\n  // to-publish ya resuelve esto por post, en los mismos campos genéricos que usa para FB —\n  // page_id/access_token, según la plataforma del post — sin necesitar ningún mapa ni endpoint\n  // aparte. Confirmado en vivo el 11-ago con un post real de LinkedIn.\n  const LINKEDIN_ACCESS_TOKEN = isLinkedIn ? (p.access_token || '') : '';\n  const LINKEDIN_ORGANIZATION_ID = isLinkedIn ? (p.page_id || p.organization_id || '') : '';\n\n  // Instagram -- algunas cuentas quedan migradas a 'Instagram API with Instagram\n  // Login' (token con prefijo IGAA) que nunca funciona contra graph.facebook.com\n  // ni con el instagram_account_id de G54 (ID del viejo esquema ligado a la Página\n  // de FB) -- confirmado 18-sep con Crating Express. Se resuelve en vivo con /me\n  // (sin hardcodear ningún ID por empresa); si la cuenta sigue en el esquema viejo\n  // (FB-linked), esta llamada falla limpio y cae al comportamiento de siempre.\n  let IG_API_HOST = 'https://graph.facebook.com';\n  let IG_PUBLISH_ID = IG_USER_ID;\n  if (isInstagram && IG_USER_ID && FB_ACCESS_TOKEN) {\n    try {\n      const meRes = await this.helpers.httpRequest({\n        method: 'GET',\n        url: 'https://graph.instagram.com/v19.0/me',\n        qs: { fields: 'id', access_token: FB_ACCESS_TOKEN },\n        json: true\n      });\n      if (meRes && meRes.id) {\n        IG_API_HOST = 'https://graph.instagram.com';\n        IG_PUBLISH_ID = meRes.id;\n      }\n    } catch (e) {\n      // se queda con el fallback de siempre: graph.facebook.com + IG_USER_ID\n    }\n  }\n\n\n  // --- Revisión antes de publicar (2026-10-01) ---\n  // Frena el post (vuelve a \"aprobado\" con el motivo, no se publica) si:\n  // 1) trae el link técnico de n8n (pasó con 9 posts publicados en sep);\n  // 2) está casi vacío (pasó el 26-sep: un post de solo \"→ link\");\n  // 3) el texto está en otro idioma que el tema (pasó el 16-sep: tema en\n  //    español, texto en inglés). Solo frena si los dos idiomas son claros.\n  const textoPost = isLinkedIn ? copy_linkedin : (isInstagram ? copy_instagram : copy_facebook);\n  const _idioma = (t) => {\n    const s = ' ' + String(t || '').toLowerCase().replace(/[^a-záéíóúñü¿¡' ]+/g, ' ') + ' ';\n    const es = (s.match(/ (el|la|los|las|de|del|que|para|con|por|una|un|tu|tus|su|sus|es|en|y|más|cómo|qué) /g) || []).length\n      + (/[ñáéíóú¿¡]/.test(s) ? 3 : 0);\n    const en = (s.match(/ (the|and|for|with|your|you|of|to|is|are|how|what|our|in|on|from|this|that) /g) || []).length;\n    if (es >= 3 && es >= en * 2) return 'es';\n    if (en >= 3 && en >= es * 2) return 'en';\n    return '';\n  };\n  let bloqueo_motivo = '';\n  if (/n8n\\.mdarthurdigital\\.com/i.test(textoPost)) {\n    bloqueo_motivo = 'el texto trae el link técnico de n8n (n8n.mdarthurdigital.com) en vez del link real de la empresa';\n  } else {\n    const sinRelleno = String(textoPost || '')\n      .replace(/https?:\\/\\/\\S+/g, '')\n      .replace(/#\\S+/g, '')\n      .replace(/[^\\p{L}\\p{N}]+/gu, '');\n    if (sinRelleno.length < 40) {\n      bloqueo_motivo = 'el texto está vacío o casi vacío (' + sinRelleno.length + ' letras sin contar links ni hashtags)';\n    } else {\n      const idiomaTema = _idioma([f.tema || p.tema, f.hook || p.hook].join(' '));\n      const idiomaTexto = _idioma(textoPost);\n      if (idiomaTema && idiomaTexto && idiomaTema !== idiomaTexto) {\n        bloqueo_motivo = 'el texto está en ' + (idiomaTexto === 'es' ? 'español' : 'inglés') +\n          ' pero el tema está en ' + (idiomaTema === 'es' ? 'español' : 'inglés');\n      }\n    }\n  }\n\n  resultados.push({ json: {\n    post_id, copy_facebook, copy_instagram, copy_linkedin, imagen_url, video_url,\n    has_image: !!imagen_url, has_video: !!video_url, platform, content_type,\n    FB_ACCESS_TOKEN, FB_PAGE_ID, IG_USER_ID, IG_API_HOST, IG_PUBLISH_ID,\n    LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORGANIZATION_ID, bloqueo_motivo\n  } });\n}\nreturn resultados;"
       },
       "id": "prep-post",
       "name": "🔧 Preparar Datos Post",
@@ -1485,7 +1485,7 @@
     },
     {
       "parameters": {
-        "jsCode": "let errorMessage = 'Fallo desconocido al publicar';\ntry {\n  if ($('🔀 Rutear: Plataforma + Imagen').isExecuted && String($json.platform || '').toLowerCase() === 'instagram' && !$json.imagen_url) {\n    errorMessage = 'Instagram requiere imagen: el post no tiene imagen_url';\n  } else if ($('⚠️ IG: Skip (container falló)').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'Instagram: falló la creación del container — ' + detail;\n  } else if ($('📘 FB: Publicar con Foto').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'Facebook: falló la publicación con foto — ' + detail;\n  } else if ($('📘 FB: Publicar Solo Texto').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'Facebook: falló la publicación — ' + detail;\n  } else if ($('💼 LinkedIn: Publicar').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló la publicación — ' + detail;\n  } else if ($('🖼️ LinkedIn: Registrar Upload').isExecuted && !$('📥 LinkedIn: Descargar Imagen').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló al registrar la subida de la imagen — ' + detail;\n  } else if ($('📥 LinkedIn: Descargar Imagen').isExecuted && !$('📤 LinkedIn: Subir Imagen').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló al descargar la imagen del post — ' + detail;\n  } else if ($('📤 LinkedIn: Subir Imagen').isExecuted && !$('💼 LinkedIn: Publicar (con imagen)').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló al subir la imagen — ' + detail;\n  } else if ($('💼 LinkedIn: Publicar (con imagen)').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló la publicación con imagen — ' + detail;\n  }\n} catch (e) {\n  errorMessage = 'Error al construir el mensaje de fallo: ' + e.message;\n}\nreturn [{ json: { errorMessage } }];\n"
+        "jsCode": "let errorMessage = 'Fallo desconocido al publicar';\ntry {\n  if ($json.bloqueo_motivo) {\n    errorMessage = 'No se publicó (revisión antes de publicar): ' + $json.bloqueo_motivo + '. Corregilo en el editor y volvé a programarlo.';\n  } else if ($('🔀 Rutear: Plataforma + Imagen').isExecuted && String($json.platform || '').toLowerCase() === 'instagram' && !$json.imagen_url) {\n    errorMessage = 'Instagram requiere imagen: el post no tiene imagen_url';\n  } else if ($('⚠️ IG: Skip (container falló)').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'Instagram: falló la creación del container — ' + detail;\n  } else if ($('📘 FB: Publicar con Foto').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'Facebook: falló la publicación con foto — ' + detail;\n  } else if ($('📘 FB: Publicar Solo Texto').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'Facebook: falló la publicación — ' + detail;\n  } else if ($('💼 LinkedIn: Publicar').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló la publicación — ' + detail;\n  } else if ($('🖼️ LinkedIn: Registrar Upload').isExecuted && !$('📥 LinkedIn: Descargar Imagen').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló al registrar la subida de la imagen — ' + detail;\n  } else if ($('📥 LinkedIn: Descargar Imagen').isExecuted && !$('📤 LinkedIn: Subir Imagen').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló al descargar la imagen del post — ' + detail;\n  } else if ($('📤 LinkedIn: Subir Imagen').isExecuted && !$('💼 LinkedIn: Publicar (con imagen)').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló al subir la imagen — ' + detail;\n  } else if ($('💼 LinkedIn: Publicar (con imagen)').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló la publicación con imagen — ' + detail;\n  }\n} catch (e) {\n  errorMessage = 'Error al construir el mensaje de fallo: ' + e.message;\n}\nreturn [{ json: { errorMessage } }];\n"
       },
       "id": "b2c3d4e5-f6a7-4890-b1c2-d3e4f5a6b7c8",
       "name": "🔧 Preparar Mensaje de Error",
@@ -1707,6 +1707,39 @@
             }
           }
         }
+      }
+    },
+    {
+      "id": "4d261b8c-bf9e-4eaa-bcc6-dd9a731ad189",
+      "name": "🛡️ ¿Pasa la revisión?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        824,
+        36
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "06edb0da-f881-4b10-9853-0622047797c3",
+              "leftValue": "={{ $json.bloqueo_motivo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
       }
     }
   ],
@@ -2030,7 +2063,7 @@
       "main": [
         [
           {
-            "node": "🔀 Rutear: Plataforma + Imagen",
+            "node": "🛡️ ¿Pasa la revisión?",
             "type": "main",
             "index": 0
           }
@@ -2269,6 +2302,24 @@
           }
         ]
       ]
+    },
+    "🛡️ ¿Pasa la revisión?": {
+      "main": [
+        [
+          {
+            "node": "🔀 Rutear: Plataforma + Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Preparar Mensaje de Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -2312,7 +2363,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "c3ad7a1e-d68e-4c4e-88e4-6adc03cec99d",
+    "versionId": "d4abbc5d-67cc-418c-aa3e-45164dd52dbb",
     "workflowId": "IRCoya91PKPjpT1T",
     "nodes": [
       {
@@ -2923,7 +2974,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const items = $input.all();\nconst config = $('⚙️ Config Distribution').item.json;\nconst tokens = $('🏢 Aplicar Tokens Empresa').item.json;\nconst webhookBody = $('🌐 Webhook: Publicar Post').item?.json?.body || {};\n\nconst resultados = [];\nfor (const item of items) {\n  const p = item.json;\n  const f = p.fields || p;\n\n  const post_id        = p.id || p.record_id || '';\n  const copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || '';\n  const copy_instagram = f.copy_instagram || f.Post_Instagram_EN || '';\n  const copy_linkedin  = f.copy_linkedin || '';\n  const imagen_url     = f.imagen_url     || f.imagen || '';\n  const video_url      = f.video_url      || p.video_url || '';\n  const platform       = f.platform || p.platform || 'Facebook';\n  const content_type   = webhookBody.content_type || f.content_type || p.content_type || 'post';\n  const isLinkedIn     = platform === 'LinkedIn';\n  const isInstagram    = platform === 'Instagram';\n\n  const FB_ACCESS_TOKEN = tokens.FB_ACCESS_TOKEN || p.access_token || '';\n  const FB_PAGE_ID = p.fb_page_id || p.page_id || config.FB_PAGE_ID || '';\n  const IG_USER_ID = p.instagram_account_id || tokens.IG_USER_ID || '';\n\n  // to-publish ya resuelve esto por post, en los mismos campos genéricos que usa para FB —\n  // page_id/access_token, según la plataforma del post — sin necesitar ningún mapa ni endpoint\n  // aparte. Confirmado en vivo el 11-ago con un post real de LinkedIn.\n  const LINKEDIN_ACCESS_TOKEN = isLinkedIn ? (p.access_token || '') : '';\n  const LINKEDIN_ORGANIZATION_ID = isLinkedIn ? (p.page_id || p.organization_id || '') : '';\n\n  // Instagram -- algunas cuentas quedan migradas a 'Instagram API with Instagram\n  // Login' (token con prefijo IGAA) que nunca funciona contra graph.facebook.com\n  // ni con el instagram_account_id de G54 (ID del viejo esquema ligado a la Página\n  // de FB) -- confirmado 18-sep con Crating Express. Se resuelve en vivo con /me\n  // (sin hardcodear ningún ID por empresa); si la cuenta sigue en el esquema viejo\n  // (FB-linked), esta llamada falla limpio y cae al comportamiento de siempre.\n  let IG_API_HOST = 'https://graph.facebook.com';\n  let IG_PUBLISH_ID = IG_USER_ID;\n  if (isInstagram && IG_USER_ID && FB_ACCESS_TOKEN) {\n    try {\n      const meRes = await this.helpers.httpRequest({\n        method: 'GET',\n        url: 'https://graph.instagram.com/v19.0/me',\n        qs: { fields: 'id', access_token: FB_ACCESS_TOKEN },\n        json: true\n      });\n      if (meRes && meRes.id) {\n        IG_API_HOST = 'https://graph.instagram.com';\n        IG_PUBLISH_ID = meRes.id;\n      }\n    } catch (e) {\n      // se queda con el fallback de siempre: graph.facebook.com + IG_USER_ID\n    }\n  }\n\n  resultados.push({ json: {\n    post_id, copy_facebook, copy_instagram, copy_linkedin, imagen_url, video_url,\n    has_image: !!imagen_url, has_video: !!video_url, platform, content_type,\n    FB_ACCESS_TOKEN, FB_PAGE_ID, IG_USER_ID, IG_API_HOST, IG_PUBLISH_ID,\n    LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORGANIZATION_ID\n  } });\n}\nreturn resultados;"
+          "jsCode": "const items = $input.all();\nconst config = $('⚙️ Config Distribution').item.json;\nconst tokens = $('🏢 Aplicar Tokens Empresa').item.json;\nconst webhookBody = $('🌐 Webhook: Publicar Post').item?.json?.body || {};\n\nconst resultados = [];\nfor (const item of items) {\n  const p = item.json;\n  const f = p.fields || p;\n\n  const post_id        = p.id || p.record_id || '';\n  const copy_facebook  = f.copy_facebook  || f.Post_Facebook_EN || '';\n  const copy_instagram = f.copy_instagram || f.Post_Instagram_EN || '';\n  const copy_linkedin  = f.copy_linkedin || '';\n  const imagen_url     = f.imagen_url     || f.imagen || '';\n  const video_url      = f.video_url      || p.video_url || '';\n  const platform       = f.platform || p.platform || 'Facebook';\n  // G54 no tiene un campo de tipo de contenido en el post: un post con video_url en Facebook o Instagram\n  // es un Reel. Sin esto, un video adjunto nunca tomaba la rama de Reel (la alarma solo manda post_id)\n  // y se publicaba como imagen/texto. LinkedIn no tiene rama de Reel, así que ahí no se deriva.\n  const content_type   = webhookBody.content_type || f.content_type || p.content_type\n    || ((video_url && platform !== 'LinkedIn') ? 'reel' : 'post');\n  const isLinkedIn     = platform === 'LinkedIn';\n  const isInstagram    = platform === 'Instagram';\n\n  const FB_ACCESS_TOKEN = tokens.FB_ACCESS_TOKEN || p.access_token || '';\n  const FB_PAGE_ID = p.fb_page_id || p.page_id || config.FB_PAGE_ID || '';\n  const IG_USER_ID = p.instagram_account_id || tokens.IG_USER_ID || '';\n\n  // to-publish ya resuelve esto por post, en los mismos campos genéricos que usa para FB —\n  // page_id/access_token, según la plataforma del post — sin necesitar ningún mapa ni endpoint\n  // aparte. Confirmado en vivo el 11-ago con un post real de LinkedIn.\n  const LINKEDIN_ACCESS_TOKEN = isLinkedIn ? (p.access_token || '') : '';\n  const LINKEDIN_ORGANIZATION_ID = isLinkedIn ? (p.page_id || p.organization_id || '') : '';\n\n  // Instagram -- algunas cuentas quedan migradas a 'Instagram API with Instagram\n  // Login' (token con prefijo IGAA) que nunca funciona contra graph.facebook.com\n  // ni con el instagram_account_id de G54 (ID del viejo esquema ligado a la Página\n  // de FB) -- confirmado 18-sep con Crating Express. Se resuelve en vivo con /me\n  // (sin hardcodear ningún ID por empresa); si la cuenta sigue en el esquema viejo\n  // (FB-linked), esta llamada falla limpio y cae al comportamiento de siempre.\n  let IG_API_HOST = 'https://graph.facebook.com';\n  let IG_PUBLISH_ID = IG_USER_ID;\n  if (isInstagram && IG_USER_ID && FB_ACCESS_TOKEN) {\n    try {\n      const meRes = await this.helpers.httpRequest({\n        method: 'GET',\n        url: 'https://graph.instagram.com/v19.0/me',\n        qs: { fields: 'id', access_token: FB_ACCESS_TOKEN },\n        json: true\n      });\n      if (meRes && meRes.id) {\n        IG_API_HOST = 'https://graph.instagram.com';\n        IG_PUBLISH_ID = meRes.id;\n      }\n    } catch (e) {\n      // se queda con el fallback de siempre: graph.facebook.com + IG_USER_ID\n    }\n  }\n\n\n  // --- Revisión antes de publicar (2026-10-01) ---\n  // Frena el post (vuelve a \"aprobado\" con el motivo, no se publica) si:\n  // 1) trae el link técnico de n8n (pasó con 9 posts publicados en sep);\n  // 2) está casi vacío (pasó el 26-sep: un post de solo \"→ link\");\n  // 3) el texto está en otro idioma que el tema (pasó el 16-sep: tema en\n  //    español, texto en inglés). Solo frena si los dos idiomas son claros.\n  const textoPost = isLinkedIn ? copy_linkedin : (isInstagram ? copy_instagram : copy_facebook);\n  const _idioma = (t) => {\n    const s = ' ' + String(t || '').toLowerCase().replace(/[^a-záéíóúñü¿¡' ]+/g, ' ') + ' ';\n    const es = (s.match(/ (el|la|los|las|de|del|que|para|con|por|una|un|tu|tus|su|sus|es|en|y|más|cómo|qué) /g) || []).length\n      + (/[ñáéíóú¿¡]/.test(s) ? 3 : 0);\n    const en = (s.match(/ (the|and|for|with|your|you|of|to|is|are|how|what|our|in|on|from|this|that) /g) || []).length;\n    if (es >= 3 && es >= en * 2) return 'es';\n    if (en >= 3 && en >= es * 2) return 'en';\n    return '';\n  };\n  let bloqueo_motivo = '';\n  if (/n8n\\.mdarthurdigital\\.com/i.test(textoPost)) {\n    bloqueo_motivo = 'el texto trae el link técnico de n8n (n8n.mdarthurdigital.com) en vez del link real de la empresa';\n  } else {\n    const sinRelleno = String(textoPost || '')\n      .replace(/https?:\\/\\/\\S+/g, '')\n      .replace(/#\\S+/g, '')\n      .replace(/[^\\p{L}\\p{N}]+/gu, '');\n    if (sinRelleno.length < 40) {\n      bloqueo_motivo = 'el texto está vacío o casi vacío (' + sinRelleno.length + ' letras sin contar links ni hashtags)';\n    } else {\n      const idiomaTema = _idioma([f.tema || p.tema, f.hook || p.hook].join(' '));\n      const idiomaTexto = _idioma(textoPost);\n      if (idiomaTema && idiomaTexto && idiomaTema !== idiomaTexto) {\n        bloqueo_motivo = 'el texto está en ' + (idiomaTexto === 'es' ? 'español' : 'inglés') +\n          ' pero el tema está en ' + (idiomaTema === 'es' ? 'español' : 'inglés');\n      }\n    }\n  }\n\n  resultados.push({ json: {\n    post_id, copy_facebook, copy_instagram, copy_linkedin, imagen_url, video_url,\n    has_image: !!imagen_url, has_video: !!video_url, platform, content_type,\n    FB_ACCESS_TOKEN, FB_PAGE_ID, IG_USER_ID, IG_API_HOST, IG_PUBLISH_ID,\n    LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORGANIZATION_ID, bloqueo_motivo\n  } });\n}\nreturn resultados;"
         },
         "id": "prep-post",
         "name": "🔧 Preparar Datos Post",
@@ -3788,7 +3839,7 @@
       },
       {
         "parameters": {
-          "jsCode": "let errorMessage = 'Fallo desconocido al publicar';\ntry {\n  if ($('🔀 Rutear: Plataforma + Imagen').isExecuted && String($json.platform || '').toLowerCase() === 'instagram' && !$json.imagen_url) {\n    errorMessage = 'Instagram requiere imagen: el post no tiene imagen_url';\n  } else if ($('⚠️ IG: Skip (container falló)').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'Instagram: falló la creación del container — ' + detail;\n  } else if ($('📘 FB: Publicar con Foto').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'Facebook: falló la publicación con foto — ' + detail;\n  } else if ($('📘 FB: Publicar Solo Texto').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'Facebook: falló la publicación — ' + detail;\n  } else if ($('💼 LinkedIn: Publicar').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló la publicación — ' + detail;\n  } else if ($('🖼️ LinkedIn: Registrar Upload').isExecuted && !$('📥 LinkedIn: Descargar Imagen').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló al registrar la subida de la imagen — ' + detail;\n  } else if ($('📥 LinkedIn: Descargar Imagen').isExecuted && !$('📤 LinkedIn: Subir Imagen').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló al descargar la imagen del post — ' + detail;\n  } else if ($('📤 LinkedIn: Subir Imagen').isExecuted && !$('💼 LinkedIn: Publicar (con imagen)').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló al subir la imagen — ' + detail;\n  } else if ($('💼 LinkedIn: Publicar (con imagen)').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló la publicación con imagen — ' + detail;\n  }\n} catch (e) {\n  errorMessage = 'Error al construir el mensaje de fallo: ' + e.message;\n}\nreturn [{ json: { errorMessage } }];\n"
+          "jsCode": "let errorMessage = 'Fallo desconocido al publicar';\ntry {\n  if ($json.bloqueo_motivo) {\n    errorMessage = 'No se publicó (revisión antes de publicar): ' + $json.bloqueo_motivo + '. Corregilo en el editor y volvé a programarlo.';\n  } else if ($('🔀 Rutear: Plataforma + Imagen').isExecuted && String($json.platform || '').toLowerCase() === 'instagram' && !$json.imagen_url) {\n    errorMessage = 'Instagram requiere imagen: el post no tiene imagen_url';\n  } else if ($('⚠️ IG: Skip (container falló)').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'Instagram: falló la creación del container — ' + detail;\n  } else if ($('📘 FB: Publicar con Foto').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'Facebook: falló la publicación con foto — ' + detail;\n  } else if ($('📘 FB: Publicar Solo Texto').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'Facebook: falló la publicación — ' + detail;\n  } else if ($('💼 LinkedIn: Publicar').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló la publicación — ' + detail;\n  } else if ($('🖼️ LinkedIn: Registrar Upload').isExecuted && !$('📥 LinkedIn: Descargar Imagen').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló al registrar la subida de la imagen — ' + detail;\n  } else if ($('📥 LinkedIn: Descargar Imagen').isExecuted && !$('📤 LinkedIn: Subir Imagen').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló al descargar la imagen del post — ' + detail;\n  } else if ($('📤 LinkedIn: Subir Imagen').isExecuted && !$('💼 LinkedIn: Publicar (con imagen)').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló al subir la imagen — ' + detail;\n  } else if ($('💼 LinkedIn: Publicar (con imagen)').isExecuted) {\n    const err = $json.error || {};\n    const detail = err.message || (err.error && err.error.message) || JSON.stringify(err) || 'sin detalle';\n    errorMessage = 'LinkedIn: falló la publicación con imagen — ' + detail;\n  }\n} catch (e) {\n  errorMessage = 'Error al construir el mensaje de fallo: ' + e.message;\n}\nreturn [{ json: { errorMessage } }];\n"
         },
         "id": "b2c3d4e5-f6a7-4890-b1c2-d3e4f5a6b7c8",
         "name": "🔧 Preparar Mensaje de Error",
@@ -4010,6 +4061,39 @@
               }
             }
           }
+        }
+      },
+      {
+        "id": "4d261b8c-bf9e-4eaa-bcc6-dd9a731ad189",
+        "name": "🛡️ ¿Pasa la revisión?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          824,
+          36
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "06edb0da-f881-4b10-9853-0622047797c3",
+                "leftValue": "={{ $json.bloqueo_motivo }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "empty",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
         }
       }
     ],
@@ -4333,7 +4417,7 @@
         "main": [
           [
             {
-              "node": "🔀 Rutear: Plataforma + Imagen",
+              "node": "🛡️ ¿Pasa la revisión?",
               "type": "main",
               "index": 0
             }
@@ -4572,6 +4656,24 @@
             }
           ]
         ]
+      },
+      "🛡️ ¿Pasa la revisión?": {
+        "main": [
+          [
+            {
+              "node": "🔀 Rutear: Plataforma + Imagen",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🔧 Preparar Mensaje de Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -4579,16 +4681,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-30T13:44:39.254Z",
-    "updatedAt": "2026-09-30T13:44:39.254Z",
+    "createdAt": "2026-10-08T15:42:13.994Z",
+    "updatedAt": "2026-10-08T15:42:13.994Z",
     "workflowPublishHistory": [
       {
-        "id": 3276,
+        "id": 3340,
         "workflowId": "IRCoya91PKPjpT1T",
-        "versionId": "c3ad7a1e-d68e-4c4e-88e4-6adc03cec99d",
+        "versionId": "d4abbc5d-67cc-418c-aa3e-45164dd52dbb",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-30T13:44:39.552Z"
+        "createdAt": "2026-10-08T15:42:14.396Z"
       }
     ]
   }
