@@ -3,12 +3,12 @@
   "name": "CE WhatsApp Engine — Marco",
   "description": null,
   "active": true,
-  "activeVersionId": "85e757cd-a5f2-4f0f-89d7-6757456b7af1",
+  "activeVersionId": "7ee2d169-6113-4d94-86a3-225ae9d74b9c",
   "createdAt": "2026-05-26T13:46:38.086Z",
-  "updatedAt": "2026-10-05T19:21:07.618Z",
+  "updatedAt": "2026-10-08T16:22:51.325Z",
   "isArchived": false,
-  "versionId": "85e757cd-a5f2-4f0f-89d7-6757456b7af1",
-  "versionCounter": 689,
+  "versionId": "7ee2d169-6113-4d94-86a3-225ae9d74b9c",
+  "versionCounter": 691,
   "sourceWorkflowId": null,
   "triggerCount": 3,
   "nodes": [
@@ -113,7 +113,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst entry = body.entry?.[0];\nconst changes = entry?.changes?.[0];\nconst value = changes?.value;\nconst message = value?.messages?.[0];\n\nif (!message) {\n  return [{ json: { skip: true } }];\n}\n\nconst telefono = message.from;\nconst texto = message.text?.body || '';\nconst messageId = message.id;\nconst timestamp = message.timestamp;\nconst nombreContacto = value?.contacts?.[0]?.profile?.name || '';\nconst tipoMensaje = message.type || 'text';\nlet mediaId = null, mimeType = null, mediaCaption = '';\nif (['image','audio','document','video'].includes(tipoMensaje)) {\n  const mediaObj = message[tipoMensaje] || {};\n  mediaId = mediaObj.id || null;\n  mimeType = mediaObj.mime_type || null;\n  mediaCaption = mediaObj.caption || '';\n}\nconst phoneNumberId = value?.metadata?.phone_number_id || '';\n\n// FIX: Deduplicación — Meta envía el mismo webhook dos veces\n// Usamos static data para recordar messageIds procesados en los últimos 60s\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.seenMessageIds) staticData.seenMessageIds = {};\n\nconst now = Date.now();\n// Limpiar entradas viejas (> 60 segundos)\nObject.keys(staticData.seenMessageIds).forEach(id => {\n  if (now - staticData.seenMessageIds[id] > 60000) delete staticData.seenMessageIds[id];\n});\n\nif (staticData.seenMessageIds[messageId]) {\n  // Mensaje duplicado — ignorar\n  return [{ json: { skip: true, skipReason: 'duplicate_messageId' } }];\n}\nstaticData.seenMessageIds[messageId] = now;\n\nreturn [{\n  json: {\n    telefono,\n    texto,\n    messageId,\n    timestamp,\n    nombreContacto,\n    tipoMensaje,\n    mediaId,\n    mimeType,\n    mediaCaption,\n    phoneNumberId,\n    skip: false\n  }\n}];"
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst entry = body.entry?.[0];\nconst changes = entry?.changes?.[0];\nconst value = changes?.value;\nconst message = value?.messages?.[0];\n\nif (!message) {\n  return [{ json: { skip: true } }];\n}\n\nconst telefono = message.from;\nlet texto = message.text?.body || '';\n// Código de origen de una publicación (Content AI lo pone en cada post: \"P\" + id de la idea,\n// ej. \"Hola P456\"). Se saca del texto que lee la IA y se guarda aparte para anotarlo en el CRM.\nlet origenPost = null;\nconst mOrigen = texto.match(/(?:^|[\\s\\[(])P-?(\\d{2,7})(?=$|[\\s\\])\\.,!?])/i);\nif (mOrigen) {\n  origenPost = Number(mOrigen[1]);\n  texto = texto.replace(/[\\[(]?\\bP-?\\d{2,7}\\b[\\])]?[,.:;]?/i, ' ').replace(/\\s+/g, ' ').replace(/^\\s*[,.:;]\\s*/, '').trim() || 'Hola';\n}\nconst messageId = message.id;\nconst timestamp = message.timestamp;\nconst nombreContacto = value?.contacts?.[0]?.profile?.name || '';\nconst tipoMensaje = message.type || 'text';\nlet mediaId = null, mimeType = null, mediaCaption = '';\nif (['image','audio','document','video'].includes(tipoMensaje)) {\n  const mediaObj = message[tipoMensaje] || {};\n  mediaId = mediaObj.id || null;\n  mimeType = mediaObj.mime_type || null;\n  mediaCaption = mediaObj.caption || '';\n}\nconst phoneNumberId = value?.metadata?.phone_number_id || '';\n\n// FIX: Deduplicación — Meta envía el mismo webhook dos veces\n// Usamos static data para recordar messageIds procesados en los últimos 60s\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.seenMessageIds) staticData.seenMessageIds = {};\n\nconst now = Date.now();\n// Limpiar entradas viejas (> 60 segundos)\nObject.keys(staticData.seenMessageIds).forEach(id => {\n  if (now - staticData.seenMessageIds[id] > 60000) delete staticData.seenMessageIds[id];\n});\n\nif (staticData.seenMessageIds[messageId]) {\n  // Mensaje duplicado — ignorar\n  return [{ json: { skip: true, skipReason: 'duplicate_messageId' } }];\n}\nstaticData.seenMessageIds[messageId] = now;\n\nreturn [{\n  json: {\n    telefono,\n    texto,\n    messageId,\n    timestamp,\n    nombreContacto,\n    tipoMensaje,\n    mediaId,\n    mimeType,\n    mediaCaption,\n    phoneNumberId,\n    origenPost,\n    skip: false\n  }\n}];"
       },
       "id": "a64fe455-0cf0-4a86-8d8c-04671e2d6b01",
       "name": "🔧 Extraer Mensaje y Teléfono",
@@ -235,7 +235,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             }
           ]
         },
@@ -290,7 +290,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Content-Type",
@@ -834,7 +834,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             }
           ]
         },
@@ -889,7 +889,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Content-Type",
@@ -1069,7 +1069,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Accept",
@@ -1090,7 +1090,7 @@
       ],
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const dealResp = $json.deal || {};\nconst dealId = dealResp.id || null;\n\nlet contenido = null;\ntry {\n  const armado = $('📝 Armar Mensaje Final').item.json;\n  const clasificacion = armado.clasificacion || '';\n  if (clasificacion === 'Caliente') {\n    contenido = 'Marco: cliente acepto cotizacion, clasificado como lead caliente.';\n  } else if (clasificacion === 'Consulta') {\n    contenido = 'Marco: consulta escalada a un especialista.';\n  }\n} catch (e) { /* si no se puede leer, no se loggea nada */ }\n\nreturn [{ json: { dealId, contenido, deberiaLoggear: !!(dealId && contenido) } }];"
+        "jsCode": "const dealResp = $json.deal || {};\nconst dealId = dealResp.id || null;\n\nconst partes = [];\n// Origen: el cliente llegó con el código de una publicación (Content AI pone \"P\" + id de la idea\n// en cada post; 1 idea = 1 post). Solo viene en el primer mensaje, así que se anota una sola vez.\n// El código es el id de la idea: el post se encuentra por social_idea_id.\ntry {\n  const origenPost = $('🔧 Extraer Mensaje y Teléfono').first().json.origenPost;\n  if (origenPost) partes.push('Origen: llegó desde la publicación P' + origenPost + ' (idea ' + origenPost + ').');\n} catch (e) { /* sin código de origen */ }\n\ntry {\n  const armado = $('📝 Armar Mensaje Final').item.json;\n  const clasificacion = armado.clasificacion || '';\n  if (clasificacion === 'Caliente') {\n    partes.push('Marco: cliente acepto cotizacion, clasificado como lead caliente.');\n  } else if (clasificacion === 'Consulta') {\n    partes.push('Marco: consulta escalada a un especialista.');\n  }\n} catch (e) { /* si no se puede leer, no se loggea nada */ }\n\nconst contenido = partes.length ? partes.join(' ') : null;\nreturn [{ json: { dealId, contenido, deberiaLoggear: !!(dealId && contenido) } }];"
       }
     },
     {
@@ -1143,7 +1143,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Content-Type",
@@ -1297,7 +1297,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Content-Type",
@@ -1334,7 +1334,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
+        "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' }) }}",
         "options": {}
       }
     },
@@ -1455,7 +1455,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Content-Type",
@@ -1591,7 +1591,7 @@
           "conditions": [
             {
               "id": "8c4cd583-50fe-46f3-b544-dde859d42fe9",
-              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -2440,9 +2440,8 @@
     },
     "global": {
       "seenMessageIds": {
-        "wamid.PRUEBA7e45fa4f3b9d4042945067d7e2bb8432": 1790714198279,
-        "wamid.PRUEBAf6b841bc30f94d00820fc3e550d277be": 1790714214383,
-        "wamid.PRUEBAc19b31c8bc23473b8784ed6a36c54cdd": 1790714230085
+        "wamid.TESTORIGEN1791476523": 1791476524025,
+        "wamid.TESTORIGEN1791476574": 1791476575435
       }
     }
   },
@@ -2483,7 +2482,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "85e757cd-a5f2-4f0f-89d7-6757456b7af1",
+    "versionId": "7ee2d169-6113-4d94-86a3-225ae9d74b9c",
     "workflowId": "zAhV8gEsXD8dCrXq",
     "nodes": [
       {
@@ -2587,7 +2586,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst entry = body.entry?.[0];\nconst changes = entry?.changes?.[0];\nconst value = changes?.value;\nconst message = value?.messages?.[0];\n\nif (!message) {\n  return [{ json: { skip: true } }];\n}\n\nconst telefono = message.from;\nconst texto = message.text?.body || '';\nconst messageId = message.id;\nconst timestamp = message.timestamp;\nconst nombreContacto = value?.contacts?.[0]?.profile?.name || '';\nconst tipoMensaje = message.type || 'text';\nlet mediaId = null, mimeType = null, mediaCaption = '';\nif (['image','audio','document','video'].includes(tipoMensaje)) {\n  const mediaObj = message[tipoMensaje] || {};\n  mediaId = mediaObj.id || null;\n  mimeType = mediaObj.mime_type || null;\n  mediaCaption = mediaObj.caption || '';\n}\nconst phoneNumberId = value?.metadata?.phone_number_id || '';\n\n// FIX: Deduplicación — Meta envía el mismo webhook dos veces\n// Usamos static data para recordar messageIds procesados en los últimos 60s\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.seenMessageIds) staticData.seenMessageIds = {};\n\nconst now = Date.now();\n// Limpiar entradas viejas (> 60 segundos)\nObject.keys(staticData.seenMessageIds).forEach(id => {\n  if (now - staticData.seenMessageIds[id] > 60000) delete staticData.seenMessageIds[id];\n});\n\nif (staticData.seenMessageIds[messageId]) {\n  // Mensaje duplicado — ignorar\n  return [{ json: { skip: true, skipReason: 'duplicate_messageId' } }];\n}\nstaticData.seenMessageIds[messageId] = now;\n\nreturn [{\n  json: {\n    telefono,\n    texto,\n    messageId,\n    timestamp,\n    nombreContacto,\n    tipoMensaje,\n    mediaId,\n    mimeType,\n    mediaCaption,\n    phoneNumberId,\n    skip: false\n  }\n}];"
+          "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst entry = body.entry?.[0];\nconst changes = entry?.changes?.[0];\nconst value = changes?.value;\nconst message = value?.messages?.[0];\n\nif (!message) {\n  return [{ json: { skip: true } }];\n}\n\nconst telefono = message.from;\nlet texto = message.text?.body || '';\n// Código de origen de una publicación (Content AI lo pone en cada post: \"P\" + id de la idea,\n// ej. \"Hola P456\"). Se saca del texto que lee la IA y se guarda aparte para anotarlo en el CRM.\nlet origenPost = null;\nconst mOrigen = texto.match(/(?:^|[\\s\\[(])P-?(\\d{2,7})(?=$|[\\s\\])\\.,!?])/i);\nif (mOrigen) {\n  origenPost = Number(mOrigen[1]);\n  texto = texto.replace(/[\\[(]?\\bP-?\\d{2,7}\\b[\\])]?[,.:;]?/i, ' ').replace(/\\s+/g, ' ').replace(/^\\s*[,.:;]\\s*/, '').trim() || 'Hola';\n}\nconst messageId = message.id;\nconst timestamp = message.timestamp;\nconst nombreContacto = value?.contacts?.[0]?.profile?.name || '';\nconst tipoMensaje = message.type || 'text';\nlet mediaId = null, mimeType = null, mediaCaption = '';\nif (['image','audio','document','video'].includes(tipoMensaje)) {\n  const mediaObj = message[tipoMensaje] || {};\n  mediaId = mediaObj.id || null;\n  mimeType = mediaObj.mime_type || null;\n  mediaCaption = mediaObj.caption || '';\n}\nconst phoneNumberId = value?.metadata?.phone_number_id || '';\n\n// FIX: Deduplicación — Meta envía el mismo webhook dos veces\n// Usamos static data para recordar messageIds procesados en los últimos 60s\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.seenMessageIds) staticData.seenMessageIds = {};\n\nconst now = Date.now();\n// Limpiar entradas viejas (> 60 segundos)\nObject.keys(staticData.seenMessageIds).forEach(id => {\n  if (now - staticData.seenMessageIds[id] > 60000) delete staticData.seenMessageIds[id];\n});\n\nif (staticData.seenMessageIds[messageId]) {\n  // Mensaje duplicado — ignorar\n  return [{ json: { skip: true, skipReason: 'duplicate_messageId' } }];\n}\nstaticData.seenMessageIds[messageId] = now;\n\nreturn [{\n  json: {\n    telefono,\n    texto,\n    messageId,\n    timestamp,\n    nombreContacto,\n    tipoMensaje,\n    mediaId,\n    mimeType,\n    mediaCaption,\n    phoneNumberId,\n    origenPost,\n    skip: false\n  }\n}];"
         },
         "id": "a64fe455-0cf0-4a86-8d8c-04671e2d6b01",
         "name": "🔧 Extraer Mensaje y Teléfono",
@@ -2709,7 +2708,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               }
             ]
           },
@@ -2764,7 +2763,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Content-Type",
@@ -3308,7 +3307,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               }
             ]
           },
@@ -3363,7 +3362,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Content-Type",
@@ -3543,7 +3542,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Accept",
@@ -3564,7 +3563,7 @@
         ],
         "typeVersion": 2,
         "parameters": {
-          "jsCode": "const dealResp = $json.deal || {};\nconst dealId = dealResp.id || null;\n\nlet contenido = null;\ntry {\n  const armado = $('📝 Armar Mensaje Final').item.json;\n  const clasificacion = armado.clasificacion || '';\n  if (clasificacion === 'Caliente') {\n    contenido = 'Marco: cliente acepto cotizacion, clasificado como lead caliente.';\n  } else if (clasificacion === 'Consulta') {\n    contenido = 'Marco: consulta escalada a un especialista.';\n  }\n} catch (e) { /* si no se puede leer, no se loggea nada */ }\n\nreturn [{ json: { dealId, contenido, deberiaLoggear: !!(dealId && contenido) } }];"
+          "jsCode": "const dealResp = $json.deal || {};\nconst dealId = dealResp.id || null;\n\nconst partes = [];\n// Origen: el cliente llegó con el código de una publicación (Content AI pone \"P\" + id de la idea\n// en cada post; 1 idea = 1 post). Solo viene en el primer mensaje, así que se anota una sola vez.\n// El código es el id de la idea: el post se encuentra por social_idea_id.\ntry {\n  const origenPost = $('🔧 Extraer Mensaje y Teléfono').first().json.origenPost;\n  if (origenPost) partes.push('Origen: llegó desde la publicación P' + origenPost + ' (idea ' + origenPost + ').');\n} catch (e) { /* sin código de origen */ }\n\ntry {\n  const armado = $('📝 Armar Mensaje Final').item.json;\n  const clasificacion = armado.clasificacion || '';\n  if (clasificacion === 'Caliente') {\n    partes.push('Marco: cliente acepto cotizacion, clasificado como lead caliente.');\n  } else if (clasificacion === 'Consulta') {\n    partes.push('Marco: consulta escalada a un especialista.');\n  }\n} catch (e) { /* si no se puede leer, no se loggea nada */ }\n\nconst contenido = partes.length ? partes.join(' ') : null;\nreturn [{ json: { dealId, contenido, deberiaLoggear: !!(dealId && contenido) } }];"
         }
       },
       {
@@ -3617,7 +3616,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Content-Type",
@@ -3771,7 +3770,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Content-Type",
@@ -3808,7 +3807,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
+          "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' }) }}",
           "options": {}
         }
       },
@@ -3929,7 +3928,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Content-Type",
@@ -4065,7 +4064,7 @@
             "conditions": [
               {
                 "id": "8c4cd583-50fe-46f3-b544-dde859d42fe9",
-                "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
+                "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
                 "rightValue": "",
                 "operator": {
                   "type": "boolean",
@@ -4901,16 +4900,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-10-05T19:21:07.625Z",
-    "updatedAt": "2026-10-05T19:21:07.625Z",
+    "createdAt": "2026-10-08T16:22:51.330Z",
+    "updatedAt": "2026-10-08T16:22:51.330Z",
     "workflowPublishHistory": [
       {
-        "id": 3325,
+        "id": 3346,
         "workflowId": "zAhV8gEsXD8dCrXq",
-        "versionId": "85e757cd-a5f2-4f0f-89d7-6757456b7af1",
+        "versionId": "7ee2d169-6113-4d94-86a3-225ae9d74b9c",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-10-05T19:21:08.012Z"
+        "createdAt": "2026-10-08T16:22:51.703Z"
       }
     ]
   }
