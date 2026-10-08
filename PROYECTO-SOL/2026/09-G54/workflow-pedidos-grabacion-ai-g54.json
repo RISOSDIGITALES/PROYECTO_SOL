@@ -1,0 +1,607 @@
+{
+  "id": "17mc8CJkKH2qzsdA",
+  "name": "🎥 Pedidos de Grabación AI — G54",
+  "description": null,
+  "active": true,
+  "activeVersionId": "cfd34534-83c1-442a-a62f-81891c61543b",
+  "createdAt": "2026-10-08T16:54:58.580Z",
+  "updatedAt": "2026-10-08T16:54:58.580Z",
+  "isArchived": false,
+  "versionId": "cfd34534-83c1-442a-a62f-81891c61543b",
+  "versionCounter": 1,
+  "sourceWorkflowId": null,
+  "triggerCount": 1,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pedidos-grabacion-g54",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "🔔 Webhook G54 (pedidos-grabacion-g54)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "f6647a71-bee1-44e4-82b0-985fb971da1a",
+      "id": "7c28432c-ce68-4ace-bea7-b4442edeedc1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "f40ba452-93a3-4d15-a6f4-1dc72acfe9ac",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "🔒 ¿Llamada autorizada? (pedidos-grabacion-g54)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "96572df1-51b4-413c-90ba-ce69a503d0ba"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\": false, \"error\": \"no autorizado\"}",
+        "options": {
+          "responseCode": 403
+        }
+      },
+      "name": "⛔ Responder 403 (no autorizado) (pedidos-grabacion-g54)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        200
+      ],
+      "id": "1c413c44-b834-4ce1-972b-236f8e870c8e"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst B = 'https://apigrowth.mdarthurdigital.com';\nconst AGENT = '<G54_AGENT_TOKEN — ver .secrets.local.md>';\nconst http = (o) => this.helpers.httpRequest({ json: true, timeout: 10000, headers: { Accept: 'application/json', ...(o.headers || {}) }, ...o });\nasync function sesion(companyId) {\n  const l = await http({ method: 'POST', url: B + '/api/auth/login', body: { email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' } });\n  await http({ method: 'POST', url: B + '/api/auth/switch-company', body: { company_id: Number(companyId) }, headers: { Authorization: 'Bearer ' + l.access_token } });\n  return l.access_token;\n}\n// Voz de marca guardada por el Strategist en `tono`: \"personalidad · trato: X · idioma: Y\" (ítem 410)\nfunction vozDe(est) {\n  const tono = String(est.tono || '');\n  const trato = (((tono.match(/trato:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\n  const idioma = (((tono.match(/idioma:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\n  const guia = ((((String(est.resumen_estrategico || '')).match(/VOZ DE MARCA:\\s*([\\s\\S]+)$/i) || [])[1]) || '').trim().slice(0, 1000);\n  const idiomaFijo = /^(español|espanol|spanish)/.test(idioma) ? 'ESPAÑOL' : (/^(inglés|ingles|english)/.test(idioma) ? 'ENGLISH' : '');\n  const tratoTxt = /^t[uú]/.test(trato) ? 'tutea siempre (tú, tu, te); nunca usted ni vos' : (/^usted/.test(trato) ? 'trata siempre de usted; nunca tutees' : '');\n  return { personalidad: tono.split('·')[0].trim() || 'profesional y directo', tratoTxt, idiomaFijo, guia };\n}\nfunction detectarIdioma(t) {\n  t = String(t || '');\n  if (/[ñáéíóú¿¡]/i.test(t)) return 'ESPAÑOL';\n  const es = (t.match(/\\b(el|la|los|las|de|del|para|que|con|una|es|como|por|tu)\\b/gi) || []).length;\n  const en = (t.match(/\\b(the|and|for|with|how|why|your|our|best|from|about)\\b/gi) || []).length;\n  return es >= en ? 'ESPAÑOL' : 'ENGLISH';\n}\n// WhatsApp real de la empresa: /api/whatsapp/config (sesión) → empresa-by-phone → Meta (nada fijo)\nasync function waDe(ses, companyId) {\n  try {\n    const w = await http({ url: B + '/api/whatsapp/config', headers: { Authorization: 'Bearer ' + ses } });\n    const c = w.data || w || {};\n    if (!c.phone_number_id || String(c.company_id) !== String(companyId)) return '';\n    const e0 = await http({ url: B + '/api/agent/wa/empresa-by-phone/' + c.phone_number_id, headers: { Authorization: 'Bearer ' + AGENT } });\n    const e = e0.data || e0 || {};\n    if (!e.wa_access_token || String(e.company_id) !== String(companyId)) return '';\n    const m = await http({ url: 'https://graph.facebook.com/v19.0/' + c.phone_number_id + '?fields=display_phone_number&access_token=' + encodeURIComponent(e.wa_access_token) });\n    return m.display_phone_number || '';\n  } catch (e) { return ''; }\n}\n\n// Arma los pedidos de grabación de la semana (pedido 4 del Éxodo). Body: { company_id, cantidad?, dry_run? }\nconst body = $('🔔 Webhook G54 (pedidos-grabacion-g54)').first().json.body || {};\nconst companyId = Number(body.company_id);\nconst cantidad = Math.min(Math.max(Number(body.cantidad) || 2, 1), 3);\nconst dryRun = body.dry_run === true || body.dry_run === 'true';\nif (!companyId) return [{ json: { ok: false, valido: false, motivo: 'falta company_id' } }];\nconst ses = await sesion(companyId);\nlet est = {}; try { const r = await http({ url: B + '/api/n8n/companies/' + companyId + '/rrss/estrategia' }); est = r.data || r || {}; } catch (e) {}\nif (!est.objetivo && !(est.pilares || []).length) return [{ json: { ok: false, valido: false, motivo: 'la empresa no tiene estrategia todavía' } }];\nlet emp = {}; try { const r = await http({ url: B + '/api/n8n/companies/' + companyId }); emp = r.data || r || {}; } catch (e) {}\nlet prods = []; try { const r = await http({ url: B + '/api/n8n/companies/' + companyId + '/productos-servicios' }); prods = r.data || r || []; } catch (e) {}\n// Ideas de Facebook/Instagram que todavía no tienen post: cada pedido sale de una idea real (y su código)\nconst ideasR = await http({ url: B + '/api/rrss/ideas', headers: { Authorization: 'Bearer ' + ses } });\nconst postsR = await http({ url: B + '/api/rrss/posts', headers: { Authorization: 'Bearer ' + ses } });\nconst usadas = new Set((postsR.data || postsR || []).map(p => Number(p.social_idea_id)).filter(Boolean));\nconst ideas = (ideasR.data || ideasR || [])\n  .filter(i => Number(i.company_id) === companyId && ['Facebook', 'Instagram'].includes(i.platform) && !usadas.has(Number(i.id)) && i.status !== 'rechazada')\n  .sort((a, b) => (a.status === 'aprobado' ? 0 : 1) - (b.status === 'aprobado' ? 0 : 1))\n  .slice(0, cantidad);\nconst voz = vozDe(est);\nconst idioma = voz.idiomaFijo || detectarIdioma((ideas[0] || {}).topic || est.objetivo);\nconst productos = prods.filter(p => p.is_active !== false).map(p => '• ' + (p.name || '') + ': ' + (p.description || '')).join('\\n');\nconst base = ideas.length ? ideas.map(i => ({ idea_id: i.id, codigo: 'P' + i.id, tema: i.topic, keyword: i.keyword, platform: i.platform }))\n  : (est.pilares || []).slice(0, cantidad).map(p => ({ idea_id: null, codigo: '', tema: p, keyword: '', platform: 'Instagram' }));\n\nconst prompt = `Eres productor de contenido para ${emp.name || 'la empresa'} (${emp.industry || ''}, ${emp.base_city || ''}).\nArma ${base.length} pedido(s) de grabación para que el propio cliente grabe un Reel con su celular esta semana, uno por cada tema de la lista.\nIDIOMA OBLIGATORIO: ${idioma}. VOZ DE MARCA: ${voz.personalidad}${voz.tratoTxt ? '; ' + voz.tratoTxt : ''}. Háblale al cliente que va a grabar en esa voz.\nOBJETIVO DE LA ESTRATEGIA: ${est.objetivo || ''}\nPILARES: ${(est.pilares || []).join(', ')}\nLO QUE LA EMPRESA REALMENTE TIENE Y HACE (única fuente válida — no pidas grabar nada que no esté acá):\n${productos || emp.description || ''}\nTEMAS:\n${base.map((b, i) => (i + 1) + '. ' + b.tema + (b.keyword ? ' (keyword: ' + b.keyword + ')' : '')).join('\\n')}\n\nReglas: video vertical, total entre 15 y 45 segundos, entre 2 y 4 tomas cortas, sin actores ni utilería que la empresa no tenga, sin pedir mostrar caras si no hace falta, sin precios ni datos inventados. Cada toma tiene que poder grabarse en minutos en el lugar real de trabajo.\nDevuelve SOLO este JSON: {\"pedidos\": [{\"titulo\": \"...\", \"objetivo\": \"por qué este video ayuda a vender, 1 frase\", \"tomas\": [{\"orden\": 1, \"que_grabar\": \"...\", \"segundos\": 5, \"consejo\": \"...\"}], \"duracion_total_seg\": 30, \"texto_en_pantalla\": \"frase corta opcional\", \"consejo_general\": \"...\"}]} en el mismo orden de los temas.`;\n\nreturn [{ json: { ok: true, valido: true, dry_run: dryRun, company_id: companyId, idioma, base,\n  groqBody: { model: 'openai/gpt-oss-120b', temperature: 0.6, max_tokens: 4000, reasoning_effort: 'low', response_format: { type: 'json_object' }, messages: [{ role: 'user', content: prompt }] } } }];\n"
+      },
+      "name": "🎥 Preparar Pedidos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "5cbee93d-0c04-4d23-bc1f-1fb0c1faa398"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "365a2147-cc63-4627-a244-bcc474b88728",
+              "leftValue": "={{ $json.valido === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "🔀 ¿Datos válidos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "id": "e0c014ec-2054-44a9-8cd8-98b8c815619e"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 422
+        }
+      },
+      "name": "↩️ Responder (no válido)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        200
+      ],
+      "id": "5137521c-297b-459e-afbe-682641299e7e"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.groqBody) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "name": "🤖 Groq: Pedidos de Grabación",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq API"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "id": "18a28fba-7256-4d7d-9ac1-c54371ba362c"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst B = 'https://apigrowth.mdarthurdigital.com';\nconst AGENT = '<G54_AGENT_TOKEN — ver .secrets.local.md>';\nconst http = (o) => this.helpers.httpRequest({ json: true, timeout: 10000, headers: { Accept: 'application/json', ...(o.headers || {}) }, ...o });\nasync function sesion(companyId) {\n  const l = await http({ method: 'POST', url: B + '/api/auth/login', body: { email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' } });\n  await http({ method: 'POST', url: B + '/api/auth/switch-company', body: { company_id: Number(companyId) }, headers: { Authorization: 'Bearer ' + l.access_token } });\n  return l.access_token;\n}\n// Voz de marca guardada por el Strategist en `tono`: \"personalidad · trato: X · idioma: Y\" (ítem 410)\nfunction vozDe(est) {\n  const tono = String(est.tono || '');\n  const trato = (((tono.match(/trato:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\n  const idioma = (((tono.match(/idioma:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\n  const guia = ((((String(est.resumen_estrategico || '')).match(/VOZ DE MARCA:\\s*([\\s\\S]+)$/i) || [])[1]) || '').trim().slice(0, 1000);\n  const idiomaFijo = /^(español|espanol|spanish)/.test(idioma) ? 'ESPAÑOL' : (/^(inglés|ingles|english)/.test(idioma) ? 'ENGLISH' : '');\n  const tratoTxt = /^t[uú]/.test(trato) ? 'tutea siempre (tú, tu, te); nunca usted ni vos' : (/^usted/.test(trato) ? 'trata siempre de usted; nunca tutees' : '');\n  return { personalidad: tono.split('·')[0].trim() || 'profesional y directo', tratoTxt, idiomaFijo, guia };\n}\nfunction detectarIdioma(t) {\n  t = String(t || '');\n  if (/[ñáéíóú¿¡]/i.test(t)) return 'ESPAÑOL';\n  const es = (t.match(/\\b(el|la|los|las|de|del|para|que|con|una|es|como|por|tu)\\b/gi) || []).length;\n  const en = (t.match(/\\b(the|and|for|with|how|why|your|our|best|from|about)\\b/gi) || []).length;\n  return es >= en ? 'ESPAÑOL' : 'ENGLISH';\n}\n// WhatsApp real de la empresa: /api/whatsapp/config (sesión) → empresa-by-phone → Meta (nada fijo)\nasync function waDe(ses, companyId) {\n  try {\n    const w = await http({ url: B + '/api/whatsapp/config', headers: { Authorization: 'Bearer ' + ses } });\n    const c = w.data || w || {};\n    if (!c.phone_number_id || String(c.company_id) !== String(companyId)) return '';\n    const e0 = await http({ url: B + '/api/agent/wa/empresa-by-phone/' + c.phone_number_id, headers: { Authorization: 'Bearer ' + AGENT } });\n    const e = e0.data || e0 || {};\n    if (!e.wa_access_token || String(e.company_id) !== String(companyId)) return '';\n    const m = await http({ url: 'https://graph.facebook.com/v19.0/' + c.phone_number_id + '?fields=display_phone_number&access_token=' + encodeURIComponent(e.wa_access_token) });\n    return m.display_phone_number || '';\n  } catch (e) { return ''; }\n}\n\nconst ctx = $('🎥 Preparar Pedidos').first().json;\nconst raw = $json.choices?.[0]?.message?.content || '';\nlet r = {}; try { r = JSON.parse(raw); } catch (e) { const m = raw.match(/\\{[\\s\\S]*\\}/); try { r = m ? JSON.parse(m[0]) : {}; } catch (e2) { r = {}; } }\nconst lista = Array.isArray(r.pedidos) ? r.pedidos : [];\nif (!lista.length) return [{ json: { ok: false, motivo: 'la IA no devolvió pedidos válidos', detalle: String($json.error?.message || raw).slice(0, 300) } }];\nconst pedidos = lista.slice(0, ctx.base.length).map((p, i) => ({\n  ...ctx.base[i],\n  titulo: String(p.titulo || '').trim(),\n  objetivo: String(p.objetivo || '').trim(),\n  tomas: (Array.isArray(p.tomas) ? p.tomas : []).slice(0, 4).map((t, k) => ({ orden: k + 1, que_grabar: String(t.que_grabar || '').trim(), segundos: Math.min(Math.max(Number(t.segundos) || 5, 2), 20), consejo: String(t.consejo || '').trim() })),\n  duracion_total_seg: Math.min(Math.max(Number(p.duracion_total_seg) || 30, 15), 45),\n  texto_en_pantalla: String(p.texto_en_pantalla || '').trim(),\n  consejo_general: String(p.consejo_general || '').trim(),\n  formato: 'vertical 9:16, MP4', idioma: ctx.idioma\n}));\n// Ruta pedida a G54 en el Éxodo (pedido 4). Mientras no exista, responde 404 y se devuelven los pedidos igual.\nlet guardado = false, motivo = ctx.dry_run ? 'prueba (dry_run): no se guardó nada' : '';\nif (!ctx.dry_run) {\n  try {\n    await http({ method: 'POST', url: B + '/api/agent/rrss/pedidos-grabacion', headers: { Authorization: 'Bearer ' + AGENT }, body: { company_id: ctx.company_id, pedidos } });\n    guardado = true; motivo = 'pedidos guardados en G54';\n  } catch (e) { motivo = 'G54 todavía no tiene la ruta POST /api/agent/rrss/pedidos-grabacion (' + String(e.message || e).slice(0, 80) + ')'; }\n}\nreturn [{ json: { ok: true, guardado, motivo, company_id: ctx.company_id, pedidos } }];\n"
+      },
+      "name": "📝 Armar y Guardar Pedidos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ],
+      "id": "47c09fde-067c-4153-baaa-ce21b750a0c2"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "name": "↩️ Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        0
+      ],
+      "id": "a184968b-141c-43f1-a7d6-a6d1a1c69fc6"
+    }
+  ],
+  "connections": {
+    "🔔 Webhook G54 (pedidos-grabacion-g54)": {
+      "main": [
+        [
+          {
+            "node": "🔒 ¿Llamada autorizada? (pedidos-grabacion-g54)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔒 ¿Llamada autorizada? (pedidos-grabacion-g54)": {
+      "main": [
+        [
+          {
+            "node": "🎥 Preparar Pedidos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⛔ Responder 403 (no autorizado) (pedidos-grabacion-g54)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎥 Preparar Pedidos": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Datos válidos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Datos válidos?": {
+      "main": [
+        [
+          {
+            "node": "🤖 Groq: Pedidos de Grabación",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "↩️ Responder (no válido)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Groq: Pedidos de Grabación": {
+      "main": [
+        [
+          {
+            "node": "📝 Armar y Guardar Pedidos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Armar y Guardar Pedidos": {
+      "main": [
+        [
+          {
+            "node": "↩️ Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodeGroups": [],
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "pinData": null,
+  "meta": null,
+  "tags": [],
+  "shared": [
+    {
+      "role": "workflow:owner",
+      "workflowId": "17mc8CJkKH2qzsdA",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-10-08T16:54:58.586Z",
+      "updatedAt": "2026-10-08T16:54:58.586Z"
+    }
+  ],
+  "activeVersion": {
+    "versionId": "cfd34534-83c1-442a-a62f-81891c61543b",
+    "workflowId": "17mc8CJkKH2qzsdA",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "pedidos-grabacion-g54",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "name": "🔔 Webhook G54 (pedidos-grabacion-g54)",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          0,
+          0
+        ],
+        "webhookId": "f6647a71-bee1-44e4-82b0-985fb971da1a",
+        "id": "7c28432c-ce68-4ace-bea7-b4442edeedc1"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "f40ba452-93a3-4d15-a6f4-1dc72acfe9ac",
+                "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "name": "🔒 ¿Llamada autorizada? (pedidos-grabacion-g54)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          220,
+          0
+        ],
+        "id": "96572df1-51b4-413c-90ba-ce69a503d0ba"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "{\"ok\": false, \"error\": \"no autorizado\"}",
+          "options": {
+            "responseCode": 403
+          }
+        },
+        "name": "⛔ Responder 403 (no autorizado) (pedidos-grabacion-g54)",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          440,
+          200
+        ],
+        "id": "1c413c44-b834-4ce1-972b-236f8e870c8e"
+      },
+      {
+        "parameters": {
+          "jsCode": "\nconst B = 'https://apigrowth.mdarthurdigital.com';\nconst AGENT = '<G54_AGENT_TOKEN — ver .secrets.local.md>';\nconst http = (o) => this.helpers.httpRequest({ json: true, timeout: 10000, headers: { Accept: 'application/json', ...(o.headers || {}) }, ...o });\nasync function sesion(companyId) {\n  const l = await http({ method: 'POST', url: B + '/api/auth/login', body: { email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' } });\n  await http({ method: 'POST', url: B + '/api/auth/switch-company', body: { company_id: Number(companyId) }, headers: { Authorization: 'Bearer ' + l.access_token } });\n  return l.access_token;\n}\n// Voz de marca guardada por el Strategist en `tono`: \"personalidad · trato: X · idioma: Y\" (ítem 410)\nfunction vozDe(est) {\n  const tono = String(est.tono || '');\n  const trato = (((tono.match(/trato:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\n  const idioma = (((tono.match(/idioma:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\n  const guia = ((((String(est.resumen_estrategico || '')).match(/VOZ DE MARCA:\\s*([\\s\\S]+)$/i) || [])[1]) || '').trim().slice(0, 1000);\n  const idiomaFijo = /^(español|espanol|spanish)/.test(idioma) ? 'ESPAÑOL' : (/^(inglés|ingles|english)/.test(idioma) ? 'ENGLISH' : '');\n  const tratoTxt = /^t[uú]/.test(trato) ? 'tutea siempre (tú, tu, te); nunca usted ni vos' : (/^usted/.test(trato) ? 'trata siempre de usted; nunca tutees' : '');\n  return { personalidad: tono.split('·')[0].trim() || 'profesional y directo', tratoTxt, idiomaFijo, guia };\n}\nfunction detectarIdioma(t) {\n  t = String(t || '');\n  if (/[ñáéíóú¿¡]/i.test(t)) return 'ESPAÑOL';\n  const es = (t.match(/\\b(el|la|los|las|de|del|para|que|con|una|es|como|por|tu)\\b/gi) || []).length;\n  const en = (t.match(/\\b(the|and|for|with|how|why|your|our|best|from|about)\\b/gi) || []).length;\n  return es >= en ? 'ESPAÑOL' : 'ENGLISH';\n}\n// WhatsApp real de la empresa: /api/whatsapp/config (sesión) → empresa-by-phone → Meta (nada fijo)\nasync function waDe(ses, companyId) {\n  try {\n    const w = await http({ url: B + '/api/whatsapp/config', headers: { Authorization: 'Bearer ' + ses } });\n    const c = w.data || w || {};\n    if (!c.phone_number_id || String(c.company_id) !== String(companyId)) return '';\n    const e0 = await http({ url: B + '/api/agent/wa/empresa-by-phone/' + c.phone_number_id, headers: { Authorization: 'Bearer ' + AGENT } });\n    const e = e0.data || e0 || {};\n    if (!e.wa_access_token || String(e.company_id) !== String(companyId)) return '';\n    const m = await http({ url: 'https://graph.facebook.com/v19.0/' + c.phone_number_id + '?fields=display_phone_number&access_token=' + encodeURIComponent(e.wa_access_token) });\n    return m.display_phone_number || '';\n  } catch (e) { return ''; }\n}\n\n// Arma los pedidos de grabación de la semana (pedido 4 del Éxodo). Body: { company_id, cantidad?, dry_run? }\nconst body = $('🔔 Webhook G54 (pedidos-grabacion-g54)').first().json.body || {};\nconst companyId = Number(body.company_id);\nconst cantidad = Math.min(Math.max(Number(body.cantidad) || 2, 1), 3);\nconst dryRun = body.dry_run === true || body.dry_run === 'true';\nif (!companyId) return [{ json: { ok: false, valido: false, motivo: 'falta company_id' } }];\nconst ses = await sesion(companyId);\nlet est = {}; try { const r = await http({ url: B + '/api/n8n/companies/' + companyId + '/rrss/estrategia' }); est = r.data || r || {}; } catch (e) {}\nif (!est.objetivo && !(est.pilares || []).length) return [{ json: { ok: false, valido: false, motivo: 'la empresa no tiene estrategia todavía' } }];\nlet emp = {}; try { const r = await http({ url: B + '/api/n8n/companies/' + companyId }); emp = r.data || r || {}; } catch (e) {}\nlet prods = []; try { const r = await http({ url: B + '/api/n8n/companies/' + companyId + '/productos-servicios' }); prods = r.data || r || []; } catch (e) {}\n// Ideas de Facebook/Instagram que todavía no tienen post: cada pedido sale de una idea real (y su código)\nconst ideasR = await http({ url: B + '/api/rrss/ideas', headers: { Authorization: 'Bearer ' + ses } });\nconst postsR = await http({ url: B + '/api/rrss/posts', headers: { Authorization: 'Bearer ' + ses } });\nconst usadas = new Set((postsR.data || postsR || []).map(p => Number(p.social_idea_id)).filter(Boolean));\nconst ideas = (ideasR.data || ideasR || [])\n  .filter(i => Number(i.company_id) === companyId && ['Facebook', 'Instagram'].includes(i.platform) && !usadas.has(Number(i.id)) && i.status !== 'rechazada')\n  .sort((a, b) => (a.status === 'aprobado' ? 0 : 1) - (b.status === 'aprobado' ? 0 : 1))\n  .slice(0, cantidad);\nconst voz = vozDe(est);\nconst idioma = voz.idiomaFijo || detectarIdioma((ideas[0] || {}).topic || est.objetivo);\nconst productos = prods.filter(p => p.is_active !== false).map(p => '• ' + (p.name || '') + ': ' + (p.description || '')).join('\\n');\nconst base = ideas.length ? ideas.map(i => ({ idea_id: i.id, codigo: 'P' + i.id, tema: i.topic, keyword: i.keyword, platform: i.platform }))\n  : (est.pilares || []).slice(0, cantidad).map(p => ({ idea_id: null, codigo: '', tema: p, keyword: '', platform: 'Instagram' }));\n\nconst prompt = `Eres productor de contenido para ${emp.name || 'la empresa'} (${emp.industry || ''}, ${emp.base_city || ''}).\nArma ${base.length} pedido(s) de grabación para que el propio cliente grabe un Reel con su celular esta semana, uno por cada tema de la lista.\nIDIOMA OBLIGATORIO: ${idioma}. VOZ DE MARCA: ${voz.personalidad}${voz.tratoTxt ? '; ' + voz.tratoTxt : ''}. Háblale al cliente que va a grabar en esa voz.\nOBJETIVO DE LA ESTRATEGIA: ${est.objetivo || ''}\nPILARES: ${(est.pilares || []).join(', ')}\nLO QUE LA EMPRESA REALMENTE TIENE Y HACE (única fuente válida — no pidas grabar nada que no esté acá):\n${productos || emp.description || ''}\nTEMAS:\n${base.map((b, i) => (i + 1) + '. ' + b.tema + (b.keyword ? ' (keyword: ' + b.keyword + ')' : '')).join('\\n')}\n\nReglas: video vertical, total entre 15 y 45 segundos, entre 2 y 4 tomas cortas, sin actores ni utilería que la empresa no tenga, sin pedir mostrar caras si no hace falta, sin precios ni datos inventados. Cada toma tiene que poder grabarse en minutos en el lugar real de trabajo.\nDevuelve SOLO este JSON: {\"pedidos\": [{\"titulo\": \"...\", \"objetivo\": \"por qué este video ayuda a vender, 1 frase\", \"tomas\": [{\"orden\": 1, \"que_grabar\": \"...\", \"segundos\": 5, \"consejo\": \"...\"}], \"duracion_total_seg\": 30, \"texto_en_pantalla\": \"frase corta opcional\", \"consejo_general\": \"...\"}]} en el mismo orden de los temas.`;\n\nreturn [{ json: { ok: true, valido: true, dry_run: dryRun, company_id: companyId, idioma, base,\n  groqBody: { model: 'openai/gpt-oss-120b', temperature: 0.6, max_tokens: 4000, reasoning_effort: 'low', response_format: { type: 'json_object' }, messages: [{ role: 'user', content: prompt }] } } }];\n"
+        },
+        "name": "🎥 Preparar Pedidos",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          440,
+          0
+        ],
+        "id": "5cbee93d-0c04-4d23-bc1f-1fb0c1faa398"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "365a2147-cc63-4627-a244-bcc474b88728",
+                "leftValue": "={{ $json.valido === true }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "name": "🔀 ¿Datos válidos?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          660,
+          0
+        ],
+        "id": "e0c014ec-2054-44a9-8cd8-98b8c815619e"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseCode": 422
+          }
+        },
+        "name": "↩️ Responder (no válido)",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          880,
+          200
+        ],
+        "id": "5137521c-297b-459e-afbe-682641299e7e"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.groq.com/openai/v1/chat/completions",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "groqApi",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json.groqBody) }}",
+          "options": {
+            "timeout": 90000
+          }
+        },
+        "name": "🤖 Groq: Pedidos de Grabación",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          880,
+          0
+        ],
+        "credentials": {
+          "groqApi": {
+            "id": "jORffbRhRNohHT1B",
+            "name": "Groq API"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true,
+        "id": "18a28fba-7256-4d7d-9ac1-c54371ba362c"
+      },
+      {
+        "parameters": {
+          "jsCode": "\nconst B = 'https://apigrowth.mdarthurdigital.com';\nconst AGENT = '<G54_AGENT_TOKEN — ver .secrets.local.md>';\nconst http = (o) => this.helpers.httpRequest({ json: true, timeout: 10000, headers: { Accept: 'application/json', ...(o.headers || {}) }, ...o });\nasync function sesion(companyId) {\n  const l = await http({ method: 'POST', url: B + '/api/auth/login', body: { email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' } });\n  await http({ method: 'POST', url: B + '/api/auth/switch-company', body: { company_id: Number(companyId) }, headers: { Authorization: 'Bearer ' + l.access_token } });\n  return l.access_token;\n}\n// Voz de marca guardada por el Strategist en `tono`: \"personalidad · trato: X · idioma: Y\" (ítem 410)\nfunction vozDe(est) {\n  const tono = String(est.tono || '');\n  const trato = (((tono.match(/trato:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\n  const idioma = (((tono.match(/idioma:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\n  const guia = ((((String(est.resumen_estrategico || '')).match(/VOZ DE MARCA:\\s*([\\s\\S]+)$/i) || [])[1]) || '').trim().slice(0, 1000);\n  const idiomaFijo = /^(español|espanol|spanish)/.test(idioma) ? 'ESPAÑOL' : (/^(inglés|ingles|english)/.test(idioma) ? 'ENGLISH' : '');\n  const tratoTxt = /^t[uú]/.test(trato) ? 'tutea siempre (tú, tu, te); nunca usted ni vos' : (/^usted/.test(trato) ? 'trata siempre de usted; nunca tutees' : '');\n  return { personalidad: tono.split('·')[0].trim() || 'profesional y directo', tratoTxt, idiomaFijo, guia };\n}\nfunction detectarIdioma(t) {\n  t = String(t || '');\n  if (/[ñáéíóú¿¡]/i.test(t)) return 'ESPAÑOL';\n  const es = (t.match(/\\b(el|la|los|las|de|del|para|que|con|una|es|como|por|tu)\\b/gi) || []).length;\n  const en = (t.match(/\\b(the|and|for|with|how|why|your|our|best|from|about)\\b/gi) || []).length;\n  return es >= en ? 'ESPAÑOL' : 'ENGLISH';\n}\n// WhatsApp real de la empresa: /api/whatsapp/config (sesión) → empresa-by-phone → Meta (nada fijo)\nasync function waDe(ses, companyId) {\n  try {\n    const w = await http({ url: B + '/api/whatsapp/config', headers: { Authorization: 'Bearer ' + ses } });\n    const c = w.data || w || {};\n    if (!c.phone_number_id || String(c.company_id) !== String(companyId)) return '';\n    const e0 = await http({ url: B + '/api/agent/wa/empresa-by-phone/' + c.phone_number_id, headers: { Authorization: 'Bearer ' + AGENT } });\n    const e = e0.data || e0 || {};\n    if (!e.wa_access_token || String(e.company_id) !== String(companyId)) return '';\n    const m = await http({ url: 'https://graph.facebook.com/v19.0/' + c.phone_number_id + '?fields=display_phone_number&access_token=' + encodeURIComponent(e.wa_access_token) });\n    return m.display_phone_number || '';\n  } catch (e) { return ''; }\n}\n\nconst ctx = $('🎥 Preparar Pedidos').first().json;\nconst raw = $json.choices?.[0]?.message?.content || '';\nlet r = {}; try { r = JSON.parse(raw); } catch (e) { const m = raw.match(/\\{[\\s\\S]*\\}/); try { r = m ? JSON.parse(m[0]) : {}; } catch (e2) { r = {}; } }\nconst lista = Array.isArray(r.pedidos) ? r.pedidos : [];\nif (!lista.length) return [{ json: { ok: false, motivo: 'la IA no devolvió pedidos válidos', detalle: String($json.error?.message || raw).slice(0, 300) } }];\nconst pedidos = lista.slice(0, ctx.base.length).map((p, i) => ({\n  ...ctx.base[i],\n  titulo: String(p.titulo || '').trim(),\n  objetivo: String(p.objetivo || '').trim(),\n  tomas: (Array.isArray(p.tomas) ? p.tomas : []).slice(0, 4).map((t, k) => ({ orden: k + 1, que_grabar: String(t.que_grabar || '').trim(), segundos: Math.min(Math.max(Number(t.segundos) || 5, 2), 20), consejo: String(t.consejo || '').trim() })),\n  duracion_total_seg: Math.min(Math.max(Number(p.duracion_total_seg) || 30, 15), 45),\n  texto_en_pantalla: String(p.texto_en_pantalla || '').trim(),\n  consejo_general: String(p.consejo_general || '').trim(),\n  formato: 'vertical 9:16, MP4', idioma: ctx.idioma\n}));\n// Ruta pedida a G54 en el Éxodo (pedido 4). Mientras no exista, responde 404 y se devuelven los pedidos igual.\nlet guardado = false, motivo = ctx.dry_run ? 'prueba (dry_run): no se guardó nada' : '';\nif (!ctx.dry_run) {\n  try {\n    await http({ method: 'POST', url: B + '/api/agent/rrss/pedidos-grabacion', headers: { Authorization: 'Bearer ' + AGENT }, body: { company_id: ctx.company_id, pedidos } });\n    guardado = true; motivo = 'pedidos guardados en G54';\n  } catch (e) { motivo = 'G54 todavía no tiene la ruta POST /api/agent/rrss/pedidos-grabacion (' + String(e.message || e).slice(0, 80) + ')'; }\n}\nreturn [{ json: { ok: true, guardado, motivo, company_id: ctx.company_id, pedidos } }];\n"
+        },
+        "name": "📝 Armar y Guardar Pedidos",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1100,
+          0
+        ],
+        "id": "47c09fde-067c-4153-baaa-ce21b750a0c2"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {}
+        },
+        "name": "↩️ Responder",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1320,
+          0
+        ],
+        "id": "a184968b-141c-43f1-a7d6-a6d1a1c69fc6"
+      }
+    ],
+    "connections": {
+      "🔔 Webhook G54 (pedidos-grabacion-g54)": {
+        "main": [
+          [
+            {
+              "node": "🔒 ¿Llamada autorizada? (pedidos-grabacion-g54)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔒 ¿Llamada autorizada? (pedidos-grabacion-g54)": {
+        "main": [
+          [
+            {
+              "node": "🎥 Preparar Pedidos",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "⛔ Responder 403 (no autorizado) (pedidos-grabacion-g54)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🎥 Preparar Pedidos": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Datos válidos?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Datos válidos?": {
+        "main": [
+          [
+            {
+              "node": "🤖 Groq: Pedidos de Grabación",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "↩️ Responder (no válido)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 Groq: Pedidos de Grabación": {
+        "main": [
+          [
+            {
+              "node": "📝 Armar y Guardar Pedidos",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📝 Armar y Guardar Pedidos": {
+        "main": [
+          [
+            {
+              "node": "↩️ Responder",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "createdAt": "2026-10-08T16:54:58.588Z",
+    "updatedAt": "2026-10-08T16:54:58.588Z",
+    "workflowPublishHistory": [
+      {
+        "id": 3364,
+        "workflowId": "17mc8CJkKH2qzsdA",
+        "versionId": "cfd34534-83c1-442a-a62f-81891c61543b",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-10-08T16:54:59.587Z"
+      }
+    ]
+  }
+}

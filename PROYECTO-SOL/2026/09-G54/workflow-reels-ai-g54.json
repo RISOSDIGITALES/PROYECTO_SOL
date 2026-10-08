@@ -1,0 +1,607 @@
+{
+  "id": "Xqb5sXsFDRz0Diys",
+  "name": "🎬 Reels AI — G54",
+  "description": null,
+  "active": true,
+  "activeVersionId": "0fb93b1b-a208-448f-8e7d-1898a3162f35",
+  "createdAt": "2026-10-08T16:54:56.748Z",
+  "updatedAt": "2026-10-08T16:54:56.748Z",
+  "isArchived": false,
+  "versionId": "0fb93b1b-a208-448f-8e7d-1898a3162f35",
+  "versionCounter": 1,
+  "sourceWorkflowId": null,
+  "triggerCount": 1,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "reel-subido-g54",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "🔔 Webhook G54 (reel-subido-g54)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "08f968d2-70b1-42b8-a295-cfa386af2c43",
+      "id": "8354f5af-0441-406e-86eb-53f5e2d0ef3d"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "8c5b34c8-e403-4028-a19e-ac8f8636426b",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "🔒 ¿Llamada autorizada? (reel-subido-g54)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "7595dac5-df8d-4c7a-a41f-d06138ef938a"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\": false, \"error\": \"no autorizado\"}",
+        "options": {
+          "responseCode": 403
+        }
+      },
+      "name": "⛔ Responder 403 (no autorizado) (reel-subido-g54)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        200
+      ],
+      "id": "6e7fd59b-a4ac-42c9-a417-125b1439fc7c"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst B = 'https://apigrowth.mdarthurdigital.com';\nconst AGENT = '<G54_AGENT_TOKEN — ver .secrets.local.md>';\nconst http = (o) => this.helpers.httpRequest({ json: true, timeout: 10000, headers: { Accept: 'application/json', ...(o.headers || {}) }, ...o });\nasync function sesion(companyId) {\n  const l = await http({ method: 'POST', url: B + '/api/auth/login', body: { email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' } });\n  await http({ method: 'POST', url: B + '/api/auth/switch-company', body: { company_id: Number(companyId) }, headers: { Authorization: 'Bearer ' + l.access_token } });\n  return l.access_token;\n}\n// Voz de marca guardada por el Strategist en `tono`: \"personalidad · trato: X · idioma: Y\" (ítem 410)\nfunction vozDe(est) {\n  const tono = String(est.tono || '');\n  const trato = (((tono.match(/trato:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\n  const idioma = (((tono.match(/idioma:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\n  const guia = ((((String(est.resumen_estrategico || '')).match(/VOZ DE MARCA:\\s*([\\s\\S]+)$/i) || [])[1]) || '').trim().slice(0, 1000);\n  const idiomaFijo = /^(español|espanol|spanish)/.test(idioma) ? 'ESPAÑOL' : (/^(inglés|ingles|english)/.test(idioma) ? 'ENGLISH' : '');\n  const tratoTxt = /^t[uú]/.test(trato) ? 'tutea siempre (tú, tu, te); nunca usted ni vos' : (/^usted/.test(trato) ? 'trata siempre de usted; nunca tutees' : '');\n  return { personalidad: tono.split('·')[0].trim() || 'profesional y directo', tratoTxt, idiomaFijo, guia };\n}\nfunction detectarIdioma(t) {\n  t = String(t || '');\n  if (/[ñáéíóú¿¡]/i.test(t)) return 'ESPAÑOL';\n  const es = (t.match(/\\b(el|la|los|las|de|del|para|que|con|una|es|como|por|tu)\\b/gi) || []).length;\n  const en = (t.match(/\\b(the|and|for|with|how|why|your|our|best|from|about)\\b/gi) || []).length;\n  return es >= en ? 'ESPAÑOL' : 'ENGLISH';\n}\n// WhatsApp real de la empresa: /api/whatsapp/config (sesión) → empresa-by-phone → Meta (nada fijo)\nasync function waDe(ses, companyId) {\n  try {\n    const w = await http({ url: B + '/api/whatsapp/config', headers: { Authorization: 'Bearer ' + ses } });\n    const c = w.data || w || {};\n    if (!c.phone_number_id || String(c.company_id) !== String(companyId)) return '';\n    const e0 = await http({ url: B + '/api/agent/wa/empresa-by-phone/' + c.phone_number_id, headers: { Authorization: 'Bearer ' + AGENT } });\n    const e = e0.data || e0 || {};\n    if (!e.wa_access_token || String(e.company_id) !== String(companyId)) return '';\n    const m = await http({ url: 'https://graph.facebook.com/v19.0/' + c.phone_number_id + '?fields=display_phone_number&access_token=' + encodeURIComponent(e.wa_access_token) });\n    return m.display_phone_number || '';\n  } catch (e) { return ''; }\n}\n\n// Recibe el aviso de G54 cuando un cliente sube un video a un post (pedido 1 y 4 del Éxodo).\n// Body esperado: { company_id, post_id, video_url, pedido_id?, dry_run? }\nconst body = $('🔔 Webhook G54 (reel-subido-g54)').first().json.body || {};\nconst companyId = Number(body.company_id), postId = Number(body.post_id);\nconst videoUrl = String(body.video_url || '').trim();\nconst dryRun = body.dry_run === true || body.dry_run === 'true';\nconst falla = (motivo) => [{ json: { ok: false, valido: false, motivo, post_id: postId || null } }];\nif (!companyId || !postId) return falla('faltan company_id o post_id');\nif (!/^https:\\/\\//i.test(videoUrl)) return falla('video_url tiene que ser una URL https pública (Meta la descarga para publicar)');\n\n// El video tiene que ser público y de verdad un video (Meta rechaza otra cosa, y lo hace tarde: al publicar)\nlet tipo = '', bytes = 0;\ntry {\n  const h = await this.helpers.httpRequest({ method: 'HEAD', url: videoUrl, returnFullResponse: true, timeout: 15000 });\n  tipo = String((h.headers || {})['content-type'] || ''); bytes = Number((h.headers || {})['content-length'] || 0);\n} catch (e) { return falla('no se pudo abrir video_url desde afuera (¿no es pública?): ' + String(e.message || e).slice(0, 120)); }\nif (!/^video\\//i.test(tipo)) return falla('video_url no es un video (content-type: ' + (tipo || 'desconocido') + ')');\nif (bytes && bytes > 1000 * 1024 * 1024) return falla('el video pesa más de 1 GB, el límite de Meta para Reels');\n\nconst ses = await sesion(companyId);\nconst posts = await http({ url: B + '/api/rrss/posts', headers: { Authorization: 'Bearer ' + ses } });\nconst post = (posts.data || posts || []).find(p => Number(p.id) === postId && Number(p.company_id) === companyId);\nif (!post) return falla('el post ' + postId + ' no existe en la empresa ' + companyId);\nif (!['Facebook', 'Instagram'].includes(post.platform)) return falla('los Reels se publican solo en Facebook o Instagram; este post es de ' + post.platform);\nif (post.status === 'publicado') return falla('el post ya está publicado');\n\nlet est = {}; try { const r = await http({ url: B + '/api/n8n/companies/' + companyId + '/rrss/estrategia' }); est = r.data || r || {}; } catch (e) {}\nlet emp = {}; try { const r = await http({ url: B + '/api/n8n/companies/' + companyId }); emp = r.data || r || {}; } catch (e) {}\n// Pedido de grabación vinculado (cuando exista la ruta de G54): describe qué se grabó\nlet pedido = null;\nif (body.pedido_id) { try { const r = await http({ url: B + '/api/agent/rrss/pedidos-grabacion/' + body.pedido_id, headers: { Authorization: 'Bearer ' + AGENT } }); pedido = r.data || r || null; } catch (e) { pedido = null; } }\n\nconst voz = vozDe(est);\nconst idioma = voz.idiomaFijo || detectarIdioma(post.tema + ' ' + (post.hook || ''));\nconst codigo = post.social_idea_id ? 'P' + post.social_idea_id : '';\nconst waDisplay = await waDe(ses, companyId);\nconst cta = est.link_resuelto || est.cta_principal || emp.website || '';\n\nconst prompt = `Escribe el texto (descripción) de un Reel de ${post.platform} para ${emp.name || 'la empresa'} (${emp.base_city || ''}).\nIDIOMA OBLIGATORIO: ${idioma}. Todo el texto en ese idioma.\nVOZ DE MARCA (obligatoria): personalidad ${voz.personalidad}${voz.tratoTxt ? '; trato: ' + voz.tratoTxt : ''}${voz.guia ? '. Guía: ' + voz.guia : ''}.\nAUDIENCIA: ${est.audiencia || emp.target_market || ''}\nTEMA DEL REEL: ${post.tema || ''}\n${pedido ? 'QUÉ SE GRABÓ (pedido de grabación): ' + JSON.stringify(pedido).slice(0, 1200) : 'No sabemos exactamente qué se ve en el video: NO describas escenas, personas, colores ni detalles concretos que no estén en el tema. Habla del tema y del beneficio.'}\nPRODUCTOS Y DATOS REALES: ${emp.description || ''} ${emp.value_proposition || ''}\n\nReglas del formato Reel: la primera línea es un gancho de máximo 10 palabras que se entienda sin sonido; después 1 a 3 frases cortas; nada de párrafos largos; máximo 1 emoji por frase. NUNCA inventes precios, plazos, cifras ni clientes. No pongas links ni teléfonos: los agrega el sistema.\nDevuelve SOLO este JSON: {\"gancho\": \"...\", \"cuerpo\": \"...\", \"llamado\": \"una frase invitando a escribir por WhatsApp\", \"hashtags\": \"#a #b #c #d #e (entre 3 y 5)\"}`;\n\nreturn [{ json: {\n  ok: true, valido: true, dry_run: dryRun, company_id: companyId, post_id: postId, video_url: videoUrl, video_tipo: tipo, video_bytes: bytes,\n  platform: post.platform, idioma, codigo, wa_display: waDisplay, cta, sesion: ses,\n  groqBody: { model: 'openai/gpt-oss-120b', temperature: 0.6, max_tokens: 3000, reasoning_effort: 'low', response_format: { type: 'json_object' }, messages: [{ role: 'user', content: prompt }] }\n} }];\n"
+      },
+      "name": "🎬 Preparar Reel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "e92e275a-3a0a-4bac-b2b9-1d2468c91bbc"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "12cf0cd1-cfba-4cd8-a325-0ae1351d4f8f",
+              "leftValue": "={{ $json.valido === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "🔀 ¿Video y post válidos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "id": "658d1f65-5885-4b6f-904b-92e63e0ab956"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 422
+        }
+      },
+      "name": "↩️ Responder (no válido)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        200
+      ],
+      "id": "3d44b8bf-1ad7-4435-9f9f-27b798faf1b7"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.groqBody) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "name": "🤖 Groq: Texto del Reel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq API"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "id": "a0e2b3ba-aa8b-416a-a2ff-c4775c94ac24"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst B = 'https://apigrowth.mdarthurdigital.com';\nconst AGENT = '<G54_AGENT_TOKEN — ver .secrets.local.md>';\nconst http = (o) => this.helpers.httpRequest({ json: true, timeout: 10000, headers: { Accept: 'application/json', ...(o.headers || {}) }, ...o });\nasync function sesion(companyId) {\n  const l = await http({ method: 'POST', url: B + '/api/auth/login', body: { email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' } });\n  await http({ method: 'POST', url: B + '/api/auth/switch-company', body: { company_id: Number(companyId) }, headers: { Authorization: 'Bearer ' + l.access_token } });\n  return l.access_token;\n}\n// Voz de marca guardada por el Strategist en `tono`: \"personalidad · trato: X · idioma: Y\" (ítem 410)\nfunction vozDe(est) {\n  const tono = String(est.tono || '');\n  const trato = (((tono.match(/trato:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\n  const idioma = (((tono.match(/idioma:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\n  const guia = ((((String(est.resumen_estrategico || '')).match(/VOZ DE MARCA:\\s*([\\s\\S]+)$/i) || [])[1]) || '').trim().slice(0, 1000);\n  const idiomaFijo = /^(español|espanol|spanish)/.test(idioma) ? 'ESPAÑOL' : (/^(inglés|ingles|english)/.test(idioma) ? 'ENGLISH' : '');\n  const tratoTxt = /^t[uú]/.test(trato) ? 'tutea siempre (tú, tu, te); nunca usted ni vos' : (/^usted/.test(trato) ? 'trata siempre de usted; nunca tutees' : '');\n  return { personalidad: tono.split('·')[0].trim() || 'profesional y directo', tratoTxt, idiomaFijo, guia };\n}\nfunction detectarIdioma(t) {\n  t = String(t || '');\n  if (/[ñáéíóú¿¡]/i.test(t)) return 'ESPAÑOL';\n  const es = (t.match(/\\b(el|la|los|las|de|del|para|que|con|una|es|como|por|tu)\\b/gi) || []).length;\n  const en = (t.match(/\\b(the|and|for|with|how|why|your|our|best|from|about)\\b/gi) || []).length;\n  return es >= en ? 'ESPAÑOL' : 'ENGLISH';\n}\n// WhatsApp real de la empresa: /api/whatsapp/config (sesión) → empresa-by-phone → Meta (nada fijo)\nasync function waDe(ses, companyId) {\n  try {\n    const w = await http({ url: B + '/api/whatsapp/config', headers: { Authorization: 'Bearer ' + ses } });\n    const c = w.data || w || {};\n    if (!c.phone_number_id || String(c.company_id) !== String(companyId)) return '';\n    const e0 = await http({ url: B + '/api/agent/wa/empresa-by-phone/' + c.phone_number_id, headers: { Authorization: 'Bearer ' + AGENT } });\n    const e = e0.data || e0 || {};\n    if (!e.wa_access_token || String(e.company_id) !== String(companyId)) return '';\n    const m = await http({ url: 'https://graph.facebook.com/v19.0/' + c.phone_number_id + '?fields=display_phone_number&access_token=' + encodeURIComponent(e.wa_access_token) });\n    return m.display_phone_number || '';\n  } catch (e) { return ''; }\n}\n\nconst ctx = $('🎬 Preparar Reel').first().json;\nconst raw = $json.choices?.[0]?.message?.content || '';\nlet r = {}; try { r = JSON.parse(raw); } catch (e) { const m = raw.match(/\\{[\\s\\S]*\\}/); try { r = m ? JSON.parse(m[0]) : {}; } catch (e2) { r = {}; } }\nif (!r.gancho || !r.cuerpo) return [{ json: { ok: false, motivo: 'la IA no devolvió un texto válido', detalle: String($json.error?.message || raw).slice(0, 300), post_id: ctx.post_id } }];\nconst en = ctx.idioma === 'ENGLISH';\nconst digits = String(ctx.wa_display || '').replace(/\\D/g, '');\n// Mismo formato de código que Content AI (ítem 412). En Reels ningún link del texto se puede tocar,\n// ni en Facebook ni en Instagram, así que va el número con el código para escribir a mano.\nconst lineaWa = digits ? ('💬 WhatsApp ' + ctx.wa_display + (ctx.codigo ? ' · ' + (en ? 'code' : 'código') + ' ' + ctx.codigo : '')) : '';\nconst base = [String(r.gancho).trim(), String(r.cuerpo).trim(), String(r.llamado || '').trim(), lineaWa].filter(Boolean).join('\\n\\n');\nconst hashtags = String(r.hashtags || '').trim();\nconst copy = (base + (hashtags ? '\\n\\n' + hashtags : '')).slice(0, 2200);\nif (/n8n\\.mdarthurdigital\\.com/i.test(copy)) return [{ json: { ok: false, motivo: 'el texto salió con un link interno', post_id: ctx.post_id } }];\n\nlet guardado = false, motivo = ctx.dry_run ? 'prueba (dry_run): no se guardó nada' : '';\nif (!ctx.dry_run) {\n  try {\n    await http({ method: 'PUT', url: B + '/api/rrss/posts/' + ctx.post_id, headers: { Authorization: 'Bearer ' + ctx.sesion }, body: { video_url: ctx.video_url, copy_facebook: copy, copy_instagram: copy, hook: String(r.gancho).trim() } });\n    guardado = true; motivo = 'texto y video guardados en el post; se publica como Reel cuando se programe';\n  } catch (e) { motivo = 'no se pudo guardar en G54: ' + String(e.message || e).slice(0, 150); }\n}\nreturn [{ json: { ok: guardado || ctx.dry_run, guardado, motivo, post_id: ctx.post_id, platform: ctx.platform, idioma: ctx.idioma, codigo: ctx.codigo, video_tipo: ctx.video_tipo, video_bytes: ctx.video_bytes, texto: copy } }];\n"
+      },
+      "name": "✍️ Armar y Guardar Texto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ],
+      "id": "d904f1f4-2e3c-478e-bfde-96650ee3b614"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "name": "↩️ Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        0
+      ],
+      "id": "4fbbd852-896d-44c5-9aec-7cd6470c363e"
+    }
+  ],
+  "connections": {
+    "🔔 Webhook G54 (reel-subido-g54)": {
+      "main": [
+        [
+          {
+            "node": "🔒 ¿Llamada autorizada? (reel-subido-g54)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔒 ¿Llamada autorizada? (reel-subido-g54)": {
+      "main": [
+        [
+          {
+            "node": "🎬 Preparar Reel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⛔ Responder 403 (no autorizado) (reel-subido-g54)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎬 Preparar Reel": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Video y post válidos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Video y post válidos?": {
+      "main": [
+        [
+          {
+            "node": "🤖 Groq: Texto del Reel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "↩️ Responder (no válido)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Groq: Texto del Reel": {
+      "main": [
+        [
+          {
+            "node": "✍️ Armar y Guardar Texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✍️ Armar y Guardar Texto": {
+      "main": [
+        [
+          {
+            "node": "↩️ Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodeGroups": [],
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "pinData": null,
+  "meta": null,
+  "tags": [],
+  "shared": [
+    {
+      "role": "workflow:owner",
+      "workflowId": "Xqb5sXsFDRz0Diys",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-10-08T16:54:56.761Z",
+      "updatedAt": "2026-10-08T16:54:56.761Z"
+    }
+  ],
+  "activeVersion": {
+    "versionId": "0fb93b1b-a208-448f-8e7d-1898a3162f35",
+    "workflowId": "Xqb5sXsFDRz0Diys",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "reel-subido-g54",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "name": "🔔 Webhook G54 (reel-subido-g54)",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          0,
+          0
+        ],
+        "webhookId": "08f968d2-70b1-42b8-a295-cfa386af2c43",
+        "id": "8354f5af-0441-406e-86eb-53f5e2d0ef3d"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "8c5b34c8-e403-4028-a19e-ac8f8636426b",
+                "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === '<N8N_WEBHOOK_KEY — ver .secrets.local.md>'; })() }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "name": "🔒 ¿Llamada autorizada? (reel-subido-g54)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          220,
+          0
+        ],
+        "id": "7595dac5-df8d-4c7a-a41f-d06138ef938a"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "{\"ok\": false, \"error\": \"no autorizado\"}",
+          "options": {
+            "responseCode": 403
+          }
+        },
+        "name": "⛔ Responder 403 (no autorizado) (reel-subido-g54)",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          440,
+          200
+        ],
+        "id": "6e7fd59b-a4ac-42c9-a417-125b1439fc7c"
+      },
+      {
+        "parameters": {
+          "jsCode": "\nconst B = 'https://apigrowth.mdarthurdigital.com';\nconst AGENT = '<G54_AGENT_TOKEN — ver .secrets.local.md>';\nconst http = (o) => this.helpers.httpRequest({ json: true, timeout: 10000, headers: { Accept: 'application/json', ...(o.headers || {}) }, ...o });\nasync function sesion(companyId) {\n  const l = await http({ method: 'POST', url: B + '/api/auth/login', body: { email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' } });\n  await http({ method: 'POST', url: B + '/api/auth/switch-company', body: { company_id: Number(companyId) }, headers: { Authorization: 'Bearer ' + l.access_token } });\n  return l.access_token;\n}\n// Voz de marca guardada por el Strategist en `tono`: \"personalidad · trato: X · idioma: Y\" (ítem 410)\nfunction vozDe(est) {\n  const tono = String(est.tono || '');\n  const trato = (((tono.match(/trato:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\n  const idioma = (((tono.match(/idioma:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\n  const guia = ((((String(est.resumen_estrategico || '')).match(/VOZ DE MARCA:\\s*([\\s\\S]+)$/i) || [])[1]) || '').trim().slice(0, 1000);\n  const idiomaFijo = /^(español|espanol|spanish)/.test(idioma) ? 'ESPAÑOL' : (/^(inglés|ingles|english)/.test(idioma) ? 'ENGLISH' : '');\n  const tratoTxt = /^t[uú]/.test(trato) ? 'tutea siempre (tú, tu, te); nunca usted ni vos' : (/^usted/.test(trato) ? 'trata siempre de usted; nunca tutees' : '');\n  return { personalidad: tono.split('·')[0].trim() || 'profesional y directo', tratoTxt, idiomaFijo, guia };\n}\nfunction detectarIdioma(t) {\n  t = String(t || '');\n  if (/[ñáéíóú¿¡]/i.test(t)) return 'ESPAÑOL';\n  const es = (t.match(/\\b(el|la|los|las|de|del|para|que|con|una|es|como|por|tu)\\b/gi) || []).length;\n  const en = (t.match(/\\b(the|and|for|with|how|why|your|our|best|from|about)\\b/gi) || []).length;\n  return es >= en ? 'ESPAÑOL' : 'ENGLISH';\n}\n// WhatsApp real de la empresa: /api/whatsapp/config (sesión) → empresa-by-phone → Meta (nada fijo)\nasync function waDe(ses, companyId) {\n  try {\n    const w = await http({ url: B + '/api/whatsapp/config', headers: { Authorization: 'Bearer ' + ses } });\n    const c = w.data || w || {};\n    if (!c.phone_number_id || String(c.company_id) !== String(companyId)) return '';\n    const e0 = await http({ url: B + '/api/agent/wa/empresa-by-phone/' + c.phone_number_id, headers: { Authorization: 'Bearer ' + AGENT } });\n    const e = e0.data || e0 || {};\n    if (!e.wa_access_token || String(e.company_id) !== String(companyId)) return '';\n    const m = await http({ url: 'https://graph.facebook.com/v19.0/' + c.phone_number_id + '?fields=display_phone_number&access_token=' + encodeURIComponent(e.wa_access_token) });\n    return m.display_phone_number || '';\n  } catch (e) { return ''; }\n}\n\n// Recibe el aviso de G54 cuando un cliente sube un video a un post (pedido 1 y 4 del Éxodo).\n// Body esperado: { company_id, post_id, video_url, pedido_id?, dry_run? }\nconst body = $('🔔 Webhook G54 (reel-subido-g54)').first().json.body || {};\nconst companyId = Number(body.company_id), postId = Number(body.post_id);\nconst videoUrl = String(body.video_url || '').trim();\nconst dryRun = body.dry_run === true || body.dry_run === 'true';\nconst falla = (motivo) => [{ json: { ok: false, valido: false, motivo, post_id: postId || null } }];\nif (!companyId || !postId) return falla('faltan company_id o post_id');\nif (!/^https:\\/\\//i.test(videoUrl)) return falla('video_url tiene que ser una URL https pública (Meta la descarga para publicar)');\n\n// El video tiene que ser público y de verdad un video (Meta rechaza otra cosa, y lo hace tarde: al publicar)\nlet tipo = '', bytes = 0;\ntry {\n  const h = await this.helpers.httpRequest({ method: 'HEAD', url: videoUrl, returnFullResponse: true, timeout: 15000 });\n  tipo = String((h.headers || {})['content-type'] || ''); bytes = Number((h.headers || {})['content-length'] || 0);\n} catch (e) { return falla('no se pudo abrir video_url desde afuera (¿no es pública?): ' + String(e.message || e).slice(0, 120)); }\nif (!/^video\\//i.test(tipo)) return falla('video_url no es un video (content-type: ' + (tipo || 'desconocido') + ')');\nif (bytes && bytes > 1000 * 1024 * 1024) return falla('el video pesa más de 1 GB, el límite de Meta para Reels');\n\nconst ses = await sesion(companyId);\nconst posts = await http({ url: B + '/api/rrss/posts', headers: { Authorization: 'Bearer ' + ses } });\nconst post = (posts.data || posts || []).find(p => Number(p.id) === postId && Number(p.company_id) === companyId);\nif (!post) return falla('el post ' + postId + ' no existe en la empresa ' + companyId);\nif (!['Facebook', 'Instagram'].includes(post.platform)) return falla('los Reels se publican solo en Facebook o Instagram; este post es de ' + post.platform);\nif (post.status === 'publicado') return falla('el post ya está publicado');\n\nlet est = {}; try { const r = await http({ url: B + '/api/n8n/companies/' + companyId + '/rrss/estrategia' }); est = r.data || r || {}; } catch (e) {}\nlet emp = {}; try { const r = await http({ url: B + '/api/n8n/companies/' + companyId }); emp = r.data || r || {}; } catch (e) {}\n// Pedido de grabación vinculado (cuando exista la ruta de G54): describe qué se grabó\nlet pedido = null;\nif (body.pedido_id) { try { const r = await http({ url: B + '/api/agent/rrss/pedidos-grabacion/' + body.pedido_id, headers: { Authorization: 'Bearer ' + AGENT } }); pedido = r.data || r || null; } catch (e) { pedido = null; } }\n\nconst voz = vozDe(est);\nconst idioma = voz.idiomaFijo || detectarIdioma(post.tema + ' ' + (post.hook || ''));\nconst codigo = post.social_idea_id ? 'P' + post.social_idea_id : '';\nconst waDisplay = await waDe(ses, companyId);\nconst cta = est.link_resuelto || est.cta_principal || emp.website || '';\n\nconst prompt = `Escribe el texto (descripción) de un Reel de ${post.platform} para ${emp.name || 'la empresa'} (${emp.base_city || ''}).\nIDIOMA OBLIGATORIO: ${idioma}. Todo el texto en ese idioma.\nVOZ DE MARCA (obligatoria): personalidad ${voz.personalidad}${voz.tratoTxt ? '; trato: ' + voz.tratoTxt : ''}${voz.guia ? '. Guía: ' + voz.guia : ''}.\nAUDIENCIA: ${est.audiencia || emp.target_market || ''}\nTEMA DEL REEL: ${post.tema || ''}\n${pedido ? 'QUÉ SE GRABÓ (pedido de grabación): ' + JSON.stringify(pedido).slice(0, 1200) : 'No sabemos exactamente qué se ve en el video: NO describas escenas, personas, colores ni detalles concretos que no estén en el tema. Habla del tema y del beneficio.'}\nPRODUCTOS Y DATOS REALES: ${emp.description || ''} ${emp.value_proposition || ''}\n\nReglas del formato Reel: la primera línea es un gancho de máximo 10 palabras que se entienda sin sonido; después 1 a 3 frases cortas; nada de párrafos largos; máximo 1 emoji por frase. NUNCA inventes precios, plazos, cifras ni clientes. No pongas links ni teléfonos: los agrega el sistema.\nDevuelve SOLO este JSON: {\"gancho\": \"...\", \"cuerpo\": \"...\", \"llamado\": \"una frase invitando a escribir por WhatsApp\", \"hashtags\": \"#a #b #c #d #e (entre 3 y 5)\"}`;\n\nreturn [{ json: {\n  ok: true, valido: true, dry_run: dryRun, company_id: companyId, post_id: postId, video_url: videoUrl, video_tipo: tipo, video_bytes: bytes,\n  platform: post.platform, idioma, codigo, wa_display: waDisplay, cta, sesion: ses,\n  groqBody: { model: 'openai/gpt-oss-120b', temperature: 0.6, max_tokens: 3000, reasoning_effort: 'low', response_format: { type: 'json_object' }, messages: [{ role: 'user', content: prompt }] }\n} }];\n"
+        },
+        "name": "🎬 Preparar Reel",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          440,
+          0
+        ],
+        "id": "e92e275a-3a0a-4bac-b2b9-1d2468c91bbc"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "12cf0cd1-cfba-4cd8-a325-0ae1351d4f8f",
+                "leftValue": "={{ $json.valido === true }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "name": "🔀 ¿Video y post válidos?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          660,
+          0
+        ],
+        "id": "658d1f65-5885-4b6f-904b-92e63e0ab956"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseCode": 422
+          }
+        },
+        "name": "↩️ Responder (no válido)",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          880,
+          200
+        ],
+        "id": "3d44b8bf-1ad7-4435-9f9f-27b798faf1b7"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.groq.com/openai/v1/chat/completions",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "groqApi",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json.groqBody) }}",
+          "options": {
+            "timeout": 90000
+          }
+        },
+        "name": "🤖 Groq: Texto del Reel",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          880,
+          0
+        ],
+        "credentials": {
+          "groqApi": {
+            "id": "jORffbRhRNohHT1B",
+            "name": "Groq API"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true,
+        "id": "a0e2b3ba-aa8b-416a-a2ff-c4775c94ac24"
+      },
+      {
+        "parameters": {
+          "jsCode": "\nconst B = 'https://apigrowth.mdarthurdigital.com';\nconst AGENT = '<G54_AGENT_TOKEN — ver .secrets.local.md>';\nconst http = (o) => this.helpers.httpRequest({ json: true, timeout: 10000, headers: { Accept: 'application/json', ...(o.headers || {}) }, ...o });\nasync function sesion(companyId) {\n  const l = await http({ method: 'POST', url: B + '/api/auth/login', body: { email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' } });\n  await http({ method: 'POST', url: B + '/api/auth/switch-company', body: { company_id: Number(companyId) }, headers: { Authorization: 'Bearer ' + l.access_token } });\n  return l.access_token;\n}\n// Voz de marca guardada por el Strategist en `tono`: \"personalidad · trato: X · idioma: Y\" (ítem 410)\nfunction vozDe(est) {\n  const tono = String(est.tono || '');\n  const trato = (((tono.match(/trato:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\n  const idioma = (((tono.match(/idioma:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\n  const guia = ((((String(est.resumen_estrategico || '')).match(/VOZ DE MARCA:\\s*([\\s\\S]+)$/i) || [])[1]) || '').trim().slice(0, 1000);\n  const idiomaFijo = /^(español|espanol|spanish)/.test(idioma) ? 'ESPAÑOL' : (/^(inglés|ingles|english)/.test(idioma) ? 'ENGLISH' : '');\n  const tratoTxt = /^t[uú]/.test(trato) ? 'tutea siempre (tú, tu, te); nunca usted ni vos' : (/^usted/.test(trato) ? 'trata siempre de usted; nunca tutees' : '');\n  return { personalidad: tono.split('·')[0].trim() || 'profesional y directo', tratoTxt, idiomaFijo, guia };\n}\nfunction detectarIdioma(t) {\n  t = String(t || '');\n  if (/[ñáéíóú¿¡]/i.test(t)) return 'ESPAÑOL';\n  const es = (t.match(/\\b(el|la|los|las|de|del|para|que|con|una|es|como|por|tu)\\b/gi) || []).length;\n  const en = (t.match(/\\b(the|and|for|with|how|why|your|our|best|from|about)\\b/gi) || []).length;\n  return es >= en ? 'ESPAÑOL' : 'ENGLISH';\n}\n// WhatsApp real de la empresa: /api/whatsapp/config (sesión) → empresa-by-phone → Meta (nada fijo)\nasync function waDe(ses, companyId) {\n  try {\n    const w = await http({ url: B + '/api/whatsapp/config', headers: { Authorization: 'Bearer ' + ses } });\n    const c = w.data || w || {};\n    if (!c.phone_number_id || String(c.company_id) !== String(companyId)) return '';\n    const e0 = await http({ url: B + '/api/agent/wa/empresa-by-phone/' + c.phone_number_id, headers: { Authorization: 'Bearer ' + AGENT } });\n    const e = e0.data || e0 || {};\n    if (!e.wa_access_token || String(e.company_id) !== String(companyId)) return '';\n    const m = await http({ url: 'https://graph.facebook.com/v19.0/' + c.phone_number_id + '?fields=display_phone_number&access_token=' + encodeURIComponent(e.wa_access_token) });\n    return m.display_phone_number || '';\n  } catch (e) { return ''; }\n}\n\nconst ctx = $('🎬 Preparar Reel').first().json;\nconst raw = $json.choices?.[0]?.message?.content || '';\nlet r = {}; try { r = JSON.parse(raw); } catch (e) { const m = raw.match(/\\{[\\s\\S]*\\}/); try { r = m ? JSON.parse(m[0]) : {}; } catch (e2) { r = {}; } }\nif (!r.gancho || !r.cuerpo) return [{ json: { ok: false, motivo: 'la IA no devolvió un texto válido', detalle: String($json.error?.message || raw).slice(0, 300), post_id: ctx.post_id } }];\nconst en = ctx.idioma === 'ENGLISH';\nconst digits = String(ctx.wa_display || '').replace(/\\D/g, '');\n// Mismo formato de código que Content AI (ítem 412). En Reels ningún link del texto se puede tocar,\n// ni en Facebook ni en Instagram, así que va el número con el código para escribir a mano.\nconst lineaWa = digits ? ('💬 WhatsApp ' + ctx.wa_display + (ctx.codigo ? ' · ' + (en ? 'code' : 'código') + ' ' + ctx.codigo : '')) : '';\nconst base = [String(r.gancho).trim(), String(r.cuerpo).trim(), String(r.llamado || '').trim(), lineaWa].filter(Boolean).join('\\n\\n');\nconst hashtags = String(r.hashtags || '').trim();\nconst copy = (base + (hashtags ? '\\n\\n' + hashtags : '')).slice(0, 2200);\nif (/n8n\\.mdarthurdigital\\.com/i.test(copy)) return [{ json: { ok: false, motivo: 'el texto salió con un link interno', post_id: ctx.post_id } }];\n\nlet guardado = false, motivo = ctx.dry_run ? 'prueba (dry_run): no se guardó nada' : '';\nif (!ctx.dry_run) {\n  try {\n    await http({ method: 'PUT', url: B + '/api/rrss/posts/' + ctx.post_id, headers: { Authorization: 'Bearer ' + ctx.sesion }, body: { video_url: ctx.video_url, copy_facebook: copy, copy_instagram: copy, hook: String(r.gancho).trim() } });\n    guardado = true; motivo = 'texto y video guardados en el post; se publica como Reel cuando se programe';\n  } catch (e) { motivo = 'no se pudo guardar en G54: ' + String(e.message || e).slice(0, 150); }\n}\nreturn [{ json: { ok: guardado || ctx.dry_run, guardado, motivo, post_id: ctx.post_id, platform: ctx.platform, idioma: ctx.idioma, codigo: ctx.codigo, video_tipo: ctx.video_tipo, video_bytes: ctx.video_bytes, texto: copy } }];\n"
+        },
+        "name": "✍️ Armar y Guardar Texto",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1100,
+          0
+        ],
+        "id": "d904f1f4-2e3c-478e-bfde-96650ee3b614"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {}
+        },
+        "name": "↩️ Responder",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1320,
+          0
+        ],
+        "id": "4fbbd852-896d-44c5-9aec-7cd6470c363e"
+      }
+    ],
+    "connections": {
+      "🔔 Webhook G54 (reel-subido-g54)": {
+        "main": [
+          [
+            {
+              "node": "🔒 ¿Llamada autorizada? (reel-subido-g54)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔒 ¿Llamada autorizada? (reel-subido-g54)": {
+        "main": [
+          [
+            {
+              "node": "🎬 Preparar Reel",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "⛔ Responder 403 (no autorizado) (reel-subido-g54)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🎬 Preparar Reel": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Video y post válidos?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Video y post válidos?": {
+        "main": [
+          [
+            {
+              "node": "🤖 Groq: Texto del Reel",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "↩️ Responder (no válido)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 Groq: Texto del Reel": {
+        "main": [
+          [
+            {
+              "node": "✍️ Armar y Guardar Texto",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "✍️ Armar y Guardar Texto": {
+        "main": [
+          [
+            {
+              "node": "↩️ Responder",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "createdAt": "2026-10-08T16:54:56.766Z",
+    "updatedAt": "2026-10-08T16:54:56.766Z",
+    "workflowPublishHistory": [
+      {
+        "id": 3363,
+        "workflowId": "Xqb5sXsFDRz0Diys",
+        "versionId": "0fb93b1b-a208-448f-8e7d-1898a3162f35",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-10-08T16:54:57.789Z"
+      }
+    ]
+  }
+}
