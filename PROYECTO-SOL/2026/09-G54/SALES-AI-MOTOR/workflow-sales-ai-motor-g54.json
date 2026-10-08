@@ -3,12 +3,12 @@
   "name": "💬 Sales AI — Motor de Conversación G54",
   "description": null,
   "active": true,
-  "activeVersionId": "687a422f-c897-4fd3-b078-003f49c2a37d",
+  "activeVersionId": "946b43e6-0c70-46a3-b440-7d9c9471eab9",
   "createdAt": "2026-06-20T00:45:39.368Z",
-  "updatedAt": "2026-10-08T16:51:29.723Z",
+  "updatedAt": "2026-10-08T17:34:08.718Z",
   "isArchived": false,
-  "versionId": "687a422f-c897-4fd3-b078-003f49c2a37d",
-  "versionCounter": 78,
+  "versionId": "946b43e6-0c70-46a3-b440-7d9c9471eab9",
+  "versionCounter": 79,
   "sourceWorkflowId": null,
   "triggerCount": 4,
   "nodes": [
@@ -2519,6 +2519,78 @@
           "responseCode": 403
         }
       }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'gpt-4.1-mini',\n  messages: [\n    {\n      role: 'system',\n      content: $('🔧 Preparar Contexto IA').item.json.promptSistema\n    },\n    {\n      role: 'user',\n      content:\n        'HISTORIAL:\n' + ($('🔧 Preparar Contexto IA').item.json.historial || '(primer mensaje)') +\n        '\n\nDATOS RECOLECTADOS:\n' +\n        JSON.stringify($('🔧 Preparar Contexto IA').item.json.datosRecolectados || {}) +\n        '\n\nMENSAJE ACTUAL: \"' + $('🔧 Preparar Contexto IA').item.json.texto + '\"' +\n        '\nCliente nuevo: ' + ($('🔧 Preparar Contexto IA').item.json.esNuevo ? 'SÍ' : 'NO') +\n        '\n\nResponde SOLO con JSON válido:\n' +\n        '{\"mensaje\":\"\",\"datos_actualizados\":{},\"clasificacion\":\"frio\",\"todos_recolectados\":false,\"resumen_lead\":\"\"}'\n    }\n  ],\n  temperature: 0.4,\n  max_tokens: 2000,\n  response_format: { type: 'json_object' }\n}) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "name": "🤖 OpenAI: Último Respaldo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3020,
+        660
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hkeIUPcrRjD4F4KY",
+          "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+      "id": "400a6555-f646-419f-934a-a0c2d1386a92"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "fc08f23d-c755-4396-aecd-065e1ca64b71",
+              "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "🔀 ¿OpenAI respondió?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3240,
+        660
+      ],
+      "id": "67dfb4ca-22e3-4fd7-9c86-45745fe883e3"
     }
   ],
   "connections": {
@@ -3329,7 +3401,7 @@
         ],
         [
           {
-            "node": "🆘 Respuesta de Emergencia",
+            "node": "🤖 OpenAI: Último Respaldo",
             "type": "main",
             "index": 0
           }
@@ -3509,6 +3581,35 @@
           }
         ]
       ]
+    },
+    "🤖 OpenAI: Último Respaldo": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿OpenAI respondió?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿OpenAI respondió?": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Respuesta IA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🆘 Respuesta de Emergencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -3552,7 +3653,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "687a422f-c897-4fd3-b078-003f49c2a37d",
+    "versionId": "946b43e6-0c70-46a3-b440-7d9c9471eab9",
     "workflowId": "otycsrxrMEMuxuwD",
     "nodes": [
       {
@@ -6062,6 +6163,78 @@
             "responseCode": 403
           }
         }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/chat/completions",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({\n  model: 'gpt-4.1-mini',\n  messages: [\n    {\n      role: 'system',\n      content: $('🔧 Preparar Contexto IA').item.json.promptSistema\n    },\n    {\n      role: 'user',\n      content:\n        'HISTORIAL:\n' + ($('🔧 Preparar Contexto IA').item.json.historial || '(primer mensaje)') +\n        '\n\nDATOS RECOLECTADOS:\n' +\n        JSON.stringify($('🔧 Preparar Contexto IA').item.json.datosRecolectados || {}) +\n        '\n\nMENSAJE ACTUAL: \"' + $('🔧 Preparar Contexto IA').item.json.texto + '\"' +\n        '\nCliente nuevo: ' + ($('🔧 Preparar Contexto IA').item.json.esNuevo ? 'SÍ' : 'NO') +\n        '\n\nResponde SOLO con JSON válido:\n' +\n        '{\"mensaje\":\"\",\"datos_actualizados\":{},\"clasificacion\":\"frio\",\"todos_recolectados\":false,\"resumen_lead\":\"\"}'\n    }\n  ],\n  temperature: 0.4,\n  max_tokens: 2000,\n  response_format: { type: 'json_object' }\n}) }}",
+          "options": {
+            "timeout": 90000
+          }
+        },
+        "name": "🤖 OpenAI: Último Respaldo",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3020,
+          660
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "hkeIUPcrRjD4F4KY",
+            "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true,
+        "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+        "id": "400a6555-f646-419f-934a-a0c2d1386a92"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "fc08f23d-c755-4396-aecd-065e1ca64b71",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty"
+                }
+              }
+            ]
+          },
+          "options": {}
+        },
+        "name": "🔀 ¿OpenAI respondió?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          3240,
+          660
+        ],
+        "id": "67dfb4ca-22e3-4fd7-9c86-45745fe883e3"
       }
     ],
     "connections": {
@@ -6872,7 +7045,7 @@
           ],
           [
             {
-              "node": "🆘 Respuesta de Emergencia",
+              "node": "🤖 OpenAI: Último Respaldo",
               "type": "main",
               "index": 0
             }
@@ -7052,6 +7225,35 @@
             }
           ]
         ]
+      },
+      "🤖 OpenAI: Último Respaldo": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿OpenAI respondió?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿OpenAI respondió?": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Respuesta IA",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🆘 Respuesta de Emergencia",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -7059,16 +7261,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-10-08T16:51:29.731Z",
-    "updatedAt": "2026-10-08T16:51:29.731Z",
+    "createdAt": "2026-10-08T17:34:08.723Z",
+    "updatedAt": "2026-10-08T17:34:08.723Z",
     "workflowPublishHistory": [
       {
-        "id": 3360,
+        "id": 3407,
         "workflowId": "otycsrxrMEMuxuwD",
-        "versionId": "687a422f-c897-4fd3-b078-003f49c2a37d",
+        "versionId": "946b43e6-0c70-46a3-b440-7d9c9471eab9",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-10-08T16:51:30.189Z"
+        "createdAt": "2026-10-08T17:34:09.138Z"
       }
     ]
   }

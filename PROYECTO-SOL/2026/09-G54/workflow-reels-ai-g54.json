@@ -3,12 +3,12 @@
   "name": "🎬 Reels AI — G54",
   "description": null,
   "active": true,
-  "activeVersionId": "0fb93b1b-a208-448f-8e7d-1898a3162f35",
+  "activeVersionId": "534e9ab4-e92b-481a-ad01-159bc2e7357b",
   "createdAt": "2026-10-08T16:54:56.748Z",
-  "updatedAt": "2026-10-08T16:54:56.748Z",
+  "updatedAt": "2026-10-08T17:34:01.414Z",
   "isArchived": false,
-  "versionId": "0fb93b1b-a208-448f-8e7d-1898a3162f35",
-  "versionCounter": 1,
+  "versionId": "534e9ab4-e92b-481a-ad01-159bc2e7357b",
+  "versionCounter": 3,
   "sourceWorkflowId": null,
   "triggerCount": 1,
   "nodes": [
@@ -199,6 +199,149 @@
         0
       ],
       "id": "4fbbd852-896d-44c5-9aec-7cd6470c363e"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "89d5dafe-056b-4425-b835-146eb5fba3c8",
+              "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "🔀 ¿Groq OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        990,
+        0
+      ],
+      "id": "cd5d3b97-b9d0-4b5c-ad38-74337bd6fe4b"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ...$('🎬 Preparar Reel').first().json.groqBody, model: 'glm-4.5-flash', reasoning_effort: undefined, thinking: { type: 'disabled' } }) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "name": "🤖 Zhipu: Respaldo IA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        990,
+        180
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "rWF3VkYbayILPZTH",
+          "name": "Zhipu GLM � Fallback IA (G54)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "id": "35028615-96ae-4b5e-9dc8-0a813a60870d"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "7f890074-e60f-4390-9f95-c4ae068f4014",
+              "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        180
+      ],
+      "id": "130328e3-1116-4122-93da-9121ef5a660c"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ...$('🎬 Preparar Reel').first().json.groqBody, model: 'gpt-4.1-mini', reasoning_effort: undefined }) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "name": "🤖 OpenAI: Último Respaldo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1210,
+        380
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hkeIUPcrRjD4F4KY",
+          "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+      "id": "f259ddff-2893-472f-ad34-ffd488341e08"
     }
   ],
   "connections": {
@@ -264,7 +407,7 @@
       "main": [
         [
           {
-            "node": "✍️ Armar y Guardar Texto",
+            "node": "🔀 ¿Groq OK?",
             "type": "main",
             "index": 0
           }
@@ -276,6 +419,64 @@
         [
           {
             "node": "↩️ Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Groq OK?": {
+      "main": [
+        [
+          {
+            "node": "✍️ Armar y Guardar Texto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🤖 Zhipu: Respaldo IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Zhipu: Respaldo IA": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Zhipu respondió? (antes de OpenAI)": {
+      "main": [
+        [
+          {
+            "node": "✍️ Armar y Guardar Texto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🤖 OpenAI: Último Respaldo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 OpenAI: Último Respaldo": {
+      "main": [
+        [
+          {
+            "node": "✍️ Armar y Guardar Texto",
             "type": "main",
             "index": 0
           }
@@ -312,7 +513,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "0fb93b1b-a208-448f-8e7d-1898a3162f35",
+    "versionId": "534e9ab4-e92b-481a-ad01-159bc2e7357b",
     "workflowId": "Xqb5sXsFDRz0Diys",
     "nodes": [
       {
@@ -502,6 +703,149 @@
           0
         ],
         "id": "4fbbd852-896d-44c5-9aec-7cd6470c363e"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "89d5dafe-056b-4425-b835-146eb5fba3c8",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty"
+                }
+              }
+            ]
+          },
+          "options": {}
+        },
+        "name": "🔀 ¿Groq OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          990,
+          0
+        ],
+        "id": "cd5d3b97-b9d0-4b5c-ad38-74337bd6fe4b"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ ...$('🎬 Preparar Reel').first().json.groqBody, model: 'glm-4.5-flash', reasoning_effort: undefined, thinking: { type: 'disabled' } }) }}",
+          "options": {
+            "timeout": 90000
+          }
+        },
+        "name": "🤖 Zhipu: Respaldo IA",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          990,
+          180
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "rWF3VkYbayILPZTH",
+            "name": "Zhipu GLM � Fallback IA (G54)"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true,
+        "id": "35028615-96ae-4b5e-9dc8-0a813a60870d"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "7f890074-e60f-4390-9f95-c4ae068f4014",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty"
+                }
+              }
+            ]
+          },
+          "options": {}
+        },
+        "name": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1100,
+          180
+        ],
+        "id": "130328e3-1116-4122-93da-9121ef5a660c"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/chat/completions",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ ...$('🎬 Preparar Reel').first().json.groqBody, model: 'gpt-4.1-mini', reasoning_effort: undefined }) }}",
+          "options": {
+            "timeout": 90000
+          }
+        },
+        "name": "🤖 OpenAI: Último Respaldo",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1210,
+          380
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "hkeIUPcrRjD4F4KY",
+            "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true,
+        "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+        "id": "f259ddff-2893-472f-ad34-ffd488341e08"
       }
     ],
     "connections": {
@@ -567,7 +911,7 @@
         "main": [
           [
             {
-              "node": "✍️ Armar y Guardar Texto",
+              "node": "🔀 ¿Groq OK?",
               "type": "main",
               "index": 0
             }
@@ -584,6 +928,64 @@
             }
           ]
         ]
+      },
+      "🔀 ¿Groq OK?": {
+        "main": [
+          [
+            {
+              "node": "✍️ Armar y Guardar Texto",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🤖 Zhipu: Respaldo IA",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 Zhipu: Respaldo IA": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿Zhipu respondió? (antes de OpenAI)": {
+        "main": [
+          [
+            {
+              "node": "✍️ Armar y Guardar Texto",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🤖 OpenAI: Último Respaldo",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 OpenAI: Último Respaldo": {
+        "main": [
+          [
+            {
+              "node": "✍️ Armar y Guardar Texto",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -591,16 +993,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-10-08T16:54:56.766Z",
-    "updatedAt": "2026-10-08T16:54:56.766Z",
+    "createdAt": "2026-10-08T17:34:01.417Z",
+    "updatedAt": "2026-10-08T17:34:01.417Z",
     "workflowPublishHistory": [
       {
-        "id": 3363,
+        "id": 3401,
         "workflowId": "Xqb5sXsFDRz0Diys",
-        "versionId": "0fb93b1b-a208-448f-8e7d-1898a3162f35",
+        "versionId": "534e9ab4-e92b-481a-ad01-159bc2e7357b",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-10-08T16:54:57.789Z"
+        "createdAt": "2026-10-08T17:34:01.694Z"
       }
     ]
   }

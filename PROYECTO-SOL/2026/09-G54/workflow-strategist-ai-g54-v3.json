@@ -3,12 +3,12 @@
   "name": "🧠 Strategist AI — RRSS G54 v3.0 (Tendencias)",
   "description": null,
   "active": true,
-  "activeVersionId": "230977f5-723b-4c07-a92e-b6c79a7c08c2",
+  "activeVersionId": "c76a05f5-20e7-49f8-be13-4de706d40606",
   "createdAt": "2026-06-20T20:02:45.580Z",
-  "updatedAt": "2026-10-08T17:12:51.355Z",
+  "updatedAt": "2026-10-08T17:33:59.036Z",
   "isArchived": false,
-  "versionId": "230977f5-723b-4c07-a92e-b6c79a7c08c2",
-  "versionCounter": 45,
+  "versionId": "c76a05f5-20e7-49f8-be13-4de706d40606",
+  "versionCounter": 46,
   "sourceWorkflowId": null,
   "triggerCount": 2,
   "nodes": [
@@ -810,6 +810,78 @@
         900
       ],
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "1f295825-61c3-48fc-9161-d0cecb09ab07",
+              "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2030,
+        780
+      ],
+      "id": "4005c78a-9de3-4212-8f68-b2d352f01e38"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'gpt-4.1-mini',\n  messages: [\n    { role: 'system', content: 'Eres un estratega senior de marketing digital especializado en SEO, AEO y GEO. Responde ÚNICAMENTE con JSON válido, sin markdown ni texto adicional.' },\n    { role: 'user',   content: $('🔧 Preparar Contexto').item.json.prompt }\n  ],\n  temperature: 0.7,\n  max_tokens: 8000\n}) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "name": "🤖 OpenAI: Último Respaldo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2140,
+        980
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hkeIUPcrRjD4F4KY",
+          "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+      "id": "d1d1d0aa-68b8-4715-8312-946f934d9bc0"
     }
   ],
   "connections": {
@@ -1034,7 +1106,7 @@
       "main": [
         [
           {
-            "node": "🔍 Parsear Estrategia",
+            "node": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
             "type": "main",
             "index": 0
           }
@@ -1128,6 +1200,35 @@
           }
         ]
       ]
+    },
+    "🔀 ¿Zhipu respondió? (antes de OpenAI)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Estrategia",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🤖 OpenAI: Último Respaldo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 OpenAI: Último Respaldo": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Estrategia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -1162,7 +1263,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "230977f5-723b-4c07-a92e-b6c79a7c08c2",
+    "versionId": "c76a05f5-20e7-49f8-be13-4de706d40606",
     "workflowId": "S62o0wcXq8Wfj67S",
     "nodes": [
       {
@@ -1963,6 +2064,78 @@
           900
         ],
         "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "1f295825-61c3-48fc-9161-d0cecb09ab07",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty"
+                }
+              }
+            ]
+          },
+          "options": {}
+        },
+        "name": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          2030,
+          780
+        ],
+        "id": "4005c78a-9de3-4212-8f68-b2d352f01e38"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/chat/completions",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({\n  model: 'gpt-4.1-mini',\n  messages: [\n    { role: 'system', content: 'Eres un estratega senior de marketing digital especializado en SEO, AEO y GEO. Responde ÚNICAMENTE con JSON válido, sin markdown ni texto adicional.' },\n    { role: 'user',   content: $('🔧 Preparar Contexto').item.json.prompt }\n  ],\n  temperature: 0.7,\n  max_tokens: 8000\n}) }}",
+          "options": {
+            "timeout": 90000
+          }
+        },
+        "name": "🤖 OpenAI: Último Respaldo",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2140,
+          980
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "hkeIUPcrRjD4F4KY",
+            "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true,
+        "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+        "id": "d1d1d0aa-68b8-4715-8312-946f934d9bc0"
       }
     ],
     "connections": {
@@ -2187,7 +2360,7 @@
         "main": [
           [
             {
-              "node": "🔍 Parsear Estrategia",
+              "node": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
               "type": "main",
               "index": 0
             }
@@ -2281,6 +2454,35 @@
             }
           ]
         ]
+      },
+      "🔀 ¿Zhipu respondió? (antes de OpenAI)": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Estrategia",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🤖 OpenAI: Último Respaldo",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 OpenAI: Último Respaldo": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Estrategia",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -2288,16 +2490,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-10-08T17:12:51.362Z",
-    "updatedAt": "2026-10-08T17:12:51.362Z",
+    "createdAt": "2026-10-08T17:33:59.041Z",
+    "updatedAt": "2026-10-08T17:33:59.041Z",
     "workflowPublishHistory": [
       {
-        "id": 3381,
+        "id": 3399,
         "workflowId": "S62o0wcXq8Wfj67S",
-        "versionId": "230977f5-723b-4c07-a92e-b6c79a7c08c2",
+        "versionId": "c76a05f5-20e7-49f8-be13-4de706d40606",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-10-08T17:12:51.670Z"
+        "createdAt": "2026-10-08T17:33:59.293Z"
       }
     ]
   }

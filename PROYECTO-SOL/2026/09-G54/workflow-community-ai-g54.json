@@ -3,12 +3,12 @@
   "name": "Community AI — G54",
   "description": null,
   "active": true,
-  "activeVersionId": "d8f16c77-1558-43a1-981c-01a482e2925a",
+  "activeVersionId": "4fb67cd5-b0e7-4836-ac8c-8efe038df71f",
   "createdAt": "2026-06-20T20:02:45.377Z",
-  "updatedAt": "2026-10-08T16:51:46.058Z",
+  "updatedAt": "2026-10-08T17:33:50.293Z",
   "isArchived": false,
-  "versionId": "d8f16c77-1558-43a1-981c-01a482e2925a",
-  "versionCounter": 59,
+  "versionId": "4fb67cd5-b0e7-4836-ac8c-8efe038df71f",
+  "versionCounter": 60,
   "sourceWorkflowId": null,
   "triggerCount": 3,
   "nodes": [
@@ -320,7 +320,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const usoZhipu = $('🤖 Zhipu: Fallback IA (Community AI)').isExecuted;\nconst raw = usoZhipu ? $('🤖 Zhipu: Fallback IA (Community AI)').first().json : $('🤖 Groq: Community AI').first().json;\nconst texto = raw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`${label}[:\\\\s]+([^\\\\n]+)`, 'i');\n  const match = texto.match(regex);\n  return (match?.[1] || '').trim();\n};\n\nconst intencion = get('INTENCI[OÓ]N');\nconst respuesta = get('RESPUESTA');\nconst lead = get('LEAD');\nconst pregunta = get('PREGUNTA');\nconst siguientePaso = get('SIGUIENTE PASO');\n\n// La respuesta pública ya viene completa del prompt (incluye el link de WhatsApp una sola vez) —\n// no se le agrega nada más aquí para evitar duplicar el link o repetir la pregunta de calificación.\nconst respuestaPublica = respuesta;\n\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\n\nreturn [{ json: {\n  intencion,\n  respuesta,\n  respuestaPublica,\n  lead,\n  pregunta,\n  siguientePaso,\n  plataforma: evento.plataforma,\n  tipo: evento.tipo,\n  comentarioId: evento.comentarioId,\n  postId: evento.postId,\n  mediaId: evento.mediaId,\n  usuarioId: evento.usuarioId,\n  usuarioNombre: evento.usuarioNombre,\n  texto_completo_groq: texto\n}}];"
+        "jsCode": "const usoZhipu = $('🤖 Zhipu: Fallback IA (Community AI)').isExecuted;\nconst usoOpenAI = $('🤖 OpenAI: Último Respaldo').isExecuted;\nconst raw = usoOpenAI ? $('🤖 OpenAI: Último Respaldo').first().json : (usoZhipu ? $('🤖 Zhipu: Fallback IA (Community AI)').first().json : $('🤖 Groq: Community AI').first().json);\nconst texto = raw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`${label}[:\\\\s]+([^\\\\n]+)`, 'i');\n  const match = texto.match(regex);\n  return (match?.[1] || '').trim();\n};\n\nconst intencion = get('INTENCI[OÓ]N');\nconst respuesta = get('RESPUESTA');\nconst lead = get('LEAD');\nconst pregunta = get('PREGUNTA');\nconst siguientePaso = get('SIGUIENTE PASO');\n\n// La respuesta pública ya viene completa del prompt (incluye el link de WhatsApp una sola vez) —\n// no se le agrega nada más aquí para evitar duplicar el link o repetir la pregunta de calificación.\nconst respuestaPublica = respuesta;\n\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\n\nreturn [{ json: {\n  intencion,\n  respuesta,\n  respuestaPublica,\n  lead,\n  pregunta,\n  siguientePaso,\n  plataforma: evento.plataforma,\n  tipo: evento.tipo,\n  comentarioId: evento.comentarioId,\n  postId: evento.postId,\n  mediaId: evento.mediaId,\n  usuarioId: evento.usuarioId,\n  usuarioNombre: evento.usuarioNombre,\n  texto_completo_groq: texto\n}}];"
       },
       "id": "parsear-community",
       "name": "🔍 Parsear Respuesta Community AI",
@@ -2021,6 +2021,78 @@
           "responseCode": 403
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "8dff5509-e51c-4d63-9ce2-447670ad9146",
+              "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2470,
+        710
+      ],
+      "id": "35a207cb-cffb-4b18-8789-5020588b21e9"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4.1-mini', messages: [ { role: 'system', content: $('🔧 Preparar Contexto Community AI').item.json.promptSistema }, { role: 'user', content: $('🔧 Preparar Contexto Community AI').item.json.mensajeUsuario } ], temperature: 0.7, max_tokens: 2000 }) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "name": "🤖 OpenAI: Último Respaldo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2580,
+        910
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hkeIUPcrRjD4F4KY",
+          "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+      "id": "493368c5-9a08-4d25-ad21-c561d6ed413d"
     }
   ],
   "connections": {
@@ -2730,7 +2802,7 @@
       "main": [
         [
           {
-            "node": "🔍 Parsear Respuesta Community AI",
+            "node": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
             "type": "main",
             "index": 0
           }
@@ -2784,6 +2856,35 @@
           }
         ]
       ]
+    },
+    "🔀 ¿Zhipu respondió? (antes de OpenAI)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Respuesta Community AI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🤖 OpenAI: Último Respaldo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 OpenAI: Último Respaldo": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Respuesta Community AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -2817,7 +2918,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "d8f16c77-1558-43a1-981c-01a482e2925a",
+    "versionId": "4fb67cd5-b0e7-4836-ac8c-8efe038df71f",
     "workflowId": "62tIvF0snsrMj0sM",
     "nodes": [
       {
@@ -3128,7 +3229,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const usoZhipu = $('🤖 Zhipu: Fallback IA (Community AI)').isExecuted;\nconst raw = usoZhipu ? $('🤖 Zhipu: Fallback IA (Community AI)').first().json : $('🤖 Groq: Community AI').first().json;\nconst texto = raw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`${label}[:\\\\s]+([^\\\\n]+)`, 'i');\n  const match = texto.match(regex);\n  return (match?.[1] || '').trim();\n};\n\nconst intencion = get('INTENCI[OÓ]N');\nconst respuesta = get('RESPUESTA');\nconst lead = get('LEAD');\nconst pregunta = get('PREGUNTA');\nconst siguientePaso = get('SIGUIENTE PASO');\n\n// La respuesta pública ya viene completa del prompt (incluye el link de WhatsApp una sola vez) —\n// no se le agrega nada más aquí para evitar duplicar el link o repetir la pregunta de calificación.\nconst respuestaPublica = respuesta;\n\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\n\nreturn [{ json: {\n  intencion,\n  respuesta,\n  respuestaPublica,\n  lead,\n  pregunta,\n  siguientePaso,\n  plataforma: evento.plataforma,\n  tipo: evento.tipo,\n  comentarioId: evento.comentarioId,\n  postId: evento.postId,\n  mediaId: evento.mediaId,\n  usuarioId: evento.usuarioId,\n  usuarioNombre: evento.usuarioNombre,\n  texto_completo_groq: texto\n}}];"
+          "jsCode": "const usoZhipu = $('🤖 Zhipu: Fallback IA (Community AI)').isExecuted;\nconst usoOpenAI = $('🤖 OpenAI: Último Respaldo').isExecuted;\nconst raw = usoOpenAI ? $('🤖 OpenAI: Último Respaldo').first().json : (usoZhipu ? $('🤖 Zhipu: Fallback IA (Community AI)').first().json : $('🤖 Groq: Community AI').first().json);\nconst texto = raw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`${label}[:\\\\s]+([^\\\\n]+)`, 'i');\n  const match = texto.match(regex);\n  return (match?.[1] || '').trim();\n};\n\nconst intencion = get('INTENCI[OÓ]N');\nconst respuesta = get('RESPUESTA');\nconst lead = get('LEAD');\nconst pregunta = get('PREGUNTA');\nconst siguientePaso = get('SIGUIENTE PASO');\n\n// La respuesta pública ya viene completa del prompt (incluye el link de WhatsApp una sola vez) —\n// no se le agrega nada más aquí para evitar duplicar el link o repetir la pregunta de calificación.\nconst respuestaPublica = respuesta;\n\nconst evento = $('🔍 Extraer Evento FB/IG').item.json;\n\nreturn [{ json: {\n  intencion,\n  respuesta,\n  respuestaPublica,\n  lead,\n  pregunta,\n  siguientePaso,\n  plataforma: evento.plataforma,\n  tipo: evento.tipo,\n  comentarioId: evento.comentarioId,\n  postId: evento.postId,\n  mediaId: evento.mediaId,\n  usuarioId: evento.usuarioId,\n  usuarioNombre: evento.usuarioNombre,\n  texto_completo_groq: texto\n}}];"
         },
         "id": "parsear-community",
         "name": "🔍 Parsear Respuesta Community AI",
@@ -4829,6 +4930,78 @@
             "responseCode": 403
           }
         }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "8dff5509-e51c-4d63-9ce2-447670ad9146",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty"
+                }
+              }
+            ]
+          },
+          "options": {}
+        },
+        "name": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          2470,
+          710
+        ],
+        "id": "35a207cb-cffb-4b18-8789-5020588b21e9"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/chat/completions",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ model: 'gpt-4.1-mini', messages: [ { role: 'system', content: $('🔧 Preparar Contexto Community AI').item.json.promptSistema }, { role: 'user', content: $('🔧 Preparar Contexto Community AI').item.json.mensajeUsuario } ], temperature: 0.7, max_tokens: 2000 }) }}",
+          "options": {
+            "timeout": 90000
+          }
+        },
+        "name": "🤖 OpenAI: Último Respaldo",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2580,
+          910
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "hkeIUPcrRjD4F4KY",
+            "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true,
+        "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+        "id": "493368c5-9a08-4d25-ad21-c561d6ed413d"
       }
     ],
     "connections": {
@@ -5538,7 +5711,7 @@
         "main": [
           [
             {
-              "node": "🔍 Parsear Respuesta Community AI",
+              "node": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
               "type": "main",
               "index": 0
             }
@@ -5592,6 +5765,35 @@
             }
           ]
         ]
+      },
+      "🔀 ¿Zhipu respondió? (antes de OpenAI)": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Respuesta Community AI",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🤖 OpenAI: Último Respaldo",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 OpenAI: Último Respaldo": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Respuesta Community AI",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -5599,16 +5801,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-10-08T16:51:46.061Z",
-    "updatedAt": "2026-10-08T16:51:46.061Z",
+    "createdAt": "2026-10-08T17:33:50.301Z",
+    "updatedAt": "2026-10-08T17:33:50.301Z",
     "workflowPublishHistory": [
       {
-        "id": 3362,
+        "id": 3391,
         "workflowId": "62tIvF0snsrMj0sM",
-        "versionId": "d8f16c77-1558-43a1-981c-01a482e2925a",
+        "versionId": "4fb67cd5-b0e7-4836-ac8c-8efe038df71f",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-10-08T16:51:46.408Z"
+        "createdAt": "2026-10-08T17:33:50.679Z"
       }
     ]
   }

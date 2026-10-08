@@ -3,12 +3,12 @@
   "name": "📞→💬 VAPI → WhatsApp Handoff",
   "description": null,
   "active": true,
-  "activeVersionId": "27f94dbd-6a52-4908-a61e-bf1b8602113b",
+  "activeVersionId": "94b090e1-6d60-44f7-a1cc-dc9c8ce4c906",
   "createdAt": "2026-06-18T17:58:10.857Z",
-  "updatedAt": "2026-09-29T20:42:12.157Z",
+  "updatedAt": "2026-10-08T17:33:52.736Z",
   "isArchived": false,
-  "versionId": "27f94dbd-6a52-4908-a61e-bf1b8602113b",
-  "versionCounter": 19,
+  "versionId": "94b090e1-6d60-44f7-a1cc-dc9c8ce4c906",
+  "versionCounter": 20,
   "sourceWorkflowId": null,
   "triggerCount": 1,
   "nodes": [
@@ -133,7 +133,9 @@
           "id": "jORffbRhRNohHT1B",
           "name": "Groq API"
         }
-      }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -273,6 +275,78 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "4e133d98-3e29-4167-aedd-d5cefe036128",
+              "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "🔀 ¿Groq respondió? (antes de OpenAI)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -130,
+        1360
+      ],
+      "id": "fb3a3b0c-abf1-4757-90a1-02f2a62a9fe5"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4.1-mini', messages: [{ role: 'user', content: `Analiza este transcript de llamada de Crating Express y extrae la información. Responde SOLO con JSON válido:\\n\\nTranscript:\\n${$json.transcript.slice(0, 2000)}\\n\\nJSON requerido:\\n{\"producto\": \"\", \"medidas\": \"\", \"fecha\": \"\", \"nombre_cliente\": \"\", \"idioma\": \"es\"}` }], max_tokens: 2000, temperature: 0.1, response_format: { type: 'json_object' } }) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "name": "🤖 OpenAI: Último Respaldo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -20,
+        1560
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hkeIUPcrRjD4F4KY",
+          "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+      "id": "caca77ca-f433-4a4b-948f-9a82a5313e19"
     }
   ],
   "connections": {
@@ -323,7 +397,7 @@
       "main": [
         [
           {
-            "node": "🔧 Preparar Datos",
+            "node": "🔀 ¿Groq respondió? (antes de OpenAI)",
             "type": "main",
             "index": 0
           }
@@ -356,6 +430,35 @@
           }
         ],
         []
+      ]
+    },
+    "🔀 ¿Groq respondió? (antes de OpenAI)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🤖 OpenAI: Último Respaldo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 OpenAI: Último Respaldo": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -397,7 +500,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "27f94dbd-6a52-4908-a61e-bf1b8602113b",
+    "versionId": "94b090e1-6d60-44f7-a1cc-dc9c8ce4c906",
     "workflowId": "6UWT1GHKZVvCDcc6",
     "nodes": [
       {
@@ -521,7 +624,9 @@
             "id": "jORffbRhRNohHT1B",
             "name": "Groq API"
           }
-        }
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true
       },
       {
         "parameters": {
@@ -661,6 +766,78 @@
           }
         },
         "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "4e133d98-3e29-4167-aedd-d5cefe036128",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty"
+                }
+              }
+            ]
+          },
+          "options": {}
+        },
+        "name": "🔀 ¿Groq respondió? (antes de OpenAI)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          -130,
+          1360
+        ],
+        "id": "fb3a3b0c-abf1-4757-90a1-02f2a62a9fe5"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/chat/completions",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ model: 'gpt-4.1-mini', messages: [{ role: 'user', content: `Analiza este transcript de llamada de Crating Express y extrae la información. Responde SOLO con JSON válido:\\n\\nTranscript:\\n${$json.transcript.slice(0, 2000)}\\n\\nJSON requerido:\\n{\"producto\": \"\", \"medidas\": \"\", \"fecha\": \"\", \"nombre_cliente\": \"\", \"idioma\": \"es\"}` }], max_tokens: 2000, temperature: 0.1, response_format: { type: 'json_object' } }) }}",
+          "options": {
+            "timeout": 90000
+          }
+        },
+        "name": "🤖 OpenAI: Último Respaldo",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -20,
+          1560
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "hkeIUPcrRjD4F4KY",
+            "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true,
+        "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+        "id": "caca77ca-f433-4a4b-948f-9a82a5313e19"
       }
     ],
     "connections": {
@@ -711,7 +888,7 @@
         "main": [
           [
             {
-              "node": "🔧 Preparar Datos",
+              "node": "🔀 ¿Groq respondió? (antes de OpenAI)",
               "type": "main",
               "index": 0
             }
@@ -745,6 +922,35 @@
           ],
           []
         ]
+      },
+      "🔀 ¿Groq respondió? (antes de OpenAI)": {
+        "main": [
+          [
+            {
+              "node": "🔧 Preparar Datos",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🤖 OpenAI: Último Respaldo",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 OpenAI: Último Respaldo": {
+        "main": [
+          [
+            {
+              "node": "🔧 Preparar Datos",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -752,16 +958,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-29T20:42:12.160Z",
-    "updatedAt": "2026-09-29T20:42:12.160Z",
+    "createdAt": "2026-10-08T17:33:52.738Z",
+    "updatedAt": "2026-10-08T17:33:52.738Z",
     "workflowPublishHistory": [
       {
-        "id": 3266,
+        "id": 3393,
         "workflowId": "6UWT1GHKZVvCDcc6",
-        "versionId": "27f94dbd-6a52-4908-a61e-bf1b8602113b",
+        "versionId": "94b090e1-6d60-44f7-a1cc-dc9c8ce4c906",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-29T20:42:12.428Z"
+        "createdAt": "2026-10-08T17:33:52.966Z"
       }
     ]
   }

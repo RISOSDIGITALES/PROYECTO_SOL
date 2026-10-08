@@ -3,12 +3,12 @@
   "name": "Marco CE — 03 Generador IA",
   "description": null,
   "active": true,
-  "activeVersionId": "0db7321c-5ffd-4212-ba48-9eaec5772ead",
+  "activeVersionId": "80c6d9a5-db79-4214-b85f-6f4e2fa1885f",
   "createdAt": "2026-06-15T15:49:48.824Z",
-  "updatedAt": "2026-09-30T13:51:09.633Z",
+  "updatedAt": "2026-10-08T17:33:57.049Z",
   "isArchived": false,
-  "versionId": "0db7321c-5ffd-4212-ba48-9eaec5772ead",
-  "versionCounter": 74,
+  "versionId": "80c6d9a5-db79-4214-b85f-6f4e2fa1885f",
+  "versionCounter": 75,
   "sourceWorkflowId": null,
   "triggerCount": 0,
   "nodes": [
@@ -184,6 +184,78 @@
       ],
       "id": "zhipu-if-node",
       "name": "🔀 ¿Zhipu OK?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4.1-mini', messages: [{ role: 'system', content: $('Recibir Datos').item.json.sistemaIA }, { role: 'user', content: $('Recibir Datos').item.json.usuarioIA }], temperature: 0.3, max_tokens: 2500, response_format: { type: \"json_object\" } }) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "name": "🤖 OpenAI: Último Respaldo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        660
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hkeIUPcrRjD4F4KY",
+          "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+      "id": "acb554ca-eadf-455f-b462-b9f6ff6f4e2f"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "7295a9fa-4b4e-445a-bce7-d38ba9e268cf",
+              "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "🔀 ¿OpenAI respondió?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        660
+      ],
+      "id": "043067aa-598b-400c-812e-86fae2eb226a"
     }
   ],
   "connections": {
@@ -260,6 +332,35 @@
         ],
         [
           {
+            "node": "🤖 OpenAI: Último Respaldo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 OpenAI: Último Respaldo": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿OpenAI respondió?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿OpenAI respondió?": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Respuesta IA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "🆘 Modo Contingencia",
             "type": "main",
             "index": 0
@@ -299,7 +400,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "0db7321c-5ffd-4212-ba48-9eaec5772ead",
+    "versionId": "80c6d9a5-db79-4214-b85f-6f4e2fa1885f",
     "workflowId": "J8qbKOF7t4GnhRDT",
     "nodes": [
       {
@@ -474,6 +575,78 @@
         ],
         "id": "zhipu-if-node",
         "name": "🔀 ¿Zhipu OK?"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/chat/completions",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ model: 'gpt-4.1-mini', messages: [{ role: 'system', content: $('Recibir Datos').item.json.sistemaIA }, { role: 'user', content: $('Recibir Datos').item.json.usuarioIA }], temperature: 0.3, max_tokens: 2500, response_format: { type: \"json_object\" } }) }}",
+          "options": {
+            "timeout": 90000
+          }
+        },
+        "name": "🤖 OpenAI: Último Respaldo",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1040,
+          660
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "hkeIUPcrRjD4F4KY",
+            "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true,
+        "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+        "id": "acb554ca-eadf-455f-b462-b9f6ff6f4e2f"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "7295a9fa-4b4e-445a-bce7-d38ba9e268cf",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty"
+                }
+              }
+            ]
+          },
+          "options": {}
+        },
+        "name": "🔀 ¿OpenAI respondió?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1260,
+          660
+        ],
+        "id": "043067aa-598b-400c-812e-86fae2eb226a"
       }
     ],
     "connections": {
@@ -550,6 +723,35 @@
           ],
           [
             {
+              "node": "🤖 OpenAI: Último Respaldo",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 OpenAI: Último Respaldo": {
+        "main": [
+          [
+            {
+              "node": "🔀 ¿OpenAI respondió?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 ¿OpenAI respondió?": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Respuesta IA",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
               "node": "🆘 Modo Contingencia",
               "type": "main",
               "index": 0
@@ -563,16 +765,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-30T13:51:09.641Z",
-    "updatedAt": "2026-09-30T13:51:09.641Z",
+    "createdAt": "2026-10-08T17:33:57.054Z",
+    "updatedAt": "2026-10-08T17:33:57.054Z",
     "workflowPublishHistory": [
       {
-        "id": 3278,
+        "id": 3397,
         "workflowId": "J8qbKOF7t4GnhRDT",
-        "versionId": "0db7321c-5ffd-4212-ba48-9eaec5772ead",
+        "versionId": "80c6d9a5-db79-4214-b85f-6f4e2fa1885f",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-30T13:51:09.949Z"
+        "createdAt": "2026-10-08T17:33:57.253Z"
       }
     ]
   }

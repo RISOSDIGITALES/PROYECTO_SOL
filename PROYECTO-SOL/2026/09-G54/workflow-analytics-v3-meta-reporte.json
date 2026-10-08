@@ -3,12 +3,12 @@
   "name": "ANALYTICS MENSUAL V3-META REPORTE",
   "description": null,
   "active": true,
-  "activeVersionId": "4d6b6303-e37d-44f6-8911-4b916b598fc8",
+  "activeVersionId": "7012e678-bcba-46bb-8e0d-d151bc0667fc",
   "createdAt": "2026-07-06T17:45:34.443Z",
-  "updatedAt": "2026-09-30T20:14:46.467Z",
+  "updatedAt": "2026-10-08T17:34:03.815Z",
   "isArchived": false,
-  "versionId": "4d6b6303-e37d-44f6-8911-4b916b598fc8",
-  "versionCounter": 108,
+  "versionId": "7012e678-bcba-46bb-8e0d-d151bc0667fc",
+  "versionCounter": 109,
   "sourceWorkflowId": null,
   "triggerCount": 2,
   "nodes": [
@@ -42,7 +42,7 @@
             {
               "id": "a3",
               "name": "G54_AGENT_TOKEN",
-              "value": "REDACTED_G54_AGENT_TOKEN",
+              "value": "<G54_AGENT_TOKEN — ver .secrets.local.md>",
               "type": "string"
             },
             {
@@ -333,11 +333,13 @@
           "id": "jORffbRhRNohHT1B",
           "name": "Groq API"
         }
-      }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
     },
     {
       "parameters": {
-        "jsCode": "const groqRaw = $('🤖 Groq: Analytics AI').item.json;\nconst texto = groqRaw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`(?:^|\\\\n)\\\\*{0,2}\\\\s*${label}\\\\s*\\\\*{0,2}[:\\\\s]+([\\\\s\\\\S]*?)(?=\\\\n\\\\*{0,2}[A-ZÁÉÍÓÚ][A-ZÁÉÍÓÚ\\\\s]+\\\\*{0,2}:|$)`, 'i');\n  const match = texto.match(regex);\n  let content = (match?.[1] || '').trim();\n  if (/^\\*{0,2}[A-ZÁÉÍÓÚ][A-ZÁÉÍÓÚ\\s]{2,40}\\*{0,2}:/.test(content)) return '';\n  return content;\n};\n\nconst reporte = get('REPORTE');\nconst topContenido = get('TOP CONTENIDO');\nconst bajoRendimiento = get('BAJO RENDIMIENTO');\nconst insightsSEO = get('INSIGHTS SEO');\nconst insightsAEO = get('INSIGHTS AEO');\nconst insightsGEO = get('INSIGHTS GEO');\nconst insightsConversion = get('INSIGHTS CONVERSI[ÓO]N');\nconst recomendaciones = get('RECOMENDACIONES');\n\nconst datos = $('🔧 Preparar Datos Analytics').item.json;\n\nreturn [{ json: {\n  reporte,\n  topContenido,\n  bajoRendimiento,\n  insightsSEO,\n  insightsAEO,\n  insightsGEO,\n  insightsConversion,\n  recomendaciones,\n  texto_completo: texto,\n  nombreEmpresa: datos.nombreEmpresa,\n  emailEmpresa: datos.emailEmpresa,\n  totalPosts: datos.totalPosts,\n  totalLeads: datos.totalLeads,\n  leadsCalientes: datos.leadsCalientes,\n  leadsTibios: datos.leadsTibios,\n  leadsPorOrigen: datos.leadsPorOrigen,\n  periodoAnalisis: datos.periodoAnalisis,\n  periodoLabel: datos.periodoLabel\n}}];"
+        "jsCode": "// Si Groq falló, la respuesta viene del último respaldo (OpenAI)\nconst groqRaw = $('🤖 OpenAI: Último Respaldo').isExecuted ? $('🤖 OpenAI: Último Respaldo').first().json : $('🤖 Groq: Analytics AI').item.json;\nconst texto = groqRaw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`(?:^|\\\\n)\\\\*{0,2}\\\\s*${label}\\\\s*\\\\*{0,2}[:\\\\s]+([\\\\s\\\\S]*?)(?=\\\\n\\\\*{0,2}[A-ZÁÉÍÓÚ][A-ZÁÉÍÓÚ\\\\s]+\\\\*{0,2}:|$)`, 'i');\n  const match = texto.match(regex);\n  let content = (match?.[1] || '').trim();\n  if (/^\\*{0,2}[A-ZÁÉÍÓÚ][A-ZÁÉÍÓÚ\\s]{2,40}\\*{0,2}:/.test(content)) return '';\n  return content;\n};\n\nconst reporte = get('REPORTE');\nconst topContenido = get('TOP CONTENIDO');\nconst bajoRendimiento = get('BAJO RENDIMIENTO');\nconst insightsSEO = get('INSIGHTS SEO');\nconst insightsAEO = get('INSIGHTS AEO');\nconst insightsGEO = get('INSIGHTS GEO');\nconst insightsConversion = get('INSIGHTS CONVERSI[ÓO]N');\nconst recomendaciones = get('RECOMENDACIONES');\n\nconst datos = $('🔧 Preparar Datos Analytics').item.json;\n\nreturn [{ json: {\n  reporte,\n  topContenido,\n  bajoRendimiento,\n  insightsSEO,\n  insightsAEO,\n  insightsGEO,\n  insightsConversion,\n  recomendaciones,\n  texto_completo: texto,\n  nombreEmpresa: datos.nombreEmpresa,\n  emailEmpresa: datos.emailEmpresa,\n  totalPosts: datos.totalPosts,\n  totalLeads: datos.totalLeads,\n  leadsCalientes: datos.leadsCalientes,\n  leadsTibios: datos.leadsTibios,\n  leadsPorOrigen: datos.leadsPorOrigen,\n  periodoAnalisis: datos.periodoAnalisis,\n  periodoLabel: datos.periodoLabel\n}}];"
       },
       "id": "b336d14f-7257-4d6e-978b-7185ea7e6d22",
       "name": "🔍 Parsear Reporte Analytics",
@@ -765,7 +767,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({email:'master@growth54.local', password:'REDACTED_G54_MASTER_PASSWORD'}) }}",
+        "jsonBody": "={{ JSON.stringify({email:'master@growth54.local', password:'<G54_MASTER_PASSWORD — ver .secrets.local.md>'}) }}",
         "options": {}
       },
       "id": "login-charts",
@@ -942,7 +944,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({email:'master@growth54.local', password:'REDACTED_G54_MASTER_PASSWORD'}) }}",
+        "jsonBody": "={{ JSON.stringify({email:'master@growth54.local', password:'<G54_MASTER_PASSWORD — ver .secrets.local.md>'}) }}",
         "options": {}
       },
       "id": "c3d4e5f6-a7b8-4901-c2d3-e4f5a6b7c8d9",
@@ -1081,7 +1083,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({email:'master@growth54.local', password:'REDACTED_G54_MASTER_PASSWORD'}) }}",
+        "jsonBody": "={{ JSON.stringify({email:'master@growth54.local', password:'<G54_MASTER_PASSWORD — ver .secrets.local.md>'}) }}",
         "options": {}
       }
     },
@@ -1255,7 +1257,7 @@
         3300
       ],
       "parameters": {
-        "jsCode": "const BASE = \"https://apigrowth.mdarthurdigital.com\";\nconst AGENT_TOKEN = \"REDACTED_G54_AGENT_TOKEN\";\n\n// Resuelve empresa -> fb_page_id/ig_user_id via el endpoint real de G54 (social-targets),\n// sin ningun mapa fijo ni dato de cliente hardcodeado. Reemplaza el placeholder vacio de antes,\n// que quedo esperando exactamente este endpoint (ver comentario historico mas abajo).\nconst empresasResp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: BASE + \"/api/n8n/companies?activas=1&con_redes=1\",\n  headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n  json: true,\n});\nconst empresas = (empresasResp && empresasResp.data) || [];\n\n// Empresas excluidas del disparo automático: comparten redes con otra empresa (no son datos\n// propios). Orison (id 6) usa el mismo page_id de Facebook que Crating Express — misma\n// decisión del 07-sep que ya aplicaba el semanal; acá faltaba (el 28-sep le generó a Orison\n// un reporte mensual con datos que no son suyos).\nconst EXCLUIDAS = [6];\nconst salida = [];\nfor (const emp of empresas) {\n  if (EXCLUIDAS.includes(Number(emp.id))) continue;\n  let targets = [];\n  try {\n    const tResp = await this.helpers.httpRequest({\n      method: \"GET\",\n      url: BASE + \"/api/agent/companies/\" + emp.id + \"/social-targets\",\n      headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n      json: true,\n    });\n    targets = (tResp && tResp.data) || [];\n  } catch (e) {\n    continue; // empresa sin conexion resuelta - se salta, no se inventa nada\n  }\n\n  const fb = targets.find(t => t.platform === \"Facebook\" && t.listo);\n  const ig = targets.find(t => t.platform === \"Instagram\" && t.listo);\n\n  if (!fb && !ig) continue; // ninguna red lista - nada real que reportar\n\n  salida.push({\n    json: {\n      company_id: emp.id,\n      fb_page_id: fb ? fb.page_id : null,\n      ig_user_id: ig ? ig.instagram_account_id : null,\n    },\n  });\n}\n\nreturn salida;"
+        "jsCode": "const BASE = \"https://apigrowth.mdarthurdigital.com\";\nconst AGENT_TOKEN = \"<G54_AGENT_TOKEN — ver .secrets.local.md>\";\n\n// Resuelve empresa -> fb_page_id/ig_user_id via el endpoint real de G54 (social-targets),\n// sin ningun mapa fijo ni dato de cliente hardcodeado. Reemplaza el placeholder vacio de antes,\n// que quedo esperando exactamente este endpoint (ver comentario historico mas abajo).\nconst empresasResp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: BASE + \"/api/n8n/companies?activas=1&con_redes=1\",\n  headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n  json: true,\n});\nconst empresas = (empresasResp && empresasResp.data) || [];\n\n// Empresas excluidas del disparo automático: comparten redes con otra empresa (no son datos\n// propios). Orison (id 6) usa el mismo page_id de Facebook que Crating Express — misma\n// decisión del 07-sep que ya aplicaba el semanal; acá faltaba (el 28-sep le generó a Orison\n// un reporte mensual con datos que no son suyos).\nconst EXCLUIDAS = [6];\nconst salida = [];\nfor (const emp of empresas) {\n  if (EXCLUIDAS.includes(Number(emp.id))) continue;\n  let targets = [];\n  try {\n    const tResp = await this.helpers.httpRequest({\n      method: \"GET\",\n      url: BASE + \"/api/agent/companies/\" + emp.id + \"/social-targets\",\n      headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n      json: true,\n    });\n    targets = (tResp && tResp.data) || [];\n  } catch (e) {\n    continue; // empresa sin conexion resuelta - se salta, no se inventa nada\n  }\n\n  const fb = targets.find(t => t.platform === \"Facebook\" && t.listo);\n  const ig = targets.find(t => t.platform === \"Instagram\" && t.listo);\n\n  if (!fb && !ig) continue; // ninguna red lista - nada real que reportar\n\n  salida.push({\n    json: {\n      company_id: emp.id,\n      fb_page_id: fb ? fb.page_id : null,\n      ig_user_id: ig ? ig.instagram_account_id : null,\n    },\n  });\n}\n\nreturn salida;"
       }
     },
     {
@@ -1586,7 +1588,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const cfg = $('⚙️ Config Growth54').first().json;\nconst baseUrl = cfg.G54_BASE_URL;\nconst agentToken = cfg.G54_AGENT_TOKEN;\nconst companyIdActual = Number(cfg.G54_COMPANY_ID);\n\nlet hitosOtrasEmpresas = [];\n\nasync function leerLineaBase(baseUrl, token, companyId) {\n  // Primero el campo linea_base de la estrategia (30-sep); el informe viejo, de respaldo.\n  try {\n    const r = await this.helpers.httpRequest({\n      method: 'GET', url: baseUrl + '/api/n8n/companies/' + companyId + '/rrss/estrategia',\n      headers: { Authorization: 'Bearer ' + agentToken }, json: true,\n    });\n    const lb = (r && (r.data || r) || {}).linea_base;\n    if (lb && lb.version === 1 && lb.inicio) return lb.inicio;\n  } catch (e) {}\n  const listResp = await this.helpers.httpRequest({\n    method: 'GET',\n    url: baseUrl + '/api/rrss/reportes?company_id=' + companyId,\n    headers: { Authorization: 'Bearer ' + token },\n    json: true,\n  });\n  const rows = (listResp && listResp.data) || [];\n  const candidatos = rows.filter(r => r.modo === 'linea_base');\n  candidatos.sort((a, b) => new Date(b.periodo_inicio) - new Date(a.periodo_inicio));\n  if (candidatos.length === 0) return null;\n  const detalle = await this.helpers.httpRequest({\n    method: 'GET',\n    url: baseUrl + '/api/rrss/reportes/' + candidatos[0].id,\n    headers: { Authorization: 'Bearer ' + token },\n    json: true,\n  });\n  const html = (detalle && detalle.data && detalle.data.html) || '';\n  const m = html.match(/LINEA_BASE_JSON:\\s*(\\{.*?\\})\\s*-->/);\n  return m ? JSON.parse(m[1]) : null;\n}\n\ntry {\n  // Listado de empresas activas — con AGENT_TOKEN, sin necesitar sesión\n  const companiesResp = await this.helpers.httpRequest({\n    method: 'GET',\n    url: baseUrl + '/api/n8n/companies',\n    headers: { Authorization: 'Bearer ' + agentToken },\n    json: true,\n  });\n  const otras = ((companiesResp && companiesResp.data) || [])\n    .filter(c => c.is_active && Number(c.id) !== companyIdActual);\n\n  if (otras.length > 0) {\n    // Login propio y aislado — nunca toca la sesión que usa el resto de este reporte\n    const login = await this.helpers.httpRequest({\n      method: 'POST',\n      url: baseUrl + '/api/auth/login',\n      body: { email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' },\n      json: true,\n    });\n    const token = login.access_token;\n\n    for (const empresa of otras) {\n      try {\n        await this.helpers.httpRequest({\n          method: 'POST',\n          url: baseUrl + '/api/auth/switch-company',\n          body: { company_id: empresa.id },\n          headers: { Authorization: 'Bearer ' + token },\n          json: true,\n        });\n\n        const lineaBaseOtra = await leerLineaBase.call(this, baseUrl, token, empresa.id);\n        if (!lineaBaseOtra || !lineaBaseOtra.fecha) continue;\n\n        const fechaLB = new Date(lineaBaseOtra.fecha);\n\n        let primerLeadFecha = null;\n        try {\n          const conv = await this.helpers.httpRequest({\n            method: 'GET',\n            url: baseUrl + '/api/whatsapp/conversations?per_page=200',\n            headers: { Authorization: 'Bearer ' + token },\n            json: true,\n          });\n          const todos = (conv && conv.data) || [];\n          const posteriores = todos\n            .filter(c => c.created_at && new Date(c.created_at) >= fechaLB)\n            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));\n          if (posteriores.length > 0) primerLeadFecha = posteriores[0].created_at;\n        } catch (e) {}\n\n        let primeraVentaFecha = null;\n        try {\n          const board = await this.helpers.httpRequest({\n            method: 'GET',\n            url: baseUrl + '/api/crm/board',\n            headers: { Authorization: 'Bearer ' + token },\n            json: true,\n          });\n          if (board && Array.isArray(board.closed)) {\n            const cerradosPosteriores = board.closed\n              .filter(d => d.updated_at && new Date(d.updated_at) >= fechaLB && Number(d.valor_estimado) > 0)\n              .sort((a, b) => new Date(a.updated_at) - new Date(b.updated_at));\n            if (cerradosPosteriores.length > 0) primeraVentaFecha = cerradosPosteriores[0].updated_at;\n          }\n        } catch (e) {}\n\n        const diasDesde = (fechaStr) => fechaStr ? Math.max(0, Math.round((new Date(fechaStr) - fechaLB) / 86400000)) : null;\n\n        hitosOtrasEmpresas.push({\n          company_id: empresa.id,\n          nombre: empresa.name,\n          hitos: {\n            fecha_linea_base: lineaBaseOtra.fecha,\n            primer_lead_fecha: primerLeadFecha,\n            dias_a_primer_lead: diasDesde(primerLeadFecha),\n            primera_venta_fecha: primeraVentaFecha,\n            dias_a_primera_venta: diasDesde(primeraVentaFecha),\n          },\n        });\n      } catch (e) {\n        // esta empresa en particular falló — se sigue con las demás, sin cortar el reporte\n      }\n    }\n  }\n} catch (e) {\n  // sin comparación disponible — la sección simplemente no se muestra\n}\n\nreturn [{ json: { hitosOtrasEmpresas } }];\n"
+        "jsCode": "const cfg = $('⚙️ Config Growth54').first().json;\nconst baseUrl = cfg.G54_BASE_URL;\nconst agentToken = cfg.G54_AGENT_TOKEN;\nconst companyIdActual = Number(cfg.G54_COMPANY_ID);\n\nlet hitosOtrasEmpresas = [];\n\nasync function leerLineaBase(baseUrl, token, companyId) {\n  // Primero el campo linea_base de la estrategia (30-sep); el informe viejo, de respaldo.\n  try {\n    const r = await this.helpers.httpRequest({\n      method: 'GET', url: baseUrl + '/api/n8n/companies/' + companyId + '/rrss/estrategia',\n      headers: { Authorization: 'Bearer ' + agentToken }, json: true,\n    });\n    const lb = (r && (r.data || r) || {}).linea_base;\n    if (lb && lb.version === 1 && lb.inicio) return lb.inicio;\n  } catch (e) {}\n  const listResp = await this.helpers.httpRequest({\n    method: 'GET',\n    url: baseUrl + '/api/rrss/reportes?company_id=' + companyId,\n    headers: { Authorization: 'Bearer ' + token },\n    json: true,\n  });\n  const rows = (listResp && listResp.data) || [];\n  const candidatos = rows.filter(r => r.modo === 'linea_base');\n  candidatos.sort((a, b) => new Date(b.periodo_inicio) - new Date(a.periodo_inicio));\n  if (candidatos.length === 0) return null;\n  const detalle = await this.helpers.httpRequest({\n    method: 'GET',\n    url: baseUrl + '/api/rrss/reportes/' + candidatos[0].id,\n    headers: { Authorization: 'Bearer ' + token },\n    json: true,\n  });\n  const html = (detalle && detalle.data && detalle.data.html) || '';\n  const m = html.match(/LINEA_BASE_JSON:\\s*(\\{.*?\\})\\s*-->/);\n  return m ? JSON.parse(m[1]) : null;\n}\n\ntry {\n  // Listado de empresas activas — con AGENT_TOKEN, sin necesitar sesión\n  const companiesResp = await this.helpers.httpRequest({\n    method: 'GET',\n    url: baseUrl + '/api/n8n/companies',\n    headers: { Authorization: 'Bearer ' + agentToken },\n    json: true,\n  });\n  const otras = ((companiesResp && companiesResp.data) || [])\n    .filter(c => c.is_active && Number(c.id) !== companyIdActual);\n\n  if (otras.length > 0) {\n    // Login propio y aislado — nunca toca la sesión que usa el resto de este reporte\n    const login = await this.helpers.httpRequest({\n      method: 'POST',\n      url: baseUrl + '/api/auth/login',\n      body: { email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' },\n      json: true,\n    });\n    const token = login.access_token;\n\n    for (const empresa of otras) {\n      try {\n        await this.helpers.httpRequest({\n          method: 'POST',\n          url: baseUrl + '/api/auth/switch-company',\n          body: { company_id: empresa.id },\n          headers: { Authorization: 'Bearer ' + token },\n          json: true,\n        });\n\n        const lineaBaseOtra = await leerLineaBase.call(this, baseUrl, token, empresa.id);\n        if (!lineaBaseOtra || !lineaBaseOtra.fecha) continue;\n\n        const fechaLB = new Date(lineaBaseOtra.fecha);\n\n        let primerLeadFecha = null;\n        try {\n          const conv = await this.helpers.httpRequest({\n            method: 'GET',\n            url: baseUrl + '/api/whatsapp/conversations?per_page=200',\n            headers: { Authorization: 'Bearer ' + token },\n            json: true,\n          });\n          const todos = (conv && conv.data) || [];\n          const posteriores = todos\n            .filter(c => c.created_at && new Date(c.created_at) >= fechaLB)\n            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));\n          if (posteriores.length > 0) primerLeadFecha = posteriores[0].created_at;\n        } catch (e) {}\n\n        let primeraVentaFecha = null;\n        try {\n          const board = await this.helpers.httpRequest({\n            method: 'GET',\n            url: baseUrl + '/api/crm/board',\n            headers: { Authorization: 'Bearer ' + token },\n            json: true,\n          });\n          if (board && Array.isArray(board.closed)) {\n            const cerradosPosteriores = board.closed\n              .filter(d => d.updated_at && new Date(d.updated_at) >= fechaLB && Number(d.valor_estimado) > 0)\n              .sort((a, b) => new Date(a.updated_at) - new Date(b.updated_at));\n            if (cerradosPosteriores.length > 0) primeraVentaFecha = cerradosPosteriores[0].updated_at;\n          }\n        } catch (e) {}\n\n        const diasDesde = (fechaStr) => fechaStr ? Math.max(0, Math.round((new Date(fechaStr) - fechaLB) / 86400000)) : null;\n\n        hitosOtrasEmpresas.push({\n          company_id: empresa.id,\n          nombre: empresa.name,\n          hitos: {\n            fecha_linea_base: lineaBaseOtra.fecha,\n            primer_lead_fecha: primerLeadFecha,\n            dias_a_primer_lead: diasDesde(primerLeadFecha),\n            primera_venta_fecha: primeraVentaFecha,\n            dias_a_primera_venta: diasDesde(primeraVentaFecha),\n          },\n        });\n      } catch (e) {\n        // esta empresa en particular falló — se sigue con las demás, sin cortar el reporte\n      }\n    }\n  }\n} catch (e) {\n  // sin comparación disponible — la sección simplemente no se muestra\n}\n\nreturn [{ json: { hitosOtrasEmpresas } }];\n"
       },
       "id": "lb-comparar-otras-empresas",
       "name": "🔧 Línea Base: Comparar Otras Empresas",
@@ -1597,6 +1599,78 @@
         3560
       ],
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "fd2a8bea-346d-4764-af10-2247f0dc70e7",
+              "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "🔀 ¿Groq respondió? (antes de OpenAI)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        942,
+        3168
+      ],
+      "id": "8bb1b03d-24ba-413f-93a4-e882823c058b"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  \"model\": \"gpt-4.1-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Actúa como un analista senior de marketing orgánico basado en SEO, AEO y GEO.\\n\\nTu función es analizar datos y optimizar la estrategia de contenido.\\n\\nDebes:\\n1. Identificar contenido de alto rendimiento\\n2. Detectar contenido de bajo rendimiento\\n3. Analizar keywords y temas que generan más engagement (SEO)\\n4. Analizar preguntas frecuentes e interacciones útiles (AEO)\\n5. Evaluar qué estructuras de contenido funcionan mejor (GEO)\\n6. Detectar patrones: horarios, formatos, temas\\n7. Proponer optimizaciones claras y accionables\\n\\nIMPORTANTE — FORMATOS:\\nG54 puede publicar imagen estática, post de texto, Stories y Reels de forma real (no son manuales) — el ciclo semanal automático genera por defecto imagen+texto, pero Story y Reel están disponibles como formato cuando se generan explícitamente. Si recomiendas Story o Reel, presentalo como una opción real de la plataforma, no como algo externo. Si recomiendas un formato que G54 genuinamente no soporta (carrusel, video largo, edición manual de contenido), márcalo con la etiqueta [Recomendación manual — fuera de G54].\\n\\nEntrega EXACTAMENTE en este formato:\\nREPORTE:\\nTOP CONTENIDO:\\nBAJO RENDIMIENTO:\\nINSIGHTS SEO:\\nINSIGHTS AEO:\\nINSIGHTS GEO:\\nINSIGHTS CONVERSIÓN:\\nRECOMENDACIONES:\\n\\nSé claro, accionable y orientado a mejora continua. Sin relleno.\\n\\nIMPORTANTE — REPORTE: el texto de REPORTE es lo ÚNICO de todo este análisis que el cliente ve — el resto de las secciones (TOP CONTENIDO, BAJO RENDIMIENTO, INSIGHTS, RECOMENDACIONES) son solo para uso interno y nunca se muestran. Por eso REPORTE debe ser un resumen autosuficiente y cerrado del desempeño del período — NUNCA digas frases como \\\"a continuación\\\", \\\"se presentan los hallazgos/recomendaciones\\\" ni nada que anuncie contenido de otra sección, porque ese contenido no existe para quien lo lee.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": $('🔧 Preparar Datos Analytics').item.json.contextoAnalytics\n    }\n  ],\n  \"temperature\": 0.5,\n  \"max_tokens\": 4000\n}) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "name": "🤖 OpenAI: Último Respaldo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1052,
+        3368
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hkeIUPcrRjD4F4KY",
+          "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+      "id": "9e9fd2f2-fe65-488d-b0b5-a7397f5b9547"
     }
   ],
   "connections": {
@@ -1692,7 +1766,7 @@
       "main": [
         [
           {
-            "node": "🔍 Parsear Reporte Analytics",
+            "node": "🔀 ¿Groq respondió? (antes de OpenAI)",
             "type": "main",
             "index": 0
           }
@@ -2214,6 +2288,35 @@
           }
         ]
       ]
+    },
+    "🔀 ¿Groq respondió? (antes de OpenAI)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Reporte Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🤖 OpenAI: Último Respaldo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 OpenAI: Último Respaldo": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Reporte Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -2262,7 +2365,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "4d6b6303-e37d-44f6-8911-4b916b598fc8",
+    "versionId": "7012e678-bcba-46bb-8e0d-d151bc0667fc",
     "workflowId": "YI9EfJYcWJN4bbM9",
     "nodes": [
       {
@@ -2295,7 +2398,7 @@
               {
                 "id": "a3",
                 "name": "G54_AGENT_TOKEN",
-                "value": "REDACTED_G54_AGENT_TOKEN",
+                "value": "<G54_AGENT_TOKEN — ver .secrets.local.md>",
                 "type": "string"
               },
               {
@@ -2586,11 +2689,13 @@
             "id": "jORffbRhRNohHT1B",
             "name": "Groq API"
           }
-        }
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true
       },
       {
         "parameters": {
-          "jsCode": "const groqRaw = $('🤖 Groq: Analytics AI').item.json;\nconst texto = groqRaw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`(?:^|\\\\n)\\\\*{0,2}\\\\s*${label}\\\\s*\\\\*{0,2}[:\\\\s]+([\\\\s\\\\S]*?)(?=\\\\n\\\\*{0,2}[A-ZÁÉÍÓÚ][A-ZÁÉÍÓÚ\\\\s]+\\\\*{0,2}:|$)`, 'i');\n  const match = texto.match(regex);\n  let content = (match?.[1] || '').trim();\n  if (/^\\*{0,2}[A-ZÁÉÍÓÚ][A-ZÁÉÍÓÚ\\s]{2,40}\\*{0,2}:/.test(content)) return '';\n  return content;\n};\n\nconst reporte = get('REPORTE');\nconst topContenido = get('TOP CONTENIDO');\nconst bajoRendimiento = get('BAJO RENDIMIENTO');\nconst insightsSEO = get('INSIGHTS SEO');\nconst insightsAEO = get('INSIGHTS AEO');\nconst insightsGEO = get('INSIGHTS GEO');\nconst insightsConversion = get('INSIGHTS CONVERSI[ÓO]N');\nconst recomendaciones = get('RECOMENDACIONES');\n\nconst datos = $('🔧 Preparar Datos Analytics').item.json;\n\nreturn [{ json: {\n  reporte,\n  topContenido,\n  bajoRendimiento,\n  insightsSEO,\n  insightsAEO,\n  insightsGEO,\n  insightsConversion,\n  recomendaciones,\n  texto_completo: texto,\n  nombreEmpresa: datos.nombreEmpresa,\n  emailEmpresa: datos.emailEmpresa,\n  totalPosts: datos.totalPosts,\n  totalLeads: datos.totalLeads,\n  leadsCalientes: datos.leadsCalientes,\n  leadsTibios: datos.leadsTibios,\n  leadsPorOrigen: datos.leadsPorOrigen,\n  periodoAnalisis: datos.periodoAnalisis,\n  periodoLabel: datos.periodoLabel\n}}];"
+          "jsCode": "// Si Groq falló, la respuesta viene del último respaldo (OpenAI)\nconst groqRaw = $('🤖 OpenAI: Último Respaldo').isExecuted ? $('🤖 OpenAI: Último Respaldo').first().json : $('🤖 Groq: Analytics AI').item.json;\nconst texto = groqRaw.choices?.[0]?.message?.content || '';\n\nconst get = (label) => {\n  const regex = new RegExp(`(?:^|\\\\n)\\\\*{0,2}\\\\s*${label}\\\\s*\\\\*{0,2}[:\\\\s]+([\\\\s\\\\S]*?)(?=\\\\n\\\\*{0,2}[A-ZÁÉÍÓÚ][A-ZÁÉÍÓÚ\\\\s]+\\\\*{0,2}:|$)`, 'i');\n  const match = texto.match(regex);\n  let content = (match?.[1] || '').trim();\n  if (/^\\*{0,2}[A-ZÁÉÍÓÚ][A-ZÁÉÍÓÚ\\s]{2,40}\\*{0,2}:/.test(content)) return '';\n  return content;\n};\n\nconst reporte = get('REPORTE');\nconst topContenido = get('TOP CONTENIDO');\nconst bajoRendimiento = get('BAJO RENDIMIENTO');\nconst insightsSEO = get('INSIGHTS SEO');\nconst insightsAEO = get('INSIGHTS AEO');\nconst insightsGEO = get('INSIGHTS GEO');\nconst insightsConversion = get('INSIGHTS CONVERSI[ÓO]N');\nconst recomendaciones = get('RECOMENDACIONES');\n\nconst datos = $('🔧 Preparar Datos Analytics').item.json;\n\nreturn [{ json: {\n  reporte,\n  topContenido,\n  bajoRendimiento,\n  insightsSEO,\n  insightsAEO,\n  insightsGEO,\n  insightsConversion,\n  recomendaciones,\n  texto_completo: texto,\n  nombreEmpresa: datos.nombreEmpresa,\n  emailEmpresa: datos.emailEmpresa,\n  totalPosts: datos.totalPosts,\n  totalLeads: datos.totalLeads,\n  leadsCalientes: datos.leadsCalientes,\n  leadsTibios: datos.leadsTibios,\n  leadsPorOrigen: datos.leadsPorOrigen,\n  periodoAnalisis: datos.periodoAnalisis,\n  periodoLabel: datos.periodoLabel\n}}];"
         },
         "id": "b336d14f-7257-4d6e-978b-7185ea7e6d22",
         "name": "🔍 Parsear Reporte Analytics",
@@ -3018,7 +3123,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({email:'master@growth54.local', password:'REDACTED_G54_MASTER_PASSWORD'}) }}",
+          "jsonBody": "={{ JSON.stringify({email:'master@growth54.local', password:'<G54_MASTER_PASSWORD — ver .secrets.local.md>'}) }}",
           "options": {}
         },
         "id": "login-charts",
@@ -3195,7 +3300,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({email:'master@growth54.local', password:'REDACTED_G54_MASTER_PASSWORD'}) }}",
+          "jsonBody": "={{ JSON.stringify({email:'master@growth54.local', password:'<G54_MASTER_PASSWORD — ver .secrets.local.md>'}) }}",
           "options": {}
         },
         "id": "c3d4e5f6-a7b8-4901-c2d3-e4f5a6b7c8d9",
@@ -3334,7 +3439,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({email:'master@growth54.local', password:'REDACTED_G54_MASTER_PASSWORD'}) }}",
+          "jsonBody": "={{ JSON.stringify({email:'master@growth54.local', password:'<G54_MASTER_PASSWORD — ver .secrets.local.md>'}) }}",
           "options": {}
         }
       },
@@ -3508,7 +3613,7 @@
           3300
         ],
         "parameters": {
-          "jsCode": "const BASE = \"https://apigrowth.mdarthurdigital.com\";\nconst AGENT_TOKEN = \"REDACTED_G54_AGENT_TOKEN\";\n\n// Resuelve empresa -> fb_page_id/ig_user_id via el endpoint real de G54 (social-targets),\n// sin ningun mapa fijo ni dato de cliente hardcodeado. Reemplaza el placeholder vacio de antes,\n// que quedo esperando exactamente este endpoint (ver comentario historico mas abajo).\nconst empresasResp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: BASE + \"/api/n8n/companies?activas=1&con_redes=1\",\n  headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n  json: true,\n});\nconst empresas = (empresasResp && empresasResp.data) || [];\n\n// Empresas excluidas del disparo automático: comparten redes con otra empresa (no son datos\n// propios). Orison (id 6) usa el mismo page_id de Facebook que Crating Express — misma\n// decisión del 07-sep que ya aplicaba el semanal; acá faltaba (el 28-sep le generó a Orison\n// un reporte mensual con datos que no son suyos).\nconst EXCLUIDAS = [6];\nconst salida = [];\nfor (const emp of empresas) {\n  if (EXCLUIDAS.includes(Number(emp.id))) continue;\n  let targets = [];\n  try {\n    const tResp = await this.helpers.httpRequest({\n      method: \"GET\",\n      url: BASE + \"/api/agent/companies/\" + emp.id + \"/social-targets\",\n      headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n      json: true,\n    });\n    targets = (tResp && tResp.data) || [];\n  } catch (e) {\n    continue; // empresa sin conexion resuelta - se salta, no se inventa nada\n  }\n\n  const fb = targets.find(t => t.platform === \"Facebook\" && t.listo);\n  const ig = targets.find(t => t.platform === \"Instagram\" && t.listo);\n\n  if (!fb && !ig) continue; // ninguna red lista - nada real que reportar\n\n  salida.push({\n    json: {\n      company_id: emp.id,\n      fb_page_id: fb ? fb.page_id : null,\n      ig_user_id: ig ? ig.instagram_account_id : null,\n    },\n  });\n}\n\nreturn salida;"
+          "jsCode": "const BASE = \"https://apigrowth.mdarthurdigital.com\";\nconst AGENT_TOKEN = \"<G54_AGENT_TOKEN — ver .secrets.local.md>\";\n\n// Resuelve empresa -> fb_page_id/ig_user_id via el endpoint real de G54 (social-targets),\n// sin ningun mapa fijo ni dato de cliente hardcodeado. Reemplaza el placeholder vacio de antes,\n// que quedo esperando exactamente este endpoint (ver comentario historico mas abajo).\nconst empresasResp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: BASE + \"/api/n8n/companies?activas=1&con_redes=1\",\n  headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n  json: true,\n});\nconst empresas = (empresasResp && empresasResp.data) || [];\n\n// Empresas excluidas del disparo automático: comparten redes con otra empresa (no son datos\n// propios). Orison (id 6) usa el mismo page_id de Facebook que Crating Express — misma\n// decisión del 07-sep que ya aplicaba el semanal; acá faltaba (el 28-sep le generó a Orison\n// un reporte mensual con datos que no son suyos).\nconst EXCLUIDAS = [6];\nconst salida = [];\nfor (const emp of empresas) {\n  if (EXCLUIDAS.includes(Number(emp.id))) continue;\n  let targets = [];\n  try {\n    const tResp = await this.helpers.httpRequest({\n      method: \"GET\",\n      url: BASE + \"/api/agent/companies/\" + emp.id + \"/social-targets\",\n      headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n      json: true,\n    });\n    targets = (tResp && tResp.data) || [];\n  } catch (e) {\n    continue; // empresa sin conexion resuelta - se salta, no se inventa nada\n  }\n\n  const fb = targets.find(t => t.platform === \"Facebook\" && t.listo);\n  const ig = targets.find(t => t.platform === \"Instagram\" && t.listo);\n\n  if (!fb && !ig) continue; // ninguna red lista - nada real que reportar\n\n  salida.push({\n    json: {\n      company_id: emp.id,\n      fb_page_id: fb ? fb.page_id : null,\n      ig_user_id: ig ? ig.instagram_account_id : null,\n    },\n  });\n}\n\nreturn salida;"
         }
       },
       {
@@ -3839,7 +3944,7 @@
       {
         "parameters": {
           "mode": "runOnceForAllItems",
-          "jsCode": "const cfg = $('⚙️ Config Growth54').first().json;\nconst baseUrl = cfg.G54_BASE_URL;\nconst agentToken = cfg.G54_AGENT_TOKEN;\nconst companyIdActual = Number(cfg.G54_COMPANY_ID);\n\nlet hitosOtrasEmpresas = [];\n\nasync function leerLineaBase(baseUrl, token, companyId) {\n  // Primero el campo linea_base de la estrategia (30-sep); el informe viejo, de respaldo.\n  try {\n    const r = await this.helpers.httpRequest({\n      method: 'GET', url: baseUrl + '/api/n8n/companies/' + companyId + '/rrss/estrategia',\n      headers: { Authorization: 'Bearer ' + agentToken }, json: true,\n    });\n    const lb = (r && (r.data || r) || {}).linea_base;\n    if (lb && lb.version === 1 && lb.inicio) return lb.inicio;\n  } catch (e) {}\n  const listResp = await this.helpers.httpRequest({\n    method: 'GET',\n    url: baseUrl + '/api/rrss/reportes?company_id=' + companyId,\n    headers: { Authorization: 'Bearer ' + token },\n    json: true,\n  });\n  const rows = (listResp && listResp.data) || [];\n  const candidatos = rows.filter(r => r.modo === 'linea_base');\n  candidatos.sort((a, b) => new Date(b.periodo_inicio) - new Date(a.periodo_inicio));\n  if (candidatos.length === 0) return null;\n  const detalle = await this.helpers.httpRequest({\n    method: 'GET',\n    url: baseUrl + '/api/rrss/reportes/' + candidatos[0].id,\n    headers: { Authorization: 'Bearer ' + token },\n    json: true,\n  });\n  const html = (detalle && detalle.data && detalle.data.html) || '';\n  const m = html.match(/LINEA_BASE_JSON:\\s*(\\{.*?\\})\\s*-->/);\n  return m ? JSON.parse(m[1]) : null;\n}\n\ntry {\n  // Listado de empresas activas — con AGENT_TOKEN, sin necesitar sesión\n  const companiesResp = await this.helpers.httpRequest({\n    method: 'GET',\n    url: baseUrl + '/api/n8n/companies',\n    headers: { Authorization: 'Bearer ' + agentToken },\n    json: true,\n  });\n  const otras = ((companiesResp && companiesResp.data) || [])\n    .filter(c => c.is_active && Number(c.id) !== companyIdActual);\n\n  if (otras.length > 0) {\n    // Login propio y aislado — nunca toca la sesión que usa el resto de este reporte\n    const login = await this.helpers.httpRequest({\n      method: 'POST',\n      url: baseUrl + '/api/auth/login',\n      body: { email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' },\n      json: true,\n    });\n    const token = login.access_token;\n\n    for (const empresa of otras) {\n      try {\n        await this.helpers.httpRequest({\n          method: 'POST',\n          url: baseUrl + '/api/auth/switch-company',\n          body: { company_id: empresa.id },\n          headers: { Authorization: 'Bearer ' + token },\n          json: true,\n        });\n\n        const lineaBaseOtra = await leerLineaBase.call(this, baseUrl, token, empresa.id);\n        if (!lineaBaseOtra || !lineaBaseOtra.fecha) continue;\n\n        const fechaLB = new Date(lineaBaseOtra.fecha);\n\n        let primerLeadFecha = null;\n        try {\n          const conv = await this.helpers.httpRequest({\n            method: 'GET',\n            url: baseUrl + '/api/whatsapp/conversations?per_page=200',\n            headers: { Authorization: 'Bearer ' + token },\n            json: true,\n          });\n          const todos = (conv && conv.data) || [];\n          const posteriores = todos\n            .filter(c => c.created_at && new Date(c.created_at) >= fechaLB)\n            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));\n          if (posteriores.length > 0) primerLeadFecha = posteriores[0].created_at;\n        } catch (e) {}\n\n        let primeraVentaFecha = null;\n        try {\n          const board = await this.helpers.httpRequest({\n            method: 'GET',\n            url: baseUrl + '/api/crm/board',\n            headers: { Authorization: 'Bearer ' + token },\n            json: true,\n          });\n          if (board && Array.isArray(board.closed)) {\n            const cerradosPosteriores = board.closed\n              .filter(d => d.updated_at && new Date(d.updated_at) >= fechaLB && Number(d.valor_estimado) > 0)\n              .sort((a, b) => new Date(a.updated_at) - new Date(b.updated_at));\n            if (cerradosPosteriores.length > 0) primeraVentaFecha = cerradosPosteriores[0].updated_at;\n          }\n        } catch (e) {}\n\n        const diasDesde = (fechaStr) => fechaStr ? Math.max(0, Math.round((new Date(fechaStr) - fechaLB) / 86400000)) : null;\n\n        hitosOtrasEmpresas.push({\n          company_id: empresa.id,\n          nombre: empresa.name,\n          hitos: {\n            fecha_linea_base: lineaBaseOtra.fecha,\n            primer_lead_fecha: primerLeadFecha,\n            dias_a_primer_lead: diasDesde(primerLeadFecha),\n            primera_venta_fecha: primeraVentaFecha,\n            dias_a_primera_venta: diasDesde(primeraVentaFecha),\n          },\n        });\n      } catch (e) {\n        // esta empresa en particular falló — se sigue con las demás, sin cortar el reporte\n      }\n    }\n  }\n} catch (e) {\n  // sin comparación disponible — la sección simplemente no se muestra\n}\n\nreturn [{ json: { hitosOtrasEmpresas } }];\n"
+          "jsCode": "const cfg = $('⚙️ Config Growth54').first().json;\nconst baseUrl = cfg.G54_BASE_URL;\nconst agentToken = cfg.G54_AGENT_TOKEN;\nconst companyIdActual = Number(cfg.G54_COMPANY_ID);\n\nlet hitosOtrasEmpresas = [];\n\nasync function leerLineaBase(baseUrl, token, companyId) {\n  // Primero el campo linea_base de la estrategia (30-sep); el informe viejo, de respaldo.\n  try {\n    const r = await this.helpers.httpRequest({\n      method: 'GET', url: baseUrl + '/api/n8n/companies/' + companyId + '/rrss/estrategia',\n      headers: { Authorization: 'Bearer ' + agentToken }, json: true,\n    });\n    const lb = (r && (r.data || r) || {}).linea_base;\n    if (lb && lb.version === 1 && lb.inicio) return lb.inicio;\n  } catch (e) {}\n  const listResp = await this.helpers.httpRequest({\n    method: 'GET',\n    url: baseUrl + '/api/rrss/reportes?company_id=' + companyId,\n    headers: { Authorization: 'Bearer ' + token },\n    json: true,\n  });\n  const rows = (listResp && listResp.data) || [];\n  const candidatos = rows.filter(r => r.modo === 'linea_base');\n  candidatos.sort((a, b) => new Date(b.periodo_inicio) - new Date(a.periodo_inicio));\n  if (candidatos.length === 0) return null;\n  const detalle = await this.helpers.httpRequest({\n    method: 'GET',\n    url: baseUrl + '/api/rrss/reportes/' + candidatos[0].id,\n    headers: { Authorization: 'Bearer ' + token },\n    json: true,\n  });\n  const html = (detalle && detalle.data && detalle.data.html) || '';\n  const m = html.match(/LINEA_BASE_JSON:\\s*(\\{.*?\\})\\s*-->/);\n  return m ? JSON.parse(m[1]) : null;\n}\n\ntry {\n  // Listado de empresas activas — con AGENT_TOKEN, sin necesitar sesión\n  const companiesResp = await this.helpers.httpRequest({\n    method: 'GET',\n    url: baseUrl + '/api/n8n/companies',\n    headers: { Authorization: 'Bearer ' + agentToken },\n    json: true,\n  });\n  const otras = ((companiesResp && companiesResp.data) || [])\n    .filter(c => c.is_active && Number(c.id) !== companyIdActual);\n\n  if (otras.length > 0) {\n    // Login propio y aislado — nunca toca la sesión que usa el resto de este reporte\n    const login = await this.helpers.httpRequest({\n      method: 'POST',\n      url: baseUrl + '/api/auth/login',\n      body: { email: 'master@growth54.local', password: '<G54_MASTER_PASSWORD — ver .secrets.local.md>' },\n      json: true,\n    });\n    const token = login.access_token;\n\n    for (const empresa of otras) {\n      try {\n        await this.helpers.httpRequest({\n          method: 'POST',\n          url: baseUrl + '/api/auth/switch-company',\n          body: { company_id: empresa.id },\n          headers: { Authorization: 'Bearer ' + token },\n          json: true,\n        });\n\n        const lineaBaseOtra = await leerLineaBase.call(this, baseUrl, token, empresa.id);\n        if (!lineaBaseOtra || !lineaBaseOtra.fecha) continue;\n\n        const fechaLB = new Date(lineaBaseOtra.fecha);\n\n        let primerLeadFecha = null;\n        try {\n          const conv = await this.helpers.httpRequest({\n            method: 'GET',\n            url: baseUrl + '/api/whatsapp/conversations?per_page=200',\n            headers: { Authorization: 'Bearer ' + token },\n            json: true,\n          });\n          const todos = (conv && conv.data) || [];\n          const posteriores = todos\n            .filter(c => c.created_at && new Date(c.created_at) >= fechaLB)\n            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));\n          if (posteriores.length > 0) primerLeadFecha = posteriores[0].created_at;\n        } catch (e) {}\n\n        let primeraVentaFecha = null;\n        try {\n          const board = await this.helpers.httpRequest({\n            method: 'GET',\n            url: baseUrl + '/api/crm/board',\n            headers: { Authorization: 'Bearer ' + token },\n            json: true,\n          });\n          if (board && Array.isArray(board.closed)) {\n            const cerradosPosteriores = board.closed\n              .filter(d => d.updated_at && new Date(d.updated_at) >= fechaLB && Number(d.valor_estimado) > 0)\n              .sort((a, b) => new Date(a.updated_at) - new Date(b.updated_at));\n            if (cerradosPosteriores.length > 0) primeraVentaFecha = cerradosPosteriores[0].updated_at;\n          }\n        } catch (e) {}\n\n        const diasDesde = (fechaStr) => fechaStr ? Math.max(0, Math.round((new Date(fechaStr) - fechaLB) / 86400000)) : null;\n\n        hitosOtrasEmpresas.push({\n          company_id: empresa.id,\n          nombre: empresa.name,\n          hitos: {\n            fecha_linea_base: lineaBaseOtra.fecha,\n            primer_lead_fecha: primerLeadFecha,\n            dias_a_primer_lead: diasDesde(primerLeadFecha),\n            primera_venta_fecha: primeraVentaFecha,\n            dias_a_primera_venta: diasDesde(primeraVentaFecha),\n          },\n        });\n      } catch (e) {\n        // esta empresa en particular falló — se sigue con las demás, sin cortar el reporte\n      }\n    }\n  }\n} catch (e) {\n  // sin comparación disponible — la sección simplemente no se muestra\n}\n\nreturn [{ json: { hitosOtrasEmpresas } }];\n"
         },
         "id": "lb-comparar-otras-empresas",
         "name": "🔧 Línea Base: Comparar Otras Empresas",
@@ -3850,6 +3955,78 @@
           3560
         ],
         "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "fd2a8bea-346d-4764-af10-2247f0dc70e7",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty"
+                }
+              }
+            ]
+          },
+          "options": {}
+        },
+        "name": "🔀 ¿Groq respondió? (antes de OpenAI)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          942,
+          3168
+        ],
+        "id": "8bb1b03d-24ba-413f-93a4-e882823c058b"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/chat/completions",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({\n  \"model\": \"gpt-4.1-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Actúa como un analista senior de marketing orgánico basado en SEO, AEO y GEO.\\n\\nTu función es analizar datos y optimizar la estrategia de contenido.\\n\\nDebes:\\n1. Identificar contenido de alto rendimiento\\n2. Detectar contenido de bajo rendimiento\\n3. Analizar keywords y temas que generan más engagement (SEO)\\n4. Analizar preguntas frecuentes e interacciones útiles (AEO)\\n5. Evaluar qué estructuras de contenido funcionan mejor (GEO)\\n6. Detectar patrones: horarios, formatos, temas\\n7. Proponer optimizaciones claras y accionables\\n\\nIMPORTANTE — FORMATOS:\\nG54 puede publicar imagen estática, post de texto, Stories y Reels de forma real (no son manuales) — el ciclo semanal automático genera por defecto imagen+texto, pero Story y Reel están disponibles como formato cuando se generan explícitamente. Si recomiendas Story o Reel, presentalo como una opción real de la plataforma, no como algo externo. Si recomiendas un formato que G54 genuinamente no soporta (carrusel, video largo, edición manual de contenido), márcalo con la etiqueta [Recomendación manual — fuera de G54].\\n\\nEntrega EXACTAMENTE en este formato:\\nREPORTE:\\nTOP CONTENIDO:\\nBAJO RENDIMIENTO:\\nINSIGHTS SEO:\\nINSIGHTS AEO:\\nINSIGHTS GEO:\\nINSIGHTS CONVERSIÓN:\\nRECOMENDACIONES:\\n\\nSé claro, accionable y orientado a mejora continua. Sin relleno.\\n\\nIMPORTANTE — REPORTE: el texto de REPORTE es lo ÚNICO de todo este análisis que el cliente ve — el resto de las secciones (TOP CONTENIDO, BAJO RENDIMIENTO, INSIGHTS, RECOMENDACIONES) son solo para uso interno y nunca se muestran. Por eso REPORTE debe ser un resumen autosuficiente y cerrado del desempeño del período — NUNCA digas frases como \\\"a continuación\\\", \\\"se presentan los hallazgos/recomendaciones\\\" ni nada que anuncie contenido de otra sección, porque ese contenido no existe para quien lo lee.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": $('🔧 Preparar Datos Analytics').item.json.contextoAnalytics\n    }\n  ],\n  \"temperature\": 0.5,\n  \"max_tokens\": 4000\n}) }}",
+          "options": {
+            "timeout": 90000
+          }
+        },
+        "name": "🤖 OpenAI: Último Respaldo",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1052,
+          3368
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "hkeIUPcrRjD4F4KY",
+            "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true,
+        "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+        "id": "9e9fd2f2-fe65-488d-b0b5-a7397f5b9547"
       }
     ],
     "connections": {
@@ -3945,7 +4122,7 @@
         "main": [
           [
             {
-              "node": "🔍 Parsear Reporte Analytics",
+              "node": "🔀 ¿Groq respondió? (antes de OpenAI)",
               "type": "main",
               "index": 0
             }
@@ -4467,6 +4644,35 @@
             }
           ]
         ]
+      },
+      "🔀 ¿Groq respondió? (antes de OpenAI)": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Reporte Analytics",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🤖 OpenAI: Último Respaldo",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 OpenAI: Último Respaldo": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Reporte Analytics",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -4474,16 +4680,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-09-30T20:14:46.475Z",
-    "updatedAt": "2026-09-30T20:14:46.475Z",
+    "createdAt": "2026-10-08T17:34:03.819Z",
+    "updatedAt": "2026-10-08T17:34:03.819Z",
     "workflowPublishHistory": [
       {
-        "id": 3293,
+        "id": 3403,
         "workflowId": "YI9EfJYcWJN4bbM9",
-        "versionId": "4d6b6303-e37d-44f6-8911-4b916b598fc8",
+        "versionId": "7012e678-bcba-46bb-8e0d-d151bc0667fc",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-09-30T20:14:47.085Z"
+        "createdAt": "2026-10-08T17:34:04.149Z"
       }
     ]
   }

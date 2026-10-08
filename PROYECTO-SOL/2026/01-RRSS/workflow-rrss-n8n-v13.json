@@ -3,12 +3,12 @@
   "name": "🎨 Content AI — RRSS G54 v1.3",
   "description": null,
   "active": true,
-  "activeVersionId": "4f51f1c1-a51c-41d1-8e69-6a1f6c03bab0",
+  "activeVersionId": "642ba1fb-758e-4f0b-9c3f-752eb4f0fd34",
   "createdAt": "2026-05-15T15:53:30.951Z",
-  "updatedAt": "2026-10-08T16:21:36.860Z",
+  "updatedAt": "2026-10-08T17:34:11.424Z",
   "isArchived": false,
-  "versionId": "4f51f1c1-a51c-41d1-8e69-6a1f6c03bab0",
-  "versionCounter": 175,
+  "versionId": "642ba1fb-758e-4f0b-9c3f-752eb4f0fd34",
+  "versionCounter": 176,
   "sourceWorkflowId": null,
   "triggerCount": 1,
   "nodes": [
@@ -948,6 +948,78 @@
           }
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "0270ddf0-7056-468d-ae38-faed7db685fd",
+              "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2622,
+        610
+      ],
+      "id": "a63dfb7f-8742-4482-9186-21ad4e14b60a"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\": \"gpt-4.1-mini\", \"messages\": [{\"role\": \"system\", \"content\": \"Escribe TODO el contenido en el idioma indicado como IDIOMA YA DETERMINADO en el mensaje del usuario, y respeta siempre la VOZ DE MARCA que se indica ahí.\\n\\nEres un experto en marketing digital y copywriting, adaptado al rubro real de cada empresa. Tu especialidad es crear contenido auténtico, persuasivo y orientado a conversión para redes sociales. Siempre respondes en formato JSON válido sin texto adicional.\"}, {\"role\": \"user\", \"content\": {{ JSON.stringify(\"Crea un post para redes sociales para la siguiente empresa (en el idioma y con la voz de marca indicados justo abajo):\\n\\n\" + (\"IDIOMA YA DETERMINADO PARA ESTE POST (no lo vuelvas a inferir, usá exactamente este): \" + $('🔧 Preparar Contexto para IA').item.json.idioma_requerido + \". Escribe absolutamente TODO el contenido en ese idioma exacto, sin excepción, sin importar en qué idioma esté redactada cualquier otra parte de este mensaje.\\n\\n\") + $('🔧 Preparar Contexto para IA').item.json.bloque_voz + \"\\n**AUDIENCIA:** \" + ($('🔧 Preparar Contexto para IA').item.json.estrategia_audiencia || '') + \"\\n\\n**EMPRESA:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_nombre + \"\\n**DESCRIPCIÓN:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_descripcion + \"\\n**PROPUESTA DE VALOR:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_propuesta_valor + \"\\n**CIUDAD:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_ciudad + \"\\n**WEB:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_web + \"\\n**SERVICIOS:**\\n\" + $('🔧 Preparar Contexto para IA').item.json.servicios_resumen + \"\\n**CTA PRINCIPAL (usa esta URL si existe):** \" + ($('🔧 Preparar Contexto para IA').item.json.estrategia_cta || '') + \"\\n\\n**TEMA DE ESTA SEMANA:** \" + $('🔧 Preparar Contexto para IA').item.json.tema_texto + \"\\n**DESCRIPCIÓN DEL TEMA:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_descripcion || '') + \"\\n**PALABRAS CLAVE:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_palabras_clave || '') + \"\\n\\nDevuelve un JSON con los siguientes campos:\\n- hook: primera frase impactante máximo 12 palabras\\n- mensaje: cuerpo del mensaje 2-3 párrafos máximo 180 palabras\\n- cta: llamada a la acción máximo 15 palabras, SIEMPRE terminando con una URL completa y clicable — usa exactamente el CTA PRINCIPAL indicado arriba\\n- hashtags: 10 hashtags comenzando con #\\n- texto_canva_titulo: título visual máximo 8 palabras EN MAYÚSCULAS\\n- texto_canva_subtitulo: subtítulo máximo 15 palabras\\n- mensaje_linkedin: el MISMO contenido (mismo hook, mismos datos, mismo CTA) reescrito en tono profesional de LinkedIn (sin cambiar el trato, el idioma ni la personalidad de la VOZ DE MARCA) — sin emojis, sin exclamaciones de venta directa, estilo thought-leadership B2B como si lo publicara un directivo comentando una tendencia del sector, no un anuncio. 2-3 párrafos, máx 200 palabras, mismo idioma que el resto del post.\\n\\nNUNCA inventar un precio, número, descuento, oferta relámpago o plazo específico (ej: '$30', '48 horas', '2x1') que no esté escrito literalmente en SERVICIOS arriba — si no hay ningún precio real ahí, describí el beneficio sin inventar ninguna cifra. Tampoco menciones ninguna característica de ubicación, amenidad o servicio (ej: 'cerca de la playa', 'con piscina', 'vista al mar') que no esté respaldada por CIUDAD/geografía real o por SERVICIOS de arriba — un cliché típico del rubro nunca se asume, se verifica contra los datos reales de esta empresa puntual.\\n\\nResponde ÚNICAMENTE con el JSON, sin texto adicional.\") }}}], \"temperature\": 0.75, \"max_tokens\": 4000, \"response_format\": {\"type\": \"json_object\"}}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "name": "🤖 OpenAI: Último Respaldo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2732,
+        810
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hkeIUPcrRjD4F4KY",
+          "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+      "id": "13243a21-b321-4be7-9078-331e36a96341"
     }
   ],
   "connections": {
@@ -1246,7 +1318,7 @@
       "main": [
         [
           {
-            "node": "🔍 Parsear Post Español",
+            "node": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
             "type": "main",
             "index": 0
           }
@@ -1281,6 +1353,35 @@
         [
           {
             "node": "📤 Generar Post (Lote, self-dispatch)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Zhipu respondió? (antes de OpenAI)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Post Español",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🤖 OpenAI: Último Respaldo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 OpenAI: Último Respaldo": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear Post Español",
             "type": "main",
             "index": 0
           }
@@ -1328,7 +1429,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "4f51f1c1-a51c-41d1-8e69-6a1f6c03bab0",
+    "versionId": "642ba1fb-758e-4f0b-9c3f-752eb4f0fd34",
     "workflowId": "wyO1f93A66imn9qw",
     "nodes": [
       {
@@ -2267,6 +2368,78 @@
             }
           }
         }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "0270ddf0-7056-468d-ae38-faed7db685fd",
+                "leftValue": "={{ $json.choices?.[0]?.message?.content }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEmpty"
+                }
+              }
+            ]
+          },
+          "options": {}
+        },
+        "name": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          2622,
+          610
+        ],
+        "id": "a63dfb7f-8742-4482-9186-21ad4e14b60a"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/chat/completions",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\"model\": \"gpt-4.1-mini\", \"messages\": [{\"role\": \"system\", \"content\": \"Escribe TODO el contenido en el idioma indicado como IDIOMA YA DETERMINADO en el mensaje del usuario, y respeta siempre la VOZ DE MARCA que se indica ahí.\\n\\nEres un experto en marketing digital y copywriting, adaptado al rubro real de cada empresa. Tu especialidad es crear contenido auténtico, persuasivo y orientado a conversión para redes sociales. Siempre respondes en formato JSON válido sin texto adicional.\"}, {\"role\": \"user\", \"content\": {{ JSON.stringify(\"Crea un post para redes sociales para la siguiente empresa (en el idioma y con la voz de marca indicados justo abajo):\\n\\n\" + (\"IDIOMA YA DETERMINADO PARA ESTE POST (no lo vuelvas a inferir, usá exactamente este): \" + $('🔧 Preparar Contexto para IA').item.json.idioma_requerido + \". Escribe absolutamente TODO el contenido en ese idioma exacto, sin excepción, sin importar en qué idioma esté redactada cualquier otra parte de este mensaje.\\n\\n\") + $('🔧 Preparar Contexto para IA').item.json.bloque_voz + \"\\n**AUDIENCIA:** \" + ($('🔧 Preparar Contexto para IA').item.json.estrategia_audiencia || '') + \"\\n\\n**EMPRESA:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_nombre + \"\\n**DESCRIPCIÓN:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_descripcion + \"\\n**PROPUESTA DE VALOR:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_propuesta_valor + \"\\n**CIUDAD:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_ciudad + \"\\n**WEB:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_web + \"\\n**SERVICIOS:**\\n\" + $('🔧 Preparar Contexto para IA').item.json.servicios_resumen + \"\\n**CTA PRINCIPAL (usa esta URL si existe):** \" + ($('🔧 Preparar Contexto para IA').item.json.estrategia_cta || '') + \"\\n\\n**TEMA DE ESTA SEMANA:** \" + $('🔧 Preparar Contexto para IA').item.json.tema_texto + \"\\n**DESCRIPCIÓN DEL TEMA:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_descripcion || '') + \"\\n**PALABRAS CLAVE:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_palabras_clave || '') + \"\\n\\nDevuelve un JSON con los siguientes campos:\\n- hook: primera frase impactante máximo 12 palabras\\n- mensaje: cuerpo del mensaje 2-3 párrafos máximo 180 palabras\\n- cta: llamada a la acción máximo 15 palabras, SIEMPRE terminando con una URL completa y clicable — usa exactamente el CTA PRINCIPAL indicado arriba\\n- hashtags: 10 hashtags comenzando con #\\n- texto_canva_titulo: título visual máximo 8 palabras EN MAYÚSCULAS\\n- texto_canva_subtitulo: subtítulo máximo 15 palabras\\n- mensaje_linkedin: el MISMO contenido (mismo hook, mismos datos, mismo CTA) reescrito en tono profesional de LinkedIn (sin cambiar el trato, el idioma ni la personalidad de la VOZ DE MARCA) — sin emojis, sin exclamaciones de venta directa, estilo thought-leadership B2B como si lo publicara un directivo comentando una tendencia del sector, no un anuncio. 2-3 párrafos, máx 200 palabras, mismo idioma que el resto del post.\\n\\nNUNCA inventar un precio, número, descuento, oferta relámpago o plazo específico (ej: '$30', '48 horas', '2x1') que no esté escrito literalmente en SERVICIOS arriba — si no hay ningún precio real ahí, describí el beneficio sin inventar ninguna cifra. Tampoco menciones ninguna característica de ubicación, amenidad o servicio (ej: 'cerca de la playa', 'con piscina', 'vista al mar') que no esté respaldada por CIUDAD/geografía real o por SERVICIOS de arriba — un cliché típico del rubro nunca se asume, se verifica contra los datos reales de esta empresa puntual.\\n\\nResponde ÚNICAMENTE con el JSON, sin texto adicional.\") }}}], \"temperature\": 0.75, \"max_tokens\": 4000, \"response_format\": {\"type\": \"json_object\"}}",
+          "options": {
+            "timeout": 90000
+          }
+        },
+        "name": "🤖 OpenAI: Último Respaldo",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2732,
+          810
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "hkeIUPcrRjD4F4KY",
+            "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "alwaysOutputData": true,
+        "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+        "id": "13243a21-b321-4be7-9078-331e36a96341"
       }
     ],
     "connections": {
@@ -2565,7 +2738,7 @@
         "main": [
           [
             {
-              "node": "🔍 Parsear Post Español",
+              "node": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
               "type": "main",
               "index": 0
             }
@@ -2605,6 +2778,35 @@
             }
           ]
         ]
+      },
+      "🔀 ¿Zhipu respondió? (antes de OpenAI)": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Post Español",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🤖 OpenAI: Último Respaldo",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 OpenAI: Último Respaldo": {
+        "main": [
+          [
+            {
+              "node": "🔍 Parsear Post Español",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -2612,16 +2814,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-10-08T16:21:36.897Z",
-    "updatedAt": "2026-10-08T16:21:36.897Z",
+    "createdAt": "2026-10-08T17:34:11.436Z",
+    "updatedAt": "2026-10-08T17:34:11.436Z",
     "workflowPublishHistory": [
       {
-        "id": 3342,
+        "id": 3409,
         "workflowId": "wyO1f93A66imn9qw",
-        "versionId": "4f51f1c1-a51c-41d1-8e69-6a1f6c03bab0",
+        "versionId": "642ba1fb-758e-4f0b-9c3f-752eb4f0fd34",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-10-08T16:21:37.464Z"
+        "createdAt": "2026-10-08T17:34:11.743Z"
       }
     ]
   }
