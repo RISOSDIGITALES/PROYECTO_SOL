@@ -158,11 +158,12 @@
     <h1>Éxodo — Pendientes para el ingeniero · <span>09 Oct 2026</span></h1>
     <p>Reemplaza a <code style="color:#a78bfa;background:transparent;border:none;">exodo-g54-sep30.html</code>. Este documento lista los pedidos abiertos por área — el historial de qué se confirmó resuelto y cuándo está abajo, plegado.</p>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> 11 pedidos activos</div>
+      <div class="meta-item"><div class="dot"></div> 13 pedidos activos</div>
     </div>
     <details class="header-updates">
-      <summary>Historial de actualizaciones (29 entradas)</summary>
+      <summary>Historial de actualizaciones (30 entradas)</summary>
       <ul>
+        <li><strong class="upd-date">12-oct (2):</strong> dos pedidos sobre el cotizador de Crating Express (cratingcotiza): que cada cotización llegue al CRM con la marca de origen del QR o la publicación (el webhook <code>cotizador-lead-g54</code> y los QR ya están listos de nuestro lado), y quitar el chat de prueba "me llamo pedrito" que ven los clientes.</li>
         <li><strong class="upd-date">12-oct:</strong> pedido nuevo: en el modal de "Generar estrategia", avisar el límite de 2.000 caracteres de "Dirección deseada" con un contador, y mostrar el error real en vez de "El agente no está configurado aún".</li>
         <li><strong class="upd-date">09-oct (nuevo documento, reemplaza a exodo-g54-sep30.html):</strong> mismo contenido, con la fecha al día. El historial de abajo sigue siendo el del documento anterior.</li>
         <li><strong class="upd-date">09-oct (2):</strong> pedido nuevo: sacar de la configuración del bot el campo "Seguimiento a las 72h", porque WhatsApp no permite texto libre pasadas las 24 horas (a las 72 h solo se avisa al vendedor por correo), y aclarar el de 24 h.</li>
@@ -352,6 +353,42 @@
         <li>Quitar de la pantalla el campo "Seguimiento a las 72h" (en la API puede quedar, no molesta).</li>
         <li>Renombrar "Seguimiento a las 24h" a algo como "Mensaje de seguimiento (antes de las 24 h)", con la ayuda: "Se envía una sola vez si el cliente no respondió en ~23 horas, antes de que WhatsApp cierre la conversación. Si a las 72 horas sigue sin responder, avisamos al vendedor por correo."</li>
       </ul>
+    </div>
+  </div>
+
+  <!-- ============ COTIZADOR CRATING EXPRESS — QR Y CRM ============ -->
+  <div class="cat-header">
+    <span class="cat-icon">🧾</span>
+    <span class="cat-title">Cotizador de Crating Express (cratingcotiza) — QR y CRM</span>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">Que cada cotización llegue al CRM con su origen, para medir los QR (pedido de Don Marc)</div><div class="item-where">App del cotizador · <code>cratingcotiza.mdarthurdigital.com/cotizar-caja</code></div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why"><strong>Por qué:</strong> Don Marc aprobó poner un QR en cada cajón, en las publicaciones y en las tarjetas, y que lleve al cotizador, porque "la razón de ser de todo el marketing de CE es que nos pidan una cotización". Hoy el cotizador pide nombre, correo y teléfono, pero esos datos quedan solo en su app: en el CRM de Crating Express no hay ni un trato que venga de la web. Sin eso no hay forma de saber cuántas cotizaciones trae cada QR.</p>
+      <p class="item-why"><strong>Ya está de nuestro lado (12-oct):</strong> un webhook de n8n que recibe la cotización y crea o actualiza el trato en el CRM (por teléfono o, si no hay, por correo), con origen <code>web</code>, la etiqueta <code>origen:&lt;marca&gt;</code>, el precio estimado como valor del trato y una nota con el detalle. Los QR del cajón y de la tarjeta ya están generados y apuntan a <code>/cotizar-caja?origen=qr-cajon</code> y <code>?origen=qr-tarjeta</code>.</p>
+      <p class="item-why"><strong>Pedido:</strong></p>
+      <ol class="item-why">
+        <li>Guardar el parámetro <code>origen</code> de la URL cuando alguien abre el cotizador (por ejemplo en un campo oculto del formulario) y mantenerlo hasta que envíe la cotización.</li>
+        <li>Al guardar cada cotización, llamar una vez a <code>POST https://n8n.mdarthurdigital.com/webhook/cotizador-lead-g54</code> con el header <code>X-Webhook-Key</code> (la clave se la pasa la usuaria por un canal privado; si la app corre en el mismo servidor que n8n no hace falta). Cuerpo:
+          <pre style="white-space:pre-wrap;font-size:12px;margin:6px 0;">{"company_id":1, "nombre":"Ana Pérez", "correo":"ana@empresa.com", "telefono":"+13055550123",
+ "origen":"qr-cajon", "tipo_servicio":"cajones_cerrados", "largo":40, "ancho":30, "alto":25,
+ "cantidad":1, "precio_estimado":172, "fecha":"2026-10-20", "mensaje":"texto libre",
+ "cotizacion_id":"id interno de la app"}</pre>
+          Obligatorios: <code>company_id</code> y al menos <code>correo</code> o <code>telefono</code>. Si el envío falla, que no frene al cliente: la cotización se guarda igual en la app. Responde <code>{"ok":true,"deal_id":…}</code>.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">El cotizador muestra a los clientes un chat de prueba ("me llamo pedrito")</div><div class="item-where">App del cotizador · botón de chat flotante (n8n chat, webhook <code>91061fae-…/chat</code>)</div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why"><strong>Qué pasa:</strong> la página carga un chat de n8n que no es ninguno de nuestros flujos (debe estar en otra cuenta o proyecto de n8n) y arranca con los mensajes de prueba "hola que tal 👋" y "me llamo pedrito". Cualquier cliente que abra el cotizador lo ve, y no sabemos qué responde ni si guarda algo.</p>
+      <p class="item-why"><strong>Pedido:</strong> sacar el chat de la página, o, si se quiere un chat ahí, conectarlo a Marco y quitar los mensajes de prueba.</p>
     </div>
   </div>
 

@@ -1,0 +1,375 @@
+{
+  "id": "FH4xYCTaxHQnb1dm",
+  "name": "🧾 Cotizador → CRM — G54",
+  "description": null,
+  "active": true,
+  "activeVersionId": "d2a819eb-3e08-4122-95a7-281662ee54c9",
+  "createdAt": "2026-10-12T16:36:01.131Z",
+  "updatedAt": "2026-10-12T16:36:34.836Z",
+  "isArchived": false,
+  "versionId": "d2a819eb-3e08-4122-95a7-281662ee54c9",
+  "versionCounter": 2,
+  "sourceWorkflowId": null,
+  "triggerCount": 1,
+  "nodes": [
+    {
+      "id": "560510c2-653c-473a-8654-6ab0db4fdef8",
+      "name": "📋 INFO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -200,
+        -260
+      ],
+      "parameters": {
+        "width": 640,
+        "height": 200,
+        "content": "## Cotizador → CRM (12-oct)\nLo llama la app del cotizador (cratingcotiza) al guardar cada cotización. Crea o actualiza el trato en el CRM de G54 con origen web, la etiqueta origen:<marca> del QR o la publicación, el precio estimado y una nota con el detalle.\nCuerpo: company_id, nombre, correo, telefono, origen, tipo_servicio, largo, ancho, alto, cantidad, precio_estimado, fecha, mensaje, cotizacion_id, dry_run.\nPlataforma: sirve para cualquier empresa con cotizador propio."
+      }
+    },
+    {
+      "id": "765f61af-2354-4b69-b4c3-92a0487c865b",
+      "name": "🔔 Webhook Cotizador",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "a9c194e8-e2ad-4adc-ac2b-de99bd30fb4f",
+      "parameters": {
+        "path": "cotizador-lead-g54",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "1ad7a2a4-eb6d-46b6-bb52-e37d081c334b",
+      "name": "🔒 ¿Llamada autorizada? (cotizador-lead-g54)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c4cfcb54-6e8f-43eb-bb25-1886db37519f",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ae51f451-5d74-4262-9b29-69d18d2a6698",
+      "name": "⛔ Responder 403 (no autorizado)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        180
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\": false, \"error\": \"no autorizado\"}",
+        "options": {
+          "responseCode": 403
+        }
+      }
+    },
+    {
+      "id": "1fa62027-70cb-4aba-9741-66e21217fd3a",
+      "name": "🧾 Guardar en CRM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Cotizador → CRM de G54 (12-oct). Lo llama la app del cotizador una vez por cotización guardada.\n// Crea o actualiza el trato (upsert de G54 por teléfono o, sin teléfono, por correo) con origen \"web\",\n// la etiqueta origen:<marca> (qr-cajon, qr-tarjeta, P<idea>…) y una nota con el detalle.\nconst BASE = 'https://apigrowth.mdarthurdigital.com';\nconst AGENT = 'Bearer REDACTED_G54_AGENT_TOKEN';\nconst b = $('🔔 Webhook Cotizador').first().json.body || {};\n\nconst limpio = (v, max = 200) => String(v ?? '').replace(/[\\u0000-\\u001f]/g, ' ').trim().slice(0, max);\nconst companyId = Number(b.company_id);\nconst correo = limpio(b.correo || b.email, 150).toLowerCase();\nlet telDig = String(b.telefono || '').replace(/\\D/g, '');\n// 10 dígitos sin código de país = número de EE. UU./Canadá (el cotizador atiende Miami): se agrega el 1.\nif (telDig.length === 10 && !String(b.telefono || '').trim().startsWith('+')) telDig = '1' + telDig;\nconst telefono = telDig.length >= 8 && telDig.length <= 15 ? '+' + telDig : '';\nconst origen = limpio(b.origen || 'web', 40).toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'web';\nconst precio = Number(b.precio_estimado);\nconst dryRun = b.dry_run === true || b.dry_run === 'true';\n\nconst errores = [];\nif (!Number.isInteger(companyId) || companyId <= 0) errores.push('company_id inválido');\nif (correo && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(correo)) errores.push('correo inválido');\nif (!correo && !telefono) errores.push('falta correo o teléfono');\nif (errores.length) return [{ json: { ok: false, motivo: errores.join('; ') } }];\n\nconst medidas = [b.largo, b.ancho, b.alto].every(x => x !== undefined && x !== null && x !== '')\n  ? `${limpio(b.largo, 10)} x ${limpio(b.ancho, 10)} x ${limpio(b.alto, 10)} pulgadas` : '';\nconst codigoPost = /^p\\d{2,7}$/.test(origen) ? origen.toUpperCase() : '';\nconst detalle = [\n  'Cotización desde el cotizador web' + (b.cotizacion_id ? ' (id ' + limpio(b.cotizacion_id, 40) + ')' : '') + '.',\n  'Origen: ' + origen + (codigoPost ? ' (publicación ' + codigoPost + ')' : '') + '.',\n  b.tipo_servicio ? 'Servicio: ' + limpio(b.tipo_servicio, 60) + '.' : '',\n  medidas ? 'Medidas: ' + medidas + '.' : '',\n  b.cantidad ? 'Cantidad: ' + limpio(b.cantidad, 10) + '.' : '',\n  Number.isFinite(precio) && precio > 0 ? 'Precio estimado: $' + precio + ' USD.' : '',\n  b.fecha ? 'Para: ' + limpio(b.fecha, 40) + '.' : '',\n  b.mensaje ? 'Mensaje: ' + limpio(b.mensaje, 500) : '',\n].filter(Boolean).join(' ');\n\nconst payload = {\n  company_id: companyId,\n  nombre: limpio(b.nombre, 120) || correo || telefono,\n  ...(telefono ? { telefono } : {}),\n  ...(correo ? { email: correo } : {}),\n  origen: 'web',\n  temperatura: 'medio',\n  tags: ['origen:' + origen, 'cotizador'],\n  ...(Number.isFinite(precio) && precio > 0 ? { valor_estimado: precio } : {}),\n  notas: detalle,\n};\nif (dryRun) return [{ json: { ok: true, dry_run: true, payload } }];\n\nlet deal = null;\ntry {\n  const r = await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/agent/crm/leads',\n    headers: { Authorization: AGENT, Accept: 'application/json' }, body: payload, json: true, timeout: 15000 });\n  deal = (r && (r.deal || r.data)) || null;\n} catch (e) {\n  return [{ json: { ok: false, motivo: 'G54 no guardó el trato: ' + String(e.message || e).slice(0, 200) } }];\n}\nif (!deal || !deal.id) return [{ json: { ok: false, motivo: 'G54 respondió sin trato' } }];\nif (Number(deal.company_id) !== companyId) return [{ json: { ok: false, motivo: 'el trato quedó en otra empresa', deal_id: deal.id } }];\n\nlet nota = false;\ntry {\n  await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/agent/crm/leads/' + deal.id + '/activities',\n    headers: { Authorization: AGENT, Accept: 'application/json' },\n    body: { tipo: 'nota', contenido: detalle }, json: true, timeout: 15000 });\n  nota = true;\n} catch (e) { nota = false; }\nreturn [{ json: { ok: true, deal_id: deal.id, origen, nota } }];\n"
+      }
+    },
+    {
+      "id": "7024ad31-9e72-49ed-811a-5d645a9e170f",
+      "name": "✅ Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": "={{ $json.ok ? 200 : 422 }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "🔔 Webhook Cotizador": {
+      "main": [
+        [
+          {
+            "node": "🔒 ¿Llamada autorizada? (cotizador-lead-g54)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔒 ¿Llamada autorizada? (cotizador-lead-g54)": {
+      "main": [
+        [
+          {
+            "node": "🧾 Guardar en CRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⛔ Responder 403 (no autorizado)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧾 Guardar en CRM": {
+      "main": [
+        [
+          {
+            "node": "✅ Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodeGroups": [],
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "pinData": null,
+  "meta": null,
+  "tags": [],
+  "shared": [
+    {
+      "role": "workflow:owner",
+      "workflowId": "FH4xYCTaxHQnb1dm",
+      "projectId": "scK6yPpEmlkikl67",
+      "project": {
+        "id": "scK6yPpEmlkikl67",
+        "name": "Solange  Torrez <risosadmi@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-10-12T16:36:01.160Z",
+      "updatedAt": "2026-10-12T16:36:01.160Z"
+    }
+  ],
+  "activeVersion": {
+    "versionId": "d2a819eb-3e08-4122-95a7-281662ee54c9",
+    "workflowId": "FH4xYCTaxHQnb1dm",
+    "nodes": [
+      {
+        "id": "560510c2-653c-473a-8654-6ab0db4fdef8",
+        "name": "📋 INFO",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -200,
+          -260
+        ],
+        "parameters": {
+          "width": 640,
+          "height": 200,
+          "content": "## Cotizador → CRM (12-oct)\nLo llama la app del cotizador (cratingcotiza) al guardar cada cotización. Crea o actualiza el trato en el CRM de G54 con origen web, la etiqueta origen:<marca> del QR o la publicación, el precio estimado y una nota con el detalle.\nCuerpo: company_id, nombre, correo, telefono, origen, tipo_servicio, largo, ancho, alto, cantidad, precio_estimado, fecha, mensaje, cotizacion_id, dry_run.\nPlataforma: sirve para cualquier empresa con cotizador propio."
+        }
+      },
+      {
+        "id": "765f61af-2354-4b69-b4c3-92a0487c865b",
+        "name": "🔔 Webhook Cotizador",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          0,
+          0
+        ],
+        "webhookId": "a9c194e8-e2ad-4adc-ac2b-de99bd30fb4f",
+        "parameters": {
+          "path": "cotizador-lead-g54",
+          "httpMethod": "POST",
+          "responseMode": "responseNode",
+          "options": {}
+        }
+      },
+      {
+        "id": "1ad7a2a4-eb6d-46b6-bb52-e37d081c334b",
+        "name": "🔒 ¿Llamada autorizada? (cotizador-lead-g54)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          220,
+          0
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "conditions": [
+              {
+                "id": "c4cfcb54-6e8f-43eb-bb25-1886db37519f",
+                "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "ae51f451-5d74-4262-9b29-69d18d2a6698",
+        "name": "⛔ Responder 403 (no autorizado)",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          440,
+          180
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "{\"ok\": false, \"error\": \"no autorizado\"}",
+          "options": {
+            "responseCode": 403
+          }
+        }
+      },
+      {
+        "id": "1fa62027-70cb-4aba-9741-66e21217fd3a",
+        "name": "🧾 Guardar en CRM",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          440,
+          0
+        ],
+        "parameters": {
+          "jsCode": "// Cotizador → CRM de G54 (12-oct). Lo llama la app del cotizador una vez por cotización guardada.\n// Crea o actualiza el trato (upsert de G54 por teléfono o, sin teléfono, por correo) con origen \"web\",\n// la etiqueta origen:<marca> (qr-cajon, qr-tarjeta, P<idea>…) y una nota con el detalle.\nconst BASE = 'https://apigrowth.mdarthurdigital.com';\nconst AGENT = 'Bearer REDACTED_G54_AGENT_TOKEN';\nconst b = $('🔔 Webhook Cotizador').first().json.body || {};\n\nconst limpio = (v, max = 200) => String(v ?? '').replace(/[\\u0000-\\u001f]/g, ' ').trim().slice(0, max);\nconst companyId = Number(b.company_id);\nconst correo = limpio(b.correo || b.email, 150).toLowerCase();\nlet telDig = String(b.telefono || '').replace(/\\D/g, '');\n// 10 dígitos sin código de país = número de EE. UU./Canadá (el cotizador atiende Miami): se agrega el 1.\nif (telDig.length === 10 && !String(b.telefono || '').trim().startsWith('+')) telDig = '1' + telDig;\nconst telefono = telDig.length >= 8 && telDig.length <= 15 ? '+' + telDig : '';\nconst origen = limpio(b.origen || 'web', 40).toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'web';\nconst precio = Number(b.precio_estimado);\nconst dryRun = b.dry_run === true || b.dry_run === 'true';\n\nconst errores = [];\nif (!Number.isInteger(companyId) || companyId <= 0) errores.push('company_id inválido');\nif (correo && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(correo)) errores.push('correo inválido');\nif (!correo && !telefono) errores.push('falta correo o teléfono');\nif (errores.length) return [{ json: { ok: false, motivo: errores.join('; ') } }];\n\nconst medidas = [b.largo, b.ancho, b.alto].every(x => x !== undefined && x !== null && x !== '')\n  ? `${limpio(b.largo, 10)} x ${limpio(b.ancho, 10)} x ${limpio(b.alto, 10)} pulgadas` : '';\nconst codigoPost = /^p\\d{2,7}$/.test(origen) ? origen.toUpperCase() : '';\nconst detalle = [\n  'Cotización desde el cotizador web' + (b.cotizacion_id ? ' (id ' + limpio(b.cotizacion_id, 40) + ')' : '') + '.',\n  'Origen: ' + origen + (codigoPost ? ' (publicación ' + codigoPost + ')' : '') + '.',\n  b.tipo_servicio ? 'Servicio: ' + limpio(b.tipo_servicio, 60) + '.' : '',\n  medidas ? 'Medidas: ' + medidas + '.' : '',\n  b.cantidad ? 'Cantidad: ' + limpio(b.cantidad, 10) + '.' : '',\n  Number.isFinite(precio) && precio > 0 ? 'Precio estimado: $' + precio + ' USD.' : '',\n  b.fecha ? 'Para: ' + limpio(b.fecha, 40) + '.' : '',\n  b.mensaje ? 'Mensaje: ' + limpio(b.mensaje, 500) : '',\n].filter(Boolean).join(' ');\n\nconst payload = {\n  company_id: companyId,\n  nombre: limpio(b.nombre, 120) || correo || telefono,\n  ...(telefono ? { telefono } : {}),\n  ...(correo ? { email: correo } : {}),\n  origen: 'web',\n  temperatura: 'medio',\n  tags: ['origen:' + origen, 'cotizador'],\n  ...(Number.isFinite(precio) && precio > 0 ? { valor_estimado: precio } : {}),\n  notas: detalle,\n};\nif (dryRun) return [{ json: { ok: true, dry_run: true, payload } }];\n\nlet deal = null;\ntry {\n  const r = await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/agent/crm/leads',\n    headers: { Authorization: AGENT, Accept: 'application/json' }, body: payload, json: true, timeout: 15000 });\n  deal = (r && (r.deal || r.data)) || null;\n} catch (e) {\n  return [{ json: { ok: false, motivo: 'G54 no guardó el trato: ' + String(e.message || e).slice(0, 200) } }];\n}\nif (!deal || !deal.id) return [{ json: { ok: false, motivo: 'G54 respondió sin trato' } }];\nif (Number(deal.company_id) !== companyId) return [{ json: { ok: false, motivo: 'el trato quedó en otra empresa', deal_id: deal.id } }];\n\nlet nota = false;\ntry {\n  await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/agent/crm/leads/' + deal.id + '/activities',\n    headers: { Authorization: AGENT, Accept: 'application/json' },\n    body: { tipo: 'nota', contenido: detalle }, json: true, timeout: 15000 });\n  nota = true;\n} catch (e) { nota = false; }\nreturn [{ json: { ok: true, deal_id: deal.id, origen, nota } }];\n"
+        }
+      },
+      {
+        "id": "7024ad31-9e72-49ed-811a-5d645a9e170f",
+        "name": "✅ Responder",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          660,
+          0
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseCode": "={{ $json.ok ? 200 : 422 }}"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "🔔 Webhook Cotizador": {
+        "main": [
+          [
+            {
+              "node": "🔒 ¿Llamada autorizada? (cotizador-lead-g54)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔒 ¿Llamada autorizada? (cotizador-lead-g54)": {
+        "main": [
+          [
+            {
+              "node": "🧾 Guardar en CRM",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "⛔ Responder 403 (no autorizado)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧾 Guardar en CRM": {
+        "main": [
+          [
+            {
+              "node": "✅ Responder",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Solange  Torrez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "createdAt": "2026-10-12T16:36:34.839Z",
+    "updatedAt": "2026-10-12T16:36:34.839Z",
+    "workflowPublishHistory": [
+      {
+        "id": 3428,
+        "workflowId": "FH4xYCTaxHQnb1dm",
+        "versionId": "d2a819eb-3e08-4122-95a7-281662ee54c9",
+        "event": "activated",
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-10-12T16:36:35.062Z"
+      }
+    ]
+  }
+}
