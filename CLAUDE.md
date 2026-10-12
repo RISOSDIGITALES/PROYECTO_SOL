@@ -2148,6 +2148,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ---
 
+### 2026-10-12 (Lunes)
+
+Arranqué con la rutina de G54, todo en orden y la semana pasada publicada completa. Aclaré que la mezcla de inglés y español en los posts es a propósito, porque el idioma lo decide la keyword, y lo dejamos así. Después quise probar qué tan bien sigue el Strategist una dirección muy específica: el primer intento no pasó porque el texto superaba los 2.000 caracteres sin que el panel lo avisara (lo pedí en el Éxodo con un contador), y por un error se regeneró una vez sin mi dirección. Con dos pruebas comparamos: la primera inventaba datos (un certificado en 24 horas, un código que no existe) y no respetaba el embudo ni los Reels; lo arreglamos por código, y con una segunda dirección distinta salió casi todo bien. Aprobé las ideas de la estrategia nueva y dejé programados cuatro posts, uno por día de martes a viernes.
+
+Después retomé lo que quedó a medias el viernes: el cotizador de Crating Express no manda las cotizaciones al CRM y además les muestra a los clientes un chat de prueba, así que dejé listo de nuestro lado el flujo que las recibe, los QR del cajón y de la tarjeta, y los pedidos para el ingeniero en el Éxodo. También probamos el botón "Actualizar semana", que nunca había funcionado y además duplicaba la semana, e hicimos que las ideas partan de los pilares de la estrategia, que no repitan siempre las mismas palabras clave y que la idea de tendencia no fuerce noticias que no tienen nada que ver, como una sobre Bali.
+
+Cerré con Bubble: pedí que hiciera todas las pruebas posibles sin mí. Simulando conversaciones encontramos seis fallas del agente (fechas mal calculadas, el PDF que nunca consultaba y un correo que agendaba sin repetir, que en una prueba le pudo llegar a otra persona, entre otras) y quedaron corregidas; con llamadas automáticas confirmamos que atiende llamadas entrantes en inglés, que corta al llegar al tiempo máximo y que se disculpa si falla la IA. Lo más urgente para seguir es el plan de Groq, porque el gratis ya no aguanta una sola llamada movida. Al final hice una revisión completa y todo quedó en orden y subido.
+
+---
+
 ### 2026-10-08 (Jueves)
 
 Arranqué con la rutina de G54, todo en orden, y la volví a revisar a fondo cuando dudé de que hubiera mirado bien las dos API. Me consultaron por qué no tenemos interacciones ni vistas si estamos siguiendo la estrategia, y encontramos que el tono de la estrategia no llegaba a los posts: el idioma lo decidía cada palabra clave, y por eso mezclábamos inglés y español, tú y usted. Ahora la voz de marca la decide el Strategist y la respetan las ideas y los posts; queda regenerar la estrategia de Crating Express el lunes, antes de los posts nuevos. Como sugerencia para tener más interacción y más rápido: que Don Marc comparta los posts de LinkedIn desde su perfil personal, pasar a Reels de 10 a 15 segundos grabados en el taller, escribirles a los clientes que ya tenemos para que sigan la página y dejen una reseña, hacer publicaciones en colaboración con clientes y empresas de envío (con su permiso) y participar desde la página en grupos de negocios de Doral y Miami.
