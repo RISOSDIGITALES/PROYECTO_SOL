@@ -158,11 +158,12 @@
     <h1>Éxodo — Pendientes para el ingeniero · <span>09 Oct 2026</span></h1>
     <p>Reemplaza a <code style="color:#a78bfa;background:transparent;border:none;">exodo-g54-sep30.html</code>. Este documento lista los pedidos abiertos por área — el historial de qué se confirmó resuelto y cuándo está abajo, plegado.</p>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> 13 pedidos activos</div>
+      <div class="meta-item"><div class="dot"></div> 14 pedidos activos</div>
     </div>
     <details class="header-updates">
-      <summary>Historial de actualizaciones (30 entradas)</summary>
+      <summary>Historial de actualizaciones (31 entradas)</summary>
       <ul>
+        <li><strong class="upd-date">12-oct (3):</strong> probado "Actualizar semana": funcionaba mal de los dos lados. Lo nuestro (el flujo no aceptaba POST y la semana se duplicaba) ya está arreglado. Pedido nuevo en Backend: upsert de métricas y que <code>run-analytics</code> no devuelva 502 cuando el agente falla.</li>
         <li><strong class="upd-date">12-oct (2):</strong> dos pedidos sobre el cotizador de Crating Express (cratingcotiza): que cada cotización llegue al CRM con la marca de origen del QR o la publicación (el webhook <code>cotizador-lead-g54</code> y los QR ya están listos de nuestro lado), y quitar el chat de prueba "me llamo pedrito" que ven los clientes.</li>
         <li><strong class="upd-date">12-oct:</strong> pedido nuevo: en el modal de "Generar estrategia", avisar el límite de 2.000 caracteres de "Dirección deseada" con un contador, y mostrar el error real en vez de "El agente no está configurado aún".</li>
         <li><strong class="upd-date">09-oct (nuevo documento, reemplaza a exodo-g54-sep30.html):</strong> mismo contenido, con la fecha al día. El historial de abajo sigue siendo el del documento anterior.</li>
@@ -435,6 +436,21 @@
     <span class="cat-icon">🔧</span>
     <span class="cat-title">Backend</span>
   </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">Métricas: guardar dos veces la misma semana la suma dos veces, y "Actualizar semana" devuelve 502 si el agente falla</div><div class="item-where"><code>POST /api/agent/rrss/metricas</code> · <code>POST /api/rrss/run-analytics</code></div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why"><strong>Qué pasó (12-oct):</strong> probamos el botón "Actualizar semana" un lunes, después de la corrida automática. (1) Nuestro flujo solo aceptaba GET y G54 lo llama por POST: n8n respondía 404 y el panel recibía un <strong>502 "Service is not reachable"</strong>, en vez de un error claro. Ya lo arreglamos de nuestro lado: el flujo acepta POST. (2) Con el botón andando, la semana quedó sumada dos veces (alcance de Facebook de 6 a 13), porque cada guardado agrega una fila y no hay forma de reemplazarla. De nuestro lado lo resolvimos borrando por rango la semana antes de volver a guardarla, pero ese rango también se lleva cualquier fila diaria de esos días.</p>
+      <p class="item-why"><strong>Pedido:</strong></p>
+      <ol class="item-why">
+        <li>Que <code>POST /api/agent/rrss/metricas</code> reemplace la fila si ya existe una con la misma empresa, red, <code>period_start</code>, <code>period_end</code> y <code>social_post_id</code> (upsert), en vez de sumar otra. Con eso sacamos el borrado previo.</li>
+        <li>Que <code>run-analytics</code> (y los demás <code>run-*</code>) devuelvan un error legible con el código que respondió n8n cuando el webhook falla, nunca un 502 del servidor.</li>
+      </ol>
+    </div>
+  </div>
+
 
   <div class="item-card">
     <div class="item-header">

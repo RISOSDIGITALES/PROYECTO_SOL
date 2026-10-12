@@ -3,14 +3,14 @@
   "name": "📊 Analytics AI Semanal — G54",
   "description": null,
   "active": true,
-  "activeVersionId": "3b381693-cb43-4312-ac1a-62095571ae81",
+  "activeVersionId": "ee12e69c-4fde-4b32-927b-a42a0b89bee7",
   "createdAt": "2026-06-12T20:28:34.750Z",
-  "updatedAt": "2026-10-08T16:56:58.138Z",
+  "updatedAt": "2026-10-12T16:59:35.686Z",
   "isArchived": false,
-  "versionId": "3b381693-cb43-4312-ac1a-62095571ae81",
-  "versionCounter": 35,
+  "versionId": "ee12e69c-4fde-4b32-927b-a42a0b89bee7",
+  "versionCounter": 37,
   "sourceWorkflowId": null,
-  "triggerCount": 2,
+  "triggerCount": 3,
   "nodes": [
     {
       "parameters": {
@@ -67,7 +67,7 @@
             {
               "id": "a3",
               "name": "G54_AGENT_TOKEN",
-              "value": "<G54_AGENT_TOKEN — ver .secrets.local.md>",
+              "value": "REDACTED_G54_AGENT_TOKEN",
               "type": "string"
             },
             {
@@ -115,7 +115,7 @@
             {
               "id": "g54-master-password",
               "name": "G54_MASTER_PASSWORD",
-              "value": "<G54_MASTER_PASSWORD — ver .secrets.local.md>",
+              "value": "REDACTED_G54_MASTER_PASSWORD",
               "type": "string"
             }
           ]
@@ -509,7 +509,7 @@
         400
       ],
       "parameters": {
-        "jsCode": "const BASE = \"https://apigrowth.mdarthurdigital.com\";\nconst AGENT_TOKEN = \"<G54_AGENT_TOKEN — ver .secrets.local.md>\";\n\n// Excluidas del despacho automático: empresas cuyas credenciales de Meta\n// están confirmadas como copiadas/compartidas con otra empresa (no son\n// datos reales propios) — hoy Orison (id 6) comparte el mismo page_id de\n// Facebook que Crating Express (ver CLAUDE.md, hallazgo del 13-jul, decisión\n// explícita del 07-sep de excluirla hasta que tenga sus propias redes).\nconst EXCLUIDAS = [6];\n\nconst empresasResp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: BASE + \"/api/n8n/companies?activas=1&con_redes=1\",\n  headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n  json: true,\n});\nconst empresas = (empresasResp && empresasResp.data) || [];\n\nconst salida = [];\nfor (const emp of empresas) {\n  if (EXCLUIDAS.includes(emp.id)) continue;\n\n  let targets = [];\n  try {\n    const tResp = await this.helpers.httpRequest({\n      method: \"GET\",\n      url: BASE + \"/api/agent/companies/\" + emp.id + \"/social-targets\",\n      headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n      json: true,\n    });\n    targets = (tResp && tResp.data) || [];\n  } catch (e) {\n    continue; // empresa sin conexión resuelta - se salta, no se inventa nada\n  }\n\n  const fb = targets.find(t => t.platform === \"Facebook\" && t.listo);\n  const ig = targets.find(t => t.platform === \"Instagram\" && t.listo);\n\n  if (!fb && !ig) continue; // ninguna red lista - nada real que reportar\n\n  salida.push({\n    json: {\n      company_id: emp.id,\n      fb_page_id: fb ? fb.page_id : null,\n      ig_user_id: ig ? ig.instagram_account_id : null,\n    },\n  });\n}\n\nreturn salida;"
+        "jsCode": "const BASE = \"https://apigrowth.mdarthurdigital.com\";\nconst AGENT_TOKEN = \"REDACTED_G54_AGENT_TOKEN\";\n\n// Excluidas del despacho automático: empresas cuyas credenciales de Meta\n// están confirmadas como copiadas/compartidas con otra empresa (no son\n// datos reales propios) — hoy Orison (id 6) comparte el mismo page_id de\n// Facebook que Crating Express (ver CLAUDE.md, hallazgo del 13-jul, decisión\n// explícita del 07-sep de excluirla hasta que tenga sus propias redes).\nconst EXCLUIDAS = [6];\n\nconst empresasResp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: BASE + \"/api/n8n/companies?activas=1&con_redes=1\",\n  headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n  json: true,\n});\nconst empresas = (empresasResp && empresasResp.data) || [];\n\nconst salida = [];\nfor (const emp of empresas) {\n  if (EXCLUIDAS.includes(emp.id)) continue;\n\n  let targets = [];\n  try {\n    const tResp = await this.helpers.httpRequest({\n      method: \"GET\",\n      url: BASE + \"/api/agent/companies/\" + emp.id + \"/social-targets\",\n      headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n      json: true,\n    });\n    targets = (tResp && tResp.data) || [];\n  } catch (e) {\n    continue; // empresa sin conexión resuelta - se salta, no se inventa nada\n  }\n\n  const fb = targets.find(t => t.platform === \"Facebook\" && t.listo);\n  const ig = targets.find(t => t.platform === \"Instagram\" && t.listo);\n\n  if (!fb && !ig) continue; // ninguna red lista - nada real que reportar\n\n  salida.push({\n    json: {\n      company_id: emp.id,\n      fb_page_id: fb ? fb.page_id : null,\n      ig_user_id: ig ? ig.instagram_account_id : null,\n    },\n  });\n}\n\nreturn salida;"
       }
     },
     {
@@ -569,6 +569,49 @@
       "alwaysOutputData": true,
       "parameters": {
         "jsCode": "// Agregado 28-sep: métricas por post de la semana, vinculadas al post de G54 por\n// post_id_platform (el id que devuelve Meta al publicar). Alimenta \"Top Posts\" del panel y\n// la retroalimentación de Ideas AI (qué temas rindieron). G54 excluye del total de cuenta\n// las filas con social_post_id, así que esto no duplica los números del panel.\n// Requiere sesión: ninguna ruta con AGENT_TOKEN devuelve los posts publicados con su id de Meta.\nconst cfg = $('⚙️ Config Growth54').item.json;\nconst m = $('📊 Preparar Métricas G54').item.json;\nconst B = cfg.G54_BASE_URL;\nconst cid = parseInt(cfg.G54_COMPANY_ID, 10) || 1;\nconst H = { Accept: 'application/json', 'Content-Type': 'application/json' };\n\nconst login = await this.helpers.httpRequest({ method: 'POST', url: B + '/api/auth/login', headers: H, json: true,\n  body: { email: cfg.G54_MASTER_EMAIL, password: cfg.G54_MASTER_PASSWORD } });\nconst auth = { ...H, Authorization: 'Bearer ' + login.access_token };\nawait this.helpers.httpRequest({ method: 'POST', url: B + '/api/auth/switch-company', headers: auth, json: true, body: { company_id: cid } });\nconst postsResp = await this.helpers.httpRequest({ method: 'GET', url: B + '/api/rrss/posts', headers: auth, json: true });\nconst posts = (postsResp && postsResp.data) || postsResp || [];\nconst porMetaId = {};\nfor (const p of posts) if (p.post_id_platform) porMetaId[String(p.post_id_platform)] = p.id;\n\nconst rows = [], sinVincular = [];\nconst base = { period_start: m.period_start, period_end: m.period_end, leads: 0 };\nfor (const d of ((m.fb && m.fb.detalle) || [])) {\n  const id = porMetaId[d.meta_id];\n  if (!id) { sinVincular.push('facebook:' + d.meta_id); continue; }\n  rows.push({ ...base, platform: 'facebook', social_post_id: id, alcance: d.alcance, impresiones: d.visualizaciones,\n    engagement_count: (d.reacciones || 0) + (d.comentarios || 0) + (d.compartidos || 0) + (d.clics || 0),\n    engagement_rate: d.alcance > 0 ? +(((d.reacciones || 0) + (d.comentarios || 0) + (d.compartidos || 0) + (d.clics || 0)) / d.alcance * 100).toFixed(2) : 0,\n    clics: d.clics || 0, compartidos: d.compartidos || 0 });\n}\nfor (const d of ((m.ig && m.ig.detalle) || [])) {\n  const id = porMetaId[d.meta_id];\n  if (!id) { sinVincular.push('instagram:' + d.meta_id); continue; }\n  rows.push({ ...base, platform: 'instagram', social_post_id: id, alcance: d.alcance, impresiones: d.visualizaciones,\n    engagement_count: d.interacciones || 0, engagement_rate: d.alcance > 0 ? +((d.interacciones || 0) / d.alcance * 100).toFixed(2) : 0,\n    guardados: d.guardados || 0, compartidos: d.compartidos || 0 });\n}\nlet guardado = null;\nif (rows.length) {\n  guardado = await this.helpers.httpRequest({ method: 'POST', url: B + '/api/agent/rrss/metricas', json: true,\n    headers: { ...H, Authorization: 'Bearer ' + cfg.G54_AGENT_TOKEN }, body: { company_id: cid, metricas: rows } });\n}\nreturn [{ json: { vinculados: rows.length, sin_vincular: sinVincular, guardado } }];\n"
+      }
+    },
+    {
+      "id": "fdd03bdc-8a64-462c-8925-8e1a3931ba97",
+      "name": "🌐 Webhook G54 (POST, botón Actualizar semana)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        520
+      ],
+      "webhookId": "2e5119b4-06f4-4d8f-b82a-17d1f98fe67f",
+      "parameters": {
+        "path": "analytics-semanal-g54",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "id": "db9fd1c9-6973-4207-b206-491e22f1329b",
+      "name": "🔎 Resolver Redes (botón)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        520
+      ],
+      "parameters": {
+        "jsCode": "// Botón \"Actualizar semana\" del panel (POST /api/rrss/run-analytics con periodo \"semanal\"): G54 llama este\n// webhook por POST y solo manda company_id. Acá se resuelven la página de Facebook y la cuenta de Instagram\n// (igual que el disparo de los lunes) y se llama al mismo flujo por GET. Agregado el 12-oct.\nconst BASE = \"https://apigrowth.mdarthurdigital.com\";\nconst AGENT_TOKEN = \"REDACTED_G54_AGENT_TOKEN\";\nconst EXCLUIDAS = [6]; // mismas exclusiones que el disparo automático (Orison comparte la página de CE)\nconst b = $input.first().json.body || {};\nconst companyId = Number(b.company_id || ($input.first().json.query || {}).company_id);\nif (!Number.isInteger(companyId) || companyId <= 0 || EXCLUIDAS.includes(companyId)) return [];\nlet targets = [];\ntry {\n  const t = await this.helpers.httpRequest({ method: \"GET\", url: BASE + \"/api/agent/companies/\" + companyId + \"/social-targets\",\n    headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" }, json: true });\n  targets = (t && t.data) || [];\n} catch (e) { return []; }\nconst fb = targets.find(t => t.platform === \"Facebook\" && t.listo);\nconst ig = targets.find(t => t.platform === \"Instagram\" && t.listo);\nif (!fb && !ig) return [];\nreturn [{ json: { company_id: companyId, fb_page_id: fb ? fb.page_id : null, ig_user_id: ig ? ig.instagram_account_id : null } }];\n"
+      }
+    },
+    {
+      "id": "60d91034-82e4-4bd7-bf36-3d93a6177dfe",
+      "name": "🧹 Borrar semana ya guardada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3250,
+        620
+      ],
+      "parameters": {
+        "jsCode": "// Borra lo ya guardado de esta misma semana antes de volver a guardarla (12-oct). G54 suma una fila por\n// cada guardado y no tiene upsert, así que apretar \"Actualizar semana\" duplicaba la semana. Se borra por\n// rango exacto (period_start/period_end de esta corrida) y por red. Ese rango también se lleva las filas por\n// post de la semana, que el paso siguiente vuelve a guardar. Si el borrado falla, se guarda igual (mejor un\n// duplicado visible que perder la semana). Ojo: también borraría filas diarias del rastreador de clics de\n// esa semana; el rastreador no registra nada desde el 02-oct.\nconst cfg = $('⚙️ Config Growth54').first().json;\nconst m = $input.first().json;\nconst companyId = parseInt(cfg.G54_COMPANY_ID) || 1;\nconst BASE = cfg.G54_BASE_URL;\nconst resultado = { borrado: [], error: null };\ntry {\n  const login = await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/auth/login', json: true,\n    headers: { Accept: 'application/json' }, body: { email: cfg.G54_MASTER_EMAIL, password: cfg.G54_MASTER_PASSWORD } });\n  const auth = { Authorization: 'Bearer ' + login.access_token, Accept: 'application/json' };\n  await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/auth/switch-company', json: true, headers: auth, body: { company_id: companyId } });\n  for (const platform of ['facebook', 'instagram']) {\n    const r = await this.helpers.httpRequest({ method: 'DELETE', url: BASE + '/api/rrss/metricas', json: true, headers: auth,\n      body: { platform, period_start: m.period_start, period_end: m.period_end } });\n    resultado.borrado.push({ platform, deleted: r && r.deleted });\n  }\n} catch (e) {\n  resultado.error = String(e.message || e).slice(0, 200);\n}\nreturn [{ json: { ...m, borrado_previo: resultado } }];\n"
       }
     }
   ],
@@ -687,7 +730,7 @@
       "main": [
         [
           {
-            "node": "💾 Guardar Métricas en G54",
+            "node": "🧹 Borrar semana ya guardada",
             "type": "main",
             "index": 0
           }
@@ -799,6 +842,39 @@
           }
         ]
       ]
+    },
+    "🌐 Webhook G54 (POST, botón Actualizar semana)": {
+      "main": [
+        [
+          {
+            "node": "🔎 Resolver Redes (botón)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔎 Resolver Redes (botón)": {
+      "main": [
+        [
+          {
+            "node": "📤 Disparar Reporte Semanal (auto-despacho)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧹 Borrar semana ya guardada": {
+      "main": [
+        [
+          {
+            "node": "💾 Guardar Métricas en G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [],
@@ -841,7 +917,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "3b381693-cb43-4312-ac1a-62095571ae81",
+    "versionId": "ee12e69c-4fde-4b32-927b-a42a0b89bee7",
     "workflowId": "EX9K1AZwKeouSJ9G",
     "nodes": [
       {
@@ -899,7 +975,7 @@
               {
                 "id": "a3",
                 "name": "G54_AGENT_TOKEN",
-                "value": "<G54_AGENT_TOKEN — ver .secrets.local.md>",
+                "value": "REDACTED_G54_AGENT_TOKEN",
                 "type": "string"
               },
               {
@@ -947,7 +1023,7 @@
               {
                 "id": "g54-master-password",
                 "name": "G54_MASTER_PASSWORD",
-                "value": "<G54_MASTER_PASSWORD — ver .secrets.local.md>",
+                "value": "REDACTED_G54_MASTER_PASSWORD",
                 "type": "string"
               }
             ]
@@ -1341,7 +1417,7 @@
           400
         ],
         "parameters": {
-          "jsCode": "const BASE = \"https://apigrowth.mdarthurdigital.com\";\nconst AGENT_TOKEN = \"<G54_AGENT_TOKEN — ver .secrets.local.md>\";\n\n// Excluidas del despacho automático: empresas cuyas credenciales de Meta\n// están confirmadas como copiadas/compartidas con otra empresa (no son\n// datos reales propios) — hoy Orison (id 6) comparte el mismo page_id de\n// Facebook que Crating Express (ver CLAUDE.md, hallazgo del 13-jul, decisión\n// explícita del 07-sep de excluirla hasta que tenga sus propias redes).\nconst EXCLUIDAS = [6];\n\nconst empresasResp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: BASE + \"/api/n8n/companies?activas=1&con_redes=1\",\n  headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n  json: true,\n});\nconst empresas = (empresasResp && empresasResp.data) || [];\n\nconst salida = [];\nfor (const emp of empresas) {\n  if (EXCLUIDAS.includes(emp.id)) continue;\n\n  let targets = [];\n  try {\n    const tResp = await this.helpers.httpRequest({\n      method: \"GET\",\n      url: BASE + \"/api/agent/companies/\" + emp.id + \"/social-targets\",\n      headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n      json: true,\n    });\n    targets = (tResp && tResp.data) || [];\n  } catch (e) {\n    continue; // empresa sin conexión resuelta - se salta, no se inventa nada\n  }\n\n  const fb = targets.find(t => t.platform === \"Facebook\" && t.listo);\n  const ig = targets.find(t => t.platform === \"Instagram\" && t.listo);\n\n  if (!fb && !ig) continue; // ninguna red lista - nada real que reportar\n\n  salida.push({\n    json: {\n      company_id: emp.id,\n      fb_page_id: fb ? fb.page_id : null,\n      ig_user_id: ig ? ig.instagram_account_id : null,\n    },\n  });\n}\n\nreturn salida;"
+          "jsCode": "const BASE = \"https://apigrowth.mdarthurdigital.com\";\nconst AGENT_TOKEN = \"REDACTED_G54_AGENT_TOKEN\";\n\n// Excluidas del despacho automático: empresas cuyas credenciales de Meta\n// están confirmadas como copiadas/compartidas con otra empresa (no son\n// datos reales propios) — hoy Orison (id 6) comparte el mismo page_id de\n// Facebook que Crating Express (ver CLAUDE.md, hallazgo del 13-jul, decisión\n// explícita del 07-sep de excluirla hasta que tenga sus propias redes).\nconst EXCLUIDAS = [6];\n\nconst empresasResp = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: BASE + \"/api/n8n/companies?activas=1&con_redes=1\",\n  headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n  json: true,\n});\nconst empresas = (empresasResp && empresasResp.data) || [];\n\nconst salida = [];\nfor (const emp of empresas) {\n  if (EXCLUIDAS.includes(emp.id)) continue;\n\n  let targets = [];\n  try {\n    const tResp = await this.helpers.httpRequest({\n      method: \"GET\",\n      url: BASE + \"/api/agent/companies/\" + emp.id + \"/social-targets\",\n      headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" },\n      json: true,\n    });\n    targets = (tResp && tResp.data) || [];\n  } catch (e) {\n    continue; // empresa sin conexión resuelta - se salta, no se inventa nada\n  }\n\n  const fb = targets.find(t => t.platform === \"Facebook\" && t.listo);\n  const ig = targets.find(t => t.platform === \"Instagram\" && t.listo);\n\n  if (!fb && !ig) continue; // ninguna red lista - nada real que reportar\n\n  salida.push({\n    json: {\n      company_id: emp.id,\n      fb_page_id: fb ? fb.page_id : null,\n      ig_user_id: ig ? ig.instagram_account_id : null,\n    },\n  });\n}\n\nreturn salida;"
         }
       },
       {
@@ -1401,6 +1477,49 @@
         "alwaysOutputData": true,
         "parameters": {
           "jsCode": "// Agregado 28-sep: métricas por post de la semana, vinculadas al post de G54 por\n// post_id_platform (el id que devuelve Meta al publicar). Alimenta \"Top Posts\" del panel y\n// la retroalimentación de Ideas AI (qué temas rindieron). G54 excluye del total de cuenta\n// las filas con social_post_id, así que esto no duplica los números del panel.\n// Requiere sesión: ninguna ruta con AGENT_TOKEN devuelve los posts publicados con su id de Meta.\nconst cfg = $('⚙️ Config Growth54').item.json;\nconst m = $('📊 Preparar Métricas G54').item.json;\nconst B = cfg.G54_BASE_URL;\nconst cid = parseInt(cfg.G54_COMPANY_ID, 10) || 1;\nconst H = { Accept: 'application/json', 'Content-Type': 'application/json' };\n\nconst login = await this.helpers.httpRequest({ method: 'POST', url: B + '/api/auth/login', headers: H, json: true,\n  body: { email: cfg.G54_MASTER_EMAIL, password: cfg.G54_MASTER_PASSWORD } });\nconst auth = { ...H, Authorization: 'Bearer ' + login.access_token };\nawait this.helpers.httpRequest({ method: 'POST', url: B + '/api/auth/switch-company', headers: auth, json: true, body: { company_id: cid } });\nconst postsResp = await this.helpers.httpRequest({ method: 'GET', url: B + '/api/rrss/posts', headers: auth, json: true });\nconst posts = (postsResp && postsResp.data) || postsResp || [];\nconst porMetaId = {};\nfor (const p of posts) if (p.post_id_platform) porMetaId[String(p.post_id_platform)] = p.id;\n\nconst rows = [], sinVincular = [];\nconst base = { period_start: m.period_start, period_end: m.period_end, leads: 0 };\nfor (const d of ((m.fb && m.fb.detalle) || [])) {\n  const id = porMetaId[d.meta_id];\n  if (!id) { sinVincular.push('facebook:' + d.meta_id); continue; }\n  rows.push({ ...base, platform: 'facebook', social_post_id: id, alcance: d.alcance, impresiones: d.visualizaciones,\n    engagement_count: (d.reacciones || 0) + (d.comentarios || 0) + (d.compartidos || 0) + (d.clics || 0),\n    engagement_rate: d.alcance > 0 ? +(((d.reacciones || 0) + (d.comentarios || 0) + (d.compartidos || 0) + (d.clics || 0)) / d.alcance * 100).toFixed(2) : 0,\n    clics: d.clics || 0, compartidos: d.compartidos || 0 });\n}\nfor (const d of ((m.ig && m.ig.detalle) || [])) {\n  const id = porMetaId[d.meta_id];\n  if (!id) { sinVincular.push('instagram:' + d.meta_id); continue; }\n  rows.push({ ...base, platform: 'instagram', social_post_id: id, alcance: d.alcance, impresiones: d.visualizaciones,\n    engagement_count: d.interacciones || 0, engagement_rate: d.alcance > 0 ? +((d.interacciones || 0) / d.alcance * 100).toFixed(2) : 0,\n    guardados: d.guardados || 0, compartidos: d.compartidos || 0 });\n}\nlet guardado = null;\nif (rows.length) {\n  guardado = await this.helpers.httpRequest({ method: 'POST', url: B + '/api/agent/rrss/metricas', json: true,\n    headers: { ...H, Authorization: 'Bearer ' + cfg.G54_AGENT_TOKEN }, body: { company_id: cid, metricas: rows } });\n}\nreturn [{ json: { vinculados: rows.length, sin_vincular: sinVincular, guardado } }];\n"
+        }
+      },
+      {
+        "id": "fdd03bdc-8a64-462c-8925-8e1a3931ba97",
+        "name": "🌐 Webhook G54 (POST, botón Actualizar semana)",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          240,
+          520
+        ],
+        "webhookId": "2e5119b4-06f4-4d8f-b82a-17d1f98fe67f",
+        "parameters": {
+          "path": "analytics-semanal-g54",
+          "httpMethod": "POST",
+          "responseMode": "onReceived",
+          "options": {}
+        }
+      },
+      {
+        "id": "db9fd1c9-6973-4207-b206-491e22f1329b",
+        "name": "🔎 Resolver Redes (botón)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          460,
+          520
+        ],
+        "parameters": {
+          "jsCode": "// Botón \"Actualizar semana\" del panel (POST /api/rrss/run-analytics con periodo \"semanal\"): G54 llama este\n// webhook por POST y solo manda company_id. Acá se resuelven la página de Facebook y la cuenta de Instagram\n// (igual que el disparo de los lunes) y se llama al mismo flujo por GET. Agregado el 12-oct.\nconst BASE = \"https://apigrowth.mdarthurdigital.com\";\nconst AGENT_TOKEN = \"REDACTED_G54_AGENT_TOKEN\";\nconst EXCLUIDAS = [6]; // mismas exclusiones que el disparo automático (Orison comparte la página de CE)\nconst b = $input.first().json.body || {};\nconst companyId = Number(b.company_id || ($input.first().json.query || {}).company_id);\nif (!Number.isInteger(companyId) || companyId <= 0 || EXCLUIDAS.includes(companyId)) return [];\nlet targets = [];\ntry {\n  const t = await this.helpers.httpRequest({ method: \"GET\", url: BASE + \"/api/agent/companies/\" + companyId + \"/social-targets\",\n    headers: { Authorization: \"Bearer \" + AGENT_TOKEN, Accept: \"application/json\" }, json: true });\n  targets = (t && t.data) || [];\n} catch (e) { return []; }\nconst fb = targets.find(t => t.platform === \"Facebook\" && t.listo);\nconst ig = targets.find(t => t.platform === \"Instagram\" && t.listo);\nif (!fb && !ig) return [];\nreturn [{ json: { company_id: companyId, fb_page_id: fb ? fb.page_id : null, ig_user_id: ig ? ig.instagram_account_id : null } }];\n"
+        }
+      },
+      {
+        "id": "60d91034-82e4-4bd7-bf36-3d93a6177dfe",
+        "name": "🧹 Borrar semana ya guardada",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3250,
+          620
+        ],
+        "parameters": {
+          "jsCode": "// Borra lo ya guardado de esta misma semana antes de volver a guardarla (12-oct). G54 suma una fila por\n// cada guardado y no tiene upsert, así que apretar \"Actualizar semana\" duplicaba la semana. Se borra por\n// rango exacto (period_start/period_end de esta corrida) y por red. Ese rango también se lleva las filas por\n// post de la semana, que el paso siguiente vuelve a guardar. Si el borrado falla, se guarda igual (mejor un\n// duplicado visible que perder la semana). Ojo: también borraría filas diarias del rastreador de clics de\n// esa semana; el rastreador no registra nada desde el 02-oct.\nconst cfg = $('⚙️ Config Growth54').first().json;\nconst m = $input.first().json;\nconst companyId = parseInt(cfg.G54_COMPANY_ID) || 1;\nconst BASE = cfg.G54_BASE_URL;\nconst resultado = { borrado: [], error: null };\ntry {\n  const login = await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/auth/login', json: true,\n    headers: { Accept: 'application/json' }, body: { email: cfg.G54_MASTER_EMAIL, password: cfg.G54_MASTER_PASSWORD } });\n  const auth = { Authorization: 'Bearer ' + login.access_token, Accept: 'application/json' };\n  await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/auth/switch-company', json: true, headers: auth, body: { company_id: companyId } });\n  for (const platform of ['facebook', 'instagram']) {\n    const r = await this.helpers.httpRequest({ method: 'DELETE', url: BASE + '/api/rrss/metricas', json: true, headers: auth,\n      body: { platform, period_start: m.period_start, period_end: m.period_end } });\n    resultado.borrado.push({ platform, deleted: r && r.deleted });\n  }\n} catch (e) {\n  resultado.error = String(e.message || e).slice(0, 200);\n}\nreturn [{ json: { ...m, borrado_previo: resultado } }];\n"
         }
       }
     ],
@@ -1519,7 +1638,7 @@
         "main": [
           [
             {
-              "node": "💾 Guardar Métricas en G54",
+              "node": "🧹 Borrar semana ya guardada",
               "type": "main",
               "index": 0
             }
@@ -1631,6 +1750,39 @@
             }
           ]
         ]
+      },
+      "🌐 Webhook G54 (POST, botón Actualizar semana)": {
+        "main": [
+          [
+            {
+              "node": "🔎 Resolver Redes (botón)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔎 Resolver Redes (botón)": {
+        "main": [
+          [
+            {
+              "node": "📤 Disparar Reporte Semanal (auto-despacho)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧹 Borrar semana ya guardada": {
+        "main": [
+          [
+            {
+              "node": "💾 Guardar Métricas en G54",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "nodeGroups": [],
@@ -1638,16 +1790,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-10-08T16:56:58.141Z",
-    "updatedAt": "2026-10-08T16:56:58.141Z",
+    "createdAt": "2026-10-12T16:59:35.690Z",
+    "updatedAt": "2026-10-12T16:59:35.690Z",
     "workflowPublishHistory": [
       {
-        "id": 3366,
+        "id": 3432,
         "workflowId": "EX9K1AZwKeouSJ9G",
-        "versionId": "3b381693-cb43-4312-ac1a-62095571ae81",
+        "versionId": "ee12e69c-4fde-4b32-927b-a42a0b89bee7",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-10-08T16:56:58.381Z"
+        "createdAt": "2026-10-12T16:59:36.028Z"
       }
     ]
   }
