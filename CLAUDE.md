@@ -1594,6 +1594,8 @@ Con eso en mano, el 4to pendiente (configurar Twilio) resultó ser algo que se p
 
 438. **Checklist de novedades para probar** (2026-10-15): a pedido de la usuaria, después de una revisión completa de Bubble (textos técnicos y Registros sin pruebas, ítems 467-468 de su repo; suites completas en verde), artifact privado https://claude.ai/artifact/4wpZMNMrZuJw7tc2ADcDJC con 37 pruebas de lo construido del 12 al 15 de octubre (Bubble: agenda de la agencia, configuración del agente, Probar agente, Inicio y guía, equipo y webhooks; G54: dirección deseada, ideas del lunes 19, posts con código P, código de origen en el CRM, Actualizar semana, QR) más las 4 pruebas pendientes de antes. Cada prueba guarda resultado (funciona / falla / no pude) y comentario en la base del artifact (colección `pruebas`, documento por id de prueba, `general` para los comentarios generales): leerla con ArtifactData `list` para la retroalimentación.
 
+439. **Checklist de pruebas actualizado** (2026-10-15): el artifact del ítem 438 (https://claude.ai/artifact/4wpZMNMrZuJw7tc2ADcDJC, versión 5) pasa a 66 pruebas en 12 grupos con lo construido en Bubble después de armarlo (ítems 469-474 de su repo): grupo nuevo "Borrar a mano" (llamadas sin que bajen los minutos, desde Registros, clientes, citas, cancelar y la actividad) y "Seguridad y datos" (CSV legible, motivo de las llamadas con error, clave de IA oculta, el operador sin consumo, tope al reenviar invitaciones y sin el número sobre Agentes). Corregida la prueba de Facturación (plan de la cuenta, no por negocio) y sacada la nota de reiniciar el servidor. Lo ya respondido en la base del artifact se conserva.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
@@ -2157,6 +2159,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 ## Reportes Diarios
 
 > Los últimos 14 días. Anteriores archivados en `PROYECTO-SOL/reportes/`.
+
+---
+
+### 2026-10-15 (Jueves)
+
+Arranqué con la rutina de G54, todo en orden y sin novedades en la API, y retomé Bubble: saqué las palabras técnicas que quedaban en los textos y Registros dejó de contar las llamadas de prueba. Después pedí una revisión completa y una lista de novedades para probar con espacio para comentarios, y al mirar la pantalla de Agencia me pareció que no estaba a la altura de lo que tiene que ser: la convertimos en el tablero que maneja todo (minutos, lo que requiere atención, actividad del equipo y la cartera de negocios) y sumamos roles de verdad en el equipo (administrador, operador que solo ve sus negocios y persona del negocio). Moví la plata a Configuración › Facturación, cargué datos de demostración para ver cómo se ven los avisos, y arreglé el CSV de llamadas, que era ilegible, para que además diga el motivo de cada llamada con error.
+
+En la tarde armé las formas de pago estilo Claude: tres planes por cuenta (Inicial sin agenda, Pro y Agencia) con límite de negocios y de minutos, cobro extra con tope si se pasan, avisos al 80 % y bloqueos de lo que no entra en cada plan; todo hipotético, sin cobro real todavía. Saqué el número de la burbuja de Agentes porque me estorbaba. Cerré con una nueva revisión de seguridad y datos que encontró cosas reales: los PDF de los negocios se podían bajar con un truco en la dirección, la clave propia de IA viajaba completa al panel, una cuenta en prueba podía subirse al plan más caro sin pagar y algunas acciones no tenían tope. Quedaron corregidas, y a mitad de camino pedí que todo se pudiera borrar a mano para no repetir lo de G54: ahora se borran llamadas, clientes y citas con confirmación, y borrar una llamada no baja los minutos del mes.
+
+Dejé todas las pruebas automáticas en verde (503 del servidor, 87 del agente y 196 del panel), la lista de novedades actualizada a 66 pruebas y todo subido a los dos repositorios. Ahí paré: lo que sigue son las pruebas manuales con esa lista.
 
 ---
 
