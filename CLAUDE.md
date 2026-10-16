@@ -2166,6 +2166,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ---
 
+### 2026-10-16 (Viernes)
+
+Arranqué con la rutina de G54 y apareció algo importante: Marco atendió por WhatsApp a una clienta real, Lu, que quería embalar una escultura de coral para mandar a Hong Kong, y la conversación tuvo varias fallas. Le cotizó con las medidas equivocadas (tomó como pulgadas los centímetros que ella dio, y $159 salió de ahí), sacó una fecha falsa de las medidas, le contestó varias veces en español aunque ella escribía en inglés, respondió a sus reacciones con emoji, le dijo que el estimado ya se le había mandado por correo cuando no era cierto, y al vendedor le llegó el aviso cuatro veces. Además, Instagram no publicó el post del 15 porque el permiso de la cuenta venció el 13. Corregimos las cinco fallas de Marco y las probamos repitiendo la conversación de Lu con números falsos; ahora convierte los centímetros y pide confirmación, sigue en inglés todo el tiempo y avisa al vendedor una sola vez. Me quedan dos cosas: avisarle al vendedor que ese estimado está mal y que el caso tiene señales de estafa, y reconectar Instagram en el panel.
+
+Después levanté Bubble para hacer las pruebas manuales de la lista, que primero no arrancaba porque la base de datos estaba apagada. Probando vi que el buscador de la Ayuda de la agencia no encontraba "silencio": no era el buscador, sino que a la agencia le faltaban todas las guías del agente de cada negocio, y quedaron agregadas. Terminé la primera vuelta de la lista con 30 pruebas que funcionan, 6 que fallan (sobre todo en Equipo, Planes y el CSV de llamadas) y 9 que no pude probar, y la lista quedó mostrando solo lo que falta.
+
+Paré aquí para dejar todo subido y el reporte hecho. Lo próximo es Equipo (sacar a la última persona de un negocio, encontrar "Cambiar rol" y el problema al invitar), y antes de seguir con Planes tengo que confirmar si los negocios se van a poder desactivar en vez de borrar.
+
+---
+
 ### 2026-10-15 (Jueves)
 
 Arranqué con la rutina de G54, todo en orden y sin novedades en la API, y retomé Bubble: saqué las palabras técnicas que quedaban en los textos y Registros dejó de contar las llamadas de prueba. Después pedí una revisión completa y una lista de novedades para probar con espacio para comentarios, y al mirar la pantalla de Agencia me pareció que no estaba a la altura de lo que tiene que ser: la convertimos en el tablero que maneja todo (minutos, lo que requiere atención, actividad del equipo y la cartera de negocios) y sumamos roles de verdad en el equipo (administrador, operador que solo ve sus negocios y persona del negocio). Moví la plata a Configuración › Facturación, cargué datos de demostración para ver cómo se ven los avisos, y arreglé el CSV de llamadas, que era ilegible, para que además diga el motivo de cada llamada con error.
