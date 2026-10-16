@@ -3,12 +3,12 @@
   "name": "CE Telegram Engine — Marco",
   "description": null,
   "active": true,
-  "activeVersionId": "46c5f985-4aae-4480-891e-d193a345a07a",
+  "activeVersionId": "966e468d-acd9-4b2e-b57c-8272788fe4ae",
   "createdAt": "2026-07-23T15:36:21.963Z",
-  "updatedAt": "2026-10-08T16:51:18.413Z",
+  "updatedAt": "2026-10-16T14:08:01.581Z",
   "isArchived": false,
-  "versionId": "46c5f985-4aae-4480-891e-d193a345a07a",
-  "versionCounter": 36,
+  "versionId": "966e468d-acd9-4b2e-b57c-8272788fe4ae",
+  "versionCounter": 38,
   "sourceWorkflowId": null,
   "triggerCount": 2,
   "nodes": [
@@ -90,7 +90,7 @@
         460
       ],
       "parameters": {
-        "jsCode": "\nconst ctx = $input.first().json;\nconst t = (ctx.texto || '').toLowerCase();\nconst enWords = (t.match(/\\b(i|the|you|need|have|want|please|thanks|yes|for|and|my|is|are|can|would|like|to|of|in|with|it|this|that|hi|hello|good|morning|afternoon|evening|crate|inches|inch|by|next|about|looking|want|send|ship|pack|protection|foam|email|quote|price|we|our|us|them|they|what|when|where|how|who|why|get|make|do|go|come|take|give|use|find|know|see|look|think|work|call|ask|tell|help|keep|let|put|seem|feel|try|leave|still|start|might|could|should|would|same|well|just|over|back|after|before|also|been|here|there|then|than|these|those|more|most|some|such|only|both|too|very|much|many|your|their|her|his|him|her|she|he|it|we|them|will|was|were|had|has|have|did|does|do|am|be|been|being|an|a|at|from|by|with|out|up|down|off|on|into|through|during|before|after|above|below|between|each|few|more|most|other|some|such|than|too|very|just|because|as|until|while|although|whether|either|neither|however|therefore|meanwhile|furthermore|accordingly|consequently|subsequently)\\b/g) || []).length;\nconst esWords = (t.match(/\\b(quiero|necesito|tengo|hola|gracias|por|sí|si|no|para|con|una|un|que|me|mi|el|la|los|las|de|en|es|son|buenas|buenos|embalar|cajón|cerrado|abierto|medidas|correo|cotización|precio|protección|espuma|soy|como|pero|cuando|donde|quien|este|esta|esto|también|muy|más|porque|ser|estar|hacer|poder|tener|deber|querer|hay|fue|era|han|del|al|le|se|lo|ya|cada|todo|toda|todos|todas|algo|alguien|nadie|nunca|siempre|antes|después|aquí|allí|ahora|luego|hoy|mañana|ayer|semana|mes|año|tiempo|momento|forma|lugar|parte|caso|tipo|manera|favor|empresa|trabajo|equipo|cliente|servicio)\\b/g) || []).length;\nconst esIngles = enWords > esWords && enWords >= 2;\nreturn [{ json: { ...ctx, idiomaOriginal: esIngles ? 'inglés' : 'español', textoOriginal: ctx.texto } }];\n"
+        "jsCode": "\nconst ctx = $input.first().json;\nconst t = (ctx.texto || '').toLowerCase();\nconst enWords = (t.match(/\\b(i|the|you|need|have|want|please|thanks|yes|for|and|my|is|are|can|would|like|to|of|in|with|it|this|that|hi|hello|good|morning|afternoon|evening|crate|inches|inch|by|next|about|looking|want|send|ship|pack|protection|foam|email|quote|price|we|our|us|them|they|what|when|where|how|who|why|get|make|do|go|come|take|give|use|find|know|see|look|think|work|call|ask|tell|help|keep|let|put|seem|feel|try|leave|still|start|might|could|should|would|same|well|just|over|back|after|before|also|been|here|there|then|than|these|those|more|most|some|such|only|both|too|very|much|many|your|their|her|his|him|her|she|he|it|we|them|will|was|were|had|has|have|did|does|do|am|be|been|being|an|a|at|from|by|with|out|up|down|off|on|into|through|during|before|after|above|below|between|each|few|more|most|other|some|such|than|too|very|just|because|as|until|while|although|whether|either|neither|however|therefore|meanwhile|furthermore|accordingly|consequently|subsequently)\\b/g) || []).length;\nconst esWords = (t.match(/\\b(quiero|necesito|tengo|hola|gracias|por|sí|si|no|para|con|una|un|que|me|mi|el|la|los|las|de|en|es|son|buenas|buenos|embalar|cajón|cerrado|abierto|medidas|correo|cotización|precio|protección|espuma|soy|como|pero|cuando|donde|quien|este|esta|esto|también|muy|más|porque|ser|estar|hacer|poder|tener|deber|querer|hay|fue|era|han|del|al|le|se|lo|ya|cada|todo|toda|todos|todas|algo|alguien|nadie|nunca|siempre|antes|después|aquí|allí|ahora|luego|hoy|mañana|ayer|semana|mes|año|tiempo|momento|forma|lugar|parte|caso|tipo|manera|favor|empresa|trabajo|equipo|cliente|servicio)\\b/g) || []).length;\n// 16-oct: un cliente real que escribía en inglés recibió 7 respuestas en español: las que\n// seguían a una foto (la descripción viene en español), una reacción, el correo solo,\n// \"Ok\" o unas medidas. Ahora, si el mensaje no alcanza para decidir, se usa el último\n// idioma claro de ese mismo cliente (se guarda por teléfono, 14 días).\nconst esMedio = /^\\[Cliente envi[oó]/.test(ctx.texto || '');\nconst decisivo = !esMedio && Math.max(enWords, esWords) >= 2 && enWords !== esWords;\nconst esInglesTexto = !esMedio && enWords > esWords && enWords >= 2;\nconst sd = $getWorkflowStaticData('global');\nif (!sd.idiomaPorTel) sd.idiomaPorTel = {};\nconst ahora = Date.now();\nfor (const k of Object.keys(sd.idiomaPorTel)) if (ahora - sd.idiomaPorTel[k].ts > 14 * 86400000) delete sd.idiomaPorTel[k];\nconst tel = String(ctx.telefono || '');\nlet idiomaRespuesta;\nif (decisivo) {\n  idiomaRespuesta = esInglesTexto ? 'inglés' : 'español';\n  if (tel) sd.idiomaPorTel[tel] = { idioma: idiomaRespuesta, ts: ahora };\n} else {\n  idiomaRespuesta = (tel && sd.idiomaPorTel[tel] && sd.idiomaPorTel[tel].idioma) || (esInglesTexto ? 'inglés' : 'español');\n}\nreturn [{ json: { ...ctx, idiomaOriginal: idiomaRespuesta, traducirEntrada: esInglesTexto, textoOriginal: ctx.texto } }];\n\n"
       }
     },
     {
@@ -113,7 +113,7 @@
           "conditions": [
             {
               "id": "c1",
-              "leftValue": "={{ $json.idiomaOriginal }}",
+              "leftValue": "={{ $json.traducirEntrada ? \"inglés\" : \"español\" }}",
               "rightValue": "inglés",
               "operator": {
                 "type": "string",
@@ -286,7 +286,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "const ctx = $('▶️ 03 Generador IA').first().json;\nconst d = ctx.datosRecolectados || {};\n\n// Only show price if all data collected and not already sent\n// Use proximoPaso from 01 Clasificador as source of truth — includes all checks (correo, proteccion, etc.)\nif (!ctx.todosRecolectados || ctx.cotizacionEnviada) {\n  return [{ json: { ...ctx } }];\n}\n\n// Read precio from HTTP node result\nconst apiResp = $input.first().json;\nconst precio = apiResp?.data?.precio_total || apiResp?.precio_total || null;\n\nconst idioma = ctx.idiomaConversacion || 'español';\nconst nombre = d.nombre_cliente ? `, ${d.nombre_cliente.split(' ')[0]}` : '';\nconst tieneProteccion = d.proteccion_extra === true || d.proteccion_extra === 'true';\n\nlet mensajeFinal;\nif (precio) {\n  if (idioma === 'inglés') {\n    mensajeFinal = `Here is your estimate${nombre}! 🎉\\n\\n📦 *${d.producto || 'Crate'}*\\n📐 Dimensions: ${d.medidas || '—'}\"\\n🗓 Needed by: ${d.fecha || '—'}\\n🛡 Extra protection: ${tieneProteccion ? 'Yes' : 'No'}\\n\\n💵 *Estimated price: $${precio} USD*\\n_This is an estimate. The final price may vary after inspection._\\n\\nWould you like a formal quote sent to your email?`;\n  } else {\n    mensajeFinal = `¡Aquí está tu estimado${nombre}! 🎉\\n\\n📦 *${d.producto || 'Cajón'}*\\n📐 Medidas: ${d.medidas || '—'}\"\\n🗓 Para: ${d.fecha || '—'}\\n🛡 Protección extra: ${tieneProteccion ? 'Sí' : 'No'}\\n\\n💵 *Precio estimado: $${precio} USD*\\n_Este es un estimado. El precio final puede variar luego de la inspección._\\n\\n¿Quieres que te enviemos la cotización formal a tu correo?`;\n  }\n} else {\n  mensajeFinal = ctx.mensaje;\n}\n\nreturn [{ json: {\n  ...ctx,\n  mensaje: mensajeFinal,\n  mensajeRespuesta: mensajeFinal,\n  cotizadorEnviado: !!precio\n} }];"
+        "jsCode": "const ctx = $('▶️ 03 Generador IA').first().json;\nconst d = ctx.datosRecolectados || {};\n\n// Only show price if all data collected and not already sent\n// Use proximoPaso from 01 Clasificador as source of truth — includes all checks (correo, proteccion, etc.)\nif (!ctx.todosRecolectados || ctx.cotizacionEnviada) {\n  return [{ json: { ...ctx } }];\n}\n\n// Read precio from HTTP node result\nconst apiResp = $input.first().json;\nconst precio = apiResp?.data?.precio_total || apiResp?.precio_total || null;\n\nconst idioma = ctx.idiomaConversacion || 'español';\nconst nombre = d.nombre_cliente ? `, ${d.nombre_cliente.split(' ')[0]}` : '';\nconst medTxt = d.medidas ? (/(in|\")\\s*$/i.test(String(d.medidas).trim()) ? d.medidas : d.medidas + '\"') : '—';\nconst tieneProteccion = d.proteccion_extra === true || d.proteccion_extra === 'true';\n\nlet mensajeFinal;\nif (precio) {\n  if (idioma === 'inglés') {\n    mensajeFinal = `Here is your estimate${nombre}! 🎉\\n\\n📦 *${d.producto || 'Crate'}*\\n📐 Dimensions: ${medTxt}\\n🗓 Needed by: ${d.fecha || '—'}\\n🛡 Extra protection: ${tieneProteccion ? 'Yes' : 'No'}\\n\\n💵 *Estimated price: $${precio} USD*\\n_This is an estimate. The final price may vary after inspection._\\n\\nWould you like a formal quote sent to your email?`;\n  } else {\n    mensajeFinal = `¡Aquí está tu estimado${nombre}! 🎉\\n\\n📦 *${d.producto || 'Cajón'}*\\n📐 Medidas: ${medTxt}\\n🗓 Para: ${d.fecha || '—'}\\n🛡 Protección extra: ${tieneProteccion ? 'Sí' : 'No'}\\n\\n💵 *Precio estimado: $${precio} USD*\\n_Este es un estimado. El precio final puede variar luego de la inspección._\\n\\n¿Quieres que te enviemos la cotización formal a tu correo?`;\n  }\n} else {\n  mensajeFinal = ctx.mensaje;\n}\n\nreturn [{ json: {\n  ...ctx,\n  mensaje: mensajeFinal,\n  mensajeRespuesta: mensajeFinal,\n  cotizadorEnviado: !!precio\n} }];"
       }
     },
     {
@@ -346,7 +346,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', messages: [{ role: 'system', content: 'You are a translator. Translate the following message to English naturally, preserving the tone and intent. Return ONLY the translated text, no explanations.' }, { role: 'user', content: $('📝 Armar Mensaje Final').first().json.mensajeRespuesta || $('📝 Armar Mensaje Final').first().json.mensaje || '' }], temperature: 0.1, max_tokens: 1500 }) }}",
+        "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', messages: [{ role: 'system', content: 'You are a translator. Translate the following message to English naturally, preserving the tone and intent. Context: this is a wooden crating company — translate cajón/cajones as crate/crates (never drawers), jaula as open crate, embalaje as crating. Keep the tone casual and use \"you\". Return ONLY the translated text, no explanations.' }, { role: 'user', content: $('📝 Armar Mensaje Final').first().json.mensajeRespuesta || $('📝 Armar Mensaje Final').first().json.mensaje || '' }], temperature: 0.1, max_tokens: 1500 }) }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "groqApi"
       },
@@ -2185,7 +2185,7 @@
     }
   ],
   "activeVersion": {
-    "versionId": "46c5f985-4aae-4480-891e-d193a345a07a",
+    "versionId": "966e468d-acd9-4b2e-b57c-8272788fe4ae",
     "workflowId": "HaSG63Q9C2tGOLH3",
     "nodes": [
       {
@@ -2266,7 +2266,7 @@
           460
         ],
         "parameters": {
-          "jsCode": "\nconst ctx = $input.first().json;\nconst t = (ctx.texto || '').toLowerCase();\nconst enWords = (t.match(/\\b(i|the|you|need|have|want|please|thanks|yes|for|and|my|is|are|can|would|like|to|of|in|with|it|this|that|hi|hello|good|morning|afternoon|evening|crate|inches|inch|by|next|about|looking|want|send|ship|pack|protection|foam|email|quote|price|we|our|us|them|they|what|when|where|how|who|why|get|make|do|go|come|take|give|use|find|know|see|look|think|work|call|ask|tell|help|keep|let|put|seem|feel|try|leave|still|start|might|could|should|would|same|well|just|over|back|after|before|also|been|here|there|then|than|these|those|more|most|some|such|only|both|too|very|much|many|your|their|her|his|him|her|she|he|it|we|them|will|was|were|had|has|have|did|does|do|am|be|been|being|an|a|at|from|by|with|out|up|down|off|on|into|through|during|before|after|above|below|between|each|few|more|most|other|some|such|than|too|very|just|because|as|until|while|although|whether|either|neither|however|therefore|meanwhile|furthermore|accordingly|consequently|subsequently)\\b/g) || []).length;\nconst esWords = (t.match(/\\b(quiero|necesito|tengo|hola|gracias|por|sí|si|no|para|con|una|un|que|me|mi|el|la|los|las|de|en|es|son|buenas|buenos|embalar|cajón|cerrado|abierto|medidas|correo|cotización|precio|protección|espuma|soy|como|pero|cuando|donde|quien|este|esta|esto|también|muy|más|porque|ser|estar|hacer|poder|tener|deber|querer|hay|fue|era|han|del|al|le|se|lo|ya|cada|todo|toda|todos|todas|algo|alguien|nadie|nunca|siempre|antes|después|aquí|allí|ahora|luego|hoy|mañana|ayer|semana|mes|año|tiempo|momento|forma|lugar|parte|caso|tipo|manera|favor|empresa|trabajo|equipo|cliente|servicio)\\b/g) || []).length;\nconst esIngles = enWords > esWords && enWords >= 2;\nreturn [{ json: { ...ctx, idiomaOriginal: esIngles ? 'inglés' : 'español', textoOriginal: ctx.texto } }];\n"
+          "jsCode": "\nconst ctx = $input.first().json;\nconst t = (ctx.texto || '').toLowerCase();\nconst enWords = (t.match(/\\b(i|the|you|need|have|want|please|thanks|yes|for|and|my|is|are|can|would|like|to|of|in|with|it|this|that|hi|hello|good|morning|afternoon|evening|crate|inches|inch|by|next|about|looking|want|send|ship|pack|protection|foam|email|quote|price|we|our|us|them|they|what|when|where|how|who|why|get|make|do|go|come|take|give|use|find|know|see|look|think|work|call|ask|tell|help|keep|let|put|seem|feel|try|leave|still|start|might|could|should|would|same|well|just|over|back|after|before|also|been|here|there|then|than|these|those|more|most|some|such|only|both|too|very|much|many|your|their|her|his|him|her|she|he|it|we|them|will|was|were|had|has|have|did|does|do|am|be|been|being|an|a|at|from|by|with|out|up|down|off|on|into|through|during|before|after|above|below|between|each|few|more|most|other|some|such|than|too|very|just|because|as|until|while|although|whether|either|neither|however|therefore|meanwhile|furthermore|accordingly|consequently|subsequently)\\b/g) || []).length;\nconst esWords = (t.match(/\\b(quiero|necesito|tengo|hola|gracias|por|sí|si|no|para|con|una|un|que|me|mi|el|la|los|las|de|en|es|son|buenas|buenos|embalar|cajón|cerrado|abierto|medidas|correo|cotización|precio|protección|espuma|soy|como|pero|cuando|donde|quien|este|esta|esto|también|muy|más|porque|ser|estar|hacer|poder|tener|deber|querer|hay|fue|era|han|del|al|le|se|lo|ya|cada|todo|toda|todos|todas|algo|alguien|nadie|nunca|siempre|antes|después|aquí|allí|ahora|luego|hoy|mañana|ayer|semana|mes|año|tiempo|momento|forma|lugar|parte|caso|tipo|manera|favor|empresa|trabajo|equipo|cliente|servicio)\\b/g) || []).length;\n// 16-oct: un cliente real que escribía en inglés recibió 7 respuestas en español: las que\n// seguían a una foto (la descripción viene en español), una reacción, el correo solo,\n// \"Ok\" o unas medidas. Ahora, si el mensaje no alcanza para decidir, se usa el último\n// idioma claro de ese mismo cliente (se guarda por teléfono, 14 días).\nconst esMedio = /^\\[Cliente envi[oó]/.test(ctx.texto || '');\nconst decisivo = !esMedio && Math.max(enWords, esWords) >= 2 && enWords !== esWords;\nconst esInglesTexto = !esMedio && enWords > esWords && enWords >= 2;\nconst sd = $getWorkflowStaticData('global');\nif (!sd.idiomaPorTel) sd.idiomaPorTel = {};\nconst ahora = Date.now();\nfor (const k of Object.keys(sd.idiomaPorTel)) if (ahora - sd.idiomaPorTel[k].ts > 14 * 86400000) delete sd.idiomaPorTel[k];\nconst tel = String(ctx.telefono || '');\nlet idiomaRespuesta;\nif (decisivo) {\n  idiomaRespuesta = esInglesTexto ? 'inglés' : 'español';\n  if (tel) sd.idiomaPorTel[tel] = { idioma: idiomaRespuesta, ts: ahora };\n} else {\n  idiomaRespuesta = (tel && sd.idiomaPorTel[tel] && sd.idiomaPorTel[tel].idioma) || (esInglesTexto ? 'inglés' : 'español');\n}\nreturn [{ json: { ...ctx, idiomaOriginal: idiomaRespuesta, traducirEntrada: esInglesTexto, textoOriginal: ctx.texto } }];\n\n"
         }
       },
       {
@@ -2289,7 +2289,7 @@
             "conditions": [
               {
                 "id": "c1",
-                "leftValue": "={{ $json.idiomaOriginal }}",
+                "leftValue": "={{ $json.traducirEntrada ? \"inglés\" : \"español\" }}",
                 "rightValue": "inglés",
                 "operator": {
                   "type": "string",
@@ -2462,7 +2462,7 @@
           300
         ],
         "parameters": {
-          "jsCode": "const ctx = $('▶️ 03 Generador IA').first().json;\nconst d = ctx.datosRecolectados || {};\n\n// Only show price if all data collected and not already sent\n// Use proximoPaso from 01 Clasificador as source of truth — includes all checks (correo, proteccion, etc.)\nif (!ctx.todosRecolectados || ctx.cotizacionEnviada) {\n  return [{ json: { ...ctx } }];\n}\n\n// Read precio from HTTP node result\nconst apiResp = $input.first().json;\nconst precio = apiResp?.data?.precio_total || apiResp?.precio_total || null;\n\nconst idioma = ctx.idiomaConversacion || 'español';\nconst nombre = d.nombre_cliente ? `, ${d.nombre_cliente.split(' ')[0]}` : '';\nconst tieneProteccion = d.proteccion_extra === true || d.proteccion_extra === 'true';\n\nlet mensajeFinal;\nif (precio) {\n  if (idioma === 'inglés') {\n    mensajeFinal = `Here is your estimate${nombre}! 🎉\\n\\n📦 *${d.producto || 'Crate'}*\\n📐 Dimensions: ${d.medidas || '—'}\"\\n🗓 Needed by: ${d.fecha || '—'}\\n🛡 Extra protection: ${tieneProteccion ? 'Yes' : 'No'}\\n\\n💵 *Estimated price: $${precio} USD*\\n_This is an estimate. The final price may vary after inspection._\\n\\nWould you like a formal quote sent to your email?`;\n  } else {\n    mensajeFinal = `¡Aquí está tu estimado${nombre}! 🎉\\n\\n📦 *${d.producto || 'Cajón'}*\\n📐 Medidas: ${d.medidas || '—'}\"\\n🗓 Para: ${d.fecha || '—'}\\n🛡 Protección extra: ${tieneProteccion ? 'Sí' : 'No'}\\n\\n💵 *Precio estimado: $${precio} USD*\\n_Este es un estimado. El precio final puede variar luego de la inspección._\\n\\n¿Quieres que te enviemos la cotización formal a tu correo?`;\n  }\n} else {\n  mensajeFinal = ctx.mensaje;\n}\n\nreturn [{ json: {\n  ...ctx,\n  mensaje: mensajeFinal,\n  mensajeRespuesta: mensajeFinal,\n  cotizadorEnviado: !!precio\n} }];"
+          "jsCode": "const ctx = $('▶️ 03 Generador IA').first().json;\nconst d = ctx.datosRecolectados || {};\n\n// Only show price if all data collected and not already sent\n// Use proximoPaso from 01 Clasificador as source of truth — includes all checks (correo, proteccion, etc.)\nif (!ctx.todosRecolectados || ctx.cotizacionEnviada) {\n  return [{ json: { ...ctx } }];\n}\n\n// Read precio from HTTP node result\nconst apiResp = $input.first().json;\nconst precio = apiResp?.data?.precio_total || apiResp?.precio_total || null;\n\nconst idioma = ctx.idiomaConversacion || 'español';\nconst nombre = d.nombre_cliente ? `, ${d.nombre_cliente.split(' ')[0]}` : '';\nconst medTxt = d.medidas ? (/(in|\")\\s*$/i.test(String(d.medidas).trim()) ? d.medidas : d.medidas + '\"') : '—';\nconst tieneProteccion = d.proteccion_extra === true || d.proteccion_extra === 'true';\n\nlet mensajeFinal;\nif (precio) {\n  if (idioma === 'inglés') {\n    mensajeFinal = `Here is your estimate${nombre}! 🎉\\n\\n📦 *${d.producto || 'Crate'}*\\n📐 Dimensions: ${medTxt}\\n🗓 Needed by: ${d.fecha || '—'}\\n🛡 Extra protection: ${tieneProteccion ? 'Yes' : 'No'}\\n\\n💵 *Estimated price: $${precio} USD*\\n_This is an estimate. The final price may vary after inspection._\\n\\nWould you like a formal quote sent to your email?`;\n  } else {\n    mensajeFinal = `¡Aquí está tu estimado${nombre}! 🎉\\n\\n📦 *${d.producto || 'Cajón'}*\\n📐 Medidas: ${medTxt}\\n🗓 Para: ${d.fecha || '—'}\\n🛡 Protección extra: ${tieneProteccion ? 'Sí' : 'No'}\\n\\n💵 *Precio estimado: $${precio} USD*\\n_Este es un estimado. El precio final puede variar luego de la inspección._\\n\\n¿Quieres que te enviemos la cotización formal a tu correo?`;\n  }\n} else {\n  mensajeFinal = ctx.mensaje;\n}\n\nreturn [{ json: {\n  ...ctx,\n  mensaje: mensajeFinal,\n  mensajeRespuesta: mensajeFinal,\n  cotizadorEnviado: !!precio\n} }];"
         }
       },
       {
@@ -2522,7 +2522,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', messages: [{ role: 'system', content: 'You are a translator. Translate the following message to English naturally, preserving the tone and intent. Return ONLY the translated text, no explanations.' }, { role: 'user', content: $('📝 Armar Mensaje Final').first().json.mensajeRespuesta || $('📝 Armar Mensaje Final').first().json.mensaje || '' }], temperature: 0.1, max_tokens: 1500 }) }}",
+          "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', messages: [{ role: 'system', content: 'You are a translator. Translate the following message to English naturally, preserving the tone and intent. Context: this is a wooden crating company — translate cajón/cajones as crate/crates (never drawers), jaula as open crate, embalaje as crating. Keep the tone casual and use \"you\". Return ONLY the translated text, no explanations.' }, { role: 'user', content: $('📝 Armar Mensaje Final').first().json.mensajeRespuesta || $('📝 Armar Mensaje Final').first().json.mensaje || '' }], temperature: 0.1, max_tokens: 1500 }) }}",
           "authentication": "predefinedCredentialType",
           "nodeCredentialType": "groqApi"
         },
@@ -4323,16 +4323,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-10-08T16:51:18.416Z",
-    "updatedAt": "2026-10-08T16:51:18.416Z",
+    "createdAt": "2026-10-16T14:08:01.584Z",
+    "updatedAt": "2026-10-16T14:08:01.584Z",
     "workflowPublishHistory": [
       {
-        "id": 3358,
+        "id": 3468,
         "workflowId": "HaSG63Q9C2tGOLH3",
-        "versionId": "46c5f985-4aae-4480-891e-d193a345a07a",
+        "versionId": "966e468d-acd9-4b2e-b57c-8272788fe4ae",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-10-08T16:51:18.746Z"
+        "createdAt": "2026-10-16T14:08:01.882Z"
       }
     ]
   }
