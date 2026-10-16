@@ -2172,7 +2172,7 @@ Arranqué con la rutina de G54 y apareció algo importante: Marco atendió por W
 
 Después levanté Bubble para hacer las pruebas manuales de la lista, que primero no arrancaba porque la base de datos estaba apagada. Probando vi que el buscador de la Ayuda de la agencia no encontraba "silencio": no era el buscador, sino que a la agencia le faltaban todas las guías del agente de cada negocio, y quedaron agregadas. Terminé la primera vuelta de la lista con 30 pruebas que funcionan, 6 que fallan (sobre todo en Equipo, Planes y el CSV de llamadas) y 9 que no pude probar, y la lista quedó mostrando solo lo que falta.
 
-Paré aquí para dejar todo subido y el reporte hecho. Lo próximo es Equipo (sacar a la última persona de un negocio, encontrar "Cambiar rol" y el problema al invitar), y antes de seguir con Planes tengo que confirmar si los negocios se van a poder desactivar en vez de borrar.
+Después seguí con las fallas. En Equipo, "Sacar" ahora aparece en todas las cuentas: si es la única persona de un negocio, explica por qué no se puede y ofrece invitar a otra, y quedó escrito dónde se cambia el rol, que no encontraba porque en mi equipo no había nadie a quien cambiárselo. En Planes decidí que al bajar de plan los negocios no se borren sino que se desactiven: guardan todos sus datos, su agente queda apagado, no cuentan para el límite y se reactivan desde su ficha; lo probamos bajando a Inicial y después dejamos todo como estaba. Ahí paré, todo subido; me queda contar qué pasó con la invitación que no me dejó hacer, y después siguen la explicación del cobro extra y el CSV.
 
 ---
 
