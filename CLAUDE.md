@@ -2172,6 +2172,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ---
 
+### 2026-10-19 (Lunes)
+
+Arranqué con la rutina de G54, todo en orden, aprobé las ideas nuevas y dejé la semana programada sin Instagram, porque el permiso de Instagram venció el 13. Pensé que ese permiso era permanente y que Facebook servía de respaldo, pero no estaba armado así; lo construimos como respaldo de emergencia y con eso se publicó el post del 15 que había quedado trabado, y dejé el de Instagram de esta semana para el viernes 23. Igual tengo que reconectar Instagram en el panel.
+
+Después seguí con Bubble y la lista de pruebas. Lo de la invitación que no me dejaba no era por tener gente en el equipo: mi correo ya tenía una cuenta de agencia y otra de negocio, y cada correo solo puede tener una de cada tipo; ahora el mensaje lo explica. También quedó explicado el cobro extra, el CSV sale con la fecha del día, y armamos el historial completo de actividad del equipo; además Registros, Llamadas, Clientes y Agenda se pueden filtrar por fechas, descargar y mandar por correo a alguien del equipo.
+
+En la tarde fui pidiendo cambios uno por uno: las burbujas de idioma también adentro del panel, que la configuración guiada no deje saltar pasos y avise que son las configuraciones básicas, y el menú lateral que se despliega hacia la derecha con los nombres, que me costó varias vueltas hasta que la "I" de Inicio dejó de verse cortada. Cerré con la página pública de Bubble con los tres planes, que lleva a un registro en pasos (plan, datos, pago y listo) y termina en el ingreso; el pago todavía no cobra y avisa que la cuenta empieza en prueba. Ahí paré por hoy, con todo subido.
+
+---
+
 ### 2026-10-16 (Viernes)
 
 Arranqué con la rutina de G54 y apareció algo importante: Marco atendió por WhatsApp a una clienta real, Lu, que quería embalar una escultura de coral para mandar a Hong Kong, y la conversación tuvo varias fallas. Le cotizó con las medidas equivocadas (tomó como pulgadas los centímetros que ella dio, y $159 salió de ahí), sacó una fecha falsa de las medidas, le contestó varias veces en español aunque ella escribía en inglés, respondió a sus reacciones con emoji, le dijo que el estimado ya se le había mandado por correo cuando no era cierto, y al vendedor le llegó el aviso cuatro veces. Además, Instagram no publicó el post del 15 porque el permiso de la cuenta venció el 13. Corregimos las cinco fallas de Marco y las probamos repitiendo la conversación de Lu con números falsos; ahora convierte los centímetros y pide confirmación, sigue en inglés todo el tiempo y avisa al vendedor una sola vez. Me quedan dos cosas: avisarle al vendedor que ese estimado está mal y que el caso tiene señales de estafa, y reconectar Instagram en el panel.
