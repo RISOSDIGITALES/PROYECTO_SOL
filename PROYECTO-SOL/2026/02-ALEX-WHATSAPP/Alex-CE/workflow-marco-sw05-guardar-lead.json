@@ -1,11 +1,16 @@
 {
-  "updatedAt": "2026-07-18T19:41:52.964Z",
-  "createdAt": "2026-06-15T15:49:48.985Z",
   "id": "PqbfMghL0E7xKflC",
   "name": "Marco CE — 05 Guardar Lead",
   "description": null,
   "active": true,
+  "activeVersionId": "9598e144-ed8e-4efa-8373-765b017817c5",
+  "createdAt": "2026-06-15T15:49:48.985Z",
+  "updatedAt": "2026-10-20T13:46:32.502Z",
   "isArchived": false,
+  "versionId": "9598e144-ed8e-4efa-8373-765b017817c5",
+  "versionCounter": 55,
+  "sourceWorkflowId": null,
+  "triggerCount": 0,
   "nodes": [
     {
       "id": "trigger",
@@ -36,11 +41,11 @@
       "name": "☁️ G54: Sync Conversación",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "continueOnFail": true,
       "position": [
         1060,
         300
       ],
-      "continueOnFail": true,
       "parameters": {
         "method": "POST",
         "url": "https://apigrowth.mdarthurdigital.com/api/agent/whatsapp/inbound",
@@ -49,7 +54,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Content-Type",
@@ -59,7 +64,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  empresa_id: 1,\n  phone: '+' + $json.telefono,\n  contact_name: $json._airtableFields?.Nombre_Contacto || $json.datosRecolectados?.nombre_cliente || '',\n  clasificacion: $json.clasificacion || 'frio',\n  datos_calificacion: {\n    ...($json.datosRecolectados || {}),\n    cotizacion_enviada: !!($json.cotizacionEnviada || $json.cotizadorEnviado),\n    escalada_enviada: !!$json.escaladaEnviada,\n    idioma: $json.idiomaConversacion || null\n  },\n  messages: [\n    ...($json.nuevoHistorial || '').split('\\n').filter(l => l.trim() && l.includes('] ') && !l.includes('[D:')).map(l => {\n      const content = l.replace(/^\\[.*?\\]\\s*/, '');\n      const isBot = content.startsWith('Bot:') || content.startsWith('Marco:');\n      return { rol: isBot ? 'bot' : 'user', contenido: content.replace(/^(Bot|Marco|Cliente):\\s*/, '') };\n    }).filter(m => m.contenido)\n  ]\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  empresa_id: 1,\n  phone: '+' + $json.telefono,\n  contact_name: $json._airtableFields?.Nombre_Contacto || $json.datosRecolectados?.nombre_cliente || '',\n  clasificacion: $json.clasificacion || 'frio',\n  datos_calificacion: {\n    ...($json.datosRecolectados || {}),\n    cotizacion_enviada: !!($json.cotizacionEnviada || $json.cotizadorEnviado),\n    escalada_enviada: !!$json.escaladaEnviada,\n    idioma: $json.idiomaConversacion || null\n  },\n  // Solo el mensaje de este turno y la respuesta enviada, completos (20-oct). Antes se armaba\n  // partiendo el historial por líneas: se perdían las líneas 2+ de los mensajes largos\n  // (estimado, descripción de fotos) y las fotos viejas se reenviaban en cada turno.\n  messages: [\n    { rol: 'user', contenido: String($json.texto || '').trim() },\n    { rol: 'bot', contenido: String($json.mensajeRespuesta || $json.mensaje || '').trim() }\n  ].filter(m => m.contenido)\n}) }}",
         "options": {
           "retry": {
             "enabled": true,
@@ -94,45 +99,38 @@
       ]
     }
   },
+  "nodeGroups": [],
   "settings": {
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
   "staticData": null,
-  "meta": null,
-  "nodeGroups": [],
   "pinData": null,
-  "versionId": "cbf41d2a-049f-4ba4-baf6-38bd7e49f973",
-  "activeVersionId": "cbf41d2a-049f-4ba4-baf6-38bd7e49f973",
-  "versionCounter": 52,
-  "triggerCount": 0,
-  "sourceWorkflowId": null,
+  "meta": null,
+  "tags": [],
   "shared": [
     {
-      "updatedAt": "2026-06-15T15:49:48.990Z",
-      "createdAt": "2026-06-15T15:49:48.990Z",
       "role": "workflow:owner",
       "workflowId": "PqbfMghL0E7xKflC",
       "projectId": "scK6yPpEmlkikl67",
       "project": {
-        "updatedAt": "2026-03-16T19:58:01.773Z",
-        "createdAt": "2026-03-16T19:56:18.866Z",
         "id": "scK6yPpEmlkikl67",
         "name": "Solange  Torrez <risosadmi@gmail.com>",
         "type": "personal",
         "icon": null,
         "description": null,
         "customTelemetryTags": [],
-        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      }
+        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-03-16T19:56:18.866Z",
+        "updatedAt": "2026-03-16T19:58:01.773Z"
+      },
+      "createdAt": "2026-06-15T15:49:48.990Z",
+      "updatedAt": "2026-06-15T15:49:48.990Z"
     }
   ],
-  "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-07-18T19:41:52.967Z",
-    "createdAt": "2026-07-18T19:41:52.967Z",
-    "versionId": "cbf41d2a-049f-4ba4-baf6-38bd7e49f973",
+    "versionId": "9598e144-ed8e-4efa-8373-765b017817c5",
     "workflowId": "PqbfMghL0E7xKflC",
     "nodes": [
       {
@@ -164,11 +162,11 @@
         "name": "☁️ G54: Sync Conversación",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
+        "continueOnFail": true,
         "position": [
           1060,
           300
         ],
-        "continueOnFail": true,
         "parameters": {
           "method": "POST",
           "url": "https://apigrowth.mdarthurdigital.com/api/agent/whatsapp/inbound",
@@ -177,7 +175,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer REDACTED_AGENT_TOKEN"
+                "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
               },
               {
                 "name": "Content-Type",
@@ -187,7 +185,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({\n  empresa_id: 1,\n  phone: '+' + $json.telefono,\n  contact_name: $json._airtableFields?.Nombre_Contacto || $json.datosRecolectados?.nombre_cliente || '',\n  clasificacion: $json.clasificacion || 'frio',\n  datos_calificacion: {\n    ...($json.datosRecolectados || {}),\n    cotizacion_enviada: !!($json.cotizacionEnviada || $json.cotizadorEnviado),\n    escalada_enviada: !!$json.escaladaEnviada,\n    idioma: $json.idiomaConversacion || null\n  },\n  messages: [\n    ...($json.nuevoHistorial || '').split('\\n').filter(l => l.trim() && l.includes('] ') && !l.includes('[D:')).map(l => {\n      const content = l.replace(/^\\[.*?\\]\\s*/, '');\n      const isBot = content.startsWith('Bot:') || content.startsWith('Marco:');\n      return { rol: isBot ? 'bot' : 'user', contenido: content.replace(/^(Bot|Marco|Cliente):\\s*/, '') };\n    }).filter(m => m.contenido)\n  ]\n}) }}",
+          "jsonBody": "={{ JSON.stringify({\n  empresa_id: 1,\n  phone: '+' + $json.telefono,\n  contact_name: $json._airtableFields?.Nombre_Contacto || $json.datosRecolectados?.nombre_cliente || '',\n  clasificacion: $json.clasificacion || 'frio',\n  datos_calificacion: {\n    ...($json.datosRecolectados || {}),\n    cotizacion_enviada: !!($json.cotizacionEnviada || $json.cotizadorEnviado),\n    escalada_enviada: !!$json.escaladaEnviada,\n    idioma: $json.idiomaConversacion || null\n  },\n  // Solo el mensaje de este turno y la respuesta enviada, completos (20-oct). Antes se armaba\n  // partiendo el historial por líneas: se perdían las líneas 2+ de los mensajes largos\n  // (estimado, descripción de fotos) y las fotos viejas se reenviaban en cada turno.\n  messages: [\n    { rol: 'user', contenido: String($json.texto || '').trim() },\n    { rol: 'bot', contenido: String($json.mensajeRespuesta || $json.mensaje || '').trim() }\n  ].filter(m => m.contenido)\n}) }}",
           "options": {
             "retry": {
               "enabled": true,
@@ -227,22 +225,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
+    "createdAt": "2026-10-20T13:46:32.505Z",
+    "updatedAt": "2026-10-20T13:46:32.505Z",
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-07-18T19:41:53.059Z",
-        "id": 2213,
+        "id": 3480,
         "workflowId": "PqbfMghL0E7xKflC",
-        "versionId": "cbf41d2a-049f-4ba4-baf6-38bd7e49f973",
+        "versionId": "9598e144-ed8e-4efa-8373-765b017817c5",
         "event": "activated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
-      },
-      {
-        "createdAt": "2026-07-18T19:41:53.033Z",
-        "id": 2212,
-        "workflowId": "PqbfMghL0E7xKflC",
-        "versionId": "cbf41d2a-049f-4ba4-baf6-38bd7e49f973",
-        "event": "deactivated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73"
+        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
+        "createdAt": "2026-10-20T13:46:32.643Z"
       }
     ]
   }
