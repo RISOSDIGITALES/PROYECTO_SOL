@@ -2178,6 +2178,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 
 ---
 
+### 2026-10-20 (Martes)
+
+Arranqué con la rutina de G54, todo en orden, y levanté Bubble, que no arrancaba porque la base de datos estaba apagada otra vez. Me pregunté de dónde había sacado Lu el número de Marco, y resultó que lo publicábamos nosotros en todos los posts desde el 8 de octubre, junto con el código de origen; decidí quitar ese método porque no nos decía nada, y quedó fuera de los posts pendientes y de los agentes que los escriben. El correo de prueba que vi en su trato no era de ella, era de una prueba nuestra del 16. También vi que la conversación de Lu en el panel era ilegible, con la misma línea de foto repetida cientos de veces y los mensajes cortados; lo arreglamos para que Marco guarde cada mensaje completo una sola vez, y como lo ya guardado no se puede limpiar, me reconstruyeron la conversación completa aparte para poder leerla. Leyéndola, Lu parece una compradora real de una subasta y no una estafa.
+
+Después pedí una Ayuda de Bubble mucho más completa, módulo por módulo, con accesos directos y capturas, y quedó reescrita con conceptos, pasos, un glosario, botones para ir directo a cada pantalla y capturas en español y en inglés con datos inventados. Revisándola salieron varias cosas que arreglamos: que se pueda mover una cita, editar el correo de un cliente, que el teléfono cuente en el perfil y que el operador no vea botones de crear, entre otras. También decidí que la prueba gratis dure 30 días y que, sin suscripción, se pierda el acceso. Actualicé la lista de pruebas con todo lo nuevo, y en el gráfico de Inicio cambiamos un punto rosado que nadie entendía por una segunda barra con las citas al lado de las llamadas.
+
+Al final quise que Don Marc pueda probar Bubble antes de subirlo al servidor, y quedó todo listo para compartirlo con ngrok desde esta computadora, que ya lo tenía instalado; solo falta que cree la cuenta y cargue el token, cosa que dejé para mañana. En el camino se me bajaron los servidores cuando abrimos el navegador de la sesión para revisar el gráfico, y los volvimos a levantar. Cerré con todo subido a los dos repositorios.
+
+---
+
 ### 2026-10-19 (Lunes)
 
 Arranqué con la rutina de G54, todo en orden, aprobé las ideas nuevas y dejé la semana programada sin Instagram, porque el permiso de Instagram venció el 13. Pensé que ese permiso era permanente y que Facebook servía de respaldo, pero no estaba armado así; lo construimos como respaldo de emergencia y con eso se publicó el post del 15 que había quedado trabado, y dejé el de Instagram de esta semana para el viernes 23. Igual tengo que reconectar Instagram en el panel.
