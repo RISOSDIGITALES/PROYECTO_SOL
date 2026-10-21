@@ -1614,6 +1614,8 @@ Con eso en mano, el 4to pendiente (configurar Twilio) resultó ser algo que se p
 
 448. **Corte de día 21-oct — diagnóstico limpio** (2026-10-21): 33 workflows (32 activos), 0 errores desde el 16-oct. Desde el 20-oct: Distribution publicó el #198 (Facebook) el 20-oct 14:00 con ID de Meta; Vigía cada 2h, Gmail Monitor y el seguimiento de Marco cada hora sin errores; la única llegada al webhook de Marco (20-oct 19:20) fue un aviso de Meta sin mensaje. Quedan 3 posts programados (200 LinkedIn hoy, 199 Facebook el 22, 201 Instagram el 23, 14:00 UTC, con imagen y sin link crudo) con sus 3 alarmas en espera; 4 borradores en Crating Express, Orison sin posts. G54 sano; bundle del panel (`index-DQOw7Ddq.js`) y las dos docs (comparadas contra la copia del 08-oct) sin cambios.
 
+449. **Corte 21-oct: Bubble compartido por ngrok, auditoría y comparativo con Dapta** (2026-10-21): el trabajo del día fue de Bubble (ítems 486-491 de su repo: script de ngrok, ver contraseña, auditoría de 65 detalles con 43 corregidos, las 4 decisiones y el diseño nuevo de los correos, pendiente de que la usuaria lo confirme). Documento comparativo Bubble frente a Dapta en Claude Docs: https://claude.ai/artifact/UiLPotyTkYZ3qqQy5dNpcD. El túnel de ngrok quedó abierto en esta computadora (https://shoplift-manly-traps.ngrok-free.dev) mientras corra la sesión.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
@@ -2177,6 +2179,16 @@ El repo tiene código viejo (versión Netlify/Airtable). El código correcto (Ex
 ## Reportes Diarios
 
 > Los últimos 14 días. Anteriores archivados en `PROYECTO-SOL/reportes/`.
+
+---
+
+### 2026-10-21 (Miércoles)
+
+Arranqué con la rutina de G54, todo en orden, y seguí con lo de ayer: dejar Bubble listo para que Don Marc lo pruebe con ngrok. El comando del token se me partió en dos líneas y no funcionaba, pero ya quedó cargado y el link funcionó; la primera vez a Don Marc le salía el aviso de ngrok, después entró. Al verlo pedí el ojo para ver la contraseña, que quedó en todos los campos, y le pasé la cuenta de agencia que tiene todos los ejemplos para que viera cómo se ve con datos.
+
+Después pedí una auditoría completa de Bubble para pulir detalles: recorrimos todas las pantallas en computadora y celular, más dos revisiones del código, y salieron 65 detalles en un registro. Se corrigieron 43: pantallas que se salían del borde en celular, duraciones y horas mal escritas, "bot" y "agente" mezclados, avisos de carga que faltaban, mensajes de error con nombres técnicos y varias cosas del agente de voz, como avisar y cortar cuando está pausado o despedirse antes de colgar. En el camino una coma de más dejó el panel con error por unos minutos, también en el link de Don Marc, y se arregló al momento. Después decidí las cuatro dudas que quedaron: cada número de llamadas dice qué cuenta, se ocultan los nombres de los proveedores, el aviso de compra ya no muestra el costo de Twilio y el número solo lo compra la agencia.
+
+Cerré con dos pedidos más: un documento comparativo de Bubble con Dapta (estética, contenido, funciones y precios, con fuentes y con lo que no se pudo verificar, porque su panel pide cuenta), y el diseño de los correos, que ahora llevan burbujas en la cabecera, el título más delgado y botones más cuadrados. El diseño quedó guardado y lo confirmo mañana; lo del agente de voz sigue sin probarse en una llamada real.
 
 ---
 
