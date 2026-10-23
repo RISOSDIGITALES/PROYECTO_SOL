@@ -31,13 +31,27 @@
 
 Cambios ya hechos y probados por partes (código de producción con entradas simuladas o flujos temporales), que todavía no se confirmaron con un caso real de punta a punta. Al confirmar uno, sacarlo de acá y anotarlo en el ítem del changelog que corresponda.
 
-1. **Foto real a Marco por WhatsApp** (ítem 399): la visión de imágenes estaba rota desde el 22-sep. Mandar una foto de algo para embalar: Marco tiene que responder según lo que se ve.
+1. ~~Foto real a Marco por WhatsApp~~ — confirmada el 16-oct con la conversación real de Lu (ítem 440).
 2. **Nota de voz y PDF a Marco por Telegram** (ítems 397, 399 y 405): la foto ya quedó confirmada por la usuaria el 02-oct. La nota de voz falló ese día (credencial de Groq Whisper mal ubicada) y se arregló el 05-oct: volver a mandar un audio y confirmar que Marco responda según lo que se dijo. El PDF todavía no se probó.
 3. **"Ejecutar seguimiento IA" enviado de verdad** (ítems 397 y 406): solo se probó con números inventados y con la ruta de Telegram en local. Telegram confirmado el 05-oct (la usuaria apretó el botón en su trato 210 y le llegó el mensaje; ejecución 19:27 UTC sin errores). Falta: por WhatsApp, escribirle a Marco desde un número real y, antes de 24h, apretar el botón. Probar también dos clics seguidos (el segundo no manda). Ojo: G54 responde `ok:true` aunque no se envíe.
 4. **Informe mensual del 28-oct** (ítem 398): tiene que comparar contra la línea base del campo `linea_base`, sin buscar el informe #34, que ya no existe.
 5. **Logo en los correos de Camila** (ítem 398): cuando Walter haga la pantalla de carga de `logo_url`, mandar un correo de prueba y ver el logo en la cabecera.
 6. **Botón "Ejecutar" de Prospección (paso 7):** bloqueado. El flujo `jg5SENgRpe2wLBTn` está apagado por falta de la key de Google Places; falta que la usuaria decida si se saca la key o se le pide a Walter ocultar el botón.
 7. **Llamada real a Marco por teléfono (VAPI)** (encontrado el 01-oct): el asistente sigue con `groq / llama-3.3-70b-versatile`, y Groq ya responde 404 `model_not_found` a ese modelo con nuestra cuenta (confirmado por el relay de Bubble). La última llamada real, del 29-sep, salió bien, pero no se sabe si VAPI usa nuestra cuenta de Groq o la suya. Llamar al +1 786-788-0417: si Marco no contesta o corta, cambiar el modelo del asistente (por ejemplo a `openai/gpt-oss-120b` en Groq, si VAPI lo ofrece).
+
+## Próxima sesión — por dónde seguir (actualizado el 2026-10-23)
+
+**Cómo trabajar (pedido de la usuaria, 23-oct):** de a poco, un paso por vez, enumerando qué se hace y reportando el % de uso (`mcp__ccd_session_mgmt__get_usage`) al terminar cada paso. El límite semanal estaba en 81 % el 23-oct (se reinicia el domingo 25-oct 14:00 UTC); si pasa el 90 %, parar y avisar.
+
+**Orden de trabajo (lo nuestro):**
+1. **Bubble — seguimiento a contactos calificados** (pedido de Don Marc, 22-oct): Bubble no hace llamadas en frío; solo atiende y llama a quien ya nos contactó, después de calificarlo. Hoy solo existen devolver llamadas perdidas y recordar citas (ítem 494 de Bubble). Armar cómo sería, o si no se puede ahora, cómo y cuándo para verlo con el ingeniero. Incluir que el CRM guarde la prueba de que la persona nos contactó y aceptó el seguimiento (fecha, canal, texto).
+2. **Bubble — 18 detalles pendientes de la auditoría** (`Bubble-54/docs/auditoria-2026-10-21.md`, estado "Pendiente"): primero los del agente (dato inventado, no cuelga tras despedirse, aviso de asistente en inglés, reloj de 15 s que corta reservas), después agenda, formato en inglés y pantallas.
+3. **Bubble — pendientes de seguridad del 15-oct** (sección "Pendientes" del CLAUDE.md de Bubble, punto 7), más que el horario de llamadas salientes usa la zona del negocio y no la del cliente.
+4. **G54:** el lunes 26 revisar que corrió la tarea `g54-programar-semana-26oct`; el 28-oct, que el informe mensual compare contra `linea_base`.
+
+**De la usuaria (no se pueden hacer desde acá):** probar "Probar mi agente" con el agente de voz encendido (lo hace ella); reconectar Instagram de Crating Express (token vencido el 13-oct); avisar al vendedor que el estimado de Lu ($159) se hizo con medidas equivocadas; pasarle a Don Marc (el abogado es él) las 6 preguntas legales sobre llamadas salientes (TCPA y voz de IA, Florida FTSA, grabación con consentimiento de ambas partes, listas "No llamar", Canadá CRTC, qué guardar como prueba de consentimiento); permisos de estadísticas de LinkedIn.
+
+**Del ingeniero:** los 14 pedidos de `PROYECTO-SOL/2026/09-G54/exodo-g54-oct13.html`.
 
 ## Qué es este proyecto
 
