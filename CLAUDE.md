@@ -41,15 +41,15 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 
 ## Próxima sesión — por dónde seguir (actualizado el 2026-10-23)
 
-**Cómo trabajar (pedido de la usuaria, 23-oct):** de a poco, un paso por vez, enumerando qué se hace y reportando el % de uso (`mcp__ccd_session_mgmt__get_usage`) al terminar cada paso. El límite semanal estaba en 81 % el 23-oct (se reinicia el domingo 25-oct 14:00 UTC); si pasa el 90 %, parar y avisar.
+**Cómo trabajar (pedido de la usuaria, 23-oct):** de a poco, un paso por vez, de lo más chico a lo más grande, enumerando qué se hace y reportando el % de uso (`mcp__ccd_session_mgmt__get_usage`) al terminar cada paso. El límite semanal cerró en 87 % el 23-oct (se reinicia el domingo 25-oct 14:00 UTC); si pasa el 90 %, parar y avisar.
 
 **Orden de trabajo (lo nuestro):**
 1. **Bubble — seguimiento a contactos calificados** (pedido de Don Marc, 22-oct): Bubble no hace llamadas en frío; solo atiende y llama a quien ya nos contactó, después de calificarlo. Hoy solo existen devolver llamadas perdidas y recordar citas (ítem 494 de Bubble). Armar cómo sería, o si no se puede ahora, cómo y cuándo para verlo con el ingeniero. Incluir que el CRM guarde la prueba de que la persona nos contactó y aceptó el seguimiento (fecha, canal, texto).
-2. **Bubble — 18 detalles pendientes de la auditoría** (`Bubble-54/docs/auditoria-2026-10-21.md`, estado "Pendiente"): primero los del agente (dato inventado, no cuelga tras despedirse, aviso de asistente en inglés, reloj de 15 s que corta reservas), después agenda, formato en inglés y pantallas.
+2. **Bubble — último detalle de la auditoría** (`Bubble-54/docs/auditoria-2026-10-21.md`): el #62, el agente inventó un dato en la llamada de ejemplo ("antes de las 3 p.m."). Los otros 17 quedaron resueltos el 23-oct (ítem 453). Después, probar en una llamada real los puntos 5 a 7 de "Pruebas pendientes" del CLAUDE.md de Bubble.
 3. **Bubble — pendientes de seguridad del 15-oct** (sección "Pendientes" del CLAUDE.md de Bubble, punto 7), más que el horario de llamadas salientes usa la zona del negocio y no la del cliente.
 4. **G54:** el lunes 26 revisar que corrió la tarea `g54-programar-semana-26oct`; el 28-oct, que el informe mensual compare contra `linea_base`.
 
-**De la usuaria (no se pueden hacer desde acá):** probar "Probar mi agente" con el agente de voz encendido (lo hace ella); reconectar Instagram de Crating Express (token vencido el 13-oct); avisar al vendedor que el estimado de Lu ($159) se hizo con medidas equivocadas; pasarle a Don Marc (el abogado es él) las 6 preguntas legales sobre llamadas salientes (TCPA y voz de IA, Florida FTSA, grabación con consentimiento de ambas partes, listas "No llamar", Canadá CRTC, qué guardar como prueba de consentimiento); permisos de estadísticas de LinkedIn.
+**De la usuaria (no se pueden hacer desde acá):** probar "Probar mi agente" con el agente de voz encendido (lo hace ella); reconectar Instagram de Crating Express (token vencido el 13-oct); avisar al vendedor que el estimado de Lu ($159) se hizo con medidas equivocadas; esperar las respuestas de Don Marc a las 6 preguntas legales (van en el reporte del 23-oct en Notion, ítem 453); permisos de estadísticas de LinkedIn.
 
 **Del ingeniero:** los 14 pedidos de `PROYECTO-SOL/2026/09-G54/exodo-g54-oct13.html`.
 
@@ -844,6 +844,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 452. **Corte de día 23-oct — diagnóstico limpio y comentarios de Don Marc del 22-oct** (2026-10-23): 33 workflows (32 activos), 0 ejecuciones con error. Desde el 22-oct: Vigía (14), Gmail Monitor y el chequeo horario de Marco (27 cada uno) sin errores; Distribution corrió hoy 14:00 UTC sin errores y el #201 (Instagram) ya no figura como aprobado ni programado (salió por el respaldo de Facebook del ítem 444). 0 alarmas en espera y ningún post en cola hasta que corra la tarea `g54-programar-semana-26oct`. Las 8 llamadas al relay de Groq son pruebas de Bubble del 22-oct. G54 sano; bundle del panel sin cambios (`index-DQOw7Ddq.js`). **Don Marc en el reporte del 22-oct:** (1) Bubble no hace llamadas en frío: solo atender y dar seguimiento a contactos que ya nos contactaron, previa calificación; si eso no se puede hoy, verlo con el ingeniero (cómo y cuándo). La captación se hace con anuncios y marketing escrito (email a contactos calificados), que es parte de la estrategia de venta de Bubble. (2) El abogado es él: pidió el detalle de lo que hay que confirmar sobre las llamadas salientes.
 
+453. **Día 23-oct: 17 de los 18 detalles de la auditoría de Bubble y respuesta legal a Don Marc** (2026-10-23). A pedido de la usuaria se fue de lo más chico a lo más grande, un paso por vez y con el uso reportado en cada uno (81 % → 87 %). Detalle completo en el ítem 496 del CLAUDE.md de Bubble y en `docs/auditoria-2026-10-21.md`: pantallas y formato en inglés (#5, #6, #26, #27, #28, #38, #39, #41), Registros (#37: el servidor no mandaba especialista, motivo de error ni dirección), Integraciones (#40), errores de validación con el campo y en el idioma (#51), citas del panel (#52 correo, #53 teléfono en E.164, #54 reconfirmar y revincular) y agente (#63 colgar tras despedirse, #64 aviso en el idioma del saludo, #65 reloj de 15 s). Pruebas al cierre: servidor 564, panel 244, agente 113. Queda el #62. **Pendiente de confirmar por la usuaria:** la semana en español sigue empezando en lunes (en inglés, domingo). **Respuesta a Don Marc** (pregunta del reporte del 22-oct, "dame los detalles de lo que necesitas confirmar con un abogado"): las 6 preguntas (TCPA y voz de IA, FTSA de Florida y su horario en la hora del cliente, consentimiento para transcribir, listas "No llamar", CRTC de Canadá y qué guardar como prueba de consentimiento) quedaron en la entrada del 23-oct de RESUMEN DIARIO en Notion, con la observación de que las llamadas en frío no son seguras aunque sigan pasando (TCPA: 500 a 1.500 dólares por llamada). Las salientes siguen apagadas hasta tener sus respuestas.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
@@ -857,6 +859,16 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 ## Reportes Diarios
 
 > Los últimos 14 días. Anteriores archivados en `PROYECTO-SOL/reportes/`.
+
+---
+
+### 2026-10-23 (Viernes)
+
+Arranqué con la rutina de G54, todo en orden y sin nada programado hasta que corra la tarea del lunes 26. Después revisé la lista de pendientes y decidí ir de lo más chico a lo más grande, uno por uno, mirando el uso de Claude en cada paso porque la semana ya iba en 81 %. Empecé por los 18 detalles que quedaban de la auditoría de Bubble, primero los de pantalla: la hora de fin de una llamada que repetía la fecha, el reloj de arriba que en inglés salía en 24 horas, los precios sin formato de dólares, la etiqueta de Inicio tapada por una burbuja en el celular y la semana de la agenda, que ahora en inglés empieza en domingo como se usa en EE. UU. (en español la dejé en lunes).
+
+Revisando Registros apareció algo más serio que lo anotado: el servidor no mandaba si la llamada pidió un especialista, el motivo de los errores ni si la llamada era saliente, así que las salientes iban a aparecer como entrantes. Con las citas pasaba algo parecido: un correo mal escrito se descartaba sin avisar y la confirmación nunca le llegaba al cliente, y un teléfono escrito con paréntesis creaba un cliente repetido; ahora el panel avisa, guarda el número igual que las llamadas, y volver a confirmar una cita cancelada manda el correo. Además los mensajes de error ya dicen qué campo está mal y en el idioma del panel, e Integraciones explica en palabras qué pasó con el último envío al CRM.
+
+Cerré con tres cosas del agente de voz: el aviso de asistente virtual sale en el idioma del saludo, el reloj de 15 segundos ya no corta una reserva que encadena pasos, y el agente puede colgar solo después de despedirse en vez de esperar el corte por silencio. Quedaron 17 de los 18 detalles resueltos, con todas las pruebas en verde y subido; lo del agente falta probarlo en una llamada real, y solo queda el dato que inventó en la llamada de ejemplo. Paré con el uso semanal en 87 % para no pasar el 90 %, y respondo abajo la pregunta de Don Marc sobre lo legal.
 
 ---
 
