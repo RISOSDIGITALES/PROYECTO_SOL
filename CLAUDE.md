@@ -862,6 +862,16 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-10-24 (Sábado)
+
+Arranqué levantando Bubble para revisarlo, con la consigna de cuidar el uso de Claude porque la semana ya venía en 90 %. Llamé al número que habíamos dejado desviado y solo repicaba: el desvío estaba bien, lo que pasaba era que el agente de voz no estaba prendido en ninguna parte. Lo prendí, volví a llamar y Sofía atendió, tomó un pedido de tulipanes para el 30 de octubre y dejó el resumen en Registros. De paso me llegó un rebote de Gmail: era el aviso al especialista, que el agente mandó porque pedí fotos, y salió a la dirección inventada de la Floristería demo, así que no es una falla de Bubble.
+
+Después me dediqué a cómo se ve el panel. La agenda del negocio ahora tiene las mismas vistas que la de la agencia, Agenda y Calendario, con la ventana de cada cita y la opción de moverla. La configuración de la agenda y la prueba del agente pasaron adentro de Agente, porque siguen siendo configuración del agente. También saqué los huecos que dejaban las tarjetas estiradas y los topes de ancho que dejaban todo en una columna angosta con márgenes enormes, para que el panel llene la pantalla como G54; en Inicio tuve que corregir porque los cuadros quedaron desparejos y los acomodé en dos columnas parejas. Todo quedó con sus pruebas y subido.
+
+Cerré con la primera misión que salió de la conversación con el ingeniero: Bubbli, la mascota de Bubble, un pez betta en una burbuja en la esquina que funcione como guía y consultor con accesos directos. Quedó analizada y anotada en pendientes; el 3D lo vamos a hacer nosotros en código el lunes, primero en computadora, con un estilo de marca y no fotorrealista. Paré con el uso semanal en 93 % para dejar el cupo del lunes completo; las demás misiones del ingeniero quedan para anotar, y el agente de voz quedó apagado.
+
+---
+
 ### 2026-10-23 (Viernes)
 
 Arranqué con la rutina de G54, todo en orden y sin nada programado hasta que corra la tarea del lunes 26. Después revisé la lista de pendientes y decidí ir de lo más chico a lo más grande, uno por uno, mirando el uso de Claude en cada paso porque la semana ya iba en 81 %. Empecé por los 18 detalles que quedaban de la auditoría de Bubble, primero los de pantalla: la hora de fin de una llamada que repetía la fecha, el reloj de arriba que en inglés salía en 24 horas, los precios sin formato de dólares, la etiqueta de Inicio tapada por una burbuja en el celular y la semana de la agenda, que ahora en inglés empieza en domingo como se usa en EE. UU. (en español la dejé en lunes).
