@@ -29,7 +29,7 @@ while True:
 print('ejecuciones desde', DESDE, dict(cnt))
 print('con error:', err or 0)
 
-for cid in (1, 2):
+for cid in (1, 6):  # 1 = Crating Express, 6 = Orison Managua (la 2 no existe)
     try:
         posts = get(f'{G54}/companies/{cid}/rrss/posts', {})
         posts = posts.get('data', posts) if isinstance(posts, dict) else posts

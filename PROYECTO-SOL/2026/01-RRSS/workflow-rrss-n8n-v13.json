@@ -3,16 +3,24 @@
   "name": "🎨 Content AI — RRSS G54 v1.3",
   "description": null,
   "active": true,
-  "activeVersionId": "6b6978f4-b669-43c3-b02b-1fc73c62edd1",
+  "activeVersionId": "9c432ac8-bb88-4c66-9767-07ddb7501e3d",
   "createdAt": "2026-05-15T15:53:30.951Z",
-  "updatedAt": "2026-10-13T13:56:27.718Z",
+  "updatedAt": "2026-10-27T14:44:48.844Z",
   "isArchived": false,
-  "versionId": "6b6978f4-b669-43c3-b02b-1fc73c62edd1",
-  "versionCounter": 178,
+  "versionId": "9c432ac8-bb88-4c66-9767-07ddb7501e3d",
+  "versionCounter": 180,
   "sourceWorkflowId": null,
   "triggerCount": 1,
   "nodes": [
     {
+      "id": "get-empresa",
+      "name": "📊 Obtener Perfil Empresa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1056,
+        304
+      ],
       "parameters": {
         "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID }}",
         "sendHeaders": true,
@@ -29,17 +37,17 @@
           ]
         },
         "options": {}
-      },
-      "id": "get-empresa",
-      "name": "📊 Obtener Perfil Empresa",
+      }
+    },
+    {
+      "id": "get-productos",
+      "name": "📦 Obtener Servicios Activos",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1056,
+        1312,
         304
-      ]
-    },
-    {
+      ],
       "parameters": {
         "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID + '/productos-servicios' }}",
         "sendHeaders": true,
@@ -56,17 +64,17 @@
           ]
         },
         "options": {}
-      },
-      "id": "get-productos",
-      "name": "📦 Obtener Servicios Activos",
+      }
+    },
+    {
+      "id": "get-tema",
+      "name": "📅 Obtener Próximo Tema Semanal",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1312,
+        1552,
         304
-      ]
-    },
-    {
+      ],
       "parameters": {
         "method": "GET",
         "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/rrss/ideas",
@@ -84,17 +92,17 @@
           ]
         },
         "options": {}
-      },
-      "id": "get-tema",
-      "name": "📅 Obtener Próximo Tema Semanal",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1552,
-        304
-      ]
+      }
     },
     {
+      "id": "if-hay-tema",
+      "name": "🔍 ¿Hay tema disponible?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        304
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -116,20 +124,9 @@
           "combinator": "and"
         },
         "options": {}
-      },
-      "id": "if-hay-tema",
-      "name": "🔍 ¿Hay tema disponible?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        1808,
-        304
-      ]
+      }
     },
     {
-      "parameters": {
-        "jsCode": "// ====================================================\n// Preparar Contexto para IA — G54 Field Mapping\n// G54 API fields:\n//   company: name, description, value_proposition, base_city, website, emails[], phones[]\n//   products: name, description, keywords[]\n//   ideas: id, topic, keyword, platform, description\n//   estrategia: objetivo, audiencia, tono, cta_principal, embudo, pilares[]\n// ====================================================\n\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\n// G54 wraps in .data, Airtable uses .fields\nconst empresa = empresaRaw.data || empresaRaw.fields || empresaRaw || {};\n\nconst productosRaw = $('📦 Obtener Servicios Activos').item.json;\n// G54: { company_id, data: [{id, name, description, keywords[]}] }\nconst productosData = productosRaw.data || productosRaw.items || productosRaw.records || (Array.isArray(productosRaw) ? productosRaw : []);\n\n// G54 ideas response: { data: [{id, topic, keyword, platform, description}] }\nconst temaRaw = $('📅 Obtener Próximo Tema Semanal').item.json;\nconst temaList = temaRaw.data || temaRaw.items || temaRaw.records || (Array.isArray(temaRaw) ? temaRaw : [temaRaw]);\n\n// Ideas que ya tienen un post generado (cualquier estado: borrador/aprobado/publicado) — para no volver a generar el mismo tema\nlet usedIdeaIds = new Set();\ntry {\n  const postsRaw = $('📋 Obtener Posts Existentes (G54)').item.json;\n  const postsList = postsRaw.data || (Array.isArray(postsRaw) ? postsRaw : []);\n  usedIdeaIds = new Set(postsList.map(p => p.social_idea_id).filter(id => id !== null && id !== undefined));\n} catch (e) {\n  // Si la lectura de posts falla (login caído, etc.), seguimos sin filtrar — mismo comportamiento de antes\n}\n\n// Use idea_id from webhook if provided (G54 sends it in mode:post)\nconst webhookBody = $('🔔 Webhook G54').item?.json?.body || $('🔔 Webhook G54').item?.json || {};\nconst webhookIdeaId = webhookBody.idea_id;\nconst temaList2 = Array.isArray(temaList) ? temaList : [temaList];\nlet temaItem;\nif (webhookIdeaId) {\n  // Mismo candado anti-duplicado del ítem 117, ahora también para cuando el panel manda\n  // un idea_id explícito (botón \"Generar Post\" sobre una idea puntual) — antes solo protegía\n  // la elección automática, así que un clic sobre una idea ya usada volvía a duplicar el post.\n  const usedIdsStr = new Set(Array.from(usedIdeaIds).map(id => String(id)));\n  if (usedIdsStr.has(String(webhookIdeaId))) {\n    throw new Error(`La idea ${webhookIdeaId} ya tiene un post generado — no se crea un duplicado. Para un contenido distinto usá \"Regenerar Idea\" antes de generar el post, o borrá primero el post existente si es un borrador.`);\n  }\n  temaItem = temaList2.find(t => String(t.id) === String(webhookIdeaId));\n    if (!temaItem) {\n      // Antes esto caia en silencio a temaList2[0] (la primera idea de la lista, sin importar\n      // cual) cuando el idea_id pedido no existia -- confirmado en vivo el 16-sep generando un\n      // post real de una idea distinta a la pedida, sin ningun aviso. Ahora falla limpio.\n      throw new Error(`No se encontro la idea ${webhookIdeaId} -- puede que ya no exista o que el ID este mal. No se genera ningun post de reemplazo.`);\n    }\n} else {\n  // Bug real del 14-ago: el botón \"Generar Post\" del panel no manda idea_id (confirmado\n  // con la ejecución real), así que sin este filtro se podía elegir cualquier idea sin\n  // post generado, sin importar su estado — incluida una idea de tendencia todavía sin\n  // aprobar, en vez de la idea real que el cliente ya había aprobado en el panel.\n  // Nunca generar un post de una idea que un humano no aprobó primero.\n  temaItem = temaList2.find(t => !usedIdeaIds.has(t.id) && t.status === 'aprobado');\n  if (!temaItem) {\n    throw new Error('No hay ninguna idea aprobada y sin usar disponible para generar un post — aprobá una idea en el panel antes de generar el post, o genera ideas nuevas si no hay ninguna pendiente.');\n  }\n}\ntemaItem = temaItem || {};\nconst tema = temaItem.fields || temaItem || {};\nconst temaId = temaItem.id || temaItem.social_idea_id || temaItem.tema_id || null;\n\n// Estrategia (continueOnFail — null if not configured yet)\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\n// Build product/service summary — handles G54 (name/description) and Airtable fallback\nconst servicios = productosData\n  .filter(p => (p.fields || p).is_active !== false)\n  .map(p => {\n    const f = p.fields || p;\n    const nombre = f.name || f.nombre || f['Nombre de Servicio'] || '';\n    const desc   = f.description || f.descripcion || f['Descripción comercial'] || '';\n    const kws    = Array.isArray(f.keywords) ? f.keywords.slice(0,3).join(', ') : '';\n    return `- ${nombre}: ${desc}${kws ? ' [' + kws + ']' : ''}`.slice(0, 220);\n  })\n  .join('\\n');\n\n\n// Idioma calculado por código, no inferido por la IA -- encontrado el 16-sep: el respaldo Zhipu\n// (glm-4.5-flash) a veces \"piensa\" en inglés a mitad de su razonamiento y termina el post en\n// inglés pese a un keyword/tema en español (no determinístico, temperatura 0.75, confirmado con\n// varias corridas de prueba reales). Calculando el idioma acá y pasándoselo ya resuelto a los 3\n// prompts se elimina la ambigüedad de \"inferí el idioma vos\" para el modelo.\nfunction detectarIdioma(...textos) {\n  const combinado = textos.filter(Boolean).join(' ');\n  if (!combinado) return 'ESPAÑOL';\n  if (/[ñáéíóúÑÁÉÍÓÚ¿¡]/.test(combinado)) return 'ESPAÑOL';\n  const esWords = (combinado.match(/\\b(el|la|los|las|de|del|para|que|con|una|uno|es|son|como|por|porque|más|sin|hacia|tu|nuestro|nuestra)\\b/gi) || []).length;\n  const enWords = (combinado.match(/\\b(the|and|for|with|how|why|near|your|our|best|from|about)\\b/gi) || []).length;\n  return esWords >= enWords ? 'ESPAÑOL' : 'ENGLISH';\n}\n// Voz de marca — la decide el Strategist (no se adivina acá). La guarda en `tono` con el formato\n// \"personalidad · trato: tú|usted|neutro · idioma: español|inglés|bilingüe\" (G54 limita ese campo a 100\n// caracteres) y el detalle en resumen_estrategico, bajo \"VOZ DE MARCA:\". Una estrategia vieja sin ese\n// formato sigue funcionando igual que antes: idioma por keyword y tono tal cual.\nconst tonoRaw = String(estrategia.tono || '');\nconst vozTrato = (((tonoRaw.match(/trato:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\nconst vozIdioma = (((tonoRaw.match(/idioma:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\nconst vozPersonalidad = tonoRaw.split('·')[0].trim() || 'profesional y directo';\nconst vozGuia = ((((String(estrategia.resumen_estrategico || '')).match(/VOZ DE MARCA:\\s*([\\s\\S]+)$/i) || [])[1]) || '').trim().slice(0, 1200);\n// Idioma: decisión de dirección (12-oct) — lo decide siempre la keyword del post, nunca la estrategia.\nconst idiomaEstrategia = '';\nconst tratoTexto = /^t[uú]/.test(vozTrato) ? 'en los posts en español, tutea siempre al lector (tú, tu, te); nunca uses usted ni vos'\n  : (/^usted/.test(vozTrato) ? 'trata siempre de usted al lector; nunca tutees ni uses vos' : '');\nconst bloque_voz = 'VOZ DE MARCA (definida por la estrategia aprobada; es obligatoria y pesa más que cualquier ajuste de tono de las instrucciones de abajo, en todas las plataformas):\\n'\n  + '- Personalidad: ' + vozPersonalidad + '\\n'\n  + (tratoTexto ? '- Trato: ' + tratoTexto + '\\n' : '')\n  + (vozGuia ? '- Guía: ' + vozGuia + '\\n' : '')\n  + (idiomaEstrategia ? '- Si la keyword está en otro idioma, usa en el texto su equivalente natural en el idioma del post; no la pegues literal.\\n' : '');\nconst bloque_voz_inline = bloque_voz.replace(/\\n/g, ' | ').replace(/[\"\\\\]/g, \"'\");\n\nconst idioma_requerido = idiomaEstrategia || detectarIdioma(tema.topic, tema.tema, tema['Tema'], tema.keyword, tema.palabras_clave, tema.keyword_principal);\n\nreturn [{\n  json: {\n    // ---- Empresa (G54 field names first, Airtable fallback) ----\n    empresa_nombre:          empresa.name || empresa.nombre_empresa || empresa['\\ufeffnombre_empresa'] || '',\n    empresa_descripcion:     empresa.description || empresa.descripcion_corta || '',\n    empresa_propuesta_valor: empresa.value_proposition || empresa.propuesta_valor || '',\n    empresa_ciudad:          empresa.base_city || empresa.ciudad_base || empresa['ciudad base'] || '',\n    empresa_web:             empresa.website || empresa.sitio_web || '',\n    empresa_telefono:        (empresa.phones || [])[0] || empresa.telefono || '',\n    empresa_email:           (empresa.emails || [])[0] || '',\n    empresa_geografia:       empresa.geography || empresa.coverage || '',\n    empresa_competidores:    (empresa.competitors_known || []).slice(0,3).map(c => c.name).join(', '),\n    servicios_resumen:       servicios,\n    // ---- Tema / Idea G54 ----\n    tema_id:                 temaId,\n    tema_texto:              tema.topic || tema.tema || tema['Tema'] || '',\n    tema_descripcion:        tema.fecha_propuesta || '',\n    tema_palabras_clave:     tema.keyword || tema.palabras_clave || '',\n    keyword_principal:       tema.keyword || tema.keyword_principal || '',\n    tema_semana:             tema.week || tema.semana || tema['Semana'] || 0,\n    tema_plataforma:         tema.platform || tema.plataforma || 'Instagram',\n    fecha_post:              new Date().toISOString().slice(0, 10), // UTC, sin asumir zona horaria de ninguna empresa\n    // ---- Estrategia G54 ----\n    estrategia_objetivo:     estrategia.objetivo || estrategia.primary_goal || empresa.primary_goal || '',\n    estrategia_audiencia:    estrategia.audiencia || estrategia.target_market || empresa.target_market || '',\n    estrategia_tono:         estrategia.tono || 'profesional, directo y humano',\n    estrategia_cta:          (estrategia.link_origen && estrategia.link_origen !== 'ninguno' && estrategia.link_resuelto) ? estrategia.link_resuelto : (estrategia.link_principal || estrategia.cta_principal || (empresa.website || empresa.sitio_web || '')), // Preferir link_resuelto (ya calculado por G54, ítem del 24-ago) sobre resolverlo nosotros mismos; misma cadena de respaldo si no viene.\n    estrategia_embudo:       estrategia.embudo || 'TOFU-MOFU',\n    estrategia_pilares:      Array.isArray(estrategia.pilares) ? estrategia.pilares.join(', ') : (estrategia.pilares || ''),\n    // ---- Imagen (G54 provee la URL — subida por usuario o generada por Image AI) ----\n    imagen_url:              tema.imagen_url || tema.image_url || null,\n    imagen_specs:            tema.imagen_specs || tema.image_specs || '',\n    idioma_requerido:        idioma_requerido,\n    bloque_voz:              bloque_voz,\n    bloque_voz_inline:       bloque_voz_inline,\n  }\n}];\n"
-      },
       "id": "preparar-contexto",
       "name": "🔧 Preparar Contexto para IA",
       "type": "n8n-nodes-base.code",
@@ -137,9 +134,21 @@
       "position": [
         2064,
         304
-      ]
+      ],
+      "parameters": {
+        "jsCode": "// ====================================================\n// Preparar Contexto para IA — G54 Field Mapping\n// G54 API fields:\n//   company: name, description, value_proposition, base_city, website, emails[], phones[]\n//   products: name, description, keywords[]\n//   ideas: id, topic, keyword, platform, description\n//   estrategia: objetivo, audiencia, tono, cta_principal, embudo, pilares[]\n// ====================================================\n\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\n// G54 wraps in .data, Airtable uses .fields\nconst empresa = empresaRaw.data || empresaRaw.fields || empresaRaw || {};\n\nconst productosRaw = $('📦 Obtener Servicios Activos').item.json;\n// G54: { company_id, data: [{id, name, description, keywords[]}] }\nconst productosData = productosRaw.data || productosRaw.items || productosRaw.records || (Array.isArray(productosRaw) ? productosRaw : []);\n\n// G54 ideas response: { data: [{id, topic, keyword, platform, description}] }\nconst temaRaw = $('📅 Obtener Próximo Tema Semanal').item.json;\nconst temaList = temaRaw.data || temaRaw.items || temaRaw.records || (Array.isArray(temaRaw) ? temaRaw : [temaRaw]);\n\n// Ideas que ya tienen un post generado (cualquier estado: borrador/aprobado/publicado) — para no volver a generar el mismo tema\nlet usedIdeaIds = new Set();\ntry {\n  const postsRaw = $('📋 Obtener Posts Existentes (G54)').item.json;\n  const postsList = postsRaw.data || (Array.isArray(postsRaw) ? postsRaw : []);\n  usedIdeaIds = new Set(postsList.map(p => p.social_idea_id).filter(id => id !== null && id !== undefined));\n} catch (e) {\n  // Si la lectura de posts falla (login caído, etc.), seguimos sin filtrar — mismo comportamiento de antes\n}\n\n// Use idea_id from webhook if provided (G54 sends it in mode:post)\nconst webhookBody = $('🔔 Webhook G54').item?.json?.body || $('🔔 Webhook G54').item?.json || {};\nconst webhookIdeaId = webhookBody.idea_id;\nconst temaList2 = Array.isArray(temaList) ? temaList : [temaList];\nlet temaItem;\nif (webhookIdeaId) {\n  // Mismo candado anti-duplicado del ítem 117, ahora también para cuando el panel manda\n  // un idea_id explícito (botón \"Generar Post\" sobre una idea puntual) — antes solo protegía\n  // la elección automática, así que un clic sobre una idea ya usada volvía a duplicar el post.\n  const usedIdsStr = new Set(Array.from(usedIdeaIds).map(id => String(id)));\n  if (usedIdsStr.has(String(webhookIdeaId))) {\n    throw new Error(`La idea ${webhookIdeaId} ya tiene un post generado — no se crea un duplicado. Para un contenido distinto usá \"Regenerar Idea\" antes de generar el post, o borrá primero el post existente si es un borrador.`);\n  }\n  temaItem = temaList2.find(t => String(t.id) === String(webhookIdeaId));\n    if (!temaItem) {\n      // Antes esto caia en silencio a temaList2[0] (la primera idea de la lista, sin importar\n      // cual) cuando el idea_id pedido no existia -- confirmado en vivo el 16-sep generando un\n      // post real de una idea distinta a la pedida, sin ningun aviso. Ahora falla limpio.\n      throw new Error(`No se encontro la idea ${webhookIdeaId} -- puede que ya no exista o que el ID este mal. No se genera ningun post de reemplazo.`);\n    }\n} else {\n  // Bug real del 14-ago: el botón \"Generar Post\" del panel no manda idea_id (confirmado\n  // con la ejecución real), así que sin este filtro se podía elegir cualquier idea sin\n  // post generado, sin importar su estado — incluida una idea de tendencia todavía sin\n  // aprobar, en vez de la idea real que el cliente ya había aprobado en el panel.\n  // Nunca generar un post de una idea que un humano no aprobó primero.\n  temaItem = temaList2.find(t => !usedIdeaIds.has(t.id) && t.status === 'aprobado');\n  if (!temaItem) {\n    throw new Error('No hay ninguna idea aprobada y sin usar disponible para generar un post — aprobá una idea en el panel antes de generar el post, o genera ideas nuevas si no hay ninguna pendiente.');\n  }\n}\ntemaItem = temaItem || {};\nconst tema = temaItem.fields || temaItem || {};\nconst temaId = temaItem.id || temaItem.social_idea_id || temaItem.tema_id || null;\n\n// Estrategia (continueOnFail — null if not configured yet)\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\n// Build product/service summary — handles G54 (name/description) and Airtable fallback\nconst servicios = productosData\n  .filter(p => (p.fields || p).is_active !== false)\n  .map(p => {\n    const f = p.fields || p;\n    const nombre = f.name || f.nombre || f['Nombre de Servicio'] || '';\n    const desc   = f.description || f.descripcion || f['Descripción comercial'] || '';\n    const kws    = Array.isArray(f.keywords) ? f.keywords.slice(0,3).join(', ') : '';\n    return `- ${nombre}: ${desc}${kws ? ' [' + kws + ']' : ''}`.slice(0, 220);\n  })\n  .join('\\n');\n\n\n// Idioma calculado por código, no inferido por la IA -- encontrado el 16-sep: el respaldo Zhipu\n// (glm-4.5-flash) a veces \"piensa\" en inglés a mitad de su razonamiento y termina el post en\n// inglés pese a un keyword/tema en español (no determinístico, temperatura 0.75, confirmado con\n// varias corridas de prueba reales). Calculando el idioma acá y pasándoselo ya resuelto a los 3\n// prompts se elimina la ambigüedad de \"inferí el idioma vos\" para el modelo.\nfunction detectarIdioma(...textos) {\n  const combinado = textos.filter(Boolean).join(' ');\n  if (!combinado) return 'ESPAÑOL';\n  if (/[ñáéíóúÑÁÉÍÓÚ¿¡]/.test(combinado)) return 'ESPAÑOL';\n  const esWords = (combinado.match(/\\b(el|la|los|las|de|del|para|que|con|una|uno|es|son|como|por|porque|más|sin|hacia|tu|nuestro|nuestra)\\b/gi) || []).length;\n  const enWords = (combinado.match(/\\b(the|and|for|with|how|why|near|your|our|best|from|about)\\b/gi) || []).length;\n  return esWords >= enWords ? 'ESPAÑOL' : 'ENGLISH';\n}\n// Voz de marca — la decide el Strategist (no se adivina acá). La guarda en `tono` con el formato\n// \"personalidad · trato: tú|usted|neutro · idioma: español|inglés|bilingüe\" (G54 limita ese campo a 100\n// caracteres) y el detalle en resumen_estrategico, bajo \"VOZ DE MARCA:\". Una estrategia vieja sin ese\n// formato sigue funcionando igual que antes: idioma por keyword y tono tal cual.\nconst tonoRaw = String(estrategia.tono || '');\nconst vozTrato = (((tonoRaw.match(/trato:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\nconst vozIdioma = (((tonoRaw.match(/idioma:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\nconst vozPersonalidad = tonoRaw.split('·')[0].trim() || 'profesional y directo';\nconst vozGuia = ((((String(estrategia.resumen_estrategico || '')).match(/VOZ DE MARCA:\\s*([\\s\\S]+)$/i) || [])[1]) || '').trim().slice(0, 1200);\n// Idioma: decisión de dirección (12-oct) — lo decide siempre la keyword del post, nunca la estrategia.\nconst idiomaEstrategia = '';\nconst tratoTexto = /^t[uú]/.test(vozTrato) ? 'en los posts en español, tutea siempre al lector (tú, tu, te); nunca uses usted ni vos'\n  : (/^usted/.test(vozTrato) ? 'trata siempre de usted al lector; nunca tutees ni uses vos' : '');\nconst bloque_voz = 'VOZ DE MARCA (definida por la estrategia aprobada; es obligatoria y pesa más que cualquier ajuste de tono de las instrucciones de abajo, en todas las plataformas):\\n'\n  + '- Personalidad: ' + vozPersonalidad + '\\n'\n  + (tratoTexto ? '- Trato: ' + tratoTexto + '\\n' : '')\n  + (vozGuia ? '- Guía: ' + vozGuia + '\\n' : '')\n  + (idiomaEstrategia ? '- Si la keyword está en otro idioma, usa en el texto su equivalente natural en el idioma del post; no la pegues literal.\\n' : '');\nconst bloque_voz_inline = bloque_voz.replace(/\\n/g, ' | ').replace(/[\"\\\\]/g, \"'\");\n\nconst idioma_requerido = idiomaEstrategia || detectarIdioma(tema.topic, tema.tema, tema['Tema'], tema.keyword, tema.palabras_clave, tema.keyword_principal);\n\nreturn [{\n  json: {\n    // ---- Empresa (G54 field names first, Airtable fallback) ----\n    empresa_nombre:          empresa.name || empresa.nombre_empresa || empresa['\\ufeffnombre_empresa'] || '',\n    empresa_descripcion:     empresa.description || empresa.descripcion_corta || '',\n    empresa_propuesta_valor: empresa.value_proposition || empresa.propuesta_valor || '',\n    empresa_ciudad:          empresa.base_city || empresa.ciudad_base || empresa['ciudad base'] || '',\n    empresa_web:             empresa.website || empresa.sitio_web || '',\n    empresa_telefono:        (empresa.phones || [])[0] || empresa.telefono || '',\n    empresa_email:           (empresa.emails || [])[0] || '',\n    empresa_geografia:       empresa.geography || empresa.coverage || '',\n    empresa_competidores:    (empresa.competitors_known || []).slice(0,3).map(c => c.name).join(', '),\n    servicios_resumen:       servicios,\n    // ---- Tema / Idea G54 ----\n    tema_id:                 temaId,\n    tema_texto:              tema.topic || tema.tema || tema['Tema'] || '',\n    tema_descripcion:        tema.fecha_propuesta || '',\n    tema_palabras_clave:     tema.keyword || tema.palabras_clave || '',\n    keyword_principal:       tema.keyword || tema.keyword_principal || '',\n    tema_semana:             tema.week || tema.semana || tema['Semana'] || 0,\n    tema_plataforma:         tema.platform || tema.plataforma || 'Instagram',\n    fecha_post:              new Date().toISOString().slice(0, 10), // UTC, sin asumir zona horaria de ninguna empresa\n    // ---- Estrategia G54 ----\n    estrategia_objetivo:     estrategia.objetivo || estrategia.primary_goal || empresa.primary_goal || '',\n    estrategia_audiencia:    estrategia.audiencia || estrategia.target_market || empresa.target_market || '',\n    estrategia_tono:         estrategia.tono || 'profesional, directo y humano',\n    estrategia_cta:          (estrategia.link_origen && estrategia.link_origen !== 'ninguno' && estrategia.link_resuelto) ? estrategia.link_resuelto : (estrategia.link_principal || estrategia.cta_principal || (empresa.website || empresa.sitio_web || '')), // Preferir link_resuelto (ya calculado por G54, ítem del 24-ago) sobre resolverlo nosotros mismos; misma cadena de respaldo si no viene.\n    estrategia_embudo:       estrategia.embudo || 'TOFU-MOFU',\n    estrategia_pilares:      Array.isArray(estrategia.pilares) ? estrategia.pilares.join(', ') : (estrategia.pilares || ''),\n    // ---- Imagen (G54 provee la URL — subida por usuario o generada por Image AI) ----\n    imagen_url:              tema.imagen_url || tema.image_url || null,\n    imagen_specs:            tema.imagen_specs || tema.image_specs || '',\n    idioma_requerido:        idioma_requerido,\n    bloque_voz:              bloque_voz,\n    bloque_voz_inline:       bloque_voz_inline,\n  }\n}];\n"
+      }
     },
     {
+      "id": "generar-post-es",
+      "name": "🤖 Generar Post en Español",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "position": [
+        2304,
+        304
+      ],
       "parameters": {
         "method": "POST",
         "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={{$('\\u2699\\ufe0f Config Growth54').item.json.GEMINI_API_KEY}}",
@@ -154,20 +163,19 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"contents\": [{\"role\": \"user\", \"parts\": [{\"text\": {{ JSON.stringify(\"Eres un Content Strategist especializado en SEO/AEO/GEO, adaptado al rubro real de cada empresa.\\n\\nREGLA DE IDIOMA — OBLIGATORIA: escribe TODO el contenido de este post (hook, mensaje, respuesta AEO, CTA, hashtags, títulos) en el MISMO idioma en que está escrita la KEYWORD PRINCIPAL / el TEMA SEMANAL indicados más abajo — nunca traduzcas al español por defecto. Si están en inglés, todo el post va en inglés; si están en español, todo va en español; y así con cualquier otro idioma que reconozcas.\\n\\nIDIOMA YA DETERMINADO PARA ESTE POST (no lo vuelvas a inferir, usá exactamente este): {{ $json.idioma_requerido }}. Escribe absolutamente TODO el contenido (hook, mensaje, respuesta AEO, CTA, hashtags, títulos, mensaje_linkedin) en ese idioma exacto, sin excepción, sin importar en qué idioma esté redactada cualquier otra parte de estas instrucciones.\\n\\n{{ $json.bloque_voz_inline }}\\n\\nEMPRESA: {{ $json.empresa_nombre }}\\nDESCRIPCI\\u00d3N: {{ $json.empresa_descripcion }}\\nPROPUESTA DE VALOR: {{ $json.empresa_propuesta_valor }}\\nCIUDAD: {{ $json.empresa_ciudad }} | WEB: {{ $json.empresa_web }}\\nSERVICIOS:\\n{{ $json.servicios_resumen }}\\n\\nESTRATEGIA G54:\\n- Objetivo: {{ $json.estrategia_objetivo || 'Generar leads para el negocio' }}\\n- Audiencia: {{ $json.estrategia_audiencia || 'clientes potenciales del negocio' }}\\n- Tono: {{ $json.estrategia_tono || 'profesional y directo' }}\\n- CTA principal: {{ $json.estrategia_cta || 'Visita nuestro sitio web: ' + $json.empresa_web }}\\n- Pilares: {{ $json.estrategia_pilares || 'los servicios principales de la empresa' }}\\n\\nTEMA SEMANAL: {{ $json.tema_texto }}\\nDESCRIPCI\\u00d3N DEL TEMA: {{ $json.tema_descripcion || '' }}\\nKEYWORD PRINCIPAL: {{ $json.keyword_principal || $json.tema_palabras_clave || '' }}\\n\\n=== PROCESO DE 8 PASOS G54 ===\\n\\nPASO 1 \\u2014 INTENCI\\u00d3N DE B\\u00daSQUEDA\\nAnaliza qu\\u00e9 intenci\\u00f3n tiene el usuario al buscar sobre este tema.\\nElige: informacional | comercial | transaccional | local\\n\\nPASO 2 \\u2014 KEYWORDS\\nIdentifica 3-5 palabras clave secundarias relacionadas con el tema y la empresa.\\n\\nPASO 3 \\u2014 AEO (Answer Engine Optimization)\\nRedacta 2-3 oraciones que respondan directamente y espec\\u00edficamente la pregunta impl\\u00edcita del tema.\\nDebe ser una respuesta directa al estilo \\\"La respuesta a [tema] es...\\\", optimizada para IA y b\\u00fasqueda conversacional.\\n\\nPASO 4 \\u2014 HOOK\\nPrimera frase impactante de m\\u00e1x 12 palabras. Usa el keyword principal. Genera curiosidad o urgencia real.\\n\\nPASO 5 \\u2014 DESARROLLO\\nCuerpo del post: 2-3 p\\u00e1rrafos, m\\u00e1x 200 palabras. Incluye datos concretos, beneficios y prueba social de {{ $json.empresa_nombre }}.\\n\\nPASO 6 \\u2014 GEO\\nIncorpora referencias geogr\\u00e1ficas espec\\u00edficas relevantes a la ubicaci\\u00f3n real de la empresa: {{ $json.empresa_ciudad }}{{ $json.empresa_geografia ? ' (' + $json.empresa_geografia + ')' : '' }}.\\n\\nPASO 7 \\u2014 ADAPTACI\\u00d3N\\nAdapta el formato a redes sociales (natural, nada corporativo ni gen\\u00e9rico) sin salirte de la VOZ DE MARCA: mismo trato, mismo idioma, misma personalidad.\\n\\nPASO 8 \\u2014 CTA + HASHTAGS\\nCTA con URL OBLIGATORIO. 10 hashtags relevantes.\\n\\nPASO 9 \\u2014 VERSI\\u00d3N LINKEDIN\\nReescribe el mismo mensaje (mismo hook, mismos datos, mismo CTA) en tono profesional de LinkedIn: sin emojis, sin exclamaciones de venta directa, estilo thought-leadership B2B, como si lo publicara un directivo comentando una tendencia del sector, no un anuncio. 2-3 p\\u00e1rrafos, m\\u00e1x 200 palabras, mismo idioma que el resto del post.\\n\\nREGLAS:\\n- CTA SIEMPRE incluye una URL completa y clicable — usa exactamente el valor de CTA principal indicado arriba\\n- M\\u00e1x 200 palabras en 'mensaje'\\n- NUNCA inventar premios, certificaciones o datos falsos. NUNCA inventes hechos sin números: instalaciones o lugares (almacén, bodega, flota), equipos o maquinaria, procesos que la empresa haría por sí misma, testimonios o reseñas, clientes con nombre, premios, años de experiencia ni garantías que no estén escritos en los datos de la empresa; ante la duda, omítelo.\\n- NUNCA inventar un precio, número, descuento, oferta relámpago o plazo específico (ej: '$30', '48 horas', '2x1') que no esté escrito literalmente en SERVICIOS arriba — si no hay ningún precio real ahí, describí el beneficio sin inventar ninguna cifra. Tampoco menciones ninguna característica de ubicación, amenidad o servicio (ej: 'cerca de la playa', 'con piscina', 'vista al mar') que no esté respaldada por CIUDAD/geografía real o por SERVICIOS de arriba — un cliché típico del rubro nunca se asume, se verifica contra los datos reales de esta empresa puntual.\\n- NUNCA menciones otro rubro, ciudad o empresa que no sea la indicada arriba\\n\\nDevuelve \\u00daNICAMENTE este JSON (sin markdown, sin texto adicional):\\n{\\n  \\\"intencion_busqueda\\\": \\\"informacional|comercial|transaccional|local\\\",\\n  \\\"keywords_secundarias\\\": [\\\"kw1\\\", \\\"kw2\\\", \\\"kw3\\\"],\\n  \\\"respuesta_aeo\\\": \\\"2-3 oraciones respondiendo directamente la pregunta impl\\u00edcita, optimizado para b\\u00fasqueda IA\\\",\\n  \\\"hook\\\": \\\"Primera frase impactante m\\u00e1x 12 palabras\\\",\\n  \\\"mensaje\\\": \\\"Cuerpo 2-3 p\\u00e1rrafos con referencias GEO, m\\u00e1x 200 palabras\\\",\\n  \\\"mensaje_linkedin\\\": \\\"Versi\\u00f3n profesional del mismo mensaje para LinkedIn (PASO 9), sin emojis, tono thought-leadership, mismo idioma\\\",\\n  \\\"geo_menciones\\\": \\\"menciona la ciudad/zona real de la empresa\\\",\\n  \\\"cta\\\": \\\"Llamada a la acci\\u00f3n con URL obligatorio\\\",\\n  \\\"hashtags\\\": \\\"#hash1 #hash2 #hash3 #hash4 #hash5 #hash6 #hash7 #hash8 #hash9 #hash10\\\",\\n  \\\"texto_canva_titulo\\\": \\\"T\\u00cdTULO EN MAY\\u00daSCULAS M\\u00c1XIMO 8 PALABRAS\\\",\\n  \\\"texto_canva_subtitulo\\\": \\\"Subt\\u00edtulo m\\u00e1ximo 15 palabras\\\"\\n}\") }}]}], \"systemInstruction\": {\"parts\": [{\"text\": \"Eres un experto en Content Strategy con enfoque SEO/AEO/GEO, adaptado al rubro real de cada empresa. SIEMPRE devuelves JSON válido, sin markdown, sin explicaciones adicionales.\"}]}}",
+        "jsonBody": "={\"contents\": [{\"role\": \"user\", \"parts\": [{\"text\": {{ JSON.stringify(\"Eres un Content Strategist especializado en SEO/AEO/GEO, adaptado al rubro real de cada empresa.\\n\\nREGLA DE IDIOMA — OBLIGATORIA: escribe TODO el contenido de este post (hook, mensaje, respuesta AEO, CTA, hashtags, títulos) en el MISMO idioma en que está escrita la KEYWORD PRINCIPAL / el TEMA SEMANAL indicados más abajo — nunca traduzcas al español por defecto. Si están en inglés, todo el post va en inglés; si están en español, todo va en español; y así con cualquier otro idioma que reconozcas.\\n\\nIDIOMA YA DETERMINADO PARA ESTE POST (no lo vuelvas a inferir, usá exactamente este): {{ $json.idioma_requerido }}. Escribe absolutamente TODO el contenido (hook, mensaje, respuesta AEO, CTA, hashtags, títulos, mensaje_linkedin) en ese idioma exacto, sin excepción, sin importar en qué idioma esté redactada cualquier otra parte de estas instrucciones.\\n\\n{{ $json.bloque_voz_inline }}\\n\\nEMPRESA: {{ $json.empresa_nombre }}\\nDESCRIPCI\\u00d3N: {{ $json.empresa_descripcion }}\\nPROPUESTA DE VALOR: {{ $json.empresa_propuesta_valor }}\\nCIUDAD: {{ $json.empresa_ciudad }} | WEB: {{ $json.empresa_web }}\\nSERVICIOS:\\n{{ $json.servicios_resumen }}\\n\\nESTRATEGIA G54:\\n- Objetivo: {{ $json.estrategia_objetivo || 'Generar leads para el negocio' }}\\n- Audiencia: {{ $json.estrategia_audiencia || 'clientes potenciales del negocio' }}\\n- Tono: {{ $json.estrategia_tono || 'profesional y directo' }}\\n- CTA principal: {{ $json.estrategia_cta || 'Visita nuestro sitio web: ' + $json.empresa_web }}\\n- Pilares: {{ $json.estrategia_pilares || 'los servicios principales de la empresa' }}\\n\\nTEMA SEMANAL: {{ $json.tema_texto }}\\nDESCRIPCI\\u00d3N DEL TEMA: {{ $json.tema_descripcion || '' }}\\nKEYWORD PRINCIPAL: {{ $json.keyword_principal || $json.tema_palabras_clave || '' }}\\n\\n=== PROCESO DE 8 PASOS G54 ===\\n\\nPASO 1 \\u2014 INTENCI\\u00d3N DE B\\u00daSQUEDA\\nAnaliza qu\\u00e9 intenci\\u00f3n tiene el usuario al buscar sobre este tema.\\nElige: informacional | comercial | transaccional | local\\n\\nPASO 2 \\u2014 KEYWORDS\\nIdentifica 3-5 palabras clave secundarias relacionadas con el tema y la empresa.\\n\\nPASO 3 \\u2014 AEO (Answer Engine Optimization)\\nRedacta 2-3 oraciones que respondan directamente y espec\\u00edficamente la pregunta impl\\u00edcita del tema.\\nDebe ser una respuesta directa al estilo \\\"La respuesta a [tema] es...\\\", optimizada para IA y b\\u00fasqueda conversacional.\\n\\nPASO 4 \\u2014 HOOK\\nPrimera frase impactante de m\\u00e1x 12 palabras. Usa el keyword principal. Genera curiosidad o urgencia real.\\n\\nPASO 5 \\u2014 DESARROLLO\\nCuerpo del post: 2-3 p\\u00e1rrafos, m\\u00e1x 200 palabras. Incluye datos concretos, beneficios y prueba social de {{ $json.empresa_nombre }}.\\n\\nPASO 6 \\u2014 GEO\\nIncorpora referencias geogr\\u00e1ficas espec\\u00edficas relevantes a la ubicaci\\u00f3n real de la empresa: {{ $json.empresa_ciudad }}{{ $json.empresa_geografia ? ' (' + $json.empresa_geografia + ')' : '' }}.\\n\\nPASO 7 \\u2014 ADAPTACI\\u00d3N\\nAdapta el formato a redes sociales (natural, nada corporativo ni gen\\u00e9rico) sin salirte de la VOZ DE MARCA: mismo trato, mismo idioma, misma personalidad.\\n\\nPASO 8 \\u2014 CTA + HASHTAGS\\nCTA con URL OBLIGATORIO. 10 hashtags relevantes, con palabras reales y completas del mismo idioma del post: nunca mezcles idiomas dentro de un hashtag ni inventes abreviaturas. El campo mensaje tampoco lleva el CTA ni los hashtags: van en sus propios campos.\\n\\nPASO 9 \\u2014 VERSI\\u00d3N LINKEDIN\\nReescribe el mismo mensaje (mismo hook y mismos datos; SIN el CTA ni los hashtags al final, que se agregan aparte) en tono profesional de LinkedIn: sin emojis, sin exclamaciones de venta directa, estilo thought-leadership B2B, como si lo publicara un directivo comentando una tendencia del sector, no un anuncio. 2-3 p\\u00e1rrafos, m\\u00e1x 200 palabras, mismo idioma que el resto del post.\\n\\nREGLAS:\\n- CTA SIEMPRE incluye una URL completa y clicable — usa exactamente el valor de CTA principal indicado arriba\\n- M\\u00e1x 200 palabras en 'mensaje'\\n- NUNCA inventar premios, certificaciones o datos falsos. NUNCA inventes hechos sin números: instalaciones o lugares (almacén, bodega, flota), equipos o maquinaria, procesos que la empresa haría por sí misma, testimonios o reseñas, clientes con nombre, premios, años de experiencia ni garantías que no estén escritos en los datos de la empresa; ante la duda, omítelo.\\n- NUNCA inventar un precio, número, descuento, oferta relámpago o plazo específico (ej: '$30', '48 horas', '2x1') que no esté escrito literalmente en SERVICIOS arriba — si no hay ningún precio real ahí, describí el beneficio sin inventar ninguna cifra. Tampoco menciones ninguna característica de ubicación, amenidad o servicio (ej: 'cerca de la playa', 'con piscina', 'vista al mar') que no esté respaldada por CIUDAD/geografía real o por SERVICIOS de arriba — un cliché típico del rubro nunca se asume, se verifica contra los datos reales de esta empresa puntual.\\n- NUNCA menciones otro rubro, ciudad o empresa que no sea la indicada arriba\\n\\nDevuelve \\u00daNICAMENTE este JSON (sin markdown, sin texto adicional):\\n{\\n  \\\"intencion_busqueda\\\": \\\"informacional|comercial|transaccional|local\\\",\\n  \\\"keywords_secundarias\\\": [\\\"kw1\\\", \\\"kw2\\\", \\\"kw3\\\"],\\n  \\\"respuesta_aeo\\\": \\\"2-3 oraciones respondiendo directamente la pregunta impl\\u00edcita, optimizado para b\\u00fasqueda IA\\\",\\n  \\\"hook\\\": \\\"Primera frase impactante m\\u00e1x 12 palabras\\\",\\n  \\\"mensaje\\\": \\\"Cuerpo 2-3 p\\u00e1rrafos con referencias GEO, m\\u00e1x 200 palabras\\\",\\n  \\\"mensaje_linkedin\\\": \\\"Versi\\u00f3n profesional del mismo mensaje para LinkedIn (PASO 9), sin emojis, tono thought-leadership, mismo idioma\\\",\\n  \\\"geo_menciones\\\": \\\"menciona la ciudad/zona real de la empresa\\\",\\n  \\\"cta\\\": \\\"Llamada a la acci\\u00f3n con URL obligatorio\\\",\\n  \\\"hashtags\\\": \\\"#hash1 #hash2 #hash3 #hash4 #hash5 #hash6 #hash7 #hash8 #hash9 #hash10\\\",\\n  \\\"texto_canva_titulo\\\": \\\"T\\u00cdTULO EN MAY\\u00daSCULAS M\\u00c1XIMO 8 PALABRAS\\\",\\n  \\\"texto_canva_subtitulo\\\": \\\"Subt\\u00edtulo m\\u00e1ximo 15 palabras\\\"\\n}\") }}]}], \"systemInstruction\": {\"parts\": [{\"text\": \"Eres un experto en Content Strategy con enfoque SEO/AEO/GEO, adaptado al rubro real de cada empresa. SIEMPRE devuelves JSON válido, sin markdown, sin explicaciones adicionales.\"}]}}",
         "options": {}
-      },
-      "id": "generar-post-es",
-      "name": "🤖 Generar Post en Español",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2304,
-        304
-      ],
-      "onError": "continueRegularOutput"
+      }
     },
     {
+      "id": "if-gemini-ok-es",
+      "name": "🔀 ¿Gemini OK? (ES)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        96
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -190,17 +198,18 @@
           "combinator": "and"
         },
         "options": {}
-      },
-      "id": "if-gemini-ok-es",
-      "name": "🔀 ¿Gemini OK? (ES)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        2400,
-        96
-      ]
+      }
     },
     {
+      "id": "grok-post-es",
+      "name": "🤖 Groq: Post Español (Fallback)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "position": [
+        2512,
+        304
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://api.groq.com/openai/v1/chat/completions",
@@ -221,29 +230,17 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"model\": \"openai/gpt-oss-120b\", \"messages\": [{\"role\": \"system\", \"content\": \"Escribe TODO el contenido en el idioma indicado como IDIOMA YA DETERMINADO en el mensaje del usuario, y respeta siempre la VOZ DE MARCA que se indica ahí.\\n\\nEres un experto en marketing digital y copywriting, adaptado al rubro real de cada empresa. Tu especialidad es crear contenido auténtico, persuasivo y orientado a conversión para redes sociales. Siempre respondes en formato JSON válido sin texto adicional.\"}, {\"role\": \"user\", \"content\": {{ JSON.stringify(\"Crea un post para redes sociales para la siguiente empresa (en el idioma y con la voz de marca indicados justo abajo):\\n\\n\" + (\"IDIOMA YA DETERMINADO PARA ESTE POST (no lo vuelvas a inferir, usá exactamente este): \" + $('🔧 Preparar Contexto para IA').item.json.idioma_requerido + \". Escribe absolutamente TODO el contenido en ese idioma exacto, sin excepción, sin importar en qué idioma esté redactada cualquier otra parte de este mensaje.\\n\\n\") + $('🔧 Preparar Contexto para IA').item.json.bloque_voz + \"\\n**AUDIENCIA:** \" + ($('🔧 Preparar Contexto para IA').item.json.estrategia_audiencia || '') + \"\\n\\n**EMPRESA:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_nombre + \"\\n**DESCRIPCIÓN:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_descripcion + \"\\n**PROPUESTA DE VALOR:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_propuesta_valor + \"\\n**CIUDAD:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_ciudad + \"\\n**WEB:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_web + \"\\n**SERVICIOS:**\\n\" + $('🔧 Preparar Contexto para IA').item.json.servicios_resumen + \"\\n**CTA PRINCIPAL (usa esta URL si existe):** \" + ($('🔧 Preparar Contexto para IA').item.json.estrategia_cta || '') + \"\\n\\n**TEMA DE ESTA SEMANA:** \" + $('🔧 Preparar Contexto para IA').item.json.tema_texto + \"\\n**DESCRIPCIÓN DEL TEMA:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_descripcion || '') + \"\\n**PALABRAS CLAVE:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_palabras_clave || '') + \"\\n\\nDevuelve un JSON con los siguientes campos:\\n- hook: primera frase impactante máximo 12 palabras\\n- mensaje: cuerpo del mensaje 2-3 párrafos máximo 180 palabras\\n- cta: llamada a la acción máximo 15 palabras, SIEMPRE terminando con una URL completa y clicable — usa exactamente el CTA PRINCIPAL indicado arriba\\n- hashtags: 10 hashtags comenzando con #\\n- texto_canva_titulo: título visual máximo 8 palabras EN MAYÚSCULAS\\n- texto_canva_subtitulo: subtítulo máximo 15 palabras\\n- mensaje_linkedin: el MISMO contenido (mismo hook, mismos datos, mismo CTA) reescrito en tono profesional de LinkedIn (sin cambiar el trato, el idioma ni la personalidad de la VOZ DE MARCA) — sin emojis, sin exclamaciones de venta directa, estilo thought-leadership B2B como si lo publicara un directivo comentando una tendencia del sector, no un anuncio. 2-3 párrafos, máx 200 palabras, mismo idioma que el resto del post.\\n\\nNUNCA inventes hechos sin números: instalaciones o lugares (almacén, bodega, flota), equipos o maquinaria, procesos que la empresa haría por sí misma, testimonios o reseñas, clientes con nombre, premios, años de experiencia ni garantías que no estén escritos en los datos de la empresa; ante la duda, omítelo. NUNCA inventar un precio, número, descuento, oferta relámpago o plazo específico (ej: '$30', '48 horas', '2x1') que no esté escrito literalmente en SERVICIOS arriba — si no hay ningún precio real ahí, describí el beneficio sin inventar ninguna cifra. Tampoco menciones ninguna característica de ubicación, amenidad o servicio (ej: 'cerca de la playa', 'con piscina', 'vista al mar') que no esté respaldada por CIUDAD/geografía real o por SERVICIOS de arriba — un cliché típico del rubro nunca se asume, se verifica contra los datos reales de esta empresa puntual.\\n\\nResponde ÚNICAMENTE con el JSON, sin texto adicional.\") }}}], \"temperature\": 0.75, \"max_tokens\": 4000, \"reasoning_effort\": \"low\", \"response_format\": {\"type\": \"json_object\"}}",
+        "jsonBody": "={\"model\": \"openai/gpt-oss-120b\", \"messages\": [{\"role\": \"system\", \"content\": \"Escribe TODO el contenido en el idioma indicado como IDIOMA YA DETERMINADO en el mensaje del usuario, y respeta siempre la VOZ DE MARCA que se indica ahí.\\n\\nEres un experto en marketing digital y copywriting, adaptado al rubro real de cada empresa. Tu especialidad es crear contenido auténtico, persuasivo y orientado a conversión para redes sociales. Siempre respondes en formato JSON válido sin texto adicional.\"}, {\"role\": \"user\", \"content\": {{ JSON.stringify(\"Crea un post para redes sociales para la siguiente empresa (en el idioma y con la voz de marca indicados justo abajo):\\n\\n\" + (\"IDIOMA YA DETERMINADO PARA ESTE POST (no lo vuelvas a inferir, usá exactamente este): \" + $('🔧 Preparar Contexto para IA').item.json.idioma_requerido + \". Escribe absolutamente TODO el contenido en ese idioma exacto, sin excepción, sin importar en qué idioma esté redactada cualquier otra parte de este mensaje.\\n\\n\") + $('🔧 Preparar Contexto para IA').item.json.bloque_voz + \"\\n**AUDIENCIA:** \" + ($('🔧 Preparar Contexto para IA').item.json.estrategia_audiencia || '') + \"\\n\\n**EMPRESA:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_nombre + \"\\n**DESCRIPCIÓN:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_descripcion + \"\\n**PROPUESTA DE VALOR:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_propuesta_valor + \"\\n**CIUDAD:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_ciudad + \"\\n**WEB:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_web + \"\\n**SERVICIOS:**\\n\" + $('🔧 Preparar Contexto para IA').item.json.servicios_resumen + \"\\n**CTA PRINCIPAL (usa esta URL si existe):** \" + ($('🔧 Preparar Contexto para IA').item.json.estrategia_cta || '') + \"\\n\\n**TEMA DE ESTA SEMANA:** \" + $('🔧 Preparar Contexto para IA').item.json.tema_texto + \"\\n**DESCRIPCIÓN DEL TEMA:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_descripcion || '') + \"\\n**PALABRAS CLAVE:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_palabras_clave || '') + \"\\n\\nDevuelve un JSON con los siguientes campos:\\n- hook: primera frase impactante máximo 12 palabras\\n- mensaje: cuerpo del mensaje 2-3 párrafos máximo 180 palabras\\n- cta: llamada a la acción máximo 15 palabras, SIEMPRE terminando con una URL completa y clicable — usa exactamente el CTA PRINCIPAL indicado arriba\\n- hashtags: 10 hashtags comenzando con #, con palabras reales y completas del mismo idioma del post: nunca mezcles idiomas dentro de un hashtag ni inventes abreviaturas\\n- texto_canva_titulo: título visual máximo 8 palabras EN MAYÚSCULAS\\n- texto_canva_subtitulo: subtítulo máximo 15 palabras\\n- mensaje_linkedin: el MISMO contenido (mismo hook y mismos datos; SIN el CTA ni los hashtags al final, que se agregan aparte) reescrito en tono profesional de LinkedIn (sin cambiar el trato, el idioma ni la personalidad de la VOZ DE MARCA) — sin emojis, sin exclamaciones de venta directa, estilo thought-leadership B2B como si lo publicara un directivo comentando una tendencia del sector, no un anuncio. 2-3 párrafos, máx 200 palabras, mismo idioma que el resto del post.\\n\\nNUNCA inventes hechos sin números: instalaciones o lugares (almacén, bodega, flota), equipos o maquinaria, procesos que la empresa haría por sí misma, testimonios o reseñas, clientes con nombre, premios, años de experiencia ni garantías que no estén escritos en los datos de la empresa; ante la duda, omítelo. NUNCA inventar un precio, número, descuento, oferta relámpago o plazo específico (ej: '$30', '48 horas', '2x1') que no esté escrito literalmente en SERVICIOS arriba — si no hay ningún precio real ahí, describí el beneficio sin inventar ninguna cifra. Tampoco menciones ninguna característica de ubicación, amenidad o servicio (ej: 'cerca de la playa', 'con piscina', 'vista al mar') que no esté respaldada por CIUDAD/geografía real o por SERVICIOS de arriba — un cliché típico del rubro nunca se asume, se verifica contra los datos reales de esta empresa puntual.\\n\\nResponde ÚNICAMENTE con el JSON, sin texto adicional.\") }}}], \"temperature\": 0.75, \"max_tokens\": 4000, \"reasoning_effort\": \"low\", \"response_format\": {\"type\": \"json_object\"}}",
         "options": {}
       },
-      "id": "grok-post-es",
-      "name": "🤖 Groq: Post Español (Fallback)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2512,
-        304
-      ],
       "credentials": {
         "groqApi": {
           "id": "jORffbRhRNohHT1B",
           "name": "Groq API"
         }
-      },
-      "onError": "continueRegularOutput"
+      }
     },
     {
-      "parameters": {
-        "jsCode": "const aiResponse = $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text || $input.item.json.choices?.[0]?.message?.content || '{}';\nlet post;\ntry {\n  post = JSON.parse(aiResponse);\n} catch(e) {\n  const match = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  post = match ? JSON.parse(match[0]) : {};\n}\n\nconst contexto = $('🔧 Preparar Contexto para IA').item.json;\n\n// Normalizar hashtags: array → string\nconst rawHashtags = post.hashtags || '';\nconst hashtags = Array.isArray(rawHashtags) ? rawHashtags.join(' ') : rawHashtags;\n\n// Garantizar URL en el CTA (por si la IA no lo incluye) — SOLO con datos reales de ESTA empresa\n// (contexto.estrategia_cta ya resuelve estrategia.cta_principal || empresa.website en 🔧 Preparar Contexto para IA).\n// Nunca se rellena con el dato de otra empresa: si no hay nada configurado, se marca como pendiente\n// en vez de inventar un link, y se dispara una alerta aparte para que se configure.\nconst QUOTE_URL = contexto.estrategia_cta || '';\nlet cta = post.cta || '';\nlet ctaSinConfigurar = false;\nif (!cta.includes('http') && !cta.includes('wa.me')) {\n  if (QUOTE_URL) {\n    cta = cta.trim() + ' → ' + QUOTE_URL;\n  } else {\n    cta = cta.trim() + ' [CTA PENDIENTE — falta configurar cta_principal o sitio web en G54]';\n    ctaSinConfigurar = true;\n  }\n}\n\n// Retirado 16-sep, a pedido explícito de la usuaria: el CTA de Facebook mostraba el link\n// envuelto en nuestro propio dominio (n8n.mdarthurdigital.com/webhook/cta-click-g54?...) en vez\n// del link real de la página — se veía técnico/sospechoso para un cliente final, exponía\n// infraestructura interna. El CTA ahora usa siempre el destino real, sin ningún wrapper —\n// mismo criterio ya aplicado a LinkedIn desde el 04-ago. Se pierde el conteo de clics reales\n// que alimentaba la sección \"Generación de Demanda\" del reporte de Analytics (ítem 213,\n// 04-ago) — trade-off aceptado explícitamente por la usuaria al pedir este cambio.\nconst platform = (contexto.tema_plataforma || 'Facebook').toLowerCase();\n\n// ---- Código de origen + WhatsApp real de la empresa (08-oct) ----\n// Cada post lleva un código corto (P + id de la idea, 1 idea = 1 post) para saber de qué\n// publicación viene cada cliente que escribe por WhatsApp: Marco lo reconoce y lo anota en el\n// trato del CRM. El número se resuelve en vivo para ESTA empresa (nunca fijo):\n// /api/whatsapp/config (sesión) → phone_number_id → empresa-by-phone (token de WhatsApp) →\n// Meta display_phone_number. Si cualquier paso falla, el post sale igual, sin la línea.\n// Facebook y LinkedIn: link wa.me con el código ya escrito. Instagram: los links del texto no\n// se pueden tocar, así que va el número y el código para escribir a mano.\nconst codigo_origen = contexto.tema_id ? ('P' + contexto.tema_id) : '';\nlet wa_display = '', wa_digits = '';\nif (codigo_origen) {\n  try {\n    const cfg = $('⚙️ Config Growth54').item.json;\n    const sesion = $('🔐 G54: Login Sesión').item.json.access_token;\n    const companyId = String(cfg.G54_COMPANY_ID);\n    const waCfgRaw = await this.helpers.httpRequest({ url: cfg.G54_BASE_URL + '/api/whatsapp/config', headers: { Authorization: 'Bearer ' + sesion, Accept: 'application/json' }, json: true, timeout: 8000 });\n    const waCfg = waCfgRaw.data || waCfgRaw || {};\n    // la sesión es compartida entre agentes: solo se usa si es de esta misma empresa\n    if (waCfg.phone_number_id && String(waCfg.company_id) === companyId) {\n      const emp = await this.helpers.httpRequest({ url: cfg.G54_BASE_URL + '/api/agent/wa/empresa-by-phone/' + waCfg.phone_number_id, headers: { Authorization: 'Bearer ' + cfg.G54_AGENT_TOKEN, Accept: 'application/json' }, json: true, timeout: 8000 });\n      const e = emp.data || emp || {};\n      if (e.wa_access_token && String(e.company_id) === companyId) {\n        const meta = await this.helpers.httpRequest({ url: 'https://graph.facebook.com/v19.0/' + waCfg.phone_number_id + '?fields=display_phone_number&access_token=' + encodeURIComponent(e.wa_access_token), json: true, timeout: 8000 });\n        wa_display = meta.display_phone_number || '';\n        wa_digits = wa_display.replace(/\\D/g, '');\n      }\n    }\n  } catch (e) { wa_display = ''; wa_digits = ''; }\n}\nconst enIngles = contexto.idioma_requerido === 'ENGLISH';\nconst lineaWaLink = wa_digits ? ('💬 WhatsApp ' + wa_display + ' (' + (enIngles ? 'code' : 'código') + ' ' + codigo_origen + '): https://wa.me/' + wa_digits + '?text=' + encodeURIComponent((enIngles ? 'Hi ' : 'Hola ') + codigo_origen)) : '';\nconst lineaWaTexto = wa_digits ? ('💬 WhatsApp ' + wa_display + ' · ' + (enIngles ? 'code' : 'código') + ' ' + codigo_origen) : '';\n// Retirado el 20-oct a pedido de la usuaria: los posts ya no llevan el número de WhatsApp ni el código P.\nconst lineaWa = '';\n\n// LinkedIn — mismo hook/CTA, cuerpo reescrito en tono profesional (PASO 9 del prompt).\n// Si la IA no lo devuelve (ej. respaldo de Groq viejo sin actualizar), cae al texto de Facebook\n// en vez de dejar el campo vacío — mejor un texto real con tono no ideal que ningún texto.\n// A veces la IA empieza el mensaje repitiendo el hook tal cual — como el texto final se arma\n// \"hook + mensaje\", el título quedaba duplicado al inicio del post (#152/#159/#170, fix 28-sep).\nconst _norm = s => (s || '').trim().replace(/[\\s.!?¡¿:–—-]+$/, '').toLowerCase();\nconst sinHookRepetido = (msg) => {\n  const h = _norm(post.hook); let m = (msg || '').trim();\n  const lineas = m.split('\\n');\n  if (h && _norm(lineas[0]) === h) m = lineas.slice(1).join('\\n').trim();\n  return m;\n};\nconst mensajeLinkedin = sinHookRepetido(post.mensaje_linkedin || post.mensaje || '');\n// LinkedIn nunca usa el CTA con tracker — a diferencia de Facebook, acá el link SÍ se\n// vuelve clicable, pero LinkedIn genera su propia vista previa (Open Graph) del link que\n// aparece en el post, y nuestro webhook de redirect no tiene una página real que mostrar —\n// quedaría un link crudo a n8n.mdarthurdigital.com, exponiendo infraestructura interna en\n// un post profesional B2B. Se usa siempre el destino real, nunca el trackeado.\nconst ctaLinkedin = QUOTE_URL ? cta.replace(/https:\\/\\/n8n\\.mdarthurdigital\\.com\\/webhook\\/cta-click-g54[^\\s]*/, QUOTE_URL) : cta;\nconst post_completo_linkedin = [post.hook || '', mensajeLinkedin, ctaLinkedin].filter(Boolean).join('\\n\\n');\n\nreturn [{\n  json: {\n    ...contexto,\n    hook_es: post.hook || '',\n    mensaje_es: sinHookRepetido(post.mensaje),\n    cta_es: cta,\n    hashtags: hashtags,\n    post_completo_es: [post.hook || '', sinHookRepetido(post.mensaje), cta, lineaWa].filter(Boolean).join('\\n\\n'),\n    codigo_origen,\n    wa_display,\n    post_completo_linkedin,\n    hashtags_es: hashtags,\n    texto_canva_titulo: post.texto_canva_titulo || '',\n    texto_canva_subtitulo: post.texto_canva_subtitulo || '',\n    ctaSinConfigurar\n  }\n}];\n"
-      },
       "id": "parsear-post-es",
       "name": "🔍 Parsear Post Español",
       "type": "n8n-nodes-base.code",
@@ -251,9 +248,20 @@
       "position": [
         2624,
         80
-      ]
+      ],
+      "parameters": {
+        "jsCode": "const aiResponse = $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text || $input.item.json.choices?.[0]?.message?.content || '{}';\nlet post;\ntry {\n  post = JSON.parse(aiResponse);\n} catch(e) {\n  const match = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  post = match ? JSON.parse(match[0]) : {};\n}\n\nconst contexto = $('🔧 Preparar Contexto para IA').item.json;\n\n// Normalizar hashtags: array → string\nconst rawHashtags = post.hashtags || '';\nconst hashtags = Array.isArray(rawHashtags) ? rawHashtags.join(' ') : rawHashtags;\n\n// Garantizar URL en el CTA (por si la IA no lo incluye) — SOLO con datos reales de ESTA empresa\n// (contexto.estrategia_cta ya resuelve estrategia.cta_principal || empresa.website en 🔧 Preparar Contexto para IA).\n// Nunca se rellena con el dato de otra empresa: si no hay nada configurado, se marca como pendiente\n// en vez de inventar un link, y se dispara una alerta aparte para que se configure.\nconst QUOTE_URL = contexto.estrategia_cta || '';\nlet cta = post.cta || '';\nlet ctaSinConfigurar = false;\nif (!cta.includes('http') && !cta.includes('wa.me')) {\n  if (QUOTE_URL) {\n    cta = cta.trim() + ' → ' + QUOTE_URL;\n  } else {\n    cta = cta.trim() + ' [CTA PENDIENTE — falta configurar cta_principal o sitio web en G54]';\n    ctaSinConfigurar = true;\n  }\n}\n\n// Retirado 16-sep, a pedido explícito de la usuaria: el CTA de Facebook mostraba el link\n// envuelto en nuestro propio dominio (n8n.mdarthurdigital.com/webhook/cta-click-g54?...) en vez\n// del link real de la página — se veía técnico/sospechoso para un cliente final, exponía\n// infraestructura interna. El CTA ahora usa siempre el destino real, sin ningún wrapper —\n// mismo criterio ya aplicado a LinkedIn desde el 04-ago. Se pierde el conteo de clics reales\n// que alimentaba la sección \"Generación de Demanda\" del reporte de Analytics (ítem 213,\n// 04-ago) — trade-off aceptado explícitamente por la usuaria al pedir este cambio.\nconst platform = (contexto.tema_plataforma || 'Facebook').toLowerCase();\n\n// ---- Código de origen + WhatsApp real de la empresa (08-oct) ----\n// Cada post lleva un código corto (P + id de la idea, 1 idea = 1 post) para saber de qué\n// publicación viene cada cliente que escribe por WhatsApp: Marco lo reconoce y lo anota en el\n// trato del CRM. El número se resuelve en vivo para ESTA empresa (nunca fijo):\n// /api/whatsapp/config (sesión) → phone_number_id → empresa-by-phone (token de WhatsApp) →\n// Meta display_phone_number. Si cualquier paso falla, el post sale igual, sin la línea.\n// Facebook y LinkedIn: link wa.me con el código ya escrito. Instagram: los links del texto no\n// se pueden tocar, así que va el número y el código para escribir a mano.\nconst codigo_origen = contexto.tema_id ? ('P' + contexto.tema_id) : '';\nlet wa_display = '', wa_digits = '';\nif (codigo_origen) {\n  try {\n    const cfg = $('⚙️ Config Growth54').item.json;\n    const sesion = $('🔐 G54: Login Sesión').item.json.access_token;\n    const companyId = String(cfg.G54_COMPANY_ID);\n    const waCfgRaw = await this.helpers.httpRequest({ url: cfg.G54_BASE_URL + '/api/whatsapp/config', headers: { Authorization: 'Bearer ' + sesion, Accept: 'application/json' }, json: true, timeout: 8000 });\n    const waCfg = waCfgRaw.data || waCfgRaw || {};\n    // la sesión es compartida entre agentes: solo se usa si es de esta misma empresa\n    if (waCfg.phone_number_id && String(waCfg.company_id) === companyId) {\n      const emp = await this.helpers.httpRequest({ url: cfg.G54_BASE_URL + '/api/agent/wa/empresa-by-phone/' + waCfg.phone_number_id, headers: { Authorization: 'Bearer ' + cfg.G54_AGENT_TOKEN, Accept: 'application/json' }, json: true, timeout: 8000 });\n      const e = emp.data || emp || {};\n      if (e.wa_access_token && String(e.company_id) === companyId) {\n        const meta = await this.helpers.httpRequest({ url: 'https://graph.facebook.com/v19.0/' + waCfg.phone_number_id + '?fields=display_phone_number&access_token=' + encodeURIComponent(e.wa_access_token), json: true, timeout: 8000 });\n        wa_display = meta.display_phone_number || '';\n        wa_digits = wa_display.replace(/\\D/g, '');\n      }\n    }\n  } catch (e) { wa_display = ''; wa_digits = ''; }\n}\nconst enIngles = contexto.idioma_requerido === 'ENGLISH';\nconst lineaWaLink = wa_digits ? ('💬 WhatsApp ' + wa_display + ' (' + (enIngles ? 'code' : 'código') + ' ' + codigo_origen + '): https://wa.me/' + wa_digits + '?text=' + encodeURIComponent((enIngles ? 'Hi ' : 'Hola ') + codigo_origen)) : '';\nconst lineaWaTexto = wa_digits ? ('💬 WhatsApp ' + wa_display + ' · ' + (enIngles ? 'code' : 'código') + ' ' + codigo_origen) : '';\n// Retirado el 20-oct a pedido de la usuaria: los posts ya no llevan el número de WhatsApp ni el código P.\nconst lineaWa = '';\n\n// LinkedIn — mismo hook/CTA, cuerpo reescrito en tono profesional (PASO 9 del prompt).\n// Si la IA no lo devuelve (ej. respaldo de Groq viejo sin actualizar), cae al texto de Facebook\n// en vez de dejar el campo vacío — mejor un texto real con tono no ideal que ningún texto.\n// A veces la IA empieza el mensaje repitiendo el hook tal cual — como el texto final se arma\n// \"hook + mensaje\", el título quedaba duplicado al inicio del post (#152/#159/#170, fix 28-sep).\nconst _norm = s => (s || '').trim().replace(/[\\s.!?¡¿:–—-]+$/, '').toLowerCase();\nconst sinHookRepetido = (msg) => {\n  const h = _norm(post.hook); let m = (msg || '').trim();\n  const lineas = m.split('\\n');\n  if (h && _norm(lineas[0]) === h) m = lineas.slice(1).join('\\n').trim();\n  return m;\n};\n// A veces la IA cierra el mensaje con su propio CTA (\"Descubre más y solicita tu cotización\n// aquí\") y abajo se agrega el CTA real: la frase salía dos veces (posts 200, 202 y 205; fix 27-oct).\n// Se sacan del final las líneas que repiten el CTA (mismo texto o mismo link) o que son solo hashtags.\nconst _plano = s => (s || '').toLowerCase().replace(/https?:\\/\\/\\S+/g, ' ').replace(/[^\\p{L}\\p{N}]+/gu, ' ').trim();\nconst ctaPlano = _plano(cta);\nconst sinCtaRepetido = (msg) => {\n  const lineas = (msg || '').trim().split('\\n');\n  while (lineas.length > 1) {\n    const ult = lineas[lineas.length - 1].trim();\n    const p = _plano(ult);\n    const repiteCta = p.length >= 12 && ctaPlano && (ctaPlano.includes(p) || p.includes(ctaPlano));\n    const repiteLink = QUOTE_URL && ult.includes(QUOTE_URL);\n    const soloHashtags = /^(#\\S+\\s*)+$/.test(ult);\n    if (!ult || repiteCta || repiteLink || soloHashtags) lineas.pop(); else break;\n  }\n  return lineas.join('\\n').trim();\n};\nconst mensajeLinkedin = sinCtaRepetido(sinHookRepetido(post.mensaje_linkedin || post.mensaje || ''));\n// LinkedIn nunca usa el CTA con tracker — a diferencia de Facebook, acá el link SÍ se\n// vuelve clicable, pero LinkedIn genera su propia vista previa (Open Graph) del link que\n// aparece en el post, y nuestro webhook de redirect no tiene una página real que mostrar —\n// quedaría un link crudo a n8n.mdarthurdigital.com, exponiendo infraestructura interna en\n// un post profesional B2B. Se usa siempre el destino real, nunca el trackeado.\nconst ctaLinkedin = QUOTE_URL ? cta.replace(/https:\\/\\/n8n\\.mdarthurdigital\\.com\\/webhook\\/cta-click-g54[^\\s]*/, QUOTE_URL) : cta;\nconst post_completo_linkedin = [post.hook || '', mensajeLinkedin, ctaLinkedin].filter(Boolean).join('\\n\\n');\n\nreturn [{\n  json: {\n    ...contexto,\n    hook_es: post.hook || '',\n    mensaje_es: sinCtaRepetido(sinHookRepetido(post.mensaje)),\n    cta_es: cta,\n    hashtags: hashtags,\n    post_completo_es: [post.hook || '', sinCtaRepetido(sinHookRepetido(post.mensaje)), cta, lineaWa].filter(Boolean).join('\\n\\n'),\n    codigo_origen,\n    wa_display,\n    post_completo_linkedin,\n    hashtags_es: hashtags,\n    texto_canva_titulo: post.texto_canva_titulo || '',\n    texto_canva_subtitulo: post.texto_canva_subtitulo || '',\n    ctaSinConfigurar\n  }\n}];\n"
+      }
     },
     {
+      "id": "crear-registro-airtable",
+      "name": "💾 Crear Registro en G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3312,
+        304
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/agent/rrss/posts' }}",
@@ -278,17 +286,19 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({\n  \"company_id\": $('⚙️ Config Growth54').item.json.G54_COMPANY_ID,\n  \"posts\": [{\n    \"tema\": $('🔧 Preparar Contexto para IA').item.json.tema_texto || '',\n    \"platform\": $('🔧 Preparar Contexto para IA').item.json.tema_plataforma || 'all',\n    \"social_idea_id\": $('🔧 Preparar Contexto para IA').item.json.tema_id || null,\n    \"copy_instagram\": ($('🔍 Parsear Post Español').item.json.post_completo_es || $('🔍 Parsear Post Español').item.json.hook_es || '') + '\\n' + ($('🔍 Parsear Post Español').item.json.hashtags_es || ''),\n    \"copy_facebook\": ($('🔍 Parsear Post Español').item.json.post_completo_es || $('🔍 Parsear Post Español').item.json.hook_es || '') + '\\n' + ($('🔍 Parsear Post Español').item.json.hashtags_es || ''),\n    \"copy_linkedin\": ($('🔍 Parsear Post Español').item.json.post_completo_linkedin || '') + '\\n' + ($('🔍 Parsear Post Español').item.json.hashtags_es || ''),\n    \"hooks\": [$('🔍 Parsear Post Español').item.json.hook_es || ''].filter(Boolean),\n    \"cta\": $('🔍 Parsear Post Español').item.json.cta_es || '',\n    \"imagen_url\": $('🖼️ Obtener URL de Imagen').item.json.imagen_url || null,\n    \"status\": \"borrador\",\n    \"imagen_prompt\": $('🔍 Parsear Post Español').item.json.texto_canva_titulo || ''\n  }]\n}) }}",
         "options": {}
-      },
-      "id": "crear-registro-airtable",
-      "name": "💾 Crear Registro en G54",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        3312,
-        304
-      ]
+      }
     },
     {
+      "id": "actualizar-tema-en-proceso",
+      "name": "🔄 Tema → En Proceso",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput",
+      "position": [
+        3488,
+        304
+      ],
       "parameters": {
         "method": "PUT",
         "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/rrss/ideas/' + $('🔧 Preparar Contexto para IA').item.json.tema_id + '/status' }}",
@@ -313,19 +323,17 @@
         "specifyBody": "json",
         "jsonBody": "{\"status\": \"procesando\"}",
         "options": {}
-      },
-      "id": "actualizar-tema-en-proceso",
-      "name": "🔄 Tema → En Proceso",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        3488,
-        304
-      ],
-      "continueOnFail": true,
-      "onError": "continueRegularOutput"
+      }
     },
     {
+      "id": "wp-buscar-imagen",
+      "name": "🖼️ Obtener URL de Imagen",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3696,
+        304
+      ],
       "parameters": {
         "assignments": {
           "assignments": [
@@ -338,17 +346,17 @@
           ]
         },
         "options": {}
-      },
-      "id": "wp-buscar-imagen",
-      "name": "🖼️ Obtener URL de Imagen",
+      }
+    },
+    {
+      "id": "config-g54",
+      "name": "⚙️ Config Growth54",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        3696,
+        704,
         304
-      ]
-    },
-    {
+      ],
       "parameters": {
         "assignments": {
           "assignments": [
@@ -403,43 +411,35 @@
           ]
         },
         "options": {}
-      },
-      "id": "config-g54",
-      "name": "⚙️ Config Growth54",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        704,
-        304
-      ]
+      }
     },
     {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "rrss-automation-g54",
-        "responseMode": "responseNode",
-        "options": {}
-      },
       "id": "webhook-g54-rrss",
       "name": "🔔 Webhook G54",
+      "webhookId": "72f3bfda-c352-455b-8e4a-cccbcab00981",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
         80,
         304
       ],
-      "webhookId": "72f3bfda-c352-455b-8e4a-cccbcab00981"
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rrss-automation-g54",
+        "responseMode": "responseNode",
+        "options": {}
+      }
     },
     {
       "id": "obtener-estrategia-g54",
       "name": "🎯 Obtener Estrategia RRSS",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "continueOnFail": true,
       "position": [
         880,
         304
       ],
-      "continueOnFail": true,
       "parameters": {
         "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID + '/rrss/estrategia' }}",
         "sendHeaders": true,
@@ -462,11 +462,12 @@
       "id": "g54-login-content-ai",
       "name": "🔐 G54: Login Sesión",
       "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
       "position": [
         3280,
         220
       ],
-      "typeVersion": 4.2,
       "parameters": {
         "method": "POST",
         "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/auth/login",
@@ -483,18 +484,18 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config Growth54').item.json.G54_MASTER_EMAIL, password: $('⚙️ Config Growth54').item.json.G54_MASTER_PASSWORD }) }}",
         "options": {}
-      },
-      "onError": "continueRegularOutput"
+      }
     },
     {
       "id": "g54-switch-company-content-ai",
       "name": "🏢 G54: Cambiar Empresa Activa",
       "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
       "position": [
         3384,
         220
       ],
-      "typeVersion": 4.2,
       "parameters": {
         "method": "POST",
         "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/auth/switch-company",
@@ -511,18 +512,18 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ company_id: Number($('⚙️ Config Growth54').item.json.G54_COMPANY_ID) }) }}",
         "options": {}
-      },
-      "onError": "continueRegularOutput"
+      }
     },
     {
       "id": "g54-check-existing-posts",
       "name": "📋 Obtener Posts Existentes (G54)",
       "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
       "position": [
         3488,
         220
       ],
-      "typeVersion": 4.2,
       "parameters": {
         "method": "GET",
         "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/rrss/posts",
@@ -536,18 +537,18 @@
           ]
         },
         "options": {}
-      },
-      "onError": "continueRegularOutput"
+      }
     },
     {
       "id": "g54-find-new-post",
       "name": "📋 Buscar Post Nuevo (G54)",
       "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
       "position": [
         4200,
         220
       ],
-      "typeVersion": 4.2,
       "parameters": {
         "method": "GET",
         "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/rrss/posts",
@@ -561,18 +562,17 @@
           ]
         },
         "options": {}
-      },
-      "onError": "continueRegularOutput"
+      }
     },
     {
       "id": "g54-match-post-idea",
       "name": "🔍 Encontrar Post por Idea",
       "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         4420,
         220
       ],
-      "typeVersion": 2,
       "parameters": {
         "jsCode": "const postsRaw = $('📋 Buscar Post Nuevo (G54)').item.json;\nconst postsList = postsRaw.data || (Array.isArray(postsRaw) ? postsRaw : []);\n\nconst temaId = $('🔧 Preparar Contexto para IA').item.json.tema_id;\n\nconst candidatos = postsList.filter(p => p.social_idea_id === temaId);\n// Si hay más de uno (no debería, pero por seguridad) tomamos el más reciente\ncandidatos.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));\nconst post = candidatos[0] || null;\n\nif (!post) {\n  return [{ json: { encontrado: false, post_id: null } }];\n}\n\nreturn [{ json: {\n  encontrado: true,\n  post_id: post.id,\n  platform: post.platform,\n  company_id: $('⚙️ Config Growth54').item.json.G54_COMPANY_ID,\n}}];\n"
       }
@@ -581,11 +581,12 @@
       "id": "g54-trigger-image-gen",
       "name": "🖼️ Generar Imagen (Image Generator AI)",
       "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
       "position": [
         4640,
         220
       ],
-      "typeVersion": 4.2,
       "parameters": {
         "method": "POST",
         "url": "https://n8n.mdarthurdigital.com/webhook/generar-imagen",
@@ -604,8 +605,7 @@
         "options": {
           "timeout": 90000
         }
-      },
-      "onError": "continueRegularOutput"
+      }
     },
     {
       "id": "if-cta-sin-configurar",
@@ -643,13 +643,14 @@
     {
       "id": "alert-cta-email",
       "name": "📧 Alertar CTA sin Configurar",
+      "webhookId": "31bcc536-766f-4794-8eac-f7d4edff0ef2",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
+      "onError": "continueRegularOutput",
       "position": [
         2400,
         620
       ],
-      "onError": "continueRegularOutput",
       "parameters": {
         "fromEmail": "Alerta G54 <risosadmi@gmail.com>",
         "toEmail": "risosadmi@gmail.com",
@@ -665,10 +666,17 @@
           "id": "iWBBSSe5AWsCMo89",
           "name": "Gmail SMTP — risosadmi"
         }
-      },
-      "webhookId": "31bcc536-766f-4794-8eac-f7d4edff0ef2"
+      }
     },
     {
+      "id": "if-mode-ideas",
+      "name": "🔀 ¿Mode = Ideas?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        304,
+        140
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -690,17 +698,17 @@
           "combinator": "and"
         },
         "options": {}
-      },
-      "id": "if-mode-ideas",
-      "name": "🔀 ¿Mode = Ideas?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        304,
-        140
-      ]
+      }
     },
     {
+      "id": "reenviar-ideas-ai",
+      "name": "🔗 Reenviar a Ideas AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        528,
+        60
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://n8n.mdarthurdigital.com/webhook/ideas-ai-g54",
@@ -719,22 +727,9 @@
         "options": {
           "timeout": 25000
         }
-      },
-      "id": "reenviar-ideas-ai",
-      "name": "🔗 Reenviar a Ideas AI",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        528,
-        60
-      ]
+      }
     },
     {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ $json }}",
-        "options": {}
-      },
       "id": "responder-modo-ideas",
       "name": "📤 Responder Modo Ideas",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -742,14 +737,14 @@
       "position": [
         752,
         60
-      ]
-    },
-    {
+      ],
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ ok: true, mode: 'post', message: 'Generando post, disponible en unos segundos.' }) }}",
+        "responseBody": "={{ $json }}",
         "options": {}
-      },
+      }
+    },
+    {
       "id": "responder-modo-post",
       "name": "📤 Responder Modo Post (Fire-and-Forget)",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -757,9 +752,23 @@
       "position": [
         528,
         260
-      ]
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, mode: 'post', message: 'Generando post, disponible en unos segundos.' }) }}",
+        "options": {}
+      }
     },
     {
+      "id": "marcar-idea-usada",
+      "name": "🔖 G54: Marcar Idea como Usada",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "position": [
+        3312,
+        460
+      ],
       "parameters": {
         "method": "PUT",
         "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/rrss/ideas/' + $('🔧 Preparar Contexto para IA').item.json.tema_id + '/status' }}",
@@ -784,18 +793,17 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ status: 'usada' }) }}",
         "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        3312,
-        460
-      ],
-      "id": "marcar-idea-usada",
-      "name": "🔖 G54: Marcar Idea como Usada",
-      "onError": "continueRegularOutput"
+      }
     },
     {
+      "id": "if-groq-ok-content",
+      "name": "🔀 ¿Groq OK? (ES)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2512,
+        460
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -816,17 +824,18 @@
             }
           ]
         }
-      },
-      "id": "if-groq-ok-content",
-      "name": "🔀 ¿Groq OK? (ES)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        2512,
-        460
-      ]
+      }
     },
     {
+      "id": "zhipu-fallback-content",
+      "name": "🤖 Zhipu: Fallback IA (ES)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "position": [
+        2512,
+        610
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
@@ -846,21 +855,12 @@
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth"
       },
-      "id": "zhipu-fallback-content",
-      "name": "🤖 Zhipu: Fallback IA (ES)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2512,
-        610
-      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "rWF3VkYbayILPZTH",
           "name": "Zhipu GLM � Fallback IA (G54)"
         }
-      },
-      "onError": "continueRegularOutput"
+      }
     },
     {
       "id": "if-lote-ideas",
@@ -927,11 +927,11 @@
       "name": "📤 Generar Post (Lote, self-dispatch)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "continueOnFail": true,
       "position": [
         640,
         540
       ],
-      "continueOnFail": true,
       "parameters": {
         "method": "POST",
         "url": "https://n8n.mdarthurdigital.com/webhook/rrss-automation-g54",
@@ -950,6 +950,14 @@
       }
     },
     {
+      "id": "a63dfb7f-8742-4482-9186-21ad4e14b60a",
+      "name": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2622,
+        610
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -971,17 +979,20 @@
           ]
         },
         "options": {}
-      },
-      "name": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        2622,
-        610
-      ],
-      "id": "a63dfb7f-8742-4482-9186-21ad4e14b60a"
+      }
     },
     {
+      "id": "13243a21-b321-4be7-9078-331e36a96341",
+      "name": "🤖 OpenAI: Último Respaldo",
+      "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "position": [
+        2732,
+        810
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
@@ -1003,23 +1014,12 @@
           "timeout": 90000
         }
       },
-      "name": "🤖 OpenAI: Último Respaldo",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2732,
-        810
-      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "hkeIUPcrRjD4F4KY",
           "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
         }
-      },
-      "onError": "continueRegularOutput",
-      "alwaysOutputData": true,
-      "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
-      "id": "13243a21-b321-4be7-9078-331e36a96341"
+      }
     }
   ],
   "connections": {
@@ -1429,10 +1429,18 @@
     }
   ],
   "activeVersion": {
-    "versionId": "6b6978f4-b669-43c3-b02b-1fc73c62edd1",
+    "versionId": "9c432ac8-bb88-4c66-9767-07ddb7501e3d",
     "workflowId": "wyO1f93A66imn9qw",
     "nodes": [
       {
+        "id": "get-empresa",
+        "name": "📊 Obtener Perfil Empresa",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1056,
+          304
+        ],
         "parameters": {
           "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID }}",
           "sendHeaders": true,
@@ -1449,17 +1457,17 @@
             ]
           },
           "options": {}
-        },
-        "id": "get-empresa",
-        "name": "📊 Obtener Perfil Empresa",
+        }
+      },
+      {
+        "id": "get-productos",
+        "name": "📦 Obtener Servicios Activos",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          1056,
+          1312,
           304
-        ]
-      },
-      {
+        ],
         "parameters": {
           "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID + '/productos-servicios' }}",
           "sendHeaders": true,
@@ -1476,17 +1484,17 @@
             ]
           },
           "options": {}
-        },
-        "id": "get-productos",
-        "name": "📦 Obtener Servicios Activos",
+        }
+      },
+      {
+        "id": "get-tema",
+        "name": "📅 Obtener Próximo Tema Semanal",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          1312,
+          1552,
           304
-        ]
-      },
-      {
+        ],
         "parameters": {
           "method": "GET",
           "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/rrss/ideas",
@@ -1504,17 +1512,17 @@
             ]
           },
           "options": {}
-        },
-        "id": "get-tema",
-        "name": "📅 Obtener Próximo Tema Semanal",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          1552,
-          304
-        ]
+        }
       },
       {
+        "id": "if-hay-tema",
+        "name": "🔍 ¿Hay tema disponible?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1808,
+          304
+        ],
         "parameters": {
           "conditions": {
             "options": {
@@ -1536,20 +1544,9 @@
             "combinator": "and"
           },
           "options": {}
-        },
-        "id": "if-hay-tema",
-        "name": "🔍 ¿Hay tema disponible?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2,
-        "position": [
-          1808,
-          304
-        ]
+        }
       },
       {
-        "parameters": {
-          "jsCode": "// ====================================================\n// Preparar Contexto para IA — G54 Field Mapping\n// G54 API fields:\n//   company: name, description, value_proposition, base_city, website, emails[], phones[]\n//   products: name, description, keywords[]\n//   ideas: id, topic, keyword, platform, description\n//   estrategia: objetivo, audiencia, tono, cta_principal, embudo, pilares[]\n// ====================================================\n\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\n// G54 wraps in .data, Airtable uses .fields\nconst empresa = empresaRaw.data || empresaRaw.fields || empresaRaw || {};\n\nconst productosRaw = $('📦 Obtener Servicios Activos').item.json;\n// G54: { company_id, data: [{id, name, description, keywords[]}] }\nconst productosData = productosRaw.data || productosRaw.items || productosRaw.records || (Array.isArray(productosRaw) ? productosRaw : []);\n\n// G54 ideas response: { data: [{id, topic, keyword, platform, description}] }\nconst temaRaw = $('📅 Obtener Próximo Tema Semanal').item.json;\nconst temaList = temaRaw.data || temaRaw.items || temaRaw.records || (Array.isArray(temaRaw) ? temaRaw : [temaRaw]);\n\n// Ideas que ya tienen un post generado (cualquier estado: borrador/aprobado/publicado) — para no volver a generar el mismo tema\nlet usedIdeaIds = new Set();\ntry {\n  const postsRaw = $('📋 Obtener Posts Existentes (G54)').item.json;\n  const postsList = postsRaw.data || (Array.isArray(postsRaw) ? postsRaw : []);\n  usedIdeaIds = new Set(postsList.map(p => p.social_idea_id).filter(id => id !== null && id !== undefined));\n} catch (e) {\n  // Si la lectura de posts falla (login caído, etc.), seguimos sin filtrar — mismo comportamiento de antes\n}\n\n// Use idea_id from webhook if provided (G54 sends it in mode:post)\nconst webhookBody = $('🔔 Webhook G54').item?.json?.body || $('🔔 Webhook G54').item?.json || {};\nconst webhookIdeaId = webhookBody.idea_id;\nconst temaList2 = Array.isArray(temaList) ? temaList : [temaList];\nlet temaItem;\nif (webhookIdeaId) {\n  // Mismo candado anti-duplicado del ítem 117, ahora también para cuando el panel manda\n  // un idea_id explícito (botón \"Generar Post\" sobre una idea puntual) — antes solo protegía\n  // la elección automática, así que un clic sobre una idea ya usada volvía a duplicar el post.\n  const usedIdsStr = new Set(Array.from(usedIdeaIds).map(id => String(id)));\n  if (usedIdsStr.has(String(webhookIdeaId))) {\n    throw new Error(`La idea ${webhookIdeaId} ya tiene un post generado — no se crea un duplicado. Para un contenido distinto usá \"Regenerar Idea\" antes de generar el post, o borrá primero el post existente si es un borrador.`);\n  }\n  temaItem = temaList2.find(t => String(t.id) === String(webhookIdeaId));\n    if (!temaItem) {\n      // Antes esto caia en silencio a temaList2[0] (la primera idea de la lista, sin importar\n      // cual) cuando el idea_id pedido no existia -- confirmado en vivo el 16-sep generando un\n      // post real de una idea distinta a la pedida, sin ningun aviso. Ahora falla limpio.\n      throw new Error(`No se encontro la idea ${webhookIdeaId} -- puede que ya no exista o que el ID este mal. No se genera ningun post de reemplazo.`);\n    }\n} else {\n  // Bug real del 14-ago: el botón \"Generar Post\" del panel no manda idea_id (confirmado\n  // con la ejecución real), así que sin este filtro se podía elegir cualquier idea sin\n  // post generado, sin importar su estado — incluida una idea de tendencia todavía sin\n  // aprobar, en vez de la idea real que el cliente ya había aprobado en el panel.\n  // Nunca generar un post de una idea que un humano no aprobó primero.\n  temaItem = temaList2.find(t => !usedIdeaIds.has(t.id) && t.status === 'aprobado');\n  if (!temaItem) {\n    throw new Error('No hay ninguna idea aprobada y sin usar disponible para generar un post — aprobá una idea en el panel antes de generar el post, o genera ideas nuevas si no hay ninguna pendiente.');\n  }\n}\ntemaItem = temaItem || {};\nconst tema = temaItem.fields || temaItem || {};\nconst temaId = temaItem.id || temaItem.social_idea_id || temaItem.tema_id || null;\n\n// Estrategia (continueOnFail — null if not configured yet)\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\n// Build product/service summary — handles G54 (name/description) and Airtable fallback\nconst servicios = productosData\n  .filter(p => (p.fields || p).is_active !== false)\n  .map(p => {\n    const f = p.fields || p;\n    const nombre = f.name || f.nombre || f['Nombre de Servicio'] || '';\n    const desc   = f.description || f.descripcion || f['Descripción comercial'] || '';\n    const kws    = Array.isArray(f.keywords) ? f.keywords.slice(0,3).join(', ') : '';\n    return `- ${nombre}: ${desc}${kws ? ' [' + kws + ']' : ''}`.slice(0, 220);\n  })\n  .join('\\n');\n\n\n// Idioma calculado por código, no inferido por la IA -- encontrado el 16-sep: el respaldo Zhipu\n// (glm-4.5-flash) a veces \"piensa\" en inglés a mitad de su razonamiento y termina el post en\n// inglés pese a un keyword/tema en español (no determinístico, temperatura 0.75, confirmado con\n// varias corridas de prueba reales). Calculando el idioma acá y pasándoselo ya resuelto a los 3\n// prompts se elimina la ambigüedad de \"inferí el idioma vos\" para el modelo.\nfunction detectarIdioma(...textos) {\n  const combinado = textos.filter(Boolean).join(' ');\n  if (!combinado) return 'ESPAÑOL';\n  if (/[ñáéíóúÑÁÉÍÓÚ¿¡]/.test(combinado)) return 'ESPAÑOL';\n  const esWords = (combinado.match(/\\b(el|la|los|las|de|del|para|que|con|una|uno|es|son|como|por|porque|más|sin|hacia|tu|nuestro|nuestra)\\b/gi) || []).length;\n  const enWords = (combinado.match(/\\b(the|and|for|with|how|why|near|your|our|best|from|about)\\b/gi) || []).length;\n  return esWords >= enWords ? 'ESPAÑOL' : 'ENGLISH';\n}\n// Voz de marca — la decide el Strategist (no se adivina acá). La guarda en `tono` con el formato\n// \"personalidad · trato: tú|usted|neutro · idioma: español|inglés|bilingüe\" (G54 limita ese campo a 100\n// caracteres) y el detalle en resumen_estrategico, bajo \"VOZ DE MARCA:\". Una estrategia vieja sin ese\n// formato sigue funcionando igual que antes: idioma por keyword y tono tal cual.\nconst tonoRaw = String(estrategia.tono || '');\nconst vozTrato = (((tonoRaw.match(/trato:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\nconst vozIdioma = (((tonoRaw.match(/idioma:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\nconst vozPersonalidad = tonoRaw.split('·')[0].trim() || 'profesional y directo';\nconst vozGuia = ((((String(estrategia.resumen_estrategico || '')).match(/VOZ DE MARCA:\\s*([\\s\\S]+)$/i) || [])[1]) || '').trim().slice(0, 1200);\n// Idioma: decisión de dirección (12-oct) — lo decide siempre la keyword del post, nunca la estrategia.\nconst idiomaEstrategia = '';\nconst tratoTexto = /^t[uú]/.test(vozTrato) ? 'en los posts en español, tutea siempre al lector (tú, tu, te); nunca uses usted ni vos'\n  : (/^usted/.test(vozTrato) ? 'trata siempre de usted al lector; nunca tutees ni uses vos' : '');\nconst bloque_voz = 'VOZ DE MARCA (definida por la estrategia aprobada; es obligatoria y pesa más que cualquier ajuste de tono de las instrucciones de abajo, en todas las plataformas):\\n'\n  + '- Personalidad: ' + vozPersonalidad + '\\n'\n  + (tratoTexto ? '- Trato: ' + tratoTexto + '\\n' : '')\n  + (vozGuia ? '- Guía: ' + vozGuia + '\\n' : '')\n  + (idiomaEstrategia ? '- Si la keyword está en otro idioma, usa en el texto su equivalente natural en el idioma del post; no la pegues literal.\\n' : '');\nconst bloque_voz_inline = bloque_voz.replace(/\\n/g, ' | ').replace(/[\"\\\\]/g, \"'\");\n\nconst idioma_requerido = idiomaEstrategia || detectarIdioma(tema.topic, tema.tema, tema['Tema'], tema.keyword, tema.palabras_clave, tema.keyword_principal);\n\nreturn [{\n  json: {\n    // ---- Empresa (G54 field names first, Airtable fallback) ----\n    empresa_nombre:          empresa.name || empresa.nombre_empresa || empresa['\\ufeffnombre_empresa'] || '',\n    empresa_descripcion:     empresa.description || empresa.descripcion_corta || '',\n    empresa_propuesta_valor: empresa.value_proposition || empresa.propuesta_valor || '',\n    empresa_ciudad:          empresa.base_city || empresa.ciudad_base || empresa['ciudad base'] || '',\n    empresa_web:             empresa.website || empresa.sitio_web || '',\n    empresa_telefono:        (empresa.phones || [])[0] || empresa.telefono || '',\n    empresa_email:           (empresa.emails || [])[0] || '',\n    empresa_geografia:       empresa.geography || empresa.coverage || '',\n    empresa_competidores:    (empresa.competitors_known || []).slice(0,3).map(c => c.name).join(', '),\n    servicios_resumen:       servicios,\n    // ---- Tema / Idea G54 ----\n    tema_id:                 temaId,\n    tema_texto:              tema.topic || tema.tema || tema['Tema'] || '',\n    tema_descripcion:        tema.fecha_propuesta || '',\n    tema_palabras_clave:     tema.keyword || tema.palabras_clave || '',\n    keyword_principal:       tema.keyword || tema.keyword_principal || '',\n    tema_semana:             tema.week || tema.semana || tema['Semana'] || 0,\n    tema_plataforma:         tema.platform || tema.plataforma || 'Instagram',\n    fecha_post:              new Date().toISOString().slice(0, 10), // UTC, sin asumir zona horaria de ninguna empresa\n    // ---- Estrategia G54 ----\n    estrategia_objetivo:     estrategia.objetivo || estrategia.primary_goal || empresa.primary_goal || '',\n    estrategia_audiencia:    estrategia.audiencia || estrategia.target_market || empresa.target_market || '',\n    estrategia_tono:         estrategia.tono || 'profesional, directo y humano',\n    estrategia_cta:          (estrategia.link_origen && estrategia.link_origen !== 'ninguno' && estrategia.link_resuelto) ? estrategia.link_resuelto : (estrategia.link_principal || estrategia.cta_principal || (empresa.website || empresa.sitio_web || '')), // Preferir link_resuelto (ya calculado por G54, ítem del 24-ago) sobre resolverlo nosotros mismos; misma cadena de respaldo si no viene.\n    estrategia_embudo:       estrategia.embudo || 'TOFU-MOFU',\n    estrategia_pilares:      Array.isArray(estrategia.pilares) ? estrategia.pilares.join(', ') : (estrategia.pilares || ''),\n    // ---- Imagen (G54 provee la URL — subida por usuario o generada por Image AI) ----\n    imagen_url:              tema.imagen_url || tema.image_url || null,\n    imagen_specs:            tema.imagen_specs || tema.image_specs || '',\n    idioma_requerido:        idioma_requerido,\n    bloque_voz:              bloque_voz,\n    bloque_voz_inline:       bloque_voz_inline,\n  }\n}];\n"
-        },
         "id": "preparar-contexto",
         "name": "🔧 Preparar Contexto para IA",
         "type": "n8n-nodes-base.code",
@@ -1557,9 +1554,21 @@
         "position": [
           2064,
           304
-        ]
+        ],
+        "parameters": {
+          "jsCode": "// ====================================================\n// Preparar Contexto para IA — G54 Field Mapping\n// G54 API fields:\n//   company: name, description, value_proposition, base_city, website, emails[], phones[]\n//   products: name, description, keywords[]\n//   ideas: id, topic, keyword, platform, description\n//   estrategia: objetivo, audiencia, tono, cta_principal, embudo, pilares[]\n// ====================================================\n\nconst empresaRaw = $('📊 Obtener Perfil Empresa').item.json;\n// G54 wraps in .data, Airtable uses .fields\nconst empresa = empresaRaw.data || empresaRaw.fields || empresaRaw || {};\n\nconst productosRaw = $('📦 Obtener Servicios Activos').item.json;\n// G54: { company_id, data: [{id, name, description, keywords[]}] }\nconst productosData = productosRaw.data || productosRaw.items || productosRaw.records || (Array.isArray(productosRaw) ? productosRaw : []);\n\n// G54 ideas response: { data: [{id, topic, keyword, platform, description}] }\nconst temaRaw = $('📅 Obtener Próximo Tema Semanal').item.json;\nconst temaList = temaRaw.data || temaRaw.items || temaRaw.records || (Array.isArray(temaRaw) ? temaRaw : [temaRaw]);\n\n// Ideas que ya tienen un post generado (cualquier estado: borrador/aprobado/publicado) — para no volver a generar el mismo tema\nlet usedIdeaIds = new Set();\ntry {\n  const postsRaw = $('📋 Obtener Posts Existentes (G54)').item.json;\n  const postsList = postsRaw.data || (Array.isArray(postsRaw) ? postsRaw : []);\n  usedIdeaIds = new Set(postsList.map(p => p.social_idea_id).filter(id => id !== null && id !== undefined));\n} catch (e) {\n  // Si la lectura de posts falla (login caído, etc.), seguimos sin filtrar — mismo comportamiento de antes\n}\n\n// Use idea_id from webhook if provided (G54 sends it in mode:post)\nconst webhookBody = $('🔔 Webhook G54').item?.json?.body || $('🔔 Webhook G54').item?.json || {};\nconst webhookIdeaId = webhookBody.idea_id;\nconst temaList2 = Array.isArray(temaList) ? temaList : [temaList];\nlet temaItem;\nif (webhookIdeaId) {\n  // Mismo candado anti-duplicado del ítem 117, ahora también para cuando el panel manda\n  // un idea_id explícito (botón \"Generar Post\" sobre una idea puntual) — antes solo protegía\n  // la elección automática, así que un clic sobre una idea ya usada volvía a duplicar el post.\n  const usedIdsStr = new Set(Array.from(usedIdeaIds).map(id => String(id)));\n  if (usedIdsStr.has(String(webhookIdeaId))) {\n    throw new Error(`La idea ${webhookIdeaId} ya tiene un post generado — no se crea un duplicado. Para un contenido distinto usá \"Regenerar Idea\" antes de generar el post, o borrá primero el post existente si es un borrador.`);\n  }\n  temaItem = temaList2.find(t => String(t.id) === String(webhookIdeaId));\n    if (!temaItem) {\n      // Antes esto caia en silencio a temaList2[0] (la primera idea de la lista, sin importar\n      // cual) cuando el idea_id pedido no existia -- confirmado en vivo el 16-sep generando un\n      // post real de una idea distinta a la pedida, sin ningun aviso. Ahora falla limpio.\n      throw new Error(`No se encontro la idea ${webhookIdeaId} -- puede que ya no exista o que el ID este mal. No se genera ningun post de reemplazo.`);\n    }\n} else {\n  // Bug real del 14-ago: el botón \"Generar Post\" del panel no manda idea_id (confirmado\n  // con la ejecución real), así que sin este filtro se podía elegir cualquier idea sin\n  // post generado, sin importar su estado — incluida una idea de tendencia todavía sin\n  // aprobar, en vez de la idea real que el cliente ya había aprobado en el panel.\n  // Nunca generar un post de una idea que un humano no aprobó primero.\n  temaItem = temaList2.find(t => !usedIdeaIds.has(t.id) && t.status === 'aprobado');\n  if (!temaItem) {\n    throw new Error('No hay ninguna idea aprobada y sin usar disponible para generar un post — aprobá una idea en el panel antes de generar el post, o genera ideas nuevas si no hay ninguna pendiente.');\n  }\n}\ntemaItem = temaItem || {};\nconst tema = temaItem.fields || temaItem || {};\nconst temaId = temaItem.id || temaItem.social_idea_id || temaItem.tema_id || null;\n\n// Estrategia (continueOnFail — null if not configured yet)\nconst estRaw = $('🎯 Obtener Estrategia RRSS').item?.json || {};\nconst estrategia = estRaw.data || estRaw || {};\n\n// Build product/service summary — handles G54 (name/description) and Airtable fallback\nconst servicios = productosData\n  .filter(p => (p.fields || p).is_active !== false)\n  .map(p => {\n    const f = p.fields || p;\n    const nombre = f.name || f.nombre || f['Nombre de Servicio'] || '';\n    const desc   = f.description || f.descripcion || f['Descripción comercial'] || '';\n    const kws    = Array.isArray(f.keywords) ? f.keywords.slice(0,3).join(', ') : '';\n    return `- ${nombre}: ${desc}${kws ? ' [' + kws + ']' : ''}`.slice(0, 220);\n  })\n  .join('\\n');\n\n\n// Idioma calculado por código, no inferido por la IA -- encontrado el 16-sep: el respaldo Zhipu\n// (glm-4.5-flash) a veces \"piensa\" en inglés a mitad de su razonamiento y termina el post en\n// inglés pese a un keyword/tema en español (no determinístico, temperatura 0.75, confirmado con\n// varias corridas de prueba reales). Calculando el idioma acá y pasándoselo ya resuelto a los 3\n// prompts se elimina la ambigüedad de \"inferí el idioma vos\" para el modelo.\nfunction detectarIdioma(...textos) {\n  const combinado = textos.filter(Boolean).join(' ');\n  if (!combinado) return 'ESPAÑOL';\n  if (/[ñáéíóúÑÁÉÍÓÚ¿¡]/.test(combinado)) return 'ESPAÑOL';\n  const esWords = (combinado.match(/\\b(el|la|los|las|de|del|para|que|con|una|uno|es|son|como|por|porque|más|sin|hacia|tu|nuestro|nuestra)\\b/gi) || []).length;\n  const enWords = (combinado.match(/\\b(the|and|for|with|how|why|near|your|our|best|from|about)\\b/gi) || []).length;\n  return esWords >= enWords ? 'ESPAÑOL' : 'ENGLISH';\n}\n// Voz de marca — la decide el Strategist (no se adivina acá). La guarda en `tono` con el formato\n// \"personalidad · trato: tú|usted|neutro · idioma: español|inglés|bilingüe\" (G54 limita ese campo a 100\n// caracteres) y el detalle en resumen_estrategico, bajo \"VOZ DE MARCA:\". Una estrategia vieja sin ese\n// formato sigue funcionando igual que antes: idioma por keyword y tono tal cual.\nconst tonoRaw = String(estrategia.tono || '');\nconst vozTrato = (((tonoRaw.match(/trato:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\nconst vozIdioma = (((tonoRaw.match(/idioma:\\s*([^·|]+)/i) || [])[1]) || '').trim().toLowerCase();\nconst vozPersonalidad = tonoRaw.split('·')[0].trim() || 'profesional y directo';\nconst vozGuia = ((((String(estrategia.resumen_estrategico || '')).match(/VOZ DE MARCA:\\s*([\\s\\S]+)$/i) || [])[1]) || '').trim().slice(0, 1200);\n// Idioma: decisión de dirección (12-oct) — lo decide siempre la keyword del post, nunca la estrategia.\nconst idiomaEstrategia = '';\nconst tratoTexto = /^t[uú]/.test(vozTrato) ? 'en los posts en español, tutea siempre al lector (tú, tu, te); nunca uses usted ni vos'\n  : (/^usted/.test(vozTrato) ? 'trata siempre de usted al lector; nunca tutees ni uses vos' : '');\nconst bloque_voz = 'VOZ DE MARCA (definida por la estrategia aprobada; es obligatoria y pesa más que cualquier ajuste de tono de las instrucciones de abajo, en todas las plataformas):\\n'\n  + '- Personalidad: ' + vozPersonalidad + '\\n'\n  + (tratoTexto ? '- Trato: ' + tratoTexto + '\\n' : '')\n  + (vozGuia ? '- Guía: ' + vozGuia + '\\n' : '')\n  + (idiomaEstrategia ? '- Si la keyword está en otro idioma, usa en el texto su equivalente natural en el idioma del post; no la pegues literal.\\n' : '');\nconst bloque_voz_inline = bloque_voz.replace(/\\n/g, ' | ').replace(/[\"\\\\]/g, \"'\");\n\nconst idioma_requerido = idiomaEstrategia || detectarIdioma(tema.topic, tema.tema, tema['Tema'], tema.keyword, tema.palabras_clave, tema.keyword_principal);\n\nreturn [{\n  json: {\n    // ---- Empresa (G54 field names first, Airtable fallback) ----\n    empresa_nombre:          empresa.name || empresa.nombre_empresa || empresa['\\ufeffnombre_empresa'] || '',\n    empresa_descripcion:     empresa.description || empresa.descripcion_corta || '',\n    empresa_propuesta_valor: empresa.value_proposition || empresa.propuesta_valor || '',\n    empresa_ciudad:          empresa.base_city || empresa.ciudad_base || empresa['ciudad base'] || '',\n    empresa_web:             empresa.website || empresa.sitio_web || '',\n    empresa_telefono:        (empresa.phones || [])[0] || empresa.telefono || '',\n    empresa_email:           (empresa.emails || [])[0] || '',\n    empresa_geografia:       empresa.geography || empresa.coverage || '',\n    empresa_competidores:    (empresa.competitors_known || []).slice(0,3).map(c => c.name).join(', '),\n    servicios_resumen:       servicios,\n    // ---- Tema / Idea G54 ----\n    tema_id:                 temaId,\n    tema_texto:              tema.topic || tema.tema || tema['Tema'] || '',\n    tema_descripcion:        tema.fecha_propuesta || '',\n    tema_palabras_clave:     tema.keyword || tema.palabras_clave || '',\n    keyword_principal:       tema.keyword || tema.keyword_principal || '',\n    tema_semana:             tema.week || tema.semana || tema['Semana'] || 0,\n    tema_plataforma:         tema.platform || tema.plataforma || 'Instagram',\n    fecha_post:              new Date().toISOString().slice(0, 10), // UTC, sin asumir zona horaria de ninguna empresa\n    // ---- Estrategia G54 ----\n    estrategia_objetivo:     estrategia.objetivo || estrategia.primary_goal || empresa.primary_goal || '',\n    estrategia_audiencia:    estrategia.audiencia || estrategia.target_market || empresa.target_market || '',\n    estrategia_tono:         estrategia.tono || 'profesional, directo y humano',\n    estrategia_cta:          (estrategia.link_origen && estrategia.link_origen !== 'ninguno' && estrategia.link_resuelto) ? estrategia.link_resuelto : (estrategia.link_principal || estrategia.cta_principal || (empresa.website || empresa.sitio_web || '')), // Preferir link_resuelto (ya calculado por G54, ítem del 24-ago) sobre resolverlo nosotros mismos; misma cadena de respaldo si no viene.\n    estrategia_embudo:       estrategia.embudo || 'TOFU-MOFU',\n    estrategia_pilares:      Array.isArray(estrategia.pilares) ? estrategia.pilares.join(', ') : (estrategia.pilares || ''),\n    // ---- Imagen (G54 provee la URL — subida por usuario o generada por Image AI) ----\n    imagen_url:              tema.imagen_url || tema.image_url || null,\n    imagen_specs:            tema.imagen_specs || tema.image_specs || '',\n    idioma_requerido:        idioma_requerido,\n    bloque_voz:              bloque_voz,\n    bloque_voz_inline:       bloque_voz_inline,\n  }\n}];\n"
+        }
       },
       {
+        "id": "generar-post-es",
+        "name": "🤖 Generar Post en Español",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "position": [
+          2304,
+          304
+        ],
         "parameters": {
           "method": "POST",
           "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={{$('\\u2699\\ufe0f Config Growth54').item.json.GEMINI_API_KEY}}",
@@ -1574,20 +1583,19 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={\"contents\": [{\"role\": \"user\", \"parts\": [{\"text\": {{ JSON.stringify(\"Eres un Content Strategist especializado en SEO/AEO/GEO, adaptado al rubro real de cada empresa.\\n\\nREGLA DE IDIOMA — OBLIGATORIA: escribe TODO el contenido de este post (hook, mensaje, respuesta AEO, CTA, hashtags, títulos) en el MISMO idioma en que está escrita la KEYWORD PRINCIPAL / el TEMA SEMANAL indicados más abajo — nunca traduzcas al español por defecto. Si están en inglés, todo el post va en inglés; si están en español, todo va en español; y así con cualquier otro idioma que reconozcas.\\n\\nIDIOMA YA DETERMINADO PARA ESTE POST (no lo vuelvas a inferir, usá exactamente este): {{ $json.idioma_requerido }}. Escribe absolutamente TODO el contenido (hook, mensaje, respuesta AEO, CTA, hashtags, títulos, mensaje_linkedin) en ese idioma exacto, sin excepción, sin importar en qué idioma esté redactada cualquier otra parte de estas instrucciones.\\n\\n{{ $json.bloque_voz_inline }}\\n\\nEMPRESA: {{ $json.empresa_nombre }}\\nDESCRIPCI\\u00d3N: {{ $json.empresa_descripcion }}\\nPROPUESTA DE VALOR: {{ $json.empresa_propuesta_valor }}\\nCIUDAD: {{ $json.empresa_ciudad }} | WEB: {{ $json.empresa_web }}\\nSERVICIOS:\\n{{ $json.servicios_resumen }}\\n\\nESTRATEGIA G54:\\n- Objetivo: {{ $json.estrategia_objetivo || 'Generar leads para el negocio' }}\\n- Audiencia: {{ $json.estrategia_audiencia || 'clientes potenciales del negocio' }}\\n- Tono: {{ $json.estrategia_tono || 'profesional y directo' }}\\n- CTA principal: {{ $json.estrategia_cta || 'Visita nuestro sitio web: ' + $json.empresa_web }}\\n- Pilares: {{ $json.estrategia_pilares || 'los servicios principales de la empresa' }}\\n\\nTEMA SEMANAL: {{ $json.tema_texto }}\\nDESCRIPCI\\u00d3N DEL TEMA: {{ $json.tema_descripcion || '' }}\\nKEYWORD PRINCIPAL: {{ $json.keyword_principal || $json.tema_palabras_clave || '' }}\\n\\n=== PROCESO DE 8 PASOS G54 ===\\n\\nPASO 1 \\u2014 INTENCI\\u00d3N DE B\\u00daSQUEDA\\nAnaliza qu\\u00e9 intenci\\u00f3n tiene el usuario al buscar sobre este tema.\\nElige: informacional | comercial | transaccional | local\\n\\nPASO 2 \\u2014 KEYWORDS\\nIdentifica 3-5 palabras clave secundarias relacionadas con el tema y la empresa.\\n\\nPASO 3 \\u2014 AEO (Answer Engine Optimization)\\nRedacta 2-3 oraciones que respondan directamente y espec\\u00edficamente la pregunta impl\\u00edcita del tema.\\nDebe ser una respuesta directa al estilo \\\"La respuesta a [tema] es...\\\", optimizada para IA y b\\u00fasqueda conversacional.\\n\\nPASO 4 \\u2014 HOOK\\nPrimera frase impactante de m\\u00e1x 12 palabras. Usa el keyword principal. Genera curiosidad o urgencia real.\\n\\nPASO 5 \\u2014 DESARROLLO\\nCuerpo del post: 2-3 p\\u00e1rrafos, m\\u00e1x 200 palabras. Incluye datos concretos, beneficios y prueba social de {{ $json.empresa_nombre }}.\\n\\nPASO 6 \\u2014 GEO\\nIncorpora referencias geogr\\u00e1ficas espec\\u00edficas relevantes a la ubicaci\\u00f3n real de la empresa: {{ $json.empresa_ciudad }}{{ $json.empresa_geografia ? ' (' + $json.empresa_geografia + ')' : '' }}.\\n\\nPASO 7 \\u2014 ADAPTACI\\u00d3N\\nAdapta el formato a redes sociales (natural, nada corporativo ni gen\\u00e9rico) sin salirte de la VOZ DE MARCA: mismo trato, mismo idioma, misma personalidad.\\n\\nPASO 8 \\u2014 CTA + HASHTAGS\\nCTA con URL OBLIGATORIO. 10 hashtags relevantes.\\n\\nPASO 9 \\u2014 VERSI\\u00d3N LINKEDIN\\nReescribe el mismo mensaje (mismo hook, mismos datos, mismo CTA) en tono profesional de LinkedIn: sin emojis, sin exclamaciones de venta directa, estilo thought-leadership B2B, como si lo publicara un directivo comentando una tendencia del sector, no un anuncio. 2-3 p\\u00e1rrafos, m\\u00e1x 200 palabras, mismo idioma que el resto del post.\\n\\nREGLAS:\\n- CTA SIEMPRE incluye una URL completa y clicable — usa exactamente el valor de CTA principal indicado arriba\\n- M\\u00e1x 200 palabras en 'mensaje'\\n- NUNCA inventar premios, certificaciones o datos falsos. NUNCA inventes hechos sin números: instalaciones o lugares (almacén, bodega, flota), equipos o maquinaria, procesos que la empresa haría por sí misma, testimonios o reseñas, clientes con nombre, premios, años de experiencia ni garantías que no estén escritos en los datos de la empresa; ante la duda, omítelo.\\n- NUNCA inventar un precio, número, descuento, oferta relámpago o plazo específico (ej: '$30', '48 horas', '2x1') que no esté escrito literalmente en SERVICIOS arriba — si no hay ningún precio real ahí, describí el beneficio sin inventar ninguna cifra. Tampoco menciones ninguna característica de ubicación, amenidad o servicio (ej: 'cerca de la playa', 'con piscina', 'vista al mar') que no esté respaldada por CIUDAD/geografía real o por SERVICIOS de arriba — un cliché típico del rubro nunca se asume, se verifica contra los datos reales de esta empresa puntual.\\n- NUNCA menciones otro rubro, ciudad o empresa que no sea la indicada arriba\\n\\nDevuelve \\u00daNICAMENTE este JSON (sin markdown, sin texto adicional):\\n{\\n  \\\"intencion_busqueda\\\": \\\"informacional|comercial|transaccional|local\\\",\\n  \\\"keywords_secundarias\\\": [\\\"kw1\\\", \\\"kw2\\\", \\\"kw3\\\"],\\n  \\\"respuesta_aeo\\\": \\\"2-3 oraciones respondiendo directamente la pregunta impl\\u00edcita, optimizado para b\\u00fasqueda IA\\\",\\n  \\\"hook\\\": \\\"Primera frase impactante m\\u00e1x 12 palabras\\\",\\n  \\\"mensaje\\\": \\\"Cuerpo 2-3 p\\u00e1rrafos con referencias GEO, m\\u00e1x 200 palabras\\\",\\n  \\\"mensaje_linkedin\\\": \\\"Versi\\u00f3n profesional del mismo mensaje para LinkedIn (PASO 9), sin emojis, tono thought-leadership, mismo idioma\\\",\\n  \\\"geo_menciones\\\": \\\"menciona la ciudad/zona real de la empresa\\\",\\n  \\\"cta\\\": \\\"Llamada a la acci\\u00f3n con URL obligatorio\\\",\\n  \\\"hashtags\\\": \\\"#hash1 #hash2 #hash3 #hash4 #hash5 #hash6 #hash7 #hash8 #hash9 #hash10\\\",\\n  \\\"texto_canva_titulo\\\": \\\"T\\u00cdTULO EN MAY\\u00daSCULAS M\\u00c1XIMO 8 PALABRAS\\\",\\n  \\\"texto_canva_subtitulo\\\": \\\"Subt\\u00edtulo m\\u00e1ximo 15 palabras\\\"\\n}\") }}]}], \"systemInstruction\": {\"parts\": [{\"text\": \"Eres un experto en Content Strategy con enfoque SEO/AEO/GEO, adaptado al rubro real de cada empresa. SIEMPRE devuelves JSON válido, sin markdown, sin explicaciones adicionales.\"}]}}",
+          "jsonBody": "={\"contents\": [{\"role\": \"user\", \"parts\": [{\"text\": {{ JSON.stringify(\"Eres un Content Strategist especializado en SEO/AEO/GEO, adaptado al rubro real de cada empresa.\\n\\nREGLA DE IDIOMA — OBLIGATORIA: escribe TODO el contenido de este post (hook, mensaje, respuesta AEO, CTA, hashtags, títulos) en el MISMO idioma en que está escrita la KEYWORD PRINCIPAL / el TEMA SEMANAL indicados más abajo — nunca traduzcas al español por defecto. Si están en inglés, todo el post va en inglés; si están en español, todo va en español; y así con cualquier otro idioma que reconozcas.\\n\\nIDIOMA YA DETERMINADO PARA ESTE POST (no lo vuelvas a inferir, usá exactamente este): {{ $json.idioma_requerido }}. Escribe absolutamente TODO el contenido (hook, mensaje, respuesta AEO, CTA, hashtags, títulos, mensaje_linkedin) en ese idioma exacto, sin excepción, sin importar en qué idioma esté redactada cualquier otra parte de estas instrucciones.\\n\\n{{ $json.bloque_voz_inline }}\\n\\nEMPRESA: {{ $json.empresa_nombre }}\\nDESCRIPCI\\u00d3N: {{ $json.empresa_descripcion }}\\nPROPUESTA DE VALOR: {{ $json.empresa_propuesta_valor }}\\nCIUDAD: {{ $json.empresa_ciudad }} | WEB: {{ $json.empresa_web }}\\nSERVICIOS:\\n{{ $json.servicios_resumen }}\\n\\nESTRATEGIA G54:\\n- Objetivo: {{ $json.estrategia_objetivo || 'Generar leads para el negocio' }}\\n- Audiencia: {{ $json.estrategia_audiencia || 'clientes potenciales del negocio' }}\\n- Tono: {{ $json.estrategia_tono || 'profesional y directo' }}\\n- CTA principal: {{ $json.estrategia_cta || 'Visita nuestro sitio web: ' + $json.empresa_web }}\\n- Pilares: {{ $json.estrategia_pilares || 'los servicios principales de la empresa' }}\\n\\nTEMA SEMANAL: {{ $json.tema_texto }}\\nDESCRIPCI\\u00d3N DEL TEMA: {{ $json.tema_descripcion || '' }}\\nKEYWORD PRINCIPAL: {{ $json.keyword_principal || $json.tema_palabras_clave || '' }}\\n\\n=== PROCESO DE 8 PASOS G54 ===\\n\\nPASO 1 \\u2014 INTENCI\\u00d3N DE B\\u00daSQUEDA\\nAnaliza qu\\u00e9 intenci\\u00f3n tiene el usuario al buscar sobre este tema.\\nElige: informacional | comercial | transaccional | local\\n\\nPASO 2 \\u2014 KEYWORDS\\nIdentifica 3-5 palabras clave secundarias relacionadas con el tema y la empresa.\\n\\nPASO 3 \\u2014 AEO (Answer Engine Optimization)\\nRedacta 2-3 oraciones que respondan directamente y espec\\u00edficamente la pregunta impl\\u00edcita del tema.\\nDebe ser una respuesta directa al estilo \\\"La respuesta a [tema] es...\\\", optimizada para IA y b\\u00fasqueda conversacional.\\n\\nPASO 4 \\u2014 HOOK\\nPrimera frase impactante de m\\u00e1x 12 palabras. Usa el keyword principal. Genera curiosidad o urgencia real.\\n\\nPASO 5 \\u2014 DESARROLLO\\nCuerpo del post: 2-3 p\\u00e1rrafos, m\\u00e1x 200 palabras. Incluye datos concretos, beneficios y prueba social de {{ $json.empresa_nombre }}.\\n\\nPASO 6 \\u2014 GEO\\nIncorpora referencias geogr\\u00e1ficas espec\\u00edficas relevantes a la ubicaci\\u00f3n real de la empresa: {{ $json.empresa_ciudad }}{{ $json.empresa_geografia ? ' (' + $json.empresa_geografia + ')' : '' }}.\\n\\nPASO 7 \\u2014 ADAPTACI\\u00d3N\\nAdapta el formato a redes sociales (natural, nada corporativo ni gen\\u00e9rico) sin salirte de la VOZ DE MARCA: mismo trato, mismo idioma, misma personalidad.\\n\\nPASO 8 \\u2014 CTA + HASHTAGS\\nCTA con URL OBLIGATORIO. 10 hashtags relevantes, con palabras reales y completas del mismo idioma del post: nunca mezcles idiomas dentro de un hashtag ni inventes abreviaturas. El campo mensaje tampoco lleva el CTA ni los hashtags: van en sus propios campos.\\n\\nPASO 9 \\u2014 VERSI\\u00d3N LINKEDIN\\nReescribe el mismo mensaje (mismo hook y mismos datos; SIN el CTA ni los hashtags al final, que se agregan aparte) en tono profesional de LinkedIn: sin emojis, sin exclamaciones de venta directa, estilo thought-leadership B2B, como si lo publicara un directivo comentando una tendencia del sector, no un anuncio. 2-3 p\\u00e1rrafos, m\\u00e1x 200 palabras, mismo idioma que el resto del post.\\n\\nREGLAS:\\n- CTA SIEMPRE incluye una URL completa y clicable — usa exactamente el valor de CTA principal indicado arriba\\n- M\\u00e1x 200 palabras en 'mensaje'\\n- NUNCA inventar premios, certificaciones o datos falsos. NUNCA inventes hechos sin números: instalaciones o lugares (almacén, bodega, flota), equipos o maquinaria, procesos que la empresa haría por sí misma, testimonios o reseñas, clientes con nombre, premios, años de experiencia ni garantías que no estén escritos en los datos de la empresa; ante la duda, omítelo.\\n- NUNCA inventar un precio, número, descuento, oferta relámpago o plazo específico (ej: '$30', '48 horas', '2x1') que no esté escrito literalmente en SERVICIOS arriba — si no hay ningún precio real ahí, describí el beneficio sin inventar ninguna cifra. Tampoco menciones ninguna característica de ubicación, amenidad o servicio (ej: 'cerca de la playa', 'con piscina', 'vista al mar') que no esté respaldada por CIUDAD/geografía real o por SERVICIOS de arriba — un cliché típico del rubro nunca se asume, se verifica contra los datos reales de esta empresa puntual.\\n- NUNCA menciones otro rubro, ciudad o empresa que no sea la indicada arriba\\n\\nDevuelve \\u00daNICAMENTE este JSON (sin markdown, sin texto adicional):\\n{\\n  \\\"intencion_busqueda\\\": \\\"informacional|comercial|transaccional|local\\\",\\n  \\\"keywords_secundarias\\\": [\\\"kw1\\\", \\\"kw2\\\", \\\"kw3\\\"],\\n  \\\"respuesta_aeo\\\": \\\"2-3 oraciones respondiendo directamente la pregunta impl\\u00edcita, optimizado para b\\u00fasqueda IA\\\",\\n  \\\"hook\\\": \\\"Primera frase impactante m\\u00e1x 12 palabras\\\",\\n  \\\"mensaje\\\": \\\"Cuerpo 2-3 p\\u00e1rrafos con referencias GEO, m\\u00e1x 200 palabras\\\",\\n  \\\"mensaje_linkedin\\\": \\\"Versi\\u00f3n profesional del mismo mensaje para LinkedIn (PASO 9), sin emojis, tono thought-leadership, mismo idioma\\\",\\n  \\\"geo_menciones\\\": \\\"menciona la ciudad/zona real de la empresa\\\",\\n  \\\"cta\\\": \\\"Llamada a la acci\\u00f3n con URL obligatorio\\\",\\n  \\\"hashtags\\\": \\\"#hash1 #hash2 #hash3 #hash4 #hash5 #hash6 #hash7 #hash8 #hash9 #hash10\\\",\\n  \\\"texto_canva_titulo\\\": \\\"T\\u00cdTULO EN MAY\\u00daSCULAS M\\u00c1XIMO 8 PALABRAS\\\",\\n  \\\"texto_canva_subtitulo\\\": \\\"Subt\\u00edtulo m\\u00e1ximo 15 palabras\\\"\\n}\") }}]}], \"systemInstruction\": {\"parts\": [{\"text\": \"Eres un experto en Content Strategy con enfoque SEO/AEO/GEO, adaptado al rubro real de cada empresa. SIEMPRE devuelves JSON válido, sin markdown, sin explicaciones adicionales.\"}]}}",
           "options": {}
-        },
-        "id": "generar-post-es",
-        "name": "🤖 Generar Post en Español",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          2304,
-          304
-        ],
-        "onError": "continueRegularOutput"
+        }
       },
       {
+        "id": "if-gemini-ok-es",
+        "name": "🔀 ¿Gemini OK? (ES)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          2400,
+          96
+        ],
         "parameters": {
           "conditions": {
             "options": {
@@ -1610,17 +1618,18 @@
             "combinator": "and"
           },
           "options": {}
-        },
-        "id": "if-gemini-ok-es",
-        "name": "🔀 ¿Gemini OK? (ES)",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2,
-        "position": [
-          2400,
-          96
-        ]
+        }
       },
       {
+        "id": "grok-post-es",
+        "name": "🤖 Groq: Post Español (Fallback)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "position": [
+          2512,
+          304
+        ],
         "parameters": {
           "method": "POST",
           "url": "https://api.groq.com/openai/v1/chat/completions",
@@ -1641,29 +1650,17 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={\"model\": \"openai/gpt-oss-120b\", \"messages\": [{\"role\": \"system\", \"content\": \"Escribe TODO el contenido en el idioma indicado como IDIOMA YA DETERMINADO en el mensaje del usuario, y respeta siempre la VOZ DE MARCA que se indica ahí.\\n\\nEres un experto en marketing digital y copywriting, adaptado al rubro real de cada empresa. Tu especialidad es crear contenido auténtico, persuasivo y orientado a conversión para redes sociales. Siempre respondes en formato JSON válido sin texto adicional.\"}, {\"role\": \"user\", \"content\": {{ JSON.stringify(\"Crea un post para redes sociales para la siguiente empresa (en el idioma y con la voz de marca indicados justo abajo):\\n\\n\" + (\"IDIOMA YA DETERMINADO PARA ESTE POST (no lo vuelvas a inferir, usá exactamente este): \" + $('🔧 Preparar Contexto para IA').item.json.idioma_requerido + \". Escribe absolutamente TODO el contenido en ese idioma exacto, sin excepción, sin importar en qué idioma esté redactada cualquier otra parte de este mensaje.\\n\\n\") + $('🔧 Preparar Contexto para IA').item.json.bloque_voz + \"\\n**AUDIENCIA:** \" + ($('🔧 Preparar Contexto para IA').item.json.estrategia_audiencia || '') + \"\\n\\n**EMPRESA:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_nombre + \"\\n**DESCRIPCIÓN:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_descripcion + \"\\n**PROPUESTA DE VALOR:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_propuesta_valor + \"\\n**CIUDAD:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_ciudad + \"\\n**WEB:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_web + \"\\n**SERVICIOS:**\\n\" + $('🔧 Preparar Contexto para IA').item.json.servicios_resumen + \"\\n**CTA PRINCIPAL (usa esta URL si existe):** \" + ($('🔧 Preparar Contexto para IA').item.json.estrategia_cta || '') + \"\\n\\n**TEMA DE ESTA SEMANA:** \" + $('🔧 Preparar Contexto para IA').item.json.tema_texto + \"\\n**DESCRIPCIÓN DEL TEMA:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_descripcion || '') + \"\\n**PALABRAS CLAVE:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_palabras_clave || '') + \"\\n\\nDevuelve un JSON con los siguientes campos:\\n- hook: primera frase impactante máximo 12 palabras\\n- mensaje: cuerpo del mensaje 2-3 párrafos máximo 180 palabras\\n- cta: llamada a la acción máximo 15 palabras, SIEMPRE terminando con una URL completa y clicable — usa exactamente el CTA PRINCIPAL indicado arriba\\n- hashtags: 10 hashtags comenzando con #\\n- texto_canva_titulo: título visual máximo 8 palabras EN MAYÚSCULAS\\n- texto_canva_subtitulo: subtítulo máximo 15 palabras\\n- mensaje_linkedin: el MISMO contenido (mismo hook, mismos datos, mismo CTA) reescrito en tono profesional de LinkedIn (sin cambiar el trato, el idioma ni la personalidad de la VOZ DE MARCA) — sin emojis, sin exclamaciones de venta directa, estilo thought-leadership B2B como si lo publicara un directivo comentando una tendencia del sector, no un anuncio. 2-3 párrafos, máx 200 palabras, mismo idioma que el resto del post.\\n\\nNUNCA inventes hechos sin números: instalaciones o lugares (almacén, bodega, flota), equipos o maquinaria, procesos que la empresa haría por sí misma, testimonios o reseñas, clientes con nombre, premios, años de experiencia ni garantías que no estén escritos en los datos de la empresa; ante la duda, omítelo. NUNCA inventar un precio, número, descuento, oferta relámpago o plazo específico (ej: '$30', '48 horas', '2x1') que no esté escrito literalmente en SERVICIOS arriba — si no hay ningún precio real ahí, describí el beneficio sin inventar ninguna cifra. Tampoco menciones ninguna característica de ubicación, amenidad o servicio (ej: 'cerca de la playa', 'con piscina', 'vista al mar') que no esté respaldada por CIUDAD/geografía real o por SERVICIOS de arriba — un cliché típico del rubro nunca se asume, se verifica contra los datos reales de esta empresa puntual.\\n\\nResponde ÚNICAMENTE con el JSON, sin texto adicional.\") }}}], \"temperature\": 0.75, \"max_tokens\": 4000, \"reasoning_effort\": \"low\", \"response_format\": {\"type\": \"json_object\"}}",
+          "jsonBody": "={\"model\": \"openai/gpt-oss-120b\", \"messages\": [{\"role\": \"system\", \"content\": \"Escribe TODO el contenido en el idioma indicado como IDIOMA YA DETERMINADO en el mensaje del usuario, y respeta siempre la VOZ DE MARCA que se indica ahí.\\n\\nEres un experto en marketing digital y copywriting, adaptado al rubro real de cada empresa. Tu especialidad es crear contenido auténtico, persuasivo y orientado a conversión para redes sociales. Siempre respondes en formato JSON válido sin texto adicional.\"}, {\"role\": \"user\", \"content\": {{ JSON.stringify(\"Crea un post para redes sociales para la siguiente empresa (en el idioma y con la voz de marca indicados justo abajo):\\n\\n\" + (\"IDIOMA YA DETERMINADO PARA ESTE POST (no lo vuelvas a inferir, usá exactamente este): \" + $('🔧 Preparar Contexto para IA').item.json.idioma_requerido + \". Escribe absolutamente TODO el contenido en ese idioma exacto, sin excepción, sin importar en qué idioma esté redactada cualquier otra parte de este mensaje.\\n\\n\") + $('🔧 Preparar Contexto para IA').item.json.bloque_voz + \"\\n**AUDIENCIA:** \" + ($('🔧 Preparar Contexto para IA').item.json.estrategia_audiencia || '') + \"\\n\\n**EMPRESA:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_nombre + \"\\n**DESCRIPCIÓN:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_descripcion + \"\\n**PROPUESTA DE VALOR:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_propuesta_valor + \"\\n**CIUDAD:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_ciudad + \"\\n**WEB:** \" + $('🔧 Preparar Contexto para IA').item.json.empresa_web + \"\\n**SERVICIOS:**\\n\" + $('🔧 Preparar Contexto para IA').item.json.servicios_resumen + \"\\n**CTA PRINCIPAL (usa esta URL si existe):** \" + ($('🔧 Preparar Contexto para IA').item.json.estrategia_cta || '') + \"\\n\\n**TEMA DE ESTA SEMANA:** \" + $('🔧 Preparar Contexto para IA').item.json.tema_texto + \"\\n**DESCRIPCIÓN DEL TEMA:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_descripcion || '') + \"\\n**PALABRAS CLAVE:** \" + ($('🔧 Preparar Contexto para IA').item.json.tema_palabras_clave || '') + \"\\n\\nDevuelve un JSON con los siguientes campos:\\n- hook: primera frase impactante máximo 12 palabras\\n- mensaje: cuerpo del mensaje 2-3 párrafos máximo 180 palabras\\n- cta: llamada a la acción máximo 15 palabras, SIEMPRE terminando con una URL completa y clicable — usa exactamente el CTA PRINCIPAL indicado arriba\\n- hashtags: 10 hashtags comenzando con #, con palabras reales y completas del mismo idioma del post: nunca mezcles idiomas dentro de un hashtag ni inventes abreviaturas\\n- texto_canva_titulo: título visual máximo 8 palabras EN MAYÚSCULAS\\n- texto_canva_subtitulo: subtítulo máximo 15 palabras\\n- mensaje_linkedin: el MISMO contenido (mismo hook y mismos datos; SIN el CTA ni los hashtags al final, que se agregan aparte) reescrito en tono profesional de LinkedIn (sin cambiar el trato, el idioma ni la personalidad de la VOZ DE MARCA) — sin emojis, sin exclamaciones de venta directa, estilo thought-leadership B2B como si lo publicara un directivo comentando una tendencia del sector, no un anuncio. 2-3 párrafos, máx 200 palabras, mismo idioma que el resto del post.\\n\\nNUNCA inventes hechos sin números: instalaciones o lugares (almacén, bodega, flota), equipos o maquinaria, procesos que la empresa haría por sí misma, testimonios o reseñas, clientes con nombre, premios, años de experiencia ni garantías que no estén escritos en los datos de la empresa; ante la duda, omítelo. NUNCA inventar un precio, número, descuento, oferta relámpago o plazo específico (ej: '$30', '48 horas', '2x1') que no esté escrito literalmente en SERVICIOS arriba — si no hay ningún precio real ahí, describí el beneficio sin inventar ninguna cifra. Tampoco menciones ninguna característica de ubicación, amenidad o servicio (ej: 'cerca de la playa', 'con piscina', 'vista al mar') que no esté respaldada por CIUDAD/geografía real o por SERVICIOS de arriba — un cliché típico del rubro nunca se asume, se verifica contra los datos reales de esta empresa puntual.\\n\\nResponde ÚNICAMENTE con el JSON, sin texto adicional.\") }}}], \"temperature\": 0.75, \"max_tokens\": 4000, \"reasoning_effort\": \"low\", \"response_format\": {\"type\": \"json_object\"}}",
           "options": {}
         },
-        "id": "grok-post-es",
-        "name": "🤖 Groq: Post Español (Fallback)",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          2512,
-          304
-        ],
         "credentials": {
           "groqApi": {
             "id": "jORffbRhRNohHT1B",
             "name": "Groq API"
           }
-        },
-        "onError": "continueRegularOutput"
+        }
       },
       {
-        "parameters": {
-          "jsCode": "const aiResponse = $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text || $input.item.json.choices?.[0]?.message?.content || '{}';\nlet post;\ntry {\n  post = JSON.parse(aiResponse);\n} catch(e) {\n  const match = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  post = match ? JSON.parse(match[0]) : {};\n}\n\nconst contexto = $('🔧 Preparar Contexto para IA').item.json;\n\n// Normalizar hashtags: array → string\nconst rawHashtags = post.hashtags || '';\nconst hashtags = Array.isArray(rawHashtags) ? rawHashtags.join(' ') : rawHashtags;\n\n// Garantizar URL en el CTA (por si la IA no lo incluye) — SOLO con datos reales de ESTA empresa\n// (contexto.estrategia_cta ya resuelve estrategia.cta_principal || empresa.website en 🔧 Preparar Contexto para IA).\n// Nunca se rellena con el dato de otra empresa: si no hay nada configurado, se marca como pendiente\n// en vez de inventar un link, y se dispara una alerta aparte para que se configure.\nconst QUOTE_URL = contexto.estrategia_cta || '';\nlet cta = post.cta || '';\nlet ctaSinConfigurar = false;\nif (!cta.includes('http') && !cta.includes('wa.me')) {\n  if (QUOTE_URL) {\n    cta = cta.trim() + ' → ' + QUOTE_URL;\n  } else {\n    cta = cta.trim() + ' [CTA PENDIENTE — falta configurar cta_principal o sitio web en G54]';\n    ctaSinConfigurar = true;\n  }\n}\n\n// Retirado 16-sep, a pedido explícito de la usuaria: el CTA de Facebook mostraba el link\n// envuelto en nuestro propio dominio (n8n.mdarthurdigital.com/webhook/cta-click-g54?...) en vez\n// del link real de la página — se veía técnico/sospechoso para un cliente final, exponía\n// infraestructura interna. El CTA ahora usa siempre el destino real, sin ningún wrapper —\n// mismo criterio ya aplicado a LinkedIn desde el 04-ago. Se pierde el conteo de clics reales\n// que alimentaba la sección \"Generación de Demanda\" del reporte de Analytics (ítem 213,\n// 04-ago) — trade-off aceptado explícitamente por la usuaria al pedir este cambio.\nconst platform = (contexto.tema_plataforma || 'Facebook').toLowerCase();\n\n// ---- Código de origen + WhatsApp real de la empresa (08-oct) ----\n// Cada post lleva un código corto (P + id de la idea, 1 idea = 1 post) para saber de qué\n// publicación viene cada cliente que escribe por WhatsApp: Marco lo reconoce y lo anota en el\n// trato del CRM. El número se resuelve en vivo para ESTA empresa (nunca fijo):\n// /api/whatsapp/config (sesión) → phone_number_id → empresa-by-phone (token de WhatsApp) →\n// Meta display_phone_number. Si cualquier paso falla, el post sale igual, sin la línea.\n// Facebook y LinkedIn: link wa.me con el código ya escrito. Instagram: los links del texto no\n// se pueden tocar, así que va el número y el código para escribir a mano.\nconst codigo_origen = contexto.tema_id ? ('P' + contexto.tema_id) : '';\nlet wa_display = '', wa_digits = '';\nif (codigo_origen) {\n  try {\n    const cfg = $('⚙️ Config Growth54').item.json;\n    const sesion = $('🔐 G54: Login Sesión').item.json.access_token;\n    const companyId = String(cfg.G54_COMPANY_ID);\n    const waCfgRaw = await this.helpers.httpRequest({ url: cfg.G54_BASE_URL + '/api/whatsapp/config', headers: { Authorization: 'Bearer ' + sesion, Accept: 'application/json' }, json: true, timeout: 8000 });\n    const waCfg = waCfgRaw.data || waCfgRaw || {};\n    // la sesión es compartida entre agentes: solo se usa si es de esta misma empresa\n    if (waCfg.phone_number_id && String(waCfg.company_id) === companyId) {\n      const emp = await this.helpers.httpRequest({ url: cfg.G54_BASE_URL + '/api/agent/wa/empresa-by-phone/' + waCfg.phone_number_id, headers: { Authorization: 'Bearer ' + cfg.G54_AGENT_TOKEN, Accept: 'application/json' }, json: true, timeout: 8000 });\n      const e = emp.data || emp || {};\n      if (e.wa_access_token && String(e.company_id) === companyId) {\n        const meta = await this.helpers.httpRequest({ url: 'https://graph.facebook.com/v19.0/' + waCfg.phone_number_id + '?fields=display_phone_number&access_token=' + encodeURIComponent(e.wa_access_token), json: true, timeout: 8000 });\n        wa_display = meta.display_phone_number || '';\n        wa_digits = wa_display.replace(/\\D/g, '');\n      }\n    }\n  } catch (e) { wa_display = ''; wa_digits = ''; }\n}\nconst enIngles = contexto.idioma_requerido === 'ENGLISH';\nconst lineaWaLink = wa_digits ? ('💬 WhatsApp ' + wa_display + ' (' + (enIngles ? 'code' : 'código') + ' ' + codigo_origen + '): https://wa.me/' + wa_digits + '?text=' + encodeURIComponent((enIngles ? 'Hi ' : 'Hola ') + codigo_origen)) : '';\nconst lineaWaTexto = wa_digits ? ('💬 WhatsApp ' + wa_display + ' · ' + (enIngles ? 'code' : 'código') + ' ' + codigo_origen) : '';\n// Retirado el 20-oct a pedido de la usuaria: los posts ya no llevan el número de WhatsApp ni el código P.\nconst lineaWa = '';\n\n// LinkedIn — mismo hook/CTA, cuerpo reescrito en tono profesional (PASO 9 del prompt).\n// Si la IA no lo devuelve (ej. respaldo de Groq viejo sin actualizar), cae al texto de Facebook\n// en vez de dejar el campo vacío — mejor un texto real con tono no ideal que ningún texto.\n// A veces la IA empieza el mensaje repitiendo el hook tal cual — como el texto final se arma\n// \"hook + mensaje\", el título quedaba duplicado al inicio del post (#152/#159/#170, fix 28-sep).\nconst _norm = s => (s || '').trim().replace(/[\\s.!?¡¿:–—-]+$/, '').toLowerCase();\nconst sinHookRepetido = (msg) => {\n  const h = _norm(post.hook); let m = (msg || '').trim();\n  const lineas = m.split('\\n');\n  if (h && _norm(lineas[0]) === h) m = lineas.slice(1).join('\\n').trim();\n  return m;\n};\nconst mensajeLinkedin = sinHookRepetido(post.mensaje_linkedin || post.mensaje || '');\n// LinkedIn nunca usa el CTA con tracker — a diferencia de Facebook, acá el link SÍ se\n// vuelve clicable, pero LinkedIn genera su propia vista previa (Open Graph) del link que\n// aparece en el post, y nuestro webhook de redirect no tiene una página real que mostrar —\n// quedaría un link crudo a n8n.mdarthurdigital.com, exponiendo infraestructura interna en\n// un post profesional B2B. Se usa siempre el destino real, nunca el trackeado.\nconst ctaLinkedin = QUOTE_URL ? cta.replace(/https:\\/\\/n8n\\.mdarthurdigital\\.com\\/webhook\\/cta-click-g54[^\\s]*/, QUOTE_URL) : cta;\nconst post_completo_linkedin = [post.hook || '', mensajeLinkedin, ctaLinkedin].filter(Boolean).join('\\n\\n');\n\nreturn [{\n  json: {\n    ...contexto,\n    hook_es: post.hook || '',\n    mensaje_es: sinHookRepetido(post.mensaje),\n    cta_es: cta,\n    hashtags: hashtags,\n    post_completo_es: [post.hook || '', sinHookRepetido(post.mensaje), cta, lineaWa].filter(Boolean).join('\\n\\n'),\n    codigo_origen,\n    wa_display,\n    post_completo_linkedin,\n    hashtags_es: hashtags,\n    texto_canva_titulo: post.texto_canva_titulo || '',\n    texto_canva_subtitulo: post.texto_canva_subtitulo || '',\n    ctaSinConfigurar\n  }\n}];\n"
-        },
         "id": "parsear-post-es",
         "name": "🔍 Parsear Post Español",
         "type": "n8n-nodes-base.code",
@@ -1671,9 +1668,20 @@
         "position": [
           2624,
           80
-        ]
+        ],
+        "parameters": {
+          "jsCode": "const aiResponse = $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text || $input.item.json.choices?.[0]?.message?.content || '{}';\nlet post;\ntry {\n  post = JSON.parse(aiResponse);\n} catch(e) {\n  const match = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  post = match ? JSON.parse(match[0]) : {};\n}\n\nconst contexto = $('🔧 Preparar Contexto para IA').item.json;\n\n// Normalizar hashtags: array → string\nconst rawHashtags = post.hashtags || '';\nconst hashtags = Array.isArray(rawHashtags) ? rawHashtags.join(' ') : rawHashtags;\n\n// Garantizar URL en el CTA (por si la IA no lo incluye) — SOLO con datos reales de ESTA empresa\n// (contexto.estrategia_cta ya resuelve estrategia.cta_principal || empresa.website en 🔧 Preparar Contexto para IA).\n// Nunca se rellena con el dato de otra empresa: si no hay nada configurado, se marca como pendiente\n// en vez de inventar un link, y se dispara una alerta aparte para que se configure.\nconst QUOTE_URL = contexto.estrategia_cta || '';\nlet cta = post.cta || '';\nlet ctaSinConfigurar = false;\nif (!cta.includes('http') && !cta.includes('wa.me')) {\n  if (QUOTE_URL) {\n    cta = cta.trim() + ' → ' + QUOTE_URL;\n  } else {\n    cta = cta.trim() + ' [CTA PENDIENTE — falta configurar cta_principal o sitio web en G54]';\n    ctaSinConfigurar = true;\n  }\n}\n\n// Retirado 16-sep, a pedido explícito de la usuaria: el CTA de Facebook mostraba el link\n// envuelto en nuestro propio dominio (n8n.mdarthurdigital.com/webhook/cta-click-g54?...) en vez\n// del link real de la página — se veía técnico/sospechoso para un cliente final, exponía\n// infraestructura interna. El CTA ahora usa siempre el destino real, sin ningún wrapper —\n// mismo criterio ya aplicado a LinkedIn desde el 04-ago. Se pierde el conteo de clics reales\n// que alimentaba la sección \"Generación de Demanda\" del reporte de Analytics (ítem 213,\n// 04-ago) — trade-off aceptado explícitamente por la usuaria al pedir este cambio.\nconst platform = (contexto.tema_plataforma || 'Facebook').toLowerCase();\n\n// ---- Código de origen + WhatsApp real de la empresa (08-oct) ----\n// Cada post lleva un código corto (P + id de la idea, 1 idea = 1 post) para saber de qué\n// publicación viene cada cliente que escribe por WhatsApp: Marco lo reconoce y lo anota en el\n// trato del CRM. El número se resuelve en vivo para ESTA empresa (nunca fijo):\n// /api/whatsapp/config (sesión) → phone_number_id → empresa-by-phone (token de WhatsApp) →\n// Meta display_phone_number. Si cualquier paso falla, el post sale igual, sin la línea.\n// Facebook y LinkedIn: link wa.me con el código ya escrito. Instagram: los links del texto no\n// se pueden tocar, así que va el número y el código para escribir a mano.\nconst codigo_origen = contexto.tema_id ? ('P' + contexto.tema_id) : '';\nlet wa_display = '', wa_digits = '';\nif (codigo_origen) {\n  try {\n    const cfg = $('⚙️ Config Growth54').item.json;\n    const sesion = $('🔐 G54: Login Sesión').item.json.access_token;\n    const companyId = String(cfg.G54_COMPANY_ID);\n    const waCfgRaw = await this.helpers.httpRequest({ url: cfg.G54_BASE_URL + '/api/whatsapp/config', headers: { Authorization: 'Bearer ' + sesion, Accept: 'application/json' }, json: true, timeout: 8000 });\n    const waCfg = waCfgRaw.data || waCfgRaw || {};\n    // la sesión es compartida entre agentes: solo se usa si es de esta misma empresa\n    if (waCfg.phone_number_id && String(waCfg.company_id) === companyId) {\n      const emp = await this.helpers.httpRequest({ url: cfg.G54_BASE_URL + '/api/agent/wa/empresa-by-phone/' + waCfg.phone_number_id, headers: { Authorization: 'Bearer ' + cfg.G54_AGENT_TOKEN, Accept: 'application/json' }, json: true, timeout: 8000 });\n      const e = emp.data || emp || {};\n      if (e.wa_access_token && String(e.company_id) === companyId) {\n        const meta = await this.helpers.httpRequest({ url: 'https://graph.facebook.com/v19.0/' + waCfg.phone_number_id + '?fields=display_phone_number&access_token=' + encodeURIComponent(e.wa_access_token), json: true, timeout: 8000 });\n        wa_display = meta.display_phone_number || '';\n        wa_digits = wa_display.replace(/\\D/g, '');\n      }\n    }\n  } catch (e) { wa_display = ''; wa_digits = ''; }\n}\nconst enIngles = contexto.idioma_requerido === 'ENGLISH';\nconst lineaWaLink = wa_digits ? ('💬 WhatsApp ' + wa_display + ' (' + (enIngles ? 'code' : 'código') + ' ' + codigo_origen + '): https://wa.me/' + wa_digits + '?text=' + encodeURIComponent((enIngles ? 'Hi ' : 'Hola ') + codigo_origen)) : '';\nconst lineaWaTexto = wa_digits ? ('💬 WhatsApp ' + wa_display + ' · ' + (enIngles ? 'code' : 'código') + ' ' + codigo_origen) : '';\n// Retirado el 20-oct a pedido de la usuaria: los posts ya no llevan el número de WhatsApp ni el código P.\nconst lineaWa = '';\n\n// LinkedIn — mismo hook/CTA, cuerpo reescrito en tono profesional (PASO 9 del prompt).\n// Si la IA no lo devuelve (ej. respaldo de Groq viejo sin actualizar), cae al texto de Facebook\n// en vez de dejar el campo vacío — mejor un texto real con tono no ideal que ningún texto.\n// A veces la IA empieza el mensaje repitiendo el hook tal cual — como el texto final se arma\n// \"hook + mensaje\", el título quedaba duplicado al inicio del post (#152/#159/#170, fix 28-sep).\nconst _norm = s => (s || '').trim().replace(/[\\s.!?¡¿:–—-]+$/, '').toLowerCase();\nconst sinHookRepetido = (msg) => {\n  const h = _norm(post.hook); let m = (msg || '').trim();\n  const lineas = m.split('\\n');\n  if (h && _norm(lineas[0]) === h) m = lineas.slice(1).join('\\n').trim();\n  return m;\n};\n// A veces la IA cierra el mensaje con su propio CTA (\"Descubre más y solicita tu cotización\n// aquí\") y abajo se agrega el CTA real: la frase salía dos veces (posts 200, 202 y 205; fix 27-oct).\n// Se sacan del final las líneas que repiten el CTA (mismo texto o mismo link) o que son solo hashtags.\nconst _plano = s => (s || '').toLowerCase().replace(/https?:\\/\\/\\S+/g, ' ').replace(/[^\\p{L}\\p{N}]+/gu, ' ').trim();\nconst ctaPlano = _plano(cta);\nconst sinCtaRepetido = (msg) => {\n  const lineas = (msg || '').trim().split('\\n');\n  while (lineas.length > 1) {\n    const ult = lineas[lineas.length - 1].trim();\n    const p = _plano(ult);\n    const repiteCta = p.length >= 12 && ctaPlano && (ctaPlano.includes(p) || p.includes(ctaPlano));\n    const repiteLink = QUOTE_URL && ult.includes(QUOTE_URL);\n    const soloHashtags = /^(#\\S+\\s*)+$/.test(ult);\n    if (!ult || repiteCta || repiteLink || soloHashtags) lineas.pop(); else break;\n  }\n  return lineas.join('\\n').trim();\n};\nconst mensajeLinkedin = sinCtaRepetido(sinHookRepetido(post.mensaje_linkedin || post.mensaje || ''));\n// LinkedIn nunca usa el CTA con tracker — a diferencia de Facebook, acá el link SÍ se\n// vuelve clicable, pero LinkedIn genera su propia vista previa (Open Graph) del link que\n// aparece en el post, y nuestro webhook de redirect no tiene una página real que mostrar —\n// quedaría un link crudo a n8n.mdarthurdigital.com, exponiendo infraestructura interna en\n// un post profesional B2B. Se usa siempre el destino real, nunca el trackeado.\nconst ctaLinkedin = QUOTE_URL ? cta.replace(/https:\\/\\/n8n\\.mdarthurdigital\\.com\\/webhook\\/cta-click-g54[^\\s]*/, QUOTE_URL) : cta;\nconst post_completo_linkedin = [post.hook || '', mensajeLinkedin, ctaLinkedin].filter(Boolean).join('\\n\\n');\n\nreturn [{\n  json: {\n    ...contexto,\n    hook_es: post.hook || '',\n    mensaje_es: sinCtaRepetido(sinHookRepetido(post.mensaje)),\n    cta_es: cta,\n    hashtags: hashtags,\n    post_completo_es: [post.hook || '', sinCtaRepetido(sinHookRepetido(post.mensaje)), cta, lineaWa].filter(Boolean).join('\\n\\n'),\n    codigo_origen,\n    wa_display,\n    post_completo_linkedin,\n    hashtags_es: hashtags,\n    texto_canva_titulo: post.texto_canva_titulo || '',\n    texto_canva_subtitulo: post.texto_canva_subtitulo || '',\n    ctaSinConfigurar\n  }\n}];\n"
+        }
       },
       {
+        "id": "crear-registro-airtable",
+        "name": "💾 Crear Registro en G54",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3312,
+          304
+        ],
         "parameters": {
           "method": "POST",
           "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/agent/rrss/posts' }}",
@@ -1698,17 +1706,19 @@
           "specifyBody": "json",
           "jsonBody": "={{ JSON.stringify({\n  \"company_id\": $('⚙️ Config Growth54').item.json.G54_COMPANY_ID,\n  \"posts\": [{\n    \"tema\": $('🔧 Preparar Contexto para IA').item.json.tema_texto || '',\n    \"platform\": $('🔧 Preparar Contexto para IA').item.json.tema_plataforma || 'all',\n    \"social_idea_id\": $('🔧 Preparar Contexto para IA').item.json.tema_id || null,\n    \"copy_instagram\": ($('🔍 Parsear Post Español').item.json.post_completo_es || $('🔍 Parsear Post Español').item.json.hook_es || '') + '\\n' + ($('🔍 Parsear Post Español').item.json.hashtags_es || ''),\n    \"copy_facebook\": ($('🔍 Parsear Post Español').item.json.post_completo_es || $('🔍 Parsear Post Español').item.json.hook_es || '') + '\\n' + ($('🔍 Parsear Post Español').item.json.hashtags_es || ''),\n    \"copy_linkedin\": ($('🔍 Parsear Post Español').item.json.post_completo_linkedin || '') + '\\n' + ($('🔍 Parsear Post Español').item.json.hashtags_es || ''),\n    \"hooks\": [$('🔍 Parsear Post Español').item.json.hook_es || ''].filter(Boolean),\n    \"cta\": $('🔍 Parsear Post Español').item.json.cta_es || '',\n    \"imagen_url\": $('🖼️ Obtener URL de Imagen').item.json.imagen_url || null,\n    \"status\": \"borrador\",\n    \"imagen_prompt\": $('🔍 Parsear Post Español').item.json.texto_canva_titulo || ''\n  }]\n}) }}",
           "options": {}
-        },
-        "id": "crear-registro-airtable",
-        "name": "💾 Crear Registro en G54",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          3312,
-          304
-        ]
+        }
       },
       {
+        "id": "actualizar-tema-en-proceso",
+        "name": "🔄 Tema → En Proceso",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "continueOnFail": true,
+        "onError": "continueRegularOutput",
+        "position": [
+          3488,
+          304
+        ],
         "parameters": {
           "method": "PUT",
           "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/rrss/ideas/' + $('🔧 Preparar Contexto para IA').item.json.tema_id + '/status' }}",
@@ -1733,19 +1743,17 @@
           "specifyBody": "json",
           "jsonBody": "{\"status\": \"procesando\"}",
           "options": {}
-        },
-        "id": "actualizar-tema-en-proceso",
-        "name": "🔄 Tema → En Proceso",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          3488,
-          304
-        ],
-        "continueOnFail": true,
-        "onError": "continueRegularOutput"
+        }
       },
       {
+        "id": "wp-buscar-imagen",
+        "name": "🖼️ Obtener URL de Imagen",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          3696,
+          304
+        ],
         "parameters": {
           "assignments": {
             "assignments": [
@@ -1758,17 +1766,17 @@
             ]
           },
           "options": {}
-        },
-        "id": "wp-buscar-imagen",
-        "name": "🖼️ Obtener URL de Imagen",
+        }
+      },
+      {
+        "id": "config-g54",
+        "name": "⚙️ Config Growth54",
         "type": "n8n-nodes-base.set",
         "typeVersion": 3.4,
         "position": [
-          3696,
+          704,
           304
-        ]
-      },
-      {
+        ],
         "parameters": {
           "assignments": {
             "assignments": [
@@ -1823,43 +1831,35 @@
             ]
           },
           "options": {}
-        },
-        "id": "config-g54",
-        "name": "⚙️ Config Growth54",
-        "type": "n8n-nodes-base.set",
-        "typeVersion": 3.4,
-        "position": [
-          704,
-          304
-        ]
+        }
       },
       {
-        "parameters": {
-          "httpMethod": "POST",
-          "path": "rrss-automation-g54",
-          "responseMode": "responseNode",
-          "options": {}
-        },
         "id": "webhook-g54-rrss",
         "name": "🔔 Webhook G54",
+        "webhookId": "72f3bfda-c352-455b-8e4a-cccbcab00981",
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 2,
         "position": [
           80,
           304
         ],
-        "webhookId": "72f3bfda-c352-455b-8e4a-cccbcab00981"
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "rrss-automation-g54",
+          "responseMode": "responseNode",
+          "options": {}
+        }
       },
       {
         "id": "obtener-estrategia-g54",
         "name": "🎯 Obtener Estrategia RRSS",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
+        "continueOnFail": true,
         "position": [
           880,
           304
         ],
-        "continueOnFail": true,
         "parameters": {
           "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/n8n/companies/' + $('⚙️ Config Growth54').item.json.G54_COMPANY_ID + '/rrss/estrategia' }}",
           "sendHeaders": true,
@@ -1882,11 +1882,12 @@
         "id": "g54-login-content-ai",
         "name": "🔐 G54: Login Sesión",
         "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
         "position": [
           3280,
           220
         ],
-        "typeVersion": 4.2,
         "parameters": {
           "method": "POST",
           "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/auth/login",
@@ -1903,18 +1904,18 @@
           "specifyBody": "json",
           "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config Growth54').item.json.G54_MASTER_EMAIL, password: $('⚙️ Config Growth54').item.json.G54_MASTER_PASSWORD }) }}",
           "options": {}
-        },
-        "onError": "continueRegularOutput"
+        }
       },
       {
         "id": "g54-switch-company-content-ai",
         "name": "🏢 G54: Cambiar Empresa Activa",
         "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
         "position": [
           3384,
           220
         ],
-        "typeVersion": 4.2,
         "parameters": {
           "method": "POST",
           "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/auth/switch-company",
@@ -1931,18 +1932,18 @@
           "specifyBody": "json",
           "jsonBody": "={{ JSON.stringify({ company_id: Number($('⚙️ Config Growth54').item.json.G54_COMPANY_ID) }) }}",
           "options": {}
-        },
-        "onError": "continueRegularOutput"
+        }
       },
       {
         "id": "g54-check-existing-posts",
         "name": "📋 Obtener Posts Existentes (G54)",
         "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
         "position": [
           3488,
           220
         ],
-        "typeVersion": 4.2,
         "parameters": {
           "method": "GET",
           "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/rrss/posts",
@@ -1956,18 +1957,18 @@
             ]
           },
           "options": {}
-        },
-        "onError": "continueRegularOutput"
+        }
       },
       {
         "id": "g54-find-new-post",
         "name": "📋 Buscar Post Nuevo (G54)",
         "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
         "position": [
           4200,
           220
         ],
-        "typeVersion": 4.2,
         "parameters": {
           "method": "GET",
           "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL }}/api/rrss/posts",
@@ -1981,18 +1982,17 @@
             ]
           },
           "options": {}
-        },
-        "onError": "continueRegularOutput"
+        }
       },
       {
         "id": "g54-match-post-idea",
         "name": "🔍 Encontrar Post por Idea",
         "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
         "position": [
           4420,
           220
         ],
-        "typeVersion": 2,
         "parameters": {
           "jsCode": "const postsRaw = $('📋 Buscar Post Nuevo (G54)').item.json;\nconst postsList = postsRaw.data || (Array.isArray(postsRaw) ? postsRaw : []);\n\nconst temaId = $('🔧 Preparar Contexto para IA').item.json.tema_id;\n\nconst candidatos = postsList.filter(p => p.social_idea_id === temaId);\n// Si hay más de uno (no debería, pero por seguridad) tomamos el más reciente\ncandidatos.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));\nconst post = candidatos[0] || null;\n\nif (!post) {\n  return [{ json: { encontrado: false, post_id: null } }];\n}\n\nreturn [{ json: {\n  encontrado: true,\n  post_id: post.id,\n  platform: post.platform,\n  company_id: $('⚙️ Config Growth54').item.json.G54_COMPANY_ID,\n}}];\n"
         }
@@ -2001,11 +2001,12 @@
         "id": "g54-trigger-image-gen",
         "name": "🖼️ Generar Imagen (Image Generator AI)",
         "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
         "position": [
           4640,
           220
         ],
-        "typeVersion": 4.2,
         "parameters": {
           "method": "POST",
           "url": "https://n8n.mdarthurdigital.com/webhook/generar-imagen",
@@ -2024,8 +2025,7 @@
           "options": {
             "timeout": 90000
           }
-        },
-        "onError": "continueRegularOutput"
+        }
       },
       {
         "id": "if-cta-sin-configurar",
@@ -2063,13 +2063,14 @@
       {
         "id": "alert-cta-email",
         "name": "📧 Alertar CTA sin Configurar",
+        "webhookId": "31bcc536-766f-4794-8eac-f7d4edff0ef2",
         "type": "n8n-nodes-base.emailSend",
         "typeVersion": 2.1,
+        "onError": "continueRegularOutput",
         "position": [
           2400,
           620
         ],
-        "onError": "continueRegularOutput",
         "parameters": {
           "fromEmail": "Alerta G54 <risosadmi@gmail.com>",
           "toEmail": "risosadmi@gmail.com",
@@ -2085,10 +2086,17 @@
             "id": "iWBBSSe5AWsCMo89",
             "name": "Gmail SMTP — risosadmi"
           }
-        },
-        "webhookId": "31bcc536-766f-4794-8eac-f7d4edff0ef2"
+        }
       },
       {
+        "id": "if-mode-ideas",
+        "name": "🔀 ¿Mode = Ideas?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          304,
+          140
+        ],
         "parameters": {
           "conditions": {
             "options": {
@@ -2110,17 +2118,17 @@
             "combinator": "and"
           },
           "options": {}
-        },
-        "id": "if-mode-ideas",
-        "name": "🔀 ¿Mode = Ideas?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2,
-        "position": [
-          304,
-          140
-        ]
+        }
       },
       {
+        "id": "reenviar-ideas-ai",
+        "name": "🔗 Reenviar a Ideas AI",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          528,
+          60
+        ],
         "parameters": {
           "method": "POST",
           "url": "https://n8n.mdarthurdigital.com/webhook/ideas-ai-g54",
@@ -2139,22 +2147,9 @@
           "options": {
             "timeout": 25000
           }
-        },
-        "id": "reenviar-ideas-ai",
-        "name": "🔗 Reenviar a Ideas AI",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          528,
-          60
-        ]
+        }
       },
       {
-        "parameters": {
-          "respondWith": "json",
-          "responseBody": "={{ $json }}",
-          "options": {}
-        },
         "id": "responder-modo-ideas",
         "name": "📤 Responder Modo Ideas",
         "type": "n8n-nodes-base.respondToWebhook",
@@ -2162,14 +2157,14 @@
         "position": [
           752,
           60
-        ]
-      },
-      {
+        ],
         "parameters": {
           "respondWith": "json",
-          "responseBody": "={{ JSON.stringify({ ok: true, mode: 'post', message: 'Generando post, disponible en unos segundos.' }) }}",
+          "responseBody": "={{ $json }}",
           "options": {}
-        },
+        }
+      },
+      {
         "id": "responder-modo-post",
         "name": "📤 Responder Modo Post (Fire-and-Forget)",
         "type": "n8n-nodes-base.respondToWebhook",
@@ -2177,9 +2172,23 @@
         "position": [
           528,
           260
-        ]
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ ok: true, mode: 'post', message: 'Generando post, disponible en unos segundos.' }) }}",
+          "options": {}
+        }
       },
       {
+        "id": "marcar-idea-usada",
+        "name": "🔖 G54: Marcar Idea como Usada",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "position": [
+          3312,
+          460
+        ],
         "parameters": {
           "method": "PUT",
           "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/rrss/ideas/' + $('🔧 Preparar Contexto para IA').item.json.tema_id + '/status' }}",
@@ -2204,18 +2213,17 @@
           "specifyBody": "json",
           "jsonBody": "={{ JSON.stringify({ status: 'usada' }) }}",
           "options": {}
-        },
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          3312,
-          460
-        ],
-        "id": "marcar-idea-usada",
-        "name": "🔖 G54: Marcar Idea como Usada",
-        "onError": "continueRegularOutput"
+        }
       },
       {
+        "id": "if-groq-ok-content",
+        "name": "🔀 ¿Groq OK? (ES)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          2512,
+          460
+        ],
         "parameters": {
           "conditions": {
             "options": {
@@ -2236,17 +2244,18 @@
               }
             ]
           }
-        },
-        "id": "if-groq-ok-content",
-        "name": "🔀 ¿Groq OK? (ES)",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2,
-        "position": [
-          2512,
-          460
-        ]
+        }
       },
       {
+        "id": "zhipu-fallback-content",
+        "name": "🤖 Zhipu: Fallback IA (ES)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "onError": "continueRegularOutput",
+        "position": [
+          2512,
+          610
+        ],
         "parameters": {
           "method": "POST",
           "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
@@ -2266,21 +2275,12 @@
           "authentication": "genericCredentialType",
           "genericAuthType": "httpHeaderAuth"
         },
-        "id": "zhipu-fallback-content",
-        "name": "🤖 Zhipu: Fallback IA (ES)",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          2512,
-          610
-        ],
         "credentials": {
           "httpHeaderAuth": {
             "id": "rWF3VkYbayILPZTH",
             "name": "Zhipu GLM � Fallback IA (G54)"
           }
-        },
-        "onError": "continueRegularOutput"
+        }
       },
       {
         "id": "if-lote-ideas",
@@ -2347,11 +2347,11 @@
         "name": "📤 Generar Post (Lote, self-dispatch)",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
+        "continueOnFail": true,
         "position": [
           640,
           540
         ],
-        "continueOnFail": true,
         "parameters": {
           "method": "POST",
           "url": "https://n8n.mdarthurdigital.com/webhook/rrss-automation-g54",
@@ -2370,6 +2370,14 @@
         }
       },
       {
+        "id": "a63dfb7f-8742-4482-9186-21ad4e14b60a",
+        "name": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          2622,
+          610
+        ],
         "parameters": {
           "conditions": {
             "options": {
@@ -2391,17 +2399,20 @@
             ]
           },
           "options": {}
-        },
-        "name": "🔀 ¿Zhipu respondió? (antes de OpenAI)",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2,
-        "position": [
-          2622,
-          610
-        ],
-        "id": "a63dfb7f-8742-4482-9186-21ad4e14b60a"
+        }
       },
       {
+        "id": "13243a21-b321-4be7-9078-331e36a96341",
+        "name": "🤖 OpenAI: Último Respaldo",
+        "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "alwaysOutputData": true,
+        "onError": "continueRegularOutput",
+        "position": [
+          2732,
+          810
+        ],
         "parameters": {
           "method": "POST",
           "url": "https://api.openai.com/v1/chat/completions",
@@ -2423,23 +2434,12 @@
             "timeout": 90000
           }
         },
-        "name": "🤖 OpenAI: Último Respaldo",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          2732,
-          810
-        ],
         "credentials": {
           "httpHeaderAuth": {
             "id": "hkeIUPcrRjD4F4KY",
             "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
           }
-        },
-        "onError": "continueRegularOutput",
-        "alwaysOutputData": true,
-        "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
-        "id": "13243a21-b321-4be7-9078-331e36a96341"
+        }
       }
     ],
     "connections": {
@@ -2814,16 +2814,16 @@
     "name": null,
     "description": null,
     "autosaved": false,
-    "createdAt": "2026-10-13T13:56:27.721Z",
-    "updatedAt": "2026-10-13T13:56:27.721Z",
+    "createdAt": "2026-10-27T14:44:48.852Z",
+    "updatedAt": "2026-10-27T14:44:48.852Z",
     "workflowPublishHistory": [
       {
-        "id": 3446,
+        "id": 3505,
         "workflowId": "wyO1f93A66imn9qw",
-        "versionId": "6b6978f4-b669-43c3-b02b-1fc73c62edd1",
+        "versionId": "9c432ac8-bb88-4c66-9767-07ddb7501e3d",
         "event": "activated",
         "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-10-13T13:56:28.226Z"
+        "createdAt": "2026-10-27T14:44:49.187Z"
       }
     ]
   }
