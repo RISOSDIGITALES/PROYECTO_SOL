@@ -52,7 +52,7 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 
 **De la usuaria (no se pueden hacer desde acá):** probar "Probar mi agente" con el agente de voz encendido (lo hace ella); reconectar Instagram de Crating Express (token vencido el 13-oct); avisar al vendedor que el estimado de Lu ($159) se hizo con medidas equivocadas; permisos de estadísticas de LinkedIn.
 
-**Del ingeniero:** los 16 pedidos (los 2 últimos, de vista previa de correo, agregados el 27-oct; falta revisar cuáles resolvió el 26-oct) de `PROYECTO-SOL/2026/09-G54/exodo-g54-oct13.html`.
+**Del ingeniero:** los 10 pedidos (revisado el 27-oct contra el panel `index-wpoZAdm_.js`: se sacaron 7 resueltos) de `PROYECTO-SOL/2026/09-G54/exodo-g54-oct13.html`.
 
 ## Qué es este proyecto
 
