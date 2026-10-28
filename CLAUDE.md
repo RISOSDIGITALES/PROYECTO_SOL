@@ -908,6 +908,16 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-10-28 (Miércoles)
+
+Arranqué con la rutina de G54 y revisé que el informe mensual ya comparara contra la línea base, y sí lo hace, pero encontré que guardaba en cero las métricas de Instagram, así que lo corregí. Después terminé a Jelly, la medusa animada que pidió el ingeniero, con base en Bubbli: le puse pupilas, se la pasé y las correcciones las hace él. En el medio me llegó un correo del Vigía: era una falla de DNS en el servidor, que no se puede arreglar desde acá porque es del servidor del ingeniero, así que le dejé el pedido y mientras tanto puse reintentos en Distribution para que no se pierda ninguna publicación.
+
+La mayor parte del día fue Prospección, que nunca había funcionado porque dependía de Google, que pide tarjeta, y no podemos usar tarjeta. Investigamos todas las opciones gratis, también Sunbiz y OpenStreetMap, y me quedé con Foursquare y Tavily, que me abrí con cuentas gratis. Rehicimos el agente para que busque clientes según el perfil de cada empresa y no a la competencia, como hacía antes, que no repita negocios y que guarde los teléfonos con código de país; la corrida real trajo dos agentes de carga reales con su correo. Al cambiar el formato de los teléfonos el CRM los duplicó, así que borré los repetidos y le pedí al ingeniero que el CRM compare los teléfonos en un solo formato. También calculamos cuánto aguanta gratis: unas 75 empresas de EE. UU. o 25 de Latinoamérica con 10 negocios por semana cada una.
+
+Cerré con Camila. Al revisar su pantalla encontré que el correo en frío tenía un texto fijo sobre embalaje que le habría llegado a los prospectos de cualquier empresa, y que el blog también les escribía a contactos que nunca nos pidieron nada. Ahora la IA redacta cada correo con el perfil de la empresa y en el idioma del prospecto, con un tope por corrida y un modo de prueba, y ya armé los dos primeros borradores reales, que quedan esperando aprobación. Al verlos en el panel me pareció inaceptable que el cliente tenga que editar código, así que sumé al Éxodo seis pedidos de Correo (la plantilla sin HTML, a quién se le manda y por qué, la fecha y hora de envío, la medición después de enviar y que el correo llegue) junto con los del DNS y los teléfonos, y ahí paré con todo subido.
+
+---
+
 ### 2026-10-27 (Martes)
 
 Arranqué con la rutina de G54 y todo estaba en orden, con una sorpresa: entró el primer contacto real desde el formulario de la web de Crating Express, que solo quedaba en la hoja de cálculo, así que lo conecté para que cada envío cree el trato en el CRM. También corregí que Content AI repetía la invitación a cotizar al final de los textos de LinkedIn, y revisé el documento de pedidos para el ingeniero contra lo que entregó ayer: saqué siete que ya están resueltos y agregué que necesitamos ver la vista previa completa de los correos y del pie en la configuración.
