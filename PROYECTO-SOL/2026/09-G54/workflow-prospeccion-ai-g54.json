@@ -1,56 +1,49 @@
 {
-  "id": "jg5SENgRpe2wLBTn",
   "name": "🔍 Camila G54 — Prospección",
-  "description": "Camila (Prospección) — busca negocios reales por zona/rubro de la empresa activa y los guarda como leads en el CRM de G54 (origen: prospeccion). Multiempresa, sin ningún dato de cliente hardcodeado. Hoy INACTIVO: falta una API key real de Google Places para poder buscar de verdad.",
-  "active": false,
-  "activeVersionId": null,
-  "createdAt": "2026-09-04T17:15:43.325Z",
-  "updatedAt": "2026-09-22T13:46:30.660Z",
-  "isArchived": false,
-  "versionId": "94f35db9-0038-4004-913f-35460a133340",
-  "versionCounter": 4,
-  "sourceWorkflowId": null,
-  "triggerCount": 0,
   "nodes": [
     {
       "id": "webhook",
       "name": "🔔 Webhook G54",
+      "webhookId": "prospeccion-g54-webhook",
       "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
       "position": [
         0,
         0
       ],
-      "typeVersion": 2,
       "parameters": {
         "path": "prospeccion-g54",
         "httpMethod": "POST",
         "responseMode": "responseNode",
         "options": {}
-      },
-      "webhookId": "prospeccion-g54-webhook"
+      }
     },
     {
       "id": "extraer-params",
       "name": "🔧 Extraer Parámetros",
       "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         220,
         0
       ],
-      "typeVersion": 2,
       "parameters": {
-        "jsCode": "const body = $input.item.json.body || $input.item.json;\nconst company_id = Number(body.company_id);\nif (!company_id) {\n  return [{ json: { error: true, motivo: 'Falta company_id en el body del webhook.' } }];\n}\nreturn [{ json: { company_id, error: false } }];"
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\nconst company_id = Number(body.company_id);\nif (!company_id) {\n  return [{ json: { error: true, motivo: 'Falta company_id en el body del webhook.' } }];\n}\n// Opcionales (28-oct): dry_run = buscar sin guardar nada en el CRM; limite = cuántos negocios\n// revisar (1 a 20, 8 por defecto); busqueda y zona = reemplazan lo que deduce la IA del perfil.\nconst dry_run = body.dry_run === true || body.dry_run === 'true';\nconst limite = Math.min(20, Math.max(1, Number(body.limite) || 8));\nconst busqueda = typeof body.busqueda === 'string' ? body.busqueda.trim() : '';\nconst zona = typeof body.zona === 'string' ? body.zona.trim() : '';\nreturn [{ json: { company_id, error: false, dry_run, limite, busqueda, zona } }];"
       }
     },
     {
       "id": "obtener-empresa",
       "name": "📊 Obtener Empresa",
       "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput",
       "position": [
         440,
         0
       ],
-      "typeVersion": 4.2,
       "parameters": {
         "method": "GET",
         "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/n8n/companies/' + $('🔧 Extraer Parámetros').item.json.company_id }}",
@@ -60,7 +53,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
             },
             {
               "name": "Accept",
@@ -68,31 +61,30 @@
             }
           ]
         }
-      },
-      "onError": "continueRegularOutput"
+      }
     },
     {
       "id": "construir-query",
       "name": "🔧 Construir Query de Búsqueda",
       "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         660,
         0
       ],
-      "typeVersion": 2,
       "parameters": {
-        "jsCode": "\nlet empresa = {};\ntry { empresa = $('📊 Obtener Empresa').item.json.data || {}; } catch (e) {}\n\nconst industry = (empresa.industry || '').trim();\nconst ciudad = (empresa.base_city || '').trim();\nconst geografia = (empresa.geography || '').trim();\nconst targetMarket = (empresa.target_market || '').trim();\n\n// keywords reales de la empresa (si existen) - se usa la primera como termino de busqueda\n// de negocio, nunca un rubro inventado por nosotros\nlet keyword = '';\ntry {\n  const kws = empresa.target_keywords;\n  if (Array.isArray(kws) && kws.length) keyword = String(kws[0]).trim();\n  else if (typeof kws === 'string' && kws.trim()) keyword = kws.split(',')[0].trim();\n} catch (e) {}\n\n// El termino de \"que buscar\" sale de la industria real, o si no existe, de la primera\n// keyword real, o si no existe, del target_market real. Nunca un valor inventado.\nconst termino = industry || keyword || targetMarket;\nconst lugar = ciudad || geografia;\n\nif (!termino) {\n  return [{ json: { valido: false, motivo: 'La empresa no tiene industry, target_keywords ni target_market configurados en G54 — no hay ningún dato real desde el cual construir una búsqueda.' } }];\n}\nif (!lugar) {\n  return [{ json: { valido: false, motivo: 'La empresa no tiene base_city ni geography configurados en G54 — no hay ninguna ciudad/zona real donde buscar.' } }];\n}\n\nconst query = termino + ' ' + lugar;\nreturn [{ json: { valido: true, query, termino, lugar } }];\n"
+        "jsCode": "\nconst perfil = $('🔧 Preparar Perfil para la IA').item.json;\nconst p = $('🔧 Extraer Parámetros').item.json;\nif (perfil.valido === false) return [{ json: { valido: false, motivo: perfil.motivo } }];\n\nlet ia = {};\ntry { ia = JSON.parse($json.choices[0].message.content); } catch (e) {}\nlet terminos = Array.isArray(ia.terminos) ? ia.terminos.map(t => String(t).trim()).filter(t => t && t.length <= 60).slice(0, 3) : [];\nif (p.busqueda) terminos = [p.busqueda];   // búsqueda escrita a mano: manda\nconst lugar = p.zona || (typeof ia.lugar === 'string' && ia.lugar.trim()) || perfil.lugar_perfil;\n\nif (!terminos.length) {\n  const err = $json.error ? (' Error de la IA: ' + JSON.stringify($json.error).slice(0, 200)) : '';\n  return [{ json: { valido: false, motivo: 'La IA no pudo deducir del perfil qué tipo de negocios buscar, y no se mandó una búsqueda a mano.' + err } }];\n}\nreturn [{ json: { valido: true, terminos, lugar, razon: ia.razon || '', query: terminos.join(' / ') + ' — ' + lugar } }];\n"
       }
     },
     {
       "id": "if-hay-query",
       "name": "🔀 ¿Hay Query Real?",
       "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
       "position": [
         880,
         0
       ],
-      "typeVersion": 2.2,
       "parameters": {
         "conditions": {
           "options": {
@@ -117,89 +109,14 @@
       }
     },
     {
-      "id": "config-busqueda",
-      "name": "⚙️ Config Búsqueda (Places + Hunter)",
-      "type": "n8n-nodes-base.set",
-      "position": [
-        1100,
-        -80
-      ],
-      "typeVersion": 3.4,
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "k1",
-              "name": "GOOGLE_PLACES_API_KEY",
-              "value": "",
-              "type": "string"
-            },
-            {
-              "id": "k2",
-              "name": "HUNTER_API_KEY",
-              "value": "REDACTED_HUNTER_API_KEY",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "places-buscar",
-      "name": "🌍 Google Places: Búsqueda",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [
-        1320,
-        -80
-      ],
-      "typeVersion": 4.2,
-      "parameters": {
-        "method": "GET",
-        "url": "https://maps.googleapis.com/maps/api/place/textsearch/json",
-        "options": {},
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "query",
-              "value": "={{ $('🔧 Construir Query de Búsqueda').item.json.query }}"
-            },
-            {
-              "name": "key",
-              "value": "={{ $json.GOOGLE_PLACES_API_KEY }}"
-            },
-            {
-              "name": "language",
-              "value": "es"
-            }
-          ]
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "chequear-places",
-      "name": "🔧 Chequear Respuesta de Places",
-      "type": "n8n-nodes-base.code",
-      "position": [
-        1540,
-        -80
-      ],
-      "typeVersion": 2,
-      "parameters": {
-        "jsCode": "\nconst resp = $json;\nconst status = resp.status || '';\n\nif (status === 'REQUEST_DENIED') {\n  return [{ json: { sinResultados: true, motivo: 'Google Places rechazó la búsqueda — falta configurar una API key real (GOOGLE_PLACES_API_KEY vacía o inválida). ' + (resp.error_message || '') } }];\n}\nif (status === 'OVER_QUERY_LIMIT') {\n  return [{ json: { sinResultados: true, motivo: 'Google Places devolvió OVER_QUERY_LIMIT — se agotó la cuota real de la API key configurada.' } }];\n}\nif (status !== 'OK' || !Array.isArray(resp.results) || resp.results.length === 0) {\n  return [{ json: { sinResultados: true, motivo: 'Google Places no encontró ningún negocio real para esta búsqueda (status: ' + status + ').' } }];\n}\nreturn resp.results.map(r => ({ json: r }));\n"
-      }
-    },
-    {
       "id": "if-sin-resultados",
       "name": "🔀 ¿Sin Resultados?",
       "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
       "position": [
         1760,
         -80
       ],
-      "typeVersion": 2.2,
       "parameters": {
         "conditions": {
           "options": {
@@ -224,479 +141,28 @@
       }
     },
     {
-      "id": "limitar-resultados",
-      "name": "✂️ Limitar Resultados",
-      "type": "n8n-nodes-base.limit",
-      "position": [
-        1980,
-        -180
-      ],
-      "typeVersion": 1,
-      "parameters": {
-        "maxItems": 8
-      }
-    },
-    {
-      "id": "places-detalles",
-      "name": "🔎 Google Places: Detalles",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [
-        2200,
-        -180
-      ],
-      "typeVersion": 4.2,
-      "parameters": {
-        "method": "GET",
-        "url": "https://maps.googleapis.com/maps/api/place/details/json",
-        "options": {},
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "place_id",
-              "value": "={{ $json.place_id }}"
-            },
-            {
-              "name": "fields",
-              "value": "name,formatted_phone_number,international_phone_number,website,formatted_address,rating"
-            },
-            {
-              "name": "key",
-              "value": "={{ $('⚙️ Config Búsqueda (Places + Hunter)').item.json.GOOGLE_PLACES_API_KEY }}"
-            },
-            {
-              "name": "language",
-              "value": "es"
-            }
-          ]
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
       "id": "formatear-lead",
       "name": "🧹 Formatear Lead",
       "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         2420,
         -180
       ],
-      "typeVersion": 2,
       "parameters": {
-        "jsCode": "\nconst r = $json.result || {};\nreturn [{ json: {\n  nombre: r.name || '',\n  direccion: r.formatted_address || '',\n  telefono: (r.international_phone_number || r.formatted_phone_number || '').replace(/\\s+/g, ' ').trim(),\n  web: r.website || '',\n  rating: r.rating || '',\n} }];\n"
-      }
-    },
-    {
-      "id": "if-tiene-contacto",
-      "name": "🔀 ¿Tiene Web o Teléfono?",
-      "type": "n8n-nodes-base.if",
-      "position": [
-        2640,
-        -180
-      ],
-      "typeVersion": 2.2,
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "id": "c1",
-              "leftValue": "={{ $json.web }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEquals"
-              }
-            },
-            {
-              "id": "c2",
-              "leftValue": "={{ $json.telefono }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEquals"
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "marcar-sin-contacto",
-      "name": "🚫 Marcar Sin Contacto",
-      "type": "n8n-nodes-base.code",
-      "position": [
-        2860,
-        -60
-      ],
-      "typeVersion": 2,
-      "parameters": {
-        "jsCode": "return [{ json: { descartado: true, motivo: 'Sin web ni teléfono real', nombre: $json.nombre } }];"
-      }
-    },
-    {
-      "id": "if-tiene-web",
-      "name": "🔀 ¿Tiene Web?",
-      "type": "n8n-nodes-base.if",
-      "position": [
-        2860,
-        -280
-      ],
-      "typeVersion": 2.2,
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "id": "c1",
-              "leftValue": "={{ $json.web }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEquals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "marcar-sin-web",
-      "name": "📵 Marcar Sin Web",
-      "type": "n8n-nodes-base.code",
-      "position": [
-        3080,
-        -140
-      ],
-      "typeVersion": 2,
-      "parameters": {
-        "jsCode": "return [{ json: { ...$json, email: '', origen_email: '' } }];"
-      }
-    },
-    {
-      "id": "hunter-buscar",
-      "name": "🔑 Hunter: Buscar Email",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [
-        3080,
-        -400
-      ],
-      "typeVersion": 4.2,
-      "parameters": {
-        "method": "GET",
-        "url": "https://api.hunter.io/v2/domain-search",
-        "options": {},
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "domain",
-              "value": "={{ $json.web.replace(/^https?:\\/\\/(www\\.)?/,'').replace(/\\/.*$/,'') }}"
-            },
-            {
-              "name": "api_key",
-              "value": "={{ $('⚙️ Config Búsqueda (Places + Hunter)').item.json.HUNTER_API_KEY }}"
-            }
-          ]
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "extraer-hunter",
-      "name": "📧 Extraer Email (Hunter)",
-      "type": "n8n-nodes-base.code",
-      "position": [
-        3300,
-        -400
-      ],
-      "typeVersion": 2,
-      "parameters": {
-        "jsCode": "\nconst lead = $('🧹 Formatear Lead').item.json;\nlet email = '';\ntry {\n  const emails = $json.data?.emails || [];\n  if (emails.length > 0) {\n    const sorted = [...emails].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));\n    email = sorted[0].value || '';\n  }\n} catch (e) {}\nreturn [{ json: { ...lead, email, origen_email: email ? 'hunter' : '' } }];\n"
-      }
-    },
-    {
-      "id": "if-encontro-hunter",
-      "name": "🔀 ¿Encontró Email (Hunter)?",
-      "type": "n8n-nodes-base.if",
-      "position": [
-        3520,
-        -400
-      ],
-      "typeVersion": 2.2,
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "id": "c1",
-              "leftValue": "={{ $json.email }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEquals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "scraping-contact",
-      "name": "🌐 Scraping: /contact",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [
-        3740,
-        -280
-      ],
-      "typeVersion": 4.2,
-      "parameters": {
-        "method": "GET",
-        "url": "={{ $('🧹 Formatear Lead').item.json.web.replace(/\\/+$/, '') + '/contact' }}",
-        "options": {}
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "extraer-contact",
-      "name": "📧 Extraer Email (/contact)",
-      "type": "n8n-nodes-base.code",
-      "position": [
-        3960,
-        -280
-      ],
-      "typeVersion": 2,
-      "parameters": {
-        "jsCode": "\nconst lead = $('🧹 Formatear Lead').item.json;\nlet html = '';\ntry {\n  const raw = $json.data !== undefined ? $json.data : $json;\n  html = typeof raw === 'string' ? raw : JSON.stringify(raw);\n} catch (e) {}\n\nlet mailtoEmails = [];\ntry {\n  const re = /href=[\"']mailto:([^\"'?\\s]+)/gi;\n  let m;\n  while ((m = re.exec(html)) !== null) {\n    if (m[1].includes('@')) mailtoEmails.push(m[1]);\n  }\n} catch (e) {}\n\nlet regexEmails = [];\ntry {\n  regexEmails = html.match(/[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}/g) || [];\n} catch (e) {}\n\nconst blacklist = ['example', 'sentry', 'wixpress', 'yourdomain', 'schema',\n                    'placeholder', 'noreply', 'no-reply', 'webmaster@'];\nconst all = [...new Set([...mailtoEmails, ...regexEmails])];\nconst emails = all.filter(e => {\n  const l = e.toLowerCase();\n  return !blacklist.some(b => l.includes(b))\n    && !l.endsWith('.js') && !l.endsWith('.css')\n    && !l.endsWith('.png') && !l.endsWith('.jpg') && !l.endsWith('.gif');\n});\n\nreturn [{ json: { ...lead, email: emails[0] || '', origen_email: emails[0] ? 'scraping_contact' : '' } }];\n"
-      }
-    },
-    {
-      "id": "if-encontro-contact",
-      "name": "🔀 ¿Encontró Email (/contact)?",
-      "type": "n8n-nodes-base.if",
-      "position": [
-        4180,
-        -280
-      ],
-      "typeVersion": 2.2,
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "id": "c1",
-              "leftValue": "={{ $json.email }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEquals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "scraping-about",
-      "name": "🌐 Scraping: /about",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [
-        4400,
-        -140
-      ],
-      "typeVersion": 4.2,
-      "parameters": {
-        "method": "GET",
-        "url": "={{ $('🧹 Formatear Lead').item.json.web.replace(/\\/+$/, '') + '/about' }}",
-        "options": {}
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "extraer-about",
-      "name": "📧 Extraer Email (/about)",
-      "type": "n8n-nodes-base.code",
-      "position": [
-        4620,
-        -140
-      ],
-      "typeVersion": 2,
-      "parameters": {
-        "jsCode": "\nconst lead = $('🧹 Formatear Lead').item.json;\nlet html = '';\ntry {\n  const raw = $json.data !== undefined ? $json.data : $json;\n  html = typeof raw === 'string' ? raw : JSON.stringify(raw);\n} catch (e) {}\n\nlet mailtoEmails = [];\ntry {\n  const re = /href=[\"']mailto:([^\"'?\\s]+)/gi;\n  let m;\n  while ((m = re.exec(html)) !== null) {\n    if (m[1].includes('@')) mailtoEmails.push(m[1]);\n  }\n} catch (e) {}\n\nlet regexEmails = [];\ntry {\n  regexEmails = html.match(/[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}/g) || [];\n} catch (e) {}\n\nconst blacklist = ['example', 'sentry', 'wixpress', 'yourdomain', 'schema',\n                    'placeholder', 'noreply', 'no-reply', 'webmaster@'];\nconst all = [...new Set([...mailtoEmails, ...regexEmails])];\nconst emails = all.filter(e => {\n  const l = e.toLowerCase();\n  return !blacklist.some(b => l.includes(b))\n    && !l.endsWith('.js') && !l.endsWith('.css')\n    && !l.endsWith('.png') && !l.endsWith('.jpg') && !l.endsWith('.gif');\n});\n\nreturn [{ json: { ...lead, email: emails[0] || '', origen_email: emails[0] ? 'scraping_about' : '' } }];\n"
-      }
-    },
-    {
-      "id": "preparar-payload",
-      "name": "🔧 CRM: Preparar Payload (Prospección)",
-      "type": "n8n-nodes-base.code",
-      "position": [
-        4840,
-        -180
-      ],
-      "typeVersion": 2,
-      "parameters": {
-        "jsCode": "\nconst lead = $json;\n\nlet query = '';\ntry { query = $('🔧 Construir Query de Búsqueda').item.json.query || ''; } catch (e) {}\nlet company_id = null;\ntry { company_id = Number($('🔧 Extraer Parámetros').item.json.company_id); } catch (e) {}\n\n// Sin teléfono NI email -- no hay ningún identificador real para guardar en el CRM\nif (!lead.telefono && !lead.email) {\n  return [{ json: { descartado: true, nombre: lead.nombre, motivo: 'Se encontró el negocio pero sin teléfono ni email real -- el CRM de G54 no tiene con qué identificarlo.' } }];\n}\n\nconst origenLabel = ({\n  hunter: 'Hunter.io',\n  scraping_contact: 'la página /contact del sitio',\n  scraping_about: 'la página /about del sitio',\n  '': 'ninguna fuente',\n})[lead.origen_email || ''] || 'ninguna fuente';\n\nconst notas = [\n  'Lead encontrado por Prospección AI' + (query ? (' (búsqueda: \"' + query + '\")') : '') + '.',\n  lead.web ? ('Sitio: ' + lead.web) : 'Sin sitio web conocido.',\n  lead.email ? ('Email encontrado vía ' + origenLabel + ': ' + lead.email) : 'No se encontró ningún email real.',\n  lead.rating ? ('Rating en Google: ' + lead.rating) : '',\n  lead.direccion ? ('Dirección: ' + lead.direccion) : '',\n].filter(Boolean).join(' ');\n\nconst payload = {\n  puede_guardar: true,\n  tiene_telefono: !!lead.telefono,\n  company_id,\n  nombre: lead.nombre,\n  origen: 'prospeccion', // ya no hace falta el workaround -- confirmado real y estable desde el 17-sep\n  temperatura: 'bajo',\n  notas,\n  email: lead.email || '',\n};\n// sin teléfono -- el CRM ya dedupea por email cuando el teléfono viene vacío (confirmado en vivo 22-sep)\nif (lead.telefono) payload.telefono = lead.telefono;\n\nreturn [{ json: payload }];\n"
-      }
-    },
-    {
-      "id": "if-tiene-telefono",
-      "name": "🔀 ¿Tiene Teléfono para Guardar?",
-      "type": "n8n-nodes-base.if",
-      "position": [
-        5060,
-        -180
-      ],
-      "typeVersion": 2.2,
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "c1",
-              "leftValue": "={{ $json.puede_guardar }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "guardar-lead",
-      "name": "💾 G54: Guardar Lead (Prospección)",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [
-        5280,
-        -280
-      ],
-      "typeVersion": 4.2,
-      "parameters": {
-        "method": "POST",
-        "url": "https://apigrowth.mdarthurdigital.com/api/agent/crm/leads",
-        "options": {},
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Accept",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ company_id: $json.company_id, telefono: $json.telefono, email: $json.email, nombre: $json.nombre, origen: $json.origen, temperatura: $json.temperatura, notas: $json.notas }) }}"
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "if-guardado-ok",
-      "name": "🔀 ¿Guardado Confirmado?",
-      "type": "n8n-nodes-base.if",
-      "position": [
-        5500,
-        -360
-      ],
-      "typeVersion": 2.2,
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "c1",
-              "leftValue": "={{ !!($json.deal && $json.deal.id) }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "marcar-guardado-ok",
-      "name": "✅ Marcar Guardado OK",
-      "type": "n8n-nodes-base.code",
-      "position": [
-        5720,
-        -440
-      ],
-      "typeVersion": 2,
-      "parameters": {
-        "jsCode": "const prev = $('🔧 CRM: Preparar Payload (Prospección)').item.json;\nreturn [{ json: { guardado_confirmado: true, deal_id: $json.deal.id, nombre: prev.nombre, email: prev.email || '', tiene_telefono: prev.tiene_telefono } }];"
-      }
-    },
-    {
-      "id": "marcar-guardado-fallo",
-      "name": "❌ Marcar Guardado Fallo",
-      "type": "n8n-nodes-base.code",
-      "position": [
-        5720,
-        -280
-      ],
-      "typeVersion": 2,
-      "parameters": {
-        "jsCode": "const prev = $('🔧 CRM: Preparar Payload (Prospección)').item.json;\nreturn [{ json: { guardado_confirmado: false, nombre: prev.nombre, email: prev.email || '', motivo: 'El guardado en el CRM de G54 no devolvió un deal real: ' + JSON.stringify($json).slice(0, 300) } }];"
+        "mode": "runOnceForEachItem",
+        "jsCode": "\nconst r = $json;\nconst loc = r.location || {};\nreturn { json: {\n  nombre: r.name || '',\n  direccion: loc.formatted_address || [loc.address, loc.locality, loc.region].filter(Boolean).join(', '),\n  ciudad: loc.locality || '',\n  telefono: (r.tel || '').replace(/\\s+/g, ' ').trim(),\n  web: r.website || '',\n  email: r.email || '',\n  origen_email: r.email ? 'foursquare' : '',\n  categoria: ((r.categories || [])[0] || {}).name || '',\n  termino: r.termino || '',\n  origen_web: r.website ? 'foursquare' : '',\n  origen_tel: r.tel ? 'foursquare' : '',\n} };\n"
       }
     },
     {
       "id": "agrupar-resultados",
       "name": "📦 Agrupar Resultados",
       "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
       "position": [
         5940,
         -80
       ],
-      "typeVersion": 1,
       "parameters": {
         "aggregate": "aggregateAllItemData",
         "options": {}
@@ -706,28 +172,233 @@
       "id": "armar-resumen",
       "name": "📤 Armar Resumen",
       "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         6160,
         -80
       ],
-      "typeVersion": 2,
       "parameters": {
-        "jsCode": "\nconst raw = $input.all();\nconst items = (raw[0] && raw[0].json && raw[0].json.data) ? raw[0].json.data : raw.map(i => i.json);\n\n// Caso de salida temprana: un solo item con sinResultados/valido:false, sin ningún lead real procesado\nif (items.length === 1 && (items[0].sinResultados === true || items[0].valido === false)) {\n  return [{ json: { ok: true, encontrados: 0, guardados: 0, motivo: items[0].motivo } }];\n}\n\nlet encontrados = items.length;\nlet sinContacto = 0, conEmail = 0, sinEmail = 0, guardadosOk = 0, guardadosSoloEmail = 0, guardadosFallidos = 0;\n\nfor (const it of items) {\n  if (it.descartado) { sinContacto++; continue; }\n  if (it.email) conEmail++; else sinEmail++;\n  if (it.guardado_confirmado === true) {\n    guardadosOk++;\n    if (it.tiene_telefono === false) guardadosSoloEmail++;\n    continue;\n  }\n  if (it.guardado_confirmado === false) { guardadosFallidos++; continue; }\n}\n\nreturn [{ json: {\n  ok: true,\n  encontrados,\n  sin_contacto: sinContacto,\n  con_email: conEmail,\n  sin_email: sinEmail,\n  guardados: guardadosOk,\n  guardados_solo_email: guardadosSoloEmail,\n  guardados_fallidos: guardadosFallidos,\n} }];\n"
+        "jsCode": "\nconst raw = $input.all();\nconst items = (raw[0] && raw[0].json && raw[0].json.data) ? raw[0].json.data : raw.map(i => i.json);\nlet q = {};\ntry { q = $('🔧 Construir Query de Búsqueda').first().json || {}; } catch (e) {}\n\n// Caso de salida temprana: un solo item con sinResultados/valido:false, sin ningún lead real procesado\nif (items.length === 1 && (items[0].sinResultados === true || items[0].valido === false)) {\n  return [{ json: { ok: true, encontrados: 0, guardados: 0, motivo: items[0].motivo, busqueda: q.terminos || [], lugar: q.lugar || '' } }];\n}\n\nlet encontrados = items.length;\nlet sinContacto = 0, conEmail = 0, sinEmail = 0, guardadosOk = 0, guardadosSoloEmail = 0, guardadosFallidos = 0, seGuardarian = 0;\nconst detalle = [];\n\nfor (const it of items) {\n  if (it.descartado) { sinContacto++; detalle.push({ nombre: it.nombre, descartado: it.motivo }); continue; }\n  if (it.email) conEmail++; else sinEmail++;\n  if (it.prueba) {\n    seGuardarian++;\n    detalle.push({ nombre: it.nombre, categoria: it.categoria, telefono: it.telefono || '', email: it.email || '', web: it.web || '',\n                   fuentes: { web: it.origen_web, telefono: it.origen_tel, email: it.origen_email } });\n    continue;\n  }\n  if (it.guardado_confirmado === true) {\n    guardadosOk++;\n    if (it.tiene_telefono === false) guardadosSoloEmail++;\n    continue;\n  }\n  if (it.guardado_confirmado === false) { guardadosFallidos++; continue; }\n}\n\nconst resumen = {\n  ok: true,\n  busqueda: q.terminos || [],\n  lugar: q.lugar || '',\n  razon: q.razon || '',\n  encontrados,\n  sin_contacto: sinContacto,\n  con_email: conEmail,\n  sin_email: sinEmail,\n  guardados: guardadosOk,\n  guardados_solo_email: guardadosSoloEmail,\n  guardados_fallidos: guardadosFallidos,\n};\nlet dry = false;\ntry { dry = !!$('🔧 Extraer Parámetros').first().json.dry_run; } catch (e) {}\nif (dry) { resumen.prueba = true; resumen.se_guardarian = seGuardarian; resumen.detalle = detalle; }\nreturn [{ json: resumen }];\n"
       }
     },
     {
       "id": "responder",
       "name": "📤 Responder Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
       "position": [
         6380,
         -80
       ],
-      "typeVersion": 1.1,
       "parameters": {
         "respondWith": "json",
         "responseBody": "={{ $json }}",
         "options": {}
+      }
+    },
+    {
+      "id": "config-busqueda",
+      "name": "⚙️ Config Búsqueda (Foursquare + Tavily + Hunter)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1100,
+        -80
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "k1",
+              "name": "FOURSQUARE_API_KEY",
+              "value": "<FOURSQUARE_API_KEY — ver .secrets.local.md>",
+              "type": "string"
+            },
+            {
+              "id": "k3",
+              "name": "TAVILY_API_KEY",
+              "value": "<TAVILY_API_KEY — ver .secrets.local.md>",
+              "type": "string"
+            },
+            {
+              "id": "k2",
+              "name": "HUNTER_API_KEY",
+              "value": "<HUNTER_API_KEY — ver .secrets.local.md>",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "69c4c964-0eda-49c1-bb6b-bd8d6a48ddb6",
+      "name": "🎯 Obtener Estrategia G54",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput",
+      "position": [
+        660,
+        200
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://apigrowth.mdarthurdigital.com/api/n8n/companies/' + $('🔧 Extraer Parámetros').item.json.company_id + '/rrss/estrategia' }}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "79c04fd8-1774-44ba-baf5-2bfdd7b3ed5b",
+      "name": "🔧 Preparar Perfil para la IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        200
+      ],
+      "parameters": {
+        "jsCode": "\n// Prospección busca CLIENTES de la empresa, no negocios de su mismo rubro: antes se buscaba\n// por \"industry\" y eso traía a la competencia. La IA traduce el perfil real de la empresa\n// (a quién le vende, dónde) en tipos de negocio que se puedan buscar en un mapa.\nlet empresa = {};\ntry { empresa = $('📊 Obtener Empresa').item.json.data || {}; } catch (e) {}\nlet estrategia = {};\ntry { estrategia = $('🎯 Obtener Estrategia G54').item.json.data || {}; } catch (e) {}\nconst p = $('🔧 Extraer Parámetros').item.json;\n\nconst datos = {\n  empresa: empresa.name || '',\n  rubro_de_la_empresa: empresa.industry || '',\n  descripcion: empresa.description || '',\n  propuesta_de_valor: empresa.value_proposition || '',\n  a_quien_le_vende: empresa.target_market || '',\n  audiencia_de_su_estrategia: estrategia.audiencia || '',\n  palabras_clave: Array.isArray(empresa.target_keywords) ? empresa.target_keywords.slice(0, 10) : (empresa.target_keywords || ''),\n  ciudad_base: empresa.base_city || '',\n  zona: empresa.geography || '',\n};\nconst hayCliente = datos.a_quien_le_vende || datos.audiencia_de_su_estrategia || datos.descripcion || datos.rubro_de_la_empresa;\nconst lugar = p.zona || datos.ciudad_base || datos.zona;\nif (!p.busqueda && !hayCliente) {\n  return [{ json: { valido: false, motivo: 'La empresa no tiene en G54 ni descripción, ni rubro, ni a quién le vende: no hay ningún dato real para saber qué clientes buscar.' } }];\n}\nif (!lugar) {\n  return [{ json: { valido: false, motivo: 'La empresa no tiene base_city ni geography configurados en G54: no hay ninguna zona real donde buscar.' } }];\n}\n\nconst sistema = 'Eres un analista de prospección comercial. Con el perfil de una empresa, decides qué TIPOS DE NEGOCIO serían sus clientes (o aliados que le manden clientes), para buscarlos en un directorio de negocios tipo Google Maps. Reglas: 1) Nunca la empresa ni negocios de su mismo rubro (serían competencia). 2) Si la empresa vende a personas y no a empresas, elige negocios que le pueden mandar clientes. 3) Cada término es una categoría de negocio corta (1 a 3 palabras), SIEMPRE en inglés y como las nombra Foursquare (por ejemplo \"Travel Agency\", \"Coworking Space\", \"Freight Forwarder\", \"Dental Clinic\"), aunque la empresa esté en un país de habla hispana: el directorio busca por esas categorías y en español trae cualquier cosa; nada de productos ni frases. 4) No inventes datos de la empresa. Responde solo JSON.';\nconst pedido = 'Perfil de la empresa:\\n' + JSON.stringify(datos, null, 1) + '\\n\\nResponde este JSON: {\"terminos\": [\"2 o 3 tipos de negocio a buscar, del más al menos prometedor\"], \"lugar\": \"la zona donde buscar, escrita como la entiende un mapa (Ciudad, Estado o Región, País), tomada de ciudad_base o zona\", \"razon\": \"una frase de por qué esos negocios serían clientes\"}';\nreturn [{ json: {\n  valido: true,\n  lugar_perfil: lugar,\n  groq_body: { model: 'openai/gpt-oss-120b', temperature: 0.2, response_format: { type: 'json_object' },\n               messages: [{ role: 'system', content: sistema }, { role: 'user', content: pedido }] },\n} }];\n"
+      }
+    },
+    {
+      "id": "164f4a2d-31b9-4db9-be1e-e6727ef4ce3b",
+      "name": "🤖 Groq: Tipos de Cliente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput",
+      "position": [
+        1100,
+        200
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.groq_body || {}) }}",
+        "options": {}
+      },
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq API"
+        }
+      }
+    },
+    {
+      "id": "58d15c66-9217-42b6-aa1b-34ff1a5ecae9",
+      "name": "🌍 Foursquare: Buscar Negocios",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        -80
+      ],
+      "parameters": {
+        "jsCode": "\n// Foursquare Places (cuenta gratis, sin tarjeta) reemplaza a Google Places desde el 28-oct.\n// Busca cada tipo de negocio que dedujo la IA en la zona, sin repetir lugares, hasta el límite.\nconst cfg = $('⚙️ Config Búsqueda (Foursquare + Tavily + Hunter)').first().json;\nconst q = $('🔧 Construir Query de Búsqueda').first().json;\nconst limite = $('🔧 Extraer Parámetros').first().json.limite || 8;\nif (!cfg.FOURSQUARE_API_KEY) return [{ json: { sinResultados: true, motivo: 'Falta la key de Foursquare (FOURSQUARE_API_KEY) en el Config del flujo.' } }];\nconst espera = (ms) => new Promise(r => setTimeout(r, ms));\nconst vistos = new Set(), porTermino = [], errores = [];\nconst tope = Math.min(40, limite * 3);\nfor (const termino of q.terminos) {\n  const out = []; porTermino.push(out);\n  let r = null;\n  for (let i = 0; i < 3 && !r; i++) {\n    try {\n      r = await this.helpers.httpRequest({ method: 'GET', url: 'https://places-api.foursquare.com/places/search', json: true,\n        qs: { query: termino, near: q.lugar, limit: Math.min(50, limite * 2), fields: 'fsq_place_id,name,location,website,tel,email,categories' },\n        headers: { Authorization: 'Bearer ' + cfg.FOURSQUARE_API_KEY, 'X-Places-Api-Version': '2025-06-17', Accept: 'application/json' } });\n    } catch (e) {\n      const st = e.httpCode || e.statusCode || (e.response && e.response.status);\n      if (String(st) === '401' || String(st) === '400' || i === 2) { errores.push(termino + ': ' + (st || '') + ' ' + String(e.message || e).slice(0, 120)); break; }\n      await espera(2000);\n    }\n  }\n  for (const pl of (r && r.results) || []) {\n    const id = pl.fsq_place_id || (pl.name + '|' + ((pl.location || {}).formatted_address || ''));\n    if (vistos.has(id)) continue;\n    vistos.add(id); out.push({ json: { ...pl, termino } });\n  }\n}\nconst out = [];\nfor (let i = 0; out.length < tope && porTermino.some(l => l.length > i); i++) for (const l of porTermino) if (l[i] && out.length < tope) out.push(l[i]);\nif (!out.length) {\n  return [{ json: { sinResultados: true, motivo: 'Foursquare no encontró ningún negocio para \"' + q.terminos.join('\", \"') + '\" en ' + q.lugar + '.' + (errores.length ? ' Errores: ' + errores.join(' | ') : '') } }];\n}\nreturn out;\n"
+      }
+    },
+    {
+      "id": "f184efa7-c9c8-4d16-95d2-e884c11e369b",
+      "name": "🔎 Completar Contacto (Tavily)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3300,
+        -180
+      ],
+      "parameters": {
+        "jsCode": "\n// Tavily (cuenta gratis, 1.000 búsquedas al mes) completa la web o el teléfono que Foursquare\n// no trae. En la prueba del 28-oct encontraba cosas equivocadas (la web de otro negocio, un\n// directorio), así que solo se acepta un dato si:\n//  - el título del resultado nombra al negocio (sus palabras propias, no \"clínica\", \"LLC\"...),\n//  - la web no es un directorio ni una red social, y su dominio lleva una palabra del nombre,\n//  - ningún otro negocio de esta misma búsqueda quedó con la misma web o el mismo teléfono.\nconst cfg = $('⚙️ Config Búsqueda (Foursquare + Tavily + Hunter)').first().json;\nconst items = $input.all().map(i => ({ ...i.json }));\nif (items.length === 1 && items[0].sinResultados) return [{ json: items[0] }];\nconst lugarBusqueda = $('🔧 Construir Query de Búsqueda').first().json.lugar || '';\nconst norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();\nconst GENERICAS = new Set(('llc inc corp corporation co company group grupo services servicios service the and de del la las el los y en of for sa s a srl ltd ' +\n  'clinica clinic dental dentista dentist restaurante restaurant ferreteria hotel tienda store shop centro center distribuidora distributor ' +\n  'distribution supply supplies equipment equipo industrial international internacional global trading import export travel travels tours tour agency agencia viajes ' +\n  'freight logistics cargo shipping consulting consultores').split(' '));\nconst DIRECTORIOS = /(facebook|instagram|tiktok|twitter|x\\.com|linkedin|youtube|google|yelp|tripadvisor|foursquare|bbb\\.org|yellowpages|paginasamarillas|mapquest|manta|bizapedia|opencorporates|dnb\\.com|zoominfo|rocketreach|cylex|infoisinfo|guialocal|eldirectorio|doctoralia|waze|wikipedia|reddit|indeed|glassdoor|thumbtack|angi|chamberofcommerce|usembassy|\\.gov)/i;\nconst TEL = /(\\+?\\d[\\d\\s().-]{6,}\\d)/g;\nconst dominio = u => String(u || '').replace(/^https?:\\/\\/(www\\.)?/i, '').split(/[\\/?#]/)[0].toLowerCase();\n\nasync function tavily(q) {\n  for (let i = 0; i < 2; i++) {\n    try {\n      return await this.helpers.httpRequest({ method: 'POST', url: 'https://api.tavily.com/search', json: true,\n        headers: { Authorization: 'Bearer ' + cfg.TAVILY_API_KEY, 'Content-Type': 'application/json' },\n        body: { query: q, max_results: 5 } });\n    } catch (e) { if (i === 1) return null; await new Promise(r => setTimeout(r, 2000)); }\n  }\n}\n\nfor (const lead of items) {\n  lead.tavily_fuente = '';\n  if (!cfg.TAVILY_API_KEY || (lead.web && lead.telefono)) continue;\n  const propias = norm(lead.nombre).split(' ').filter(t => t.length >= 3 && !GENERICAS.has(t));\n  if (!propias.length) continue;   // nombre sin palabras propias: imposible confirmar\n  const r = await tavily.call(this, lead.nombre + ' ' + (lead.ciudad || '') + ' contacto');\n  // Además tiene que ser de esa zona: en la prueba del 28-oct, para agencias de Managua trajo\n  // negocios homónimos de EE. UU., Saipán y Argentina. Se exige que el resultado mencione la\n  // ciudad del negocio o alguna parte de la zona de búsqueda (ciudad, región o país).\n  // Con solo el país no alcanza (una página que lista países \"menciona\" Nicaragua): se pide la\n  // ciudad del negocio; si Foursquare no la trae, la primera parte de la zona de búsqueda.\n  const ciudad = norm(lead.ciudad || String(lugarBusqueda).split(',')[0]);\n  // Nombre completo sin LLC/Inc...: con una sola palabra propia (\"Century Travel\") la palabra\n  // sola aparece en cualquier lado, así que el título tiene que traer el nombre entero.\n  const nombreEntero = norm(lead.nombre).split(' ').filter(t => !['llc', 'inc', 'corp', 'sa', 'srl', 'ltd', 'co'].includes(t)).join(' ');\n  const nombraAlNegocio = res => {\n    const t = norm(res.title);\n    const hits = propias.filter(p => t.includes(p)).length;\n    const todo = norm(res.title + ' ' + res.content + ' ' + res.url);\n    const deLaZona = ciudad.length < 3 || todo.includes(ciudad);\n    const nombre = propias.length === 1 ? t.includes(nombreEntero) : (propias.length === 2 ? hits === 2 : hits >= 2);\n    return deLaZona && nombre;\n  };\n  for (const res of ((r && r.results) || []).filter(nombraAlNegocio)) {\n    const d = dominio(res.url);\n    if (!lead.web && !DIRECTORIOS.test(d) && propias.some(p => norm(d).replace(/ /g, '').includes(p))) {\n      lead.web = 'https://' + d; lead.origen_web = 'tavily'; lead.tavily_fuente = res.url;\n    }\n    if (!lead.telefono) {\n      const tel = ((res.content || '').match(TEL) || []).map(x => x.trim()).find(x => { const n = x.replace(/\\D/g, ''); return n.length >= 8 && n.length <= 15; });\n      if (tel) { lead.telefono = tel; lead.origen_tel = 'tavily'; lead.tavily_fuente = lead.tavily_fuente || res.url; }\n    }\n    if (lead.web && lead.telefono) break;\n  }\n}\n// Una misma web o un mismo teléfono encontrado por Tavily para dos negocios distintos no es de ninguno.\nfor (const campo of ['web', 'telefono']) {\n  const origen = campo === 'web' ? 'origen_web' : 'origen_tel';\n  const cuenta = {};\n  for (const l of items) if (l[origen] === 'tavily') { const k = campo === 'web' ? dominio(l.web) : l.telefono.replace(/\\D/g, ''); cuenta[k] = (cuenta[k] || 0) + 1; }\n  for (const l of items) if (l[origen] === 'tavily') {\n    const k = campo === 'web' ? dominio(l.web) : l.telefono.replace(/\\D/g, '');\n    if (cuenta[k] > 1) { l[campo] = ''; l[origen] = ''; }\n  }\n}\nreturn items.map((json, i) => ({ json, pairedItem: { item: i } }));\n"
+      }
+    },
+    {
+      "id": "4127878b-60b3-4464-80c9-570e1a2b568e",
+      "name": "🔧 Preparar Filtro de Encaje",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        -180
+      ],
+      "parameters": {
+        "jsCode": "\nconst leads = $input.all().map(i => i.json);\nconst q = $('🔧 Construir Query de Búsqueda').first().json;\nlet empresa = {};\ntry { empresa = $('📊 Obtener Empresa').first().json.data || {}; } catch (e) {}\nconst lista = leads.map((l, i) => ({ i, nombre: l.nombre, categoria: l.categoria, ciudad: l.ciudad, web: l.web }));\nconst sistema = 'Eres un analista de prospección comercial. Te paso negocios encontrados en un directorio y el perfil de una empresa. Te quedas solo con los que de verdad podrían ser clientes de esa empresa, o aliados que le manden clientes. Descarta: los que no encajan por su categoría (aunque el nombre se parezca a la búsqueda), las grandes cadenas nacionales o internacionales, la competencia (mismo rubro que la empresa), y los repetidos (el mismo negocio en otra sucursal). Responde solo JSON.';\nconst pedido = 'Empresa: ' + JSON.stringify({ nombre: empresa.name, rubro: empresa.industry, a_quien_le_vende: empresa.target_market, que_buscamos: q.terminos, por_que: q.razon }) +\n  '\\n\\nNegocios encontrados:\\n' + JSON.stringify(lista) + '\\n\\nResponde: {\"quedan\": [los números i de los que sirven, del más al menos prometedor]}';\nreturn [{ json: { leads, groq_body: { model: 'openai/gpt-oss-120b', temperature: 0, response_format: { type: 'json_object' },\n  messages: [{ role: 'system', content: sistema }, { role: 'user', content: pedido }] } } }];\n"
+      }
+    },
+    {
+      "id": "fea9601e-a797-466c-83af-fc07a99a7f41",
+      "name": "🤖 Groq: Filtrar Encaje",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput",
+      "position": [
+        2860,
+        -180
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.groq_body || {}) }}",
+        "options": {}
+      },
+      "credentials": {
+        "groqApi": {
+          "id": "jORffbRhRNohHT1B",
+          "name": "Groq API"
+        }
+      }
+    },
+    {
+      "id": "50a960e2-8825-4a31-842e-acf97f9a9c3f",
+      "name": "🔧 Aplicar Filtro de Encaje",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3080,
+        -180
+      ],
+      "parameters": {
+        "jsCode": "\nconst prev = $('🔧 Preparar Filtro de Encaje').first().json;\nconst limite = $('🔧 Extraer Parámetros').first().json.limite || 8;\nlet quedan = null;\ntry { quedan = JSON.parse($json.choices[0].message.content).quedan; } catch (e) {}\nlet leads;\nif (Array.isArray(quedan)) {\n  leads = quedan.map(Number).filter(i => Number.isInteger(i) && prev.leads[i]).map(i => prev.leads[i]);\n} else {\n  // Si la IA no respondió, no se descarta a ciegas: sigue la lista, sin repetidos por nombre.\n  const vistos = new Set();\n  leads = prev.leads.filter(l => { const k = l.nombre.toLowerCase(); if (vistos.has(k)) return false; vistos.add(k); return true; });\n}\nleads = leads.slice(0, limite);\nif (!leads.length) return [{ json: { sinResultados: true, motivo: 'Foursquare encontró negocios, pero ninguno encaja con el cliente ideal de la empresa según la revisión de la IA.' } }];\nreturn leads.map(json => ({ json }));\n"
+      }
+    },
+    {
+      "id": "c1990289-9837-46f9-9768-b794f4210bc9",
+      "name": "📇 Buscar Correo y Guardar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4840,
+        -180
+      ],
+      "parameters": {
+        "jsCode": "\n// Para cada negocio: correo (Foursquare, Hunter o la página /contact o /about de su web) y\n// guardado en el CRM. En modo prueba no se guarda nada ni se gasta Hunter.\nconst cfg = $('⚙️ Config Búsqueda (Foursquare + Tavily + Hunter)').first().json;\nconst par = $('🔧 Extraer Parámetros').first().json;\nconst q = $('🔧 Construir Query de Búsqueda').first().json;\nconst MAIL = /[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}/g;\nconst MALOS = ['example', 'sentry', 'wixpress', 'yourdomain', 'schema', 'placeholder', 'noreply', 'no-reply', 'webmaster@', 'domain.com', 'email.com'];\nconst limpiar = arr => [...new Set(arr)].filter(e => { const l = e.toLowerCase(); return !MALOS.some(b => l.includes(b)) && !/\\.(js|css|png|jpe?g|gif|webp|svg)$/.test(l); });\nconst dominio = u => String(u || '').replace(/^https?:\\/\\/(www\\.)?/i, '').split(/[\\/?#]/)[0].toLowerCase();\nconst get = async url => { try { return String(await this.helpers.httpRequest({ method: 'GET', url, timeout: 10000, json: false, headers: { 'User-Agent': 'Mozilla/5.0' } })); } catch (e) { return ''; } };\nconst resultados = [];\nif ($input.all().length === 1 && $input.first().json.sinResultados) return [{ json: $input.first().json }];\n\nfor (const it of $input.all()) {\n  const lead = { ...it.json };\n  if (!lead.telefono && !lead.web && !lead.email) { resultados.push({ descartado: true, nombre: lead.nombre, motivo: 'Sin web, teléfono ni correo.' }); continue; }\n  if (!lead.email && lead.web && !par.dry_run && cfg.HUNTER_API_KEY) {\n    try {\n      const h = await this.helpers.httpRequest({ method: 'GET', url: 'https://api.hunter.io/v2/domain-search', qs: { domain: dominio(lead.web), api_key: cfg.HUNTER_API_KEY }, json: true, timeout: 15000 });\n      const em = [...((h.data || {}).emails || [])].sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];\n      if (em && em.value) { lead.email = em.value; lead.origen_email = 'hunter'; }\n    } catch (e) {}\n  }\n  if (!lead.email && lead.web) {\n    const base = lead.web.replace(/\\/+$/, '');\n    for (const [ruta, origen] of [['/contact', 'scraping_contact'], ['/contacto', 'scraping_contact'], ['/about', 'scraping_about'], ['', 'scraping_inicio']]) {\n      const html = await get(base + ruta);\n      const mailto = [...html.matchAll(/href=[\"']mailto:([^\"'?\\s]+)/gi)].map(m => m[1]);\n      const em = limpiar([...mailto, ...(html.match(MAIL) || [])]);\n      // Preferir un correo del mismo dominio de la web.\n      const pick = em.find(e => e.toLowerCase().endsWith('@' + dominio(lead.web))) || em[0];\n      if (pick) { lead.email = pick; lead.origen_email = origen; break; }\n    }\n  }\n  if (!lead.telefono && !lead.email) { resultados.push({ descartado: true, nombre: lead.nombre, motivo: 'Se encontró el negocio pero sin teléfono ni email real -- el CRM de G54 no tiene con qué identificarlo.' }); continue; }\n\n  const origenLabel = ({ foursquare: 'Foursquare', hunter: 'Hunter.io', scraping_contact: 'la página de contacto del sitio', scraping_about: 'la página /about del sitio', scraping_inicio: 'la página de inicio del sitio' })[lead.origen_email || ''] || 'ninguna fuente';\n  const fuenteDe = o => o === 'tavily' ? ' (encontrado en la web' + (lead.tavily_fuente ? ': ' + lead.tavily_fuente : '') + ')' : '';\n  const notas = [\n    'Lead encontrado por Prospección AI' + (lead.termino ? (' buscando \"' + lead.termino + '\"') : '') + (q.lugar ? (' en ' + q.lugar) : '') + ', con Foursquare.',\n    lead.categoria ? ('Categoría: ' + lead.categoria + '.') : '',\n    lead.web ? ('Sitio: ' + lead.web + fuenteDe(lead.origen_web) + '.') : 'Sin sitio web conocido.',\n    lead.telefono && lead.origen_tel === 'tavily' ? ('Teléfono' + fuenteDe('tavily') + '.') : '',\n    lead.email ? ('Email encontrado vía ' + origenLabel + ': ' + lead.email) : 'No se encontró ningún email real.',\n    lead.direccion ? ('Dirección: ' + lead.direccion) : '',\n  ].filter(Boolean).join(' ');\n  const base = { nombre: lead.nombre, categoria: lead.categoria || '', telefono: lead.telefono || '', email: lead.email || '', web: lead.web || '',\n                 tiene_telefono: !!lead.telefono, origen_web: lead.origen_web || '', origen_tel: lead.origen_tel || '', origen_email: lead.origen_email || '' };\n  if (par.dry_run) { resultados.push({ ...base, prueba: true, notas }); continue; }\n\n  const body = { company_id: par.company_id, nombre: lead.nombre, origen: 'prospeccion', temperatura: 'bajo', notas, email: lead.email || '' };\n  if (lead.telefono) body.telefono = lead.telefono;   // sin teléfono el CRM dedupea por email (22-sep)\n  let r = null, err = '';\n  for (let i = 0; i < 3 && !r; i++) {\n    try { r = await this.helpers.httpRequest({ method: 'POST', url: 'https://apigrowth.mdarthurdigital.com/api/agent/crm/leads', json: true, body, timeout: 30000,\n            headers: { Authorization: 'Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>', Accept: 'application/json' } }); }\n    catch (e) { err = String(e.message || e).slice(0, 200); await new Promise(s => setTimeout(s, 3000)); }\n  }\n  if (r && r.deal && r.deal.id) resultados.push({ ...base, guardado_confirmado: true, deal_id: r.deal.id });\n  else resultados.push({ ...base, guardado_confirmado: false, motivo: 'El guardado en el CRM de G54 no devolvió un deal real: ' + (err || JSON.stringify(r).slice(0, 300)) });\n}\nreturn resultados.map(json => ({ json }));\n"
       }
     }
   ],
@@ -758,7 +429,7 @@
       "main": [
         [
           {
-            "node": "🔧 Construir Query de Búsqueda",
+            "node": "🎯 Obtener Estrategia G54",
             "type": "main",
             "index": 0
           }
@@ -780,7 +451,7 @@
       "main": [
         [
           {
-            "node": "⚙️ Config Búsqueda (Places + Hunter)",
+            "node": "⚙️ Config Búsqueda (Foursquare + Tavily + Hunter)",
             "type": "main",
             "index": 0
           }
@@ -788,39 +459,6 @@
         [
           {
             "node": "📦 Agrupar Resultados",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "⚙️ Config Búsqueda (Places + Hunter)": {
-      "main": [
-        [
-          {
-            "node": "🌍 Google Places: Búsqueda",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🌍 Google Places: Búsqueda": {
-      "main": [
-        [
-          {
-            "node": "🔧 Chequear Respuesta de Places",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔧 Chequear Respuesta de Places": {
-      "main": [
-        [
-          {
-            "node": "🔀 ¿Sin Resultados?",
             "type": "main",
             "index": 0
           }
@@ -838,28 +476,6 @@
         ],
         [
           {
-            "node": "✂️ Limitar Resultados",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "✂️ Limitar Resultados": {
-      "main": [
-        [
-          {
-            "node": "🔎 Google Places: Detalles",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔎 Google Places: Detalles": {
-      "main": [
-        [
-          {
             "node": "🧹 Formatear Lead",
             "type": "main",
             "index": 0
@@ -871,247 +487,7 @@
       "main": [
         [
           {
-            "node": "🔀 ¿Tiene Web o Teléfono?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔀 ¿Tiene Web o Teléfono?": {
-      "main": [
-        [
-          {
-            "node": "🔀 ¿Tiene Web?",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "🚫 Marcar Sin Contacto",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🚫 Marcar Sin Contacto": {
-      "main": [
-        [
-          {
-            "node": "📦 Agrupar Resultados",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔀 ¿Tiene Web?": {
-      "main": [
-        [
-          {
-            "node": "🔑 Hunter: Buscar Email",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "📵 Marcar Sin Web",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📵 Marcar Sin Web": {
-      "main": [
-        [
-          {
-            "node": "🔧 CRM: Preparar Payload (Prospección)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔑 Hunter: Buscar Email": {
-      "main": [
-        [
-          {
-            "node": "📧 Extraer Email (Hunter)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📧 Extraer Email (Hunter)": {
-      "main": [
-        [
-          {
-            "node": "🔀 ¿Encontró Email (Hunter)?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔀 ¿Encontró Email (Hunter)?": {
-      "main": [
-        [
-          {
-            "node": "🔧 CRM: Preparar Payload (Prospección)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "🌐 Scraping: /contact",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🌐 Scraping: /contact": {
-      "main": [
-        [
-          {
-            "node": "📧 Extraer Email (/contact)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📧 Extraer Email (/contact)": {
-      "main": [
-        [
-          {
-            "node": "🔀 ¿Encontró Email (/contact)?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔀 ¿Encontró Email (/contact)?": {
-      "main": [
-        [
-          {
-            "node": "🔧 CRM: Preparar Payload (Prospección)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "🌐 Scraping: /about",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🌐 Scraping: /about": {
-      "main": [
-        [
-          {
-            "node": "📧 Extraer Email (/about)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📧 Extraer Email (/about)": {
-      "main": [
-        [
-          {
-            "node": "🔧 CRM: Preparar Payload (Prospección)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔧 CRM: Preparar Payload (Prospección)": {
-      "main": [
-        [
-          {
-            "node": "🔀 ¿Tiene Teléfono para Guardar?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔀 ¿Tiene Teléfono para Guardar?": {
-      "main": [
-        [
-          {
-            "node": "💾 G54: Guardar Lead (Prospección)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "📦 Agrupar Resultados",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "💾 G54: Guardar Lead (Prospección)": {
-      "main": [
-        [
-          {
-            "node": "🔀 ¿Guardado Confirmado?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔀 ¿Guardado Confirmado?": {
-      "main": [
-        [
-          {
-            "node": "✅ Marcar Guardado OK",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "❌ Marcar Guardado Fallo",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "✅ Marcar Guardado OK": {
-      "main": [
-        [
-          {
-            "node": "📦 Agrupar Resultados",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "❌ Marcar Guardado Fallo": {
-      "main": [
-        [
-          {
-            "node": "📦 Agrupar Resultados",
+            "node": "🔧 Preparar Filtro de Encaje",
             "type": "main",
             "index": 0
           }
@@ -1139,14 +515,119 @@
           }
         ]
       ]
+    },
+    "🎯 Obtener Estrategia G54": {
+      "main": [
+        [
+          {
+            "node": "🔧 Preparar Perfil para la IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Perfil para la IA": {
+      "main": [
+        [
+          {
+            "node": "🤖 Groq: Tipos de Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Groq: Tipos de Cliente": {
+      "main": [
+        [
+          {
+            "node": "🔧 Construir Query de Búsqueda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Config Búsqueda (Foursquare + Tavily + Hunter)": {
+      "main": [
+        [
+          {
+            "node": "🌍 Foursquare: Buscar Negocios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌍 Foursquare: Buscar Negocios": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Sin Resultados?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔎 Completar Contacto (Tavily)": {
+      "main": [
+        [
+          {
+            "node": "📇 Buscar Correo y Guardar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Preparar Filtro de Encaje": {
+      "main": [
+        [
+          {
+            "node": "🤖 Groq: Filtrar Encaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Groq: Filtrar Encaje": {
+      "main": [
+        [
+          {
+            "node": "🔧 Aplicar Filtro de Encaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Aplicar Filtro de Encaje": {
+      "main": [
+        [
+          {
+            "node": "🔎 Completar Contacto (Tavily)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📇 Buscar Correo y Guardar": {
+      "main": [
+        [
+          {
+            "node": "📦 Agrupar Resultados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "nodeGroups": [],
   "settings": {
     "executionOrder": "v1"
-  },
-  "staticData": null,
-  "meta": null,
-  "tags": [],
-  "activeVersion": null
+  }
 }
