@@ -158,11 +158,12 @@
     <h1>Éxodo — Pendientes para el ingeniero · <span>13 Oct 2026</span></h1>
     <p>Reemplaza a <code style="color:#a78bfa;background:transparent;border:none;">exodo-g54-oct09.html</code>. Este documento lista los pedidos abiertos por área — el historial de qué se confirmó resuelto y cuándo está abajo, plegado.</p>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> 16 pedidos activos</div>
+      <div class="meta-item"><div class="dot"></div> 18 pedidos activos</div>
     </div>
     <details class="header-updates">
-      <summary>Historial de actualizaciones (34 entradas)</summary>
+      <summary>Historial de actualizaciones (35 entradas)</summary>
       <ul>
+        <li><strong class="upd-date">28-oct (2):</strong> 2 pedidos nuevos en Backend: arreglar las fallas de DNS del servidor (agregar en <code>/etc/hosts</code> los dominios de G54 y n8n) y que el CRM guarde y compare los teléfonos en un solo formato, para no duplicar contactos.</li>
         <li><strong class="upd-date">28-oct:</strong> 6 pedidos nuevos en Correo, después de ver los primeros borradores reales de Camila: editar el borrador como plantilla y no como HTML, mostrar para quién es cada correo y por qué, día y hora de envío modificables con un tope diario, lanzar a Camila desde Correo sabiendo cuántos borradores va a armar, medir qué pasó después de enviar (aperturas, clics, rebotes, respuestas y bajas) y revisar que el correo llegue (prueba de la cuenta y dominio). De nuestro lado ya están el modo prueba y el tope por corrida de Camila.</li>
         <li><strong class="upd-date">27-oct:</strong> revisado contra el panel nuevo (<code>index-wpoZAdm_.js</code>), la API y la documentación. <strong style="color:#4ade80;">Resueltos y sacados (7):</strong> el límite de 2.000 caracteres con contador en "Dirección deseada", la ruta para escribir la sugerencia de horario, el botón "Outreach" con confirmación, el botón "Eliminar trato", el campo de 72 h quitado y renombrado el de 24 h, la subida del logo y el upsert de métricas. De la tarjeta de Reels se entregó casi todo (subir video, <code>social_idea_id</code>, resultado por publicación, <code>top-ventas</code>, pedidos de grabación, <code>whatsapp_numero</code>): quedan los teléfonos en formatos distintos y una duda sobre el aviso del video. El chat del cotizador perdió los mensajes de prueba, pero sigue cargando. Siguen abiertos sin cambios: las piezas de Métricas, el origen de las cotizaciones del cotizador, los dos pedidos legales (las páginas siguen con fecha 17-abr) y "mejor plataforma"/"mejor tipo de contenido" (siguen en <code>null</code> las últimas semanas). Pedidos nuevos: vista previa del correo (ya hay una, pero chica) y pie de los correos con G54 como dueño.</li>
         <li><strong class="upd-date">13-oct (nuevo documento, reemplaza a exodo-g54-oct09.html):</strong> reprobados los pedidos contra la API y el panel: ninguno cambió. El panel sigue en <code>index-DQOw7Ddq.js</code> (30-sep) y la documentación no tiene nada posterior al 29-sep. Sin resolver, comprobado hoy: <code>mejor_plataforma</code> y <code>mejor_tipo_contenido</code> siguen <code>null</code> (también en la semana 07–13 oct), <code>logo_url</code> sigue vacío, <code>whatsapp_numero</code> y la escritura de <code>sugerencia_horario</code> no existen, <code>POST /api/agent/rrss/pedidos-grabacion</code> sigue en 404 y el cotizador sigue mostrando el chat de prueba. Nuevos desde el documento del 09-oct (ya están abajo): el aviso de 2.000 caracteres en "Dirección deseada", los dos pedidos del cotizador de Crating Express y el upsert de métricas.</li>
@@ -457,6 +458,37 @@
   <div class="cat-header">
     <span class="cat-icon">🔧</span>
     <span class="cat-title">Backend</span>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">El servidor falla a ratos al buscar las direcciones de G54 y n8n (DNS)</div><div class="item-where">Servidor 207.244.252.27 · <code>/etc/hosts</code>, <code>/etc/resolv.conf</code> o <code>systemd-resolved</code></div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why"><strong>Qué pasa (28-oct):</strong> desde el 27-oct a la noche, varios agentes fallaron al llamar a G54 con "getaddrinfo EAI_AGAIN" y "The DNS server returned an error": el chequeo horario de Marco (5 veces) y el Vigía, que mandó una alerta crítica por <code>api.growth54.com</code>. n8n y G54 están en el mismo servidor, y lo que falla a ratos es la consulta de direcciones del propio servidor. Los servidores de nombres de los dominios (<code>ns4936</code> y <code>ns4937.banahosting.com</code>) respondieron bien en 18 de 18 consultas directas, y desde afuera los dominios resuelven bien.</p>
+      <p class="item-why"><strong>Pedido:</strong></p>
+      <ol class="item-why">
+        <li>Agregar en <code>/etc/hosts</code> <code>api.growth54.com</code>, <code>apigrowth.mdarthurdigital.com</code> y <code>n8n.mdarthurdigital.com</code> apuntando al propio servidor, para que n8n no dependa del DNS para hablar con G54.</li>
+        <li>Revisar la configuración de DNS del servidor (<code>/etc/resolv.conf</code> o <code>systemd-resolved</code>): qué servidor de nombres usa y si conviene sumar uno de respaldo.</li>
+      </ol>
+      <p class="item-why"><strong>De nuestro lado (28-oct):</strong> Distribution AI reintenta hasta 5 veces cada llamada a G54, para que no se pierda una publicación. Es solo un parche: los demás agentes siguen expuestos hasta el arreglo de fondo.</p>
+    </div>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">El CRM guarda los teléfonos en formatos distintos y duplica contactos</div><div class="item-where"><code>POST /api/agent/crm/leads</code> · <code>POST /api/agent/whatsapp/inbound</code> · tratos del CRM</div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why"><strong>Qué pasa (28-oct):</strong> el CRM reconoce a un contacto que ya existe solo si el teléfono está escrito exactamente igual. En Crating Express hoy conviven tres formatos: el formulario web y Prospección guardan "+código" (por ejemplo +17863643700); WhatsApp, el código sin "+" (17863643700), y Telegram, 10 dígitos sin código (7863643700). El CRM le saca los paréntesis y los guiones, pero respeta el "+" y no agrega ni quita el código de país. Pasó de verdad: Prospección guardó dos negocios como "(786) 364-3700" y, al pasar al formato con código, el CRM los creó de nuevo como tratos aparte (los repetidos ya se borraron).</p>
+      <p class="item-why"><strong>Pedido:</strong></p>
+      <ol class="item-why">
+        <li>Que el CRM guarde todos los teléfonos en un solo formato: "+", código de país y número (E.164).</li>
+        <li>Que, al buscar si un contacto ya existe, compare solo los dígitos con el código de país. Si llega un número de 10 dígitos sin código, que use el país de la empresa.</li>
+        <li>Pasar a ese formato los teléfonos que ya están guardados y avisar si aparecen tratos repetidos, para unirlos.</li>
+      </ol>
+      <p class="item-why"><strong>Relacionado:</strong> el pedido 1 de la tarjeta de Reels (<code>wa/leads?phone=</code>) es el mismo problema en otra ruta. Con un solo formato en el CRM se resuelven los dos.</p>
+    </div>
   </div>
 
   <div class="item-card">
