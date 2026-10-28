@@ -17,7 +17,7 @@
 // Para que pueda pasear, el host y sus contenedores no deben recortar lo que sobresale
 // (sin overflow: hidden). Con "movimiento reducido" del sistema queda quieta.
 
-const AZUL = "#2E8BE3", AZUL_CLARO = "#55A4EC", AZUL_OSCURO = "#1F78D6", CARA = "#E3F4FF";
+const AZUL = "#2E8BE3", AZUL_CLARO = "#55A4EC", AZUL_OSCURO = "#1F78D6", CARA = "#E3F4FF", PUPILA = "#063F67";
 const TENTACULOS = [[64, 58, AZUL], [82, 72, AZUL_CLARO], [100, 64, AZUL], [118, 74, AZUL_CLARO], [136, 56, AZUL]];
 const GAZES = [[0, 0], [3, 0], [-3, 0], [0, -2.2], [2.2, -1.6], [-2, 1.2]];
 let unico = 0;
@@ -34,7 +34,11 @@ export function startJelly(host, opciones = {}) {
     `<path fill="${AZUL_OSCURO}" d="M42 94 Q51 106 61 98 Q71 106 80.5 98 Q90 106 100 98 Q110 106 119.5 98 Q129 106 139 98 Q150 106 158 94 Z"/>` +
     `<path fill="${AZUL}" d="M42 96 C40 52 68 28 100 28 C132 28 160 52 158 96 Z"/>` +
     `<g clip-path="url(#${id}-domo)"><path fill="${AZUL_CLARO}" d="M30 20 H170 V58 C140 46 60 46 30 58 Z"/></g>` +
-    `<g class="cara"><g class="ojos"><ellipse cx="82" cy="66" rx="7.5" ry="8" fill="${CARA}"/><ellipse cx="118" cy="66" rx="7.5" ry="8" fill="${CARA}"/></g>` +
+    // Pupilas (28-oct, pedido de la usuaria): azul marino de la marca con un brillo blanco; son
+    // las que siguen la mirada.
+    `<g class="cara"><g class="ojos"><ellipse cx="82" cy="66" rx="7.5" ry="8" fill="${CARA}"/><ellipse cx="118" cy="66" rx="7.5" ry="8" fill="${CARA}"/>` +
+    `<g class="pupilas"><circle cx="82" cy="67" r="4.3" fill="${PUPILA}"/><circle cx="118" cy="67" r="4.3" fill="${PUPILA}"/>` +
+    `<circle cx="83.6" cy="65.1" r="1.5" fill="#fff"/><circle cx="119.6" cy="65.1" r="1.5" fill="#fff"/></g></g>` +
     `<path class="ojos-felices" d="M75 69 Q82 59 89 69 M111 69 Q118 59 125 69" stroke="${CARA}" stroke-width="3.6" fill="none" stroke-linecap="round" opacity="0"/>` +
     `<path class="ojos-dormidos" d="M75 66 Q82 73 89 66 M111 66 Q118 73 125 66" stroke="${CARA}" stroke-width="3.6" fill="none" stroke-linecap="round" opacity="0"/>` +
     `<ellipse class="boca-o" cx="100" cy="82" rx="3.6" ry="4.4" fill="${CARA}" opacity="0"/>` +
@@ -44,7 +48,7 @@ export function startJelly(host, opciones = {}) {
   svg.setAttribute("width", "100%"); svg.setAttribute("height", "100%");
   const $ = (s) => svg.querySelector(s);
   const NS = "http://www.w3.org/2000/svg";
-  const pos = $(".pos"), cuerpo = $(".cuerpo"), campana = $(".campana"), cara = $(".cara"), ojos = $(".ojos");
+  const pos = $(".pos"), cuerpo = $(".cuerpo"), campana = $(".campana"), cara = $(".cara"), ojos = $(".ojos"), pupilas = $(".pupilas");
   const felices = $(".ojos-felices"), dormidos = $(".ojos-dormidos"), boca = $(".boca"), bocaO = $(".boca-o");
   const tentaculos = [...svg.querySelectorAll(".tentaculos path")], burbujas = $(".burbujas");
   svg.appendChild(burbujas);   // adelante de la medusa
@@ -232,7 +236,9 @@ export function startJelly(host, opciones = {}) {
     if (mood === "pensando") { etx = 1.5; ety = -2.2; nextGaze = t + 1; }
     if (!durmiendo && t > nextGaze) { const g = GAZES[Math.floor(Math.random() * GAZES.length)]; etx = g[0]; ety = g[1]; nextGaze = t + rnd(1.2, 4); }
     ex += (etx - ex) * Math.min(1, dt / 0.08); ey += (ety - ey) * Math.min(1, dt / 0.08);
-    cara.setAttribute("transform", `translate(${ex.toFixed(2)} ${ey.toFixed(2)})`);
+    // Las pupilas se mueven dentro del ojo y la cara entera acompaña un poco.
+    pupilas.setAttribute("transform", `translate(${(ex * 0.95).toFixed(2)} ${(ey * 0.95).toFixed(2)})`);
+    cara.setAttribute("transform", `translate(${(ex * 0.4).toFixed(2)} ${(ey * 0.4).toFixed(2)})`);
     const hop = e === "feliz" && fase === "casa" && loopStart < 0 ? -Math.abs(Math.sin((t - emoStart) * 6)) * 4 : 0;
 
     rot += (tilt - rot) * Math.min(1, dt / 0.35);
