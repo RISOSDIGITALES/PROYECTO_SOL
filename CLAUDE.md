@@ -924,6 +924,16 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-10-29 (Jueves)
+
+Arranqué con la rutina de G54, todo en orden salvo la falla de DNS del servidor que sigue a ratos, y seguí con lo que quedó de ayer: el pie de los correos de Camila ahora sale en inglés cuando el correo va en inglés, la ciudad sale de la dirección real y corregí los dos borradores que esperan aprobación. Después llevé a Bubbli al celular, encima del menú de abajo. En el medio armé el documento comparativo del CRM de G54 contra HubSpot, Pipedrive, Zoho, Kommo y GoHighLevel: el nuestro ya hace lo que otros cobran aparte, pero le faltan datos confiables y proceso, así que pasé la primera fase al Éxodo del ingeniero, y de nuestro lado Marco ya manda los teléfonos con código de país y la temperatura del trato ya no vuelve sola a "bajo".
+
+La mayor parte del día fue Bubble, porque me pidieron que pudiera conectarse con otros CRM en los dos sentidos. Ahora tiene llaves para que otro sistema lea y le mande clientes y citas, avisos a varias direcciones con reintentos, conexión directa con GoHighLevel y con HubSpot, y una guía paso a paso para conectar el CRM dentro de Integraciones, sin la palabra "programadores" para que nadie se asuste. Lo probé todo de punta a punta, con 17 de 17 comprobaciones en vivo y todas las pruebas automáticas en verde; lo único que falta es probarlo con cuentas reales de GoHighLevel y HubSpot.
+
+Al final le puse reintentos a Marco contra la falla de DNS, dejé lista la sugerencia de mejor horario, que se activa sola cuando la rotación junte datos, y revisé el asistente de voz de VAPI, que sigue con un modelo viejo y queda pendiente de una llamada de prueba. Por el comentario de Don Marc le di a Jelly el estilo de Finding Nemo, con ojos grandes y sonrisa con dientes, y lo dejé en espera hasta que conteste el ingeniero. Ahí paré con todo subido.
+
+---
+
 ### 2026-10-28 (Miércoles)
 
 Arranqué con la rutina de G54 y revisé que el informe mensual ya comparara contra la línea base, y sí lo hace, pero encontré que guardaba en cero las métricas de Instagram, así que lo corregí. Después terminé a Jelly, la medusa animada que pidió el ingeniero, con base en Bubbli: le puse pupilas, se la pasé y las correcciones las hace él. En el medio me llegó un correo del Vigía: era una falla de DNS en el servidor, que no se puede arreglar desde acá porque es del servidor del ingeniero, así que le dejé el pedido y mientras tanto puse reintentos en Distribution para que no se pierda ninguna publicación.
@@ -981,16 +991,6 @@ Arranqué con la rutina de G54 pidiendo que fuera muy meticulosa, y todo estaba 
 Después confirmé el diseño nuevo de los correos de Bubble, dejando el botón como estaba, y pedí que ese estilo quedara en todos los correos; solo el resumen de llamada y el aviso de escalación tenían piezas propias y ahora se ven igual al resto. Luego pregunté si podíamos hacer llamadas automatizadas salientes a los clientes: se puede, pero por las leyes de EE. UU. y Canadá conviene solo para servicio a clientes que ya tienen relación con el negocio, así que construimos dos funciones, devolver llamadas perdidas y recordar citas, con horario, topes de llamadas e intentos, "No llamar", aviso de asistente virtual y detección de contestador, las dos apagadas por defecto.
 
 Quedó todo subido y con las pruebas en verde, pero no lo probé con una llamada real porque decidí esperar a cuando gastemos en Twilio, y antes de lanzarlo conviene que un abogado confirme la parte legal. Al final probé yo misma la vista de negocio: en la llamada de prueba sonó mi teléfono pero nadie habló, porque el agente de voz no está corriendo en esta computadora, y además el aviso de "te estamos llamando" nunca se iba y no se podía cortar. Hicimos que la prueba muestre en vivo si está sonando, si atendí y si el agente entró, con un botón para cortarla, y lo dejé pendiente para mañana verlo en pantalla y probarlo con el agente de voz encendido.
-
----
-
-### 2026-10-21 (Miércoles)
-
-Arranqué con la rutina de G54, todo en orden, y seguí con lo de ayer: dejar Bubble listo para que Don Marc lo pruebe con ngrok. El comando del token se me partió en dos líneas y no funcionaba, pero ya quedó cargado y el link funcionó; la primera vez a Don Marc le salía el aviso de ngrok, después entró. Al verlo pedí el ojo para ver la contraseña, que quedó en todos los campos, y le pasé la cuenta de agencia que tiene todos los ejemplos para que viera cómo se ve con datos.
-
-Después pedí una auditoría completa de Bubble para pulir detalles: recorrimos todas las pantallas en computadora y celular, más dos revisiones del código, y salieron 65 detalles en un registro. Se corrigieron 43: pantallas que se salían del borde en celular, duraciones y horas mal escritas, "bot" y "agente" mezclados, avisos de carga que faltaban, mensajes de error con nombres técnicos y varias cosas del agente de voz, como avisar y cortar cuando está pausado o despedirse antes de colgar. En el camino una coma de más dejó el panel con error por unos minutos, también en el link de Don Marc, y se arregló al momento. Después decidí las cuatro dudas que quedaron: cada número de llamadas dice qué cuenta, se ocultan los nombres de los proveedores, el aviso de compra ya no muestra el costo de Twilio y el número solo lo compra la agencia.
-
-Cerré con dos pedidos más: un documento comparativo de Bubble con Dapta (estética, contenido, funciones y precios, con fuentes y con lo que no se pudo verificar, porque su panel pide cuenta), y el diseño de los correos, que ahora llevan burbujas en la cabecera, el título más delgado y botones más cuadrados. El diseño quedó guardado y lo confirmo mañana; lo del agente de voz sigue sin probarse en una llamada real.
 
 ---
 
