@@ -536,6 +536,20 @@
         "options": {}
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "sugerencia-horario-29oct",
+      "name": "🕒 Sugerencia de Horario",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "onError": "continueRegularOutput",
+      "position": [
+        3540,
+        760
+      ],
+      "parameters": {
+        "jsCode": "// Sugerencia de horario (29-oct): con el rendimiento real de los posts de Facebook e Instagram de\n// los últimos 60 días, sugiere el mejor día y hora para publicar y lo guarda en G54\n// (PUT /api/agent/companies/{id}/sugerencia-horario; el editor de posts del panel lo muestra con \"Usar\").\n// Piso mínimo (decisión de la usuaria, 26-oct): 3 horarios con 5 posts medidos cada uno y el mejor\n// al menos 20 % por encima del segundo. Si no, la sugerencia queda vacía y se devuelve el motivo.\n// Cada red se compara contra su propio promedio (alcance + 3 × interacciones). LinkedIn todavía no\n// entra: falta el permiso de estadísticas. Nunca frena el informe: cualquier error se devuelve como motivo.\nconst entrada = $input.first().json;\ntry {\n  const cfg = $('⚙️ Config Growth54').item.json;\n  const B = cfg.G54_BASE_URL;\n  const cid = parseInt(cfg.G54_COMPANY_ID, 10) || 1;\n  const PAGE = cfg.FB_PAGE_ID;\n  const PT = $('🔑 Obtener Page Token FB').item.json.access_token;\n  const IGID = $('🔑 Obtener Tokens Sociales G64').item.json.ig_user_id;\n  let tz = 'America/New_York';\n  try { tz = ($('📊 Obtener Perfil Empresa').item.json.data || {}).timezone || tz; } catch (e) {}\n  const H = { Accept: 'application/json', 'Content-Type': 'application/json' };\n  const G = 'https://graph.facebook.com/v19.0/';\n  const desde = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10);\n  const get = async (path, params) => {\n    const qs = Object.entries({ ...params, access_token: PT }).map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v)).join('&');\n    try { return await this.helpers.httpRequest({ method: 'GET', url: G + path + '?' + qs, json: true, timeout: 30000 }); } catch (e) { return null; }\n  };\n  const sumObj = v => (v && typeof v === 'object') ? Object.values(v).reduce((a, b) => a + (Number(b) || 0), 0) : (Number(v) || 0);\n\n  // Métricas actuales de Meta por id\n  const metricas = {};\n  if (PAGE && PT) {\n    const r = await get(PAGE + '/published_posts', { since: desde, limit: 100,\n      fields: 'id,insights.metric(post_total_media_view_unique,post_reactions_by_type_total,post_clicks_by_type,post_activity_by_action_type)' });\n    for (const p of ((r && r.data) || [])) {\n      const ins = (p.insights && p.insights.data) || [];\n      const val = n => { const x = ins.find(i => i.name === n); return x && x.values && x.values[0] ? sumObj(x.values[0].value) : 0; };\n      const acts = ((ins.find(i => i.name === 'post_activity_by_action_type') || {}).values || [{}])[0].value || {};\n      metricas[String(p.id)] = { alcance: val('post_total_media_view_unique'),\n        interacciones: val('post_reactions_by_type_total') + val('post_clicks_by_type') + (Number(acts.comment) || 0) + (Number(acts.share) || 0) };\n    }\n  }\n  if (IGID && PT) {\n    const media = await get(IGID + '/media', { fields: 'id,timestamp', since: desde, limit: 100 });\n    for (const md of ((media && media.data) || [])) {\n      const mi = await get(md.id + '/insights', { metric: 'reach,total_interactions' });\n      const mv = n => { const x = ((mi && mi.data) || []).find(y => y.name === n); return (x && x.values && x.values[0] && Number(x.values[0].value)) || 0; };\n      metricas[String(md.id)] = { alcance: mv('reach'), interacciones: mv('total_interactions') };\n    }\n  }\n\n  // Posts publicados de G54 (con su hora real de publicación), cruzados con las métricas por su id de Meta\n  const login = await this.helpers.httpRequest({ method: 'POST', url: B + '/api/auth/login', headers: H, json: true,\n    body: { email: cfg.G54_MASTER_EMAIL, password: cfg.G54_MASTER_PASSWORD } });\n  const auth = { ...H, Authorization: 'Bearer ' + login.access_token };\n  await this.helpers.httpRequest({ method: 'POST', url: B + '/api/auth/switch-company', headers: auth, json: true, body: { company_id: cid } });\n  const resp = await this.helpers.httpRequest({ method: 'GET', url: B + '/api/rrss/posts', headers: auth, json: true });\n  const posts = [];\n  for (const p of ((resp && resp.data) || resp || [])) {\n    if (p.status !== 'publicado' || !p.fecha_publicada || !p.post_id_platform) continue;\n    const id = String(p.post_id_platform);\n    const m = metricas[id] || metricas[id.split('_').pop()];\n    if (!m) continue;  // LinkedIn, o un post que Meta ya no devuelve\n    posts.push({ platform: p.platform, fecha_publicada: p.fecha_publicada, alcance: m.alcance, interacciones: m.interacciones });\n  }\n\n  // ---- Cálculo (probado aparte el 29-oct con los mismos casos) ----\n  const calcularSugerencia = (posts, tz, ahora) => {\n    const MIN_POSTS = 5, MIN_HORARIOS = 3, VENTAJA = 1.2;\n    const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];\n    const partes = (iso) => {\n      const f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hourCycle: 'h23', weekday: 'short' }).formatToParts(new Date(iso));\n      return { hora: Number(f.find((p) => p.type === 'hour').value),\n               wd: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(f.find((p) => p.type === 'weekday').value) };\n    };\n    const medidos = posts.filter((p) => p.fecha_publicada && Number.isFinite(p.alcance));\n    const porRed = {};\n    for (const p of medidos) (porRed[p.platform] = porRed[p.platform] || []).push(p.alcance + 3 * (p.interacciones || 0));\n    const prom = {};\n    for (const [red, v] of Object.entries(porRed)) prom[red] = Math.max(1, v.reduce((a, b) => a + b, 0) / v.length);\n    const grupos = {}, dias = {};\n    for (const p of medidos) {\n      const { hora, wd } = partes(p.fecha_publicada);\n      const puntaje = (p.alcance + 3 * (p.interacciones || 0)) / prom[p.platform];\n      (grupos[hora] = grupos[hora] || []).push(puntaje);\n      (dias[wd] = dias[wd] || []).push(puntaje);\n    }\n    const media = (v) => v.reduce((a, b) => a + b, 0) / v.length;\n    const conPiso = Object.entries(grupos).filter(([, v]) => v.length >= MIN_POSTS)\n      .map(([h, v]) => ({ hora: Number(h), n: v.length, media: media(v) })).sort((a, b) => b.media - a.media);\n    const hhmm = (h) => String(h).padStart(2, '0') + ':00';\n    if (conPiso.length < MIN_HORARIOS) {\n      const detalle = Object.entries(grupos).map(([h, v]) => `${hhmm(Number(h))}: ${v.length}`).join(', ') || 'ninguno';\n      return { motivo: `Faltan datos: hacen falta ${MIN_HORARIOS} horarios con ${MIN_POSTS} posts medidos cada uno y hay ${conPiso.length} (posts por horario: ${detalle}).` };\n    }\n    const [mejor, segundo] = conPiso;\n    if (mejor.media < segundo.media * VENTAJA) {\n      return { motivo: `Sin una diferencia clara: el mejor horario (${hhmm(mejor.hora)}) rinde ${Math.round((mejor.media / segundo.media - 1) * 100)} % más que el segundo (${hhmm(segundo.hora)}), y hace falta al menos ${Math.round((VENTAJA - 1) * 100)} %.` };\n    }\n    const diaOk = Object.entries(dias).filter(([, v]) => v.length >= MIN_POSTS)\n      .map(([d, v]) => ({ wd: Number(d), media: media(v) })).sort((a, b) => b.media - a.media)[0];\n    const hoy = partes(ahora.toISOString());\n    const wd = diaOk ? diaOk.wd : ((hoy.wd + 1) % 7 === 0 ? 1 : (hoy.wd + 1) % 7 === 6 ? 1 : (hoy.wd + 1) % 7);\n    let delta = (wd - hoy.wd + 7) % 7;\n    if (delta === 0) delta = 7;\n    const fecha = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date(ahora.getTime() + delta * 86400000));\n    return { dia: DIAS[wd], hora: hhmm(mejor.hora), fecha,\n      motivo: `A las ${hhmm(mejor.hora)} tus posts rinden ${Math.round((mejor.media / segundo.media - 1) * 100)} % más que a las ${hhmm(segundo.hora)} (${mejor.n} y ${segundo.n} posts medidos).` };\n  };\n  const sug = calcularSugerencia(posts, tz, new Date());\n\n  // Con día y hora la guarda; sin ellos, G54 deja la sugerencia vacía.\n  const body = sug.dia ? { dia: sug.dia, hora: sug.hora, fecha: sug.fecha, motivo: sug.motivo } : { motivo: sug.motivo };\n  await this.helpers.httpRequest({ method: 'PUT', url: B + '/api/agent/companies/' + cid + '/sugerencia-horario', json: true,\n    headers: { ...H, Authorization: 'Bearer ' + cfg.G54_AGENT_TOKEN }, body });\n  try { await this.helpers.httpRequest({ method: 'POST', url: B + '/api/auth/logout', headers: auth, json: true }); } catch (e) {}\n  return [{ json: { ...entrada, sugerencia_horario: { ...sug, posts_medidos: posts.length } } }];\n} catch (e) {\n  return [{ json: { ...entrada, sugerencia_horario: { error: String(e.message || e).slice(0, 200) } } }];\n}\n"
+      }
     }
   ],
   "connections": {
@@ -770,6 +784,28 @@
         [
           {
             "node": "🔀 ¿Post individual?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Guardar Métricas por Post": {
+      "main": [
+        [
+          {
+            "node": "🕒 Sugerencia de Horario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🕒 Sugerencia de Horario": {
+      "main": [
+        [
+          {
+            "node": "📑 Generar Informe Semanal (formato aprobado)",
             "type": "main",
             "index": 0
           }
