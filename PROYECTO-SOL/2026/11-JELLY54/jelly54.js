@@ -18,8 +18,13 @@
 // (sin overflow: hidden). Con "movimiento reducido" del sistema queda quieta.
 
 const AZUL = "#2E8BE3", AZUL_CLARO = "#55A4EC", AZUL_OSCURO = "#1F78D6", CARA = "#E3F4FF", PUPILA = "#063F67";
+// 29-oct (pedido de Don Marc): cara al estilo de las películas animadas tipo Finding Nemo, con
+// ojos grandes, iris, dos brillos, cejas, sonrisa abierta con dientes y lengua, mejillas y
+// volumen (degradés y brillos en vez de colores lisos). Mismos colores de la marca.
+const BOCA = "#0B2E4F", LENGUA = "#FF7A8A", MEJILLA = "#FF9DB0", OJO_SOMBRA = "#CFE6FA";
+const OJOS = [[80, 60], [120, 60]];   // centros de los ojos
 const TENTACULOS = [[64, 58, AZUL], [82, 72, AZUL_CLARO], [100, 64, AZUL], [118, 74, AZUL_CLARO], [136, 56, AZUL]];
-const GAZES = [[0, 0], [3, 0], [-3, 0], [0, -2.2], [2.2, -1.6], [-2, 1.2]];
+const GAZES = [[0, 0], [4, 0], [-4, 0], [0, -3], [3, -2.2], [-3, 1.6]];
 let unico = 0;
 
 export function startJelly(host, opciones = {}) {
@@ -29,20 +34,39 @@ export function startJelly(host, opciones = {}) {
     // Achicada al 85 % y bajada un poco: con los tentáculos estirados ocupaba todo el alto.
     `<g class="burbujas"></g><g class="pos"><g transform="translate(15 10) scale(0.85)"><g class="cuerpo">` +
     `<g class="tentaculos">${TENTACULOS.map(([, , c]) => `<path fill="none" stroke="${c}" stroke-width="6.5" stroke-linecap="round"/>`).join("")}</g>` +
-    // Campana: domo con el borde de abajo en lóbulos; arriba más clara y el borde más oscuro, como el ícono.
+    // Degradés para dar volumen (29-oct): la campana más clara arriba a la izquierda, el iris
+    // de celeste a azul marino y el blanco del ojo con un poco de sombra abajo.
+    `<defs><radialGradient id="${id}-g-campana" cx="38%" cy="30%" r="75%"><stop offset="0" stop-color="#7DBBF2"/>` +
+    `<stop offset="0.55" stop-color="${AZUL}"/><stop offset="1" stop-color="#1A64B8"/></radialGradient>` +
+    `<radialGradient id="${id}-g-iris" cx="45%" cy="40%" r="60%"><stop offset="0" stop-color="#6FC3FF"/>` +
+    `<stop offset="0.6" stop-color="${AZUL}"/><stop offset="1" stop-color="${PUPILA}"/></radialGradient>` +
+    `<radialGradient id="${id}-g-ojo" cx="50%" cy="38%" r="65%"><stop offset="0.7" stop-color="#FFFFFF"/>` +
+    `<stop offset="1" stop-color="${OJO_SOMBRA}"/></radialGradient>` +
+    `<clipPath id="${id}-boca"><path class="boca-clip"/></clipPath></defs>` +
+    // Campana: domo con el borde de abajo en lóbulos, con volumen, un brillo arriba y sombra abajo.
     `<g class="campana"><clipPath id="${id}-domo"><path d="M42 96 C40 52 68 28 100 28 C132 28 160 52 158 96 Z"/></clipPath>` +
     `<path fill="${AZUL_OSCURO}" d="M42 94 Q51 106 61 98 Q71 106 80.5 98 Q90 106 100 98 Q110 106 119.5 98 Q129 106 139 98 Q150 106 158 94 Z"/>` +
-    `<path fill="${AZUL}" d="M42 96 C40 52 68 28 100 28 C132 28 160 52 158 96 Z"/>` +
-    `<g clip-path="url(#${id}-domo)"><path fill="${AZUL_CLARO}" d="M30 20 H170 V58 C140 46 60 46 30 58 Z"/></g>` +
-    // Pupilas (28-oct, pedido de la usuaria): azul marino de la marca con un brillo blanco; son
-    // las que siguen la mirada.
-    `<g class="cara"><g class="ojos"><ellipse cx="82" cy="66" rx="7.5" ry="8" fill="${CARA}"/><ellipse cx="118" cy="66" rx="7.5" ry="8" fill="${CARA}"/>` +
-    `<g class="pupilas"><circle cx="82" cy="67" r="4.3" fill="${PUPILA}"/><circle cx="118" cy="67" r="4.3" fill="${PUPILA}"/>` +
-    `<circle cx="83.6" cy="65.1" r="1.5" fill="#fff"/><circle cx="119.6" cy="65.1" r="1.5" fill="#fff"/></g></g>` +
-    `<path class="ojos-felices" d="M75 69 Q82 59 89 69 M111 69 Q118 59 125 69" stroke="${CARA}" stroke-width="3.6" fill="none" stroke-linecap="round" opacity="0"/>` +
-    `<path class="ojos-dormidos" d="M75 66 Q82 73 89 66 M111 66 Q118 73 125 66" stroke="${CARA}" stroke-width="3.6" fill="none" stroke-linecap="round" opacity="0"/>` +
-    `<ellipse class="boca-o" cx="100" cy="82" rx="3.6" ry="4.4" fill="${CARA}" opacity="0"/>` +
-    `<path class="boca" d="M95 80 Q100 84 105 80" stroke="${CARA}" stroke-width="3.2" fill="none" stroke-linecap="round"/></g></g>` +
+    `<path fill="url(#${id}-g-campana)" d="M42 96 C40 52 68 28 100 28 C132 28 160 52 158 96 Z"/>` +
+    `<g clip-path="url(#${id}-domo)"><ellipse cx="100" cy="104" rx="70" ry="16" fill="#0F4F9A" opacity="0.25"/></g>` +
+    `<ellipse cx="72" cy="42" rx="14" ry="7" fill="#FFFFFF" opacity="0.35" transform="rotate(-28 72 42)"/>` +
+    `<circle cx="89" cy="35" r="3" fill="#FFFFFF" opacity="0.45"/>` +
+    // Cara (29-oct): ojos grandes con iris, pupila y dos brillos (son los que siguen la mirada),
+    // cejas, mejillas y una sonrisa abierta con dientes y lengua.
+    `<g class="cara"><g class="mejillas"><ellipse cx="64" cy="78" rx="7.5" ry="4.5" fill="${MEJILLA}" opacity="0.55"/>` +
+    `<ellipse cx="136" cy="78" rx="7.5" ry="4.5" fill="${MEJILLA}" opacity="0.55"/></g>` +
+    `<g class="cejas">${OJOS.map(([cx, cy], i) => `<path d="M${cx - 8} ${cy - 19} Q${cx} ${cy - (i ? 24 : 23)} ${cx + 8} ${cy - 19}" stroke="${PUPILA}" stroke-width="2.8" fill="none" stroke-linecap="round"/>`).join("")}</g>` +
+    `<g class="ojos">${OJOS.map(([cx, cy]) => `<ellipse cx="${cx}" cy="${cy}" rx="12.5" ry="14.5" fill="url(#${id}-g-ojo)" stroke="${PUPILA}" stroke-width="1.6"/>`).join("")}` +
+    `<g class="pupilas">${OJOS.map(([cx, cy]) => `<circle cx="${cx}" cy="${cy + 2}" r="8.2" fill="url(#${id}-g-iris)"/>` +
+      `<circle cx="${cx}" cy="${cy + 2}" r="4.3" fill="#04243D"/><circle cx="${cx + 3}" cy="${cy - 2}" r="2.8" fill="#fff"/>` +
+      `<circle cx="${cx - 2.6}" cy="${cy + 5}" r="1.3" fill="#fff" opacity="0.9"/>`).join("")}</g></g>` +
+    `<path class="ojos-felices" d="M68 63 Q80 49 92 63 M108 63 Q120 49 132 63" stroke="${PUPILA}" stroke-width="3.6" fill="none" stroke-linecap="round" opacity="0"/>` +
+    `<path class="ojos-dormidos" d="M68 60 Q80 70 92 60 M108 60 Q120 70 132 60" stroke="${PUPILA}" stroke-width="3.6" fill="none" stroke-linecap="round" opacity="0"/>` +
+    `<g class="boca-o" opacity="0"><ellipse cx="100" cy="86" rx="5.5" ry="6.5" fill="${BOCA}"/>` +
+    `<ellipse cx="100" cy="90" rx="3.5" ry="2.2" fill="${LENGUA}"/></g>` +
+    // Sonrisa: el contorno se dibuja en cada cuadro; los dientes y la lengua quedan recortados adentro.
+    `<g class="boca"><path class="boca-fondo" fill="${BOCA}"/><g clip-path="url(#${id}-boca)">` +
+    `<rect x="80" y="75" width="40" height="4.6" rx="1.5" fill="#FFFFFF"/>` +
+    `<ellipse class="lengua" cx="100" cy="92" rx="7" ry="4.5" fill="${LENGUA}"/></g></g></g></g>` +
     `</g></g></g></svg>`;
   const svg = host.firstElementChild;
   svg.setAttribute("width", "100%"); svg.setAttribute("height", "100%");
@@ -50,13 +74,25 @@ export function startJelly(host, opciones = {}) {
   const NS = "http://www.w3.org/2000/svg";
   const pos = $(".pos"), cuerpo = $(".cuerpo"), campana = $(".campana"), cara = $(".cara"), ojos = $(".ojos"), pupilas = $(".pupilas");
   const felices = $(".ojos-felices"), dormidos = $(".ojos-dormidos"), boca = $(".boca"), bocaO = $(".boca-o");
+  const bocaFondo = $(".boca-fondo"), bocaClip = $(".boca-clip"), lengua = $(".lengua"), cejas = $(".cejas");
   const tentaculos = [...svg.querySelectorAll(".tentaculos path")], burbujas = $(".burbujas");
   svg.appendChild(burbujas);   // adelante de la medusa
-  ojos.style.transformBox = "view-box"; ojos.style.transformOrigin = "100px 66px";
+  ojos.style.transformBox = "view-box"; ojos.style.transformOrigin = "100px 60px";
+
+  // Sonrisa abierta (29-oct): el borde de arriba casi recto y el de abajo en curva; `abre` es
+  // cuánto baja la curva (más con alegría o al hablar).
+  function dibujarBoca(ancho, abre) {
+    const y0 = 75, d = `M${100 - ancho} ${y0} Q100 ${y0 + 2} ${100 + ancho} ${y0} Q100 ${(y0 + abre).toFixed(2)} ${100 - ancho} ${y0} Z`;
+    bocaFondo.setAttribute("d", d); bocaClip.setAttribute("d", d);
+    // La curva llega hasta la mitad de `abre`: la lengua va en el fondo de esa curva.
+    lengua.setAttribute("cy", (y0 + abre * 0.46).toFixed(2));
+    lengua.setAttribute("rx", (ancho * 0.55).toFixed(2));
+  }
 
   let mood = "quieto", pedido = null;
-  // Tentáculos en reposo, para el dibujo quieto (y el arranque).
+  // Tentáculos y boca en reposo, para el dibujo quieto (y el arranque).
   dibujarTentaculos(1, 1, 0, 0, 0);
+  dibujarBoca(14, 20);
   const reducido = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   if (reducido || typeof svg.animate !== "function") {
     return { stop() {}, setMood(m) { mood = m; }, accion() {} };
@@ -227,12 +263,16 @@ export function startJelly(host, opciones = {}) {
     felices.setAttribute("opacity", e === "feliz" && !durmiendo ? 1 : 0);
     dormidos.setAttribute("opacity", durmiendo ? 1 : 0);
     talk += ((mood === "hablando" ? 0.5 + 0.5 * Math.sin(t * 14) : 0) - talk) * Math.min(1, dt / 0.08);
-    const sonrisa = e === "feliz" ? 6 : durmiendo ? 1.5 : 3.5, ancho = e === "feliz" ? 7 : 5;
-    boca.setAttribute("d", `M${100 - ancho} 80 Q100 ${(80 + sonrisa + talk * 5).toFixed(2)} ${100 + ancho} 80`);
+    // Sonrisa abierta: más grande feliz, chiquita dormida, y se abre y cierra al hablar.
+    const abre = (e === "feliz" ? 26 : durmiendo ? 6 : 20) + talk * 10, anchoBoca = e === "feliz" ? 16 : durmiendo ? 7 : 14;
+    dibujarBoca(anchoBoca, abre);
     const enO = e === "sorpresa" && talk < 0.1;
     boca.setAttribute("opacity", enO ? 0 : 1);
     bocaO.setAttribute("opacity", enO ? 1 : 0);
-    if (e === "curioso") { tilt += 10; etx = 3; ety = 0; }
+    // Cejas: suben con la sorpresa y la curiosidad, bajan un poco dormida.
+    const cejaY = e === "sorpresa" ? -4 : e === "curioso" ? -2.5 : durmiendo ? 2 : 0;
+    cejas.setAttribute("transform", `translate(0 ${cejaY})`);
+    if (e === "curioso") { tilt += 10; etx = 4; ety = 0; }
     if (mood === "pensando") { etx = 1.5; ety = -2.2; nextGaze = t + 1; }
     if (!durmiendo && t > nextGaze) { const g = GAZES[Math.floor(Math.random() * GAZES.length)]; etx = g[0]; ety = g[1]; nextGaze = t + rnd(1.2, 4); }
     ex += (etx - ex) * Math.min(1, dt / 0.08); ey += (ety - ey) * Math.min(1, dt / 0.08);
