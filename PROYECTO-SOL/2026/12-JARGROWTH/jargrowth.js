@@ -34,15 +34,15 @@ export function startJarGrowth(host, opciones = {}) {
     (opciones.fondo ? `<rect x="8" y="8" width="184" height="184" rx="44" fill="#F1F7F7"/>` : "") +
     // Achicado al 76 % (la cabeza queda más chica y los tentáculos, más largos, entran en el cuadro).
     `<g class="burbujas"></g><g class="pos"><g transform="translate(24 4) scale(0.76)"><g class="cuerpo">` +
-    // Tentáculos: cada uno es un trazo ancho verde oscuro (el contorno) con uno verde claro encima.
-    `<g class="tentaculos">${TENTACULOS.map(() => `<g><path fill="none" stroke="${BORDE}" stroke-width="12" stroke-linecap="round"/>` +
-      `<path fill="none" stroke="${VERDE_CLARO}" stroke-width="8" stroke-linecap="round"/></g>`).join("")}</g>` +
-    // Cabeza redonda con una banda más clara arriba y, abajo, el borde de donde salen los tentáculos.
+    // Tentáculos de pulpo (30-oct): cada uno es una forma rellena, gruesa arriba y finita en la
+    // punta, con contorno, y cuatro ventosas del lado de adentro.
+    `<g class="tentaculos">${TENTACULOS.map(() => `<g><path fill="${VERDE_CLARO}" stroke="${BORDE}" stroke-width="2.4" stroke-linejoin="round"/>` +
+      `<g>${"<circle fill=\"#C9F2D6\" stroke=\"#2E7D4F\" stroke-width=\"0.8\"/>".repeat(4)}</g></g>`).join("")}</g>` +
+    // Cabeza redonda con una banda más clara arriba; los tentáculos salen directo de abajo.
     `<defs><linearGradient id="${id}-g-campana" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6EDC98"/>` +
     `<stop offset="0.36" stop-color="#4CC97E"/><stop offset="0.44" stop-color="#2DB463"/><stop offset="1" stop-color="${VERDE_OSCURO}"/></linearGradient>` +
     `<clipPath id="${id}-boca"><path class="boca-clip"/></clipPath></defs>` +
     `<g class="campana"><clipPath id="${id}-domo"><path d="M44 94 C24 52 56 10 100 10 C144 10 176 52 156 94 Q100 112 44 94 Z"/></clipPath>` +
-    `<path fill="${VERDE}" stroke="${BORDE}" stroke-width="2.6" stroke-linejoin="round" d="M46 88 Q34 104 56 109 Q100 118 144 109 Q166 104 154 88 Q100 106 46 88 Z"/>` +
     `<path fill="url(#${id}-g-campana)" d="M44 94 C24 52 56 10 100 10 C144 10 176 52 156 94 Q100 112 44 94 Z"/>` +
     `<g clip-path="url(#${id}-domo)"><ellipse cx="100" cy="106" rx="72" ry="13" fill="#0F5A2E" opacity="0.3"/></g>` +
     `<path fill="none" stroke="${BORDE}" stroke-width="2.6" stroke-linejoin="round" d="M44 94 C24 52 56 10 100 10 C144 10 176 52 156 94 Q100 112 44 94 Z"/>` +
@@ -86,7 +86,7 @@ export function startJarGrowth(host, opciones = {}) {
   const pos = $(".pos"), cuerpo = $(".cuerpo"), campana = $(".campana"), cara = $(".cara"), ojos = $(".ojos"), pupilas = $(".pupilas");
   const felices = $(".ojos-felices"), dormidos = $(".ojos-dormidos"), boca = $(".boca"), bocaO = $(".boca-o");
   const bocaFondo = $(".boca-fondo"), bocaClip = $(".boca-clip"), bocaBorde = $(".boca-borde"), comisuras = $(".comisuras"), lengua = $(".lengua"), cejas = $(".cejas");
-  const tentaculos = [...svg.querySelectorAll(".tentaculos > g")].map((g) => [...g.children]), burbujas = $(".burbujas");
+  const tentaculos = [...svg.querySelectorAll(".tentaculos > g")].map((g) => [g.children[0], [...g.children[1].children]]), burbujas = $(".burbujas");
   svg.appendChild(burbujas);   // adelante de la medusa
   ojos.style.transformBox = "view-box"; ojos.style.transformOrigin = "100px 62px";
 
@@ -105,7 +105,7 @@ export function startJarGrowth(host, opciones = {}) {
 
   let mood = "quieto", pedido = null;
   // Tentáculos y boca en reposo, para el dibujo quieto (y el arranque).
-  dibujarTentaculos(1, 1, 0, 0, 0);
+  dibujarTentaculos(1, 1, 0, 0, 1);
   dibujarBoca(13, 20);
   const reducido = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   if (reducido || typeof svg.animate !== "function") {
@@ -124,27 +124,34 @@ export function startJarGrowth(host, opciones = {}) {
   let fase = "casa", faseT = 0, nextEscape = rnd(60, 90), ruta = null, rutaI = 0;
   let talk = 0, raf = 0, last = performance.now() / 1000;
 
-  // Cada tentáculo es una línea suave de 6 tramos. Ondula con un retraso que crece hacia la
-  // punta, se va hacia atrás cuando la medusa se mueve de costado y se estira cuando sube.
+  // Cada tentáculo se arma como un trazo que avanza en pasos y va girando: sale de abajo de la
+  // cabeza abierto en abanico, ondula con un retraso que crece hacia la punta, se va hacia atrás
+  // cuando el pulpo se mueve de costado, se estira cuando sube, y la punta se enrosca en espiral
+  // hacia afuera. Alrededor de ese trazo se dibuja la forma, gruesa arriba y finita en la punta.
   function dibujarTentaculos(sx, sy, w, lat, estira) {
     TENTACULOS.forEach(([x0, largo], k) => {
-      const rx = 100 + (x0 - 100) * sx, ry = 62 + (102 - 62) * sy, n = 8, pts = [];
-      const lado = x0 < 100 ? -1 : 1;
-      const abre = (x0 - 100) * 0.12 * (1 - sx) * 4;   // al contraerse, las puntas se abren un poco
-      for (let i = 0; i <= n; i++) {
-        const u = i / n;
-        const ondaX = Math.sin(w - u * 3.4 + k * 0.9) * 6.5 * u;
-        // Las patas se abren hacia los costados y la punta se enrosca hacia afuera y arriba.
-        const abierto = (x0 - 100) * 0.28 * u, rizo = u > 0.6 ? ((u - 0.6) / 0.4) ** 2 : 0;
-        pts.push([rx + ondaX + abre * u - lat * u * u + abierto + lado * 9 * rizo, ry + largo * estira * u - 9 * rizo]);
+      const lado = x0 < 100 ? -1 : 1, n = 16, paso = (largo * estira) / n;
+      let x = 100 + (x0 - 100) * sx, y = 92 + 6 * (sy - 1);
+      let h = ((x0 - 100) / 42) * 0.95 * (1.15 - 0.15 * sx);   // ángulo: 0 = hacia abajo
+      const pts = [[x, y, h]];
+      for (let i = 1; i <= n; i++) {
+        const u = i / n, rizo = u > 0.5 ? ((u - 0.5) / 0.5) ** 1.6 : 0;
+        h += Math.sin(w - u * 3.2 + k * 0.9) * 0.07 * u - lat * 0.0035 + lado * 0.78 * rizo;
+        x += Math.sin(h) * paso; y += Math.cos(h) * paso;
+        pts.push([x, y, h]);
       }
-      let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
-      for (let i = 1; i < n; i++) {
-        const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
-        d += ` Q${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)}`;
-      }
-      const dd = d + ` L${pts[n][0].toFixed(1)} ${pts[n][1].toFixed(1)}`;
-      tentaculos[k].forEach((p) => p.setAttribute("d", dd));
+      const ancho = (u) => 14.5 * (1 - u) + 2.6 * u;
+      const borde = (q, u, lado2) => [q[0] + Math.cos(q[2]) * ancho(u) / 2 * lado2, q[1] - Math.sin(q[2]) * ancho(u) / 2 * lado2];
+      const izq = pts.map((q, i) => borde(q, i / n, 1)), der = pts.map((q, i) => borde(q, i / n, -1)).reverse();
+      const f = (p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`;
+      const [pata, ventosas] = tentaculos[k];
+      pata.setAttribute("d", `M${izq.map(f).join(" L")} L${der.map(f).join(" L")} Z`);
+      // Ventosas del lado de adentro (hacia el centro del pulpo), más chicas hacia la punta.
+      ventosas.forEach((c, j) => {
+        const u = 0.28 + j * 0.15, q = pts[Math.round(u * n)], [bx, by] = borde(q, u, -lado * 0.42);
+        c.setAttribute("cx", bx.toFixed(1)); c.setAttribute("cy", by.toFixed(1));
+        c.setAttribute("r", (2.3 * (1 - u) + 0.9).toFixed(2));
+      });
     });
   }
   function burbuja() {
