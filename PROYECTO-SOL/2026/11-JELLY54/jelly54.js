@@ -29,7 +29,7 @@ const GAZES = [[0, 0], [3.5, 0], [-3.5, 0], [0, -2.6], [2.6, -2], [-2.6, 1.5]];
 let unico = 0;
 // Curva del cachete de cada ojo (puntos "x y" de inicio, control y fin): empieza en el borde de
 // adentro del ojo, cruza la parte de abajo subiendo un poco y sale del ojo hacia afuera.
-const cachete = (cx, cy, afuera) => [[-13, 9], [3, 4.5], [19, 13]].map(([dx, dy]) => `${(cx + afuera * dx).toFixed(1)} ${(cy + dy).toFixed(1)}`);
+const cachete = (cx, cy, afuera) => [[-12, 9.5], [3, 4.5], [15.5, 11]].map(([dx, dy]) => `${(cx + afuera * dx).toFixed(1)} ${(cy + dy).toFixed(1)}`);
 
 export function startJelly(host, opciones = {}) {
   const id = `jelly${++unico}`;
