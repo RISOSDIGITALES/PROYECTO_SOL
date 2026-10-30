@@ -39,14 +39,14 @@ export function startJarGrowth(host, opciones = {}) {
     // punta, con contorno, y cuatro ventosas del lado de adentro.
     `<g class="tentaculos">${TENTACULOS.map(() => `<g><path fill="${VERDE_CUERPO}" stroke="${BORDE}" stroke-width="2.4" stroke-linejoin="round"/>` +
       `<g>${"<circle fill=\"#C9F2D6\" stroke=\"#2E7D4F\" stroke-width=\"0.8\"/>".repeat(4)}</g></g>`).join("")}</g>` +
-    // Cabeza redonda con una banda más clara arriba. Abajo no tiene contorno ni sombra y termina en
-    // el mismo verde de los tentáculos, así cabeza y tentáculos se ven como un solo cuerpo.
+    // Cabeza redonda que se angosta abajo en un cuello, con una banda más clara arriba. Abajo no
+    // tiene contorno ni sombra y termina en el mismo verde de los tentáculos: un solo cuerpo.
     `<defs><linearGradient id="${id}-g-campana" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6EDC98"/>` +
     `<stop offset="0.36" stop-color="#4CC97E"/><stop offset="0.44" stop-color="#34B96A"/><stop offset="1" stop-color="${VERDE_CUERPO}"/></linearGradient>` +
     `<clipPath id="${id}-boca"><path class="boca-clip"/></clipPath></defs>` +
-    `<g class="campana"><clipPath id="${id}-domo"><path d="M44 94 C24 52 56 10 100 10 C144 10 176 52 156 94 Q100 112 44 94 Z"/></clipPath>` +
-    `<path fill="url(#${id}-g-campana)" d="M44 94 C24 52 56 10 100 10 C144 10 176 52 156 94 Q100 112 44 94 Z"/>` +
-    `<path fill="none" stroke="${BORDE}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M52 97 Q47 96 44 94 C24 52 56 10 100 10 C144 10 176 52 156 94 Q153 96 148 97"/>` +
+    `<g class="campana"><clipPath id="${id}-domo"><path d="M60 100 C46 90 30 66 36 44 C44 20 70 10 100 10 C130 10 156 20 164 44 C170 66 154 90 140 100 Q100 110 60 100 Z"/></clipPath>` +
+    `<path fill="url(#${id}-g-campana)" d="M60 100 C46 90 30 66 36 44 C44 20 70 10 100 10 C130 10 156 20 164 44 C170 66 154 90 140 100 Q100 110 60 100 Z"/>` +
+    `<path fill="none" stroke="${BORDE}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M66 102 Q62 101 60 100 C46 90 30 66 36 44 C44 20 70 10 100 10 C130 10 156 20 164 44 C170 66 154 90 140 100 Q138 101 134 102"/>` +
     `<ellipse cx="100" cy="25" rx="16" ry="6.5" fill="#FFFFFF" opacity="0.45" transform="rotate(-8 100 36)"/>` +
     `<ellipse cx="60" cy="42" rx="6.5" ry="4.2" fill="#FFFFFF" opacity="0.5" transform="rotate(-42 60 42)"/>` +
     // Cara: ojos con el blanco finito y casi todo negro, con dos brillos (son los que siguen la
@@ -133,7 +133,8 @@ export function startJarGrowth(host, opciones = {}) {
   function dibujarTentaculos(sx, sy, w, lat, estira) {
     TENTACULOS.forEach(([x0, largo], k) => {
       const lado = x0 < 100 ? -1 : 1, n = 16, paso = (largo * estira) / n;
-      let x = 100 + (x0 - 100) * sx, y = 92 + 6 * (sy - 1);
+      // Salen juntos, del cuello (más angosto que la cabeza), y recién después se abren.
+      let x = 100 + (x0 - 100) * 0.62 * sx, y = 96 + 6 * (sy - 1);
       let h = ((x0 - 100) / 42) * 0.95 * (1.15 - 0.15 * sx);   // ángulo: 0 = hacia abajo
       const pts = [[x, y, h]];
       for (let i = 1; i <= n; i++) {
