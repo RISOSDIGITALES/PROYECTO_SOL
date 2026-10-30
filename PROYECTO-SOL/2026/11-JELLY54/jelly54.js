@@ -27,6 +27,11 @@ const OJOS = [[76, 62], [124, 62]];   // centros de los ojos
 const TENTACULOS = [[52, 50], [66, 66], [83, 58], [100, 72], [117, 60], [134, 68], [148, 52]];
 const GAZES = [[0, 0], [3.5, 0], [-3.5, 0], [0, -2.6], [2.6, -2], [-2.6, 1.5]];
 let unico = 0;
+// Trazo de arco alrededor de (cx, cy), de un ángulo a otro en grados (0 = derecha, 90 = abajo).
+const arco = (cx, cy, r, a0, a1) => {
+  const p = (a) => [cx + r * Math.cos((a * Math.PI) / 180), cy + r * 1.05 * Math.sin((a * Math.PI) / 180)].map((v) => v.toFixed(1)).join(" ");
+  return `M${p(a0)} A${r} ${r * 1.05} 0 0 1 ${p(a1)}`;
+};
 
 export function startJelly(host, opciones = {}) {
   const id = `jelly${++unico}`;
@@ -40,8 +45,6 @@ export function startJelly(host, opciones = {}) {
     // Campana con una banda más clara arriba (como en la imagen de referencia) y el borde en lóbulos.
     `<defs><linearGradient id="${id}-g-campana" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7CBCF3"/>` +
     `<stop offset="0.36" stop-color="#5FA9EE"/><stop offset="0.44" stop-color="#3E91E4"/><stop offset="1" stop-color="${AZUL_OSCURO}"/></linearGradient>` +
-    `<radialGradient id="${id}-g-iris" cx="45%" cy="35%" r="65%"><stop offset="0" stop-color="#7FCBFF"/>` +
-    `<stop offset="0.55" stop-color="${AZUL}"/><stop offset="1" stop-color="#0B3A6E"/></radialGradient>` +
     `<clipPath id="${id}-boca"><path class="boca-clip"/></clipPath></defs>` +
     `<g class="campana"><clipPath id="${id}-domo"><path d="M36 98 C34 48 66 24 100 24 C134 24 166 48 164 98 Z"/></clipPath>` +
     `<path fill="${AZUL}" stroke="${BORDE}" stroke-width="2.6" stroke-linejoin="round" d="M38 94 Q46 110 56 102 Q66 112 78 103 Q89 112 100 103 Q111 112 122 103 Q134 112 144 102 Q154 110 162 94 Z"/>` +
@@ -53,14 +56,14 @@ export function startJelly(host, opciones = {}) {
     // Cara: ojos con el blanco finito y casi todo negro, con dos brillos (son los que siguen la
     // mirada), cejitas, rubor en puntitos y una boca abierta con lengua.
     `<g class="cara"><g class="mejillas">${[[58, 81], [65, 79.5], [135, 79.5], [142, 81]].map(([cx, cy]) => `<ellipse cx="${cx}" cy="${cy}" rx="3" ry="2.1" fill="${RUBOR}"/>`).join("")}</g>` +
-    `<g class="cejas">${OJOS.map(([cx, cy], i) => `<path d="M${cx - 7 + (i ? 3 : -3)} ${cy - 24} Q${cx + (i ? 3 : -3)} ${cy - 28.5} ${cx + 7 + (i ? 3 : -3)} ${cy - 24}" stroke="${NEGRO}" stroke-width="3" fill="none" stroke-linecap="round"/>`).join("")}</g>` +
-    // 30-oct, a pedido de la usuaria: los ojos vuelven a tener lo tierno de la versión anterior
-    // (iris azul en degradé, pupila y brillos grandes), más grandes y con el contorno del dibujo nuevo.
-    `<g class="ojos">${OJOS.map(([cx, cy]) => `<ellipse cx="${cx}" cy="${cy}" rx="15.5" ry="17" fill="#FFFFFF" stroke="${NEGRO}" stroke-width="2.6"/>`).join("")}` +
-    `<g class="pupilas">${OJOS.map(([cx, cy]) => `<circle cx="${cx}" cy="${cy + 2}" r="11.5" fill="url(#${id}-g-iris)"/>` +
-      `<circle cx="${cx}" cy="${cy + 2.5}" r="6.6" fill="${NEGRO}"/>` +
-      `<circle cx="${cx - 4}" cy="${cy - 3}" r="4.8" fill="#fff"/><circle cx="${cx + 4.4}" cy="${cy + 6}" r="2.2" fill="#fff"/>` +
-      `<circle cx="${cx + 4.6}" cy="${cy - 4.2}" r="1.3" fill="#fff" opacity="0.9"/>`).join("")}</g></g>` +
+    `<g class="cejas">${OJOS.map(([cx, cy], i) => `<path d="M${cx - 7 + (i ? 3 : -3)} ${cy - 24} Q${cx + (i ? 3 : -3)} ${cy - 28.5} ${cx + 7 + (i ? 3 : -3)} ${cy - 24}" stroke="${NEGRO}" stroke-width="3.8" fill="none" stroke-linecap="round"/>`).join("")}</g>` +
+    // 30-oct, segunda vuelta (la usuaria marcó los detalles de la referencia): contorno negro
+    // grueso, aro blanco finito, pupila negra grande con un brillo grande y uno chico, y una
+    // rayita curva debajo de la esquina de afuera de cada ojo.
+    `<g class="ojos">${OJOS.map(([cx, cy], i) => `<ellipse cx="${cx}" cy="${cy}" rx="15" ry="16" fill="#FFFFFF" stroke="${NEGRO}" stroke-width="3.4"/>` +
+      `<path d="${arco(cx, cy, 20, i ? 22 : 118, i ? 62 : 158)}" stroke="${NEGRO}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`).join("")}` +
+    `<g class="pupilas">${OJOS.map(([cx, cy]) => `<ellipse cx="${cx}" cy="${cy + 0.5}" rx="11.3" ry="12.3" fill="${NEGRO}"/>` +
+      `<circle cx="${cx - 3.2}" cy="${cy - 4.2}" r="4.6" fill="#fff"/><circle cx="${cx + 2.6}" cy="${cy + 2.4}" r="2.1" fill="#fff"/>`).join("")}</g></g>` +
     `<path class="ojos-felices" d="M62 66 Q76 50 90 66 M110 66 Q124 50 138 66" stroke="${NEGRO}" stroke-width="3.8" fill="none" stroke-linecap="round" opacity="0"/>` +
     `<path class="ojos-dormidos" d="M62 62 Q76 73 90 62 M110 62 Q124 73 138 62" stroke="${NEGRO}" stroke-width="3.8" fill="none" stroke-linecap="round" opacity="0"/>` +
     `<g class="boca-o" opacity="0"><ellipse cx="100" cy="88" rx="6" ry="7" fill="${BOCA}" stroke="${NEGRO}" stroke-width="2"/>` +
@@ -68,7 +71,8 @@ export function startJelly(host, opciones = {}) {
     // Boca: el contorno se dibuja en cada cuadro; la lengua queda recortada adentro.
     `<g class="boca"><path class="boca-fondo" fill="${BOCA}"/><g clip-path="url(#${id}-boca)">` +
     `<ellipse class="lengua" cx="100" cy="92" rx="7" ry="4.5" fill="${LENGUA}"/></g>` +
-    `<path class="boca-borde" fill="none" stroke="${NEGRO}" stroke-width="2.2" stroke-linejoin="round"/></g></g></g>` +
+    `<path class="boca-borde" fill="none" stroke="${NEGRO}" stroke-width="2.2" stroke-linejoin="round"/>` +
+    `<path class="comisuras" fill="none" stroke="${NEGRO}" stroke-width="2" stroke-linecap="round"/></g></g></g>` +
     `</g></g></g></svg>`;
   const svg = host.firstElementChild;
   svg.setAttribute("width", "100%"); svg.setAttribute("height", "100%");
@@ -76,7 +80,7 @@ export function startJelly(host, opciones = {}) {
   const NS = "http://www.w3.org/2000/svg";
   const pos = $(".pos"), cuerpo = $(".cuerpo"), campana = $(".campana"), cara = $(".cara"), ojos = $(".ojos"), pupilas = $(".pupilas");
   const felices = $(".ojos-felices"), dormidos = $(".ojos-dormidos"), boca = $(".boca"), bocaO = $(".boca-o");
-  const bocaFondo = $(".boca-fondo"), bocaClip = $(".boca-clip"), bocaBorde = $(".boca-borde"), lengua = $(".lengua"), cejas = $(".cejas");
+  const bocaFondo = $(".boca-fondo"), bocaClip = $(".boca-clip"), bocaBorde = $(".boca-borde"), comisuras = $(".comisuras"), lengua = $(".lengua"), cejas = $(".cejas");
   const tentaculos = [...svg.querySelectorAll(".tentaculos > g")].map((g) => [...g.children]), burbujas = $(".burbujas");
   svg.appendChild(burbujas);   // adelante de la medusa
   ojos.style.transformBox = "view-box"; ojos.style.transformOrigin = "100px 62px";
@@ -86,6 +90,9 @@ export function startJelly(host, opciones = {}) {
   function dibujarBoca(ancho, abre) {
     const y0 = 79, d = `M${100 - ancho} ${y0} Q100 ${y0 + 2} ${100 + ancho} ${y0} Q100 ${(y0 + abre).toFixed(2)} ${100 - ancho} ${y0} Z`;
     bocaFondo.setAttribute("d", d); bocaClip.setAttribute("d", d); bocaBorde.setAttribute("d", d);
+    // Rayitas curvas en las puntas de la sonrisa, como en la referencia.
+    const l = 100 - ancho, r = 100 + ancho;
+    comisuras.setAttribute("d", `M${l - 3.5} ${y0 - 3} Q${l - 2} ${y0 + 0.5} ${l + 1} ${y0 + 0.8} M${r + 3.5} ${y0 - 3} Q${r + 2} ${y0 + 0.5} ${r - 1} ${y0 + 0.8}`);
     // La curva llega hasta la mitad de `abre`: la lengua va en el fondo de esa curva.
     lengua.setAttribute("cy", (y0 + abre * 0.46).toFixed(2));
     lengua.setAttribute("rx", (ancho * 0.55).toFixed(2));
