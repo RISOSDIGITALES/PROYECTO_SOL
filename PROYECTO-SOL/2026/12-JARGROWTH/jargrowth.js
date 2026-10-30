@@ -133,7 +133,9 @@ export function startJarGrowth(host, opciones = {}) {
 
   // Brazos (versión 2), como se mueven en un pulpo real. Cada brazo es un trazo que avanza en
   // pasos y va girando, y se mueve por su cuenta: su propia onda viaja de la base a la punta, a su
-  // propio ritmo, y su punta se enrosca y se suelta despacio, cada una en otro momento.
+  // propio ritmo, y su punta se enrosca y se suelta despacio, cada una en otro momento. El
+  // sentido también cambia: cada punta pasa despacio de enroscarse hacia afuera a enroscarse hacia
+  // adentro (y vuelve), pasando por derecha, así nunca están todas iguales.
   // `cierre` (0 a 1) es el nado a chorro: el manto se contrae, los brazos se juntan y se estiran
   // hacia atrás; cuando el manto se vuelve a llenar, se abren otra vez.
   // Alrededor del trazo se dibuja la forma, gruesa arriba y finita en la punta; arriba de las
@@ -146,7 +148,8 @@ export function startJarGrowth(host, opciones = {}) {
     TENTACULOS.forEach(([x0, largo], k) => {
       const lado = x0 < 100 ? -1 : 1, paso = (largo * estira * (1 + 0.12 * cierre)) / n;
       const ritmo = 0.75 + 0.12 * (k % 4), fase = k * 1.37;
-      const enrosque = (0.45 + 0.4 * (0.5 + 0.5 * Math.sin(w * 0.35 * ritmo + fase * 1.9))) * (1 - 0.7 * cierre);
+      const sentido = Math.sin(w * 0.16 * ritmo + fase * 2.3);   // 1 = hacia afuera, -1 = hacia adentro
+      const enrosque = (0.45 + 0.4 * (0.5 + 0.5 * Math.sin(w * 0.35 * ritmo + fase * 1.9))) * (1 - 0.7 * cierre) * sentido * 1.15;
       // Salen juntos, del cuello (más angosto que el manto), y recién después se abren.
       let x = 100 + (x0 - 100) * 0.52 * sx, y = 96 + 6 * (sy - 1);
       let h = ((x0 - 100) / 42) * 0.95 * (1.15 - 0.15 * sx) * (1 - 0.6 * cierre);   // ángulo: 0 = hacia abajo
