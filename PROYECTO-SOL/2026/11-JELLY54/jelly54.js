@@ -52,9 +52,17 @@ export function startJelly(host, opciones = {}) {
     // mirada), cejitas, rubor en puntitos y una boca abierta con lengua.
     `<g class="cara"><g class="mejillas">${[[58, 81], [65, 79.5], [135, 79.5], [142, 81]].map(([cx, cy]) => `<ellipse cx="${cx}" cy="${cy}" rx="3" ry="2.1" fill="${RUBOR}"/>`).join("")}</g>` +
     `<g class="cejas">${OJOS.map(([cx, cy], i) => `<path d="M${cx - 7 + (i ? 3 : -3)} ${cy - 24} Q${cx + (i ? 3 : -3)} ${cy - 28.5} ${cx + 7 + (i ? 3 : -3)} ${cy - 24}" stroke="${NEGRO}" stroke-width="3.8" fill="none" stroke-linecap="round"/>`).join("")}</g>` +
-    // 30-oct, segunda vuelta (la usuaria marcó los detalles de la referencia): contorno negro
-    // grueso, aro blanco finito y pupila negra grande con un brillo grande y uno chico.
-    `<g class="ojos">${OJOS.map(([cx, cy]) => `<ellipse cx="${cx}" cy="${cy}" rx="15" ry="16" fill="#FFFFFF" stroke="${NEGRO}" stroke-width="3.4"/>`).join("")}` +
+    // 30-oct (detalles de la referencia que marcó la usuaria): el contorno no es parejo, es más
+    // grueso arriba y hacia afuera y más fino abajo y hacia adentro (un óvalo negro corrido hacia
+    // arriba y afuera, con el blanco encima corrido hacia abajo y adentro); debajo, pegada al ojo,
+    // una línea curva como el cachete que sube al sonreír. Aro blanco finito y pupila negra grande
+    // con un brillo grande y uno chico.
+    `<g class="ojos">${OJOS.map(([cx, cy], i) => { const afuera = i ? 1 : -1; return `<ellipse cx="${cx + afuera * 1}" cy="${cy - 1.3}" rx="17.6" ry="18.6" fill="${NEGRO}"/>` +
+      `<ellipse cx="${cx - afuera * 0.4}" cy="${cy + 0.7}" rx="14.6" ry="15.6" fill="#FFFFFF"/>` +
+      // La línea del cachete sigue el borde del ojo por abajo y hacia afuera (de 80° a 145°, contando desde adentro).
+      (() => { const ox = cx + afuera * 1, oy = cy - 1.3, rx = 19, ry = 20, a0 = 80, a1 = 145;
+        const p = (a) => `${(ox - afuera * rx * Math.cos((a * Math.PI) / 180)).toFixed(1)} ${(oy + ry * Math.sin((a * Math.PI) / 180)).toFixed(1)}`;
+        return `<path d="M${p(a0)} A${rx} ${ry} 0 0 ${i ? 0 : 1} ${p(a1)}" stroke="${NEGRO}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`; })(); }).join("")}` +
     `<g class="pupilas">${OJOS.map(([cx, cy]) => `<ellipse cx="${cx}" cy="${cy + 0.5}" rx="11.3" ry="12.3" fill="${NEGRO}"/>` +
       `<circle cx="${cx - 3.2}" cy="${cy - 4.2}" r="4.6" fill="#fff"/><circle cx="${cx + 2.6}" cy="${cy + 2.4}" r="2.1" fill="#fff"/>`).join("")}</g></g>` +
     `<path class="ojos-felices" d="M62 66 Q76 50 90 66 M110 66 Q124 50 138 66" stroke="${NEGRO}" stroke-width="3.8" fill="none" stroke-linecap="round" opacity="0"/>` +
