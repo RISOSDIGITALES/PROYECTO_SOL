@@ -59,10 +59,10 @@ export function startJelly(host, opciones = {}) {
     // con un brillo grande y uno chico.
     `<g class="ojos">${OJOS.map(([cx, cy], i) => { const afuera = i ? 1 : -1; return `<ellipse cx="${cx + afuera * 1}" cy="${cy - 1.3}" rx="17.6" ry="18.6" fill="${NEGRO}"/>` +
       `<ellipse cx="${cx - afuera * 0.4}" cy="${cy + 0.7}" rx="14.6" ry="15.6" fill="#FFFFFF"/>` +
-      // La línea del cachete sigue el borde del ojo por abajo y hacia afuera (de 80° a 145°, contando desde adentro).
-      (() => { const ox = cx + afuera * 1, oy = cy - 1.3, rx = 19, ry = 20, a0 = 80, a1 = 145;
-        const p = (a) => `${(ox - afuera * rx * Math.cos((a * Math.PI) / 180)).toFixed(1)} ${(oy + ry * Math.sin((a * Math.PI) / 180)).toFixed(1)}`;
-        return `<path d="M${p(a0)} A${rx} ${ry} 0 0 ${i ? 0 : 1} ${p(a1)}" stroke="${NEGRO}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`; })(); }).join("")}` +
+      // La línea del cachete es un arquito que sube (︵), debajo del ojo y hacia afuera, y toca
+      // el borde del ojo solo con la punta: es el cachete empujando al sonreír, no una ojera.
+      (() => { const a = (115 * Math.PI) / 180, px = cx + afuera * 1 + afuera * 17.6 * -Math.cos(a), py = cy - 1.3 + 18.6 * Math.sin(a);
+        return `<path d="M${(px - 6.5).toFixed(1)} ${(py + 3.4).toFixed(1)} Q${px.toFixed(1)} ${(py - 2.6).toFixed(1)} ${(px + 6.5).toFixed(1)} ${(py + 3.4).toFixed(1)}" stroke="${NEGRO}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`; })(); }).join("")}` +
     `<g class="pupilas">${OJOS.map(([cx, cy]) => `<ellipse cx="${cx}" cy="${cy + 0.5}" rx="11.3" ry="12.3" fill="${NEGRO}"/>` +
       `<circle cx="${cx - 3.2}" cy="${cy - 4.2}" r="4.6" fill="#fff"/><circle cx="${cx + 2.6}" cy="${cy + 2.4}" r="2.1" fill="#fff"/>`).join("")}</g></g>` +
     `<path class="ojos-felices" d="M62 66 Q76 50 90 66 M110 66 Q124 50 138 66" stroke="${NEGRO}" stroke-width="3.8" fill="none" stroke-linecap="round" opacity="0"/>` +
