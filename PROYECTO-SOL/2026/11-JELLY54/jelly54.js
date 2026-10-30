@@ -50,21 +50,24 @@ export function startJelly(host, opciones = {}) {
     `<ellipse cx="62" cy="50" rx="6" ry="4" fill="#FFFFFF" opacity="0.5" transform="rotate(-40 62 50)"/>` +
     // Cara: ojos con el blanco finito y casi todo negro, con dos brillos (son los que siguen la
     // mirada), cejitas, rubor en puntitos y una boca abierta con lengua.
-    `<g class="cara"><g class="mejillas">${[[58, 81], [65, 79.5], [135, 79.5], [142, 81]].map(([cx, cy]) => `<ellipse cx="${cx}" cy="${cy}" rx="3" ry="2.1" fill="${RUBOR}"/>`).join("")}</g>` +
-    `<g class="cejas">${OJOS.map(([cx, cy], i) => `<path d="M${cx - 7 + (i ? 3 : -3)} ${cy - 24} Q${cx + (i ? 3 : -3)} ${cy - 28.5} ${cx + 7 + (i ? 3 : -3)} ${cy - 24}" stroke="${NEGRO}" stroke-width="3.8" fill="none" stroke-linecap="round"/>`).join("")}</g>` +
+    `<g class="cara"><g class="mejillas">${[[59, 87], [66, 85.5], [134, 85.5], [141, 87]].map(([cx, cy]) => `<ellipse cx="${cx}" cy="${cy}" rx="3" ry="2.1" fill="${RUBOR}"/>`).join("")}</g>` +
+    // Cejas como en la referencia: rellenas, finitas y en punta hacia afuera, gruesas y redondeadas
+    // hacia adentro, en arco.
+    `<g class="cejas">${OJOS.map(([cx, cy], i) => { const af = i ? 1 : -1, bx = cx + af * 3, by = cy - 23, X = (dx) => (bx - af * dx).toFixed(1);
+      return `<path d="M${X(-9)} ${by + 2.5} Q${X(-3)} ${by - 4.5} ${X(6.5)} ${by - 2.6} Q${X(10)} ${by - 1.8} ${X(8.5)} ${by + 1.4} Q${X(2)} ${by - 0.2} ${X(-9)} ${by + 2.5} Z" fill="${NEGRO}" stroke="${NEGRO}" stroke-width="0.8" stroke-linejoin="round"/>`; }).join("")}</g>` +
     // 30-oct (detalles de la referencia que marcó la usuaria): el contorno no es parejo, es más
     // grueso arriba y hacia afuera y más fino abajo y hacia adentro (un óvalo negro corrido hacia
     // arriba y afuera, con el blanco encima corrido hacia abajo y adentro); debajo, pegada al ojo,
     // una línea curva como el cachete que sube al sonreír. Aro blanco finito y pupila negra grande
     // con un brillo grande y uno chico.
-    `<g class="ojos">${OJOS.map(([cx, cy], i) => { const afuera = i ? 1 : -1; return `<ellipse cx="${cx + afuera * 1}" cy="${cy - 1.3}" rx="17.6" ry="18.6" fill="${NEGRO}"/>` +
-      `<ellipse cx="${cx - afuera * 0.4}" cy="${cy + 0.7}" rx="14.6" ry="15.6" fill="#FFFFFF"/>` +
+    `<g class="ojos">${OJOS.map(([cx, cy], i) => { const afuera = i ? 1 : -1; return `<ellipse cx="${cx + afuera * 0.7}" cy="${cy - 0.9}" rx="16" ry="17" fill="${NEGRO}"/>` +
+      `<ellipse cx="${cx - afuera * 0.3}" cy="${cy + 0.5}" rx="13.8" ry="14.8" fill="#FFFFFF"/>` +
       // La línea del cachete es un arquito que sube (︵), debajo del ojo y hacia afuera, pegado
       // encima del borde del ojo (la punta se monta sobre el contorno): es el cachete empujando al sonreír, no una ojera.
-      (() => { const a = (115 * Math.PI) / 180, px = cx + afuera * 1 + afuera * 17.6 * -Math.cos(a), py = cy - 1.3 + 18.6 * Math.sin(a);
+      (() => { const a = (115 * Math.PI) / 180, px = cx + afuera * 0.7 + afuera * 16 * -Math.cos(a), py = cy - 0.9 + 17 * Math.sin(a);
         return `<path d="M${(px - 6.5).toFixed(1)} ${(py + 1.4).toFixed(1)} Q${px.toFixed(1)} ${(py - 4.8).toFixed(1)} ${(px + 6.5).toFixed(1)} ${(py + 1.4).toFixed(1)}" stroke="${NEGRO}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`; })(); }).join("")}` +
-    `<g class="pupilas">${OJOS.map(([cx, cy]) => `<ellipse cx="${cx}" cy="${cy + 0.5}" rx="11.3" ry="12.3" fill="${NEGRO}"/>` +
-      `<circle cx="${cx - 3.2}" cy="${cy - 4.2}" r="4.6" fill="#fff"/><circle cx="${cx + 2.6}" cy="${cy + 2.4}" r="2.1" fill="#fff"/>`).join("")}</g></g>` +
+    `<g class="pupilas">${OJOS.map(([cx, cy]) => `<ellipse cx="${cx}" cy="${cy + 0.5}" rx="10.6" ry="11.5" fill="${NEGRO}"/>` +
+      `<circle cx="${cx - 3}" cy="${cy - 3.9}" r="4.3" fill="#fff"/><circle cx="${cx + 2.4}" cy="${cy + 2.2}" r="2" fill="#fff"/>`).join("")}</g></g>` +
     `<path class="ojos-felices" d="M62 66 Q76 50 90 66 M110 66 Q124 50 138 66" stroke="${NEGRO}" stroke-width="3.8" fill="none" stroke-linecap="round" opacity="0"/>` +
     `<path class="ojos-dormidos" d="M62 62 Q76 73 90 62 M110 62 Q124 73 138 62" stroke="${NEGRO}" stroke-width="3.8" fill="none" stroke-linecap="round" opacity="0"/>` +
     `<g class="boca-o" opacity="0"><ellipse cx="100" cy="88" rx="6" ry="7" fill="${BOCA}" stroke="${NEGRO}" stroke-width="2"/>` +
