@@ -48,9 +48,9 @@ export function startJarGrowth(host, opciones = {}) {
     `<defs><linearGradient id="${id}-g-campana" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6EDC98"/>` +
     `<stop offset="0.36" stop-color="#4CC97E"/><stop offset="0.44" stop-color="#34B96A"/><stop offset="1" stop-color="${VERDE_CUERPO}"/></linearGradient>` +
     `<clipPath id="${id}-boca"><path class="boca-clip"/></clipPath></defs>` +
-    `<g class="campana"><path class="sifon" fill="${VERDE_CUERPO}" stroke="${BORDE}" stroke-width="2.4" stroke-linejoin="round" d="M46 80 Q30 82 24 92 Q22 99 29 99 Q36 96 50 90 Z"/><ellipse cx="25.5" cy="95.5" rx="2.6" ry="3.4" fill="#0F5A2E" transform="rotate(30 25.5 95.5)"/><clipPath id="${id}-domo"><path d="M66 101 C44 94 32 76 32 52 C32 12 62 -18 100 -18 C138 -18 168 12 168 52 C168 76 156 94 134 101 Q100 109 66 101 Z"/></clipPath>` +
-    `<path fill="url(#${id}-g-campana)" d="M66 101 C44 94 32 76 32 52 C32 12 62 -18 100 -18 C138 -18 168 12 168 52 C168 76 156 94 134 101 Q100 109 66 101 Z"/>` +
-    `<path fill="none" stroke="${BORDE}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M72 103 Q68 102 66 101 C44 94 32 76 32 52 C32 12 62 -18 100 -18 C138 -18 168 12 168 52 C168 76 156 94 134 101 Q132 102 128 103"/>` +
+    `<g class="campana"><clipPath id="${id}-domo"><path d="M76 103 C50 98 32 80 32 52 C32 12 62 -18 100 -18 C138 -18 168 12 168 52 C168 80 150 98 124 103 Q100 108 76 103 Z"/></clipPath>` +
+    `<path fill="url(#${id}-g-campana)" d="M76 103 C50 98 32 80 32 52 C32 12 62 -18 100 -18 C138 -18 168 12 168 52 C168 80 150 98 124 103 Q100 108 76 103 Z"/>` +
+    `<path fill="none" stroke="${BORDE}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M82 105 Q78 104 76 103 C50 98 32 80 32 52 C32 12 62 -18 100 -18 C138 -18 168 12 168 52 C168 80 150 98 124 103 Q122 104 118 105"/>` +
     `<ellipse cx="96" cy="-4" rx="18" ry="7" fill="#FFFFFF" opacity="0.45" transform="rotate(-10 96 -4)"/>` +
     `<ellipse cx="54" cy="18" rx="6.5" ry="4.4" fill="#FFFFFF" opacity="0.5" transform="rotate(-50 54 18)"/>` +
     // Cara: ojos con el blanco finito y casi todo negro, con dos brillos (son los que siguen la
@@ -148,7 +148,7 @@ export function startJarGrowth(host, opciones = {}) {
       const ritmo = 0.75 + 0.12 * (k % 4), fase = k * 1.37;
       const enrosque = (0.45 + 0.4 * (0.5 + 0.5 * Math.sin(w * 0.35 * ritmo + fase * 1.9))) * (1 - 0.7 * cierre);
       // Salen juntos, del cuello (más angosto que el manto), y recién después se abren.
-      let x = 100 + (x0 - 100) * 0.7 * sx, y = 96 + 6 * (sy - 1);
+      let x = 100 + (x0 - 100) * 0.52 * sx, y = 96 + 6 * (sy - 1);
       let h = ((x0 - 100) / 42) * 0.95 * (1.15 - 0.15 * sx) * (1 - 0.6 * cierre);   // ángulo: 0 = hacia abajo
       const pts = [[x, y, h]];
       for (let i = 1; i <= n; i++) {
