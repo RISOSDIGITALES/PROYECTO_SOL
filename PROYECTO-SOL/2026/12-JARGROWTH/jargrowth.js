@@ -18,7 +18,7 @@
 // Para que pueda pasear, el host y sus contenedores no deben recortar lo que sobresale
 // (sin overflow: hidden). Con "movimiento reducido" del sistema queda quieto.
 
-const VERDE = "#16A34A", VERDE_CLARO = "#3DBE6C", VERDE_OSCURO = "#15803D";
+const VERDE = "#16A34A", VERDE_CUERPO = "#2AAE5F";   // VERDE_CUERPO: el de abajo de la cabeza y el de los tentáculos
 const BORDE = "#14532D", NEGRO = "#111827", BOCA = "#7A1F24", LENGUA = "#E8707A", RUBOR = "#F08A94";
 const OJOS = [[76, 62], [124, 62]];   // centros de los ojos
 const TENTACULOS = [[58, 73], [70, 88], [84, 81], [95, 94], [105, 94], [116, 81], [130, 88], [142, 73]];
@@ -37,16 +37,16 @@ export function startJarGrowth(host, opciones = {}) {
     `<g class="burbujas"></g><g class="pos"><g transform="translate(30 4) scale(0.7)"><g class="cuerpo">` +
     // Tentáculos de pulpo (30-oct): cada uno es una forma rellena, gruesa arriba y finita en la
     // punta, con contorno, y cuatro ventosas del lado de adentro.
-    `<g class="tentaculos">${TENTACULOS.map(() => `<g><path fill="${VERDE_CLARO}" stroke="${BORDE}" stroke-width="2.4" stroke-linejoin="round"/>` +
+    `<g class="tentaculos">${TENTACULOS.map(() => `<g><path fill="${VERDE_CUERPO}" stroke="${BORDE}" stroke-width="2.4" stroke-linejoin="round"/>` +
       `<g>${"<circle fill=\"#C9F2D6\" stroke=\"#2E7D4F\" stroke-width=\"0.8\"/>".repeat(4)}</g></g>`).join("")}</g>` +
-    // Cabeza redonda con una banda más clara arriba; los tentáculos salen directo de abajo.
+    // Cabeza redonda con una banda más clara arriba. Abajo no tiene contorno ni sombra y termina en
+    // el mismo verde de los tentáculos, así cabeza y tentáculos se ven como un solo cuerpo.
     `<defs><linearGradient id="${id}-g-campana" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6EDC98"/>` +
-    `<stop offset="0.36" stop-color="#4CC97E"/><stop offset="0.44" stop-color="#2DB463"/><stop offset="1" stop-color="${VERDE_OSCURO}"/></linearGradient>` +
+    `<stop offset="0.36" stop-color="#4CC97E"/><stop offset="0.44" stop-color="#34B96A"/><stop offset="1" stop-color="${VERDE_CUERPO}"/></linearGradient>` +
     `<clipPath id="${id}-boca"><path class="boca-clip"/></clipPath></defs>` +
     `<g class="campana"><clipPath id="${id}-domo"><path d="M44 94 C24 52 56 10 100 10 C144 10 176 52 156 94 Q100 112 44 94 Z"/></clipPath>` +
     `<path fill="url(#${id}-g-campana)" d="M44 94 C24 52 56 10 100 10 C144 10 176 52 156 94 Q100 112 44 94 Z"/>` +
-    `<g clip-path="url(#${id}-domo)"><ellipse cx="100" cy="106" rx="72" ry="13" fill="#0F5A2E" opacity="0.3"/></g>` +
-    `<path fill="none" stroke="${BORDE}" stroke-width="2.6" stroke-linejoin="round" d="M44 94 C24 52 56 10 100 10 C144 10 176 52 156 94 Q100 112 44 94 Z"/>` +
+    `<path fill="none" stroke="${BORDE}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M52 97 Q47 96 44 94 C24 52 56 10 100 10 C144 10 176 52 156 94 Q153 96 148 97"/>` +
     `<ellipse cx="100" cy="25" rx="16" ry="6.5" fill="#FFFFFF" opacity="0.45" transform="rotate(-8 100 36)"/>` +
     `<ellipse cx="60" cy="42" rx="6.5" ry="4.2" fill="#FFFFFF" opacity="0.5" transform="rotate(-42 60 42)"/>` +
     // Cara: ojos con el blanco finito y casi todo negro, con dos brillos (son los que siguen la
