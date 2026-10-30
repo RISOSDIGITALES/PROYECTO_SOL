@@ -1,0 +1,165 @@
+{
+  "id": "JsLFysLfQIxGZN5f",
+  "name": "🔄 LinkedIn — Renovar token (G54)",
+  "nodes": [
+    {
+      "id": "a6ae4c90-b26e-4ad8-a1c0-d6a84fbb2dfb",
+      "name": "⏰ Cada lunes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bac962bc-67c9-4617-a810-6fddd481a7bd",
+      "name": "🌐 Webhook (manual)",
+      "webhookId": "d278f180-0e90-41fd-a34b-01d33754a257",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "renovar-linkedin-g54",
+        "responseMode": "lastNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "2ae89e06-0b37-436c-9b43-0070c8ca33f2",
+      "name": "⚙️ Config Renovación LinkedIn",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        260,
+        100
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0d06b086-df9a-486a-a01d-67454aac21de",
+              "name": "G54_BASE_URL",
+              "value": "https://apigrowth.mdarthurdigital.com",
+              "type": "string"
+            },
+            {
+              "id": "6e2ebacf-72f0-47ee-9e7e-8a0e20645c1e",
+              "name": "G54_MASTER_EMAIL",
+              "value": "master@growth54.local",
+              "type": "string"
+            },
+            {
+              "id": "0d8ebdb6-b46e-4734-b8b5-3561c2963049",
+              "name": "G54_MASTER_PASSWORD",
+              "value": "<G54_MASTER_PASSWORD — ver .secrets.local.md>",
+              "type": "string"
+            },
+            {
+              "id": "892b712c-421c-4e6b-97de-c4769f3b51f7",
+              "name": "LINKEDIN_CLIENT_ID",
+              "value": "<LINKEDIN_CLIENT_ID — ver .secrets.local.md>",
+              "type": "string"
+            },
+            {
+              "id": "249a5ded-4a85-4bc4-af16-1c5928691fd0",
+              "name": "LINKEDIN_CLIENT_SECRET",
+              "value": "<LINKEDIN_CLIENT_SECRET — ver .secrets.local.md>",
+              "type": "string"
+            },
+            {
+              "id": "0dcd0529-b928-4468-85ff-812f74679f88",
+              "name": "DIAS_ANTES",
+              "value": "21",
+              "type": "string"
+            },
+            {
+              "id": "f82e2340-95f8-4765-8c4e-b497df9bc72b",
+              "name": "EMPRESAS_JSON",
+              "value": "[{\"company_id\": 1, \"refresh_token\": \"<LINKEDIN_REFRESH_TOKEN \\u2014 ver .secrets.local.md>\"}]",
+              "type": "string"
+            },
+            {
+              "id": "bed55edb-e247-41e5-947a-bec124a68a3f",
+              "name": "_entrada",
+              "value": "={{ $json.body || {} }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "0f471d47-b272-4331-bbfe-49e657ab0d3f",
+      "name": "🔄 Renovar tokens LinkedIn",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        100
+      ],
+      "parameters": {
+        "jsCode": "// Renueva el token de LinkedIn de cada empresa antes de que venza. LinkedIn da tokens de\n// publicación por 60 días como máximo; el refresh token (1 año) sirve para pedir uno nuevo sin\n// entrar a LinkedIn. Por cada empresa del Config: lee el token guardado en G54\n// (GET /api/rrss/tokens) y, si le faltan menos de DIAS_ANTES días, pide uno nuevo a LinkedIn y\n// lo guarda en G54 (PUT /api/rrss/tokens) con su fecha de vencimiento.\n// Por el webhook: dry_run solo informa sin renovar; forzar renueva aunque falten más días.\nconst cfg = $('⚙️ Config Renovación LinkedIn').first().json;\nconst entrada = cfg._entrada || {};\nconst dryRun = entrada.dry_run === true || entrada.dry_run === 'true';\nconst forzar = entrada.forzar === true || entrada.forzar === 'true';\nconst http = (o) => this.helpers.httpRequest({ json: true, timeout: 30000, ...o });\nconst G = cfg.G54_BASE_URL + '/api';\nconst empresas = JSON.parse(cfg.EMPRESAS_JSON || '[]');\n// Si LinkedIn devolvió un refresh token nuevo en una corrida anterior, se usa ese.\nconst memoria = $getWorkflowStaticData('global');\nmemoria.refresh = memoria.refresh || {};\nconst resultados = [];\nconst login = await http({ method: 'POST', url: G + '/auth/login', body: { email: cfg.G54_MASTER_EMAIL, password: cfg.G54_MASTER_PASSWORD } });\nconst auth = { Authorization: 'Bearer ' + (login.access_token || login.token), Accept: 'application/json' };\ntry {\n  for (const emp of empresas) {\n    const r = { company_id: emp.company_id };\n    try {\n      await http({ method: 'POST', url: G + '/auth/switch-company', headers: auth, body: { company_id: emp.company_id } });\n      const lista = await http({ method: 'GET', url: G + '/rrss/tokens', headers: auth });\n      const fila = (lista.data || lista || []).find((x) => String(x.platform || '').toLowerCase() === 'linkedin');\n      if (!fila) { r.estado = 'sin_token_linkedin_en_g54'; resultados.push(r); continue; }\n      r.page_id = fila.page_id;\n      r.vence_antes = fila.expires_at;\n      const dias = fila.expires_at ? (new Date(fila.expires_at) - Date.now()) / 86400000 : 0;\n      r.dias_restantes = Math.round(dias);\n      if (!forzar && dias > Number(cfg.DIAS_ANTES)) { r.estado = 'vigente'; resultados.push(r); continue; }\n      if (dryRun) { r.estado = 'se_renovaria'; resultados.push(r); continue; }\n      const refresh = memoria.refresh[emp.company_id] || emp.refresh_token;\n      // n8n no tiene URLSearchParams en el Code node: el formulario se arma a mano.\n      const form = Object.entries({ grant_type: 'refresh_token', refresh_token: refresh, client_id: cfg.LINKEDIN_CLIENT_ID, client_secret: cfg.LINKEDIN_CLIENT_SECRET })\n        .map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v)).join('&');\n      const crudo = await http({ method: 'POST', url: 'https://www.linkedin.com/oauth/v2/accessToken', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form, json: false });\n      const j = typeof crudo === 'string' ? JSON.parse(crudo) : crudo;\n      if (!j.access_token) throw new Error('LinkedIn no devolvió token: ' + JSON.stringify(j).slice(0, 200));\n      if (j.refresh_token && j.refresh_token !== refresh) memoria.refresh[emp.company_id] = j.refresh_token;\n      const vence = new Date(Date.now() + (Number(j.expires_in) || 5184000) * 1000).toISOString().slice(0, 10);\n      await http({ method: 'PUT', url: G + '/rrss/tokens', headers: auth, body: { platform: fila.platform, access_token: j.access_token, page_id: fila.page_id, instagram_account_id: fila.instagram_account_id || '', label: fila.label || '', expires_at: vence } });\n      r.estado = 'renovado';\n      r.vence_ahora = vence;\n      if (j.refresh_token_expires_in) r.refresh_vence = new Date(Date.now() + Number(j.refresh_token_expires_in) * 1000).toISOString().slice(0, 10);\n    } catch (e) {\n      r.estado = 'error';\n      r.error = String(e.message || e).slice(0, 300);\n    }\n    resultados.push(r);\n  }\n} finally {\n  try { await http({ method: 'POST', url: G + '/auth/logout', headers: auth, body: {} }); } catch (e) {}\n}\nreturn [{ json: { ok: !resultados.some((x) => x.estado === 'error'), dry_run: dryRun, resultados } }];\n"
+      }
+    }
+  ],
+  "connections": {
+    "⏰ Cada lunes": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config Renovación LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 Webhook (manual)": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config Renovación LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Config Renovación LinkedIn": {
+      "main": [
+        [
+          {
+            "node": "🔄 Renovar tokens LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "America/New_York",
+    "executionOrder": "v1"
+  },
+  "active": true
+}
