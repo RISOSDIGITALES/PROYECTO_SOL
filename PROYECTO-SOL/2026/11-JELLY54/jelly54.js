@@ -27,11 +27,6 @@ const OJOS = [[76, 62], [124, 62]];   // centros de los ojos
 const TENTACULOS = [[52, 50], [66, 66], [83, 58], [100, 72], [117, 60], [134, 68], [148, 52]];
 const GAZES = [[0, 0], [3.5, 0], [-3.5, 0], [0, -2.6], [2.6, -2], [-2.6, 1.5]];
 let unico = 0;
-// Trazo de arco alrededor de (cx, cy), de un ángulo a otro en grados (0 = derecha, 90 = abajo).
-const arco = (cx, cy, r, a0, a1) => {
-  const p = (a) => [cx + r * Math.cos((a * Math.PI) / 180), cy + r * 1.05 * Math.sin((a * Math.PI) / 180)].map((v) => v.toFixed(1)).join(" ");
-  return `M${p(a0)} A${r} ${r * 1.05} 0 0 1 ${p(a1)}`;
-};
 
 export function startJelly(host, opciones = {}) {
   const id = `jelly${++unico}`;
@@ -58,10 +53,8 @@ export function startJelly(host, opciones = {}) {
     `<g class="cara"><g class="mejillas">${[[58, 81], [65, 79.5], [135, 79.5], [142, 81]].map(([cx, cy]) => `<ellipse cx="${cx}" cy="${cy}" rx="3" ry="2.1" fill="${RUBOR}"/>`).join("")}</g>` +
     `<g class="cejas">${OJOS.map(([cx, cy], i) => `<path d="M${cx - 7 + (i ? 3 : -3)} ${cy - 24} Q${cx + (i ? 3 : -3)} ${cy - 28.5} ${cx + 7 + (i ? 3 : -3)} ${cy - 24}" stroke="${NEGRO}" stroke-width="3.8" fill="none" stroke-linecap="round"/>`).join("")}</g>` +
     // 30-oct, segunda vuelta (la usuaria marcó los detalles de la referencia): contorno negro
-    // grueso, aro blanco finito, pupila negra grande con un brillo grande y uno chico, y una
-    // rayita curva debajo de la esquina de afuera de cada ojo.
-    `<g class="ojos">${OJOS.map(([cx, cy], i) => `<ellipse cx="${cx}" cy="${cy}" rx="15" ry="16" fill="#FFFFFF" stroke="${NEGRO}" stroke-width="3.4"/>` +
-      `<path d="${arco(cx, cy, 20, i ? 22 : 118, i ? 62 : 158)}" stroke="${NEGRO}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`).join("")}` +
+    // grueso, aro blanco finito y pupila negra grande con un brillo grande y uno chico.
+    `<g class="ojos">${OJOS.map(([cx, cy]) => `<ellipse cx="${cx}" cy="${cy}" rx="15" ry="16" fill="#FFFFFF" stroke="${NEGRO}" stroke-width="3.4"/>`).join("")}` +
     `<g class="pupilas">${OJOS.map(([cx, cy]) => `<ellipse cx="${cx}" cy="${cy + 0.5}" rx="11.3" ry="12.3" fill="${NEGRO}"/>` +
       `<circle cx="${cx - 3.2}" cy="${cy - 4.2}" r="4.6" fill="#fff"/><circle cx="${cx + 2.6}" cy="${cy + 2.4}" r="2.1" fill="#fff"/>`).join("")}</g></g>` +
     `<path class="ojos-felices" d="M62 66 Q76 50 90 66 M110 66 Q124 50 138 66" stroke="${NEGRO}" stroke-width="3.8" fill="none" stroke-linecap="round" opacity="0"/>` +
