@@ -21,7 +21,8 @@
 const VERDE = "#16A34A", VERDE_CLARO = "#3DBE6C", VERDE_OSCURO = "#15803D";
 const BORDE = "#14532D", NEGRO = "#111827", BOCA = "#7A1F24", LENGUA = "#E8707A", RUBOR = "#F08A94";
 const OJOS = [[76, 62], [124, 62]];   // centros de los ojos
-const TENTACULOS = [[58, 56], [70, 68], [84, 62], [95, 72], [105, 72], [116, 62], [130, 68], [142, 56]];
+const TENTACULOS = [[58, 73], [70, 88], [84, 81], [95, 94], [105, 94], [116, 81], [130, 88], [142, 73]];
+const CABEZA = 0.86;   // tamaño de la cabeza respecto del dibujo original
 const GAZES = [[0, 0], [3.5, 0], [-3.5, 0], [0, -2.6], [2.6, -2], [-2.6, 1.5]];
 let unico = 0;
 // Curva del cachete de cada ojo (puntos "x y" de inicio, control y fin): empieza en el borde de
@@ -32,8 +33,8 @@ export function startJarGrowth(host, opciones = {}) {
   const id = `jar${++unico}`;
   host.innerHTML = `<svg class="jargrowth" viewBox="0 0 200 200" aria-label="JarGrowth" role="img" style="overflow:visible">` +
     (opciones.fondo ? `<rect x="8" y="8" width="184" height="184" rx="44" fill="#F1F7F7"/>` : "") +
-    // Achicado al 76 % (la cabeza queda más chica y los tentáculos, más largos, entran en el cuadro).
-    `<g class="burbujas"></g><g class="pos"><g transform="translate(24 4) scale(0.76)"><g class="cuerpo">` +
+    // Achicado al 70 % (la cabeza queda más chica y los tentáculos, más largos, entran en el cuadro).
+    `<g class="burbujas"></g><g class="pos"><g transform="translate(30 4) scale(0.7)"><g class="cuerpo">` +
     // Tentáculos de pulpo (30-oct): cada uno es una forma rellena, gruesa arriba y finita en la
     // punta, con contorno, y cuatro ventosas del lado de adentro.
     `<g class="tentaculos">${TENTACULOS.map(() => `<g><path fill="${VERDE_CLARO}" stroke="${BORDE}" stroke-width="2.4" stroke-linejoin="round"/>` +
@@ -106,6 +107,7 @@ export function startJarGrowth(host, opciones = {}) {
   let mood = "quieto", pedido = null;
   // Tentáculos y boca en reposo, para el dibujo quieto (y el arranque).
   dibujarTentaculos(1, 1, 0, 0, 1);
+  campana.setAttribute("transform", `translate(100 96) scale(${CABEZA}) translate(-100 -96)`);
   dibujarBoca(13, 20);
   const reducido = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   if (reducido || typeof svg.animate !== "function") {
@@ -140,7 +142,7 @@ export function startJarGrowth(host, opciones = {}) {
         x += Math.sin(h) * paso; y += Math.cos(h) * paso;
         pts.push([x, y, h]);
       }
-      const ancho = (u) => 14.5 * (1 - u) + 2.6 * u;
+      const ancho = (u) => 18.5 * (1 - u) + 3.6 * u;
       const borde = (q, u, lado2) => [q[0] + Math.cos(q[2]) * ancho(u) / 2 * lado2, q[1] - Math.sin(q[2]) * ancho(u) / 2 * lado2];
       const izq = pts.map((q, i) => borde(q, i / n, 1)), der = pts.map((q, i) => borde(q, i / n, -1)).reverse();
       const f = (p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`;
@@ -311,7 +313,9 @@ export function startJarGrowth(host, opciones = {}) {
     cuerpo.setAttribute("transform", `rotate(${(rot + loopRot).toFixed(2)} 100 90)`);
     // La campana se angosta y se alarga al contraerse.
     const sx = 1 - 0.13 * fuerza, sy = 1 + 0.07 * fuerza;
-    campana.setAttribute("transform", `translate(100 62) scale(${sx.toFixed(3)} ${sy.toFixed(3)}) translate(-100 -62)`);
+    // La cabeza va al 86 % de su tamaño (pedido de la usuaria), achicada desde abajo para que
+    // siga pegada a los tentáculos.
+    campana.setAttribute("transform", `translate(100 96) scale(${(sx * CABEZA).toFixed(3)} ${(sy * CABEZA).toFixed(3)}) translate(-100 -96)`);
     // Tentáculos: velocidad pasada al marco del cuerpo, para que queden detrás del movimiento.
     const vxb = vx * Math.cos(ang) + vy * Math.sin(ang), vyb = -vx * Math.sin(ang) + vy * Math.cos(ang);
     onda += dt * (durmiendo ? 1.2 : 2.4 + 2 * fuerza);
