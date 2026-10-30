@@ -21,7 +21,7 @@
 const VERDE = "#16A34A", VERDE_CLARO = "#3DBE6C", VERDE_OSCURO = "#15803D";
 const BORDE = "#14532D", NEGRO = "#111827", BOCA = "#7A1F24", LENGUA = "#E8707A", RUBOR = "#F08A94";
 const OJOS = [[76, 62], [124, 62]];   // centros de los ojos
-const TENTACULOS = [[58, 36], [70, 44], [84, 40], [95, 46], [105, 46], [116, 40], [130, 44], [142, 36]];
+const TENTACULOS = [[58, 56], [70, 68], [84, 62], [95, 72], [105, 72], [116, 62], [130, 68], [142, 56]];
 const GAZES = [[0, 0], [3.5, 0], [-3.5, 0], [0, -2.6], [2.6, -2], [-2.6, 1.5]];
 let unico = 0;
 // Curva del cachete de cada ojo (puntos "x y" de inicio, control y fin): empieza en el borde de
@@ -32,8 +32,8 @@ export function startJarGrowth(host, opciones = {}) {
   const id = `jar${++unico}`;
   host.innerHTML = `<svg class="jargrowth" viewBox="0 0 200 200" aria-label="JarGrowth" role="img" style="overflow:visible">` +
     (opciones.fondo ? `<rect x="8" y="8" width="184" height="184" rx="44" fill="#F1F7F7"/>` : "") +
-    // Achicado al 85 % y bajado un poco, igual que Jelly.
-    `<g class="burbujas"></g><g class="pos"><g transform="translate(15 10) scale(0.85)"><g class="cuerpo">` +
+    // Achicado al 76 % (la cabeza queda más chica y los tentáculos, más largos, entran en el cuadro).
+    `<g class="burbujas"></g><g class="pos"><g transform="translate(24 4) scale(0.76)"><g class="cuerpo">` +
     // Tentáculos: cada uno es un trazo ancho verde oscuro (el contorno) con uno verde claro encima.
     `<g class="tentaculos">${TENTACULOS.map(() => `<g><path fill="none" stroke="${BORDE}" stroke-width="12" stroke-linecap="round"/>` +
       `<path fill="none" stroke="${VERDE_CLARO}" stroke-width="8" stroke-linecap="round"/></g>`).join("")}</g>` +
