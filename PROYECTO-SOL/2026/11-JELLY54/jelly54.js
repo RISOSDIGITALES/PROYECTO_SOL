@@ -40,6 +40,8 @@ export function startJelly(host, opciones = {}) {
     // Campana con una banda más clara arriba (como en la imagen de referencia) y el borde en lóbulos.
     `<defs><linearGradient id="${id}-g-campana" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7CBCF3"/>` +
     `<stop offset="0.36" stop-color="#5FA9EE"/><stop offset="0.44" stop-color="#3E91E4"/><stop offset="1" stop-color="${AZUL_OSCURO}"/></linearGradient>` +
+    `<radialGradient id="${id}-g-iris" cx="45%" cy="35%" r="65%"><stop offset="0" stop-color="#7FCBFF"/>` +
+    `<stop offset="0.55" stop-color="${AZUL}"/><stop offset="1" stop-color="#0B3A6E"/></radialGradient>` +
     `<clipPath id="${id}-boca"><path class="boca-clip"/></clipPath></defs>` +
     `<g class="campana"><clipPath id="${id}-domo"><path d="M36 98 C34 48 66 24 100 24 C134 24 166 48 164 98 Z"/></clipPath>` +
     `<path fill="${AZUL}" stroke="${BORDE}" stroke-width="2.6" stroke-linejoin="round" d="M38 94 Q46 110 56 102 Q66 112 78 103 Q89 112 100 103 Q111 112 122 103 Q134 112 144 102 Q154 110 162 94 Z"/>` +
@@ -51,10 +53,14 @@ export function startJelly(host, opciones = {}) {
     // Cara: ojos con el blanco finito y casi todo negro, con dos brillos (son los que siguen la
     // mirada), cejitas, rubor en puntitos y una boca abierta con lengua.
     `<g class="cara"><g class="mejillas">${[[58, 81], [65, 79.5], [135, 79.5], [142, 81]].map(([cx, cy]) => `<ellipse cx="${cx}" cy="${cy}" rx="3" ry="2.1" fill="${RUBOR}"/>`).join("")}</g>` +
-    `<g class="cejas">${OJOS.map(([cx, cy], i) => `<path d="M${cx - 7 + (i ? 3 : -3)} ${cy - 21} Q${cx + (i ? 3 : -3)} ${cy - 25.5} ${cx + 7 + (i ? 3 : -3)} ${cy - 21}" stroke="${NEGRO}" stroke-width="3" fill="none" stroke-linecap="round"/>`).join("")}</g>` +
-    `<g class="ojos">${OJOS.map(([cx, cy]) => `<circle cx="${cx}" cy="${cy}" r="15" fill="#FFFFFF" stroke="${NEGRO}" stroke-width="2.6"/>`).join("")}` +
-    `<g class="pupilas">${OJOS.map(([cx, cy]) => `<circle cx="${cx}" cy="${cy}" r="11.2" fill="${NEGRO}"/>` +
-      `<circle cx="${cx - 3.4}" cy="${cy - 3.6}" r="4.4" fill="#fff"/><circle cx="${cx + 3.6}" cy="${cy + 3.4}" r="2" fill="#fff"/>`).join("")}</g></g>` +
+    `<g class="cejas">${OJOS.map(([cx, cy], i) => `<path d="M${cx - 7 + (i ? 3 : -3)} ${cy - 24} Q${cx + (i ? 3 : -3)} ${cy - 28.5} ${cx + 7 + (i ? 3 : -3)} ${cy - 24}" stroke="${NEGRO}" stroke-width="3" fill="none" stroke-linecap="round"/>`).join("")}</g>` +
+    // 30-oct, a pedido de la usuaria: los ojos vuelven a tener lo tierno de la versión anterior
+    // (iris azul en degradé, pupila y brillos grandes), más grandes y con el contorno del dibujo nuevo.
+    `<g class="ojos">${OJOS.map(([cx, cy]) => `<ellipse cx="${cx}" cy="${cy}" rx="15.5" ry="17" fill="#FFFFFF" stroke="${NEGRO}" stroke-width="2.6"/>`).join("")}` +
+    `<g class="pupilas">${OJOS.map(([cx, cy]) => `<circle cx="${cx}" cy="${cy + 2}" r="11.5" fill="url(#${id}-g-iris)"/>` +
+      `<circle cx="${cx}" cy="${cy + 2.5}" r="6.6" fill="${NEGRO}"/>` +
+      `<circle cx="${cx - 4}" cy="${cy - 3}" r="4.8" fill="#fff"/><circle cx="${cx + 4.4}" cy="${cy + 6}" r="2.2" fill="#fff"/>` +
+      `<circle cx="${cx + 4.6}" cy="${cy - 4.2}" r="1.3" fill="#fff" opacity="0.9"/>`).join("")}</g></g>` +
     `<path class="ojos-felices" d="M62 66 Q76 50 90 66 M110 66 Q124 50 138 66" stroke="${NEGRO}" stroke-width="3.8" fill="none" stroke-linecap="round" opacity="0"/>` +
     `<path class="ojos-dormidos" d="M62 62 Q76 73 90 62 M110 62 Q124 73 138 62" stroke="${NEGRO}" stroke-width="3.8" fill="none" stroke-linecap="round" opacity="0"/>` +
     `<g class="boca-o" opacity="0"><ellipse cx="100" cy="88" rx="6" ry="7" fill="${BOCA}" stroke="${NEGRO}" stroke-width="2"/>` +
