@@ -1,16 +1,5 @@
 {
-  "id": "FU8QG1BVmT4r5Kjw",
   "name": "CE Cotizaciones - CF7 → Airtable + Leads",
-  "description": null,
-  "active": true,
-  "activeVersionId": "663e3bb5-07c5-406d-a9fb-739aaf0e2b9e",
-  "createdAt": "2026-04-16T15:35:12.673Z",
-  "updatedAt": "2026-10-27T13:28:54.315Z",
-  "isArchived": false,
-  "versionId": "663e3bb5-07c5-406d-a9fb-739aaf0e2b9e",
-  "versionCounter": 20,
-  "sourceWorkflowId": null,
-  "triggerCount": 1,
   "nodes": [
     {
       "id": "webhook-cf7",
@@ -50,7 +39,7 @@
       "continueOnFail": true,
       "onError": "continueRegularOutput",
       "position": [
-        720,
+        940,
         400
       ],
       "parameters": {
@@ -88,7 +77,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        1180,
+        1400,
         300
       ],
       "parameters": {
@@ -106,11 +95,45 @@
       "typeVersion": 2,
       "onError": "continueRegularOutput",
       "position": [
-        940,
+        1160,
         400
       ],
       "parameters": {
-        "jsCode": "// Formulario de la web (CF7) → CRM de G54 (27-oct). Crea o actualiza el trato (upsert de G54 por teléfono\n// o, sin teléfono, por correo) con origen \"web\" y deja una nota con el detalle del pedido.\n// Si G54 falla, el formulario igual responde OK: el lead ya quedó en el Google Sheet.\nconst BASE = 'https://apigrowth.mdarthurdigital.com';\nconst AGENT = 'Bearer REDACTED_G54_AGENT_TOKEN';\nconst COMPANY_ID = 1; // Crating Express: este flujo es solo del formulario de cratingexpress.com\nconst f = $('🔧 Formatear Datos').first().json;\n\nconst limpio = (v, max = 200) => String(v ?? '').replace(/[\\u0000-\\u0008\\u000b-\\u001f]/g, ' ').trim().slice(0, max);\nconst correo = limpio(f.email, 150).toLowerCase();\nconst telOriginal = String(f.telefono || '').trim();\nlet telDig = telOriginal.replace(/\\D/g, '');\n// 10 dígitos sin código de país = número de EE. UU. (el formulario es de Miami): se agrega el 1.\nif (telDig.length === 10 && !telOriginal.startsWith('+')) telDig = '1' + telDig;\nconst telefono = telDig.length >= 8 && telDig.length <= 15 ? '+' + telDig : '';\nconst correoValido = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(correo);\nif (!correoValido && !telefono) return [{ json: { ok: false, motivo: 'el formulario no trae correo ni teléfono válidos' } }];\n\nconst detalle = [\n  'Pedido de cotización desde el formulario de la web' + (f.fecha_solicitud ? ' (' + limpio(f.fecha_solicitud, 40) + ')' : '') + '.',\n  f.zip ? 'Zip: ' + limpio(f.zip, 20) + '.' : '',\n  telOriginal && !telefono ? 'Teléfono escrito: ' + limpio(telOriginal, 40) + '.' : '',\n  limpio(f.mensaje, 1500),\n].filter(Boolean).join('\\n');\n\nconst payload = {\n  company_id: COMPANY_ID,\n  nombre: limpio(f.nombre, 120) || correo || telefono,\n  ...(telefono ? { telefono } : {}),\n  ...(correoValido ? { email: correo } : {}),\n  origen: 'web',\n  temperatura: 'medio',\n  tags: ['origen:formulario-web', 'cf7'],\n  notas: detalle,\n};\nif ($('📥 Webhook CF7').first().json.body?.dry_run === true) return [{ json: { ok: true, dry_run: true, payload } }];\n\nlet deal = null;\ntry {\n  const r = await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/agent/crm/leads',\n    headers: { Authorization: AGENT, Accept: 'application/json' }, body: payload, json: true, timeout: 15000 });\n  deal = (r && (r.deal || r.data)) || null;\n} catch (e) {\n  return [{ json: { ok: false, motivo: 'G54 no guardó el trato: ' + String(e.message || e).slice(0, 200) } }];\n}\nif (!deal || !deal.id) return [{ json: { ok: false, motivo: 'G54 respondió sin trato' } }];\nif (Number(deal.company_id) !== COMPANY_ID) return [{ json: { ok: false, motivo: 'el trato quedó en otra empresa', deal_id: deal.id } }];\n\nlet nota = false;\ntry {\n  await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/agent/crm/leads/' + deal.id + '/activities',\n    headers: { Authorization: AGENT, Accept: 'application/json' },\n    body: { tipo: 'nota', contenido: detalle }, json: true, timeout: 15000 });\n  nota = true;\n} catch (e) { nota = false; }\nreturn [{ json: { ok: true, deal_id: deal.id, nota } }];\n"
+        "jsCode": "// Formulario de la web (CF7) → CRM de G54 (27-oct). Crea o actualiza el trato (upsert de G54 por teléfono\n// o, sin teléfono, por correo) con origen \"web\" y deja una nota con el detalle del pedido.\n// Si G54 falla, el formulario igual responde OK: el lead ya quedó en el Google Sheet.\nconst BASE = 'https://apigrowth.mdarthurdigital.com';\nconst AGENT = 'Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>';\nconst COMPANY_ID = 1; // Crating Express: este flujo es solo del formulario de cratingexpress.com\nconst f = $('🔧 Formatear Datos').first().json;\n\nconst limpio = (v, max = 200) => String(v ?? '').replace(/[\\u0000-\\u0008\\u000b-\\u001f]/g, ' ').trim().slice(0, max);\nconst correo = limpio(f.email, 150).toLowerCase();\nconst telOriginal = String(f.telefono || '').trim();\nlet telDig = telOriginal.replace(/\\D/g, '');\n// 10 dígitos sin código de país = número de EE. UU. (el formulario es de Miami): se agrega el 1.\nif (telDig.length === 10 && !telOriginal.startsWith('+')) telDig = '1' + telDig;\nconst telefono = telDig.length >= 8 && telDig.length <= 15 ? '+' + telDig : '';\nconst correoValido = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(correo);\nif (!correoValido && !telefono) return [{ json: { ok: false, motivo: 'el formulario no trae correo ni teléfono válidos' } }];\n\nconst detalle = [\n  'Pedido de cotización desde el formulario de la web' + (f.fecha_solicitud ? ' (' + limpio(f.fecha_solicitud, 40) + ')' : '') + '.',\n  f.zip ? 'Zip: ' + limpio(f.zip, 20) + '.' : '',\n  telOriginal && !telefono ? 'Teléfono escrito: ' + limpio(telOriginal, 40) + '.' : '',\n  limpio(f.mensaje, 1500),\n].filter(Boolean).join('\\n');\n\nconst payload = {\n  company_id: COMPANY_ID,\n  nombre: limpio(f.nombre, 120) || correo || telefono,\n  ...(telefono ? { telefono } : {}),\n  ...(correoValido ? { email: correo } : {}),\n  origen: 'web',\n  temperatura: 'medio',\n  tags: ['origen:formulario-web', 'cf7'],\n  notas: detalle,\n};\nif ($('📥 Webhook CF7').first().json.body?.dry_run === true) return [{ json: { ok: true, dry_run: true, payload } }];\n\nlet deal = null;\ntry {\n  const r = await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/agent/crm/leads',\n    headers: { Authorization: AGENT, Accept: 'application/json' }, body: payload, json: true, timeout: 15000 });\n  deal = (r && (r.deal || r.data)) || null;\n} catch (e) {\n  return [{ json: { ok: false, motivo: 'G54 no guardó el trato: ' + String(e.message || e).slice(0, 200) } }];\n}\nif (!deal || !deal.id) return [{ json: { ok: false, motivo: 'G54 respondió sin trato' } }];\nif (Number(deal.company_id) !== COMPANY_ID) return [{ json: { ok: false, motivo: 'el trato quedó en otra empresa', deal_id: deal.id } }];\n\nlet nota = false;\ntry {\n  await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/agent/crm/leads/' + deal.id + '/activities',\n    headers: { Authorization: AGENT, Accept: 'application/json' },\n    body: { tipo: 'nota', contenido: detalle }, json: true, timeout: 15000 });\n  nota = true;\n} catch (e) { nota = false; }\nreturn [{ json: { ok: true, deal_id: deal.id, nota } }];\n"
+      }
+    },
+    {
+      "id": "if-guardar-sheet",
+      "name": "🔀 ¿Guardar en el Sheet?",
+      "notes": "31-oct: sin correo ni teléfono, o con dry_run, no se guarda una fila en el Sheet (el CRM igual responde con el motivo).",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        720,
+        400
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ !$('📥 Webhook CF7').item.json.body?.dry_run && !!(($json.email || '').trim() || ($json.telefono || '').trim()) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
       }
     }
   ],
@@ -130,7 +153,7 @@
       "main": [
         [
           {
-            "node": "📊 Guardar en Leads Sheet",
+            "node": "🔀 ¿Guardar en el Sheet?",
             "type": "main",
             "index": 0
           }
@@ -158,215 +181,31 @@
           }
         ]
       ]
+    },
+    "🔀 ¿Guardar en el Sheet?": {
+      "main": [
+        [
+          {
+            "node": "📊 Guardar en Leads Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🧾 Guardar en CRM (G54)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "nodeGroups": [],
   "settings": {
     "executionOrder": "v1",
     "saveManualExecutions": true,
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false,
     "errorWorkflow": "CKOju9JVnSMymfKv"
-  },
-  "staticData": null,
-  "pinData": null,
-  "meta": null,
-  "tags": [
-    {
-      "id": "pJ6UP83Ety9RKf4d",
-      "name": "email",
-      "createdAt": "2026-04-16T17:44:14.781Z",
-      "updatedAt": "2026-04-16T17:44:14.781Z"
-    }
-  ],
-  "shared": [
-    {
-      "role": "workflow:owner",
-      "workflowId": "FU8QG1BVmT4r5Kjw",
-      "projectId": "scK6yPpEmlkikl67",
-      "project": {
-        "id": "scK6yPpEmlkikl67",
-        "name": "Solange  Torrez <risosadmi@gmail.com>",
-        "type": "personal",
-        "icon": null,
-        "description": null,
-        "customTelemetryTags": [],
-        "creatorId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-03-16T19:56:18.866Z",
-        "updatedAt": "2026-03-16T19:58:01.773Z"
-      },
-      "createdAt": "2026-04-16T15:35:12.680Z",
-      "updatedAt": "2026-04-16T15:35:12.680Z"
-    }
-  ],
-  "activeVersion": {
-    "versionId": "663e3bb5-07c5-406d-a9fb-739aaf0e2b9e",
-    "workflowId": "FU8QG1BVmT4r5Kjw",
-    "nodes": [
-      {
-        "id": "webhook-cf7",
-        "name": "📥 Webhook CF7",
-        "webhookId": "cf7-cotizacion",
-        "type": "n8n-nodes-base.webhook",
-        "typeVersion": 2,
-        "position": [
-          240,
-          300
-        ],
-        "parameters": {
-          "httpMethod": "POST",
-          "path": "cf7-cotizacion",
-          "responseMode": "responseNode",
-          "options": {}
-        }
-      },
-      {
-        "id": "format-lead",
-        "name": "🔧 Formatear Datos",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          480,
-          300
-        ],
-        "parameters": {
-          "jsCode": "\nconst b = $json.body || $json;\n\nconst nombre   = (b['nombre']      || '').toString().trim();\nconst email    = (b['email']       || '').toString().trim();\nconst telefono = (b['telefono']    || '').toString().trim();\nconst zip      = (b['ZipCode']     || '').toString().trim();\nconst producto = (b['Product']     || '').toString().trim();\nconst servicio = (b['Service']     || '').toString().trim();\nconst mensaje  = (b['Message']     || '').toString().trim();\nconst fecha    = (b['Fecha']       || new Date().toLocaleDateString('es-US',{timeZone:'America/New_York'})).toString().trim();\n\n// Build shipment details from all 5 rows\nconst filas = [\n  { cant: b['Cantidad'],  det: b['detalles'],  l: b['Length'],  w: b['Width'],  h: b['height'],  p: b['Weightaprox']  },\n  { cant: b['Cantidad2'], det: b['Detalles2'], l: b['Length2'], w: b['Width2'], h: b['height2'], p: b['Weightaprox2'] },\n  { cant: b['Cantidad3'], det: b['Detalles3'], l: b['Length3'], w: b['Width3'], h: b['height3'], p: b['Weightaprox3'] },\n  { cant: b['Cantidad4'], det: b['Detalles4'], l: b['Length4'], w: b['Width4'], h: b['height4'], p: b['Weightaprox4'] },\n  { cant: b['Cantidad5'], det: b['Detalles5'], l: b['Length5'], w: b['Width5'], h: b['height5'], p: b['Weightaprox5'] },\n];\n\nconst lineas = filas\n  .filter(f => f.det || f.l)\n  .map(f => `${f.cant||'1'}x ${f.det||'item'} — ${f.l||'?'}×${f.w||'?'}×${f.h||'?'} in / ${f.p||'?'} lbs`);\n\nconst detalles_embarque = lineas.join('\\n') || 'Sin dimensiones';\n\nconst resumen = [\n  `📦 Producto: ${producto} / ${servicio}`,\n  `📐 Detalles:\\n${detalles_embarque}`,\n  mensaje ? `💬 Notas: ${mensaje}` : ''\n].filter(Boolean).join('\\n');\n\nconst fecha_captura = new Date().toLocaleDateString('es-US', {timeZone:'America/New_York'});\n\nreturn [{\n  json: {\n    // Para Leads Sheet\n    nombre,\n    email,\n    telefono,\n    direccion: `Zip: ${zip}`,\n    web: '',\n    rating: '',\n    fecha_captura,\n    correo_enviado: '0',\n    fecha_c1: '', fecha_c2: '', fecha_c3: '',\n    estado_email: 'activo',\n    estado: 'Cotización Web',\n    nicho: 'cotizacion-web',\n    // Para Airtable\n    zip, producto, servicio,\n    mensaje: resumen,\n    fecha_solicitud: fecha,\n  }\n}];\n"
-        }
-      },
-      {
-        "id": "save-leads-sheet",
-        "name": "📊 Guardar en Leads Sheet",
-        "type": "n8n-nodes-base.googleSheets",
-        "typeVersion": 4.5,
-        "continueOnFail": true,
-        "onError": "continueRegularOutput",
-        "position": [
-          720,
-          400
-        ],
-        "parameters": {
-          "operation": "append",
-          "documentId": {
-            "__rl": true,
-            "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
-            "mode": "id"
-          },
-          "sheetName": {
-            "__rl": true,
-            "value": "gid=0",
-            "mode": "id"
-          },
-          "columns": {
-            "mappingMode": "autoMapInputData",
-            "value": {},
-            "matchingColumns": [
-              "email"
-            ],
-            "schema": []
-          },
-          "options": {}
-        },
-        "credentials": {
-          "googleSheetsOAuth2Api": {
-            "id": "QE2RlAxaMLoYefTD",
-            "name": "Google Sheets account"
-          }
-        }
-      },
-      {
-        "id": "respond-ok",
-        "name": "✅ Responder OK",
-        "type": "n8n-nodes-base.respondToWebhook",
-        "typeVersion": 1.1,
-        "position": [
-          1180,
-          300
-        ],
-        "parameters": {
-          "respondWith": "json",
-          "responseBody": "={\"ok\":true}",
-          "options": {
-            "responseCode": 200
-          }
-        }
-      },
-      {
-        "id": "af877527-3c1d-48f8-a2b2-5ac20ce970e7",
-        "name": "🧾 Guardar en CRM (G54)",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "onError": "continueRegularOutput",
-        "position": [
-          940,
-          400
-        ],
-        "parameters": {
-          "jsCode": "// Formulario de la web (CF7) → CRM de G54 (27-oct). Crea o actualiza el trato (upsert de G54 por teléfono\n// o, sin teléfono, por correo) con origen \"web\" y deja una nota con el detalle del pedido.\n// Si G54 falla, el formulario igual responde OK: el lead ya quedó en el Google Sheet.\nconst BASE = 'https://apigrowth.mdarthurdigital.com';\nconst AGENT = 'Bearer REDACTED_G54_AGENT_TOKEN';\nconst COMPANY_ID = 1; // Crating Express: este flujo es solo del formulario de cratingexpress.com\nconst f = $('🔧 Formatear Datos').first().json;\n\nconst limpio = (v, max = 200) => String(v ?? '').replace(/[\\u0000-\\u0008\\u000b-\\u001f]/g, ' ').trim().slice(0, max);\nconst correo = limpio(f.email, 150).toLowerCase();\nconst telOriginal = String(f.telefono || '').trim();\nlet telDig = telOriginal.replace(/\\D/g, '');\n// 10 dígitos sin código de país = número de EE. UU. (el formulario es de Miami): se agrega el 1.\nif (telDig.length === 10 && !telOriginal.startsWith('+')) telDig = '1' + telDig;\nconst telefono = telDig.length >= 8 && telDig.length <= 15 ? '+' + telDig : '';\nconst correoValido = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(correo);\nif (!correoValido && !telefono) return [{ json: { ok: false, motivo: 'el formulario no trae correo ni teléfono válidos' } }];\n\nconst detalle = [\n  'Pedido de cotización desde el formulario de la web' + (f.fecha_solicitud ? ' (' + limpio(f.fecha_solicitud, 40) + ')' : '') + '.',\n  f.zip ? 'Zip: ' + limpio(f.zip, 20) + '.' : '',\n  telOriginal && !telefono ? 'Teléfono escrito: ' + limpio(telOriginal, 40) + '.' : '',\n  limpio(f.mensaje, 1500),\n].filter(Boolean).join('\\n');\n\nconst payload = {\n  company_id: COMPANY_ID,\n  nombre: limpio(f.nombre, 120) || correo || telefono,\n  ...(telefono ? { telefono } : {}),\n  ...(correoValido ? { email: correo } : {}),\n  origen: 'web',\n  temperatura: 'medio',\n  tags: ['origen:formulario-web', 'cf7'],\n  notas: detalle,\n};\nif ($('📥 Webhook CF7').first().json.body?.dry_run === true) return [{ json: { ok: true, dry_run: true, payload } }];\n\nlet deal = null;\ntry {\n  const r = await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/agent/crm/leads',\n    headers: { Authorization: AGENT, Accept: 'application/json' }, body: payload, json: true, timeout: 15000 });\n  deal = (r && (r.deal || r.data)) || null;\n} catch (e) {\n  return [{ json: { ok: false, motivo: 'G54 no guardó el trato: ' + String(e.message || e).slice(0, 200) } }];\n}\nif (!deal || !deal.id) return [{ json: { ok: false, motivo: 'G54 respondió sin trato' } }];\nif (Number(deal.company_id) !== COMPANY_ID) return [{ json: { ok: false, motivo: 'el trato quedó en otra empresa', deal_id: deal.id } }];\n\nlet nota = false;\ntry {\n  await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/agent/crm/leads/' + deal.id + '/activities',\n    headers: { Authorization: AGENT, Accept: 'application/json' },\n    body: { tipo: 'nota', contenido: detalle }, json: true, timeout: 15000 });\n  nota = true;\n} catch (e) { nota = false; }\nreturn [{ json: { ok: true, deal_id: deal.id, nota } }];\n"
-        }
-      }
-    ],
-    "connections": {
-      "📥 Webhook CF7": {
-        "main": [
-          [
-            {
-              "node": "🔧 Formatear Datos",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔧 Formatear Datos": {
-        "main": [
-          [
-            {
-              "node": "📊 Guardar en Leads Sheet",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "📊 Guardar en Leads Sheet": {
-        "main": [
-          [
-            {
-              "node": "🧾 Guardar en CRM (G54)",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🧾 Guardar en CRM (G54)": {
-        "main": [
-          [
-            {
-              "node": "✅ Responder OK",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      }
-    },
-    "nodeGroups": [],
-    "authors": "Solange  Torrez",
-    "name": null,
-    "description": null,
-    "autosaved": false,
-    "createdAt": "2026-10-27T13:28:54.320Z",
-    "updatedAt": "2026-10-27T13:28:54.320Z",
-    "workflowPublishHistory": [
-      {
-        "id": 3503,
-        "workflowId": "FU8QG1BVmT4r5Kjw",
-        "versionId": "663e3bb5-07c5-406d-a9fb-739aaf0e2b9e",
-        "event": "activated",
-        "userId": "80d1b461-d4b7-4c8c-8c0f-d53d9a124c73",
-        "createdAt": "2026-10-27T13:28:54.599Z"
-      }
-    ]
   }
 }
