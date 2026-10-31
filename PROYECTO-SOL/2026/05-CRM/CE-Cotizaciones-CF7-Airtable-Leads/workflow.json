@@ -32,46 +32,6 @@
       }
     },
     {
-      "id": "save-leads-sheet",
-      "name": "📊 Guardar en Leads Sheet",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
-      "continueOnFail": true,
-      "onError": "continueRegularOutput",
-      "position": [
-        940,
-        400
-      ],
-      "parameters": {
-        "operation": "append",
-        "documentId": {
-          "__rl": true,
-          "value": "1WRqv3s1vsTRSpfz6Bo27u3ff9kHDki_nDDMFt9yVj-8",
-          "mode": "id"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "gid=0",
-          "mode": "id"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "value": {},
-          "matchingColumns": [
-            "email"
-          ],
-          "schema": []
-        },
-        "options": {}
-      },
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "QE2RlAxaMLoYefTD",
-          "name": "Google Sheets account"
-        }
-      }
-    },
-    {
       "id": "respond-ok",
       "name": "✅ Responder OK",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -99,41 +59,7 @@
         400
       ],
       "parameters": {
-        "jsCode": "// Formulario de la web (CF7) → CRM de G54 (27-oct). Crea o actualiza el trato (upsert de G54 por teléfono\n// o, sin teléfono, por correo) con origen \"web\" y deja una nota con el detalle del pedido.\n// Si G54 falla, el formulario igual responde OK: el lead ya quedó en el Google Sheet.\nconst BASE = 'https://apigrowth.mdarthurdigital.com';\nconst AGENT = 'Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>';\nconst COMPANY_ID = 1; // Crating Express: este flujo es solo del formulario de cratingexpress.com\nconst f = $('🔧 Formatear Datos').first().json;\n\nconst limpio = (v, max = 200) => String(v ?? '').replace(/[\\u0000-\\u0008\\u000b-\\u001f]/g, ' ').trim().slice(0, max);\nconst correo = limpio(f.email, 150).toLowerCase();\nconst telOriginal = String(f.telefono || '').trim();\nlet telDig = telOriginal.replace(/\\D/g, '');\n// 10 dígitos sin código de país = número de EE. UU. (el formulario es de Miami): se agrega el 1.\nif (telDig.length === 10 && !telOriginal.startsWith('+')) telDig = '1' + telDig;\nconst telefono = telDig.length >= 8 && telDig.length <= 15 ? '+' + telDig : '';\nconst correoValido = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(correo);\nif (!correoValido && !telefono) return [{ json: { ok: false, motivo: 'el formulario no trae correo ni teléfono válidos' } }];\n\nconst detalle = [\n  'Pedido de cotización desde el formulario de la web' + (f.fecha_solicitud ? ' (' + limpio(f.fecha_solicitud, 40) + ')' : '') + '.',\n  f.zip ? 'Zip: ' + limpio(f.zip, 20) + '.' : '',\n  telOriginal && !telefono ? 'Teléfono escrito: ' + limpio(telOriginal, 40) + '.' : '',\n  limpio(f.mensaje, 1500),\n].filter(Boolean).join('\\n');\n\nconst payload = {\n  company_id: COMPANY_ID,\n  nombre: limpio(f.nombre, 120) || correo || telefono,\n  ...(telefono ? { telefono } : {}),\n  ...(correoValido ? { email: correo } : {}),\n  origen: 'web',\n  temperatura: 'medio',\n  tags: ['origen:formulario-web', 'cf7'],\n  notas: detalle,\n};\nif ($('📥 Webhook CF7').first().json.body?.dry_run === true) return [{ json: { ok: true, dry_run: true, payload } }];\n\nlet deal = null;\ntry {\n  const r = await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/agent/crm/leads',\n    headers: { Authorization: AGENT, Accept: 'application/json' }, body: payload, json: true, timeout: 15000 });\n  deal = (r && (r.deal || r.data)) || null;\n} catch (e) {\n  return [{ json: { ok: false, motivo: 'G54 no guardó el trato: ' + String(e.message || e).slice(0, 200) } }];\n}\nif (!deal || !deal.id) return [{ json: { ok: false, motivo: 'G54 respondió sin trato' } }];\nif (Number(deal.company_id) !== COMPANY_ID) return [{ json: { ok: false, motivo: 'el trato quedó en otra empresa', deal_id: deal.id } }];\n\nlet nota = false;\ntry {\n  await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/agent/crm/leads/' + deal.id + '/activities',\n    headers: { Authorization: AGENT, Accept: 'application/json' },\n    body: { tipo: 'nota', contenido: detalle }, json: true, timeout: 15000 });\n  nota = true;\n} catch (e) { nota = false; }\nreturn [{ json: { ok: true, deal_id: deal.id, nota } }];\n"
-      }
-    },
-    {
-      "id": "if-guardar-sheet",
-      "name": "🔀 ¿Guardar en el Sheet?",
-      "notes": "31-oct: sin correo ni teléfono, o con dry_run, no se guarda una fila en el Sheet (el CRM igual responde con el motivo).",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        720,
-        400
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "id": "c1",
-              "leftValue": "={{ !$('📥 Webhook CF7').item.json.body?.dry_run && !!(($json.email || '').trim() || ($json.telefono || '').trim()) }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+        "jsCode": "// Formulario de la web (CF7) → CRM de G54 (27-oct). Crea o actualiza el trato (upsert de G54 por teléfono\n// o, sin teléfono, por correo) con origen \"web\" y deja una nota con el detalle del pedido.\n// Si G54 falla, el formulario igual responde OK. Desde el 31-oct el CRM es el único lugar donde queda el lead (se sacó el Google Sheet).\nconst BASE = 'https://apigrowth.mdarthurdigital.com';\nconst AGENT = 'Bearer <G54_AGENT_TOKEN — ver .secrets.local.md>';\nconst COMPANY_ID = 1; // Crating Express: este flujo es solo del formulario de cratingexpress.com\nconst f = $('🔧 Formatear Datos').first().json;\n\nconst limpio = (v, max = 200) => String(v ?? '').replace(/[\\u0000-\\u0008\\u000b-\\u001f]/g, ' ').trim().slice(0, max);\nconst correo = limpio(f.email, 150).toLowerCase();\nconst telOriginal = String(f.telefono || '').trim();\nlet telDig = telOriginal.replace(/\\D/g, '');\n// 10 dígitos sin código de país = número de EE. UU. (el formulario es de Miami): se agrega el 1.\nif (telDig.length === 10 && !telOriginal.startsWith('+')) telDig = '1' + telDig;\nconst telefono = telDig.length >= 8 && telDig.length <= 15 ? '+' + telDig : '';\nconst correoValido = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(correo);\nif (!correoValido && !telefono) return [{ json: { ok: false, motivo: 'el formulario no trae correo ni teléfono válidos' } }];\n\nconst detalle = [\n  'Pedido de cotización desde el formulario de la web' + (f.fecha_solicitud ? ' (' + limpio(f.fecha_solicitud, 40) + ')' : '') + '.',\n  f.zip ? 'Zip: ' + limpio(f.zip, 20) + '.' : '',\n  telOriginal && !telefono ? 'Teléfono escrito: ' + limpio(telOriginal, 40) + '.' : '',\n  limpio(f.mensaje, 1500),\n].filter(Boolean).join('\\n');\n\nconst payload = {\n  company_id: COMPANY_ID,\n  nombre: limpio(f.nombre, 120) || correo || telefono,\n  ...(telefono ? { telefono } : {}),\n  ...(correoValido ? { email: correo } : {}),\n  origen: 'web',\n  temperatura: 'medio',\n  tags: ['origen:formulario-web', 'cf7'],\n  notas: detalle,\n};\nif ($('📥 Webhook CF7').first().json.body?.dry_run === true) return [{ json: { ok: true, dry_run: true, payload } }];\n\nlet deal = null;\ntry {\n  const r = await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/agent/crm/leads',\n    headers: { Authorization: AGENT, Accept: 'application/json' }, body: payload, json: true, timeout: 15000 });\n  deal = (r && (r.deal || r.data)) || null;\n} catch (e) {\n  return [{ json: { ok: false, motivo: 'G54 no guardó el trato: ' + String(e.message || e).slice(0, 200) } }];\n}\nif (!deal || !deal.id) return [{ json: { ok: false, motivo: 'G54 respondió sin trato' } }];\nif (Number(deal.company_id) !== COMPANY_ID) return [{ json: { ok: false, motivo: 'el trato quedó en otra empresa', deal_id: deal.id } }];\n\nlet nota = false;\ntry {\n  await this.helpers.httpRequest({ method: 'POST', url: BASE + '/api/agent/crm/leads/' + deal.id + '/activities',\n    headers: { Authorization: AGENT, Accept: 'application/json' },\n    body: { tipo: 'nota', contenido: detalle }, json: true, timeout: 15000 });\n  nota = true;\n} catch (e) { nota = false; }\nreturn [{ json: { ok: true, deal_id: deal.id, nota } }];\n"
       }
     }
   ],
@@ -153,17 +79,6 @@
       "main": [
         [
           {
-            "node": "🔀 ¿Guardar en el Sheet?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📊 Guardar en Leads Sheet": {
-      "main": [
-        [
-          {
             "node": "🧾 Guardar en CRM (G54)",
             "type": "main",
             "index": 0
@@ -176,24 +91,6 @@
         [
           {
             "node": "✅ Responder OK",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔀 ¿Guardar en el Sheet?": {
-      "main": [
-        [
-          {
-            "node": "📊 Guardar en Leads Sheet",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "🧾 Guardar en CRM (G54)",
             "type": "main",
             "index": 0
           }
