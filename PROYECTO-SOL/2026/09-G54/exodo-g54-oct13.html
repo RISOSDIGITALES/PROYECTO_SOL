@@ -158,11 +158,12 @@
     <h1>Éxodo — Pendientes para el ingeniero · <span>13 Oct 2026</span></h1>
     <p>Reemplaza a <code style="color:#a78bfa;background:transparent;border:none;">exodo-g54-oct09.html</code>. Este documento lista los pedidos abiertos por área — el historial de qué se confirmó resuelto y cuándo está abajo, plegado.</p>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> 19 pedidos activos</div>
+      <div class="meta-item"><div class="dot"></div> 20 pedidos activos</div>
     </div>
     <details class="header-updates">
-      <summary>Historial de actualizaciones (36 entradas)</summary>
+      <summary>Historial de actualizaciones (37 entradas)</summary>
       <ul>
+        <li><strong class="upd-date">31-oct:</strong> 1 pedido nuevo en Backend: que G54 guarde el token de renovación de LinkedIn al conectar la empresa y renueve solo el de publicación, que vence cada 60 días. Mientras tanto, lo renueva un flujo nuestro en n8n.</li>
         <li><strong class="upd-date">29-oct:</strong> 1 pedido nuevo en Backend, que sale del comparativo del CRM de G54 con otros CRM: que los datos del CRM sean confiables. Pide monto obligatorio al cerrar y motivo al perder, contacto y empresa aparte del trato, unir duplicados, importar y exportar CSV, y la baja como campo propio.</li>
         <li><strong class="upd-date">28-oct (2):</strong> 2 pedidos nuevos en Backend: arreglar las fallas de DNS del servidor (agregar en <code>/etc/hosts</code> los dominios de G54 y n8n) y que el CRM guarde y compare los teléfonos en un solo formato, para no duplicar contactos.</li>
         <li><strong class="upd-date">28-oct:</strong> 6 pedidos nuevos en Correo, después de ver los primeros borradores reales de Camila: editar el borrador como plantilla y no como HTML, mostrar para quién es cada correo y por qué, día y hora de envío modificables con un tope diario, lanzar a Camila desde Correo sabiendo cuántos borradores va a armar, medir qué pasó después de enviar (aperturas, clics, rebotes, respuestas y bajas) y revisar que el correo llegue (prueba de la cuenta y dominio). De nuestro lado ya están el modo prueba y el tope por corrida de Camila.</li>
@@ -508,6 +509,23 @@
       </ol>
       <p class="item-why"><strong>De nuestro lado:</strong> que cada agente mande el teléfono ya con "+" y código de país (Marco, Telegram y Community AI todavía no lo hacen) y que la temperatura se llene con un criterio, en vez de dejarla siempre en "bajo". Cuando existan los campos de baja, Camila los va a usar en vez de la marca en las notas.</p>
       <p class="item-why"><strong>Para después</strong> (en el documento, fases 2 a 4): etapas configurables con probabilidad, tareas con responsable y fecha, respuestas de correo en el historial, pronóstico y reportes de ventas. Se dejan anotadas, pero no las pedimos todavía.</p>
+    </div>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">LinkedIn: que G54 guarde el token de renovación y renueve solo el de publicación</div><div class="item-where"><code>/api/oauth/linkedin</code> · <code>GET/PUT /api/rrss/tokens</code> · <code>GET /api/n8n/pages/{id}</code></div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why"><strong>Qué pasa (30-oct):</strong> LinkedIn no da tokens permanentes: el de publicación vence a los 60 días y el de renovación, al año. Hoy G54 guarda solo el de publicación, y cuando vence, Distribution deja de publicar en LinkedIn hasta que alguien reconecta a mano. Al de Crating Express le quedaban 31 días.</p>
+      <p class="item-why"><strong>De nuestro lado, listo (30-oct):</strong> el flujo <code>🔄 LinkedIn — Renovar token (G54)</code> corre cada lunes. Si al token le faltan menos de 21 días, pide uno nuevo con el de renovación y lo guarda con <code>PUT /api/rrss/tokens</code>. Ya renovó el de Crating Express hasta el 29-dic. El problema es que el token de renovación de cada empresa queda guardado en n8n, que es un dato de la empresa fuera de G54, y hay que cargarlo a mano por cada empresa.</p>
+      <p class="item-why"><strong>Pedido:</strong></p>
+      <ol class="item-why">
+        <li>Que, cuando una empresa conecta LinkedIn con el botón del panel (<code>/api/oauth/linkedin</code>), G54 guarde también el <code>refresh_token</code> y su vencimiento (LinkedIn lo devuelve en la misma respuesta).</li>
+        <li>Que G54 renueve solo el token de publicación unos días antes de que venza (<code>grant_type=refresh_token</code>) y guarde el nuevo, o que nos pase el <code>refresh_token</code> por una ruta de agente para que lo haga nuestro flujo.</li>
+        <li>Que el panel avise a la empresa unas semanas antes de que venza el token de renovación (al año), porque ahí sí hay que volver a autorizar a mano.</li>
+      </ol>
+      <p class="item-why"><strong>Cuando esté:</strong> apagamos nuestro flujo y sacamos el token de renovación de n8n.</p>
     </div>
   </div>
 
