@@ -695,6 +695,16 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-10-31 (Sábado)
+
+Arranqué con la rutina de G54, todo en orden, y el post que quedaba salió por Instagram de verdad y no por el respaldo de Facebook. Después revisé los pendientes y adelanté los que podía: corregí un error que se repetía en cada publicación de Distribution, dejé a Orison en pausa (ya estaba fuera de casi todo, solo faltaba sacarla del Vigía) y quedó la regla de que cada negocio manda sus correos desde su propia casilla. Como Crating Express es de prueba, los borradores de Camila no se aprueban, y me mandé copias a mi correo para ver cómo llegan. También sumé al Éxodo el pedido para que G54 renueve solo el permiso de LinkedIn.
+
+Luego hice una revisión de errores: los de la semana ya estaban resueltos y no hay secretos expuestos en el repo. Como refuerzo contra la falla de DNS del servidor, le puse reintentos a 79 consultas a G54 en 14 agentes. En las pruebas por descarte encontré que el formulario web guardaba filas vacías en el Google Sheet, y como ese Sheet ya no servía de nada, lo sacamos: el formulario guarda solo en el CRM y apagué el Gmail Monitor que lo leía. En Bubble pasaron todas las pruebas del agente, el servidor y el panel; encontré que las del servidor llamaban a Groq de verdad y gastaban cupo, lo corregí y reinicié el servidor local, que corría con código viejo.
+
+Al final intenté subir el video del primer Reel y no se pudo: el servidor de G54 acepta archivos de hasta 2 MB aunque la documentación dice 100, así que quedó como pedido urgente en el Éxodo, junto con lo que encontré del chat del cotizador, que responde desde un flujo que no es nuestro. El Éxodo queda con 21 pedidos. Ahí paré, con todo subido y el uso semanal en 87 %.
+
+---
+
 ### 2026-10-30 (Viernes)
 
 Arranqué con la rutina de G54, todo en orden y sin errores, y después revisé los comentarios de Don Marc al reporte de ayer. Como le gustó más la medusa que armó con Gemini, rehice a Jelly con ese estilo y las mismas animaciones, y le di muchas vueltas a los ojos hasta que quedaron como en su imagen: el contorno más grueso arriba, la pupila grande con brillos y el cachete que les corta la parte de abajo. Se la pasé al ingeniero. Después revisé los pendientes y aproveché a dejar resuelto el permiso de LinkedIn, que vence cada 60 días: ahora se renueva solo cada lunes, y ya quedó renovado hasta fin de diciembre. También encontré que la estrategia de Orison venció el 5 de octubre y por eso no le salían ideas.
@@ -712,13 +722,3 @@ Arranqué con la rutina de G54, todo en orden salvo la falla de DNS del servidor
 La mayor parte del día fue Bubble, porque me pidieron que pudiera conectarse con otros CRM en los dos sentidos. Ahora tiene llaves para que otro sistema lea y le mande clientes y citas, avisos a varias direcciones con reintentos, conexión directa con GoHighLevel y con HubSpot, y una guía paso a paso para conectar el CRM dentro de Integraciones, sin la palabra "programadores" para que nadie se asuste. Lo probé todo de punta a punta, con 17 de 17 comprobaciones en vivo y todas las pruebas automáticas en verde; lo único que falta es probarlo con cuentas reales de GoHighLevel y HubSpot.
 
 Al final le puse reintentos a Marco contra la falla de DNS, dejé lista la sugerencia de mejor horario, que se activa sola cuando la rotación junte datos, y revisé el asistente de voz de VAPI, que sigue con un modelo viejo y queda pendiente de una llamada de prueba. Por el comentario de Don Marc le di a Jelly el estilo de Finding Nemo, con ojos grandes y sonrisa con dientes, y lo dejé en espera hasta que conteste el ingeniero. Ahí paré con todo subido.
-
----
-
-### 2026-10-28 (Miércoles)
-
-Arranqué con la rutina de G54 y revisé que el informe mensual ya comparara contra la línea base, y sí lo hace, pero encontré que guardaba en cero las métricas de Instagram, así que lo corregí. Después terminé a Jelly, la medusa animada que pidió el ingeniero, con base en Bubbli: le puse pupilas, se la pasé y las correcciones las hace él. En el medio me llegó un correo del Vigía: era una falla de DNS en el servidor, que no se puede arreglar desde acá porque es del servidor del ingeniero, así que le dejé el pedido y mientras tanto puse reintentos en Distribution para que no se pierda ninguna publicación.
-
-La mayor parte del día fue Prospección, que nunca había funcionado porque dependía de Google, que pide tarjeta, y no podemos usar tarjeta. Investigamos todas las opciones gratis, también Sunbiz y OpenStreetMap, y me quedé con Foursquare y Tavily, que me abrí con cuentas gratis. Rehicimos el agente para que busque clientes según el perfil de cada empresa y no a la competencia, como hacía antes, que no repita negocios y que guarde los teléfonos con código de país; la corrida real trajo dos agentes de carga reales con su correo. Al cambiar el formato de los teléfonos el CRM los duplicó, así que borré los repetidos y le pedí al ingeniero que el CRM compare los teléfonos en un solo formato. También calculamos cuánto aguanta gratis: unas 75 empresas de EE. UU. o 25 de Latinoamérica con 10 negocios por semana cada una.
-
-Cerré con Camila. Al revisar su pantalla encontré que el correo en frío tenía un texto fijo sobre embalaje que le habría llegado a los prospectos de cualquier empresa, y que el blog también les escribía a contactos que nunca nos pidieron nada. Ahora la IA redacta cada correo con el perfil de la empresa y en el idioma del prospecto, con un tope por corrida y un modo de prueba, y ya armé los dos primeros borradores reales, que quedan esperando aprobación. Al verlos en el panel me pareció inaceptable que el cliente tenga que editar código, así que sumé al Éxodo seis pedidos de Correo (la plantilla sin HTML, a quién se le manda y por qué, la fecha y hora de envío, la medición después de enviar y que el correo llegue) junto con los del DNS y los teléfonos, y ahí paré con todo subido.
