@@ -158,11 +158,12 @@
     <h1>Éxodo — Pendientes para el ingeniero · <span>13 Oct 2026</span></h1>
     <p>Reemplaza a <code style="color:#a78bfa;background:transparent;border:none;">exodo-g54-oct09.html</code>. Este documento lista los pedidos abiertos por área — el historial de qué se confirmó resuelto y cuándo está abajo, plegado.</p>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> 20 pedidos activos</div>
+      <div class="meta-item"><div class="dot"></div> 21 pedidos activos</div>
     </div>
     <details class="header-updates">
-      <summary>Historial de actualizaciones (37 entradas)</summary>
+      <summary>Historial de actualizaciones (38 entradas)</summary>
       <ul>
+        <li><strong class="upd-date">31-oct (2):</strong> 1 pedido urgente en Reels: el servidor no deja subir videos de más de 2 MB (la documentación promete 100 MB), así que ningún Reel real se puede subir. Hay que subir los límites de PHP y nginx.</li>
         <li><strong class="upd-date">31-oct:</strong> 1 pedido nuevo en Backend: que G54 guarde el token de renovación de LinkedIn al conectar la empresa y renueve solo el de publicación, que vence cada 60 días. Mientras tanto, lo renueva un flujo nuestro en n8n.</li>
         <li><strong class="upd-date">29-oct:</strong> 1 pedido nuevo en Backend, que sale del comparativo del CRM de G54 con otros CRM: que los datos del CRM sean confiables. Pide monto obligatorio al cerrar y motivo al perder, contacto y empresa aparte del trato, unir duplicados, importar y exportar CSV, y la baja como campo propio.</li>
         <li><strong class="upd-date">28-oct (2):</strong> 2 pedidos nuevos en Backend: arreglar las fallas de DNS del servidor (agregar en <code>/etc/hosts</code> los dominios de G54 y n8n) y que el CRM guarde y compare los teléfonos en un solo formato, para no duplicar contactos.</li>
@@ -236,6 +237,29 @@
   <div class="cat-header">
     <span class="cat-icon">🎬</span>
     <span class="cat-title">Reels y atribución — lo que queda</span>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">Urgente: no se puede subir ningún video real (el servidor acepta hasta 2 MB, no 100 MB)</div><div class="item-where"><code>POST /api/videos/upload</code> · <code>php.ini</code> · configuración de nginx</div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why"><strong>Qué pasa (31-oct):</strong> la usuaria grabó un pedido de grabación y, al apretar "Ya lo grabé — subir video", el panel dijo "No se pudo subir el video." La documentación dice "solo video/mp4, máx. 100 MB", pero el servidor corta mucho antes. Lo probamos con archivos de distintos tamaños contra <code>POST /api/videos/upload</code>:</p>
+      <ul class="item-why">
+        <li>0,5 MB: llega a Laravel (422 por el tipo, era un archivo de prueba).</li>
+        <li>3 MB: 422 "The file failed to upload": <code>upload_max_filesize</code> de PHP está en 2 MB.</li>
+        <li>9 MB: "POST Content-Length of 9437355 bytes exceeds the limit of 8388608 bytes" y "The POST data is too large": <code>post_max_size</code> está en 8 MB (y el aviso de PHP sale impreso en la respuesta).</li>
+        <li>20 MB: el servidor corta la conexión (probablemente <code>client_max_body_size</code> de nginx).</li>
+      </ul>
+      <p class="item-why">Un video de celular de 10 a 90 segundos pesa entre 10 y 200 MB, así que hoy ningún Reel real se puede subir. Como esas respuestas no traen un <code>message</code> en JSON, el panel muestra el texto genérico y el cliente no sabe por qué falló.</p>
+      <p class="item-why"><strong>Pedido:</strong></p>
+      <ol class="item-why">
+        <li>Subir los límites a lo que dice la documentación: en PHP, <code>upload_max_filesize = 100M</code> y <code>post_max_size = 110M</code> (y revisar <code>max_execution_time</code> y <code>max_input_time</code> para subidas lentas); en nginx, <code>client_max_body_size 110m</code> en el sitio de la API.</li>
+        <li>Que el panel revise el tamaño antes de subir (como ya hace con la duración y la forma vertical) y muestre "El video pesa X MB, el máximo es 100 MB".</li>
+        <li>Que un 413 o un archivo demasiado grande vuelva como JSON con un <code>message</code> legible, y apagar <code>display_errors</code> en producción para que los avisos de PHP no salgan en la respuesta.</li>
+      </ol>
+      <p class="item-why"><strong>Cómo lo probamos cuando esté:</strong> subimos un video real desde el panel con el pedido de grabación 1 o 2 de Crating Express.</p>
+    </div>
   </div>
 
   <div class="item-card">
