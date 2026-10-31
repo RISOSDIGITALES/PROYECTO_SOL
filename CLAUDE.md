@@ -665,6 +665,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 498. **El Vigía ya no revisa a Orison** (2026-10-31), a pedido de la usuaria, porque está en pausa (ítem 497). En `🔐 G54: Posts Atascados + Storage` se agregó `EXCLUIDAS = [6]` dentro del recorrido. Orison sigue en la lista de empresas para el chequeo de contenido cruzado (un post de CE que la nombre). Probado por el webhook manual: solo hubo hallazgos de CE y no se mandó correo por el enfriamiento de 6 h. Esos hallazgos: 15 ideas sin aprobar hace más de 7 días y 4 borradores sin revisar (197, 180, 176 y 174). **Correo de Camila:** el "permiso" de G54 es que cada empresa cargue su casilla con una contraseña de aplicación en Ajustes → Correo electrónico. Para CE está cargada `risosadmi@gmail.com`; para mandar desde la casilla de CE alguien con acceso tiene que crear esa contraseña y cargarla en el panel. Ver al ingeniero o la usuaria.
 
+499. **Regla: cada negocio manda correo desde su propia casilla** (2026-10-31), decidido por la usuaria. Cada negocio carga la suya en Ajustes → Correo electrónico. Crating Express sigue con `risosadmi@gmail.com` porque es la empresa de prueba y su casilla real la usa el negocio. Pendiente: los borradores 7 y 8 de Camila van a negocios reales, así que, si se aprueban, les llega un correo real desde esa casilla.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
