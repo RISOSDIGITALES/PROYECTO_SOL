@@ -677,6 +677,16 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-11-03 (Martes)
+
+Arranqué con la rutina de G54, todo limpio, y con la rotación de horarios, que esta vez corrió un día tarde porque el lunes la computadora no se prendió (la tarea solo corre con la app abierta, y decidí dejarla así). Aprobé las 4 ideas de la semana y programé los posts de Facebook, LinkedIn y otra vez Facebook; el de Instagram me dio guerra porque la imagen salía con faltas en el subtítulo que inventa la IA, así que lo dejé solo con el título, quedó limpio, y cambié esa configuración para Instagram de Crating Express de ahora en adelante.
+
+Después hice una revisión de seguridad. Encontré que G54 entrega los tokens de nuestras redes a cualquiera que pida la dirección de la página; lo dejé en el Éxodo para el ingeniero, sin marca de urgente, porque por ahora solo nos afecta a nosotros. De nuestro lado les puse candado a los agentes que se disparan por webhook, primero a 12 y más tarde a los de Telegram, donde vi que no los llama Telegram sino G54, así que llevaban el mismo candado; confirmé que el post del martes salió igual con el candado puesto. También borré del flujo de Marco por Telegram unas piezas viejas que estaban apagadas.
+
+La otra gran parte del día fue ordenar: el repo quedó por temas, con fechas en los nombres, un índice y la copia al día de los 35 agentes de n8n, y en la computadora comprimí las copias viejas y el respaldo de la web de Crating Express en una sola carpeta de archivo. Dejé más liviano el archivo que se carga en cada sesión, saqué del Éxodo el pedido del chat del cotizador porque el cotizador es del ingeniero, y lo dejé listo para enviar con 21 pedidos. Queda pendiente mandarle un mensaje a Marco por Telegram para confirmar el candado. Ahí paré con todo subido y el uso semanal en 6 %.
+
+---
+
 ### 2026-10-31 (Sábado)
 
 Arranqué con la rutina de G54, todo en orden, y el post que quedaba salió por Instagram de verdad y no por el respaldo de Facebook. Después revisé los pendientes y adelanté los que podía: corregí un error que se repetía en cada publicación de Distribution, dejé a Orison en pausa (ya estaba fuera de casi todo, solo faltaba sacarla del Vigía) y quedó la regla de que cada negocio manda sus correos desde su propia casilla. Como Crating Express es de prueba, los borradores de Camila no se aprueban, y me mandé copias a mi correo para ver cómo llegan. También sumé al Éxodo el pedido para que G54 renueve solo el permiso de LinkedIn.
@@ -694,13 +704,3 @@ Arranqué con la rutina de G54, todo en orden y sin errores, y después revisé 
 En Bubble hice una revisión completa: pasaron todas las pruebas del servidor, el panel y el agente de voz, y arreglé cuatro detalles de mantenimiento, entre ellos que el panel ahora carga cuatro veces más liviano. La revisión del inglés ya la había hecho alguien, así que quedó cerrada. Después me pidieron hacer a JarGrowth, el pulpo de G54, con el mismo estilo de Jelly. Guardé una primera versión y armé una segunda basada en la anatomía real de un pulpo, con la membrana entre los brazos, dos filas de ventosas, cada brazo moviéndose por su cuenta y el nado a chorro. Esa es la que más me gustó, y dejé los archivos listos para enviar.
 
 Al final trabajé en la tarea de Don Marc sobre cómo validar G54 antes de lanzarlo. Armé un primer plan, pero al revisarlo con ojo crítico vi que no servía para decidir: medía "G54 más alguien atrás" y solo con negocios nuestros. Lo rehice con dos validaciones, una del producto (que una empresa lo use sin nosotros) y otra de resultados, con 2 o 3 pilotos externos que paguen como prueba principal y la decisión para el 19 de febrero. Cerré dejando más livianos los archivos que se cargan en cada sesión, para gastar menos uso, y ahí paré con todo subido.
-
----
-
-### 2026-10-29 (Jueves)
-
-Arranqué con la rutina de G54, todo en orden salvo la falla de DNS del servidor que sigue a ratos, y seguí con lo que quedó de ayer: el pie de los correos de Camila ahora sale en inglés cuando el correo va en inglés, la ciudad sale de la dirección real y corregí los dos borradores que esperan aprobación. Después llevé a Bubbli al celular, encima del menú de abajo. En el medio armé el documento comparativo del CRM de G54 contra HubSpot, Pipedrive, Zoho, Kommo y GoHighLevel: el nuestro ya hace lo que otros cobran aparte, pero le faltan datos confiables y proceso, así que pasé la primera fase al Éxodo del ingeniero, y de nuestro lado Marco ya manda los teléfonos con código de país y la temperatura del trato ya no vuelve sola a "bajo".
-
-La mayor parte del día fue Bubble, porque me pidieron que pudiera conectarse con otros CRM en los dos sentidos. Ahora tiene llaves para que otro sistema lea y le mande clientes y citas, avisos a varias direcciones con reintentos, conexión directa con GoHighLevel y con HubSpot, y una guía paso a paso para conectar el CRM dentro de Integraciones, sin la palabra "programadores" para que nadie se asuste. Lo probé todo de punta a punta, con 17 de 17 comprobaciones en vivo y todas las pruebas automáticas en verde; lo único que falta es probarlo con cuentas reales de GoHighLevel y HubSpot.
-
-Al final le puse reintentos a Marco contra la falla de DNS, dejé lista la sugerencia de mejor horario, que se activa sola cuando la rotación junte datos, y revisé el asistente de voz de VAPI, que sigue con un modelo viejo y queda pendiente de una llamada de prueba. Por el comentario de Don Marc le di a Jelly el estilo de Finding Nemo, con ojos grandes y sonrisa con dientes, y lo dejé en espera hasta que conteste el ingeniero. Ahí paré con todo subido.
