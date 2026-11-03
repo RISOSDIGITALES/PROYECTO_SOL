@@ -158,11 +158,12 @@
     <h1>Éxodo — Pendientes para el ingeniero · <span>13 Oct 2026</span></h1>
     <p>Reemplaza a <code style="color:#a78bfa;background:transparent;border:none;">exodo-g54-oct09.html</code>. Este documento lista los pedidos abiertos por área — el historial de qué se confirmó resuelto y cuándo está abajo, plegado.</p>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> 21 pedidos activos</div>
+      <div class="meta-item"><div class="dot"></div> 22 pedidos activos</div>
     </div>
     <details class="header-updates">
-      <summary>Historial de actualizaciones (38 entradas)</summary>
+      <summary>Historial de actualizaciones (39 entradas)</summary>
       <ul>
+        <li><strong class="upd-date">3-nov:</strong> 1 pedido urgente nuevo en Seguridad: las rutas <code>GET /api/n8n/*</code> responden sin token, y <code>/api/n8n/pages/{id}</code> entrega los tokens de Facebook, Instagram y LinkedIn. Hay que cargar <code>N8N_API_TOKEN</code>; nuestros agentes ya mandan el token en todas las lecturas.</li>
         <li><strong class="upd-date">31-oct (2):</strong> 1 pedido urgente en Reels: el servidor no deja subir videos de más de 2 MB (la documentación promete 100 MB), así que ningún Reel real se puede subir. Hay que subir los límites de PHP y nginx.</li>
         <li><strong class="upd-date">31-oct:</strong> 1 pedido nuevo en Backend: que G54 guarde el token de renovación de LinkedIn al conectar la empresa y renueve solo el de publicación, que vence cada 60 días. Mientras tanto, lo renueva un flujo nuestro en n8n.</li>
         <li><strong class="upd-date">29-oct:</strong> 1 pedido nuevo en Backend, que sale del comparativo del CRM de G54 con otros CRM: que los datos del CRM sean confiables. Pide monto obligatorio al cerrar y motivo al perder, contacto y empresa aparte del trato, unir duplicados, importar y exportar CSV, y la baja como campo propio.</li>
@@ -210,6 +211,27 @@
 </div>
 
 <div class="container">
+
+  <!-- ============ SEGURIDAD ============ -->
+  <div class="cat-header">
+    <span class="cat-icon">🔒</span>
+    <span class="cat-title">Seguridad — urgente</span>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">Urgente: las rutas de lectura para n8n responden sin autenticación, y una entrega los tokens de las redes</div><div class="item-where"><code>GET /api/n8n/*</code> · <code>N8N_API_TOKEN</code> en el <code>.env</code> del servidor</div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why"><strong>Qué pasa (3-nov):</strong> la API sigue en el "modo desarrollo" del principio: si <code>N8N_API_TOKEN</code> está vacío, todas las rutas <code>GET /api/n8n/*</code> responden a cualquiera, sin token. La más delicada es <code>GET /api/n8n/pages/{page_id}</code>: devuelve el token de Facebook, el de Instagram o el de LinkedIn de la página. El ID de una página de Facebook es público, así que cualquiera que lo conozca puede sacar el token y publicar o responder en nombre de la empresa. Además, <code>/api/n8n/companies</code> lista las empresas y <code>/api/n8n/companies/{id}/wa/leads?phone=</code> podría devolver datos de un contacto con solo adivinar el teléfono (no lo probamos con números reales). Las rutas de escritura (<code>/api/agent/*</code>) sí piden token: probado, responden 401.</p>
+      <p class="item-why"><strong>Pedido:</strong></p>
+      <ol class="item-why">
+        <li>Cargar un valor largo y aleatorio en <code>N8N_API_TOKEN</code> y que las rutas <code>/api/n8n/*</code> respondan 401 sin él (también con el token vacío).</li>
+        <li>Pasarnos el valor por un canal privado, no por correo ni por el repositorio.</li>
+        <li>Avisarnos antes de activarlo: de nuestro lado ya está todo listo (las 58 lecturas de los agentes mandan <code>Authorization: Bearer</code> desde el 3-nov) y solo hay que cargar el valor en el nodo de configuración de cada flujo, así que se puede hacer el mismo día sin cortar nada.</li>
+      </ol>
+    </div>
+  </div>
 
   <!-- ============ MÉTRICAS RRSS — REGRESIÓN ============ -->
   <div class="cat-header">
