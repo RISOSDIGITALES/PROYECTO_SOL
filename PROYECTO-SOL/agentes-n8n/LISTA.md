@@ -20,7 +20,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | 📢 Distribution AI — RRSS G54 v1.0 | `IRCoya91PKPjpT1T` | sí | 2026-11-03 | [distribution-ai-rrss-g54-v1-0.json](g54-plataforma/distribution-ai-rrss-g54-v1-0.json) |
 | 📧 Camila G54 — Nurture & Outreach | `fahn0L68z5czTocE` | sí | 2026-11-03 | [camila-g54-nurture-outreach.json](g54-plataforma/camila-g54-nurture-outreach.json) |
 | 📨 Seguimiento IA manual — G54 (wa_followup) | `E7axtRDYCL8AbtgO` | sí | 2026-10-31 | [seguimiento-ia-manual-g54-wa-followup.json](g54-plataforma/seguimiento-ia-manual-g54-wa-followup.json) |
-| 📲 Telegram Router — G54 | `ciz4AeS7LtVAXK1L` | sí | 2026-08-07 | [telegram-router-g54.json](g54-plataforma/telegram-router-g54.json) |
+| 📲 Telegram Router — G54 | `ciz4AeS7LtVAXK1L` | sí | 2026-11-03 | [telegram-router-g54.json](g54-plataforma/telegram-router-g54.json) |
 | 🔄 LinkedIn — Renovar token (G54) | `JsLFysLfQIxGZN5f` | sí | 2026-11-03 | [linkedin-renovar-token-g54.json](g54-plataforma/linkedin-renovar-token-g54.json) |
 | 🔍 Camila G54 — Prospección | `jg5SENgRpe2wLBTn` | sí | 2026-11-03 | [camila-g54-prospeccion.json](g54-plataforma/camila-g54-prospeccion.json) |
 | 🔗 CTA Click Tracker (G54) | `JN2vRUznkOXlej8q` | sí | 2026-09-28 | [cta-click-tracker-g54.json](g54-plataforma/cta-click-tracker-g54.json) |
@@ -36,7 +36,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 |---|---|---|---|---|
 | ?? CE Gmail Monitor - Detectar Respuestas de Leads | `cJZV7jcwlbFoW5qJ` | no | 2026-07-23 | [ce-gmail-monitor-detectar-respuestas-de-leads.json](marco-crating-express/ce-gmail-monitor-detectar-respuestas-de-leads.json) |
 | CE Cotizaciones - CF7 → Airtable + Leads | `FU8QG1BVmT4r5Kjw` | sí | 2026-10-31 | [ce-cotizaciones-cf7-airtable-leads.json](marco-crating-express/ce-cotizaciones-cf7-airtable-leads.json) |
-| CE Telegram Engine — Marco | `HaSG63Q9C2tGOLH3` | sí | 2026-10-31 | [ce-telegram-engine-marco.json](marco-crating-express/ce-telegram-engine-marco.json) |
+| CE Telegram Engine — Marco | `HaSG63Q9C2tGOLH3` | sí | 2026-11-03 | [ce-telegram-engine-marco.json](marco-crating-express/ce-telegram-engine-marco.json) |
 | CE WhatsApp Engine — Marco | `zAhV8gEsXD8dCrXq` | sí | 2026-10-29 | [ce-whatsapp-engine-marco.json](marco-crating-express/ce-whatsapp-engine-marco.json) |
 | Marco CE — 01 Clasificador | `1PXcg3dOQBt8hrrT` | sí | 2026-10-16 | [marco-ce-01-clasificador.json](marco-crating-express/marco-ce-01-clasificador.json) |
 | Marco CE — 02 Contexto y Lead | `s1Z7jKoFzy5x7XvC` | sí | 2026-11-03 | [marco-ce-02-contexto-y-lead.json](marco-crating-express/marco-ce-02-contexto-y-lead.json) |

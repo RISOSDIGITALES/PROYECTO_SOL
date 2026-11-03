@@ -2,7 +2,7 @@
   "id": "ciz4AeS7LtVAXK1L",
   "name": "📲 Telegram Router — G54",
   "active": true,
-  "updatedAt": "2026-08-07T20:26:54.589Z",
+  "updatedAt": "2026-11-03T19:50:46.153Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1"
@@ -26,6 +26,7 @@
     {
       "id": "router-webhook",
       "name": "🔔 Webhook G54 (Telegram Router)",
+      "webhookId": "telegram-router-g54",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
@@ -36,8 +37,7 @@
         "httpMethod": "POST",
         "path": "telegram-router-g54",
         "options": {}
-      },
-      "webhookId": "telegram-router-g54"
+      }
     },
     {
       "id": "router-decidir",
@@ -58,11 +58,11 @@
       "name": "📤 Reenviar a Motor Correspondiente",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
       "position": [
         360,
         40
       ],
-      "onError": "continueRegularOutput",
       "parameters": {
         "method": "POST",
         "url": "={{ $json.targetUrl }}",
@@ -72,12 +72,49 @@
             {
               "name": "Content-Type",
               "value": "application/json"
+            },
+            {
+              "name": "X-Webhook-Key",
+              "value": "REDACTED_N8N_WEBHOOK_KEY"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "b4dbb0cd-e757-4c3f-9807-dd82b48e7937",
+      "name": "🔒 ¿Llamada autorizada? (telegram-router-g54)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        40,
+        180
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "2b533fb9-9df7-4564-95cf-9fa84e9b004b",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
         "options": {}
       }
     }
@@ -87,7 +124,7 @@
       "main": [
         [
           {
-            "node": "🔀 Decidir Destino",
+            "node": "🔒 ¿Llamada autorizada? (telegram-router-g54)",
             "type": "main",
             "index": 0
           }
@@ -103,6 +140,18 @@
             "index": 0
           }
         ]
+      ]
+    },
+    "🔒 ¿Llamada autorizada? (telegram-router-g54)": {
+      "main": [
+        [
+          {
+            "node": "🔀 Decidir Destino",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
       ]
     }
   }
