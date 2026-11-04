@@ -683,6 +683,16 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-11-04 (Miércoles)
+
+Arranqué con la rutina de G54, todo limpio, y enseguida me preguntaron si Bubble estaba haciendo llamadas solo porque alguien dijo que lo habían llamado. Revisé y ni Bubble ni Marco hicieron ninguna llamada saliente: la que recibió esa persona salió con el número del magicJack de la oficina, que no está conectado a nada nuestro, así que fue un número falsificado. Después me dediqué a Bubble con llamadas de prueba reales y encontré que el plan gratis de Groq solo aguanta unas 3 respuestas por minuto, así que comparé precios: Groq sale a unos US$0,005 por llamada (unos US$5 cada mil) y Kimi a unos US$0,033, seis o siete veces más caro y más lento para voz. El plan pago de Groq queda en espera de aprobación y el cobro de Bubble se va a hacer con G54.
+
+Con las llamadas confirmé casi todo lo que faltaba: inglés, agendar, mover y cancelar citas con sus correos, leer el PDF del negocio, colgar solo, el aviso de asistente en el idioma del saludo, el corte cuando la IA no responde, el seguimiento a contactos calificados con correo y de palabra (las llamadas de vuelta salieron a la hora exacta), el idioma fijo en inglés, los avisos apagados y la llamada fuera de horario. En el camino corregí más de diez fallas que solo se ven en una llamada de verdad; la más importante, que ninguna transferencia a una persona podía funcionar, y con el permiso para prender las transferencias en Twilio la primera llamada transferida llegó a Marco, lo que de paso confirmó que Marco por teléfono sigue andando. También limpié los datos de demostración y actualicé los paquetes de Bubble.
+
+Lo que salió mal fue que en una de las pruebas la IA entendió mal mi correo y mandó dos correos de confirmación a una dirección que puede ser de otra persona, y que Groq se quedó sin su cupo del día. Cerré revisando que todo quedara en orden, con todas las pruebas en verde y todo subido. Para mañana quedan dos llamadas cortas cuando Groq tenga cupo, y sigue pendiente mandarle un mensaje a Marco por Telegram para confirmar el candado. Ahí paré con el uso semanal en 15 %.
+
+---
+
 ### 2026-11-03 (Martes)
 
 Arranqué con la rutina de G54, todo limpio, y con la rotación de horarios, que esta vez corrió un día tarde porque el lunes la computadora no se prendió (la tarea solo corre con la app abierta, y decidí dejarla así). Aprobé las 4 ideas de la semana y programé los posts de Facebook, LinkedIn y otra vez Facebook; el de Instagram me dio guerra porque la imagen salía con faltas en el subtítulo que inventa la IA, así que lo dejé solo con el título, quedó limpio, y cambié esa configuración para Instagram de Crating Express de ahora en adelante.
@@ -700,13 +710,3 @@ Arranqué con la rutina de G54, todo en orden, y el post que quedaba salió por 
 Luego hice una revisión de errores: los de la semana ya estaban resueltos y no hay secretos expuestos en el repo. Como refuerzo contra la falla de DNS del servidor, le puse reintentos a 79 consultas a G54 en 14 agentes. En las pruebas por descarte encontré que el formulario web guardaba filas vacías en el Google Sheet, y como ese Sheet ya no servía de nada, lo sacamos: el formulario guarda solo en el CRM y apagué el Gmail Monitor que lo leía. En Bubble pasaron todas las pruebas del agente, el servidor y el panel; encontré que las del servidor llamaban a Groq de verdad y gastaban cupo, lo corregí y reinicié el servidor local, que corría con código viejo.
 
 Al final intenté subir el video del primer Reel y no se pudo: el servidor de G54 acepta archivos de hasta 2 MB aunque la documentación dice 100, así que quedó como pedido urgente en el Éxodo, junto con lo que encontré del chat del cotizador, que responde desde un flujo que no es nuestro. El Éxodo queda con 21 pedidos. Ahí paré, con todo subido y el uso semanal en 87 %.
-
----
-
-### 2026-10-30 (Viernes)
-
-Arranqué con la rutina de G54, todo en orden y sin errores, y después revisé los comentarios de Don Marc al reporte de ayer. Como le gustó más la medusa que armó con Gemini, rehice a Jelly con ese estilo y las mismas animaciones, y le di muchas vueltas a los ojos hasta que quedaron como en su imagen: el contorno más grueso arriba, la pupila grande con brillos y el cachete que les corta la parte de abajo. Se la pasé al ingeniero. Después revisé los pendientes y aproveché a dejar resuelto el permiso de LinkedIn, que vence cada 60 días: ahora se renueva solo cada lunes, y ya quedó renovado hasta fin de diciembre. También encontré que la estrategia de Orison venció el 5 de octubre y por eso no le salían ideas.
-
-En Bubble hice una revisión completa: pasaron todas las pruebas del servidor, el panel y el agente de voz, y arreglé cuatro detalles de mantenimiento, entre ellos que el panel ahora carga cuatro veces más liviano. La revisión del inglés ya la había hecho alguien, así que quedó cerrada. Después me pidieron hacer a JarGrowth, el pulpo de G54, con el mismo estilo de Jelly. Guardé una primera versión y armé una segunda basada en la anatomía real de un pulpo, con la membrana entre los brazos, dos filas de ventosas, cada brazo moviéndose por su cuenta y el nado a chorro. Esa es la que más me gustó, y dejé los archivos listos para enviar.
-
-Al final trabajé en la tarea de Don Marc sobre cómo validar G54 antes de lanzarlo. Armé un primer plan, pero al revisarlo con ojo crítico vi que no servía para decidir: medía "G54 más alguien atrás" y solo con negocios nuestros. Lo rehice con dos validaciones, una del producto (que una empresa lo use sin nosotros) y otra de resultados, con 2 o 3 pilotos externos que paguen como prueba principal y la decisión para el 19 de febrero. Cerré dejando más livianos los archivos que se cargan en cada sesión, para gastar menos uso, y ahí paré con todo subido.
