@@ -2,7 +2,7 @@
   "id": "6UWT1GHKZVvCDcc6",
   "name": "📞→💬 VAPI → WhatsApp Handoff",
   "active": true,
-  "updatedAt": "2026-10-08T17:33:52.736Z",
+  "updatedAt": "2026-11-05T15:44:08.034Z",
   "tags": [
     {
       "id": "2CrVJWitAB77MgTJ",
@@ -18,30 +18,23 @@
   },
   "nodes": [
     {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "vapi-handoff-v2",
-        "responseMode": "responseNode",
-        "options": {}
-      },
       "id": "0de51649-bb29-495a-a15d-db5b695c5e56",
       "name": "🔔 Webhook VAPI",
+      "webhookId": "f537d06c-b3e7-4573-91d7-ba46e0b1d2a5",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
         -1120,
         1472
       ],
-      "webhookId": "f537d06c-b3e7-4573-91d7-ba46e0b1d2a5"
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vapi-handoff-v2",
+        "responseMode": "responseNode",
+        "options": {}
+      }
     },
     {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={\"ok\": true}",
-        "options": {
-          "responseCode": 200
-        }
-      },
       "id": "1ca69ac5-117a-4e0d-8d48-71ba2fb13f22",
       "name": "✅ Responder OK",
       "type": "n8n-nodes-base.respondToWebhook",
@@ -49,9 +42,24 @@
       "position": [
         -896,
         1472
-      ]
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\": true}",
+        "options": {
+          "responseCode": 200
+        }
+      }
     },
     {
+      "id": "8e789001-e071-4662-945b-cd01df895818",
+      "name": "🔀 ¿Es end-of-call exitoso?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        1472
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -81,20 +89,9 @@
           "combinator": "and"
         },
         "options": {}
-      },
-      "id": "8e789001-e071-4662-945b-cd01df895818",
-      "name": "🔀 ¿Es end-of-call exitoso?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        -672,
-        1472
-      ]
+      }
     },
     {
-      "parameters": {
-        "jsCode": "const body = $input.first().json.body;\nconst msg = body.message;\n\nconst call = msg.call || {};\nconst telefono = (call.customer?.number || '').replace(/^\\+/, '');\nconst callId = call.id || '';\nconst transcript = msg.artifact?.transcript || '';\nconst messages = msg.artifact?.messages || [];\n\nconst historial = messages\n  .filter(m => m.role === 'user' || m.role === 'bot')\n  .map(m => `[Llamada] ${m.role === 'user' ? 'Cliente' : 'Alex'}: ${m.message || ''}`)\n  .join('\\n');\n\nreturn [{ json: {\n  telefono,\n  callId,\n  transcript,\n  historial: historial || `[Transcript] ${transcript.slice(0, 1000)}`\n}}];"
-      },
       "id": "6e88c5a9-7c18-43e9-8c9e-720f60ad64e1",
       "name": "🔧 Extraer Datos Llamada",
       "type": "n8n-nodes-base.code",
@@ -102,9 +99,23 @@
       "position": [
         -448,
         1360
-      ]
+      ],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst msg = body.message;\n\nconst call = msg.call || {};\nconst telefono = (call.customer?.number || '').replace(/^\\+/, '');\nconst callId = call.id || '';\nconst transcript = msg.artifact?.transcript || '';\nconst messages = msg.artifact?.messages || [];\n\nconst historial = messages\n  .filter(m => m.role === 'user' || m.role === 'bot')\n  .map(m => `[Llamada] ${m.role === 'user' ? 'Cliente' : 'Alex'}: ${m.message || ''}`)\n  .join('\\n');\n\nreturn [{ json: {\n  telefono,\n  callId,\n  transcript,\n  historial: historial || `[Transcript] ${transcript.slice(0, 1000)}`\n}}];"
+      }
     },
     {
+      "id": "ea75eaf7-3561-4d85-abfb-9b3f8e721046",
+      "name": "🤖 Groq: Extraer Datos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "alwaysOutputData": true,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput",
+      "position": [
+        -240,
+        1360
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://api.groq.com/openai/v1/chat/completions",
@@ -124,28 +135,14 @@
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "groqApi"
       },
-      "id": "ea75eaf7-3561-4d85-abfb-9b3f8e721046",
-      "name": "🤖 Groq: Extraer Datos",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -240,
-        1360
-      ],
-      "continueOnFail": true,
       "credentials": {
         "groqApi": {
           "id": "jORffbRhRNohHT1B",
           "name": "Groq API"
         }
-      },
-      "onError": "continueRegularOutput",
-      "alwaysOutputData": true
+      }
     },
     {
-      "parameters": {
-        "jsCode": "const extractData = $('🔧 Extraer Datos Llamada').item.json;\nconst groqRaw = $input.first().json;\n\nlet leadData = { producto: '', medidas: '', fecha: '', nombre_cliente: '', idioma: 'es' };\ntry {\n  const content = groqRaw.choices?.[0]?.message?.content || '{}';\n  leadData = { ...leadData, ...JSON.parse(content) };\n} catch(e) {}\n\nconst esEspanol = leadData.idioma !== 'en';\n\nconst mensajeWA = esEspanol\n  ? `Hola 👋 soy Alex de Crating Express. Continuamos por aquí.`\n  : `Hi 👋 this is Alex from Crating Express. Let's continue here.`;\n\nreturn [{ json: {\n  telefono: extractData.telefono,\n  callId: extractData.callId,\n  mensajeWA,\n  nombre_cliente: leadData.nombre_cliente || '',\n  producto: leadData.producto || '',\n  medidas: leadData.medidas || '',\n  fecha: leadData.fecha || '',\n  historial: extractData.historial\n}}];"
-      },
       "id": "50390642-3c40-4336-a7ab-7b81c18a8912",
       "name": "🔧 Preparar Datos",
       "type": "n8n-nodes-base.code",
@@ -153,9 +150,21 @@
       "position": [
         -16,
         1360
-      ]
+      ],
+      "parameters": {
+        "jsCode": "const extractData = $('🔧 Extraer Datos Llamada').item.json;\nconst groqRaw = $input.first().json;\n\nlet leadData = { producto: '', medidas: '', fecha: '', nombre_cliente: '', idioma: 'es' };\ntry {\n  const content = groqRaw.choices?.[0]?.message?.content || '{}';\n  leadData = { ...leadData, ...JSON.parse(content) };\n} catch(e) {}\n\nconst esEspanol = leadData.idioma !== 'en';\n\nconst mensajeWA = esEspanol\n  ? `Hola 👋 soy Alex de Crating Express. Continuamos por aquí.`\n  : `Hi 👋 this is Alex from Crating Express. Let's continue here.`;\n\nreturn [{ json: {\n  telefono: extractData.telefono,\n  callId: extractData.callId,\n  mensajeWA,\n  nombre_cliente: leadData.nombre_cliente || '',\n  producto: leadData.producto || '',\n  medidas: leadData.medidas || '',\n  fecha: leadData.fecha || '',\n  historial: extractData.historial\n}}];"
+      }
     },
     {
+      "id": "c0277025-62cf-49e0-a070-6fdc21231e11",
+      "name": "💾 Crear Lead en Airtable",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "continueOnFail": true,
+      "position": [
+        208,
+        1248
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://api.airtable.com/v0/appUOYi54iBfaDcLn/WhatsApp_Leads",
@@ -175,15 +184,6 @@
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth"
       },
-      "id": "c0277025-62cf-49e0-a070-6fdc21231e11",
-      "name": "💾 Crear Lead en Airtable",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        208,
-        1248
-      ],
-      "continueOnFail": true,
       "credentials": {
         "httpHeaderAuth": {
           "id": "ZyqxmqBJAc8692Bx",
@@ -192,6 +192,15 @@
       }
     },
     {
+      "id": "7ee3f8f7-d268-4ed4-9c50-0e008d747a19",
+      "name": "📤 Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "continueOnFail": true,
+      "position": [
+        208,
+        1456
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://graph.facebook.com/v19.0/1083260611538246/messages",
@@ -211,15 +220,6 @@
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth"
       },
-      "id": "7ee3f8f7-d268-4ed4-9c50-0e008d747a19",
-      "name": "📤 Enviar WhatsApp",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        208,
-        1456
-      ],
-      "continueOnFail": true,
       "credentials": {
         "httpHeaderAuth": {
           "id": "7ivJXD93zYeBwZsD",
@@ -230,6 +230,7 @@
     {
       "id": "974c6bf1-af96-46fa-8c1f-8c8271369970",
       "name": "🔀 ¿Reenviar a Voice Agent?",
+      "notes": "29-sep: VAPI solo manda sus eventos a este webhook (server.url). El reporte de fin de llamada se reenvía al Voice Agent (vapi-ce-calls), que es el que guarda la llamada en G54 y el CRM.",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
@@ -257,14 +258,14 @@
           ]
         },
         "options": {}
-      },
-      "notes": "29-sep: VAPI solo manda sus eventos a este webhook (server.url). El reporte de fin de llamada se reenvía al Voice Agent (vapi-ce-calls), que es el que guarda la llamada en G54 y el CRM."
+      }
     },
     {
       "id": "9423da47-7b9d-40a4-a12d-f42702e7cdf5",
       "name": "📨 Reenviar a Voice Agent (G54)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
       "position": [
         -680,
         1732
@@ -277,11 +278,27 @@
         "jsonBody": "={{ JSON.stringify($json.body) }}",
         "options": {
           "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Key",
+              "value": "REDACTED_N8N_WEBHOOK_KEY"
+            }
+          ]
         }
-      },
-      "onError": "continueRegularOutput"
+      }
     },
     {
+      "id": "fb3a3b0c-abf1-4757-90a1-02f2a62a9fe5",
+      "name": "🔀 ¿Groq respondió? (antes de OpenAI)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -130,
+        1360
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -303,17 +320,20 @@
           ]
         },
         "options": {}
-      },
-      "name": "🔀 ¿Groq respondió? (antes de OpenAI)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        -130,
-        1360
-      ],
-      "id": "fb3a3b0c-abf1-4757-90a1-02f2a62a9fe5"
+      }
     },
     {
+      "id": "caca77ca-f433-4a4b-948f-9a82a5313e19",
+      "name": "🤖 OpenAI: Último Respaldo",
+      "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "position": [
+        -20,
+        1560
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
@@ -335,23 +355,62 @@
           "timeout": 90000
         }
       },
-      "name": "🤖 OpenAI: Último Respaldo",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -20,
-        1560
-      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "hkeIUPcrRjD4F4KY",
           "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
         }
-      },
-      "onError": "continueRegularOutput",
-      "alwaysOutputData": true,
-      "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
-      "id": "caca77ca-f433-4a4b-948f-9a82a5313e19"
+      }
+    },
+    {
+      "id": "79623f07-3226-4cc3-86a2-6a24eace2282",
+      "name": "🔒 ¿Llamada autorizada? (vapi-handoff-v2)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1060,
+        1272
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "a409734b-8eb9-4ce0-b8bc-4867d82ee229",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "dee0e53e-fcc2-41a7-8a45-333820b14dd5",
+      "name": "🚫 Responder 403 (vapi-handoff-v2)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -840,
+        1152
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"error\":\"forbidden\"}",
+        "options": {
+          "responseCode": 403
+        }
+      }
     }
   ],
   "connections": {
@@ -359,17 +418,7 @@
       "main": [
         [
           {
-            "node": "✅ Responder OK",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "🔀 ¿Es end-of-call exitoso?",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "🔀 ¿Reenviar a Voice Agent?",
+            "node": "🔒 ¿Llamada autorizada? (vapi-handoff-v2)",
             "type": "main",
             "index": 0
           }
@@ -460,6 +509,34 @@
         [
           {
             "node": "🔧 Preparar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔒 ¿Llamada autorizada? (vapi-handoff-v2)": {
+      "main": [
+        [
+          {
+            "node": "✅ Responder OK",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔀 ¿Es end-of-call exitoso?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔀 ¿Reenviar a Voice Agent?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🚫 Responder 403 (vapi-handoff-v2)",
             "type": "main",
             "index": 0
           }

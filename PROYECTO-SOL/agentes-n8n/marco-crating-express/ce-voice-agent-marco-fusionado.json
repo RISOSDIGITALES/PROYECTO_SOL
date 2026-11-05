@@ -2,7 +2,7 @@
   "id": "FYKfTJBfgwsMpJV7",
   "name": "📞 CE Voice Agent — Marco (Fusionado)",
   "active": true,
-  "updatedAt": "2026-10-31T15:57:48.144Z",
+  "updatedAt": "2026-11-05T15:44:07.261Z",
   "tags": [
     {
       "id": "2CrVJWitAB77MgTJ",
@@ -562,6 +562,56 @@
           "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
         }
       }
+    },
+    {
+      "id": "7f958b8d-83c3-4d0c-aa09-4e6e0b61f813",
+      "name": "🔒 ¿Llamada autorizada? (vapi-ce-calls)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        940,
+        120
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "97fa6bc4-49de-48a6-b1e5-7331913318a9",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "0352495f-dbe0-464c-b233-000a16a7e63d",
+      "name": "🚫 Responder 403 (vapi-ce-calls)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1160,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"error\":\"forbidden\"}",
+        "options": {
+          "responseCode": 403
+        }
+      }
     }
   ],
   "connections": {
@@ -569,7 +619,7 @@
       "main": [
         [
           {
-            "node": "🔍 Detectar Tipo de Evento",
+            "node": "🔒 ¿Llamada autorizada? (vapi-ce-calls)",
             "type": "main",
             "index": 0
           }
@@ -786,6 +836,24 @@
         [
           {
             "node": "🔍 Parsear Extracción",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔒 ¿Llamada autorizada? (vapi-ce-calls)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Detectar Tipo de Evento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🚫 Responder 403 (vapi-ce-calls)",
             "type": "main",
             "index": 0
           }

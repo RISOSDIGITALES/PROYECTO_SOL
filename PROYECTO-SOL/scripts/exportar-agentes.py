@@ -59,7 +59,9 @@ def get(url):
 
 lista = get('https://n8n.mdarthurdigital.com/api/v1/workflows?limit=250')['data']
 if DESTINO.exists():
-    shutil.rmtree(DESTINO)
+    # Se vacía por dentro en vez de borrar la carpeta: si una terminal está parada en ella, Windows no deja borrarla.
+    for hijo in DESTINO.iterdir():
+        shutil.rmtree(hijo) if hijo.is_dir() else hijo.unlink()
 filas = []
 for w in sorted(lista, key=lambda w: (grupo(w), w['name'])):
     full = get(f"https://n8n.mdarthurdigital.com/api/v1/workflows/{w['id']}")

@@ -43,8 +43,8 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | Marco CE — 03 Generador IA | `J8qbKOF7t4GnhRDT` | sí | 2026-10-16 | [marco-ce-03-generador-ia.json](marco-crating-express/marco-ce-03-generador-ia.json) |
 | Marco CE — 05 Guardar Lead | `PqbfMghL0E7xKflC` | sí | 2026-10-20 | [marco-ce-05-guardar-lead.json](marco-crating-express/marco-ce-05-guardar-lead.json) |
 | Marco CE — 06 Procesador de Medios | `5GU89AeWsBZ86FWa` | sí | 2026-10-31 | [marco-ce-06-procesador-de-medios.json](marco-crating-express/marco-ce-06-procesador-de-medios.json) |
-| 📞 CE Voice Agent — Marco (Fusionado) | `FYKfTJBfgwsMpJV7` | sí | 2026-10-31 | [ce-voice-agent-marco-fusionado.json](marco-crating-express/ce-voice-agent-marco-fusionado.json) |
-| 📞→💬 VAPI → WhatsApp Handoff | `6UWT1GHKZVvCDcc6` | sí | 2026-10-08 | [vapi-whatsapp-handoff.json](marco-crating-express/vapi-whatsapp-handoff.json) |
+| 📞 CE Voice Agent — Marco (Fusionado) | `FYKfTJBfgwsMpJV7` | sí | 2026-11-05 | [ce-voice-agent-marco-fusionado.json](marco-crating-express/ce-voice-agent-marco-fusionado.json) |
+| 📞→💬 VAPI → WhatsApp Handoff | `6UWT1GHKZVvCDcc6` | sí | 2026-11-05 | [vapi-whatsapp-handoff.json](marco-crating-express/vapi-whatsapp-handoff.json) |
 | 🖼️ Marco — Media Proxy (G54) | `OMZLwErubDaiGgO7` | sí | 2026-10-31 | [marco-media-proxy-g54.json](marco-crating-express/marco-media-proxy-g54.json) |
 
 ## otros
