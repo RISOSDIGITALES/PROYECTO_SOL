@@ -685,6 +685,25 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-11-05 (Jueves)
+
+Arranqué con la rutina de G54, todo limpio, y el post de LinkedIn salió a su hora. Después revisé los comentarios del reporte de ayer y Don Marc pidió comparar las IAs chinas contra Groq para la voz de Bubble; hice la comparación con precios oficiales y también la del costo por minuto de una llamada, que dejo abajo. En G54 arreglé un error que se repetía en Distribution con los posts de LinkedIn y les puse candado a los webhooks de VAPI, que confirmé con llamadas reales. Luego levanté Bubble y seguí las pruebas de ayer: el seguimiento sin correo, pasar a una persona cuando el cliente lo pide, que sin el aviso al especialista no prometa que alguien lo va a llamar, los avisos a otros sistemas por internet, cuánto gasta la IA en cada respuesta (menos de lo que tenía anotado) y el despliegue con Docker, donde corregí que el modelo de búsqueda en documentos se bajaba en cada arranque.
+
+Me preguntaron si Bubble ya estaba listo y la respuesta honesta fue que todavía no para venderlo, sí para un piloto controlado. Con eso armé la página de términos y condiciones, que deja claro que el permiso de las personas a las que llama el agente es responsabilidad del negocio y que con otros sistemas solo damos el puente, y la casilla para aceptarlos al registrarse; falta que la revise un abogado. También dejé un correo de alerta si el agente de voz se cae y las migraciones de la base para el servidor, y vi que dos de los pendientes técnicos ya estaban resueltos desde octubre.
+
+En la tarde tuve la reunión con el ingeniero sobre el Éxodo: reescribí el pedido de Métricas para explicar bien qué es cada pieza y por qué importa, saqué el cotizador y lo legal a dos archivos aparte, y dejé claro que la plantilla de los correos la crea G54 dentro de Camila. Después revisé la API y él ya había subido cambios el 4-nov; los probé en vivo con datos de prueba y funcionan: videos de más de 2 MB, teléfonos en un solo formato, monto y motivo al cerrar o perder un trato, duplicados, descarga en CSV y correos programados. El Éxodo quedó en 14 pedidos, y Camila ya manda en cada borrador por qué se le escribe a esa persona y de dónde salió su contacto. Ahí paré con todo subido y el uso semanal en 25 %.
+
+**Para Don Marc — IAs chinas vs. Groq para la voz de Bubble**
+Precios oficiales de noviembre, por llamada de unas 10 respuestas.
+- Groq (el que usamos): unos US$0,004 por llamada.
+- DeepSeek: unos US$0,001 a 0,002; ahorra US$2-3 cada 1.000 llamadas, pero tarda más en empezar a hablar y guarda los datos en China.
+- Qwen (US$0,024) y Kimi (US$0,033): más caros que Groq.
+- La IA es solo el 4 % del costo de un minuto de llamada (unos US$0,047); la voz es el 39 %.
+- Cambiar la voz a Inworld ahorraría unos US$24 cada 1.000 llamadas, diez veces más que DeepSeek, pero falta probarla en español.
+Recomendación: seguir con Groq; cualquier cambio queda en espera hasta que se decidan los gastos de Bubble.
+
+---
+
 ### 2026-11-04 (Miércoles)
 
 Arranqué con la rutina de G54, todo limpio, y enseguida me preguntaron si Bubble estaba haciendo llamadas solo porque alguien dijo que lo habían llamado. Revisé y ni Bubble ni Marco hicieron ninguna llamada saliente: la que recibió esa persona salió con el número del magicJack de la oficina, que no está conectado a nada nuestro, así que fue un número falsificado. Después me dediqué a Bubble con llamadas de prueba reales y encontré que el plan gratis de Groq solo aguanta unas 3 respuestas por minuto, así que comparé precios: Groq sale a unos US$0,005 por llamada (unos US$5 cada mil) y Kimi a unos US$0,033, seis o siete veces más caro y más lento para voz. El plan pago de Groq queda en espera de aprobación y el cobro de Bubble se va a hacer con G54.
@@ -702,13 +721,3 @@ Arranqué con la rutina de G54, todo limpio, y con la rotación de horarios, que
 Después hice una revisión de seguridad. Encontré que G54 entrega los tokens de nuestras redes a cualquiera que pida la dirección de la página; lo dejé en el Éxodo para el ingeniero, sin marca de urgente, porque por ahora solo nos afecta a nosotros. De nuestro lado les puse candado a los agentes que se disparan por webhook, primero a 12 y más tarde a los de Telegram, donde vi que no los llama Telegram sino G54, así que llevaban el mismo candado; confirmé que el post del martes salió igual con el candado puesto. También borré del flujo de Marco por Telegram unas piezas viejas que estaban apagadas.
 
 La otra gran parte del día fue ordenar: el repo quedó por temas, con fechas en los nombres, un índice y la copia al día de los 35 agentes de n8n, y en la computadora comprimí las copias viejas y el respaldo de la web de Crating Express en una sola carpeta de archivo. Dejé más liviano el archivo que se carga en cada sesión, saqué del Éxodo el pedido del chat del cotizador porque el cotizador es del ingeniero, y lo dejé listo para enviar con 21 pedidos. Queda pendiente mandarle un mensaje a Marco por Telegram para confirmar el candado. Ahí paré con todo subido y el uso semanal en 6 %.
-
----
-
-### 2026-10-31 (Sábado)
-
-Arranqué con la rutina de G54, todo en orden, y el post que quedaba salió por Instagram de verdad y no por el respaldo de Facebook. Después revisé los pendientes y adelanté los que podía: corregí un error que se repetía en cada publicación de Distribution, dejé a Orison en pausa (ya estaba fuera de casi todo, solo faltaba sacarla del Vigía) y quedó la regla de que cada negocio manda sus correos desde su propia casilla. Como Crating Express es de prueba, los borradores de Camila no se aprueban, y me mandé copias a mi correo para ver cómo llegan. También sumé al Éxodo el pedido para que G54 renueve solo el permiso de LinkedIn.
-
-Luego hice una revisión de errores: los de la semana ya estaban resueltos y no hay secretos expuestos en el repo. Como refuerzo contra la falla de DNS del servidor, le puse reintentos a 79 consultas a G54 en 14 agentes. En las pruebas por descarte encontré que el formulario web guardaba filas vacías en el Google Sheet, y como ese Sheet ya no servía de nada, lo sacamos: el formulario guarda solo en el CRM y apagué el Gmail Monitor que lo leía. En Bubble pasaron todas las pruebas del agente, el servidor y el panel; encontré que las del servidor llamaban a Groq de verdad y gastaban cupo, lo corregí y reinicié el servidor local, que corría con código viejo.
-
-Al final intenté subir el video del primer Reel y no se pudo: el servidor de G54 acepta archivos de hasta 2 MB aunque la documentación dice 100, así que quedó como pedido urgente en el Éxodo, junto con lo que encontré del chat del cotizador, que responde desde un flujo que no es nuestro. El Éxodo queda con 21 pedidos. Ahí paré, con todo subido y el uso semanal en 87 %.
