@@ -158,11 +158,12 @@
     <h1>Éxodo — Pendientes para el ingeniero · <span>13 Oct 2026</span></h1>
     <p>Reemplaza a <code style="color:#a78bfa;background:transparent;border:none;">exodo-g54-oct09.html</code>. Este documento lista los pedidos abiertos por área — el historial de qué se confirmó resuelto y cuándo está abajo, plegado.</p>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> 18 pedidos activos</div>
+      <div class="meta-item"><div class="dot"></div> 14 pedidos activos</div>
     </div>
     <details class="header-updates">
-      <summary>Historial de actualizaciones (41 entradas)</summary>
+      <summary>Historial de actualizaciones (42 entradas)</summary>
       <ul>
+        <li><strong class="upd-date">5-nov (2):</strong> revisado contra la documentación nueva (cambios del 4-nov) y el panel <code>index-D7b4wdqV.js</code>. <strong>Resueltos y sacados (4):</strong> videos de hasta 100 MB, los teléfonos en un solo formato en WhatsApp y en el CRM, el <code>pedido_id</code> en el aviso <code>rrss_reel</code>, y "mejor plataforma" y "mejor tipo de contenido" (ya llegan con datos). <strong>Resueltos en parte:</strong> CRM (monto al cerrar, motivo al perder, lista de duplicados, descarga en CSV, y consentimiento y baja en el trato), envío programado con tope diario y <code>motivo</code>/<code>origen</code> del borrador; en esas tarjetas queda solo lo que falta. Todo probado en vivo con datos de prueba, ya borrados. Sigue abierto: las rutas de lectura sin token. Quedan 14 pedidos.</li>
         <li><strong class="upd-date">5-nov:</strong> después de la reunión con el ingeniero. (1) <strong>Métricas</strong> reescrito: qué es cada pieza, por qué importa el bloque Demanda frente a las métricas de referencia, cómo se calculan ingresos, retención y leads por semana, y qué es "publicado vs. comprometido". (2) El <strong>cotizador de Crating Express</strong> y los dos pedidos <strong>legales</strong> salieron de este documento a archivos aparte, como tareas adicionales: <code>tarea-adicional-cotizador-crating-express.html</code> y <code>tarea-adicional-legal-terminos-privacidad.html</code>. (3) En Correo: crear la plantilla del correo en G54, dentro de la sección de Camila del panel. Quedan 18 pedidos.</li>
         <li><strong class="upd-date">3-nov (2):</strong> sacado el pedido del chat que carga el cotizador: el cotizador es del ingeniero, no nuestro (decidido por la usuaria).</li>
         <li><strong class="upd-date">3-nov:</strong> 1 pedido nuevo en Seguridad (no urgente, decidido por la usuaria): las rutas <code>GET /api/n8n/*</code> responden sin token, y <code>/api/n8n/pages/{id}</code> entrega los tokens de Facebook, Instagram y LinkedIn. Hay que cargar <code>N8N_API_TOKEN</code>; nuestros agentes ya mandan el token en todas las lecturas.</li>
@@ -250,46 +251,6 @@
     </div>
   </div>
 
-  <!-- ============ PUBLICACIÓN — REELS ============ -->
-  <div class="cat-header">
-    <span class="cat-icon">🎬</span>
-    <span class="cat-title">Reels y atribución — lo que queda</span>
-  </div>
-
-  <div class="item-card">
-    <div class="item-header">
-      <div><div class="item-title">Urgente: no se puede subir ningún video real (el servidor acepta hasta 2 MB, no 100 MB)</div><div class="item-where"><code>POST /api/videos/upload</code> · <code>php.ini</code> · configuración de nginx</div></div>
-    </div>
-    <div class="item-body">
-      <p class="item-why"><strong>Qué pasa (31-oct):</strong> la usuaria grabó un pedido de grabación y, al apretar "Ya lo grabé — subir video", el panel dijo "No se pudo subir el video." La documentación dice "solo video/mp4, máx. 100 MB", pero el servidor corta mucho antes. Lo probamos con archivos de distintos tamaños contra <code>POST /api/videos/upload</code>:</p>
-      <ul class="item-why">
-        <li>0,5 MB: llega a Laravel (422 por el tipo, era un archivo de prueba).</li>
-        <li>3 MB: 422 "The file failed to upload": <code>upload_max_filesize</code> de PHP está en 2 MB.</li>
-        <li>9 MB: "POST Content-Length of 9437355 bytes exceeds the limit of 8388608 bytes" y "The POST data is too large": <code>post_max_size</code> está en 8 MB (y el aviso de PHP sale impreso en la respuesta).</li>
-        <li>20 MB: el servidor corta la conexión (probablemente <code>client_max_body_size</code> de nginx).</li>
-      </ul>
-      <p class="item-why">Un video de celular de 10 a 90 segundos pesa entre 10 y 200 MB, así que hoy ningún Reel real se puede subir. Como esas respuestas no traen un <code>message</code> en JSON, el panel muestra el texto genérico y el cliente no sabe por qué falló.</p>
-      <p class="item-why"><strong>Pedido:</strong></p>
-      <ol class="item-why">
-        <li>Subir los límites a lo que dice la documentación: en PHP, <code>upload_max_filesize = 100M</code> y <code>post_max_size = 110M</code> (y revisar <code>max_execution_time</code> y <code>max_input_time</code> para subidas lentas); en nginx, <code>client_max_body_size 110m</code> en el sitio de la API.</li>
-        <li>Que el panel revise el tamaño antes de subir (como ya hace con la duración y la forma vertical) y muestre "El video pesa X MB, el máximo es 100 MB".</li>
-        <li>Que un 413 o un archivo demasiado grande vuelva como JSON con un <code>message</code> legible, y apagar <code>display_errors</code> en producción para que los avisos de PHP no salgan en la respuesta.</li>
-      </ol>
-      <p class="item-why"><strong>Cómo lo probamos cuando esté:</strong> subimos un video real desde el panel con el pedido de grabación 1 o 2 de Crating Express.</p>
-    </div>
-  </div>
-
-  <div class="item-card">
-    <div class="item-header">
-      <div><div class="item-title">Reels: casi todo entregado; quedan los teléfonos en formatos distintos y una duda sobre el aviso del video</div><div class="item-where"><code>POST /api/agent/whatsapp/inbound</code> · <code>GET /api/n8n/companies/{id}/wa/leads?phone=</code> · aviso <code>rrss_reel</code></div></div>
-    </div>
-    <div class="item-body">
-      <p class="item-why"><strong>Ya está (26-oct), gracias:</strong> subir video en el editor, <code>social_idea_id</code> en el trato, resultado en $ por publicación y <code>top-ventas</code>, pedidos de grabación (ya guardamos los 2 primeros de Crating Express) y <code>whatsapp_numero</code> en el perfil.</p>
-      <p class="item-why"><strong>Pedido 1 — teléfonos:</strong> <code>GET /api/n8n/companies/{id}/wa/leads?phone=</code> sigue exigiendo el formato exacto: probado el 27-oct con un contacto real, <code>+393884829817</code> lo encuentra y <code>393884829817</code> no. Si un agente guarda con "+" y otro busca sin "+", quedan dos contactos para la misma persona. Que esta ruta y <code>POST /api/agent/whatsapp/inbound</code> normalicen a E.164 (con "+") al guardar y al buscar, como ya hace el CRM.</p>
-      <p class="item-why"><strong>Pedido 2 — una duda:</strong> cuando el cliente sube el video desde un pedido de grabación, ¿el aviso <code>rrss_reel</code> que recibe Reels AI trae el <code>pedido_id</code>? La documentación no lo dice. Si lo trae, Reels AI escribe el texto con las tomas y la idea del pedido; si no, lo escribe solo con lo que tenga el post.</p>
-    </div>
-  </div>
-
   <!-- ============ CORREO — VISTA PREVIA ============ -->
   <div class="cat-header">
     <span class="cat-icon">✉️</span>
@@ -352,14 +313,15 @@
 
   <div class="item-card">
     <div class="item-header">
-      <div><div class="item-title">Para quién es cada correo y por qué se lo eligió</div><div class="item-where">Panel › Correo › Pendientes · <code>email_drafts</code> (campo nuevo)</div></div>
+      <div><div class="item-title">Para quién es cada correo y por qué se lo eligió</div><div class="item-where">Panel › Correo › Pendientes · campos <code>motivo</code> y <code>origen</code> del borrador</div></div>
     </div>
     <div class="item-body">
       <p class="item-why"><strong>Por qué:</strong> para aprobar hay que saber a quién le escribimos y por qué. Hoy el borrador solo muestra el nombre y el correo.</p>
       <p class="item-why"><strong>Pedido:</strong></p>
+      <p class="item-why"><strong>Ya está (4-nov), gracias:</strong> <code>POST /api/agent/email/drafts</code> acepta <code>motivo</code> y <code>origen</code> y los devuelve en el borrador.</p>
       <ol class="item-why">
-        <li>Un campo <code>motivo</code> (texto, hasta 500 caracteres) en el borrador, que se muestre arriba de cada correo. Por ejemplo: "Encontrado por Prospección buscando agentes de carga en Miami; correo sacado de Foursquare".</li>
-        <li>Mostrar el origen del contacto (Prospección, formulario web, WhatsApp…), su etapa y un enlace a su trato en el CRM.</li>
+        <li>Mostrar el <code>motivo</code> arriba de cada correo en Pendientes. Por ejemplo: "Encontrado por Prospección buscando agentes de carga en Miami; correo sacado de Foursquare".</li>
+        <li>Mostrar el <code>origen</code> del contacto, su etapa y un enlace a su trato en el CRM.</li>
         <li>Una vista de lista con todos los pendientes (destinatario, motivo, asunto y fecha de envío) para marcar varios y "Aprobar seleccionados" o "Cancelar seleccionados", y un filtro por tipo (contacto en frío o nutrir).</li>
       </ol>
       <p class="item-why"><strong>De nuestro lado:</strong> el motivo ya está en las notas de cada trato que deja Prospección. Apenas exista el campo, Camila lo manda lleno.</p>
@@ -368,15 +330,17 @@
 
   <div class="item-card">
     <div class="item-header">
-      <div><div class="item-title">Día y hora de envío, a la vista y modificable</div><div class="item-where">Panel › Correo · columna <code>scheduled_at</code> (ya reservada según la documentación)</div></div>
+      <div><div class="item-title">Día y hora de envío, a la vista y modificable</div><div class="item-where">Panel › Correo · <code>POST /api/email-drafts/{id}/programar</code> · <code>POST /api/agent/email/drafts</code></div></div>
     </div>
     <div class="item-body">
       <p class="item-why"><strong>Por qué:</strong> hoy, al aprobar, el correo sale en el momento. La usuaria quiere ver cuándo se va a enviar cada uno y poder cambiarlo. Además, mandar muchos correos en frío juntos daña la reputación de la casilla de la empresa: conviene repartirlos.</p>
       <p class="item-why"><strong>Pedido:</strong></p>
+      <p class="item-why"><strong>Ya está (4-nov), gracias:</strong> en la API, <code>POST /api/email-drafts/{id}/programar</code> deja el borrador programado y sale solo a su hora, con un tope diario por empresa (50, variable <code>CORREO_TOPE_DIARIO</code>) que pasa al día siguiente lo que no cabe; un programado se puede cancelar.</p>
       <ol class="item-why">
-        <li>Usar <code>scheduled_at</code>: aceptarlo en <code>POST /api/agent/email/drafts</code>, mostrarlo en cada borrador con un selector de fecha y hora (en la zona del destinatario o de la empresa, aclarando cuál), y que al aprobar el correo quede programado y salga a esa hora.</li>
-        <li>Un tope de envíos por día por empresa, configurable (sugerencia: 20 en frío por día), que mueva al día siguiente lo que se pase.</li>
-        <li>En el Historial, el estado "Programado" con la opción de cancelarlo antes de que salga.</li>
+        <li>En el panel, en cada borrador, un selector de fecha y hora (en la zona del destinatario o de la empresa, aclarando cuál) y el botón "Programar", junto al de "Aprobar y enviar".</li>
+        <li>Aceptar <code>scheduled_at</code> en <code>POST /api/agent/email/drafts</code>, para que el borrador llegue con una hora propuesta y el selector arranque en esa hora.</li>
+        <li>En el Historial, el estado "Programado" con su fecha y la opción de cancelarlo antes de que salga.</li>
+        <li>Que el tope diario se pueda cambiar por empresa desde Ajustes (sugerencia: 20 en frío por día), además de la variable del servidor.</li>
       </ol>
       <p class="item-why"><strong>De nuestro lado:</strong> Camila propone una hora por borrador (en horario laboral del destinatario, de lunes a viernes y repartidos en el día). El cliente la puede cambiar.</p>
     </div>
@@ -447,35 +411,20 @@
 
   <div class="item-card">
     <div class="item-header">
-      <div><div class="item-title">El CRM guarda los teléfonos en formatos distintos y duplica contactos</div><div class="item-where"><code>POST /api/agent/crm/leads</code> · <code>POST /api/agent/whatsapp/inbound</code> · tratos del CRM</div></div>
-    </div>
-    <div class="item-body">
-      <p class="item-why"><strong>Qué pasa (28-oct):</strong> el CRM reconoce a un contacto que ya existe solo si el teléfono está escrito exactamente igual. En Crating Express hoy conviven tres formatos: el formulario web y Prospección guardan "+código" (por ejemplo +17863643700); WhatsApp, el código sin "+" (17863643700), y Telegram, 10 dígitos sin código (7863643700). El CRM le saca los paréntesis y los guiones, pero respeta el "+" y no agrega ni quita el código de país. Pasó de verdad: Prospección guardó dos negocios como "(786) 364-3700" y, al pasar al formato con código, el CRM los creó de nuevo como tratos aparte (los repetidos ya se borraron).</p>
-      <p class="item-why"><strong>Pedido:</strong></p>
-      <ol class="item-why">
-        <li>Que el CRM guarde todos los teléfonos en un solo formato: "+", código de país y número (E.164).</li>
-        <li>Que, al buscar si un contacto ya existe, compare solo los dígitos con el código de país. Si llega un número de 10 dígitos sin código, que use el país de la empresa.</li>
-        <li>Pasar a ese formato los teléfonos que ya están guardados y avisar si aparecen tratos repetidos, para unirlos.</li>
-      </ol>
-      <p class="item-why"><strong>Relacionado:</strong> el pedido 1 de la tarjeta de Reels (<code>wa/leads?phone=</code>) es el mismo problema en otra ruta. Con un solo formato en el CRM se resuelven los dos.</p>
-    </div>
-  </div>
-
-  <div class="item-card">
-    <div class="item-header">
       <div><div class="item-title">CRM: que sus datos sean confiables (fase 1 del comparativo del CRM)</div><div class="item-where">Tratos del CRM · <code>POST /api/agent/crm/leads</code> · <code>PUT /api/crm/deals/{id}</code> · panel del CRM</div></div>
     </div>
     <div class="item-body">
       <p class="item-why"><strong>Qué pasa (29-oct):</strong> el CRM lo llenan solos los agentes (WhatsApp, Telegram, comentarios, formulario web, cotizador y Prospección), pero hoy no se puede confiar en sus datos. En los 9 tratos de Crating Express, 1 tiene monto, ninguno está cerrado con monto, 8 están en temperatura "bajo" y los teléfonos están en 4 formatos. Todo vive en el trato, así que un cliente que vuelve se repite. Lo comparamos con HubSpot, Pipedrive, Zoho, Kommo y GoHighLevel, y la conclusión es arreglar primero los datos y después sumar funciones. Documento completo: <a href="https://claude.ai/artifact/XLzwqUa6s3BrZuimeMkrxP">CRM de G54: qué le falta para ser un CRM real</a> (también en PDF: <code>PROYECTO-SOL/g54/documentos/crm-g54-comparativo-2026-10-29.pdf</code>).</p>
-      <p class="item-why"><strong>Pedido</strong> (además de los teléfonos en un solo formato, la tarjeta de arriba):</p>
+      <p class="item-why"><strong>Ya está (4-nov), gracias:</strong> monto obligatorio al cerrar y motivo obligatorio al perder (en la API y en el panel), teléfonos en un solo formato, la lista de posibles duplicados (<code>GET /api/crm/duplicados</code>), la descarga en CSV (<code>GET /api/crm/export</code>) y el consentimiento y la baja en el trato (<code>consentimiento_at</code>, <code>baja_at</code>). Probado en vivo el 5-nov con un trato de prueba (ya borrado).</p>
+      <p class="item-why"><strong>Pedido</strong> (lo que falta):</p>
       <ol class="item-why">
-        <li>Monto obligatorio al pasar un trato a "Cerrado", y motivo obligatorio al pasarlo a "Perdido", elegido de una lista que cada empresa pueda editar. Sin el monto, no se puede medir cuánto vende cada post (<code>top-ventas</code>).</li>
         <li>Separar el contacto (la persona) y la empresa del trato, para que un mismo cliente tenga varios tratos sin repetirse.</li>
-        <li>Una vista de posibles duplicados (mismo teléfono o mismo correo) con un botón para unirlos.</li>
-        <li>Importar y exportar tratos en CSV, revisando duplicados al importar. Sin esto, un cliente nuevo no puede traer su lista.</li>
-        <li>Consentimiento y baja como campos propios del contacto, por canal (correo, WhatsApp, llamadas). Hoy Camila marca la baja escribiendo <code>no_contactar_email</code> en las notas del trato.</li>
+        <li>En el panel, una vista de los posibles duplicados con un botón para unirlos.</li>
+        <li>Importar tratos en CSV, revisando duplicados al importar. Sin esto, un cliente nuevo no puede traer su lista.</li>
+        <li>Que el motivo de pérdida se elija de una lista que cada empresa pueda editar (hoy es texto libre), para poder contar por qué se pierden los tratos.</li>
+        <li>Consentimiento y baja por canal (correo, WhatsApp, llamadas) y en el contacto, no solo en el trato: una persona puede darse de baja del correo y seguir escribiendo por WhatsApp, y la baja tiene que valer para todos sus tratos.</li>
       </ol>
-      <p class="item-why"><strong>De nuestro lado:</strong> que cada agente mande el teléfono ya con "+" y código de país (Marco, Telegram y Community AI todavía no lo hacen) y que la temperatura se llene con un criterio, en vez de dejarla siempre en "bajo". Cuando existan los campos de baja, Camila los va a usar en vez de la marca en las notas.</p>
+      <p class="item-why"><strong>De nuestro lado:</strong> que la temperatura se llene con un criterio, en vez de dejarla siempre en "bajo". Cuando existan los campos de baja, Camila los va a usar en vez de la marca en las notas.</p>
       <p class="item-why"><strong>Para después</strong> (en el documento, fases 2 a 4): etapas configurables con probabilidad, tareas con responsable y fecha, respuestas de correo en el historial, pronóstico y reportes de ventas. Se dejan anotadas, pero no las pedimos todavía.</p>
     </div>
   </div>
@@ -504,16 +453,6 @@
     <div class="item-body">
       <p class="item-why"><strong>Ya está (13-oct), gracias:</strong> <code>POST /api/agent/rrss/metricas</code> reemplaza la fila de la misma semana en vez de sumar otra.</p>
       <p class="item-why"><strong>Lo que queda:</strong> el 12-oct, cuando nuestro webhook respondió 404, el panel mostró un 502 "Service is not reachable" en vez del error real. La documentación no dice si esto cambió y no lo pudimos probar sin disparar un informe de verdad. <strong>Pedido:</strong> que <code>run-analytics</code> y los demás <code>run-*</code> devuelvan un error legible con el código que respondió n8n cuando el webhook falla. Si ya está hecho, avísennos y sacamos la tarjeta.</p>
-    </div>
-  </div>
-
-  <div class="item-card">
-    <div class="item-header">
-      <div><div class="item-title">Analytics históricos: "mejor plataforma" y "mejor tipo de contenido" llegan siempre vacíos</div><div class="item-where"><code>GET /api/n8n/companies/{id}/rrss/analytics</code></div></div>
-    </div>
-    <div class="item-body">
-      <p class="item-why"><strong>Ya está (29-sep):</strong> la ruta responde con datos reales, y desde el 01-oct el Strategist los usa al generar cada estrategia (lo comprobamos con dos estrategias reales de Crating Express). Gracias.</p>
-      <p class="item-why"><strong>Lo que falta:</strong> en las 6 semanas revisadas, <code>mejor_plataforma</code> y <code>mejor_tipo_contenido</code> vienen <code>null</code>, así que la estrategia no sabe qué red ni qué tipo de post rinde más. <strong>Pedido:</strong> calcularlos con los datos que ya se guardan. Las métricas por post las guardamos nosotros con <code>social_post_id</code> desde el 28-sep. Por ejemplo, la plataforma con más leads de la semana (o, si hay empate en 0, con más alcance por post), y el pilar o tipo de los posts con más interacción. Si en una semana no hay datos suficientes, que siga viniendo <code>null</code> antes que un valor inventado.</p>
     </div>
   </div>
 
