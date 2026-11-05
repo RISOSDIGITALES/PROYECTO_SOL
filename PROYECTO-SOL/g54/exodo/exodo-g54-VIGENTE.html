@@ -158,11 +158,12 @@
     <h1>Éxodo — Pendientes para el ingeniero · <span>13 Oct 2026</span></h1>
     <p>Reemplaza a <code style="color:#a78bfa;background:transparent;border:none;">exodo-g54-oct09.html</code>. Este documento lista los pedidos abiertos por área — el historial de qué se confirmó resuelto y cuándo está abajo, plegado.</p>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> 21 pedidos activos</div>
+      <div class="meta-item"><div class="dot"></div> 18 pedidos activos</div>
     </div>
     <details class="header-updates">
-      <summary>Historial de actualizaciones (40 entradas)</summary>
+      <summary>Historial de actualizaciones (41 entradas)</summary>
       <ul>
+        <li><strong class="upd-date">5-nov:</strong> después de la reunión con el ingeniero. (1) <strong>Métricas</strong> reescrito: qué es cada pieza, por qué importa el bloque Demanda frente a las métricas de referencia, cómo se calculan ingresos, retención y leads por semana, y qué es "publicado vs. comprometido". (2) El <strong>cotizador de Crating Express</strong> y los dos pedidos <strong>legales</strong> salieron de este documento a archivos aparte, como tareas adicionales: <code>tarea-adicional-cotizador-crating-express.html</code> y <code>tarea-adicional-legal-terminos-privacidad.html</code>. (3) En Correo: la plantilla se crea dentro de Camila, en G54. Quedan 18 pedidos.</li>
         <li><strong class="upd-date">3-nov (2):</strong> sacado el pedido del chat que carga el cotizador: el cotizador es del ingeniero, no nuestro (decidido por la usuaria).</li>
         <li><strong class="upd-date">3-nov:</strong> 1 pedido nuevo en Seguridad (no urgente, decidido por la usuaria): las rutas <code>GET /api/n8n/*</code> responden sin token, y <code>/api/n8n/pages/{id}</code> entrega los tokens de Facebook, Instagram y LinkedIn. Hay que cargar <code>N8N_API_TOKEN</code>; nuestros agentes ya mandan el token en todas las lecturas.</li>
         <li><strong class="upd-date">31-oct (2):</strong> 1 pedido urgente en Reels: el servidor no deja subir videos de más de 2 MB (la documentación promete 100 MB), así que ningún Reel real se puede subir. Hay que subir los límites de PHP y nginx.</li>
@@ -224,14 +225,28 @@
       <div><div class="item-title">Rediseño de Métricas — faltan algunas piezas de la propuesta inicial (12-ago)</div><div class="item-where">Panel › Métricas RRSS</div></div>
     </div>
     <div class="item-body">
-      <p class="item-why">El rediseño del 22-sep quedó muy bien. De la propuesta inicial faltan estas piezas — los datos ya existen en la API:</p>
-      <ul class="item-why">
-        <li><strong>Bloque "Demanda"</strong> propio (guardados, compartidos, visitas al perfil, clics), separado de "Métricas de referencia".</li>
-        <li><strong>"Ingresos reales y retención"</strong> (ventas cerradas en $ y clientes recurrentes).</li>
-        <li><strong>"Leads por semana de estrategia"</strong> (hoy se muestra alcance por semana).</li>
-        <li><strong>"Consistencia de contenido"</strong> (publicado vs. comprometido por red).</li>
-      </ul>
-      <p class="item-why"><strong>Pedido:</strong> evaluar si entran; y si alguna no conviene, rechazarla abiertamente para sacarla de la lista.</p>
+      <p class="item-why"><strong>Por qué (explicado de nuevo el 5-nov, a pedido del ingeniero):</strong> hoy la pantalla responde "¿cuánta gente vio lo que publicamos?" (alcance, impresiones, engagement). Al dueño del negocio le importa otra cosa: "¿esto me trae clientes y plata, y estamos cumpliendo lo que prometimos publicar?". Las cuatro piezas que faltan responden eso, en ese orden: interés real → clientes → plata → constancia. Todos los datos ya existen en la API; es armarlos en pantalla.</p>
+      <ol class="item-why">
+        <li><strong>Bloque "Demanda", separado de "Métricas de referencia".</strong>
+          <br><em>Qué es:</em> guardados, compartidos, visitas al perfil y clics, en su propio bloque.
+          <br><em>Por qué separarlo:</em> alcance, impresiones y engagement (las "de referencia") miden que el post <u>se vio</u>; un "me gusta" no cuesta nada. Guardar, compartir, ir al perfil o hacer clic en el enlace son acciones de alguien que <u>quiere algo</u>: es el paso justo antes de escribir o cotizar. Mezclados con los demás números se pierden, y son los que mejor anticipan los leads. La propia documentación de G54 los llama "señales de demanda".
+          <br><em>De dónde sale:</em> <code>GET /api/rrss/metricas</code> → <code>guardados_total</code>, <code>compartidos_total</code>, <code>visitas_perfil_total</code>, <code>clics_total</code>, por red y por fechas (ya existen desde el 25-ago).
+          <br><em>Cómo se ve:</em> 4 tarjetas con el total del período y la flecha contra el período anterior, y debajo "Demanda por cada 1.000 de alcance" (la suma de las cuatro ÷ alcance × 1.000), para comparar semanas con alcance distinto.</li>
+        <li><strong>"Ingresos reales y retención".</strong>
+          <br><em>Qué es:</em> cuánta plata cerrada vino de las redes, y cuántos de esos clientes volvieron a comprar.
+          <br><em>Cómo se calcula:</em> <strong>Ingresos</strong> = suma de <code>valor_estimado</code> de los tratos del CRM en etapa ganada, con origen de redes (<code>facebook</code>, <code>instagram</code>, o con <code>social_idea_id</code>), en el período; ya existe por post en <code>GET /api/rrss/posts/{id}/resultado</code> (<code>ventas_valor</code>), acá es la suma. <strong>Retención</strong> = de los clientes con un trato ganado, cuántos tienen 2 o más (mismo teléfono), en % y en número.
+          <br><em>Cómo se ve:</em> "Ventas cerradas: $X (N tratos)" y "Clientes que repitieron: N (X %)".</li>
+        <li><strong>"Leads por semana de estrategia"</strong> (en lugar de, o además de, "alcance por semana").
+          <br><em>Qué es:</em> un gráfico de barras con una barra por semana desde que arrancó la estrategia actual, contando leads nuevos (tratos creados en el CRM con origen de redes).
+          <br><em>Por qué:</em> la estrategia se cambia o se mantiene según si trae leads, no según el alcance. Con la semana de la estrategia (semana 1, 2, 3…) se ve si el cambio de estrategia movió algo.
+          <br><em>De dónde sale:</em> fecha de inicio de la estrategia vigente + <code>leads_generados</code> de los analytics semanales (o el conteo directo de tratos por <code>created_at</code>).</li>
+        <li><strong>"Consistencia de contenido": publicado vs. comprometido, por red.</strong>
+          <br><em>Qué quiere decir:</em> "comprometido" es lo que la estrategia promete publicar por semana en cada red, y "publicado" es lo que de verdad salió. Si la estrategia dice 2 por semana en Facebook y salió 1, la consistencia de Facebook esa semana es 50 %.
+          <br><em>Por qué:</em> sin constancia, los demás números no se pueden leer: una semana con pocos leads puede ser porque la estrategia falló o porque no se publicó. Además, le muestra al cliente que G54 cumple lo que prometió.
+          <br><em>De dónde sale:</em> comprometido = <code>frecuencia_estructurada</code> de la estrategia (por ejemplo <code>{"Facebook":2,"Instagram":1}</code> por semana); publicado = posts en estado publicado de esa red con fecha en esa semana.
+          <br><em>Cómo se ve:</em> una fila por red con "1 de 2 · 50 %" y un color (verde 100 %, amarillo 50-99 %, rojo menos de 50 %).</li>
+      </ol>
+      <p class="item-why"><strong>Pedido:</strong> agregar las cuatro en este orden. Si alguna no conviene o no se puede, decirlo para sacarla de la lista.</p>
     </div>
   </div>
 
@@ -272,71 +287,6 @@
       <p class="item-why"><strong>Ya está (26-oct), gracias:</strong> subir video en el editor, <code>social_idea_id</code> en el trato, resultado en $ por publicación y <code>top-ventas</code>, pedidos de grabación (ya guardamos los 2 primeros de Crating Express) y <code>whatsapp_numero</code> en el perfil.</p>
       <p class="item-why"><strong>Pedido 1 — teléfonos:</strong> <code>GET /api/n8n/companies/{id}/wa/leads?phone=</code> sigue exigiendo el formato exacto: probado el 27-oct con un contacto real, <code>+393884829817</code> lo encuentra y <code>393884829817</code> no. Si un agente guarda con "+" y otro busca sin "+", quedan dos contactos para la misma persona. Que esta ruta y <code>POST /api/agent/whatsapp/inbound</code> normalicen a E.164 (con "+") al guardar y al buscar, como ya hace el CRM.</p>
       <p class="item-why"><strong>Pedido 2 — una duda:</strong> cuando el cliente sube el video desde un pedido de grabación, ¿el aviso <code>rrss_reel</code> que recibe Reels AI trae el <code>pedido_id</code>? La documentación no lo dice. Si lo trae, Reels AI escribe el texto con las tomas y la idea del pedido; si no, lo escribe solo con lo que tenga el post.</p>
-    </div>
-  </div>
-
-  <!-- ============ COTIZADOR CRATING EXPRESS — QR Y CRM ============ -->
-  <div class="cat-header">
-    <span class="cat-icon">🧾</span>
-    <span class="cat-title">Cotizador de Crating Express (cratingcotiza) — QR y CRM</span>
-  </div>
-
-  <div class="item-card">
-    <div class="item-header">
-      <div><div class="item-title">Que cada cotización llegue al CRM con su origen, para medir los QR (pedido de Don Marc)</div><div class="item-where">App del cotizador · <code>cratingcotiza.mdarthurdigital.com/cotizar-caja</code></div></div>
-    </div>
-    <div class="item-body">
-      <p class="item-why"><strong>Por qué:</strong> Don Marc aprobó poner un QR en cada cajón, en las publicaciones y en las tarjetas, y que lleve al cotizador, porque "la razón de ser de todo el marketing de CE es que nos pidan una cotización". Hoy el cotizador pide nombre, correo y teléfono, pero esos datos quedan solo en su app: en el CRM de Crating Express no hay ni un trato que venga de la web. Sin eso no hay forma de saber cuántas cotizaciones trae cada QR.</p>
-      <p class="item-why"><strong>Ya está de nuestro lado (12-oct):</strong> un webhook de n8n que recibe la cotización y crea o actualiza el trato en el CRM (por teléfono o, si no hay, por correo), con origen <code>web</code>, la etiqueta <code>origen:&lt;marca&gt;</code>, el precio estimado como valor del trato y una nota con el detalle. Los QR del cajón y de la tarjeta ya están generados y apuntan a <code>/cotizar-caja?origen=qr-cajon</code> y <code>?origen=qr-tarjeta</code>.</p>
-      <p class="item-why"><strong>Pedido:</strong></p>
-      <ol class="item-why">
-        <li>Guardar el parámetro <code>origen</code> de la URL cuando alguien abre el cotizador (por ejemplo en un campo oculto del formulario) y mantenerlo hasta que envíe la cotización.</li>
-        <li>Al guardar cada cotización, llamar una vez a <code>POST https://n8n.mdarthurdigital.com/webhook/cotizador-lead-g54</code> con el header <code>X-Webhook-Key</code> (la clave se la pasa la usuaria por un canal privado; si la app corre en el mismo servidor que n8n no hace falta). Cuerpo:
-          <pre style="white-space:pre-wrap;font-size:12px;margin:6px 0;">{"company_id":1, "nombre":"Ana Pérez", "correo":"ana@empresa.com", "telefono":"+13055550123",
- "origen":"qr-cajon", "tipo_servicio":"cajones_cerrados", "largo":40, "ancho":30, "alto":25,
- "cantidad":1, "precio_estimado":172, "fecha":"2026-10-20", "mensaje":"texto libre",
- "cotizacion_id":"id interno de la app"}</pre>
-          Obligatorios: <code>company_id</code> y al menos <code>correo</code> o <code>telefono</code>. Si el envío falla, que no frene al cliente: la cotización se guarda igual en la app. Responde <code>{"ok":true,"deal_id":…}</code>.</li>
-      </ol>
-    </div>
-  </div>
-
-
-  <!-- ============ LEGAL — TÉRMINOS Y CONDICIONES ============ -->
-  <div class="cat-header">
-    <span class="cat-icon">📜</span>
-    <span class="cat-title">Legal — Términos y Condiciones y Política de Privacidad (growth54.com)</span>
-  </div>
-
-  <div class="item-card">
-    <div class="item-header">
-      <div><div class="item-title">Términos y Condiciones: falta el permiso de uso del contenido que el cliente sube o aprueba (petición de Don Marc)</div><div class="item-where">growth54.com/terminos-y-condiciones · sección 3 "Propiedad Intelectual y Uso de Datos"</div></div>
-    </div>
-    <div class="item-body">
-      <p class="item-why"><strong>Por qué:</strong> usar la plataforma tiene que significar que el cliente autoriza a G54 a usar lo que aprueba o sube (fotos, videos y textos de su negocio, y lo que G54 crea y el cliente aprueba). Hoy los Términos (vigentes desde el 17-abr) solo dicen que el cliente nos otorga "una licencia limitada para procesar estos datos con el fin de proveer y mejorar el servicio". Procesar no es publicar, y con la función de Reels y los pedidos de grabación el hueco es real.</p>
-      <p class="item-why"><strong>Pedido concreto:</strong> agregar dos cláusulas (texto final a revisar con alguien de legal antes de publicar):</p>
-      <ul class="item-why">
-        <li><strong>Licencia de uso:</strong> al subir o aprobar contenido en la plataforma, el cliente autoriza a G54 a usarlo, adaptarlo (recortar, subtitular, editar) y publicarlo en los canales que conectó, mientras use el servicio.</li>
-        <li><strong>Garantía de terceros:</strong> el cliente garantiza que tiene los derechos y permisos de las personas, marcas y bienes de terceros que aparecen en lo que sube o aprueba (por ejemplo, la mercadería de sus propios clientes), y responde por eso. Los Términos de G54 no pueden autorizar nada en nombre de alguien que nunca los aceptó; esta garantía es lo que protege a G54.</li>
-      </ul>
-      <p class="item-why"><strong>Del nuestro lado:</strong> cuando estén publicadas, los pedidos de grabación cambian el aviso de "solo con permiso por escrito del cliente" por "verifica que tengas el permiso de tu cliente".</p>
-    </div>
-  </div>
-
-  <div class="item-card">
-    <div class="item-header">
-      <div><div class="item-title">Términos y Privacidad: no cubren lo que hacen los agentes con los clientes del cliente</div><div class="item-where">growth54.com/terminos-y-condiciones · growth54.com/privacy-police</div></div>
-    </div>
-    <div class="item-body">
-      <p class="item-why"><strong>Por qué:</strong> revisando los dos documentos para el pedido anterior aparecieron otros huecos. Los Términos y la Política de Privacidad hablan de los datos del cliente (su cuenta, lo que sube), pero los agentes de G54 trabajan sobre todo con datos de <strong>los clientes del cliente</strong>: conversaciones de WhatsApp, Telegram y DMs, comentarios, teléfonos y correos en el CRM, llamadas. La propia Política de Privacidad dice que no se aplica a "el contenido que procesamos exclusivamente en nombre de nuestros clientes corporativos bajo acuerdos de servicios específicos", y esos acuerdos no existen. Ninguna de estas cláusulas es un pedido de Don Marc: las sugerimos nosotras, y conviene revisarlas con él y con alguien de legal.</p>
-      <ul class="item-why">
-        <li><strong>Quién responde por esos datos:</strong> el cliente es el responsable de los datos de sus clientes y G54 los procesa en su nombre. El cliente garantiza que tiene permiso para contactarlos por cada canal (opt-in de WhatsApp, consentimiento para SMS y llamadas automatizadas, base legal para correo en frío, que es lo que hace Prospección / Camila).</li>
-        <li><strong>Respuestas automáticas:</strong> la sección 5 dice que el cliente "es el único responsable de revisar y validar el contenido antes de su publicación". Pero los agentes responden comentarios, DMs, WhatsApp y llamadas solos, sin que nadie revise antes. Hace falta una cláusula en la que el cliente autoriza esas respuestas automáticas y acepta cómo funcionan.</li>
-        <li><strong>Cuentas conectadas:</strong> el cliente autoriza a G54 a publicar, responder y enviar mensajes en las cuentas que conecta (Facebook, Instagram, LinkedIn, WhatsApp, Telegram), dentro de las reglas de cada plataforma, y puede revocar el acceso cuando quiera.</li>
-        <li><strong>Llamadas:</strong> el agente de voz graba y transcribe. En Florida (ley que rige estos Términos) grabar una llamada requiere el consentimiento de todas las partes, así que el aviso al inicio de la llamada y quién se encarga de darlo tienen que estar escritos.</li>
-        <li><strong>Proveedores de IA desactualizados:</strong> la Política lista Gemini, OpenAI, Grok, Google Cloud AI y Claude. Los que se usan hoy son Groq (modelos Llama y gpt-oss), Zhipu (GLM), OpenRouter, Deepgram, Cartesia, ElevenLabs y VAPI. Zhipu es una empresa de China, y China no aparece entre los países a los que se transfieren datos (la Política nombra EE. UU., la U.E., Brasil, Costa Rica, Filipinas y Canadá). O se agrega a la lista, o se deja de usar Zhipu en los agentes que hablan con clientes: esa decisión es nuestra y la tomamos aparte.</li>
-        <li><strong>Inglés y dirección:</strong> los dos documentos están solo en español, aunque se rigen por la ley de Florida y la plataforma tiene clientes en EE. UU. (Crating Express, en Miami, es uno). Y la Política de Privacidad vive en <code>/privacy-police/</code> (con "police"); <code>/privacy-policy/</code> da 404.</li>
-      </ul>
     </div>
   </div>
 
@@ -391,7 +341,8 @@
       <p class="item-why"><strong>Por qué:</strong> hoy el cuerpo se edita en un cuadro "Cuerpo (HTML)" con todo el código del correo. Un cliente no entiende eso, y un cambio chico puede romper el diseño o el enlace de baja. La usuaria lo vio el 28-oct en los primeros borradores reales.</p>
       <p class="item-why"><strong>Pedido:</strong></p>
       <ol class="item-why">
-        <li>Que el borrador guarde el contenido por partes: <code>titulo</code>, <code>parrafos[]</code>, <code>lista[]</code> (opcional), <code>boton</code> (<code>texto</code> y <code>url</code>) e <code>idioma</code>. Que G54 arme el HTML con una plantilla única (la cabecera de Growth54ai, el cuerpo y el pie del pedido anterior).</li>
+        <li><strong>Que la plantilla se cree dentro de Camila, en G54</strong> (aclarado el 5-nov): una sección "Plantilla" en la pantalla de Camila del panel, donde cada empresa arma y guarda su plantilla de correo (logo, colores, cabecera y pie) sin tocar código. Camila no diseña el correo: solo llena las partes de esa plantilla, y todos los borradores de la empresa salen con ella.</li>
+        <li>Que el borrador guarde el contenido por partes: <code>titulo</code>, <code>parrafos[]</code>, <code>lista[]</code> (opcional), <code>boton</code> (<code>texto</code> y <code>url</code>) e <code>idioma</code>. Que G54 arme el HTML con la plantilla de Camila de esa empresa (punto 1).</li>
         <li>En Pendientes, mostrar solo campos de texto (asunto, título, cada párrafo, la lista y el texto del botón), con la vista previa al lado que se actualice al escribir. Que el HTML no aparezca, o que quede detrás de un "Avanzado" solo para el administrador.</li>
         <li>Un botón "Enviarme una prueba" que mande el borrador al correo del usuario del panel antes de aprobarlo.</li>
       </ol>

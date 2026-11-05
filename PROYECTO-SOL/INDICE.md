@@ -12,6 +12,7 @@ Lo que se movió o se borró ese día sigue en el historial de git (`git log --f
 | `agentes-n8n/otros/` | Lo que no es de G54 ni de Marco (el relay de Groq de Bubble). |
 | `g54/exodo/exodo-g54-VIGENTE.html` | **El Éxodo actual**: los pedidos al ingeniero. |
 | `g54/exodo/historial/` | Versiones anteriores del Éxodo, por fecha. |
+| `g54/exodo/tarea-adicional-*.html` | Tareas para el ingeniero que salieron del Éxodo el 5-nov: cotizador de Crating Express y textos legales de growth54.com. |
 | `g54/documentos/` | Documentos de G54: comparativo del CRM, método de validación, arquitectura, guías e investigación. `genesis/` tiene los Génesis y `docs-api-g54/` las copias de la documentación de la API. |
 | `g54/respuestas-walter/` | Respuestas a y del ingeniero, por fecha. |
 | `g54/sops/` | Procedimientos (ciclo semanal de contenido, alta de cliente nuevo, Marco). Abrir `index.html`. |
