@@ -2,7 +2,7 @@
   "id": "IRCoya91PKPjpT1T",
   "name": "📢 Distribution AI — RRSS G54 v1.0",
   "active": true,
-  "updatedAt": "2026-11-03T14:07:11.068Z",
+  "updatedAt": "2026-11-05T15:40:25.855Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -1099,16 +1099,16 @@
     {
       "id": "exchange-per-post-token",
       "name": "🔑 Intercambiar Page Token (Por Post)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "onError": "continueRegularOutput",
       "position": [
         900,
         130
       ],
       "parameters": {
-        "url": "=https://graph.facebook.com/v19.0/{{ $json.FB_PAGE_ID }}?fields=access_token&access_token={{ $json.FB_ACCESS_TOKEN }}",
-        "options": {}
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Canjea el token de Facebook por el de la página, post por post. Los posts de LinkedIn no lo necesitan:\n// antes se mandaba igual el token de LinkedIn a Facebook y quedaba un error en cada corrida.\n// Devuelve un ítem por post, en el mismo orden, porque 🔧 Aplicar Token Intercambiado los empareja por posición.\nconst salida = [];\nfor (const item of $input.all()) {\n  const p = item.json;\n  if (p.platform === 'LinkedIn' || !p.FB_PAGE_ID || !p.FB_ACCESS_TOKEN) {\n    salida.push({ json: { omitido: true } });\n    continue;\n  }\n  try {\n    const r = await this.helpers.httpRequest({\n      method: 'GET',\n      url: 'https://graph.facebook.com/v19.0/' + p.FB_PAGE_ID,\n      qs: { fields: 'access_token', access_token: p.FB_ACCESS_TOKEN },\n      json: true,\n    });\n    salida.push({ json: r || {} });\n  } catch (e) {\n    salida.push({ json: { error: e.message || String(e) } });\n  }\n}\nreturn salida;\n"
       }
     },
     {
@@ -1806,6 +1806,7 @@
       }
     },
     {
+      "id": "abd77652-704a-4d00-9e60-36bfb479d5e6",
       "name": "🔒 ¿Llamada autorizada? (distribution-publish-g54)",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
@@ -1835,8 +1836,7 @@
           "combinator": "and"
         },
         "options": {}
-      },
-      "id": "abd77652-704a-4d00-9e60-36bfb479d5e6"
+      }
     }
   ],
   "connections": {
