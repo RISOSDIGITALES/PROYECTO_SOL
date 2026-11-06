@@ -669,6 +669,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 525. **Bubble: Google Calendar por negocio** (2026-11-06), a pedido de la usuaria (detalle en el ítem 563 del repo de Bubble). Cada negocio conecta su Google desde la Agenda del agente: lo ocupado en Google tapa esos horarios para el agente, y las citas de Bubble se crean, mueven y cancelan en Google. Si Google falla, se agenda igual. Probado con 22 pruebas nuevas y en vivo con un cliente falso; servidor 648 y panel 270 en verde. **Falta:** que la usuaria cree el proyecto de Google Cloud (pasos en `docs/google-calendar.md` de Bubble) y probar con una cuenta real. **Para el reporte:** para clientes reales Google pide verificar la app (dominio propio, política de privacidad y un video); va junto con el servidor.
 
+526. **Bubble: política de privacidad** (2026-11-06), a pedido de la usuaria (detalle en el ítem 564 de Bubble). Página `/privacy` en inglés y español, enlazada en la página pública, en los términos y en el registro. Escrita contra lo que Bubble hace de verdad: no guarda el audio, no tiene rastreo, cifra transcripciones y notas, y lista los proveedores y los derechos (California, Canadá y Quebec). Trae la sección de Google Calendar que Google exige para aprobar la app. **Para el reporte:** es un borrador; falta que el abogado la revise junto con los términos.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
