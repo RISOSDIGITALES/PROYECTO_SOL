@@ -671,6 +671,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 526. **Bubble: política de privacidad** (2026-11-06), a pedido de la usuaria (detalle en el ítem 564 de Bubble). Página `/privacy` en inglés y español, enlazada en la página pública, en los términos y en el registro. Escrita contra lo que Bubble hace de verdad: no guarda el audio, no tiene rastreo, cifra transcripciones y notas, y lista los proveedores y los derechos (California, Canadá y Quebec). Trae la sección de Google Calendar que Google exige para aprobar la app. **Para el reporte:** es un borrador; falta que el abogado la revise junto con los términos.
 
+527. **Bubble: copia y borrado completo de los datos de una persona** (2026-11-06), por iniciativa propia mientras la usuaria revisa lo de Google Calendar (detalle en el ítem 565 de Bubble). La política de privacidad promete que quien llama puede pedir una copia o que borren sus datos, y Bubble no lo cumplía: borrar un cliente dejaba sus llamadas, citas y consentimiento. Ahora la ficha del cliente tiene "Descargar sus datos" y "Borrar todo de esta persona", en el panel del negocio y en el de la agencia. Probado con pruebas automáticas y en vivo con una persona inventada.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
