@@ -1,4 +1,4 @@
-# Agentes de n8n — copia del 2026-11-05
+# Agentes de n8n — copia del 2026-11-06
 
 Generado con `python PROYECTO-SOL/scripts/exportar-agentes.py`. Secretos tapados (`REDACTED_...`);
 los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` ni `staticData`.
@@ -10,7 +10,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | ANALYTICS MENSUAL V3-META REPORTE | `YI9EfJYcWJN4bbM9` | sí | 2026-11-03 | [analytics-mensual-v3-meta-reporte.json](g54-plataforma/analytics-mensual-v3-meta-reporte.json) |
 | Community AI — G54 | `62tIvF0snsrMj0sM` | sí | 2026-11-03 | [community-ai-g54.json](g54-plataforma/community-ai-g54.json) |
 | ⏰ Distribution AI — Alarma Exacta (G54) | `sNNhTEH8IzJsOIm3` | sí | 2026-11-03 | [distribution-ai-alarma-exacta-g54.json](g54-plataforma/distribution-ai-alarma-exacta-g54.json) |
-| ✉️ Camila — Baja de correos (G54) | `FXRpSFH9ESdVah1P` | sí | 2026-10-28 | [camila-baja-de-correos-g54.json](g54-plataforma/camila-baja-de-correos-g54.json) |
+| ✉️ Camila — Baja de correos (G54) | `FXRpSFH9ESdVah1P` | sí | 2026-11-06 | [camila-baja-de-correos-g54.json](g54-plataforma/camila-baja-de-correos-g54.json) |
 | 🎥 Pedidos de Grabación AI — G54 | `17mc8CJkKH2qzsdA` | sí | 2026-10-26 | [pedidos-de-grabacion-ai-g54.json](g54-plataforma/pedidos-de-grabacion-ai-g54.json) |
 | 🎨 Content AI — RRSS G54 v1.3 | `wyO1f93A66imn9qw` | sí | 2026-11-03 | [content-ai-rrss-g54-v1-3.json](g54-plataforma/content-ai-rrss-g54-v1-3.json) |
 | 🎬 Reels AI — G54 | `Xqb5sXsFDRz0Diys` | sí | 2026-10-20 | [reels-ai-g54.json](g54-plataforma/reels-ai-g54.json) |
@@ -18,7 +18,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | 💬 Sales AI — Motor de Conversación G54 | `otycsrxrMEMuxuwD` | sí | 2026-11-03 | [sales-ai-motor-de-conversacion-g54.json](g54-plataforma/sales-ai-motor-de-conversacion-g54.json) |
 | 📊 Analytics AI Semanal — G54 | `EX9K1AZwKeouSJ9G` | sí | 2026-11-03 | [analytics-ai-semanal-g54.json](g54-plataforma/analytics-ai-semanal-g54.json) |
 | 📢 Distribution AI — RRSS G54 v1.0 | `IRCoya91PKPjpT1T` | sí | 2026-11-05 | [distribution-ai-rrss-g54-v1-0.json](g54-plataforma/distribution-ai-rrss-g54-v1-0.json) |
-| 📧 Camila G54 — Nurture & Outreach | `fahn0L68z5czTocE` | sí | 2026-11-05 | [camila-g54-nurture-outreach.json](g54-plataforma/camila-g54-nurture-outreach.json) |
+| 📧 Camila G54 — Nurture & Outreach | `fahn0L68z5czTocE` | sí | 2026-11-06 | [camila-g54-nurture-outreach.json](g54-plataforma/camila-g54-nurture-outreach.json) |
 | 📨 Seguimiento IA manual — G54 (wa_followup) | `E7axtRDYCL8AbtgO` | sí | 2026-10-31 | [seguimiento-ia-manual-g54-wa-followup.json](g54-plataforma/seguimiento-ia-manual-g54-wa-followup.json) |
 | 📲 Telegram Router — G54 | `ciz4AeS7LtVAXK1L` | sí | 2026-11-03 | [telegram-router-g54.json](g54-plataforma/telegram-router-g54.json) |
 | 🔄 LinkedIn — Renovar token (G54) | `JsLFysLfQIxGZN5f` | sí | 2026-11-03 | [linkedin-renovar-token-g54.json](g54-plataforma/linkedin-renovar-token-g54.json) |
