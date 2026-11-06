@@ -63,7 +63,8 @@ for nombre in ('api', 'rrss'):
     try:
         hoy = urllib.request.urlopen(urllib.request.Request(f'https://apigrowth.mdarthurdigital.com/docs/{nombre}', headers={'User-Agent': 'diag'}), timeout=30).read()
         ultima = sorted(DOCS.glob(f'docs-{nombre}-*.html'))[-1]
-        if hoy == ultima.read_bytes():
+        # sin contar los saltos de línea: git los cambia a CRLF al bajar el repo en Windows
+        if hoy.replace(b'\r\n', b'\n') == ultima.read_bytes().replace(b'\r\n', b'\n'):
             print(f'docs {nombre}: igual a {ultima.name}')
         else:
             nueva = DOCS / f'docs-{nombre}-{datetime.date.today()}.html'
