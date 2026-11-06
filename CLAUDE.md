@@ -679,6 +679,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 530. **Bubble: Inworld como segundo proveedor de voz** (2026-11-06), a pedido de la usuaria (detalle en el ítem 569 de Bubble). 9 voces que eligió al escuchar muestras, en el panel, en "Escuchar", en la llamada de ejemplo y en el agente. **Para el reporte:** Inworld empieza a sonar en 0,24 s contra 0,53 s de Cartesia y cuesta un tercio; en la llamada de ejemplo el transcriptor entendió el 95 %. El error fue de la IA (Groq), no de la voz: inventó un horario de corte y pidió cinco datos juntos. Falta una llamada telefónica real con Inworld.
 
+531. **Bubble: el agente ya no inventa horarios límite ni pide varios datos juntos** (2026-11-06), a pedido de la usuaria (detalle en el ítem 570 de Bubble). Medido con el agente real antes y después: inventaba la hora límite 5 de 5 veces y pedía todo junto 4 de 5; con las reglas nuevas, 0 de 5 en español y 0 de 4 en inglés. **Para el reporte:** era el error más riesgoso para un negocio (prometer algo que nunca dijo).
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
