@@ -679,6 +679,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 537. **Bubble: paquetes para negocio independiente y para agencias** (2026-11-07), a pedido de la usuaria (sección 6 del informe de precios). Negocio: Básico US$49 (400 min), Plus 99 (1.000), Pro 179 (2.000, 2 números). Agencias: Starter 99 (1.000 min, 3 negocios), Agency 249 (3.000, ilimitados), Scale 549 (8.000). Márgenes de 60-76 % usando todo y 76-85 % usando la mitad. Mes gratis con tope de ~100 min. **Ojo:** riesgo de que un negocio salte la agencia y contrate directo, hasta que exista la marca propia. `plans.py` sin tocar.
 
+538. **Bubble: los planes nuevos ya están en el código** (2026-11-07), a pedido de la usuaria (ítem 573 de Bubble). Los seis paquetes del ítem 537 en `plans.py`, todos con todas las funciones; la página pública y el registro los muestran en dos grupos ("Para tu negocio" y "Para agencias"). Pruebas en verde y página vista en el navegador. **Falta:** el mes gratis con tope de ~100 min y que el registro de un negocio independiente no diga "agencia".
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
