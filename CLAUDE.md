@@ -699,6 +699,18 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-11-07 (Sábado)
+
+Arranqué con la rutina de G54, todo limpio, y revisé la API a fondo en vivo: ninguno de los pedidos del Éxodo cambió. Después seguí con Bubble mientras la llamada real con Inworld queda para más tarde: le puse respaldo a la voz y al transcriptor, para que si Inworld, Cartesia o Deepgram fallan la llamada no quede muda, y dejé a Inworld como voz inicial de los negocios nuevos porque empieza a hablar más rápido y cuesta un tercio. Luego saqué el costo real por llamada con la facturación de Twilio, LiveKit y Deepgram: a precio de lista sale unos US$0,022 por minuto, unos US$0,028 por llamada promedio, y hoy de verdad solo se paga Twilio, unos US$0,005 por llamada; LiveKit lo tenía sobreestimado y su plan gratis nos alcanza.
+
+Con esos números hice el análisis de la competencia y vi que nuestros planes provisorios quedaban peor que Trillet, el competidor directo. Rearmé los paquetes en dos líneas: para el negocio independiente, Básico de US$49 con 400 minutos, Plus de US$99 y Pro de US$179; para agencias, US$99, US$249 y US$549, todos con agenda, transferencia y CRM incluidos y márgenes de 60 a 85 %. Los dejé en el código junto con un mes gratis de 100 minutos que arranca cuando Growth54 aprueba la cuenta, y con un registro que ya no habla de agencias cuando el plan es de negocio; todas las pruebas pasaron. El riesgo que dejo anotado es que un negocio se salte a su agencia y contrate directo mientras no exista la marca propia.
+
+En la tarde resumí el método de validación de G54 porque Don Marc lo encontró muy largo: quedó en un esquema con una sola tabla de criterios, corregí dos datos que estaban viejos (OM en pausa y el CRM con montos ya entregado) y saqué los riesgos, los pendientes y el calendario; el documento queda al final. Además el ingeniero me dio la tarea de probar y configurar el nuevo reloj de marcación y añadir a los empleados. Ahí paré con todo subido y el uso semanal en 50 %.
+
+**Resumen del método de validación de G54:** https://claude.ai/artifact/KJyBMsi9N8LncFNUybdvrH
+
+---
+
 ### 2026-11-06 (Viernes)
 
 Arranqué con la rutina de G54, todo limpio: salieron los posts de Facebook e Instagram, y el de Facebook confirmó el arreglo de ayer en Distribution. Revisé la API a fondo contra los 14 pedidos del Éxodo y ninguno había cambiado; de paso encontré que unir tratos duplicados da error y que la API acepta un campo que no existe sin avisar. Con lo que encontré hice que Camila respete la baja de correos con el campo nuevo de G54, lo probé dos veces con tratos falsos, y dejé el diagnóstico avisando solo cuando G54 cambia algo. También corrí Prospección con Hunter: respondió bien pero no tenía correo para ese negocio, y ahora, si Hunter falla o se queda sin búsquedas, el resumen lo avisa en vez de tragárselo.
@@ -725,13 +737,3 @@ Precios oficiales de noviembre, por llamada de unas 10 respuestas.
 - La IA es solo el 4 % del costo de un minuto de llamada (unos US$0,047); la voz es el 39 %.
 - Cambiar la voz a Inworld ahorraría unos US$24 cada 1.000 llamadas, diez veces más que DeepSeek, pero falta probarla en español.
 Recomendación: seguir con Groq; cualquier cambio queda en espera hasta que se decidan los gastos de Bubble.
-
----
-
-### 2026-11-04 (Miércoles)
-
-Arranqué con la rutina de G54, todo limpio, y enseguida me preguntaron si Bubble estaba haciendo llamadas solo porque alguien dijo que lo habían llamado. Revisé y ni Bubble ni Marco hicieron ninguna llamada saliente: la que recibió esa persona salió con el número del magicJack de la oficina, que no está conectado a nada nuestro, así que fue un número falsificado. Después me dediqué a Bubble con llamadas de prueba reales y encontré que el plan gratis de Groq solo aguanta unas 3 respuestas por minuto, así que comparé precios: Groq sale a unos US$0,005 por llamada (unos US$5 cada mil) y Kimi a unos US$0,033, seis o siete veces más caro y más lento para voz. El plan pago de Groq queda en espera de aprobación y el cobro de Bubble se va a hacer con G54.
-
-Con las llamadas confirmé casi todo lo que faltaba: inglés, agendar, mover y cancelar citas con sus correos, leer el PDF del negocio, colgar solo, el aviso de asistente en el idioma del saludo, el corte cuando la IA no responde, el seguimiento a contactos calificados con correo y de palabra (las llamadas de vuelta salieron a la hora exacta), el idioma fijo en inglés, los avisos apagados y la llamada fuera de horario. En el camino corregí más de diez fallas que solo se ven en una llamada de verdad; la más importante, que ninguna transferencia a una persona podía funcionar, y con el permiso para prender las transferencias en Twilio la primera llamada transferida llegó a Marco, lo que de paso confirmó que Marco por teléfono sigue andando. También limpié los datos de demostración y actualicé los paquetes de Bubble.
-
-Lo que salió mal fue que en una de las pruebas la IA entendió mal mi correo y mandó dos correos de confirmación a una dirección que puede ser de otra persona, y que Groq se quedó sin su cupo del día. Cerré revisando que todo quedara en orden, con todas las pruebas en verde y todo subido. Para mañana quedan dos llamadas cortas cuando Groq tenga cupo, y sigue pendiente mandarle un mensaje a Marco por Telegram para confirmar el candado. Ahí paré con el uso semanal en 15 %.
