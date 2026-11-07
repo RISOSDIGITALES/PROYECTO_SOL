@@ -701,18 +701,18 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ### 2026-11-07 (Sábado)
 
-Arranqué con la rutina de G54, todo limpio, y revisé la API a fondo en vivo: ninguno de los pedidos del Éxodo cambió. Después seguí con Bubble mientras la llamada real con Inworld queda para más tarde: le puse respaldo a la voz y al transcriptor, para que si Inworld, Cartesia o Deepgram fallan la llamada no quede muda, y dejé a Inworld como voz inicial de los negocios nuevos porque empieza a hablar más rápido y cuesta un tercio. Luego saqué el costo real por llamada con la facturación de Twilio, LiveKit y Deepgram: a precio de lista sale unos US$0,022 por minuto, unos US$0,028 por llamada promedio, y hoy de verdad solo se paga Twilio, unos US$0,005 por llamada; LiveKit lo tenía sobreestimado y su plan gratis nos alcanza.
+Arranqué con la rutina de G54, todo limpio, y revisé la API a fondo en vivo: ninguno de los pedidos del Éxodo cambió. Después seguí con Bubble mientras la llamada real con Inworld queda para más tarde: le puse respaldo a la voz y al transcriptor, para que si Inworld, Cartesia o Deepgram fallan la llamada no quede muda, y dejé a Inworld como voz inicial de los negocios nuevos porque empieza a hablar más rápido y cuesta un tercio. Luego saqué el costo real por llamada con la facturación de Twilio, LiveKit y Deepgram (tabla abajo); LiveKit lo tenía sobreestimado y su plan gratis nos alcanza.
 
-Con esos números hice el análisis de la competencia y vi que nuestros planes provisorios quedaban peor que Trillet, el competidor directo. Rearmé los paquetes en dos líneas, para el negocio independiente y para agencias (tabla abajo), todos con agenda, transferencia y CRM incluidos y márgenes de 60 a 85 %. Los dejé en el código junto con un mes gratis de 100 minutos que arranca cuando Growth54 aprueba la cuenta, y con un registro que ya no habla de agencias cuando el plan es de negocio; todas las pruebas pasaron. El riesgo que dejo anotado es que un negocio se salte a su agencia y contrate directo mientras no exista la marca propia.
+| Pieza | Costo por minuto (precio de lista) | Lo que se paga hoy |
+| --- | --- | --- |
+| Twilio (la línea telefónica) | US$0,0034 | Sí se paga |
+| LiveKit (el audio de la llamada) | US$0,0045 | Nada: plan gratis |
+| Deepgram (pasa la voz a texto) | US$0,0059 | Nada: crédito de US$199,66 |
+| Groq (la IA) | US$0,002 | Nada: plan gratis |
+| Inworld (la voz del agente) | US$0,006 | Nada: minutos gratis |
+| **Total** | **US$0,022 por minuto; US$0,028 por llamada promedio** | **US$0,005 por llamada (solo Twilio)** |
 
-| Paquete | Precio al mes | Minutos | Negocios | La competencia |
-| --- | --- | --- | --- | --- |
-| Básico (negocio) | US$49 | 400 | 1 | Rosie: US$49 por 250 min, sin agenda |
-| Plus (negocio) | US$99 | 1.000 | 1 | Frontdesk: US$99 por 200 min |
-| Pro (negocio) | US$179 | 2.000 | 1 | — |
-| Agencia Inicial | US$99 | 1.000 | 3 | Trillet Studio: US$99 por 1.000 min, 3 negocios |
-| Agencia | US$249 | 3.000 | Ilimitados | Trillet Agency: US$299 por 3.000 min, más telefonía aparte |
-| Agencia Escala | US$549 | 8.000 | Ilimitados | — |
+Con esos números hice el análisis de la competencia y vi que nuestros planes provisorios quedaban peor que Trillet, el competidor directo. Rearmé los paquetes en dos líneas: para el negocio independiente, Básico de US$49 con 400 minutos, Plus de US$99 y Pro de US$179; para agencias, US$99, US$249 y US$549, todos con agenda, transferencia y CRM incluidos y márgenes de 60 a 85 %. Los dejé en el código junto con un mes gratis de 100 minutos que arranca cuando Growth54 aprueba la cuenta, y con un registro que ya no habla de agencias cuando el plan es de negocio; todas las pruebas pasaron. El riesgo que dejo anotado es que un negocio se salte a su agencia y contrate directo mientras no exista la marca propia.
 
 En la tarde resumí el método de validación de G54 porque Don Marc lo encontró muy largo: quedó en un esquema con una sola tabla de criterios, corregí dos datos que estaban viejos (OM en pausa y el CRM con montos ya entregado) y saqué los riesgos, los pendientes y el calendario; el documento queda al final. Además el ingeniero me dio la tarea de probar y configurar el nuevo reloj de marcación y añadir a los empleados. Ahí paré con todo subido y el uso semanal en 50 %.
 
