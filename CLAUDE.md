@@ -681,6 +681,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 538. **Bubble: los planes nuevos ya están en el código** (2026-11-07), a pedido de la usuaria (ítem 573 de Bubble). Los seis paquetes del ítem 537 en `plans.py`, todos con todas las funciones; la página pública y el registro los muestran en dos grupos ("Para tu negocio" y "Para agencias"). Pruebas en verde y página vista en el navegador. **Falta:** el mes gratis con tope de ~100 min y que el registro de un negocio independiente no diga "agencia".
 
+539. **Bubble: mes gratis y registro para negocios** (2026-11-07), a pedido de la usuaria (ítem 574 de Bubble). Al aprobar una cuenta arranca un mes gratis con 100 minutos, sin cobro extra ni cobro del plan; pasado el tope, el agente transfiere o avisa y cuelga. El registro con un plan de negocio ya no dice "agencia". Pruebas en verde. **Falta:** que el negocio independiente no tenga que crear su negocio a mano al entrar.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
