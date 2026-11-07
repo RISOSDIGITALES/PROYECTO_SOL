@@ -708,9 +708,9 @@ Arranqué con la rutina de G54, todo limpio, y revisé la API a fondo en vivo: n
 | Twilio (la línea telefónica) | US$0,0034 | Sí se paga |
 | LiveKit (el audio de la llamada) | US$0,0045 | Nada: plan gratis |
 | Deepgram (pasa la voz a texto) | US$0,0059 | Nada: crédito de US$199,66 |
-| Groq (la IA) | US$0,002 | Nada: plan gratis |
+| Groq (la IA) | US$0,002 | Sí se paga: plan pago, por uso y sin cuota fija |
 | Inworld (la voz del agente) | US$0,006 | Nada: minutos gratis |
-| **Total** | **US$0,022 por minuto; US$0,028 por llamada promedio** | **US$0,005 por llamada (solo Twilio)** |
+| **Total** | **US$0,022 por minuto; US$0,028 por llamada promedio** | **US$0,007 por llamada (Twilio y Groq)** |
 
 Con esos números hice el análisis de la competencia y vi que nuestros planes provisorios quedaban peor que Trillet, el competidor directo. Rearmé los paquetes en dos líneas: para el negocio independiente, Básico de US$49 con 400 minutos, Plus de US$99 y Pro de US$179; para agencias, US$99, US$249 y US$549, todos con agenda, transferencia y CRM incluidos y márgenes de 60 a 85 %. Los dejé en el código junto con un mes gratis de 100 minutos que arranca cuando Growth54 aprueba la cuenta, y con un registro que ya no habla de agencias cuando el plan es de negocio; todas las pruebas pasaron. El riesgo que dejo anotado es que un negocio se salte a su agencia y contrate directo mientras no exista la marca propia.
 
