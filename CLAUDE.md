@@ -703,14 +703,14 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 Arranqué con la rutina de G54, todo limpio, y revisé la API a fondo en vivo: ninguno de los pedidos del Éxodo cambió. Después seguí con Bubble mientras la llamada real con Inworld queda para más tarde: le puse respaldo a la voz y al transcriptor, para que si Inworld, Cartesia o Deepgram fallan la llamada no quede muda, y dejé a Inworld como voz inicial de los negocios nuevos porque empieza a hablar más rápido y cuesta un tercio. Luego saqué el costo real por llamada con la facturación de Twilio, LiveKit y Deepgram (tabla abajo); LiveKit lo tenía sobreestimado y su plan gratis nos alcanza.
 
-| Pieza | Costo por minuto (precio de lista) | Lo que se paga hoy |
+| Pieza | Costo por minuto (precio de lista) | Cómo se paga |
 | --- | --- | --- |
-| Twilio (la línea telefónica) | US$0,0034 | Sí se paga |
-| LiveKit (el audio de la llamada) | US$0,0045 | Nada: plan gratis |
-| Deepgram (pasa la voz a texto) | US$0,0059 | Nada: crédito de US$199,66 |
-| Groq (la IA) | US$0,002 | Sí se paga: plan pago, por uso y sin cuota fija |
-| Inworld (la voz del agente) | US$0,006 | Nada: minutos gratis |
-| **Total** | **US$0,022 por minuto; US$0,028 por llamada promedio** | **US$0,007 por llamada (Twilio y Groq)** |
+| Twilio (la línea telefónica) | US$0,0034 | Por uso, más US$1,15 al mes por número |
+| LiveKit (el audio de la llamada) | US$0,0045 | Plan Ship: US$50 al mes, más el uso pasado lo incluido |
+| Deepgram (pasa la voz a texto) | US$0,0059 | Por uso, sin cuota fija |
+| Groq (la IA) | US$0,002 | Por uso, sin cuota fija |
+| Inworld (la voz del agente) | US$0,006 | Por uso: US$15 por millón de caracteres |
+| **Total** | **US$0,022 por minuto; US$0,028 por llamada promedio** | **US$0,028 por llamada, más US$50 al mes de LiveKit y US$1,15 por número** |
 
 Con esos números hice el análisis de la competencia y vi que nuestros planes provisorios quedaban peor que Trillet, el competidor directo. Rearmé los paquetes en dos líneas: para el negocio independiente, Básico de US$49 con 400 minutos, Plus de US$99 y Pro de US$179; para agencias, US$99, US$249 y US$549, todos con agenda, transferencia y CRM incluidos y márgenes de 60 a 85 %. Los dejé en el código junto con un mes gratis de 100 minutos que arranca cuando Growth54 aprueba la cuenta, y con un registro que ya no habla de agencias cuando el plan es de negocio; todas las pruebas pasaron. El riesgo que dejo anotado es que un negocio se salte a su agencia y contrate directo mientras no exista la marca propia.
 
