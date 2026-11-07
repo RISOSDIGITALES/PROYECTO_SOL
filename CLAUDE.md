@@ -671,6 +671,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 533. **Bubble: la voz de Inworld tiene a Cartesia de respaldo** (2026-11-07), mientras la llamada real con Inworld queda para más tarde (detalle en el ítem 571 de Bubble). Antes, si Inworld fallaba o se quedaba sin crédito, la llamada quedaba muda: la IA tenía respaldo y la voz no. Probado con las claves reales: con una clave de Inworld rota, en el mismo pedido habló Cartesia. **Para el reporte:** el plan gratis de Inworld trae unos 70 minutos de audio (2-3 horas de llamadas de prueba) y después cobra US$15 por millón de caracteres; no dice si se renueva cada mes, y el consumo solo se ve en su portal.
 
+534. **Bubble: Inworld pasa a ser la voz inicial, y la voz y el transcriptor tienen respaldo** (2026-11-07), a pedido de la usuaria (detalle en el ítem 572 de Bubble). Los negocios nuevos arrancan con Inworld; Inworld y Cartesia se cubren entre sí, y si Deepgram falla transcribe Inworld. Todo probado con claves rotas a propósito. **Para el reporte:** el transcriptor de Inworld cuesta ~US$0,15 la hora contra ~US$0,55 de Deepgram y entendió igual o mejor, pero tarda 2-3 s más en cerrar cada frase; por eso queda de respaldo y no de principal. La política de privacidad ya nombra a Inworld.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
