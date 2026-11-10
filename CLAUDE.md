@@ -689,6 +689,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 551. **Bubble: llaves de la API con permisos por tipo de dato** (2026-11-10), a pedido de la usuaria (ítem 582 de Bubble). Al crear una llave, el cliente elige para clientes, llamadas y citas si la llave no los ve, solo los lee o también los escribe. Las llaves de antes siguen funcionando igual. Probado en el navegador con una llave real (ya borrada); pruebas en verde.
 
+552. **Bubble: sin huecos en pantalla en todo el panel** (2026-11-10), a pedido de la usuaria (ítem 583 de Bubble). La página del agente dejaba un hueco grande debajo de Número; reordenada (Número y Modelo a la izquierda, Voz a la derecha, columnas parejas). Revisado todo el panel con una medición automática en el navegador a 1280, 1440 y 1920 px, en las tres clases de cuenta y en las páginas públicas: se corrigieron Inicio, Mi cuenta/Configuración, planes, integraciones, Ayuda, perfil de agencia y el resumen del agente. Quedó en 0 huecos; pruebas en verde.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
