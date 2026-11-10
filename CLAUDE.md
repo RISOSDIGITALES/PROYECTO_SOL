@@ -683,6 +683,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 539. **Bubble: mes gratis y registro para negocios** (2026-11-07), a pedido de la usuaria (ítem 574 de Bubble). Al aprobar una cuenta arranca un mes gratis con 100 minutos, sin cobro extra ni cobro del plan; pasado el tope, el agente transfiere o avisa y cuelga. El registro con un plan de negocio ya no dice "agencia". Pruebas en verde. **Falta:** que el negocio independiente no tenga que crear su negocio a mano al entrar.
 
+540. **Rotación de horarios, semana del 9-nov** (2026-11-10), tarea programada. Corrió un día tarde (el lunes 9 no se ejecutó), así que usé las 4 ideas que Ideas AI creó el lunes 9-nov 12:00 UTC (corrida sin error), no ideas viejas. Aprobadas 563-566; posts programados en hora de Miami: **210 Facebook mar 10-nov 17:00**, **212 LinkedIn mié 11-nov 19:00**, **211 Facebook jue 12-nov 08:00**, **213 Instagram vie 13-nov 12:00**. Ninguna fecha había pasado. Las 4 alarmas en espera en `sNNhTEH8IzJsOIm3` (una por post, con la hora UTC correcta). Textos sanos, sin precios ni datos fuera del perfil. La imagen del 213 decía "SHIPPING INSOICE": regenerada una vez con `solo_titulo`; el título quedó bien, pero el papel del fondo sigue con letras chicas mal formadas ("SHIPPNG"). Se programó igual: cambiarla a mano antes del viernes si molesta.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
