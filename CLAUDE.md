@@ -683,6 +683,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 548. **Bubble: Equipo en "Mi cuenta" de la cuenta de negocio** (2026-11-10), a pedido de la usuaria (ítem 579 de Bubble). Invita a un administrador o a un operador (por ejemplo, la recepcionista: maneja el agente, la agenda y las llamadas, sin facturación ni equipo), asignado solo a su negocio. Probado en el navegador (invitar y sacar); pruebas en verde. **Ojo:** el servidor local manda correos reales desde la casilla de la usuaria; la invitación de prueba fue a un dominio inexistente y rebotó.
 
+549. **Bubble: Configuración con tarjetas desplegables** (2026-11-10), a pedido de la usuaria (ítem 580 de Bubble). Cada tarjeta se abre tocando su título; arrancan abiertas solo las chicas (cuenta, idioma, apariencia) y el panel recuerda lo que dejaste abierto. Apariencia pasó al lado de la contraseña, en el hueco de la derecha. Vale para agencias y negocios. Visto en el navegador; pruebas en verde.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
