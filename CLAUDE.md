@@ -685,7 +685,9 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 549. **Bubble: Configuración con tarjetas desplegables** (2026-11-10), a pedido de la usuaria (ítem 580 de Bubble). Cada tarjeta se abre tocando su título; arrancan abiertas solo las chicas (cuenta, idioma, apariencia) y el panel recuerda lo que dejaste abierto. Apariencia pasó al lado de la contraseña, en el hueco de la derecha. Vale para agencias y negocios. Visto en el navegador; pruebas en verde.
 
-550. **Bubble: revisión de la API y documento para el ingeniero** (2026-11-10), a pedido de la usuaria (ítem 581 de Bubble). La API para conectar otras apps está hecha (llaves por cliente, leer o escribir, uno o todos los negocios, avisos por evento, GoHighLevel y HubSpot); le faltan permisos por tipo de dato. Documento "Bubble 54 para G54": https://claude.ai/artifact/6s3RwwGBfqFDqJdymPYZ7h (copia en `docs/` de Bubble). **Decidido por la usuaria:** servidor y dominio aprobados, se hacen al final; el cobro va con G54 y ya se coordina con el ingeniero: no volver a plantearlos.
+550. **Bubble: revisión de la API y documento para el ingeniero** (2026-11-10), a pedido de la usuaria (ítem 581 de Bubble). La API para conectar otras apps está hecha (llaves por cliente, leer o escribir, uno o todos los negocios, avisos por evento, GoHighLevel y HubSpot). Permisos por tipo de dato, en el ítem 551. Documento "Bubble 54 para G54": https://claude.ai/artifact/6s3RwwGBfqFDqJdymPYZ7h (copia en `docs/` de Bubble). **Decidido por la usuaria:** servidor y dominio aprobados, se hacen al final; el cobro va con G54 y ya se coordina con el ingeniero: no volver a plantearlos.
+
+551. **Bubble: llaves de la API con permisos por tipo de dato** (2026-11-10), a pedido de la usuaria (ítem 582 de Bubble). Al crear una llave, el cliente elige para clientes, llamadas y citas si la llave no los ve, solo los lee o también los escribe. Las llaves de antes siguen funcionando igual. Probado en el navegador con una llave real (ya borrada); pruebas en verde.
 
 ## Error conocido
 
