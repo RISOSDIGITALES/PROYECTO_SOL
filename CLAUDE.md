@@ -691,6 +691,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 552. **Bubble: sin huecos en pantalla en todo el panel** (2026-11-10), a pedido de la usuaria (ítem 583 de Bubble). La página del agente dejaba un hueco grande debajo de Número; reordenada (Número y Modelo a la izquierda, Voz a la derecha, columnas parejas). Revisado todo el panel con una medición automática en el navegador a 1280, 1440 y 1920 px, en las tres clases de cuenta y en las páginas públicas: se corrigieron Inicio, Mi cuenta/Configuración, planes, integraciones, Ayuda, perfil de agencia y el resumen del agente. Quedó en 0 huecos; pruebas en verde.
 
+553. **Bubble: Google Calendar probado con una cuenta real** (2026-11-10), a pedido de la usuaria (ítem 584 de Bubble). La usuaria creó el proyecto de Google Cloud y conectó su cuenta desde la floristería demo. La cita de prueba (mar 17-nov 10:00) subió a Google, y sus eventos ocupados taparon horarios del agente. **Para decidir:** tres eventos repetidos de día completo marcados como Ocupado tapan días enteros; mucha gente los usa de recordatorio. **Falta (11-nov):** ver la cita en Google, probar un evento con hora y limpiar la prueba. Documento del ingeniero marcado como probado.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
@@ -704,6 +706,18 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 ## Reportes Diarios
 
 > Solo los últimos 3 reportes (regla cambiada el 2026-10-30, antes 7 días, para gastar menos uso: CLAUDE.md se carga entero en cada sesión). Al agregar uno, mover el más viejo a `PROYECTO-SOL/historial/reportes/AAAA-MM-DD.md`.
+
+---
+
+### 2026-11-10 (Lunes)
+
+Arranqué con la rutina de G54, todo limpio, con los cuatro posts de la semana ya programados, y después revisé a fondo los pendientes y la guía de la API: ninguno de los 14 pedidos del Éxodo cambió, y encontré que la guía enlaza una página de planes del ingeniero que no coincide con el único plan que existe de verdad. Rehice la imagen del post de Instagram del viernes, que traía letras mal formadas en los papeles del fondo, y le dejé al generador una regla para que en adelante esos papeles salgan en blanco.
+
+El grueso del día fue Bubble. Dejé lista la cuenta del negocio independiente: entra con su negocio ya creado y todo el panel le habla de "tu negocio", con su propia Ayuda, Bubbli, "Mi cuenta" y su equipo, y la configuración quedó en tarjetas desplegables para que no aparezca todo de golpe. Revisé que la API para conectar otras apps ya estaba hecha y le sumé que cada cliente elija, para clientes, llamadas y citas, si la llave no los ve, solo los lee o también los escribe. Armé el documento para el ingeniero con qué es Bubble y qué le aporta a G54, y como seguían apareciendo huecos vacíos entre tarjetas, revisé todo el panel con una medición automática en tres tamaños de pantalla hasta dejarlo en cero.
+
+En la tarde creé el proyecto de Google Cloud y conecté mi cuenta a la floristería de prueba: la cita que agendó Bubble apareció en mi Google y lo que tengo ocupado ahí dejó de ofrecerse en las llamadas, así que en el documento del ingeniero ya figura como probado. De paso apareció que mis eventos repetidos de día completo, marcados como ocupados, tapan días enteros, y queda por decidir si eso debe ser así para los clientes. Mañana sigo con la prueba de un evento con hora y limpio la cita de prueba. Ahí paré con todo subido y el uso semanal en 12 %.
+
+**Documento "Bubble 54 para G54":** https://claude.ai/artifact/6s3RwwGBfqFDqJdymPYZ7h
 
 ---
 
@@ -737,20 +751,3 @@ En Bubble dejé hecha la conexión con Google Calendar por negocio: lo ocupado e
 En la tarde quise probar DeepSeek e Inworld para bajar el costo de las llamadas. DeepSeek no da crédito gratis y la cuenta estaba en cero, así que decidí no cargarle saldo. Inworld sí: escuché muestras, descarté a Valeria y lo sumé a Bubble como segundo proveedor de voz con 9 voces. Empieza a hablar en 0,24 segundos contra 0,53 de Cartesia, cuesta un tercio, y en una llamada de ejemplo el transcriptor entendió el 95 %. Esa misma llamada mostró que la IA inventaba una hora límite de entrega y pedía todos los datos de un pedido en una sola pregunta; lo corregí y lo medí antes y después, y pasó de fallar casi siempre a no fallar ninguna vez. Falta una llamada telefónica real con Inworld. Ahí paré con todo subido y el uso semanal en 42 %.
 
 ---
-
-### 2026-11-05 (Jueves)
-
-Arranqué con la rutina de G54, todo limpio, y el post de LinkedIn salió a su hora. Después revisé los comentarios del reporte de ayer y Don Marc pidió comparar las IAs chinas contra Groq para la voz de Bubble; hice la comparación con precios oficiales y también la del costo por minuto de una llamada, que dejo abajo. En G54 arreglé un error que se repetía en Distribution con los posts de LinkedIn y les puse candado a los webhooks de VAPI, que confirmé con llamadas reales. Luego levanté Bubble y seguí las pruebas de ayer: el seguimiento sin correo, pasar a una persona cuando el cliente lo pide, que sin el aviso al especialista no prometa que alguien lo va a llamar, los avisos a otros sistemas por internet, cuánto gasta la IA en cada respuesta (menos de lo que tenía anotado) y el despliegue con Docker, donde corregí que el modelo de búsqueda en documentos se bajaba en cada arranque.
-
-Me preguntaron si Bubble ya estaba listo y la respuesta honesta fue que todavía no para venderlo, sí para un piloto controlado. Con eso armé la página de términos y condiciones, que deja claro que el permiso de las personas a las que llama el agente es responsabilidad del negocio y que con otros sistemas solo damos el puente, y la casilla para aceptarlos al registrarse; falta que la revise un abogado. También dejé un correo de alerta si el agente de voz se cae y las migraciones de la base para el servidor, y vi que dos de los pendientes técnicos ya estaban resueltos desde octubre.
-
-En la tarde tuve la reunión con el ingeniero sobre el Éxodo: reescribí el pedido de Métricas para explicar bien qué es cada pieza y por qué importa, saqué el cotizador y lo legal a dos archivos aparte, y dejé claro que la plantilla de los correos la crea G54 dentro de Camila. Después revisé la API y él ya había subido cambios el 4-nov; los probé en vivo con datos de prueba y funcionan: videos de más de 2 MB, teléfonos en un solo formato, monto y motivo al cerrar o perder un trato, duplicados, descarga en CSV y correos programados. El Éxodo quedó en 14 pedidos, y Camila ya manda en cada borrador por qué se le escribe a esa persona y de dónde salió su contacto. Ahí paré con todo subido y el uso semanal en 25 %.
-
-**Para Don Marc — IAs chinas vs. Groq para la voz de Bubble**
-Precios oficiales de noviembre, por llamada de unas 10 respuestas.
-- Groq (el que usamos): unos US$0,004 por llamada.
-- DeepSeek: unos US$0,001 a 0,002; ahorra US$2-3 cada 1.000 llamadas, pero tarda más en empezar a hablar y guarda los datos en China.
-- Qwen (US$0,024) y Kimi (US$0,033): más caros que Groq.
-- La IA es solo el 4 % del costo de un minuto de llamada (unos US$0,047); la voz es el 39 %.
-- Cambiar la voz a Inworld ahorraría unos US$24 cada 1.000 llamadas, diez veces más que DeepSeek, pero falta probarla en español.
-Recomendación: seguir con Groq; cualquier cambio queda en espera hasta que se decidan los gastos de Bubble.
