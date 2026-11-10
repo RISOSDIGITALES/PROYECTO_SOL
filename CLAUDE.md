@@ -675,7 +675,9 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 544. **Bubble: el negocio independiente entra con su negocio ya creado** (2026-11-10), a pedido de la usuaria (ítem 575 de Bubble). Con un plan de negocio, el registro crea el negocio con su nombre, su agente y la voz inicial, y los resúmenes van al correo del registro. Servidor 664 en verde. Panel ajustado en el ítem 545.
 
-545. **Bubble: el panel habla de "tu negocio" en las cuentas de negocio** (2026-11-10), a pedido de la usuaria (ítem 576 de Bubble). Menú con "Mi cuenta" y "Mi negocio"; en Inicio, el primer paso es completar los datos del negocio (horario y productos, lo que usa el agente para contestar), sin tarjeta de agencia ni "Volver a negocios". Probado en el navegador con una cuenta de prueba (ya borrada). **Falta:** que Bubbli y la Ayuda también hablen para el negocio.
+545. **Bubble: el panel habla de "tu negocio" en las cuentas de negocio** (2026-11-10), a pedido de la usuaria (ítem 576 de Bubble). Menú con "Mi cuenta" y "Mi negocio"; en Inicio, el primer paso es completar los datos del negocio (horario y productos, lo que usa el agente para contestar), sin tarjeta de agencia ni "Volver a negocios". Probado en el navegador con una cuenta de prueba (ya borrada). Bubbli y la Ayuda, en el ítem 546.
+
+546. **Bubble: Bubbli y la Ayuda para la cuenta de negocio** (2026-11-10), a pedido de la usuaria (ítem 577 de Bubble). Ayuda propia (presentación, primeros pasos, plan, facturación, número y las guías del agente, sin lo que es solo de agencias), Bubbli con sugerencias para "Mi negocio", y los atajos abren directo el negocio. **De paso:** la guía de planes de las agencias seguía con los precios de octubre; corregida. Probado en el navegador con la cuenta demo; pruebas en verde. **Falta:** que "Mi cuenta" no abra el perfil de agencia.
 
 ## Error conocido
 
