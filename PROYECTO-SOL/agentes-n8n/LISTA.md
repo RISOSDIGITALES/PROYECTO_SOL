@@ -1,4 +1,4 @@
-# Agentes de n8n — copia del 2026-11-06
+# Agentes de n8n — copia del 2026-11-10
 
 Generado con `python PROYECTO-SOL/scripts/exportar-agentes.py`. Secretos tapados (`REDACTED_...`);
 los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` ni `staticData`.
@@ -24,7 +24,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | 🔄 LinkedIn — Renovar token (G54) | `JsLFysLfQIxGZN5f` | sí | 2026-11-03 | [linkedin-renovar-token-g54.json](g54-plataforma/linkedin-renovar-token-g54.json) |
 | 🔍 Camila G54 — Prospección | `jg5SENgRpe2wLBTn` | sí | 2026-11-06 | [camila-g54-prospeccion.json](g54-plataforma/camila-g54-prospeccion.json) |
 | 🔗 CTA Click Tracker (G54) | `JN2vRUznkOXlej8q` | sí | 2026-09-28 | [cta-click-tracker-g54.json](g54-plataforma/cta-click-tracker-g54.json) |
-| 🖼️ Content AI — Generador de Imágenes (Pollinations) | `1rsqmFabW5PjnlHy` | sí | 2026-11-03 | [content-ai-generador-de-imagenes-pollinations.json](g54-plataforma/content-ai-generador-de-imagenes-pollinations.json) |
+| 🖼️ Content AI — Generador de Imágenes (Pollinations) | `1rsqmFabW5PjnlHy` | sí | 2026-11-10 | [content-ai-generador-de-imagenes-pollinations.json](g54-plataforma/content-ai-generador-de-imagenes-pollinations.json) |
 | 🚨 Error Reporter — Growth54 | `CKOju9JVnSMymfKv` | sí | 2026-08-05 | [error-reporter-growth54.json](g54-plataforma/error-reporter-growth54.json) |
 | 🧠 Ideas AI — RRSS G54 | `nHawWPIIu51ABBgl` | sí | 2026-11-03 | [ideas-ai-rrss-g54.json](g54-plataforma/ideas-ai-rrss-g54.json) |
 | 🧠 Strategist AI — RRSS G54 v3.0 (Tendencias) | `S62o0wcXq8Wfj67S` | sí | 2026-11-03 | [strategist-ai-rrss-g54-v3-0-tendencias.json](g54-plataforma/strategist-ai-rrss-g54-v3-0-tendencias.json) |
