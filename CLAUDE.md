@@ -679,7 +679,9 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 546. **Bubble: Bubbli y la Ayuda para la cuenta de negocio** (2026-11-10), a pedido de la usuaria (ítem 577 de Bubble). Ayuda propia (presentación, primeros pasos, plan, facturación, número y las guías del agente, sin lo que es solo de agencias), Bubbli con sugerencias para "Mi negocio", y los atajos abren directo el negocio. **De paso:** la guía de planes de las agencias seguía con los precios de octubre; corregida. Probado en el navegador con la cuenta demo; pruebas en verde. "Mi cuenta", en el ítem 547.
 
-547. **Bubble: "Mi cuenta" en la cuenta de negocio** (2026-11-10), a pedido de la usuaria (ítem 578 de Bubble). Sin perfil de agencia: Configuración pasa a llamarse "Mi cuenta" (acceso, idioma, contraseña, facturación e integraciones) y el perfil de agencia lleva ahí. Probado en el navegador; pruebas en verde. **Falta:** la cuenta de negocio no tiene dónde invitar a su equipo (estaba en el perfil de agencia).
+547. **Bubble: "Mi cuenta" en la cuenta de negocio** (2026-11-10), a pedido de la usuaria (ítem 578 de Bubble). Sin perfil de agencia: Configuración pasa a llamarse "Mi cuenta" (acceso, idioma, contraseña, facturación e integraciones) y el perfil de agencia lleva ahí. Probado en el navegador; pruebas en verde. Equipo, en el ítem 548.
+
+548. **Bubble: Equipo en "Mi cuenta" de la cuenta de negocio** (2026-11-10), a pedido de la usuaria (ítem 579 de Bubble). Invita a un administrador o a un operador (por ejemplo, la recepcionista: maneja el agente, la agenda y las llamadas, sin facturación ni equipo), asignado solo a su negocio. Probado en el navegador (invitar y sacar); pruebas en verde. **Ojo:** el servidor local manda correos reales desde la casilla de la usuaria; la invitación de prueba fue a un dominio inexistente y rebotó.
 
 ## Error conocido
 
