@@ -673,7 +673,9 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 543. **Imagen del 213 rehecha y regla nueva en el generador** (2026-11-10), a pedido de la usuaria (pendiente del ítem 540). Los papeles del fondo salían con letras mal formadas porque el prompt solo controlaba el título. En `🎨 Construir Prompt` (`1rsqmFabW5PjnlHy`), en los modos con título (`solo_titulo`, `titulo_subtitulo`, `titulo_sub_detalles`) se suma que el título es el único texto y que papeles, etiquetas, cajas y carteles van en blanco; vale para todas las empresas. Regenerada la del 213 (Instagram): título bien escrito, papel en blanco y calculadora sin números. Sigue programado para el vie 13-nov 12:00 Miami. Respaldo previo en el scratchpad (`img-gen-antes-2026-11-10.json`); copia del repo actualizada.
 
-544. **Bubble: el negocio independiente entra con su negocio ya creado** (2026-11-10), a pedido de la usuaria (ítem 575 de Bubble). Con un plan de negocio, el registro crea el negocio con su nombre, su agente y la voz inicial, y los resúmenes van al correo del registro. Servidor 664 en verde. **Falta:** que el panel diga "tu negocio" en estas cuentas y verlo con un registro real.
+544. **Bubble: el negocio independiente entra con su negocio ya creado** (2026-11-10), a pedido de la usuaria (ítem 575 de Bubble). Con un plan de negocio, el registro crea el negocio con su nombre, su agente y la voz inicial, y los resúmenes van al correo del registro. Servidor 664 en verde. Panel ajustado en el ítem 545.
+
+545. **Bubble: el panel habla de "tu negocio" en las cuentas de negocio** (2026-11-10), a pedido de la usuaria (ítem 576 de Bubble). Menú con "Mi cuenta" y "Mi negocio"; en Inicio, el primer paso es completar los datos del negocio (horario y productos, lo que usa el agente para contestar), sin tarjeta de agencia ni "Volver a negocios". Probado en el navegador con una cuenta de prueba (ya borrada). **Falta:** que Bubbli y la Ayuda también hablen para el negocio.
 
 ## Error conocido
 
