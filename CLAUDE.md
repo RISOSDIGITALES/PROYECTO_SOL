@@ -699,6 +699,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 564. **Marco por teléfono se despide en el idioma de la llamada** (2026-11-11), a pedido de la usuaria (sigue del ítem 563). En el asistente de VAPI (`69fedf52-…`): se quitó el mensaje de cierre fijo en inglés; el prompt suma una sección de cierre (despedida en el idioma de la llamada, nunca en los dos) y la frase de silencio en español; las frases que cortan la llamada suman "have a great day", "que tenga buen día", "hasta luego" y "hasta pronto". No se pudo simular: el chat de prueba de VAPI pide tarjeta y Groq no responde desde esta red (nuestra cuenta de Groq solo tiene `openai/gpt-oss-120b`: `llama-3.3-70b-versatile` y los otros modelos dan 404). Revisado: no afecta a nadie. Todos los agentes de n8n ya usan `gpt-oss-120b`, y VAPI usa su propia cuenta de Groq (las llamadas del 5-nov respondieron bien con llama-3.3). **Falta:** una llamada real en español. Respaldo en el scratchpad (`vapi-marco-antes-2026-11-11.json`).
 
+565. **Bubble: revisión completa con puntaje, 72 %** (2026-11-11), a pedido de la usuaria (ítem 587 de Bubble). Diez perspectivas, de visual 86 a producción 55; informe con 13 arreglos ordenados: https://claude.ai/artifact/4WACFs6gbEBhJMnGMWkUKz. Nada arreglado todavía.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
