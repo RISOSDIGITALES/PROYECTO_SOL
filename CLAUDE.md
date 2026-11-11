@@ -701,6 +701,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 565. **Bubble: revisión completa con puntaje, 72 %** (2026-11-11), a pedido de la usuaria (ítem 587 de Bubble). Diez perspectivas, de visual 86 a producción 55; informe con 13 arreglos ordenados: https://claude.ai/artifact/4WACFs6gbEBhJMnGMWkUKz. Nada arreglado todavía.
 
+566. **Bubble: 5 de los 6 arreglos chicos de la revisión** (2026-11-11), a pedido de la usuaria (ítem 588 de Bubble): sin "agencia" para el negocio, mes gratis visible en inicio y registro, aviso con "Reintentar", sin parpadeo de agencia al cargar y el menú del celular completo. Panel 283 en verde. Falta decidir el precio de la Agencia Inicial.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
