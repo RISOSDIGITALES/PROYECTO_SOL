@@ -707,6 +707,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 568. **Bubble: seguridad de 82 a 92 %** (2026-11-11), a pedido de la usuaria (ítem 591 de Bubble). Google Calendar confirmado con la sesión, CSP y sesión de 8 horas que se renueva, IP real solo desde el proxy, bloqueo por cuenta y por IP, y revocar llaves al sacar a alguien. Servidor 680 y panel 286 en verde. Revisión general: 77 %. Falta probar Google Calendar con la cuenta real.
 
+569. **Bubble: pruebas de 74 a 86 %** (2026-11-11), a pedido de la usuaria (ítem 592 de Bubble). Servidor en paralelo (11 → 4,7 min), pruebas del arranque de cada llamada, prueba de punta a punta y pruebas automáticas en GitHub. La primera corrida en GitHub quedó en cola: falta verla en verde. Revisión general: 78 %.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
