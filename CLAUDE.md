@@ -701,7 +701,7 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 565. **Bubble: revisión completa con puntaje, 72 %** (2026-11-11), a pedido de la usuaria (ítem 587 de Bubble). Diez perspectivas, de visual 86 a producción 55; informe con 13 arreglos ordenados: https://claude.ai/artifact/4WACFs6gbEBhJMnGMWkUKz. Nada arreglado todavía.
 
-566. **Bubble: 5 de los 6 arreglos chicos de la revisión** (2026-11-11), a pedido de la usuaria (ítem 588 de Bubble): sin "agencia" para el negocio, mes gratis visible en inicio y registro, aviso con "Reintentar", sin parpadeo de agencia al cargar y el menú del celular completo. Panel 283 en verde. Falta decidir el precio de la Agencia Inicial.
+566. **Bubble: 5 de los 6 arreglos chicos de la revisión** (2026-11-11), a pedido de la usuaria (ítem 588 de Bubble): sin "agencia" para el negocio, mes gratis visible en inicio y registro, aviso con "Reintentar", sin parpadeo de agencia al cargar y el menú del celular completo. Panel 283 en verde. La Agencia Inicial queda en US$99 con 750 minutos (antes 1.000), decidido por la usuaria (ítem 589 de Bubble).
 
 ## Error conocido
 
