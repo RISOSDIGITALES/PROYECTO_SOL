@@ -725,6 +725,18 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-11-11 (Miércoles)
+
+Arranqué con lo que pidió la mañana: el resumen de validación de G54 en HTML, un comentario corto sobre DeepSeek y la rutina de G54, todo limpio. Cerré la prueba de Google Calendar con un evento con hora y decidí que los eventos de todo el día ya no tapen la agenda. Hice la prueba del Reel con un video de prueba y encontré que G54 no le avisa a Reels AI porque falta registrar una clave en su catálogo, así que se la pedí al ingeniero en el Éxodo; de paso corregí que los textos prometían rapidez y mandaban a un WhatsApp sin número. Mandé un correo real de Camila a anget3747, le arreglé el texto centrado y dejé la imagen en el idioma del correo. También tomé la indicación de Don Marc de escribir la fecha al estilo de EE. UU., y corregí que Marco por teléfono se despidiera en inglés.
+
+La tarde fue de Bubble. Pedí una revisión completa con puntaje desde todas las perspectivas y salió 72 %: fuerte en diseño y seguridad, flojo en producción y en lo que entiende un dueño de negocio. Hice los seis arreglos chicos (sin la palabra "agencia" para el negocio, el mes gratis a la vista, el menú del celular completo, entre otros) y dejé la Agencia Inicial en US$99 con 750 minutos. Después armé un plan para llevar todo a 90 y avancé con los dos primeros pasos: la seguridad subió de 82 a 92 % y las pruebas de 74 a 86 %, con todas las pruebas en verde y la revisión general en 78 %.
+
+Lo único que quedó colgado fue la primera corrida de pruebas en GitHub, que se quedó en cola sin arrancar y mañana reviso si es por los minutos de la cuenta. Ahí paré por la hora, con todo subido y el uso semanal en 26 %.
+
+**Revisión completa de Bubble 54:** https://claude.ai/artifact/4WACFs6gbEBhJMnGMWkUKz
+
+---
+
 ### 2026-11-10 (Lunes)
 
 Arranqué con la rutina de G54, todo limpio, con los cuatro posts de la semana ya programados, y después revisé a fondo los pendientes y la guía de la API: ninguno de los 14 pedidos del Éxodo cambió, y encontré que la guía enlaza una página de planes del ingeniero que no coincide con el único plan que existe de verdad. Rehice la imagen del post de Instagram del viernes, que traía letras mal formadas en los papeles del fondo, y le dejé al generador una regla para que en adelante esos papeles salgan en blanco.
@@ -758,12 +770,3 @@ En la tarde resumí el método de validación de G54 porque Don Marc lo encontr�
 
 ---
 
-### 2026-11-06 (Viernes)
-
-Arranqué con la rutina de G54, todo limpio: salieron los posts de Facebook e Instagram, y el de Facebook confirmó el arreglo de ayer en Distribution. Revisé la API a fondo contra los 14 pedidos del Éxodo y ninguno había cambiado; de paso encontré que unir tratos duplicados da error y que la API acepta un campo que no existe sin avisar. Con lo que encontré hice que Camila respete la baja de correos con el campo nuevo de G54, lo probé dos veces con tratos falsos, y dejé el diagnóstico avisando solo cuando G54 cambia algo. También corrí Prospección con Hunter: respondió bien pero no tenía correo para ese negocio, y ahora, si Hunter falla o se queda sin búsquedas, el resumen lo avisa en vez de tragárselo.
-
-En Bubble dejé hecha la conexión con Google Calendar por negocio: lo ocupado en Google tapa esos horarios para el agente y las citas se copian allá. Queda esperando que cree el proyecto en Google Cloud y, para clientes reales, que Google verifique la app. Escribí la política de privacidad, y como promete que una persona puede pedir una copia de sus datos o que los borren, agregué las dos cosas en la ficha del cliente. También ordené la tarjeta de Integraciones y corregí la guía que mezclaba español e inglés. Los términos y la política quedan como borrador hasta que los revise un abogado.
-
-En la tarde quise probar DeepSeek e Inworld para bajar el costo de las llamadas. DeepSeek no da crédito gratis y la cuenta estaba en cero, así que decidí no cargarle saldo. Inworld sí: escuché muestras, descarté a Valeria y lo sumé a Bubble como segundo proveedor de voz con 9 voces. Empieza a hablar en 0,24 segundos contra 0,53 de Cartesia, cuesta un tercio, y en una llamada de ejemplo el transcriptor entendió el 95 %. Esa misma llamada mostró que la IA inventaba una hora límite de entrega y pedía todos los datos de un pedido en una sola pregunta; lo corregí y lo medí antes y después, y pasó de fallar casi siempre a no fallar ninguna vez. Falta una llamada telefónica real con Inworld. Ahí paré con todo subido y el uso semanal en 42 %.
-
----
