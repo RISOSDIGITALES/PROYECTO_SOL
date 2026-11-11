@@ -683,6 +683,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 556. **Borradores 7 y 8 de Camila: se quedan pendientes** (2026-11-11), decidido por la usuaria. Las copias de prueba del 31-oct llegaron bien a risosadmi: en inglés, "Doral, Miami", horario en inglés, pie completo y enlace de baja, y todo lo que prometen está en el perfil de CE. Son para negocios reales, así que no se aprueban ni se cancelan: quedan como están. No volver a plantearlo.
 
+557. **Bubble: los eventos de todo el día ya no tapan la agenda, y el registro guarda la zona horaria** (2026-11-11), a pedido de la usuaria (ítem 586 de Bubble). Solo tapan los eventos de Google con hora. El negocio independiente que se registra toma la zona horaria del navegador; antes quedaba sin zona y la agenda usaba la de Nueva York. Pruebas en verde.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
