@@ -681,6 +681,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 555. **Bubble: Google Calendar con evento con hora, y prueba limpia** (2026-11-11), a pedido de la usuaria (ítem 585 de Bubble). La cita de prueba estaba en Google; un evento Ocupado de 14:00 a 15:00 sacó esos horarios de lo que ofrece el agente y dejó el resto. Borrados el evento y la cita, y apagada otra vez la agenda de la floristería de prueba. **Falta decidir:** si los eventos de día completo marcados Ocupado tapan la agenda (hoy sí).
 
+556. **Borradores 7 y 8 de Camila: se quedan pendientes** (2026-11-11), decidido por la usuaria. Las copias de prueba del 31-oct llegaron bien a risosadmi: en inglés, "Doral, Miami", horario en inglés, pie completo y enlace de baja, y todo lo que prometen está en el perfil de CE. Son para negocios reales, así que no se aprueban ni se cancelan: quedan como están. No volver a plantearlo.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
