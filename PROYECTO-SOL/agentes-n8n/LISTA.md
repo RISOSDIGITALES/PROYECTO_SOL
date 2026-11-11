@@ -13,7 +13,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | ✉️ Camila — Baja de correos (G54) | `FXRpSFH9ESdVah1P` | sí | 2026-11-06 | [camila-baja-de-correos-g54.json](g54-plataforma/camila-baja-de-correos-g54.json) |
 | 🎥 Pedidos de Grabación AI — G54 | `17mc8CJkKH2qzsdA` | sí | 2026-10-26 | [pedidos-de-grabacion-ai-g54.json](g54-plataforma/pedidos-de-grabacion-ai-g54.json) |
 | 🎨 Content AI — RRSS G54 v1.3 | `wyO1f93A66imn9qw` | sí | 2026-11-03 | [content-ai-rrss-g54-v1-3.json](g54-plataforma/content-ai-rrss-g54-v1-3.json) |
-| 🎬 Reels AI — G54 | `Xqb5sXsFDRz0Diys` | sí | 2026-10-20 | [reels-ai-g54.json](g54-plataforma/reels-ai-g54.json) |
+| 🎬 Reels AI — G54 | `Xqb5sXsFDRz0Diys` | sí | 2026-11-11 | [reels-ai-g54.json](g54-plataforma/reels-ai-g54.json) |
 | 👁️ Vigía G54 — Supervisor RRSS | `zTm4tMOV9vMfUDnG` | sí | 2026-10-31 | [vigia-g54-supervisor-rrss.json](g54-plataforma/vigia-g54-supervisor-rrss.json) |
 | 💬 Sales AI — Motor de Conversación G54 | `otycsrxrMEMuxuwD` | sí | 2026-11-03 | [sales-ai-motor-de-conversacion-g54.json](g54-plataforma/sales-ai-motor-de-conversacion-g54.json) |
 | 📊 Analytics AI Semanal — G54 | `EX9K1AZwKeouSJ9G` | sí | 2026-11-03 | [analytics-ai-semanal-g54.json](g54-plataforma/analytics-ai-semanal-g54.json) |

@@ -691,6 +691,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 560. **`rrss_reel` no se puede registrar: pedido al ingeniero** (2026-11-11), con el OK de la usuaria para registrarla. `POST /api/agent-endpoints` con `rrss_reel` responde 422: la clave no está en el `catalog` de G54 (24 claves, ninguna de Reels), aunque la documentación de `subir-video` diga que avisa a esa clave. Agregado al Éxodo (Backend): sumarla al catálogo y al seeder con el webhook `reel-subido-g54`. Ahora son 15 pedidos.
 
+561. **Reels AI: sin "escríbenos por WhatsApp" y sin prometer rapidez** (2026-11-11), sigue del ítem 559. En `🎬 Preparar Reel` (`Xqb5sXsFDRz0Diys`): (1) el llamado invita a escribir por mensaje directo en esa red (Community AI contesta los DM), porque desde el 20-oct los posts no llevan número de WhatsApp y el texto invitaba a escribir sin dar ninguno; (2) el pedido de grabación llega a la IA sin los campos de duración (`duracion_total_seg`, `segundos`), que eran de donde salía "en 30 segundos"; (3) una línea final de prohibido ("en segundos", "en minutos", "en tiempo récord", "al instante"…). Medido en modo prueba con el post 214: con solo la regla, 5 de 6 prometían rapidez; con la línea final, 1 de 6 y después 0 de 6. Vale para todas las empresas. Texto del post 214 reescrito con las reglas nuevas. Respaldo en el scratchpad; copia del repo actualizada.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
