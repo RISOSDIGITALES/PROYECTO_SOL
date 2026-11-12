@@ -697,6 +697,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 577. **Bubble: llamadas en tabla, color de la agencia, errores con código y agente más ordenado** (2026-11-12), a pedido de la usuaria (ítems 600 y 601 de Bubble). El registro de llamadas del negocio pasó a una tabla, la agencia elige su color (panel y correos de sus clientes), los errores de la API traen un código fijo y las herramientas de la llamada salieron de la función principal del agente. Revisión general: 88 %.
 
+578. **Bubble: llamada real de prueba y detalles** (2026-11-12), a pedido de la usuaria (ítem 602 de Bubble). La llamada al número de Floristería Pétalos confirmó el reordenamiento del agente, aunque se cortó a los 103 s por el límite de Groq gratis. Esa llamada mostró que LiveKit pedía cada respuesta dos veces, y ya quedó corregido. Además: "Reintentar" en Facturación y Equipo y menos palabras técnicas. Revisión general: 88 %.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
