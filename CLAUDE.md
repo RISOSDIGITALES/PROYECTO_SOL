@@ -693,6 +693,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 575. **Bubble: utilidad, paso 6 del plan, 80 → 88 %** (2026-11-12), a pedido de la usuaria (ítem 598 de Bubble). Plantillas por rubro (seis rubros: el agente queda listo para ese tipo de negocio en un toque), informe mensual de cada negocio firmado por su agencia, y el logo y el nombre de la agencia en el panel y en los correos de su cliente. Revisión general: 87 %.
 
+576. **Bubble: ayuda del "?" más clara** (2026-11-12), a pedido de la usuaria (ítem 599 de Bubble). Cada "?" dice qué es en una frase, y su ventanita ya no hereda las mayúsculas del título. Entendimiento al 85 %; revisión general: 87 %. Se cortó por la ventana de 5 horas.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
