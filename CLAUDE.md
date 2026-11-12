@@ -717,6 +717,16 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-11-12 (Jueves)
+
+Arranqué con la rutina de G54, todo limpio y con los posts de la semana saliendo a su hora, y confirmé que las pruebas automáticas de Bubble ya corren en verde en GitHub. Después seguí con el plan para llevar Bubble a 90 en cada perspectiva. Primero dejé lista la parte de producción: las tareas de fondo ya no se duplican, el PDF no congela el servidor, los registros quedaron ordenados y sin datos personales, las migraciones son un paso aparte, y hay un respaldo diario de la base con un vigía que avisa por correo. Lo probé de verdad en Docker. Luego trabajé la experiencia: el agente nace con el nombre de su voz, el Inicio dice qué le falta al agente y lo activa ahí mismo, la guía se abre sola, ya no aparece "Failed to fetch", Bubbli no tapa nada en el celular y la página de inicio muestra una conversación bilingüe y cuánto se ahorra frente a una recepcionista.
+
+En la tarde ordené el código: ningún archivo del servidor ni del panel pasa de 800 líneas, y lo repetido entre agencia y negocio quedó en una sola copia. También sumé lo que más le faltaba a la utilidad: plantillas por rubro para dejar el agente listo en un toque, un informe mensual de cada negocio firmado por su agencia, y el logo y el color de la agencia en lo que ve su cliente. Además pasé el registro de llamadas a una tabla. En medio, Don Marc me pasó el análisis de TikTok para OM y le preparé la respuesta sobre qué puede automatizar G54, aclarando que OM todavía no tiene la verificación de Meta y que G54 aún no es Tech Provider.
+
+Al final hice una llamada real de prueba al número de Floristería Pétalos. El agente atendió, cambió de idioma y respondió bien, pero se cortó a los 103 segundos por el límite del plan gratis de Groq. Con eso apareció que LiveKit pedía cada respuesta dos veces, y quedó corregido. Bubble queda en 88 % contando todo, y en 90 sin contar el servidor ni la prueba con dueños reales, que van con el piloto. Lo que de verdad falta antes de lanzarlo es pasar a Groq pago. Ahí paré, con todo subido y el uso semanal en 48 %.
+
+---
+
 ### 2026-11-11 (Miércoles)
 
 Arranqué con lo que pidió la mañana: el resumen de validación de G54 en HTML, un comentario corto sobre DeepSeek y la rutina de G54, todo limpio. Cerré la prueba de Google Calendar con un evento con hora y decidí que los eventos de todo el día ya no tapen la agenda. Hice la prueba del Reel con un video de prueba y encontré que G54 no le avisa a Reels AI porque falta registrar una clave en su catálogo, así que se la pedí al ingeniero en el Éxodo; de paso corregí que los textos prometían rapidez y mandaban a un WhatsApp sin número. Mandé un correo real de Camila a anget3747, le arreglé el texto centrado y dejé la imagen en el idioma del correo. También tomé la indicación de Don Marc de escribir la fecha al estilo de EE. UU., y corregí que Marco por teléfono se despidiera en inglés.
@@ -738,27 +748,3 @@ El grueso del día fue Bubble. Dejé lista la cuenta del negocio independiente: 
 En la tarde creé el proyecto de Google Cloud y conecté mi cuenta a la floristería de prueba: la cita que agendó Bubble apareció en mi Google y lo que tengo ocupado ahí dejó de ofrecerse en las llamadas, así que en el documento del ingeniero ya figura como probado. De paso apareció que mis eventos repetidos de día completo, marcados como ocupados, tapan días enteros, y queda por decidir si eso debe ser así para los clientes. Mañana sigo con la prueba de un evento con hora y limpio la cita de prueba. Ahí paré con todo subido y el uso semanal en 12 %.
 
 **Documento "Bubble 54 para G54":** https://claude.ai/artifact/6s3RwwGBfqFDqJdymPYZ7h
-
----
-
-### 2026-11-07 (Sábado)
-
-Arranqué con la rutina de G54, todo limpio, y revisé la API a fondo en vivo: ninguno de los pedidos del Éxodo cambió. Después seguí con Bubble mientras la llamada real con Inworld queda para más tarde: le puse respaldo a la voz y al transcriptor, para que si Inworld, Cartesia o Deepgram fallan la llamada no quede muda, y dejé a Inworld como voz inicial de los negocios nuevos porque empieza a hablar más rápido y cuesta un tercio. Luego saqué el costo real por llamada con la facturación de Twilio, LiveKit y Deepgram (tabla abajo); LiveKit lo tenía sobreestimado y su plan gratis nos alcanza.
-
-| Pieza | Costo por minuto (precio de lista) | Cómo se paga |
-| --- | --- | --- |
-| Twilio (la línea telefónica) | US$0,0034 | Por uso, más US$1,15 al mes por número |
-| LiveKit (el audio de la llamada) | US$0,0045 | Plan Ship: US$50 al mes, más el uso pasado lo incluido |
-| Deepgram (pasa la voz a texto) | US$0,0059 | Por uso, sin cuota fija |
-| Groq (la IA) | US$0,002 | Por uso, sin cuota fija |
-| Inworld (la voz del agente) | US$0,006 | Por uso: US$15 por millón de caracteres |
-| **Total** | **US$0,022 por minuto; US$0,028 por llamada promedio** | **US$0,028 por llamada, más US$50 al mes de LiveKit y US$1,15 por número** |
-
-Con esos números hice el análisis de la competencia y vi que nuestros planes provisorios quedaban peor que Trillet, el competidor directo. Rearmé los paquetes en dos líneas: para el negocio independiente, Básico de US$49 con 400 minutos, Plus de US$99 y Pro de US$179; para agencias, US$99, US$249 y US$549, todos con agenda, transferencia y CRM incluidos y márgenes de 60 a 85 %. Los dejé en el código junto con un mes gratis de 100 minutos que arranca cuando Growth54 aprueba la cuenta, y con un registro que ya no habla de agencias cuando el plan es de negocio; todas las pruebas pasaron. El riesgo que dejo anotado es que un negocio se salte a su agencia y contrate directo mientras no exista la marca propia.
-
-En la tarde resumí el método de validación de G54 porque Don Marc lo encontró muy largo: quedó en un esquema con una sola tabla de criterios, corregí dos datos que estaban viejos (OM en pausa y el CRM con montos ya entregado) y saqué los riesgos, los pendientes y el calendario; el documento queda al final. Además el ingeniero me dio la tarea de probar y configurar el nuevo reloj de marcación y añadir a los empleados. Ahí paré con todo subido y el uso semanal en 50 %.
-
-**Resumen del método de validación de G54:** https://claude.ai/artifact/KJyBMsi9N8LncFNUybdvrH
-
----
-
