@@ -687,6 +687,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 572. **Bubble: listo para producción al 85 %** (2026-11-12), a pedido de la usuaria (ítem 595 de Bubble). El respaldo incluye los archivos subidos, y todo quedó probado en Docker: respaldo, restauración y caída del servidor vista por el vigía. De paso se corrigieron dos fallas del arranque. Falta copiar los respaldos fuera del servidor (va con el servidor real). Revisión general: 82 %.
 
+573. **Bubble: experiencia, paso 4 del plan** (2026-11-12), a pedido de la usuaria (ítem 596 de Bubble). Cambios: el agente nace con nombre, el Modelo de IA pasó a opciones avanzadas, el Inicio dice qué le falta al agente y lo activa ahí mismo, no hay más "Failed to fetch", la guía se abre sola, Bubbli es más chico en el celular, y la página pública tiene una conversación bilingüe de ejemplo y la cuenta del ahorro. Revisión general: 85 %. Se sumaron al `.claude/launch.json` de acá los servidores `bubble54-paso4-*` (8013/5176) para probar sin chocar con otras sesiones.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
