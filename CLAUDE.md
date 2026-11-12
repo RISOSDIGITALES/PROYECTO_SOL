@@ -685,6 +685,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 571. **Bubble: listo para producción de 55 a 83 %** (2026-11-12), paso 3 del plan (ítem 594 de Bubble). Tareas de fondo con candado (sin salientes repetidas con varios procesos), el PDF ya no congela el servidor, registros en JSON sin datos personales, migraciones como paso del despliegue, y respaldo diario con vigía que avisa por correo. Servidor 718, panel 286 y agente 146 en verde. Falta levantar los servicios nuevos con Docker una vez. Revisión general: 81 %.
 
+572. **Bubble: listo para producción al 85 %** (2026-11-12), a pedido de la usuaria (ítem 595 de Bubble). El respaldo incluye los archivos subidos, y todo quedó probado en Docker: respaldo, restauración y caída del servidor vista por el vigía. De paso se corrigieron dos fallas del arranque. Falta copiar los respaldos fuera del servidor (va con el servidor real). Revisión general: 82 %.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
