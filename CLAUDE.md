@@ -695,6 +695,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 576. **Bubble: ayuda del "?" más clara** (2026-11-12), a pedido de la usuaria (ítem 599 de Bubble). Cada "?" dice qué es en una frase, y su ventanita ya no hereda las mayúsculas del título. Entendimiento al 85 %; revisión general: 87 %. Se cortó por la ventana de 5 horas.
 
+577. **Bubble: llamadas en tabla, color de la agencia, errores con código y agente más ordenado** (2026-11-12), a pedido de la usuaria (ítems 600 y 601 de Bubble). El registro de llamadas del negocio pasó a una tabla, la agencia elige su color (panel y correos de sus clientes), los errores de la API traen un código fijo y las herramientas de la llamada salieron de la función principal del agente. Revisión general: 88 %.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
