@@ -671,6 +671,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 580. **Corte de día 13-nov — diagnóstico casi limpio** (2026-11-13): 35 flujos (34 activos). Un solo error: el chequeo horario de Marco de las 01:00 UTC no pudo entrar a G54 por una falla de DNS pasajera (`EAI_AGAIN`, 4 intentos); las corridas siguientes salieron bien, así que no hay nada que arreglar. **211 Facebook publicado** el 12-nov 13:00 UTC; en cola **213 Instagram** hoy 17:00 UTC (12:00 Miami). Ideas aprobadas sin usar: ninguna (las de la semana del 16-nov se aprueban el lunes). Marco 26, Vigía 13, Community AI 1 (aviso de Meta del propio post), Groq Relay 1 (Bubble). Panel sin cambios (`index-D7b4wdqV.js`) y docs de G54 iguales a las del 5-nov y el 26-oct. Orison sin nada. Ítems 554-569 (11-nov) archivados en el historial.
 
+581. **Bubble: verificación en dos pasos para las cuentas de agencia** (2026-11-13), a pedido de la usuaria (ítem 604 de Bubble), primer paso de lo que faltaba para el 90 sin gastos. Código de 6 dígitos de una app de autenticación, con 8 códigos de recuperación; sin SMS ni costo. Servidor 741 y panel 307 en verde, y probada en el navegador. Quedan: contraste y teclado, prueba con clics (Playwright) y que un nativo revise el inglés nuevo.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
