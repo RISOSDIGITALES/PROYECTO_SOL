@@ -681,6 +681,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 585. **Bubble: Mi cuenta sin huecos, en agencia y negocio** (2026-11-13), por la nota de la usuaria en su revisión (ítem 608 de Bubble). En la agencia, "Idioma del panel" quedaba estirado y vacío y sobraba una tercera columna vacía; en el negocio, tres columnas con huecos debajo. Ahora las dos pantallas tienen dos columnas parejas, y Cambiar contraseña y la verificación en dos pasos se abren en una ventana emergente. Medido a 1280/1440/1920. Sus notas de la lista de revisión se perdieron al cerrarse la ventana: la lista suma "Copiar mis notas" para pegarlas en el chat.
 
+586. **Bubble: notas de la revisión de acabados y pendientes para el 14-nov** (2026-11-13), ítems 608-610 de Bubble. Mi cuenta del negocio también quedó en dos columnas parejas; el aviso rojo de Llamadas (marcaba 11 para siempre) ahora se borra al abrir Llamadas; y en la configuración guiada la plantilla se aplica aunque ya haya un saludo escrito, con "Volver a mi saludo de antes". La revisión quedó completa salvo esa nota, ya resuelta. **Para mañana:** (1) que la usuaria pruebe la plantilla otra vez en la configuración guiada; (2) la contraseña de `admin@growth54.com` ya no es `agencia123` (confirmar si la cambió ella o volverla a poner en la base local); (3) el campo "Nombre del agente" sale vacío aunque el saludo diga "soy Marco": preguntar si debe llenarse solo; (4) las 14 frases para el nativo de inglés siguen esperando revisor.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
@@ -694,6 +696,16 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 ## Reportes Diarios
 
 > Solo los últimos 3 reportes (regla cambiada el 2026-10-30, antes 7 días, para gastar menos uso: CLAUDE.md se carga entero en cada sesión). Al agregar uno, mover el más viejo a `PROYECTO-SOL/historial/reportes/AAAA-MM-DD.md`.
+
+---
+
+### 2026-11-13 (Viernes)
+
+Arranqué con la rutina de G54, casi limpia: solo hubo una falla pasajera de conexión en el chequeo de Marco de la madrugada, y el post de Instagram del viernes salió a su hora. Después seguí con lo que faltaba para llevar Bubble a 90 sin gastos: dejé la verificación en dos pasos con código del celular para agencias y negocios, mejoré el contraste de los textos y el uso con teclado de todas las ventanas, y sumé pruebas automáticas que recorren el panel con clics como una persona, tanto en la computadora como en GitHub. El inglés nuevo lo pasé por LanguageTool, corregí seis frases que sonaban raras y dejé solo 14 para que las mire un nativo.
+
+En la tarde armé una lista de revisión por vista, de agencia y de negocio, y me puse a revisar los acabados. Encontré que el servidor local estaba corriendo con código viejo y por eso varias cosas daban "Not found"; al reiniciarlo se arregló. En mi cuenta de agencia aparecían huecos vacíos entre tarjetas, así que la contraseña y la verificación pasaron a ventanas emergentes y las dos pantallas de Mi cuenta quedaron en dos columnas parejas. También corregí que el aviso rojo de Llamadas marcaba 11 para siempre: ahora se borra al entrar. Se me cerró la lista una vez y perdí las notas, así que le sumé un botón para copiarlas.
+
+Con mi única nota de la revisión, que la plantilla de la configuración guiada no se aplicaba, encontré que no cambiaba el saludo si ya había uno escrito, como el de Marco. Lo dejé para que se aplique siempre y con la opción de volver al saludo anterior. Ahí corté para el reporte. Mañana pruebo de nuevo la plantilla, reviso la contraseña de la cuenta de agencia de prueba y decido si el nombre del agente debe llenarse solo. Todo quedó subido y el uso semanal está en 59 %.
 
 ---
 
@@ -716,15 +728,3 @@ La tarde fue de Bubble. Pedí una revisión completa con puntaje desde todas las
 Lo único que quedó colgado fue la primera corrida de pruebas en GitHub, que se quedó en cola sin arrancar y mañana reviso si es por los minutos de la cuenta. Ahí paré por la hora, con todo subido y el uso semanal en 26 %.
 
 **Revisión completa de Bubble 54:** https://claude.ai/artifact/4WACFs6gbEBhJMnGMWkUKz
-
----
-
-### 2026-11-10 (Lunes)
-
-Arranqué con la rutina de G54, todo limpio, con los cuatro posts de la semana ya programados, y después revisé a fondo los pendientes y la guía de la API: ninguno de los 14 pedidos del Éxodo cambió, y encontré que la guía enlaza una página de planes del ingeniero que no coincide con el único plan que existe de verdad. Rehice la imagen del post de Instagram del viernes, que traía letras mal formadas en los papeles del fondo, y le dejé al generador una regla para que en adelante esos papeles salgan en blanco.
-
-El grueso del día fue Bubble. Dejé lista la cuenta del negocio independiente: entra con su negocio ya creado y todo el panel le habla de "tu negocio", con su propia Ayuda, Bubbli, "Mi cuenta" y su equipo, y la configuración quedó en tarjetas desplegables para que no aparezca todo de golpe. Revisé que la API para conectar otras apps ya estaba hecha y le sumé que cada cliente elija, para clientes, llamadas y citas, si la llave no los ve, solo los lee o también los escribe. Armé el documento para el ingeniero con qué es Bubble y qué le aporta a G54, y como seguían apareciendo huecos vacíos entre tarjetas, revisé todo el panel con una medición automática en tres tamaños de pantalla hasta dejarlo en cero.
-
-En la tarde creé el proyecto de Google Cloud y conecté mi cuenta a la floristería de prueba: la cita que agendó Bubble apareció en mi Google y lo que tengo ocupado ahí dejó de ofrecerse en las llamadas, así que en el documento del ingeniero ya figura como probado. De paso apareció que mis eventos repetidos de día completo, marcados como ocupados, tapan días enteros, y queda por decidir si eso debe ser así para los clientes. Mañana sigo con la prueba de un evento con hora y limpio la cita de prueba. Ahí paré con todo subido y el uso semanal en 12 %.
-
-**Documento "Bubble 54 para G54":** https://claude.ai/artifact/6s3RwwGBfqFDqJdymPYZ7h
