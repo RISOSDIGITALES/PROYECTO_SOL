@@ -679,6 +679,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 584. **Bubble: dos pasos también para los negocios y detalles de teclado** (2026-11-13), a pedido de la usuaria (ítem 607 de Bubble). Las cuentas de negocio ahora pueden activar la verificación en dos pasos igual que las agencias; las 3 ventanas que faltaban se manejan con teclado, y se limpiaron avisos del código que podían esconder errores. Servidor 743, panel 319 y navegador 8 de 8 en verde. Groq pago no se vuelve a plantear: es decisión de ellos.
 
+585. **Bubble: Mi cuenta sin huecos, en agencia y negocio** (2026-11-13), por la nota de la usuaria en su revisión (ítem 608 de Bubble). En la agencia, "Idioma del panel" quedaba estirado y vacío y sobraba una tercera columna vacía; en el negocio, tres columnas con huecos debajo. Ahora las dos pantallas tienen dos columnas parejas, y Cambiar contraseña y la verificación en dos pasos se abren en una ventana emergente. Medido a 1280/1440/1920. Sus notas de la lista de revisión se perdieron al cerrarse la ventana: la lista suma "Copiar mis notas" para pegarlas en el chat.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
