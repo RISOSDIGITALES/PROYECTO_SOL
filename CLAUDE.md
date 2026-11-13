@@ -677,6 +677,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 583. **Bubble: pruebas en el navegador con clics** (2026-11-13), a pedido de la usuaria (ítem 606 de Bubble). Playwright recorre 8 flujos de punta a punta sobre una base propia que se rehace en cada corrida (ingreso, idioma, negocios, pausar el agente, ventanas con teclado, panel del negocio y la verificación en dos pasos completa). Corren en la computadora y en GitHub en cada cambio (los 4 trabajos en verde). De los cuatro pasos sin gastos solo queda que un nativo revise el inglés nuevo: los 268 textos pasaron por LanguageTool sin errores reales, los revisé uno por uno y corregí 6 que sonaban raros, y para el nativo quedan solo 14 frases (los 6 saludos de las plantillas y 8 de venta de la página de inicio, ~5 min) en `docs/revision-ingles-corta-2026-11-13.html` del repo de Bubble.
 
+584. **Bubble: dos pasos también para los negocios y detalles de teclado** (2026-11-13), a pedido de la usuaria (ítem 607 de Bubble). Las cuentas de negocio ahora pueden activar la verificación en dos pasos igual que las agencias; las 3 ventanas que faltaban se manejan con teclado, y se limpiaron avisos del código que podían esconder errores. Servidor 743, panel 319 y navegador 8 de 8 en verde. Groq pago no se vuelve a plantear: es decisión de ellos.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
