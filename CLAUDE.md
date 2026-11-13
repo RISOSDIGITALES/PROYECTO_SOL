@@ -675,6 +675,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 582. **Bubble: contraste y uso con teclado** (2026-11-13), a pedido de la usuaria (ítem 605 de Bubble). Medido con axe en 15 pantallas (claro y oscuro): grises, rojo y verde de texto llegan a 4,5:1; interruptores con nombre; ventanas emergentes con foco, Escape y vuelta del foco. De paso se arregló que Actividad se caía entera con ciertos registros. Ahora 0 fallas. Quedan: prueba con clics (Playwright) y que un nativo revise el inglés nuevo.
 
+583. **Bubble: pruebas en el navegador con clics** (2026-11-13), a pedido de la usuaria (ítem 606 de Bubble). Playwright recorre 8 flujos de punta a punta sobre una base propia que se rehace en cada corrida (ingreso, idioma, negocios, pausar el agente, ventanas con teclado, panel del negocio y la verificación en dos pasos completa). Corren en la computadora y en GitHub en cada cambio (los 4 trabajos en verde). De los cuatro pasos sin gastos solo queda que un nativo revise el inglés nuevo: la lista de 268 textos está lista en `docs/revision-ingles-2026-11-13.html` del repo de Bubble.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
