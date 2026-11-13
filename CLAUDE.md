@@ -673,6 +673,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 581. **Bubble: verificación en dos pasos para las cuentas de agencia** (2026-11-13), a pedido de la usuaria (ítem 604 de Bubble), primer paso de lo que faltaba para el 90 sin gastos. Código de 6 dígitos de una app de autenticación, con 8 códigos de recuperación; sin SMS ni costo. Servidor 741 y panel 307 en verde, y probada en el navegador. Quedan: contraste y teclado, prueba con clics (Playwright) y que un nativo revise el inglés nuevo.
 
+582. **Bubble: contraste y uso con teclado** (2026-11-13), a pedido de la usuaria (ítem 605 de Bubble). Medido con axe en 15 pantallas (claro y oscuro): grises, rojo y verde de texto llegan a 4,5:1; interruptores con nombre; ventanas emergentes con foco, Escape y vuelta del foco. De paso se arregló que Actividad se caía entera con ciertos registros. Ahora 0 fallas. Quedan: prueba con clics (Playwright) y que un nativo revise el inglés nuevo.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
