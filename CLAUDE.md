@@ -42,6 +42,8 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 
 9. **Respuesta manual de WhatsApp desde el panel de G54** (ítem 590): probada de punta a punta con un contacto inventado (G54 la marcó enviado). Falta una real: que alguien escriba al WhatsApp de Crating Express y, antes de 24 h, responderle desde el panel; ver que le llegue y que Marco no conteste encima.
 
+10. **Foto real a Marco por WhatsApp, otra vez** (ítem 597): la imagen ahora viaja embebida al modelo de visión. Mandar una foto al WhatsApp de Crating Express y ver que Marco la describa.
+
 ## Próxima sesión — por dónde seguir (actualizado el 2026-10-23)
 
 **Cómo trabajar (pedido de la usuaria, 23-oct):** de a poco, un paso por vez, de lo más chico a lo más grande, enumerando qué se hace y reportando el % de uso (`mcp__ccd_session_mgmt__get_usage`) al terminar cada paso. Si el uso semanal pasa el 90 %, parar y avisar.
@@ -684,6 +686,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 595. **G54: los fallos ya avisan** (2026-11-14), punto 2 de la revisión (ítem 593). (1) Aviso de error (`🚨 Error Reporter`, correo a risosadmi) en los 33 flujos activos; antes solo 3. Quedan fuera el propio Reporter, el relay de Bubble y Gmail Monitor (inactivo). (2) Distribution: la salida de error de `📸 IG: Publicar` no estaba conectada; ahora va a `🔧 Preparar Mensaje de Error` con su motivo ("Instagram: falló la publicación — …") y el post vuelve con el motivo. Las historias y los Reels hacen caer el flujo, que ahora avisa. (3) Vigía: 12 flujos más en su lista (Marco WhatsApp/Telegram/Voz, Camila, Reels, WA Reply, Seguimiento, Cotizador, LinkedIn…), sin chequeo de volumen para que nunca los apague solo. Corrida manual: 23 flujos, sin hallazgos ni errores. Respaldos en el scratchpad.
 
 596. **G54: el seguimiento de 23 h respeta WhatsApp y no miente** (2026-11-14), punto 3 de la revisión (ítem 593), en Marco y Sales AI. (1) Por WhatsApp se manda solo entre las 23 y las 24 h de silencio (la ventana de Meta); si esa hora se pierde, se avisa al vendedor a las 72 h, solo para leads con 72 a 96 h de silencio (para no mandar avisos de leads viejos al activar el cambio; hoy había 0 en esa franja). (2) Se marca enviado solo si Meta o Telegram aceptaron; si no, queda `followup_23h_fallido_en` + `followup_23h_motivo` con una nota de sistema, y no se reintenta (también en Telegram). (3) En Marco, un envío fallido ya no frena el lote. Probado con 8 leads simulados y 3 respuestas (aceptado, rechazado, Telegram): todo da lo esperado; 0 errores. Falta ver el primer caso real.
+
+597. **G54: el token de agente ya no le llega al modelo de visión** (2026-11-14), punto 4 de la revisión (ítem 593). En `06 Procesador de Medios`, para fotos de WhatsApp se le pasaba a OpenRouter la URL del Media Proxy con `secret=<token de agente>`. Ahora n8n baja la imagen del proxy y la manda como data URL, igual que Telegram desde el 30-sep: la URL con el token solo viaja dentro de nuestro servidor. Probado con el código real y respuestas simuladas (imagen, fallo, JSON y Telegram): nunca sale el token; 0 errores. Sin media_id real no se puede probar de punta a punta: falta una foto real (Pruebas pendientes, punto 10). El token no se cambió (decisión de la usuaria).
 
 ## Error conocido
 
