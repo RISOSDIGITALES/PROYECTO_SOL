@@ -699,6 +699,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 602. **G54: respaldo de OpenAI y posts vacíos** (2026-11-14), punto 9 de la revisión (ítem 593). Revisado: los 11 nodos "OpenAI: Último Respaldo" sin clave tienen "seguir si falla", así que el fallo ya cae en la contingencia de cada flujo; desactivarlos no cambiaba nada y, si un día se carga la clave, funcionan solos (cargarla cuesta plata: no se propone). El riesgo real era Content AI: si fallaban todas las IAs seguía con un post vacío. Ahora corta con error (sin gancho o con menos de 80 caracteres) y no guarda nada; la idea queda sin usar y el aviso llega por correo. Reels y Pedidos ya cortaban; Ideas no guarda si no hay ideas válidas. Probado con post bueno, respuesta vacía y JSON roto.
 
+603. **G54: Community ya no pisa las notas del trato** (2026-11-14), punto 10 de la revisión (ítem 593). `💾 G54: Actualizar Deal CRM` reemplazaba `notas` con "Última interacción vía Community AI…" (borraba lo del vendedor y las marcas de Camila como `no_contactar_email`) y bajaba la temperatura en cada comentario. Ahora no toca las notas y la temperatura solo sube (tibio → medio, caliente → alto); los leads calientes ya dejaban su nota como actividad. En vivo: comentario urgente → trato alto; nota del vendedor; segundo comentario "lo voy a pensar" → nota intacta y sigue alto. Prueba borrada.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
