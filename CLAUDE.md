@@ -701,6 +701,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 603. **G54: Community ya no pisa las notas del trato** (2026-11-14), punto 10 de la revisión (ítem 593). `💾 G54: Actualizar Deal CRM` reemplazaba `notas` con "Última interacción vía Community AI…" (borraba lo del vendedor y las marcas de Camila como `no_contactar_email`) y bajaba la temperatura en cada comentario. Ahora no toca las notas y la temperatura solo sube (tibio → medio, caliente → alto); los leads calientes ya dejaban su nota como actividad. En vivo: comentario urgente → trato alto; nota del vendedor; segundo comentario "lo voy a pensar" → nota intacta y sigue alto. Prueba borrada.
 
+604. **G54: el Vigía devuelve los posts con motivo y avisa** (2026-11-14), punto 11 de la revisión (ítem 593). Un post en "programado" vencido hace más de 15 min se devolvía con `PUT …/status` a secas, sin motivo y sin correo (severidad "atención"). Ahora usa `mark-published` como pide G54: si el post ya tiene el id de la red, se marca publicado (antes podía terminar duplicado); si no, vuelve a "aprobado" con un motivo que el cliente ve en el Editor. El hallazgo pasa a crítico, así llega el correo (con la espera de 6 h). Verificado: `mark-published` acepta el token de agente (404 de post inexistente) y dos corridas del Vigía sin errores; hoy no había posts atascados para ejercitar ese camino.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
