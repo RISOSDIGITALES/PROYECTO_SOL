@@ -1,0 +1,186 @@
+<title>Revisión completa de G54</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: informe de una columna; resumen con puntajes arriba, plan priorizado y detalle por perspectiva debajo */
+:root{
+  --bg:#f6f7f4; --surface:#ffffff; --fg:#1d2420; --muted:#5a645e; --line:#dde2dc;
+  --accent:#1f6b52; --accent-soft:#e3efe9;
+  --crit:#b42318; --crit-soft:#fdecea; --warn:#9a5b00; --warn-soft:#fdf3e1; --ok:#1f7a3d; --ok-soft:#e6f4ea;
+  --display:"Fraunces",Georgia,serif; --body:"Source Sans 3","Segoe UI",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141917; --surface:#1c2320; --fg:#e7ece8; --muted:#a1aca5; --line:#2e3833;
+  --accent:#5fc19c; --accent-soft:#1f3a30; --crit:#ff8a7a; --crit-soft:#3a1f1c; --warn:#f2b45a; --warn-soft:#3a2c17; --ok:#7fd49a; --ok-soft:#1d3324; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141917; --surface:#1c2320; --fg:#e7ece8; --muted:#a1aca5; --line:#2e3833;
+  --accent:#5fc19c; --accent-soft:#1f3a30; --crit:#ff8a7a; --crit-soft:#3a1f1c; --warn:#f2b45a; --warn-soft:#3a2c17; --ok:#7fd49a; --ok-soft:#1d3324; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.55}
+.wrap{max-width:900px;margin:0 auto;padding-block:40px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:36px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:2.1rem} h2{font-size:1.45rem} h3{font-size:1.08rem;font-family:var(--body);font-weight:700}
+p{margin:0} .muted{color:var(--muted)}
+.eyebrow{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700}
+header{display:flex;flex-direction:column;gap:10px}
+section{display:flex;flex-direction:column;gap:14px}
+.general{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px}
+.big{font-family:var(--display);font-size:3rem;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1}
+.general p{flex:1;min-width:0;min-width:240px}
+.scores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 28px}
+@media (max-width:640px){.scores{grid-template-columns:1fr}}
+.score{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:baseline}
+.score .n{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
+.bar{grid-column:1/-1;height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px}
+.lo{background:var(--crit)} .mid{background:var(--warn)} .hi{background:var(--ok)}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--mono);color:var(--muted);width:2.2em}
+.pill{display:inline-block;font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.alta{background:var(--crit-soft);color:var(--crit)} .media{background:var(--warn-soft);color:var(--warn)} .baja{background:var(--accent-soft);color:var(--accent)} .hecho{background:var(--ok-soft);color:var(--ok)}
+.v{font-size:.75rem;color:var(--ok);font-weight:700;white-space:nowrap}
+.find{display:flex;flex-direction:column;gap:6px;padding:14px 0;border-top:1px solid var(--line)}
+.find:first-of-type{border-top:0}
+.find .t{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+code{font-family:var(--mono);font-size:.85em;background:var(--accent-soft);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px 18px}
+summary{cursor:pointer;padding:12px 0;font-weight:700;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+summary .n{font-family:var(--mono);color:var(--muted);font-weight:600}
+ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
+.note{font-size:.9rem;color:var(--muted)}
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">G54 · agentes de n8n · 14 de noviembre de 2026</span>
+  <h1>Revisión completa de G54</h1>
+  <p class="muted">Revisamos los 36 agentes de n8n desde 8 perspectivas. Cuatro revisores leyeron la copia del repo en paralelo y yo comprobé los hallazgos importantes en los archivos o en vivo contra G54. La revisión cubre lo que está de nuestro lado; lo que depende del ingeniero va aparte, al final.</p>
+</header>
+
+<section>
+  <div class="general">
+    <span class="big">58 %</span>
+    <p><strong>Revisión general.</strong> Los agentes hacen su trabajo y la cadena de respaldo de IA es sólida. Lo que baja la nota es lo que pasa cuando algo falla: casi ningún flujo avisa, y varios marcan como hecho algo que no se hizo. También pesan los nombres de campo equivocados al hablar con G54 y los atajos de "una sola empresa" que quedan en el código. Casi todo se arregla con cambios chicos.</p>
+  </div>
+  <div class="scores" role="list">
+    <div class="score" role="listitem"><span>Utilidad para el negocio</span><span class="n">72</span><span class="bar"><i class="mid" style="width:72%"></i></span></div>
+    <div class="score" role="listitem"><span>Multiempresa</span><span class="n">68</span><span class="bar"><i class="mid" style="width:68%"></i></span></div>
+    <div class="score" role="listitem"><span>Uso correcto de la API de G54</span><span class="n">66</span><span class="bar"><i class="mid" style="width:66%"></i></span></div>
+    <div class="score" role="listitem"><span>Seguridad</span><span class="n">58</span><span class="bar"><i class="mid" style="width:58%"></i></span></div>
+    <div class="score" role="listitem"><span>Confiabilidad</span><span class="n">58</span><span class="bar"><i class="mid" style="width:58%"></i></span></div>
+    <div class="score" role="listitem"><span>Costo y escalabilidad</span><span class="n">55</span><span class="bar"><i class="mid" style="width:55%"></i></span></div>
+    <div class="score" role="listitem"><span>Mantenibilidad</span><span class="n">50</span><span class="bar"><i class="lo" style="width:50%"></i></span></div>
+    <div class="score" role="listitem"><span>Visibilidad de errores</span><span class="n">35</span><span class="bar"><i class="lo" style="width:35%"></i></span></div>
+  </div>
+  <p class="note">Puntajes de 0 a 100, después de los arreglos de hoy (ítems 590 a 592). La general es el promedio simple de las 8.</p>
+</section>
+
+<section>
+  <h2>Plan de arreglos, en orden</h2>
+  <p class="muted">Ordenado por impacto y esfuerzo. Todo es de nuestro lado y con herramientas gratis. <span class="v">✓ comprobado</span> marca lo que verifiqué yo en los archivos o en vivo.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>Qué arreglar</th><th>Impacto</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td><strong>Nombre y temperatura del lead.</strong> Siete guardados mandan <code>contact_name</code> y <code>clasificacion</code>, que G54 ignora; hay que mandar <code>name</code> y <code>estado</code> (hot / warm / cold). Hoy los leads quedan sin nombre y todos como fríos. <span class="v">✓ comprobado en vivo</span></td><td><span class="pill alta">Alta</span></td></tr>
+      <tr><td class="num">2</td><td><strong>Que los fallos avisen.</strong> Solo 3 de 36 flujos tienen el aviso de error. Si Instagram rechaza un post, la salida de error no está conectada a nada y nadie se entera. Hay que poner el aviso en todos, conectar esas salidas y sumar al Vigía los flujos de Marco, Camila y Reels. <span class="v">✓ comprobado</span></td><td><span class="pill alta">Alta</span></td></tr>
+      <tr><td class="num">3</td><td><strong>Seguimiento de 23 h.</strong> Sales AI lo marca como enviado aunque Meta lo rechace, y ni Sales AI ni Marco respetan el límite de 24 h de WhatsApp. Marcar solo si Meta lo aceptó y no mandar texto libre pasadas las 24 h. <span class="v">✓ comprobado</span></td><td><span class="pill alta">Alta</span></td></tr>
+      <tr><td class="num">4</td><td><strong>Token de G54 en la dirección de las fotos.</strong> Para leer una foto de WhatsApp, Marco le pasa al modelo de visión una dirección que lleva el token de agente de G54. Hay que mandar la imagen dentro del mensaje, como ya hace Telegram. <span class="v">✓ comprobado</span></td><td><span class="pill alta">Alta</span></td></tr>
+      <tr><td class="num">5</td><td><strong>Regla de no inventar precios.</strong> En Sales AI la regla solo está en el prompt por defecto: si la empresa escribe el suyo, desaparece. Agregarla siempre, también en Community AI, que además responde con venta a las quejas públicas. <span class="v">✓ comprobado</span></td><td><span class="pill alta">Alta</span></td></tr>
+      <tr><td class="num">6</td><td><strong>Avisos falsos de Meta.</strong> Los webhooks de WhatsApp, comentarios y mensajes directos no comprueban la firma de Meta, y en Sales AI el <code>?company</code> de la dirección le gana a lo que resuelve G54. Comprobar la firma y resolver la empresa solo por número o página. <span class="v">✓ comprobado</span></td><td><span class="pill alta">Alta</span></td></tr>
+      <tr><td class="num">7</td><td><strong>Datos escondidos en la conversación.</strong> Sales AI guarda lo que junta como un mensaje <code>[__DATOS__]{…}</code> en cada turno, y eso es lo que ve el vendedor. G54 ya guarda los datos del lead: pasarlos ahí, conservando los que ya tenía. En Marco ese atajo solo queda como lectura de respaldo.</td><td><span class="pill alta">Alta</span></td></tr>
+      <tr><td class="num">8</td><td><strong>Respaldos a Crating Express.</strong> Once lugares usan <code>|| 1</code> cuando falta la empresa, y cinco tienen a Orison excluida a mano (<code>[6]</code>). Cortar con error y leer de G54 si la empresa está en pausa.</td><td><span class="pill media">Media</span></td></tr>
+      <tr><td class="num">9</td><td><strong>El último respaldo de IA no tiene clave.</strong> Once nodos usan una credencial de OpenAI que dice "falta cargar la clave". Cerrar la cadena con el mensaje de contingencia, que ya existe. <span class="v">✓ comprobado</span></td><td><span class="pill media">Media</span></td></tr>
+      <tr><td class="num">10</td><td><strong>Community AI pisa las notas del trato</strong> (y con eso, las marcas de Camila). Mandar la nota como actividad y no reemplazar <code>notas</code>.</td><td><span class="pill media">Media</span></td></tr>
+      <tr><td class="num">11</td><td><strong>Vigía devuelve posts sin decir por qué.</strong> Usar <code>mark-published</code> con el motivo, como pide G54, y revisar si el post ya salió en la red antes de devolverlo.</td><td><span class="pill media">Media</span></td></tr>
+      <tr><td class="num">12</td><td><strong>Una misma persona en varios contactos.</strong> Telegram usa <code>tg_</code> y <code>+tg_</code>, y Facebook usa <code>fb_</code> y <code>fbig_</code>, así que la pausa de un canal no frena al otro. Usar un solo formato.</td><td><span class="pill media">Media</span></td></tr>
+      <tr><td class="num">13</td><td><strong>Gasto de IA por mensaje.</strong> Detectar el idioma sin llamar a la IA (la función ya existe), traducir con un modelo chico y mandar solo los últimos turnos del historial. Calculo que baja a la mitad los tokens por mensaje; no lo medí.</td><td><span class="pill media">Media</span></td></tr>
+      <tr><td class="num">14</td><td><strong>Orden del código.</strong> El prompt de Content AI tiene 4 copias que ya no dicen lo mismo, hay 31 logins repetidos y quedan ramas sin uso (<code>sales-ai-manual</code>, un nodo con un estado inválido, 3 consultas por post que no se usan).</td><td><span class="pill baja">Baja</span></td></tr>
+      <tr><td class="num">15</td><td><strong>"Soy Alex de Crating Express".</strong> El paso de llamada a WhatsApp todavía se presenta como Alex con clientes reales. Cambiarlo a Marco. <span class="v">✓ comprobado</span></td><td><span class="pill baja">Baja</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Mejoras con valor para el negocio</h2>
+  <p class="muted">No arreglan nada roto: suman lo que hoy no se puede medir ni hacer. Todas son gratis.</p>
+  <ul>
+    <li><strong>Saber qué post trae clientes:</strong> sumar parámetros UTM al enlace de cada post (red, campaña y número de idea). No pasan por nuestro dominio, así que no repiten el problema del contador de clics retirado.</li>
+    <li><strong>Probar ganchos:</strong> que Content AI escriba dos ganchos y se alterne cuál se publica, para que Analytics compare cuál funciona mejor.</li>
+    <li><strong>Separar quejas y spam en los comentarios:</strong> la queja va por correo a una persona y el spam se ignora, en vez de contestar todo con una invitación a WhatsApp.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Detalle por perspectiva</h2>
+
+  <details>
+    <summary>Seguridad <span class="n">58</span></summary>
+    <div class="find"><div class="t"><span class="pill hecho">Arreglado hoy</span><strong>Clave del relay de Groq a la vista en el repo público</strong></div><p>Estaba sin tapar desde el 3 de noviembre en la copia de un flujo. Ya quedó tapada y el hook bloquea cualquier commit que la traiga. No la cambié: cambiar claves lo deciden ustedes.</p></div>
+    <div class="find"><div class="t"><span class="pill alta">Alta</span><strong>Token de G54 en la dirección de las fotos</strong> <span class="v">✓</span></div><p>Es el punto 4 del plan. Ese token sirve para escribir en G54 en nombre de cualquier empresa, y queda en los registros del proveedor de IA.</p></div>
+    <div class="find"><div class="t"><span class="pill alta">Alta</span><strong>Webhooks de Meta sin firma</strong> <span class="v">✓</span></div><p>Es el punto 6. Con un aviso falso alguien puede crear leads en el CRM de cualquier empresa, gastar Groq y hacer que el bot responda con el token de esa empresa.</p></div>
+    <div class="find"><div class="t"><span class="pill media">Media</span><strong>El candado de los webhooks confía en la IP</strong></div><p>Deja pasar sin clave cualquier llamada que diga venir de una IP privada, y acepta la clave en la dirección, donde queda registrada. Hay que confirmar con el ingeniero cómo está armado el proxy, mandar la clave solo en el encabezado y guardarla como variable de n8n.</p></div>
+    <div class="find"><div class="t"><span class="pill media">Media</span><strong>Disparadores abiertos</strong></div><p>El disparo manual del Vigía (que puede apagar flujos), el del informe semanal (que borra y reescribe métricas) y el formulario de cotización de CE no piden clave. Ponerles el mismo candado.</p></div>
+    <div class="find"><div class="t"><span class="pill baja">Baja</span><strong>Otros detalles</strong></div><ul><li>El contador de clics redirige a cualquier dirección.</li><li>La contraseña maestra queda en el Config de 19 flujos y, con ella, en los registros de cada ejecución.</li><li>El "challenge" de Meta no comprueba el token de verificación.</li></ul></div>
+  </details>
+
+  <details>
+    <summary>Multiempresa <span class="n">68</span></summary>
+    <div class="find"><p>La empresa casi siempre se resuelve bien, por página o por número de WhatsApp contra G54. Lo que queda son los 11 <code>|| 1</code> y las 5 exclusiones fijas de Orison (punto 8 del plan). También el router de Telegram, que manda la empresa 1 a Marco a mano, el refresh token de LinkedIn de la empresa 1 guardado dentro del flujo, el correo de respaldo de los vendedores (<code>risosadmi@gmail.com</code>) para leads de cualquier empresa, y un ejemplo de "embalaje en el sur de Florida" en el prompt de Ideas AI que puede sesgar a otras empresas.</p></div>
+  </details>
+
+  <details>
+    <summary>Confiabilidad <span class="n">58</span></summary>
+    <div class="find"><p>La cadena de respaldo de IA es sólida y casi toda lectura de la respuesta de la IA está protegida. Los problemas están en los efectos: marcas de "ya enviado" que se escriben después de un paso que puede fallar (seguimientos y aviso de 72 h: puede repetirse el correo al vendedor cada hora), un post que sale en la red pero queda como no publicado si falla la marca en G54, el reintento de la publicación en Facebook que puede duplicar el post, y 331 de 362 llamadas HTTP sin límite de tiempo. Por confirmar: que Meta reenvíe un mensaje antes de que Marco termine (el control de repetidos se guarda al final de la corrida), y que cancelar una alarma no frene la espera que ya está corriendo.</p></div>
+  </details>
+
+  <details>
+    <summary>Visibilidad de errores <span class="n">35</span></summary>
+    <div class="find"><p>Solo Content AI, Seguimiento manual y el formulario de CE avisan cuando fallan. El Vigía mira 11 flujos y deja fuera a Marco, Telegram, Voz, Camila y Reels. Solo avisa si fallan 3 corridas seguidas (las fallas "con permiso para seguir" cuentan como éxito), y solo manda correo si lo encontrado es crítico, así que un post devuelto, el límite de Groq o un post duplicado quedan sin aviso. Si el Vigía mismo falla, nadie se entera.</p></div>
+  </details>
+
+  <details>
+    <summary>Uso correcto de la API de G54 <span class="n">66</span></summary>
+    <div class="find"><p>Las rutas, los métodos y los tokens están casi todos bien, y Distribution informa éxitos y fallos como pide la documentación. Bajan la nota los campos ignorados (punto 1, comprobado en vivo), los datos escondidos de Sales AI (punto 7), los contactos repetidos de Telegram y Facebook (punto 12), las notas pisadas de Community (punto 10) y el Vigía (punto 11). Detalles menores: Telegram queda guardado como origen "whatsapp" en el CRM, falta <code>link_url</code> en Distribution y un nodo manda un estado que no existe.</p></div>
+  </details>
+
+  <details>
+    <summary>Utilidad para el negocio <span class="n">72</span></summary>
+    <div class="find"><p>La cadena estrategia → ideas → post → publicación y Marco funcionan, con candados reales: no hay posts de ideas sin aprobar, no hay duplicados y el idioma lo fija el código. Falta poder medir qué post trae clientes y tener reglas de veracidad fijas (puntos 5 y 13, y las mejoras de arriba). Además, si la IA no devuelve el formato esperado, Content AI guarda el post vacío igual.</p></div>
+  </details>
+
+  <details>
+    <summary>Costo y escalabilidad <span class="n">55</span></summary>
+    <div class="find"><p>Casi todo corre con planes gratis. Los problemas son tres. Veintitrés nodos usan una sola credencial de Groq y el modelo más grande para tareas chicas como traducir o detectar el idioma. Todos los agentes entran con el mismo usuario y cambian la empresa activa de esa sesión, algo que con varias empresas a la vez se pisa (hoy se detecta, pero no se evita). Y todas las empresas arrancan al mismo minuto los lunes. Además, el generador de imágenes es el único costo por unidad del sistema y crece con cada post.</p></div>
+  </details>
+
+  <details>
+    <summary>Mantenibilidad <span class="n">50</span></summary>
+    <div class="find"><p>Hay 157 nodos de código con 574.000 caracteres en total; el más grande, el informe mensual, tiene 54.000. La dirección de G54 aparece escrita unas 110 veces, el prompt de Content AI tiene 4 copias que ya no dicen lo mismo, y el aviso al vendedor está copiado igual en WhatsApp y Telegram. En el CLAUDE.md, la cadena de respaldo de Marco está mal descrita: la real es Groq → Zhipu → OpenAI → contingencia.</p></div>
+  </details>
+</section>
+
+<section>
+  <h2>Ya arreglado hoy</h2>
+  <ul>
+    <li><strong>Respuesta manual de WhatsApp desde el panel:</strong> flujo nuevo, probado de punta a punta.</li>
+    <li><strong>Datos del lead:</strong> cinco guardados ya no los borran (las 4 pausas manuales y las llamadas de Marco).</li>
+    <li><strong>Llamadas sin transcripción:</strong> ahora sí se guardan en G54.</li>
+    <li><strong>Seguimiento:</strong> la conversación del panel muestra el mensaje real que recibió el cliente.</li>
+    <li><strong>Clave del relay de Groq:</strong> tapada en el repo público.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Para el ingeniero</h2>
+  <p class="muted">Solo lo que no se puede resolver de nuestro lado.</p>
+  <ul>
+    <li>Que <code>POST /api/agent/whatsapp/inbound</code> y <code>wa/leads</code> acepten <code>canal</code> y <code>external_id</code>, para leer y escribir el contacto de Telegram o Facebook que crea G54 sin números inventados.</li>
+    <li>Que <code>inbound</code> pueda sumar campos a <code>datos_calificacion</code> en vez de reemplazarlo entero, para que dos flujos que escriben casi al mismo tiempo no se pisen.</li>
+    <li>Que la documentación aclare si <code>POST /api/agent/crm/leads</code> reemplaza o suma las <code>notas</code> de un trato que ya existe.</li>
+  </ul>
+</section>
+</div>
