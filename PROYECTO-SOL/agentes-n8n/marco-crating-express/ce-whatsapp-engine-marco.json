@@ -2,7 +2,7 @@
   "id": "zAhV8gEsXD8dCrXq",
   "name": "CE WhatsApp Engine — Marco",
   "active": true,
-  "updatedAt": "2026-10-29T17:04:58.624Z",
+  "updatedAt": "2026-11-14T15:14:12.411Z",
   "tags": [
     {
       "id": "2CrVJWitAB77MgTJ",
@@ -921,7 +921,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: $('🔍 Normalizar y Validar (Manual WA)').item.json.phoneE164, canal: 'whatsapp', messages: [{ rol: 'bot', contenido: $('🔍 Normalizar y Validar (Manual WA)').item.json.mensaje }], datos_calificacion: { bot_pausado: true, motivo: 'Vendedor tomó control manual', fecha: new Date().toISOString() } }) }}",
+        "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: $('🔍 Normalizar y Validar (Manual WA)').item.json.phoneE164, canal: 'whatsapp', messages: [{ rol: 'bot', contenido: $('🔍 Normalizar y Validar (Manual WA)').item.json.mensaje }], datos_calificacion: { ...(((d) => d && typeof d === 'object' && !Array.isArray(d) ? d : {})((($json.data || [])[0] || {}).datos)), bot_pausado: true, motivo: 'Vendedor tomó control manual', fecha: new Date().toISOString() } }) }}",
         "options": {
           "retry": {
             "enabled": true,
@@ -1777,6 +1777,34 @@
         "jsonBody": "={{ JSON.stringify({ conversation_id: $('🔧 Procesar Follow-ups').item.json.telegramConversationId, message: $('📊 Config para Follow-up').item.json.msg_followup_24h }) }}",
         "options": {}
       }
+    },
+    {
+      "id": "6ba43a5b-fe22-4426-b947-882b923225ad",
+      "name": "📋 G54: Datos Actuales del Lead (Manual WA)",
+      "notes": "14-nov: G54 reemplaza datos_calificacion entero; se leen los datos que el lead ya tenía para que la pausa no los borre.",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "position": [
+        -108,
+        784
+      ],
+      "parameters": {
+        "url": "=https://apigrowth.mdarthurdigital.com/api/n8n/companies/{{ '1' }}/wa/leads?phone={{ encodeURIComponent(String($('🔍 Normalizar y Validar (Manual WA)').item.json.phoneE164 || '')) }}",
+        "options": {
+          "timeout": 8000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer "
+            }
+          ]
+        }
+      }
     }
   ],
   "connections": {
@@ -2125,7 +2153,7 @@
       "main": [
         [
           {
-            "node": "💾 Guardar en Historial G54",
+            "node": "📋 G54: Datos Actuales del Lead (Manual WA)",
             "type": "main",
             "index": 0
           }
@@ -2460,6 +2488,17 @@
         [
           {
             "node": "🔄 Marcar 23h Enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 G54: Datos Actuales del Lead (Manual WA)": {
+      "main": [
+        [
+          {
+            "node": "💾 Guardar en Historial G54",
             "type": "main",
             "index": 0
           }

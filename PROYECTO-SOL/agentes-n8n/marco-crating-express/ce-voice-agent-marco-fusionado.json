@@ -2,7 +2,7 @@
   "id": "FYKfTJBfgwsMpJV7",
   "name": "📞 CE Voice Agent — Marco (Fusionado)",
   "active": true,
-  "updatedAt": "2026-11-05T15:44:07.261Z",
+  "updatedAt": "2026-11-14T15:13:10.354Z",
   "tags": [
     {
       "id": "2CrVJWitAB77MgTJ",
@@ -253,7 +253,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  empresa_id: 1,\n  phone: $json.phoneFormatted,\n  contact_name: $json.nombre || '',\n  canal: 'llamada',\n  clasificacion: $json.clasificacionVoice || 'frio',\n  datos_calificacion: {\n    empresa: $json.empresa || '',\n    interes: $json.interes || 'otro',\n    notas: $json.notas || '',\n    duration_seconds: $json.duration || 0,\n    ended_reason: $json.endedReason || '',\n    fecha_llamada: $json.fechaLlamada || ''\n  },\n  messages: [\n    { rol: 'user', contenido: ($json.transcript || '').slice(0, 10000) }\n  ]\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  empresa_id: 1,\n  phone: $('🔍 Parsear Extracción').item.json.phoneFormatted,\n  contact_name: $('🔍 Parsear Extracción').item.json.nombre || '',\n  canal: 'llamada',\n  clasificacion: $('🔍 Parsear Extracción').item.json.clasificacionVoice || 'frio',\n  datos_calificacion: {\n    ...(((d) => d && typeof d === 'object' && !Array.isArray(d) ? d : {})((($json.data || [])[0] || {}).datos)),\n    empresa: $('🔍 Parsear Extracción').item.json.empresa || '',\n    interes: $('🔍 Parsear Extracción').item.json.interes || 'otro',\n    notas: $('🔍 Parsear Extracción').item.json.notas || '',\n    duration_seconds: $('🔍 Parsear Extracción').item.json.duration || 0,\n    ended_reason: $('🔍 Parsear Extracción').item.json.endedReason || '',\n    fecha_llamada: $('🔍 Parsear Extracción').item.json.fechaLlamada || ''\n  },\n  messages: [\n    { rol: 'user', contenido: ($('🔍 Parsear Extracción').item.json.transcript || '(Llamada sin transcripción)').slice(0, 10000) }\n  ]\n}) }}",
         "options": {
           "onError": "continueRegularOutput"
         }
@@ -612,6 +612,38 @@
           "responseCode": 403
         }
       }
+    },
+    {
+      "id": "c8571320-2c02-4891-baac-7e4a10b7f1f3",
+      "name": "📋 G54: Datos Actuales del Lead (Voice)",
+      "notes": "14-nov: G54 reemplaza datos_calificacion entero; se leen los datos que el lead ya tenía para no borrarlos al guardar la llamada.",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "position": [
+        1764,
+        560
+      ],
+      "parameters": {
+        "url": "=https://apigrowth.mdarthurdigital.com/api/n8n/companies/1/wa/leads?phone={{ encodeURIComponent($json.phoneFormatted || '') }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 8000
+        }
+      }
     }
   ],
   "connections": {
@@ -721,7 +753,7 @@
       "main": [
         [
           {
-            "node": "💾 G54: Guardar Lead (Voice)",
+            "node": "📋 G54: Datos Actuales del Lead (Voice)",
             "type": "main",
             "index": 0
           }
@@ -854,6 +886,17 @@
         [
           {
             "node": "🚫 Responder 403 (vapi-ce-calls)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 G54: Datos Actuales del Lead (Voice)": {
+      "main": [
+        [
+          {
+            "node": "💾 G54: Guardar Lead (Voice)",
             "type": "main",
             "index": 0
           }

@@ -2,7 +2,7 @@
   "id": "62tIvF0snsrMj0sM",
   "name": "Community AI — G54",
   "active": true,
-  "updatedAt": "2026-11-03T14:02:53.000Z",
+  "updatedAt": "2026-11-14T15:15:49.892Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -1780,7 +1780,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ empresa_id: Number($('📩 Webhook Respuesta Manual (Community)').item.json.body.company_id), phone: 'fb_' + $('📩 Webhook Respuesta Manual (Community)').item.json.body.destinatario_id, canal: $('📩 Webhook Respuesta Manual (Community)').item.json.body.plataforma === 'instagram' ? 'instagram' : 'facebook', datos_calificacion: { bot_pausado: true, motivo: 'Vendedor tomó control manual', fecha: new Date().toISOString() }, messages: [{ rol: 'bot', contenido: $('📩 Webhook Respuesta Manual (Community)').item.json.body.mensaje || '(intervención manual del vendedor, sin mensaje enviado por este medio)' }] }) }}",
+        "jsonBody": "={{ JSON.stringify({ empresa_id: Number($('📩 Webhook Respuesta Manual (Community)').item.json.body.company_id), phone: 'fb_' + $('📩 Webhook Respuesta Manual (Community)').item.json.body.destinatario_id, canal: $('📩 Webhook Respuesta Manual (Community)').item.json.body.plataforma === 'instagram' ? 'instagram' : 'facebook', datos_calificacion: { ...(((d) => d && typeof d === 'object' && !Array.isArray(d) ? d : {})((($json.data || [])[0] || {}).datos)), bot_pausado: true, motivo: 'Vendedor tomó control manual', fecha: new Date().toISOString() }, messages: [{ rol: 'bot', contenido: $('📩 Webhook Respuesta Manual (Community)').item.json.body.mensaje || '(intervención manual del vendedor, sin mensaje enviado por este medio)' }] }) }}",
         "options": {}
       }
     },
@@ -2124,6 +2124,38 @@
         "httpHeaderAuth": {
           "id": "hkeIUPcrRjD4F4KY",
           "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
+        }
+      }
+    },
+    {
+      "id": "5bd5c866-7bc2-408e-9c8a-cf2c69e89bdd",
+      "name": "📋 G54: Datos Actuales del Lead (Community)",
+      "notes": "14-nov: G54 reemplaza datos_calificacion entero; se leen los datos que el lead ya tenía para que la pausa no los borre.",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "position": [
+        3270,
+        680
+      ],
+      "parameters": {
+        "url": "=https://apigrowth.mdarthurdigital.com/api/n8n/companies/{{ $('📩 Webhook Respuesta Manual (Community)').item.json.body.company_id }}/wa/leads?phone={{ encodeURIComponent(String('fb_' + $('📩 Webhook Respuesta Manual (Community)').item.json.body.destinatario_id || '')) }}",
+        "options": {
+          "timeout": 8000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
         }
       }
     }
@@ -2746,7 +2778,7 @@
         ],
         [
           {
-            "node": "💾 Marcar Vendedor Activo (Community)",
+            "node": "📋 G54: Datos Actuales del Lead (Community)",
             "type": "main",
             "index": 0
           }
@@ -2757,7 +2789,7 @@
       "main": [
         [
           {
-            "node": "💾 Marcar Vendedor Activo (Community)",
+            "node": "📋 G54: Datos Actuales del Lead (Community)",
             "type": "main",
             "index": 0
           }
@@ -2768,7 +2800,7 @@
       "main": [
         [
           {
-            "node": "💾 Marcar Vendedor Activo (Community)",
+            "node": "📋 G54: Datos Actuales del Lead (Community)",
             "type": "main",
             "index": 0
           }
@@ -2779,7 +2811,7 @@
       "main": [
         [
           {
-            "node": "💾 Marcar Vendedor Activo (Community)",
+            "node": "📋 G54: Datos Actuales del Lead (Community)",
             "type": "main",
             "index": 0
           }
@@ -2913,6 +2945,17 @@
         [
           {
             "node": "🔍 Parsear Respuesta Community AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 G54: Datos Actuales del Lead (Community)": {
+      "main": [
+        [
+          {
+            "node": "💾 Marcar Vendedor Activo (Community)",
             "type": "main",
             "index": 0
           }

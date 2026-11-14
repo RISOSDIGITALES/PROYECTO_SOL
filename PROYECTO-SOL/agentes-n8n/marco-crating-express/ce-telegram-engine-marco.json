@@ -2,7 +2,7 @@
   "id": "HaSG63Q9C2tGOLH3",
   "name": "CE Telegram Engine — Marco",
   "active": true,
-  "updatedAt": "2026-11-03T20:45:10.673Z",
+  "updatedAt": "2026-11-14T15:14:08.322Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1"
@@ -966,7 +966,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ empresa_id: Number($('📩 Webhook Respuesta Manual (Telegram)').item.json.body.company_id), phone: 'tg_' + $('📩 Webhook Respuesta Manual (Telegram)').item.json.body.chat_id, canal: 'telegram', datos_calificacion: { bot_pausado: true, motivo: 'Vendedor tomó control manual', fecha: new Date().toISOString() }, messages: [{ rol: 'bot', contenido: $('📩 Webhook Respuesta Manual (Telegram)').item.json.body.mensaje || '(intervención manual del vendedor, sin mensaje enviado por este medio)' }] }) }}",
+        "jsonBody": "={{ JSON.stringify({ empresa_id: Number($('📩 Webhook Respuesta Manual (Telegram)').item.json.body.company_id), phone: 'tg_' + $('📩 Webhook Respuesta Manual (Telegram)').item.json.body.chat_id, canal: 'telegram', datos_calificacion: { ...(((d) => d && typeof d === 'object' && !Array.isArray(d) ? d : {})((($json.data || [])[0] || {}).datos)), bot_pausado: true, motivo: 'Vendedor tomó control manual', fecha: new Date().toISOString() }, messages: [{ rol: 'bot', contenido: $('📩 Webhook Respuesta Manual (Telegram)').item.json.body.mensaje || '(intervención manual del vendedor, sin mensaje enviado por este medio)' }] }) }}",
         "options": {}
       }
     },
@@ -1236,6 +1236,38 @@
           "combinator": "and"
         },
         "options": {}
+      }
+    },
+    {
+      "id": "25b7820a-6216-4996-9045-82524cb83c0a",
+      "name": "📋 G54: Datos Actuales del Lead (Telegram)",
+      "notes": "14-nov: G54 reemplaza datos_calificacion entero; se leen los datos que el lead ya tenía para que la pausa no los borre.",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "position": [
+        1320,
+        1460
+      ],
+      "parameters": {
+        "url": "=https://apigrowth.mdarthurdigital.com/api/n8n/companies/{{ $('📩 Webhook Respuesta Manual (Telegram)').item.json.body.company_id }}/wa/leads?phone={{ encodeURIComponent(String('tg_' + $('📩 Webhook Respuesta Manual (Telegram)').item.json.body.chat_id || '')) }}",
+        "options": {
+          "timeout": 8000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        }
       }
     }
   ],
@@ -1604,7 +1636,7 @@
         ],
         [
           {
-            "node": "💾 Marcar Vendedor Activo (Telegram)",
+            "node": "📋 G54: Datos Actuales del Lead (Telegram)",
             "type": "main",
             "index": 0
           }
@@ -1615,7 +1647,7 @@
       "main": [
         [
           {
-            "node": "💾 Marcar Vendedor Activo (Telegram)",
+            "node": "📋 G54: Datos Actuales del Lead (Telegram)",
             "type": "main",
             "index": 0
           }
@@ -1756,6 +1788,17 @@
           }
         ],
         []
+      ]
+    },
+    "📋 G54: Datos Actuales del Lead (Telegram)": {
+      "main": [
+        [
+          {
+            "node": "💾 Marcar Vendedor Activo (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   }
