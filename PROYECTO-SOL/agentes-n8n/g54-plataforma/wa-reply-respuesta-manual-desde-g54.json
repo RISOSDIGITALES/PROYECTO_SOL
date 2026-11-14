@@ -1,0 +1,174 @@
+{
+  "id": "2dat4nEoi8x8iLb2",
+  "name": "📤 WA Reply — Respuesta manual desde G54",
+  "active": true,
+  "updatedAt": "2026-11-14T15:05:39.502Z",
+  "tags": [],
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "nodes": [
+    {
+      "id": "c8e9cc26-274f-48bc-a44d-a7fdebae1387",
+      "name": "📩 Webhook wa_reply (G54)",
+      "webhookId": "2fb2d177-4882-40e5-9a82-a34a5ed5f2c8",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wa-reply-g54",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "7b55c898-56db-4b7e-b97b-a9b336511ee4",
+      "name": "🛡️ Verificar y Enviar a Meta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// WA Reply: respuesta manual desde el panel de G54 (14-nov). Sigue el contrato de G54 (docs del 5-nov,\n// \"POST {webhook wa_reply}\"): recibe phone, message, company_id y phone_number_id, y solo transporta\n// el mensaje a Meta, sin volver a guardarlo en G54 (el panel ya lo guarda). Responde 2xx solo si Meta\n// aceptó el envío. Como G54 no manda clave, hay dos candados: la empresa del número de Meta tiene que\n// ser la de company_id, y el teléfono tiene que ser un contacto de WhatsApp de esa empresa.\n// Reemplaza a wa-reply-g54 (borrado el 14-ago) y a la rama sales-ai-manual, que no calzaban con el contrato.\nconst B = 'https://apigrowth.mdarthurdigital.com/api';\nconst AGENT = 'Bearer REDACTED_G54_AGENT_TOKEN';\nconst b = $input.first().json.body || {};\nconst fail = (status, motivo, extra = {}) => [{ json: { ok: false, status, motivo, ...extra } }];\n\nconst message = String(b.message || '');\nconst companyId = String(b.company_id ?? '').trim();\nconst pnid = String(b.phone_number_id ?? '').trim();\nconst digits = String(b.phone || '').replace(/\\D/g, '');\nif (!message.trim()) return fail(422, 'Falta message');\nif (message.length > 4096) return fail(422, 'message supera los 4096 caracteres que permite WhatsApp');\nif (!/^\\d+$/.test(companyId)) return fail(422, 'company_id no válido');\nif (!/^\\d+$/.test(pnid)) return fail(422, 'phone_number_id no válido');\nif (digits.length < 8 || digits.length > 15) return fail(422, 'phone no válido');\n\n// G54 espera 12 s en total: cada llamada lleva su propio tope para no pasarse.\nconst http = (o) => this.helpers.httpRequest({ json: true, timeout: 3500, returnFullResponse: true, ignoreHttpStatusErrors: true,\n  ...o, headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(o.headers || {}) } });\n\nconst emp = await http({ url: B + '/agent/wa/empresa-by-phone/' + pnid, headers: { Authorization: AGENT } });\nif (emp.statusCode !== 200) return fail(404, 'El número de Meta no está registrado en G54', { g54_status: emp.statusCode });\nconst e = (emp.body && emp.body.data) || emp.body || {};\nif (String(e.company_id) !== companyId) return fail(403, 'El número de Meta no es de esa empresa');\nif (!e.wa_access_token) return fail(409, 'La empresa no tiene token de WhatsApp en G54');\n\nconst lr = await http({ url: B + '/n8n/companies/' + companyId + '/wa/leads?phone=' + encodeURIComponent('+' + digits) });\nconst leads = lr.statusCode === 200 && lr.body && Array.isArray(lr.body.data) ? lr.body.data : [];\nconst lead = leads.find((x) => String(x.phone || '').replace(/\\D/g, '') === digits);\nif (!lead) return fail(403, 'El teléfono no es un contacto de WhatsApp de esa empresa');\n\nconst meta = await http({ method: 'POST', timeout: 5000, url: 'https://graph.facebook.com/v19.0/' + (e.phone_number_id || pnid) + '/messages',\n  headers: { Authorization: 'Bearer ' + e.wa_access_token },\n  body: { messaging_product: 'whatsapp', to: digits, type: 'text', text: { body: message } } });\nconst waId = meta.body && meta.body.messages && meta.body.messages[0] && meta.body.messages[0].id;\nif (meta.statusCode >= 300 || !waId) {\n  const er = (meta.body && meta.body.error) || {};\n  return fail(502, 'Meta no aceptó el envío', { meta_status: meta.statusCode, meta_code: er.code, meta_mensaje: er.message || '' });\n}\n// Para la pausa del bot (siguiente nodo, después de responder a G54).\nreturn [{ json: { ok: true, status: 200, wa_message_id: waId, _pausa: { companyId, digits, datos: lead.datos } } }];\n"
+      }
+    },
+    {
+      "id": "ee26ae90-f9d1-4c56-b0e5-6a0e5b4c6e27",
+      "name": "¿Meta lo aceptó?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ea394f6f-bf47-46a4-bdbb-c21db5908f5d",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a5bb545b-c83c-497f-b294-7991fd0bc779",
+      "name": "✅ Responder 200 a G54",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        -100
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, wa_message_id: $json.wa_message_id }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "7db4a66b-020f-4678-8186-d203c41e3d92",
+      "name": "⏸️ Pausar Bot (G54)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        -100
+      ],
+      "parameters": {
+        "jsCode": "// Pausa al bot en esa conversación (datos_calificacion.bot_pausado, el candado del 14-ago que leen Marco y\n// Sales AI). Va después de responder a G54 para no gastar su espera de 12 s. G54 reemplaza datos_calificacion\n// entero (comprobado el 14-nov), así que se mandan los datos que ya tenía el lead más la pausa. G54 exige al\n// menos un mensaje: va una nota de sistema, no el texto del vendedor (eso lo duplicaría).\nconst B = 'https://apigrowth.mdarthurdigital.com/api';\nconst AGENT = 'Bearer REDACTED_G54_AGENT_TOKEN';\nconst p = $input.first().json._pausa;\nconst datos = p.datos && typeof p.datos === 'object' && !Array.isArray(p.datos) ? p.datos : {};\ntry {\n  const r = await this.helpers.httpRequest({ method: 'POST', url: B + '/agent/whatsapp/inbound', json: true, timeout: 10000,\n    returnFullResponse: true, ignoreHttpStatusErrors: true,\n    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: AGENT },\n    body: { empresa_id: Number(p.companyId), phone: '+' + p.digits, canal: 'whatsapp',\n      datos_calificacion: { ...datos, bot_pausado: true, motivo: 'Vendedor tomó control manual', fecha: new Date().toISOString() },\n      messages: [{ rol: 'sys', contenido: 'El vendedor respondió desde el panel; el bot queda en pausa.' }] } });\n  return [{ json: { bot_pausado: r.statusCode < 300, g54_status: r.statusCode } }];\n} catch (err) {\n  return [{ json: { bot_pausado: false, error: err.message } }];\n}\n"
+      }
+    },
+    {
+      "id": "f3364085-b560-43be-be93-0ea2bab42945",
+      "name": "⛔ Responder Error a G54",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        100
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, motivo: $json.motivo, meta_code: $json.meta_code, meta_mensaje: $json.meta_mensaje }) }}",
+        "options": {
+          "responseCode": "={{ $json.status }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "📩 Webhook wa_reply (G54)": {
+      "main": [
+        [
+          {
+            "node": "🛡️ Verificar y Enviar a Meta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🛡️ Verificar y Enviar a Meta": {
+      "main": [
+        [
+          {
+            "node": "¿Meta lo aceptó?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Meta lo aceptó?": {
+      "main": [
+        [
+          {
+            "node": "✅ Responder 200 a G54",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⛔ Responder Error a G54",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Responder 200 a G54": {
+      "main": [
+        [
+          {
+            "node": "⏸️ Pausar Bot (G54)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
