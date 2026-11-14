@@ -2,7 +2,7 @@
   "id": "otycsrxrMEMuxuwD",
   "name": "💬 Sales AI — Motor de Conversación G54",
   "active": true,
-  "updatedAt": "2026-11-14T16:18:47.201Z",
+  "updatedAt": "2026-11-14T16:41:16.743Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -1353,37 +1353,15 @@
     {
       "id": "detectar-idioma",
       "name": "🌐 Detectar Idioma",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "onError": "continueRegularOutput",
       "position": [
         2400,
         180
       ],
       "parameters": {
-        "method": "POST",
-        "url": "https://api.groq.com/openai/v1/chat/completions",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "groqApi",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', messages: [{ role: 'system', content: 'Detecta el idioma del ULTIMO mensaje del cliente. Si el mensaje es muy corto o ambiguo (ej: \"ok\", \"si\", un numero), usa el idioma predominante del historial de conversacion en su lugar. Responde UNICAMENTE con el nombre del idioma en espanol, todo en minusculas, una sola palabra (ejemplos validos: espanol, ingles, portugues, frances). Sin explicaciones.' }, { role: 'user', content: 'HISTORIAL:\\n' + ($json.historial || '(sin historial)') + '\\n\\nMENSAJE ACTUAL: \"' + $json.texto + '\"' }], temperature: 0, max_tokens: 500 }) }}",
-        "options": {}
-      },
-      "credentials": {
-        "groqApi": {
-          "id": "jORffbRhRNohHT1B",
-          "name": "Groq API"
-        }
+        "jsCode": "// 14-nov (revisión G54, punto 13): antes esta era una llamada aparte a Groq (gpt-oss-120b, con el historial entero)\n// en cada mensaje, solo para saber el idioma. Ahora se decide sin IA, con la misma idea que usa Marco: se cuentan\n// palabras típicas de inglés y de español en el mensaje; si no alcanza (un \"ok\", unas medidas, un correo), se miran\n// los últimos mensajes del cliente en el historial. Sale con la misma forma que daba la IA, así los nodos siguientes\n// no cambian. Por defecto, español (igual que antes).\nconst ctx = $('🔧 Preparar Contexto IA').first().json;\nconst EN = /\\b(i|i'm|the|you|need|have|want|please|thanks|thank|yes|for|and|my|is|are|can|would|like|to|of|with|this|that|hi|hello|good|morning|afternoon|evening|how|much|what|when|where|price|quote|send|ship|we|our|your|will|do|does|it's|don't|could|about|looking|get|know)\\b/g;\nconst ES = /\\b(quiero|necesito|tengo|hola|gracias|por|sí|para|con|una|un|que|me|mi|el|la|los|las|de|en|es|son|buenas|buenos|cuánto|cuanto|precio|cotización|cotizar|soy|como|pero|cuando|donde|este|esta|también|muy|más|porque|hay|del|al|se|lo|ya|favor|empresa|servicio|tienen|hacen|puedo|quisiera)\\b/g;\nfunction contar(t) {\n  const s = String(t || '').toLowerCase();\n  return { en: (s.match(EN) || []).length, es: (s.match(ES) || []).length };\n}\nfunction decidir(c) {\n  if (Math.max(c.en, c.es) < 2 || c.en === c.es) return null;\n  return c.en > c.es ? 'inglés' : 'español';\n}\nlet idioma = decidir(contar(ctx.texto));\nif (!idioma) {\n  const delCliente = String(ctx.historial || '').split('\\n').filter((l) => /^(\\[[^\\]]*\\]\\s*)?Cliente:/.test(l)).slice(-10).join(' ');\n  idioma = decidir(contar(delCliente));\n}\nreturn [{ json: { choices: [{ message: { content: idioma || 'español' } }], idioma_detectado: idioma || 'español (por defecto)' } }];\n"
       }
     },
     {
