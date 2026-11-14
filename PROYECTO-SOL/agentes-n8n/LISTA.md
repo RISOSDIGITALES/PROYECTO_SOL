@@ -42,7 +42,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | Marco CE — 01 Clasificador | `1PXcg3dOQBt8hrrT` | sí | 2026-10-16 | [marco-ce-01-clasificador.json](marco-crating-express/marco-ce-01-clasificador.json) |
 | Marco CE — 02 Contexto y Lead | `s1Z7jKoFzy5x7XvC` | sí | 2026-11-03 | [marco-ce-02-contexto-y-lead.json](marco-crating-express/marco-ce-02-contexto-y-lead.json) |
 | Marco CE — 03 Generador IA | `J8qbKOF7t4GnhRDT` | sí | 2026-10-16 | [marco-ce-03-generador-ia.json](marco-crating-express/marco-ce-03-generador-ia.json) |
-| Marco CE — 05 Guardar Lead | `PqbfMghL0E7xKflC` | sí | 2026-10-20 | [marco-ce-05-guardar-lead.json](marco-crating-express/marco-ce-05-guardar-lead.json) |
+| Marco CE — 05 Guardar Lead | `PqbfMghL0E7xKflC` | sí | 2026-11-14 | [marco-ce-05-guardar-lead.json](marco-crating-express/marco-ce-05-guardar-lead.json) |
 | Marco CE — 06 Procesador de Medios | `5GU89AeWsBZ86FWa` | sí | 2026-10-31 | [marco-ce-06-procesador-de-medios.json](marco-crating-express/marco-ce-06-procesador-de-medios.json) |
 | 📞 CE Voice Agent — Marco (Fusionado) | `FYKfTJBfgwsMpJV7` | sí | 2026-11-14 | [ce-voice-agent-marco-fusionado.json](marco-crating-express/ce-voice-agent-marco-fusionado.json) |
 | 📞→💬 VAPI → WhatsApp Handoff | `6UWT1GHKZVvCDcc6` | sí | 2026-11-05 | [vapi-whatsapp-handoff.json](marco-crating-express/vapi-whatsapp-handoff.json) |

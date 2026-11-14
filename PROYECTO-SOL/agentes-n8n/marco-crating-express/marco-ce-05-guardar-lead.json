@@ -2,7 +2,7 @@
   "id": "PqbfMghL0E7xKflC",
   "name": "Marco CE — 05 Guardar Lead",
   "active": true,
-  "updatedAt": "2026-10-20T13:46:32.502Z",
+  "updatedAt": "2026-11-14T15:41:33.953Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -62,7 +62,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  empresa_id: 1,\n  phone: '+' + $json.telefono,\n  contact_name: $json._airtableFields?.Nombre_Contacto || $json.datosRecolectados?.nombre_cliente || '',\n  clasificacion: $json.clasificacion || 'frio',\n  datos_calificacion: {\n    ...($json.datosRecolectados || {}),\n    cotizacion_enviada: !!($json.cotizacionEnviada || $json.cotizadorEnviado),\n    escalada_enviada: !!$json.escaladaEnviada,\n    idioma: $json.idiomaConversacion || null\n  },\n  // Solo el mensaje de este turno y la respuesta enviada, completos (20-oct). Antes se armaba\n  // partiendo el historial por líneas: se perdían las líneas 2+ de los mensajes largos\n  // (estimado, descripción de fotos) y las fotos viejas se reenviaban en cada turno.\n  messages: [\n    { rol: 'user', contenido: String($json.texto || '').trim() },\n    { rol: 'bot', contenido: String($json.mensajeRespuesta || $json.mensaje || '').trim() }\n  ].filter(m => m.contenido)\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  empresa_id: 1,\n  phone: '+' + $json.telefono,\n  contact_name: $json._airtableFields?.Nombre_Contacto || $json.datosRecolectados?.nombre_cliente || '',\n  clasificacion: $json.clasificacion || 'frio',\n  ...((n) => n ? { name: n } : {})(String($json._airtableFields?.Nombre_Contacto || $json.datosRecolectados?.nombre_cliente || '').trim()),\n  ...((e) => e ? { estado: e } : {})(({ caliente: 'hot', tibio: 'warm' })[String($json.clasificacion || 'frio').toLowerCase()]),\n  datos_calificacion: {\n    ...($json.datosRecolectados || {}),\n    cotizacion_enviada: !!($json.cotizacionEnviada || $json.cotizadorEnviado),\n    escalada_enviada: !!$json.escaladaEnviada,\n    idioma: $json.idiomaConversacion || null\n  },\n  // Solo el mensaje de este turno y la respuesta enviada, completos (20-oct). Antes se armaba\n  // partiendo el historial por líneas: se perdían las líneas 2+ de los mensajes largos\n  // (estimado, descripción de fotos) y las fotos viejas se reenviaban en cada turno.\n  messages: [\n    { rol: 'user', contenido: String($json.texto || '').trim() },\n    { rol: 'bot', contenido: String($json.mensajeRespuesta || $json.mensaje || '').trim() }\n  ].filter(m => m.contenido)\n}) }}",
         "options": {
           "retry": {
             "enabled": true,
