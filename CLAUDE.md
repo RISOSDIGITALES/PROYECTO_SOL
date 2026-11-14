@@ -56,6 +56,8 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 3. **Bubble — pendientes de seguridad del 15-oct** (sección "Pendientes" del CLAUDE.md de Bubble, punto 7). El tope de descargas CSV quedó hecho el 27-oct; el horario de las salientes ya usa la zona del cliente (ítem 462). El cifrado del resumen, la escalación y las notas quedó hecho el 27-oct (ítem 515 de Bubble; en el servidor de Walter hay que correr `python -m scripts.encrypt_existing` una vez). La conversación limpia en el panel quedó hecha el 27-oct (ítem 516 de Bubble). Bubbli fase 3 (sugerencias con datos reales) quedó hecha el 27-oct (ítem 517 de Bubble), y Bubbli en el celular, el 29-oct (ítem 537 de Bubble). Queda solo la confirmación por SMS (en espera porque cuesta plata). Comprar números: solo la agencia (decidido el 27-oct; ya estaba aplicado desde el 21-oct).
 4. **G54:** ~~revisar el informe mensual del 28-oct~~ (hecho, ítem 467). **Rotación de horarios (pedido de la usuaria, 26-oct), cada lunes hasta la semana del 30-nov:** aprobar las ideas nuevas, generar los posts y programarlos en hora de Miami (`fecha_programada` sin "Z"): martes Facebook, miércoles LinkedIn, jueves Facebook, viernes Instagram. Horas por semana: 2-nov 12/17/19/08 · 9-nov 17/19/08/12 · 16-nov 19/08/12/17 · 23-nov 08/12/17/19 · 30-nov 12/17/19/08 (mar/mié/jue/vie). Con 6 semanas, cada horario junta 6 posts. El cálculo de `sugerencia-horario` con el piso mínimo ya quedó hecho el 29-oct (ítem 487) y se activa solo cuando haya datos.
 
+**Reunión con el ingeniero (14-nov):** tareas anotadas por la usuaria en Enfoco; pedirle que las pegue al empezar y anotarlas acá (ítem 608).
+
 **Pedido del ingeniero (27-oct):** ~~animación de Jelly basada en Bubbli~~: hecha y entregada el 28-oct (ítem 469); las correcciones que hagan falta las hace el ingeniero.
 
 **De la usuaria (no se pueden hacer desde acá):** probar "Probar mi agente" con el agente de voz encendido (lo hace ella); permisos de estadísticas de LinkedIn.
@@ -707,6 +709,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 607. **Revisión de G54: de 58 a 71 %** (2026-11-14), recalculada con mediciones por script sobre los 35 flujos activos (no una revisión completa nueva). Visibilidad 35→75, API 66→82, utilidad 72→80, multiempresa 68→78, confiabilidad 58→72, seguridad 58→70, costo 55→60, mantenibilidad 50→52. Hechos los puntos 1-11 y 15; a medias el 6 (firma de Meta, sin App Secret) y el 13 (traducción de Marco e historial); pendientes 12 (contactos tg_/fb_) y 14 (orden del código). Informe actualizado en el mismo enlace. Corregida en este archivo la cadena de respaldo de Marco (Groq → Zhipu → OpenAI sin clave → contingencia).
 
+608. **Reunión con el ingeniero y cierre del 14-nov** (2026-11-14): el ingeniero le dejó tareas a la usuaria, que ella anotó en Enfoco (no se puede leer desde acá: no está en el Notion conectado). **Al abrir la próxima sesión, pedirle que las pegue y pasarlas a "Próxima sesión".** Quedan de G54, de nuestro lado: puntos 12 (contactos duplicados tg_/fb_), 14 (orden del código), la mitad del 13 (modelo chico para traducir en Marco, recortar historial) y del 6 (firma de Meta, falta el App Secret); los 3 pedidos al ingeniero (canal + external_id, fusión de datos, notas) siguen sin sumarse al Éxodo.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
@@ -720,6 +724,16 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 ## Reportes Diarios
 
 > Solo los últimos 3 reportes (regla cambiada el 2026-10-30, antes 7 días, para gastar menos uso: CLAUDE.md se carga entero en cada sesión). Al agregar uno, mover el más viejo a `PROYECTO-SOL/historial/reportes/AAAA-MM-DD.md`.
+
+---
+
+### 2026-11-14 (Sábado)
+
+Arranqué con la rutina de G54, todo limpio, y seguí con los pendientes de ayer en Bubble: la cuenta de agencia de prueba volvió a su contraseña de siempre, el nombre del agente ahora se toma solo del saludo cuando el campo está vacío, probé la plantilla de la configuración guiada y cerré la revisión del inglés nuevo con la plataforma. También dejé listo el guion para la llamada real de prueba de Bubble, que queda para cuando haya un rato.
+
+Después me metí a fondo con G54. Al revisar la API encontré que la respuesta manual de WhatsApp desde el panel no tenía quién la recibiera, porque ese flujo se había borrado sin que quedara registro; lo rehice con cuidado y lo probé de punta a punta. Con eso pedí una revisión completa de nuestro lado, igual de meticulosa que la de Bubble, y salió 58 %. Fui arreglando punto por punto: los agentes ya no borran los datos del lead y guardan nombre y temperatura, todos los fallos avisan por correo, el seguimiento respeta la ventana de WhatsApp, el agente de ventas por fin recuerda la conversación y respeta la pausa, y ya no hay respaldos silenciosos a Crating Express. Al recalcular quedamos en 71 %; lo que falta (unificar los contactos de varios canales, ordenar el código y unos ajustes de seguridad) nos llevaría a unos 80.
+
+En la tarde tuve una reunión con el ingeniero, que me dejó unas tareas que anoté en Enfoco y que tomo en la próxima sesión. Ahí cerré el día, con todo subido y el uso semanal en 74 %.
 
 ---
 
@@ -740,15 +754,3 @@ Arranqué con la rutina de G54, todo limpio y con los posts de la semana saliend
 En la tarde ordené el código: ningún archivo del servidor ni del panel pasa de 800 líneas, y lo repetido entre agencia y negocio quedó en una sola copia. También sumé lo que más le faltaba a la utilidad: plantillas por rubro para dejar el agente listo en un toque, un informe mensual de cada negocio firmado por su agencia, y el logo y el color de la agencia en lo que ve su cliente. Además pasé el registro de llamadas a una tabla. En medio, Don Marc me pasó el análisis de TikTok para OM y le preparé la respuesta sobre qué puede automatizar G54, aclarando que OM todavía no tiene la verificación de Meta y que G54 aún no es Tech Provider.
 
 Al final hice una llamada real de prueba al número de Floristería Pétalos. El agente atendió, cambió de idioma y respondió bien, pero se cortó a los 103 segundos por el límite del plan gratis de Groq. Con eso apareció que LiveKit pedía cada respuesta dos veces, y quedó corregido. Bubble queda en 88 % contando todo, y en 90 sin contar el servidor ni la prueba con dueños reales, que van con el piloto. Lo que de verdad falta antes de lanzarlo es pasar a Groq pago. Ahí paré, con todo subido y el uso semanal en 48 %.
-
----
-
-### 2026-11-11 (Miércoles)
-
-Arranqué con lo que pidió la mañana: el resumen de validación de G54 en HTML, un comentario corto sobre DeepSeek y la rutina de G54, todo limpio. Cerré la prueba de Google Calendar con un evento con hora y decidí que los eventos de todo el día ya no tapen la agenda. Hice la prueba del Reel con un video de prueba y encontré que G54 no le avisa a Reels AI porque falta registrar una clave en su catálogo, así que se la pedí al ingeniero en el Éxodo; de paso corregí que los textos prometían rapidez y mandaban a un WhatsApp sin número. Mandé un correo real de Camila a anget3747, le arreglé el texto centrado y dejé la imagen en el idioma del correo. También tomé la indicación de Don Marc de escribir la fecha al estilo de EE. UU., y corregí que Marco por teléfono se despidiera en inglés.
-
-La tarde fue de Bubble. Pedí una revisión completa con puntaje desde todas las perspectivas y salió 72 %: fuerte en diseño y seguridad, flojo en producción y en lo que entiende un dueño de negocio. Hice los seis arreglos chicos (sin la palabra "agencia" para el negocio, el mes gratis a la vista, el menú del celular completo, entre otros) y dejé la Agencia Inicial en US$99 con 750 minutos. Después armé un plan para llevar todo a 90 y avancé con los dos primeros pasos: la seguridad subió de 82 a 92 % y las pruebas de 74 a 86 %, con todas las pruebas en verde y la revisión general en 78 %.
-
-Lo único que quedó colgado fue la primera corrida de pruebas en GitHub, que se quedó en cola sin arrancar y mañana reviso si es por los minutos de la cuenta. Ahí paré por la hora, con todo subido y el uso semanal en 26 %.
-
-**Revisión completa de Bubble 54:** https://claude.ai/artifact/4WACFs6gbEBhJMnGMWkUKz
