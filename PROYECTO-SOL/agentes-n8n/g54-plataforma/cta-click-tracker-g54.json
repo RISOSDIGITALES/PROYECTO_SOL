@@ -2,38 +2,39 @@
   "id": "JN2vRUznkOXlej8q",
   "name": "🔗 CTA Click Tracker (G54)",
   "active": true,
-  "updatedAt": "2026-09-28T16:05:28.855Z",
+  "updatedAt": "2026-11-14T15:46:00.485Z",
   "tags": [],
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "CKOju9JVnSMymfKv"
   },
   "nodes": [
     {
       "id": "webhook-click",
       "name": "🔔 Webhook: Clic CTA",
+      "webhookId": "c16fb858-4df9-4b44-af9e-11149655aa43",
       "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
       "position": [
         200,
         300
       ],
-      "typeVersion": 2,
       "parameters": {
         "httpMethod": "GET",
         "path": "cta-click-g54",
         "options": {},
         "responseMode": "responseNode"
-      },
-      "webhookId": "c16fb858-4df9-4b44-af9e-11149655aa43"
+      }
     },
     {
       "id": "config-node",
       "name": "⚙️ Config Growth54",
       "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
         420,
         300
       ],
-      "typeVersion": 3.4,
       "parameters": {
         "assignments": {
           "assignments": [
@@ -58,11 +59,11 @@
       "id": "preparar-click",
       "name": "🔧 Preparar Click",
       "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         640,
         300
       ],
-      "typeVersion": 2,
       "parameters": {
         "jsCode": "const wh = $('🔔 Webhook: Clic CTA').item.json;\nconst q = wh.query || {};\nconst company = q.company || '';\nconst platform = (q.platform === 'instagram') ? 'instagram' : 'facebook';\nconst dest = q.dest || '';\n// Solo redirige a http(s) real — evita que este endpoint se use como open-redirect genérico\nconst destValida = typeof dest === 'string' && /^https?:\\/\\//.test(dest);\nconst hoy = new Date().toISOString().slice(0, 10);\n// Bots y crawlers (vista previa de Facebook, buscadores, IA) también \"visitan\" el link.\n// Revisado 28-sep: ~80% de los clics registrados eran de bots (facebookexternalhit,\n// linkfluence, Googlebot, GPTBot). Se los redirige igual, pero no se suman como clic.\nconst ua = String((wh.headers || {})['user-agent'] || '');\nconst esBot = !ua || /bot|crawl|spider|facebookexternalhit|facebookcatalog|meta-externalagent|slurp|preview|linkfluence|headless|python-requests|curl|wget/i.test(ua);\n\nreturn [{\n  json: { company, platform, dest, destValida, hoy, esBot }\n}];\n"
       }
@@ -71,11 +72,11 @@
       "id": "if-dest-valida",
       "name": "🔀 ¿Dest válida?",
       "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
       "position": [
         860,
         300
       ],
-      "typeVersion": 2.2,
       "parameters": {
         "conditions": {
           "options": {
@@ -105,12 +106,12 @@
       "id": "sumar-clic",
       "name": "💾 G54: Sumar Clic",
       "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "onError": "continueRegularOutput",
       "position": [
         1080,
         200
       ],
-      "typeVersion": 4.1,
-      "onError": "continueRegularOutput",
       "parameters": {
         "method": "POST",
         "url": "={{ $('⚙️ Config Growth54').item.json.G54_BASE_URL + '/api/agent/rrss/metricas' }}",
@@ -141,11 +142,11 @@
       "id": "responder-redirect",
       "name": "📤 Redirigir",
       "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
       "position": [
         1300,
         200
       ],
-      "typeVersion": 1.1,
       "parameters": {
         "respondWith": "text",
         "responseBody": "",
@@ -166,11 +167,11 @@
       "id": "responder-error",
       "name": "❌ Responder Error",
       "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
       "position": [
         1080,
         420
       ],
-      "typeVersion": 1.1,
       "parameters": {
         "respondWith": "text",
         "responseBody": "Link inválido.",

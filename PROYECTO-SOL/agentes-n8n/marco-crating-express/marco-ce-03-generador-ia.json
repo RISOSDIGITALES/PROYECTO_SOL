@@ -2,12 +2,13 @@
   "id": "J8qbKOF7t4GnhRDT",
   "name": "Marco CE — 03 Generador IA",
   "active": true,
-  "updatedAt": "2026-10-16T14:08:02.921Z",
+  "updatedAt": "2026-11-14T15:45:59.471Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner",
-    "availableInMCP": false
+    "availableInMCP": false,
+    "errorWorkflow": "CKOju9JVnSMymfKv"
   },
   "nodes": [
     {
@@ -26,6 +27,7 @@
       "name": "🤖 Groq: Conversación IA",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "continueOnFail": true,
       "position": [
         300,
         300
@@ -54,14 +56,14 @@
           "id": "jORffbRhRNohHT1B",
           "name": "Groq API"
         }
-      },
-      "continueOnFail": true
+      }
     },
     {
       "id": "if-groq",
       "name": "🔀 ¿Groq OK?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
+      "continueOnFail": true,
       "position": [
         560,
         300
@@ -86,8 +88,7 @@
             }
           ]
         }
-      },
-      "continueOnFail": true
+      }
     },
     {
       "id": "parsear",
@@ -116,6 +117,16 @@
       }
     },
     {
+      "id": "zhipu-fallback-node",
+      "name": "🤖 Zhipu: Fallback IA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "alwaysOutputData": true,
+      "continueOnFail": true,
+      "position": [
+        820,
+        460
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
@@ -135,24 +146,22 @@
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth"
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        820,
-        460
-      ],
-      "id": "zhipu-fallback-node",
-      "name": "🤖 Zhipu: Fallback IA",
       "credentials": {
         "httpHeaderAuth": {
           "id": "rWF3VkYbayILPZTH",
           "name": "Zhipu GLM � Fallback IA (G54)"
         }
-      },
-      "continueOnFail": true,
-      "alwaysOutputData": true
+      }
     },
     {
+      "id": "zhipu-if-node",
+      "name": "🔀 ¿Zhipu OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        460
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -173,17 +182,20 @@
             }
           ]
         }
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        1080,
-        460
-      ],
-      "id": "zhipu-if-node",
-      "name": "🔀 ¿Zhipu OK?"
+      }
     },
     {
+      "id": "acb554ca-eadf-455f-b462-b9f6ff6f4e2f",
+      "name": "🤖 OpenAI: Último Respaldo",
+      "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "position": [
+        1040,
+        660
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
@@ -205,25 +217,22 @@
           "timeout": 90000
         }
       },
-      "name": "🤖 OpenAI: Último Respaldo",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1040,
-        660
-      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "hkeIUPcrRjD4F4KY",
           "name": "OpenAI � G54 (plataforma, falta cargar la clave)"
         }
-      },
-      "onError": "continueRegularOutput",
-      "alwaysOutputData": true,
-      "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
-      "id": "acb554ca-eadf-455f-b462-b9f6ff6f4e2f"
+      }
     },
     {
+      "id": "043067aa-598b-400c-812e-86fae2eb226a",
+      "name": "🔀 ¿OpenAI respondió?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        660
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -245,15 +254,7 @@
           ]
         },
         "options": {}
-      },
-      "name": "🔀 ¿OpenAI respondió?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        1260,
-        660
-      ],
-      "id": "043067aa-598b-400c-812e-86fae2eb226a"
+      }
     }
   ],
   "connections": {
