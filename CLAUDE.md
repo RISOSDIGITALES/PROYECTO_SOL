@@ -544,7 +544,7 @@ LISTO_PARA_COTIZAR    → todos los datos presentes
 
 ### Límites de APIs
 - Groq llama-3.3-70b-versatile: límite diario — se resetea a medianoche Miami
-- Fallback de Marco cuando Groq falla: Gemini, y si también falla, Modo Contingencia sin IA (ver ítem 104) — DeepSeek ya no forma parte de la cadena, confirmado el 15-jul que ningún workflow lo referencia
+- Fallback de Marco cuando Groq falla (corregido 14-nov, revisión G54): Groq → Zhipu (`glm-4.5-flash`) → OpenAI (`gpt-4.1-mini`, hoy sin clave: falla y sigue) → Modo Contingencia sin IA.
 
 ## VAPI — Marco Voz
 
@@ -704,6 +704,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 604. **G54: el Vigía devuelve los posts con motivo y avisa** (2026-11-14), punto 11 de la revisión (ítem 593). Un post en "programado" vencido hace más de 15 min se devolvía con `PUT …/status` a secas, sin motivo y sin correo (severidad "atención"). Ahora usa `mark-published` como pide G54: si el post ya tiene el id de la red, se marca publicado (antes podía terminar duplicado); si no, vuelve a "aprobado" con un motivo que el cliente ve en el Editor. El hallazgo pasa a crítico, así llega el correo (con la espera de 6 h). Verificado: `mark-published` acepta el token de agente (404 de post inexistente) y dos corridas del Vigía sin errores; hoy no había posts atascados para ejercitar ese camino.
 
 606. **G54: una llamada a la IA menos por mensaje en Sales AI** (2026-11-14), punto 13 de la revisión (ítem 593). `🌐 Detectar Idioma` era una llamada aparte a Groq (gpt-oss-120b, con el historial entero) en cada mensaje; ahora es un nodo de código sin IA (palabras típicas de inglés/español en el mensaje y, si no alcanza, en los últimos mensajes del cliente; por defecto español), con la misma salida para no tocar los nodos siguientes. Menos tokens y menos riesgo de llegar al límite de Groq. Probado con 6 casos (incluidos "ok" y medidas) y en vivo: mensaje en inglés → "Good morning, I'm Marco… May I have your name?". **Queda del punto 13:** traducción de Marco con un modelo chico y recorte del historial (más delicado, no se tocó).
+
+607. **Revisión de G54: de 58 a 71 %** (2026-11-14), recalculada con mediciones por script sobre los 35 flujos activos (no una revisión completa nueva). Visibilidad 35→75, API 66→82, utilidad 72→80, multiempresa 68→78, confiabilidad 58→72, seguridad 58→70, costo 55→60, mantenibilidad 50→52. Hechos los puntos 1-11 y 15; a medias el 6 (firma de Meta, sin App Secret) y el 13 (traducción de Marco e historial); pendientes 12 (contactos tg_/fb_) y 14 (orden del código). Informe actualizado en el mismo enlace. Corregida en este archivo la cadena de respaldo de Marco (Groq → Zhipu → OpenAI sin clave → contingencia).
 
 ## Error conocido
 
