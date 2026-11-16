@@ -2,7 +2,7 @@
   "id": "EX9K1AZwKeouSJ9G",
   "name": "📊 Analytics AI Semanal — G54",
   "active": true,
-  "updatedAt": "2026-11-14T16:25:41.806Z",
+  "updatedAt": "2026-11-16T15:31:52.617Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -542,7 +542,16 @@
       "parameters": {
         "method": "GET",
         "url": "=https://n8n.mdarthurdigital.com/webhook/analytics-semanal-g54?company_id={{ $json.company_id }}&fb_page_id={{ $json.fb_page_id || \"\" }}&ig_user_id={{ $json.ig_user_id || \"\" }}",
-        "options": {}
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Key",
+              "value": "REDACTED_N8N_WEBHOOK_KEY"
+            }
+          ]
+        }
       }
     },
     {
@@ -653,6 +662,39 @@
       "position": [
         360,
         360
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "8c4cd583-50fe-46f3-b544-dde859d42fe9",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "8beea998-719e-4c1a-a09b-b85ce1e8b02a",
+      "name": "🔒 ¿Llamada autorizada? (GET semanal)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        420,
+        340
       ],
       "parameters": {
         "conditions": {
@@ -805,7 +847,7 @@
       "main": [
         [
           {
-            "node": "⚙️ Config Growth54",
+            "node": "🔒 ¿Llamada autorizada? (GET semanal)",
             "type": "main",
             "index": 0
           }
@@ -956,6 +998,18 @@
         [
           {
             "node": "🔎 Resolver Redes (botón)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "🔒 ¿Llamada autorizada? (GET semanal)": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config Growth54",
             "type": "main",
             "index": 0
           }
