@@ -1,0 +1,164 @@
+<title>Revisión de G54, 16-nov</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: informe de una columna; resumen con puntajes arriba, plan priorizado y detalle por perspectiva debajo */
+:root{
+  --bg:#f6f7f4; --surface:#ffffff; --fg:#1d2420; --muted:#5a645e; --line:#dde2dc;
+  --accent:#1f6b52; --accent-soft:#e3efe9;
+  --crit:#b42318; --crit-soft:#fdecea; --warn:#9a5b00; --warn-soft:#fdf3e1; --ok:#1f7a3d; --ok-soft:#e6f4ea;
+  --display:"Fraunces",Georgia,serif; --body:"Source Sans 3","Segoe UI",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141917; --surface:#1c2320; --fg:#e7ece8; --muted:#a1aca5; --line:#2e3833;
+  --accent:#5fc19c; --accent-soft:#1f3a30; --crit:#ff8a7a; --crit-soft:#3a1f1c; --warn:#f2b45a; --warn-soft:#3a2c17; --ok:#7fd49a; --ok-soft:#1d3324; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141917; --surface:#1c2320; --fg:#e7ece8; --muted:#a1aca5; --line:#2e3833;
+  --accent:#5fc19c; --accent-soft:#1f3a30; --crit:#ff8a7a; --crit-soft:#3a1f1c; --warn:#f2b45a; --warn-soft:#3a2c17; --ok:#7fd49a; --ok-soft:#1d3324; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.55}
+.wrap{max-width:900px;margin:0 auto;padding-block:40px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:36px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:2.1rem} h2{font-size:1.45rem} h3{font-size:1.08rem;font-family:var(--body);font-weight:700}
+p{margin:0} .muted{color:var(--muted)}
+.eyebrow{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700}
+header{display:flex;flex-direction:column;gap:10px}
+section{display:flex;flex-direction:column;gap:14px}
+.general{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px}
+.big{font-family:var(--display);font-size:3rem;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1}
+.general p{flex:1;min-width:0;min-width:240px}
+.scores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 28px}
+@media (max-width:640px){.scores{grid-template-columns:1fr}}
+.score{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:baseline}
+.score .n{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
+.bar{grid-column:1/-1;height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px}
+.lo{background:var(--crit)} .mid{background:var(--warn)} .hi{background:var(--ok)}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--mono);color:var(--muted);width:2.2em}
+.pill{display:inline-block;font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.alta{background:var(--crit-soft);color:var(--crit)} .media{background:var(--warn-soft);color:var(--warn)} .baja{background:var(--accent-soft);color:var(--accent)} .hecho{background:var(--ok-soft);color:var(--ok)}
+.v{font-size:.75rem;color:var(--ok);font-weight:700;white-space:nowrap}
+.find{display:flex;flex-direction:column;gap:6px;padding:14px 0;border-top:1px solid var(--line)}
+.find:first-of-type{border-top:0}
+.find .t{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+code{font-family:var(--mono);font-size:.85em;background:var(--accent-soft);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px 18px}
+summary{cursor:pointer;padding:12px 0;font-weight:700;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+summary .n{font-family:var(--mono);color:var(--muted);font-weight:600}
+ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
+.note{font-size:.9rem;color:var(--muted)}
+</style>
+<div class="wrap">
+<header>
+  <span class="eyebrow">G54 · agentes de n8n · 16 de noviembre de 2026</span>
+  <h1>Revisión completa de G54</h1>
+  <p class="muted">Cuatro revisores leyeron en paralelo la copia de hoy de los 35 flujos activos, dos perspectivas cada uno. Yo comprobé en los archivos los hallazgos marcados como comprobados. Esta vez les pedí que no dieran por bueno nada de lo arreglado el 14-nov.</p>
+</header>
+
+<section>
+  <div class="general">
+    <span class="big">61 %</span>
+    <p>Baja desde el 71 % del 14-nov. Aquel número salió de mediciones por script sobre lo que se arregló, no de una revisión completa, y fue optimista. Esta revisión encontró caminos que no se habían mirado (dos puertas sin candado, Facebook duplicado, mensajes que Marco pierde en pausa) y dos arreglos del 14-nov que no quedaron bien: el respaldo de IA de Sales AI y su seguimiento de 23 h.</p>
+  </div>
+  <div class="scores">
+    <div class="score"><span>Uso correcto de la API</span><span class="n">74 <span class="muted">(82)</span></span><span class="bar"><i class="mid" style="width:74%"></i></span></div>
+    <div class="score"><span>Multiempresa</span><span class="n">72 <span class="muted">(78)</span></span><span class="bar"><i class="mid" style="width:72%"></i></span></div>
+    <div class="score"><span>Utilidad para el negocio</span><span class="n">70 <span class="muted">(80)</span></span><span class="bar"><i class="mid" style="width:70%"></i></span></div>
+    <div class="score"><span>Confiabilidad</span><span class="n">60 <span class="muted">(72)</span></span><span class="bar"><i class="mid" style="width:60%"></i></span></div>
+    <div class="score"><span>Visibilidad de errores</span><span class="n">58 <span class="muted">(75)</span></span><span class="bar"><i class="mid" style="width:58%"></i></span></div>
+    <div class="score"><span>Costo y escalabilidad</span><span class="n">56 <span class="muted">(60)</span></span><span class="bar"><i class="mid" style="width:56%"></i></span></div>
+    <div class="score"><span>Seguridad</span><span class="n">50 <span class="muted">(70)</span></span><span class="bar"><i class="lo" style="width:50%"></i></span></div>
+    <div class="score"><span>Mantenibilidad</span><span class="n">46 <span class="muted">(52)</span></span><span class="bar"><i class="lo" style="width:46%"></i></span></div>
+  </div>
+  <p class="note">Entre paréntesis, el puntaje del 14-nov por la tarde. La general es el promedio simple de las 8.</p>
+</section>
+
+<section>
+  <h2>Arreglado durante la revisión</h2>
+  <div class="find"><div class="t"><span class="pill hecho">Hecho</span><h3>Clave de Pollinations a la vista en el repo público</h3></div>
+  <p>Estaba sin tapar desde el 3-nov en la copia del generador de imágenes. Quedó tapada, y el exportador y el hook de commits ahora la reconocen (probado: el hook bloquea un commit con una clave de ese formato). No la cambié: cambiar claves lo deciden ustedes.</p></div>
+</section>
+
+<section>
+  <h2>Plan de arreglos, en orden</h2>
+  <p class="muted">Ordenado por daño posible y esfuerzo. Todo es de nuestro lado salvo donde dice "ingeniero". <span class="v">✓ comprobado</span> marca lo que verifiqué yo en los archivos.</p>
+  <div class="tbl"><table>
+  <thead><tr><th>#</th><th>Qué arreglar</th><th>Impacto</th></tr></thead>
+  <tbody>
+  <tr><td class="num">1</td><td><b>Respaldo de IA de Sales AI.</b> El nodo de Zhipu no tiene "seguir si falla": si Groq llega al límite y Zhipu falla, la corrida se cae y el cliente no recibe nada. Nunca se llega a OpenAI ni al mensaje de emergencia. El ítem 598 lo dio por arreglado. <span class="v">✓ comprobado</span></td><td><span class="pill alta">Alta</span></td></tr>
+  <tr><td class="num">2</td><td><b>Puerta abierta en Analytics semanal.</b> La versión GET del webhook no tiene candado y toma de la dirección la empresa y la página de Facebook. Con eso alguien puede borrar la semana de una empresa y guardarle las métricas de otra. El botón del panel usa la versión POST, que sí tiene candado: la GET se puede cerrar. <span class="v">✓ comprobado</span></td><td><span class="pill alta">Alta</span></td></tr>
+  <tr><td class="num">3</td><td><b>Marco pierde los mensajes cuando el bot está en pausa.</b> La salida "no" de <code>¿Bot puede responder?</code> no va a ningún lado. Si el vendedor tomó la conversación desde el panel, lo que el cliente responde no llega al panel ni avisa a nadie. Sales AI ya lo hace bien: hay que copiar eso. <span class="v">✓ comprobado</span></td><td><span class="pill alta">Alta</span></td></tr>
+  <tr><td class="num">4</td><td><b>La respuesta manual de WhatsApp no pide clave.</b> El flujo del 14-nov (<code>wa-reply-g54</code>) comprueba que la empresa y el contacto existan, pero no quién llama. Con datos que circulan, cualquiera podría mandar un mensaje desde el WhatsApp de una empresa a uno de sus clientes. G54 no manda clave: hay que pedirle al ingeniero un encabezado secreto. <span class="v">✓ comprobado</span></td><td><span class="pill alta">Alta · ingeniero</span></td></tr>
+  <tr><td class="num">5</td><td><b>Facebook duplicado.</b> Las publicaciones en Facebook, Instagram y LinkedIn se reintentan una vez. Si la red publicó pero respondió tarde, sale dos veces. Y si Facebook publica pero falla la marca en G54, el Vigía lo devuelve como "no se publicó", y al reprogramarlo sale duplicado. Sacar el reintento de esas publicaciones y, en el Vigía, buscar el post en la red antes de devolverlo.</td><td><span class="pill alta">Alta</span></td></tr>
+  <tr><td class="num">6</td><td><b>El Vigía se cae si se cae Groq.</b> En su chequeo de Groq, "seguir si falla" quedó escrito en el lugar equivocado y n8n lo ignora. Si Groq falla, el Vigía no revisa los posts atascados. <span class="v">✓ comprobado</span></td><td><span class="pill alta">Alta</span></td></tr>
+  <tr><td class="num">7</td><td><b>Seguimiento de Sales AI apagado.</b> El disparador del seguimiento y el aviso al vendedor de lead caliente están desactivados, sin registro de por qué. El arreglo del ítem 596 nunca corre para otras empresas. Hoy no afecta a nadie (Crating Express usa Marco y Orison está en pausa), pero hay que decidir: activarlo o retirarlo a propósito. <span class="v">✓ comprobado</span></td><td><span class="pill media">Media · decisión</span></td></tr>
+  <tr><td class="num">8</td><td><b>La temperatura del trato baja.</b> En Sales AI y en Telegram de Marco, un "gracias" después de aceptar baja el trato de alto a bajo. En Community, un comentario tibio baja un trato alto a medio. Es el mismo error que se arregló en Marco WhatsApp el 29-oct. <span class="v">✓ comprobado</span></td><td><span class="pill media">Media</span></td></tr>
+  <tr><td class="num">9</td><td><b>Community todavía deja que la dirección decida la empresa.</b> El arreglo del 14-nov se hizo solo en Sales AI. Con una página no registrada y <code>?company=N</code>, entra a escribir en el CRM de la empresa N. <span class="v">✓ comprobado</span></td><td><span class="pill media">Media</span></td></tr>
+  <tr><td class="num">10</td><td><b>Envíos fallidos que quedan como éxito.</b> En Sales AI, Community y el router de Telegram, si Meta rechaza la respuesta, la corrida termina bien y el lead queda con la respuesta como si se hubiera mandado. Nadie se entera. Las respuestas manuales de Community y Telegram contestan "ok" siempre.</td><td><span class="pill media">Media</span></td></tr>
+  <tr><td class="num">11</td><td><b>Content AI no usa su mejor prompt.</b> El prompt completo (los 8 pasos con AEO y GEO) solo está en el nodo de Gemini, que da error desde julio. El que escribe cada post es el de Groq, más corto. Pasar el prompt completo a Groq y sacar Gemini del camino.</td><td><span class="pill media">Media</span></td></tr>
+  <tr><td class="num">12</td><td><b>Una misma persona en varios contactos</b> (pendiente del 14-nov). Telegram, Facebook e Instagram usan formatos distintos, así que pausar a alguien en un canal no lo frena en otro. Además, Telegram y las llamadas quedan anotados como WhatsApp en el CRM.</td><td><span class="pill media">Media</span></td></tr>
+  <tr><td class="num">13</td><td><b>Firma de Meta</b> (pendiente del 14-nov). Ningún webhook de Meta la comprueba. Necesita el App Secret de la app de Meta de cada empresa.</td><td><span class="pill media">Media · ingeniero</span></td></tr>
+  <tr><td class="num">14</td><td><b>Capacidad de Groq.</b> Una sola credencial de Groq la usan 18 flujos, también el relay de Bubble. Sales AI manda el historial entero en cada mensaje y Marco traduce con el modelo grande. Los lunes, Ideas y los informes arrancan todas las empresas al mismo minuto. Estimación: con 3 a 5 empresas con clientes escribiendo, se llega al límite diario.</td><td><span class="pill media">Media</span></td></tr>
+  <tr><td class="num">15</td><td><b>Orden del código</b> (pendiente del 14-nov). Más de 10 nodos sueltos o apagados que confunden, el generador de imágenes se llama "Pollinations" pero usa OpenAI, la detección de idioma está copiada en 7 lugares, <code>sales-ai-manual</code> sigue activo sin uso y el contador de clics viejo sigue abierto.</td><td><span class="pill baja">Baja</span></td></tr>
+  </tbody></table></div>
+</section>
+
+<section>
+  <h2>Lo que más valor agregaría</h2>
+  <div class="find"><div class="t"><h3>Saber qué post trae clientes</h3></div>
+  <p>Cada trato ya queda enlazado a su post, pero nadie usa ese dato. G54 ya ofrece <code>top-ventas</code> y el resultado por post: que Analytics los guarde, que el informe semanal muestre qué post trajo clientes y que Ideas AI elija temas por ventas y no solo por alcance. Sumar UTM a los enlaces del sitio. Todo gratis.</p></div>
+  <div class="find"><div class="t"><h3>Que la pausa del bot termine sola</h3></div>
+  <p>Hoy ningún flujo vuelve a encender el bot. Si un vendedor contesta una vez, ese cliente queda sin bot para siempre. Una pausa de 72 h sin mensajes del vendedor lo resuelve.</p></div>
+</section>
+
+<section>
+  <h2>Detalle por perspectiva</h2>
+  <details><summary>Seguridad <span class="n">50</span></summary><ul>
+    <li>Las puertas abiertas de los puntos 2 y 4 y la firma de Meta (punto 13).</li>
+    <li>El candado de los webhooks confía en la IP y acepta la clave en la dirección. Siguen sin candado el disparo manual del Vigía y el formulario de cotización.</li>
+    <li>Lo que responde la IA en Community se publica tal cual: un comentario con instrucciones escondidas podría hacer que la marca publique un enlace falso. Falta un filtro de enlaces y largo.</li>
+    <li>Cada corrida crea una sesión maestra de G54 que no vence y no se cierra (32 inicios de sesión, 2 cierres).</li>
+    <li>Bien: la foto ya viaja sin el token, no quedan respaldos <code>|| 1</code> y Sales AI resuelve la empresa contra G54.</li>
+  </ul></details>
+  <details><summary>Multiempresa <span class="n">72</span></summary><ul>
+    <li>Community acepta <code>?company</code> (punto 9) y Analytics semanal escribe en cualquier empresa (punto 2).</li>
+    <li>Orison sigue excluida a mano en 5 lugares, Telegram manda la empresa 1 fija a Marco, los tokens de LinkedIn viven dentro del flujo y el respaldo del correo al vendedor es risosadmi para cualquier empresa.</li>
+    <li>Corrección al 14-nov: la sesión compartida entre empresas no es un riesgo, porque la empresa activa es de cada sesión.</li>
+  </ul></details>
+  <details><summary>Confiabilidad <span class="n">60</span></summary><ul>
+    <li>Puntos 1, 5 y 10. 293 de 322 llamadas HTTP siguen sin límite de tiempo.</li>
+    <li>El control de mensajes repetidos guarda al final de la corrida: dos mensajes simultáneos no se ven entre sí. Sales AI no tiene ninguno.</li>
+    <li>El aviso de 72 h de Marco puede repetirse cada hora si falla la marca.</li>
+    <li>Bien: la ventana de 24 h de Marco y los guardas de Content AI contra posts vacíos.</li>
+  </ul></details>
+  <details><summary>Visibilidad de errores <span class="n">58</span></summary><ul>
+    <li>33 de 35 flujos avisan por correo cuando fallan: el salto del 14-nov es real.</li>
+    <li>Pero los fallos que "siguen" no avisan (punto 10), el Vigía se cae con Groq (punto 6), solo avisa tras 3 fallas seguidas, y todo sale por una sola cuenta de correo sin límite. Si el Vigía o n8n se apagan, nadie se entera.</li>
+  </ul></details>
+  <details><summary>Uso correcto de la API <span class="n">74</span></summary><ul>
+    <li>Puntos 3, 8 y 12. Distribution no manda <code>link_url</code> al marcar publicado.</li>
+    <li>Marco, Telegram, Sales AI y Voz mandan una nota fija en cada turno. Si G54 reemplaza las notas al actualizar, borraría lo del vendedor. Hay que comprobarlo en vivo.</li>
+    <li>Bien: nombre y temperatura, datos conservados, Sales AI recuerda y respeta la pausa, <code>mark-published</code> con motivo.</li>
+  </ul></details>
+  <details><summary>Utilidad para el negocio <span class="n">70</span></summary><ul>
+    <li>Los agentes califican, recuerdan y no inventan, y el contenido sigue la estrategia.</li>
+    <li>Bajan la nota que el vendedor pierda las respuestas en Marco (punto 3), la pausa permanente y que todavía no se pueda decir qué post trae clientes.</li>
+  </ul></details>
+  <details><summary>Costo y escalabilidad <span class="n">56</span></summary><ul>
+    <li>Llamadas a la IA: Marco 1 por mensaje en español y 3 en inglés; Sales AI y Community 1; Content 1 más la imagen paga; Ideas 2 por semana y empresa. Más una llamada muerta a Gemini en Content, Ideas y Strategist.</li>
+    <li>Sales AI hace unas 15 llamadas a G54 o Meta por mensaje, con 2 inicios de sesión.</li>
+    <li>Marco ya recorta el historial a 20 líneas: esa mitad del punto 13 del 14-nov está hecha.</li>
+  </ul></details>
+  <details><summary>Mantenibilidad <span class="n">46</span></summary><ul>
+    <li>Punto 15, más 156 nodos de código con 581.000 caracteres, sin partes compartidas.</li>
+    <li>Las divergencias ya tienen efecto real: el producto que describe la documentación no es el que se genera (punto 11) y dos arreglos dados por hechos no lo estaban.</li>
+  </ul></details>
+</section>
+
+<p class="note">La revisión anterior, del 14-nov, sigue en <code>g54/revision-g54-2026-11-14.html</code>.</p>
+</div>
