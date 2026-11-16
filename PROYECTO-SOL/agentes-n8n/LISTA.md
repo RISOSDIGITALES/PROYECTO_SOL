@@ -18,7 +18,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | 💬 Sales AI — Motor de Conversación G54 | `otycsrxrMEMuxuwD` | sí | 2026-11-16 | [sales-ai-motor-de-conversacion-g54.json](g54-plataforma/sales-ai-motor-de-conversacion-g54.json) |
 | 📊 Analytics AI Semanal — G54 | `EX9K1AZwKeouSJ9G` | sí | 2026-11-16 | [analytics-ai-semanal-g54.json](g54-plataforma/analytics-ai-semanal-g54.json) |
 | 📢 Distribution AI — RRSS G54 v1.0 | `IRCoya91PKPjpT1T` | sí | 2026-11-14 | [distribution-ai-rrss-g54-v1-0.json](g54-plataforma/distribution-ai-rrss-g54-v1-0.json) |
-| 📤 WA Reply — Respuesta manual desde G54 | `2dat4nEoi8x8iLb2` | sí | 2026-11-14 | [wa-reply-respuesta-manual-desde-g54.json](g54-plataforma/wa-reply-respuesta-manual-desde-g54.json) |
+| 📤 WA Reply — Respuesta manual desde G54 | `2dat4nEoi8x8iLb2` | sí | 2026-11-16 | [wa-reply-respuesta-manual-desde-g54.json](g54-plataforma/wa-reply-respuesta-manual-desde-g54.json) |
 | 📧 Camila G54 — Nurture & Outreach | `fahn0L68z5czTocE` | sí | 2026-11-14 | [camila-g54-nurture-outreach.json](g54-plataforma/camila-g54-nurture-outreach.json) |
 | 📨 Seguimiento IA manual — G54 (wa_followup) | `E7axtRDYCL8AbtgO` | sí | 2026-10-31 | [seguimiento-ia-manual-g54-wa-followup.json](g54-plataforma/seguimiento-ia-manual-g54-wa-followup.json) |
 | 📲 Telegram Router — G54 | `ciz4AeS7LtVAXK1L` | sí | 2026-11-14 | [telegram-router-g54.json](g54-plataforma/telegram-router-g54.json) |
