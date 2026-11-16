@@ -2,7 +2,7 @@
   "id": "otycsrxrMEMuxuwD",
   "name": "💬 Sales AI — Motor de Conversación G54",
   "active": true,
-  "updatedAt": "2026-11-16T15:54:12.374Z",
+  "updatedAt": "2026-11-16T15:59:10.709Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -2468,7 +2468,7 @@
         400
       ],
       "parameters": {
-        "jsCode": "const parsed = $('🔍 Parsear Respuesta IA').item.json;\nconst cfg = $('🏢 Aplicar Config Empresa').item.json;\n// Teléfono con \"+\" y código de país (29-oct): WhatsApp siempre manda el número con su código, sin \"+\".\n// Los ids sintéticos (tg_..., fbig_...) quedan como vienen. El CRM compara el texto exacto.\nconst telRaw = String(parsed.telefono || '');\nconst telefono = /^\\d{8,15}$/.test(telRaw) ? '+' + telRaw : telRaw;\n\nlet wa_contact_id = null;\ntry {\n  const contactData = $('🔍 Buscar Contact ID (G54)').item.json.data || [];\n  wa_contact_id = contactData[0]?.id || null;\n} catch (e) { /* si fallo el lookup, seguimos sin el vinculo */ }\n\nconst origenMap = { instagram_dm: 'instagram', facebook_dm: 'facebook' };\nconst origen = origenMap[parsed.canal] || 'whatsapp';\n// La IA a veces devuelve \"Tibio\" o \"frío\": se compara sin mayúsculas ni tildes (29-oct).\nconst clasif = String(parsed.clasificacion || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');\nconst temperatura = ({frio:'bajo', tibio:'medio', caliente:'alto'})[clasif] || 'bajo';\n\n// Origen de la publicación en el trato (08-oct): la etiqueta \"origen:P<idea>\" ya se guarda al crear\n// el trato y se puede filtrar hoy; social_idea_id lo ignora G54 por ahora sin error y empieza a\n// guardarse solo cuando exista la columna (pedido en el Éxodo). Solo se manda si vino el código,\n// que llega en el primer mensaje: no pisa etiquetas de un trato ya existente en los demás turnos.\nlet origenCampos = {};\ntry { const op = (() => { for (const ext of ['🔧 Extraer Mensaje WA', '🔧 Extraer Mensaje FB/IG DM', '🔧 Extraer Mensaje Telegram']) { try { const j = $(ext).first().json; if (j && !j.skip && j.origenPost) return j.origenPost; } catch (e) {} } return null; })(); if (op) origenCampos = { tags: ['origen:P' + op], social_idea_id: Number(op) }; } catch (e) {}\n\nreturn [{ json: {\n  ...origenCampos,\n  company_id: Number(cfg.G54_COMPANY_ID),\n  telefono,\n  nombre: parsed.nombreContacto || telefono,\n  origen,\n  wa_contact_id,\n  temperatura,\n  notas: 'Lead generado/actualizado por Sales AI Motor: ' + (parsed.resumenLead || ''),\n}}];"
+        "jsCode": "const parsed = $('🔍 Parsear Respuesta IA').item.json;\nconst cfg = $('🏢 Aplicar Config Empresa').item.json;\n// Teléfono con \"+\" y código de país (29-oct): WhatsApp siempre manda el número con su código, sin \"+\".\n// Los ids sintéticos (tg_..., fbig_...) quedan como vienen. El CRM compara el texto exacto.\nconst telRaw = String(parsed.telefono || '');\nconst telefono = /^\\d{8,15}$/.test(telRaw) ? '+' + telRaw : telRaw;\n\nlet wa_contact_id = null;\ntry {\n  const contactData = $('🔍 Buscar Contact ID (G54)').item.json.data || [];\n  wa_contact_id = contactData[0]?.id || null;\n} catch (e) { /* si fallo el lookup, seguimos sin el vinculo */ }\n\nconst origenMap = { instagram_dm: 'instagram', facebook_dm: 'facebook', telegram: 'telegram' }; // 16-nov: Telegram quedaba como whatsapp\nconst origen = origenMap[parsed.canal] || 'whatsapp';\n// La IA a veces devuelve \"Tibio\" o \"frío\": se compara sin mayúsculas ni tildes (29-oct).\nconst clasif = String(parsed.clasificacion || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');\nconst temperatura = ({frio:'bajo', tibio:'medio', caliente:'alto'})[clasif] || 'bajo';\n\n// Origen de la publicación en el trato (08-oct): la etiqueta \"origen:P<idea>\" ya se guarda al crear\n// el trato y se puede filtrar hoy; social_idea_id lo ignora G54 por ahora sin error y empieza a\n// guardarse solo cuando exista la columna (pedido en el Éxodo). Solo se manda si vino el código,\n// que llega en el primer mensaje: no pisa etiquetas de un trato ya existente en los demás turnos.\nlet origenCampos = {};\ntry { const op = (() => { for (const ext of ['🔧 Extraer Mensaje WA', '🔧 Extraer Mensaje FB/IG DM', '🔧 Extraer Mensaje Telegram']) { try { const j = $(ext).first().json; if (j && !j.skip && j.origenPost) return j.origenPost; } catch (e) {} } return null; })(); if (op) origenCampos = { tags: ['origen:P' + op], social_idea_id: Number(op) }; } catch (e) {}\n\nreturn [{ json: {\n  ...origenCampos,\n  company_id: Number(cfg.G54_COMPANY_ID),\n  telefono,\n  nombre: parsed.nombreContacto || telefono,\n  origen,\n  wa_contact_id,\n  temperatura,\n  notas: 'Lead generado/actualizado por Sales AI Motor: ' + (parsed.resumenLead || ''),\n}}];"
       }
     },
     {
@@ -2503,7 +2503,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}",
+        "jsonBody": "={{ JSON.stringify((({ notas, temperatura, ...resto }) => resto)($json)) }}",
         "options": {}
       }
     },
@@ -2758,6 +2758,19 @@
           "combinator": "and"
         },
         "options": {}
+      }
+    },
+    {
+      "id": "51729b8f-5d60-4cd4-8407-7333ceb70f83",
+      "name": "🌡️ CRM: Temperatura y notas (Sales)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5320,
+        560
+      ],
+      "parameters": {
+        "jsCode": "// 16-nov (revisión, punto 8): G54 reemplaza notas y temperatura en cada guardado del trato.\n// El guardado anterior va sin esos dos campos; acá se completan solo si corresponde:\n// - notas: solo si el trato es nuevo (no pisa lo que escribió el vendedor ni las marcas de Camila);\n// - temperatura: solo si sube (un \"gracias\" después de aceptar no baja el trato de alto a bajo).\nconst pay = $('🔧 CRM: Preparar Payload').item.json;\nconst resp = $json;\nconst deal = resp && resp.deal;\nif (!deal) return [{ json: resp }];\nconst rango = { bajo: 0, medio: 1, alto: 2 };\nconst extra = {};\nif (resp.created && pay.notas) extra.notas = pay.notas;\nif (pay.temperatura && (rango[pay.temperatura] ?? -1) > (rango[deal.temperatura] ?? -1)) extra.temperatura = pay.temperatura;\nif (!Object.keys(extra).length) return [{ json: resp }];\nconst { notas, temperatura, ...base } = pay;\ntry {\n  const r2 = await this.helpers.httpRequest({\n    method: 'POST',\n    url: ($('⚙️ Config G54').item.json.G54_BASE_URL + '/api/agent/crm/leads'),\n    headers: { Authorization: ('Bearer ' + $('⚙️ Config G54').item.json.G54_AGENT_TOKEN), 'Content-Type': 'application/json', Accept: 'application/json' },\n    body: { ...base, ...extra }, json: true, timeout: 15000\n  });\n  return [{ json: r2 && r2.deal ? r2 : resp }];\n} catch (e) {\n  return [{ json: resp }];\n}\n"
       }
     }
   ],
@@ -3720,7 +3733,7 @@
       "main": [
         [
           {
-            "node": "🔀 ¿Empresa CRM Correcta?",
+            "node": "🌡️ CRM: Temperatura y notas (Sales)",
             "type": "main",
             "index": 0
           }
@@ -3826,6 +3839,17 @@
         [
           {
             "node": "🔄 Marcar Notificado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌡️ CRM: Temperatura y notas (Sales)": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Empresa CRM Correcta?",
             "type": "main",
             "index": 0
           }

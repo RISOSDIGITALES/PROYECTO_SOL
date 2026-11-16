@@ -2,7 +2,7 @@
   "id": "FYKfTJBfgwsMpJV7",
   "name": "📞 CE Voice Agent — Marco (Fusionado)",
   "active": true,
-  "updatedAt": "2026-11-14T15:45:55.052Z",
+  "updatedAt": "2026-11-16T15:59:13.722Z",
   "tags": [
     {
       "id": "2CrVJWitAB77MgTJ",
@@ -488,7 +488,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}",
+        "jsonBody": "={{ JSON.stringify((({ notas, temperatura, ...resto }) => resto)($json)) }}",
         "options": {}
       }
     },
@@ -644,6 +644,19 @@
         "options": {
           "timeout": 8000
         }
+      }
+    },
+    {
+      "id": "63c6a1e3-bd02-4844-bd4d-fd8d9e492d81",
+      "name": "🌡️ CRM: Temperatura y notas (Voice)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3200,
+        860
+      ],
+      "parameters": {
+        "jsCode": "// 16-nov (revisión, punto 8): G54 reemplaza notas y temperatura en cada guardado del trato.\n// El guardado anterior va sin esos dos campos; acá se completan solo si corresponde:\n// - notas: solo si el trato es nuevo (no pisa lo que escribió el vendedor ni las marcas de Camila);\n// - temperatura: solo si sube (un \"gracias\" después de aceptar no baja el trato de alto a bajo).\nconst pay = $('🔧 CRM: Preparar Payload (Voice)').item.json;\nconst resp = $json;\nconst deal = resp && resp.deal;\nif (!deal) return [{ json: resp }];\nconst rango = { bajo: 0, medio: 1, alto: 2 };\nconst extra = {};\nif (resp.created && pay.notas) extra.notas = pay.notas;\nif (pay.temperatura && (rango[pay.temperatura] ?? -1) > (rango[deal.temperatura] ?? -1)) extra.temperatura = pay.temperatura;\nif (!Object.keys(extra).length) return [{ json: resp }];\nconst { notas, temperatura, ...base } = pay;\ntry {\n  const r2 = await this.helpers.httpRequest({\n    method: 'POST',\n    url: \"https://apigrowth.mdarthurdigital.com/api/agent/crm/leads\",\n    headers: { Authorization: \"Bearer REDACTED_G54_AGENT_TOKEN\", 'Content-Type': 'application/json', Accept: 'application/json' },\n    body: { ...base, ...extra }, json: true, timeout: 15000\n  });\n  return [{ json: r2 && r2.deal ? r2 : resp }];\n} catch (e) {\n  return [{ json: resp }];\n}\n"
       }
     }
   ],
@@ -839,7 +852,7 @@
       "main": [
         [
           {
-            "node": "🔀 ¿Empresa CRM Correcta?",
+            "node": "🌡️ CRM: Temperatura y notas (Voice)",
             "type": "main",
             "index": 0
           }
@@ -898,6 +911,17 @@
         [
           {
             "node": "💾 G54: Guardar Lead (Voice)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌡️ CRM: Temperatura y notas (Voice)": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Empresa CRM Correcta?",
             "type": "main",
             "index": 0
           }

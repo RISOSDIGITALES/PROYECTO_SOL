@@ -8,7 +8,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | Agente | ID | Activo | Última edición | Archivo |
 |---|---|---|---|---|
 | ANALYTICS MENSUAL V3-META REPORTE | `YI9EfJYcWJN4bbM9` | sí | 2026-11-14 | [analytics-mensual-v3-meta-reporte.json](g54-plataforma/analytics-mensual-v3-meta-reporte.json) |
-| Community AI — G54 | `62tIvF0snsrMj0sM` | sí | 2026-11-14 | [community-ai-g54.json](g54-plataforma/community-ai-g54.json) |
+| Community AI — G54 | `62tIvF0snsrMj0sM` | sí | 2026-11-16 | [community-ai-g54.json](g54-plataforma/community-ai-g54.json) |
 | ⏰ Distribution AI — Alarma Exacta (G54) | `sNNhTEH8IzJsOIm3` | sí | 2026-11-14 | [distribution-ai-alarma-exacta-g54.json](g54-plataforma/distribution-ai-alarma-exacta-g54.json) |
 | ✉️ Camila — Baja de correos (G54) | `FXRpSFH9ESdVah1P` | sí | 2026-11-14 | [camila-baja-de-correos-g54.json](g54-plataforma/camila-baja-de-correos-g54.json) |
 | 🎥 Pedidos de Grabación AI — G54 | `17mc8CJkKH2qzsdA` | sí | 2026-11-14 | [pedidos-de-grabacion-ai-g54.json](g54-plataforma/pedidos-de-grabacion-ai-g54.json) |
@@ -37,14 +37,14 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 |---|---|---|---|---|
 | ?? CE Gmail Monitor - Detectar Respuestas de Leads | `cJZV7jcwlbFoW5qJ` | no | 2026-07-23 | [ce-gmail-monitor-detectar-respuestas-de-leads.json](marco-crating-express/ce-gmail-monitor-detectar-respuestas-de-leads.json) |
 | CE Cotizaciones - CF7 → Airtable + Leads | `FU8QG1BVmT4r5Kjw` | sí | 2026-10-31 | [ce-cotizaciones-cf7-airtable-leads.json](marco-crating-express/ce-cotizaciones-cf7-airtable-leads.json) |
-| CE Telegram Engine — Marco | `HaSG63Q9C2tGOLH3` | sí | 2026-11-14 | [ce-telegram-engine-marco.json](marco-crating-express/ce-telegram-engine-marco.json) |
+| CE Telegram Engine — Marco | `HaSG63Q9C2tGOLH3` | sí | 2026-11-16 | [ce-telegram-engine-marco.json](marco-crating-express/ce-telegram-engine-marco.json) |
 | CE WhatsApp Engine — Marco | `zAhV8gEsXD8dCrXq` | sí | 2026-11-16 | [ce-whatsapp-engine-marco.json](marco-crating-express/ce-whatsapp-engine-marco.json) |
 | Marco CE — 01 Clasificador | `1PXcg3dOQBt8hrrT` | sí | 2026-11-14 | [marco-ce-01-clasificador.json](marco-crating-express/marco-ce-01-clasificador.json) |
 | Marco CE — 02 Contexto y Lead | `s1Z7jKoFzy5x7XvC` | sí | 2026-11-14 | [marco-ce-02-contexto-y-lead.json](marco-crating-express/marco-ce-02-contexto-y-lead.json) |
 | Marco CE — 03 Generador IA | `J8qbKOF7t4GnhRDT` | sí | 2026-11-14 | [marco-ce-03-generador-ia.json](marco-crating-express/marco-ce-03-generador-ia.json) |
 | Marco CE — 05 Guardar Lead | `PqbfMghL0E7xKflC` | sí | 2026-11-14 | [marco-ce-05-guardar-lead.json](marco-crating-express/marco-ce-05-guardar-lead.json) |
 | Marco CE — 06 Procesador de Medios | `5GU89AeWsBZ86FWa` | sí | 2026-11-14 | [marco-ce-06-procesador-de-medios.json](marco-crating-express/marco-ce-06-procesador-de-medios.json) |
-| 📞 CE Voice Agent — Marco (Fusionado) | `FYKfTJBfgwsMpJV7` | sí | 2026-11-14 | [ce-voice-agent-marco-fusionado.json](marco-crating-express/ce-voice-agent-marco-fusionado.json) |
+| 📞 CE Voice Agent — Marco (Fusionado) | `FYKfTJBfgwsMpJV7` | sí | 2026-11-16 | [ce-voice-agent-marco-fusionado.json](marco-crating-express/ce-voice-agent-marco-fusionado.json) |
 | 📞→💬 VAPI → WhatsApp Handoff | `6UWT1GHKZVvCDcc6` | sí | 2026-11-14 | [vapi-whatsapp-handoff.json](marco-crating-express/vapi-whatsapp-handoff.json) |
 | 🖼️ Marco — Media Proxy (G54) | `OMZLwErubDaiGgO7` | sí | 2026-11-14 | [marco-media-proxy-g54.json](marco-crating-express/marco-media-proxy-g54.json) |
 

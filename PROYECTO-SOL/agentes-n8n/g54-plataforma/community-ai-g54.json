@@ -2,7 +2,7 @@
   "id": "62tIvF0snsrMj0sM",
   "name": "Community AI — G54",
   "active": true,
-  "updatedAt": "2026-11-14T16:30:52.762Z",
+  "updatedAt": "2026-11-16T15:59:38.062Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -826,7 +826,7 @@
         680
       ],
       "parameters": {
-        "jsCode": "const board = $('📋 G54: Buscar Deal Existente (CRM)').item.json;\n\nlet wa_contact_id = null;\ntry {\n  const contactData = $('🔍 Buscar Contact ID (G54)').item.json.data || [];\n  wa_contact_id = contactData[0]?.id || null;\n} catch (e) { /* si falló el lookup, seguimos sin el vínculo */ }\n\n// Community AI (FB/IG) nunca tiene un teléfono real — el usuarioId de Facebook\n// se usa solo como clave interna para G54 (endpoints /inbound y /wa/leads lo piden\n// como \"phone\"), pero no se muestra como teléfono en el CRM para no inventar uno.\nlet match = null;\ntry {\n  for (const etapa of Object.keys(board)) {\n    const deals = board[etapa] || [];\n    const found = deals.find(d => wa_contact_id && d.wa_contact_id === wa_contact_id);\n    if (found) { match = found; break; }\n  }\n} catch (e) { /* si el board no cargó, seguimos como si no existiera */ }\n\nreturn [{ json: {\n  existe: !!match,\n  deal_id: match ? match.id : null,\n  wa_contact_id,\n}}];"
+        "jsCode": "const board = $('📋 G54: Buscar Deal Existente (CRM)').item.json;\n\nlet wa_contact_id = null;\ntry {\n  const contactData = $('🔍 Buscar Contact ID (G54)').item.json.data || [];\n  wa_contact_id = contactData[0]?.id || null;\n} catch (e) { /* si falló el lookup, seguimos sin el vínculo */ }\n\n// Community AI (FB/IG) nunca tiene un teléfono real — el usuarioId de Facebook\n// se usa solo como clave interna para G54 (endpoints /inbound y /wa/leads lo piden\n// como \"phone\"), pero no se muestra como teléfono en el CRM para no inventar uno.\nlet match = null;\ntry {\n  for (const etapa of Object.keys(board)) {\n    const deals = board[etapa] || [];\n    const found = deals.find(d => wa_contact_id && d.wa_contact_id === wa_contact_id);\n    if (found) { match = found; break; }\n  }\n} catch (e) { /* si el board no cargó, seguimos como si no existiera */ }\n\nreturn [{ json: {\n  existe: !!match,\n  deal_id: match ? match.id : null,\n  temperatura_actual: match ? (match.temperatura || null) : null, // 16-nov: para no bajar la temperatura\n  wa_contact_id,\n}}];"
       }
     },
     {
@@ -892,7 +892,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ wa_contact_id: $('🔍 Encontrar Deal por Teléfono').item.json.wa_contact_id, ...((t) => t ? { temperatura: t } : {})(({ tibio: 'medio', caliente: 'alto' })[String($('🔍 Parsear Respuesta Community AI').item.json.lead || '').toLowerCase()]) }) }}",
+        "jsonBody": "={{ JSON.stringify({ wa_contact_id: $('🔍 Encontrar Deal por Teléfono').item.json.wa_contact_id, ...((t) => (t && ({ bajo: 0, medio: 1, alto: 2 })[t] > (({ bajo: 0, medio: 1, alto: 2 })[$('🔍 Encontrar Deal por Teléfono').item.json.temperatura_actual] ?? -1)) ? { temperatura: t } : {})(({ tibio: 'medio', caliente: 'alto' })[String($('🔍 Parsear Respuesta Community AI').item.json.lead || '').toLowerCase()]) }) }}",
         "options": {}
       }
     },
