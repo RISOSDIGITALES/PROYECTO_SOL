@@ -2,7 +2,7 @@
   "id": "otycsrxrMEMuxuwD",
   "name": "💬 Sales AI — Motor de Conversación G54",
   "active": true,
-  "updatedAt": "2026-11-16T15:59:10.709Z",
+  "updatedAt": "2026-11-16T16:09:36.656Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -2772,6 +2772,47 @@
       "parameters": {
         "jsCode": "// 16-nov (revisión, punto 8): G54 reemplaza notas y temperatura en cada guardado del trato.\n// El guardado anterior va sin esos dos campos; acá se completan solo si corresponde:\n// - notas: solo si el trato es nuevo (no pisa lo que escribió el vendedor ni las marcas de Camila);\n// - temperatura: solo si sube (un \"gracias\" después de aceptar no baja el trato de alto a bajo).\nconst pay = $('🔧 CRM: Preparar Payload').item.json;\nconst resp = $json;\nconst deal = resp && resp.deal;\nif (!deal) return [{ json: resp }];\nconst rango = { bajo: 0, medio: 1, alto: 2 };\nconst extra = {};\nif (resp.created && pay.notas) extra.notas = pay.notas;\nif (pay.temperatura && (rango[pay.temperatura] ?? -1) > (rango[deal.temperatura] ?? -1)) extra.temperatura = pay.temperatura;\nif (!Object.keys(extra).length) return [{ json: resp }];\nconst { notas, temperatura, ...base } = pay;\ntry {\n  const r2 = await this.helpers.httpRequest({\n    method: 'POST',\n    url: ($('⚙️ Config G54').item.json.G54_BASE_URL + '/api/agent/crm/leads'),\n    headers: { Authorization: ('Bearer ' + $('⚙️ Config G54').item.json.G54_AGENT_TOKEN), 'Content-Type': 'application/json', Accept: 'application/json' },\n    body: { ...base, ...extra }, json: true, timeout: 15000\n  });\n  return [{ json: r2 && r2.deal ? r2 : resp }];\n} catch (e) {\n  return [{ json: resp }];\n}\n"
       }
+    },
+    {
+      "id": "01e5035f-43ba-4553-ac05-0981d5c5a5be",
+      "name": "⚠️ ¿Llegó la respuesta? (Sales)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4460,
+        720
+      ],
+      "parameters": {
+        "jsCode": "// 16-nov (revisión, punto 10): los envíos \"siguen si fallan\" para no cortar el guardado del lead,\n// así que un envío rechazado (token vencido, ventana de 24 h, cuenta bloqueada…) terminaba como éxito y nadie\n// se enteraba. Este paso no corta nada: si el envío falló, arma un aviso por correo; si salió bien, no devuelve nada.\nconst r = $json || {};\nlet motivo = '';\nif (r.error) motivo = r.error.message || r.error.description || JSON.stringify(r.error);\nelse if (r.ok === false || r.success === false) motivo = r.message || r.motivo || r.description || 'La API respondió ok: false';\nif (!motivo) return [];\nconst ocultar = s => { const t = String(s || ''); return t.length > 4 ? '…' + t.slice(-4) : t; };\n\nlet ctx = {}, cfg = {};\ntry { ctx = $('🔧 Preparar Contexto IA').first().json; } catch (e) {}\ntry { cfg = $('🏢 Aplicar Config Empresa').first().json; } catch (e) {}\nconst agente = 'Sales AI';\nconst empresa = ctx.empresa_nombre || ('empresa ' + (cfg.G54_COMPANY_ID || ctx.empresaIdTelegram || '?'));\nconst canal = ctx.canalLabel || ctx.canal || '?';\nconst contacto = ctx.telefono || ctx.usuarioId || ctx.chatId || '';\n\nconst asunto = `⚠️ G54: la respuesta no le llegó al cliente (${empresa}, ${canal})`;\nconst html = `<div style=\"font-family:Arial,sans-serif;font-size:15px;color:#1d2420\">\n<p>El agente <b>${agente}</b> generó una respuesta pero el envío falló. El cliente no la recibió.</p>\n<p>Empresa: ${empresa}<br>Canal: ${canal}<br>Contacto: ${ocultar(contacto)}<br>Ejecución: ${$execution.id}</p>\n<p style=\"background:#fdecea;padding:12px;border-radius:6px\">Motivo: ${String(motivo).slice(0, 500).replace(/[<>&]/g, '')}</p>\n<p>Revisá el token o la configuración del canal en G54 y respondele a mano desde el panel.</p></div>`;\nreturn [{ json: { asunto, html } }];\n"
+      }
+    },
+    {
+      "id": "38e014a4-8234-4664-b278-4e83a4d15d8a",
+      "name": "📧 Avisar envío fallido (Sales)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "onError": "continueRegularOutput",
+      "position": [
+        4720,
+        720
+      ],
+      "parameters": {
+        "fromEmail": "Growth54 <risosadmi@gmail.com>",
+        "toEmail": "risosadmi@gmail.com",
+        "subject": "={{ $json.asunto }}",
+        "html": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        },
+        "emailType": "html"
+      },
+      "credentials": {
+        "smtp": {
+          "id": "iWBBSSe5AWsCMo89",
+          "name": "Gmail SMTP — risosadmi"
+        }
+      },
+      "webhookId": "dbb2fb39-928a-4e13-897e-902a93eab7f4"
     }
   ],
   "connections": {
@@ -3850,6 +3891,50 @@
         [
           {
             "node": "🔀 ¿Empresa CRM Correcta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Enviar Mensaje WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "⚠️ ¿Llegó la respuesta? (Sales)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Enviar DM Social (FB/IG)": {
+      "main": [
+        [
+          {
+            "node": "⚠️ ¿Llegó la respuesta? (Sales)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 G54: Responder Telegram (Sales)": {
+      "main": [
+        [
+          {
+            "node": "⚠️ ¿Llegó la respuesta? (Sales)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚠️ ¿Llegó la respuesta? (Sales)": {
+      "main": [
+        [
+          {
+            "node": "📧 Avisar envío fallido (Sales)",
             "type": "main",
             "index": 0
           }
