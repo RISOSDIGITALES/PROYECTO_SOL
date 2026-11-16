@@ -2,7 +2,7 @@
   "id": "zAhV8gEsXD8dCrXq",
   "name": "CE WhatsApp Engine — Marco",
   "active": true,
-  "updatedAt": "2026-11-16T15:59:09.160Z",
+  "updatedAt": "2026-11-16T16:35:32.332Z",
   "tags": [
     {
       "id": "2CrVJWitAB77MgTJ",
@@ -189,47 +189,6 @@
       }
     },
     {
-      "id": "e556b0a3-d260-4f1d-a2c0-94ede1f52634",
-      "name": "📋 Obtener Leads Sin Respuesta",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "retryOnFail": true,
-      "maxTries": 4,
-      "waitBetweenTries": 3000,
-      "onError": "continueRegularOutput",
-      "position": [
-        -624,
-        672
-      ],
-      "parameters": {
-        "method": "GET",
-        "url": "https://apigrowth.mdarthurdigital.com/api/n8n/companies/1/wa/leads",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "hours_inactive",
-              "value": "23"
-            },
-            {
-              "name": "status",
-              "value": "Nuevo,En calificación,Calificado"
-            }
-          ]
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer "
-            }
-          ]
-        },
-        "options": {}
-      }
-    },
-    {
       "id": "2f08aeac-7fa5-48b5-9ad2-8a177e0ca547",
       "name": "🔧 Procesar Follow-ups",
       "type": "n8n-nodes-base.code",
@@ -371,23 +330,6 @@
         1248
       ],
       "parameters": {}
-    },
-    {
-      "id": "wait-race-condition",
-      "name": "⏱️ Esperar (anti-race)",
-      "webhookId": "wait-race-condition",
-      "notes": "HUERFANO desde 21-sep: nunca tuvo conexion de salida real (confirmado con una ejecucion en vivo -- el mensaje se procesaba igual sin pasar por aca), asi que el candado de bot_pausado nunca bloqueaba nada. El gate real (bot_pausado + modos_respuesta) ahora vive antes de 'Marcar como Leido', reusando el mismo '¿Bot puede responder?' de siempre. Este nodo se dejo sin conectar en vez de borrarlo, por si alguna vez hizo falta un delay anti-duplicados real aca.",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1,
-      "position": [
-        1060,
-        300
-      ],
-      "parameters": {
-        "resume": "timeInterval",
-        "amount": 4,
-        "unit": "seconds"
-      }
     },
     {
       "id": "n-merge",
@@ -804,133 +746,6 @@
       ],
       "parameters": {
         "jsCode": "\nconst armar = $('📝 Armar Mensaje Final').first().json;\nconst tradResp = $input.first().json;\n// Extract translated text from Groq response\nconst traducido = tradResp.choices?.[0]?.message?.content?.trim();\nconst mensajeFinal = traducido || armar.mensajeRespuesta || armar.mensaje || '';\nreturn [{ json: { ...armar, mensaje: mensajeFinal, mensajeRespuesta: mensajeFinal } }];\n"
-      }
-    },
-    {
-      "id": "manual-reply-webhook-001",
-      "name": "📩 Webhook Respuesta Manual",
-      "webhookId": "2efc3263-8728-4b8c-a522-04699f0f4b80",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        -848,
-        624
-      ],
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "marco-manual-ce",
-        "responseMode": "responseNode",
-        "options": {}
-      }
-    },
-    {
-      "id": "manual-reply-respond-001",
-      "name": "✅ Responder OK a G54",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        -608,
-        544
-      ],
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ ok: true }) }}"
-      }
-    },
-    {
-      "id": "manual-reply-config-001",
-      "name": "⚙️ Config WA Manual",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "retryOnFail": true,
-      "maxTries": 4,
-      "waitBetweenTries": 3000,
-      "position": [
-        -368,
-        624
-      ],
-      "parameters": {
-        "method": "GET",
-        "url": "https://apigrowth.mdarthurdigital.com/api/agent/wa/empresa-by-phone/1083260611538246",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
-            }
-          ]
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "manual-reply-send-001",
-      "name": "📤 Enviar Respuesta Manual WA",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -128,
-        624
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config WA Manual').item.json.phone_number_id }}/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('⚙️ Config WA Manual').item.json.wa_access_token }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('🔍 Normalizar y Validar (Manual WA)').item.json.phoneDigits, type: 'text', text: { body: $('🔍 Normalizar y Validar (Manual WA)').item.json.mensaje } }) }}",
-        "options": {}
-      }
-    },
-    {
-      "id": "manual-reply-save-001",
-      "name": "💾 Guardar en Historial G54",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueRegularOutput",
-      "position": [
-        112,
-        624
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://apigrowth.mdarthurdigital.com/api/agent/whatsapp/inbound",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ empresa_id: 1, phone: $('🔍 Normalizar y Validar (Manual WA)').item.json.phoneE164, canal: 'whatsapp', messages: [{ rol: 'bot', contenido: $('🔍 Normalizar y Validar (Manual WA)').item.json.mensaje }], datos_calificacion: { ...(((d) => d && typeof d === 'object' && !Array.isArray(d) ? d : {})((($json.data || [])[0] || {}).datos)), bot_pausado: true, motivo: 'Vendedor tomó control manual', fecha: new Date().toISOString() } }) }}",
-        "options": {
-          "retry": {
-            "enabled": true,
-            "maxTries": 2,
-            "waitBetweenTries": 1000
-          }
-        }
       }
     },
     {
@@ -1544,129 +1359,6 @@
       }
     },
     {
-      "id": "normalizar-validar-manual-wa",
-      "name": "🔍 Normalizar y Validar (Manual WA)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -688,
-        744
-      ],
-      "parameters": {
-        "jsCode": "const body = $json.body || {};\nconst phoneRaw = (body.phone || '').toString().trim();\nconst mensaje = (body.mensaje || '').toString().trim();\n\n// Normalizar a solo digitos (sin '+', espacios, guiones) -- mismo criterio que\n// usa el resto de Marco al comparar/guardar telefonos.\nconst phoneDigits = phoneRaw.replace(/[^0-9]/g, '');\n\nlet motivo = null;\nif (!phoneDigits) motivo = 'Falta un telefono valido en el body (campo phone).';\nelse if (phoneDigits.length < 8) motivo = 'El telefono tiene muy pocos digitos: \"' + phoneRaw + '\".';\nelse if (!mensaje) motivo = 'Falta el mensaje a enviar (campo mensaje).';\n\nreturn [{ json: {\n  valido: !motivo,\n  motivo,\n  phoneDigits,        // sin '+' -- formato que espera la API real de WhatsApp (Meta)\n  phoneE164: phoneDigits ? ('+' + phoneDigits) : '',  // con '+' -- formato real usado por G54 (ver SW05)\n  mensaje,\n} }];"
-      }
-    },
-    {
-      "id": "gate-datos-validos-manual-wa",
-      "name": "🔀 ¿Datos Válidos? (Manual WA)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        -508,
-        744
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "cond-datos-validos",
-              "leftValue": "={{ $json.valido }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "alertar-datos-invalidos-manual-wa",
-      "name": "📧 Alertar Datos Inválidos (Manual WA)",
-      "webhookId": "1c2bc657-01e4-46a3-9e8e-2b7e42af92c7",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
-      "onError": "continueRegularOutput",
-      "position": [
-        -508,
-        864
-      ],
-      "parameters": {
-        "fromEmail": "Alerta Marco <risosadmi@gmail.com>",
-        "toEmail": "risosadmi@gmail.com",
-        "subject": "⚠️ Respuesta manual de Marco rechazada -- datos inválidos",
-        "html": "={{ 'El webhook de respuesta manual (marco-manual-ce) recibió datos inválidos y no se mandó ningún mensaje.<br><br>Motivo: ' + ($json.motivo || 'desconocido') + '<br>Teléfono recibido: \"' + (($json.body && $json.body.phone) || '') + '\"<br>Mensaje recibido: \"' + (($json.body && $json.body.mensaje) || '') + '\"' }}",
-        "options": {
-          "appendAttribution": false
-        }
-      },
-      "credentials": {
-        "smtp": {
-          "id": "iWBBSSe5AWsCMo89",
-          "name": "Gmail SMTP — risosadmi"
-        }
-      }
-    },
-    {
-      "id": "ba900c69-ed4b-4b43-9a48-60cc193fc75d",
-      "name": "🔒 ¿Llamada autorizada? (marco-manual-ce)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        -728,
-        464
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "id": "8c4cd583-50fe-46f3-b544-dde859d42fe9",
-              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "4b9c48f2-33c3-41f7-b747-f4512bd0161d",
-      "name": "⛔ Responder 403 (no autorizado) (marco-manual-ce)",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        -508,
-        364
-      ],
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{\"ok\": false, \"error\": \"no autorizado\"}",
-        "options": {
-          "responseCode": 403
-        }
-      }
-    },
-    {
       "id": "fu-tg-list",
       "name": "📋 Obtener Conversaciones Telegram (Follow-up)",
       "type": "n8n-nodes-base.httpRequest",
@@ -1779,34 +1471,6 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ conversation_id: $('🔧 Procesar Follow-ups').item.json.telegramConversationId, message: $('📊 Config para Follow-up').item.json.msg_followup_24h }) }}",
         "options": {}
-      }
-    },
-    {
-      "id": "6ba43a5b-fe22-4426-b947-882b923225ad",
-      "name": "📋 G54: Datos Actuales del Lead (Manual WA)",
-      "notes": "14-nov: G54 reemplaza datos_calificacion entero; se leen los datos que el lead ya tenía para que la pausa no los borre.",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "alwaysOutputData": true,
-      "onError": "continueRegularOutput",
-      "position": [
-        -108,
-        784
-      ],
-      "parameters": {
-        "url": "=https://apigrowth.mdarthurdigital.com/api/n8n/companies/{{ '1' }}/wa/leads?phone={{ encodeURIComponent(String($('🔍 Normalizar y Validar (Manual WA)').item.json.phoneE164 || '')) }}",
-        "options": {
-          "timeout": 8000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer "
-            }
-          ]
-        }
       }
     },
     {
@@ -2249,39 +1913,6 @@
         ]
       ]
     },
-    "📩 Webhook Respuesta Manual": {
-      "main": [
-        [
-          {
-            "node": "🔒 ¿Llamada autorizada? (marco-manual-ce)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "⚙️ Config WA Manual": {
-      "main": [
-        [
-          {
-            "node": "📤 Enviar Respuesta Manual WA",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📤 Enviar Respuesta Manual WA": {
-      "main": [
-        [
-          {
-            "node": "📋 G54: Datos Actuales del Lead (Manual WA)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "🔍 Verificar Estado Lead": {
       "main": [
         [
@@ -2530,58 +2161,6 @@
         ]
       ]
     },
-    "🔍 Normalizar y Validar (Manual WA)": {
-      "main": [
-        [
-          {
-            "node": "🔀 ¿Datos Válidos? (Manual WA)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔀 ¿Datos Válidos? (Manual WA)": {
-      "main": [
-        [
-          {
-            "node": "⚙️ Config WA Manual",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "📧 Alertar Datos Inválidos (Manual WA)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔒 ¿Llamada autorizada? (marco-manual-ce)": {
-      "main": [
-        [
-          {
-            "node": "✅ Responder OK a G54",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "🔍 Normalizar y Validar (Manual WA)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "⛔ Responder 403 (no autorizado) (marco-manual-ce)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "📋 Obtener Conversaciones Telegram (Follow-up)": {
       "main": [
         [
@@ -2616,17 +2195,6 @@
         [
           {
             "node": "🔄 Marcar 23h Enviado",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📋 G54: Datos Actuales del Lead (Manual WA)": {
-      "main": [
-        [
-          {
-            "node": "💾 Guardar en Historial G54",
             "type": "main",
             "index": 0
           }

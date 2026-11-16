@@ -2,7 +2,7 @@
   "id": "otycsrxrMEMuxuwD",
   "name": "💬 Sales AI — Motor de Conversación G54",
   "active": true,
-  "updatedAt": "2026-11-16T16:29:11.481Z",
+  "updatedAt": "2026-11-16T16:35:22.858Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -992,128 +992,6 @@
       }
     },
     {
-      "id": "salesai-manual-webhook-001",
-      "name": "📩 Webhook Respuesta Manual",
-      "webhookId": "85e5b819-4ed7-4628-9bb0-251fd10cb1a4",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        -240,
-        660
-      ],
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "sales-ai-manual",
-        "responseMode": "responseNode",
-        "options": {}
-      }
-    },
-    {
-      "id": "salesai-manual-respond-001",
-      "name": "✅ Responder OK a G54",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        0,
-        580
-      ],
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ ok: true }) }}"
-      }
-    },
-    {
-      "id": "salesai-manual-config-001",
-      "name": "⚙️ Config WA Manual",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "retryOnFail": true,
-      "maxTries": 2,
-      "waitBetweenTries": 1000,
-      "onError": "continueRegularOutput",
-      "position": [
-        240,
-        660
-      ],
-      "parameters": {
-        "method": "GET",
-        "url": "=https://apigrowth.mdarthurdigital.com/api/agent/wa/empresa-by-phone/{{ $('📩 Webhook Respuesta Manual').item.json.body.phone_number_id }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
-            }
-          ]
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "salesai-manual-send-001",
-      "name": "📤 Enviar Respuesta Manual WA",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        480,
-        660
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "=https://graph.facebook.com/v19.0/{{ $('⚙️ Config WA Manual').item.json.phone_number_id }}/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('⚙️ Config WA Manual').item.json.wa_access_token }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('📩 Webhook Respuesta Manual').item.json.body.phone, type: 'text', text: { body: $('📩 Webhook Respuesta Manual').item.json.body.mensaje } }) }}",
-        "options": {}
-      }
-    },
-    {
-      "id": "salesai-manual-save-001",
-      "name": "💾 Guardar en Historial G54",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueRegularOutput",
-      "position": [
-        720,
-        660
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://apigrowth.mdarthurdigital.com/api/agent/whatsapp/inbound",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ empresa_id: $('📩 Webhook Respuesta Manual').item.json.body.company_id, phone: $('📩 Webhook Respuesta Manual').item.json.body.phone, canal: 'whatsapp', messages: [{ rol: 'bot', contenido: $('📩 Webhook Respuesta Manual').item.json.body.mensaje }], datos_calificacion: { ...(((d) => d && typeof d === 'object' && !Array.isArray(d) ? d : {})((($json.data || [])[0] || {}).datos)), bot_pausado: true, motivo: 'Vendedor tomó control manual', fecha: new Date().toISOString() } }) }}",
-        "options": {}
-      }
-    },
-    {
       "id": "salesai-check-lead-001",
       "name": "🔍 Verificar Estado Lead",
       "type": "n8n-nodes-base.httpRequest",
@@ -1923,38 +1801,6 @@
       }
     },
     {
-      "id": "alerta-es-social-dm-gate",
-      "name": "🔀 ¿Es DM de FB/IG?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        5200,
-        900
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "id": "alerta-es-social-dm",
-              "leftValue": "={{ $('🔧 Extraer Mensaje FB/IG DM').isExecuted && !$('🔧 Extraer Mensaje FB/IG DM').item.json.skip }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
       "id": "alerta-if-activada-sales",
       "name": "🔀 ¿Alertar Nueva Conversación? (Sales)",
       "type": "n8n-nodes-base.if",
@@ -2508,56 +2354,6 @@
       }
     },
     {
-      "id": "cc8c036d-dc9b-4ea1-8869-07cbcc9a8e73",
-      "name": "🔒 ¿Llamada autorizada? (sales-ai-manual)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        -120,
-        500
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "id": "8c9ce211-951c-4826-9e3e-e284c574bbcc",
-              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "77380c62-f051-41de-8e85-7fb049305cbc",
-      "name": "⛔ Responder 403 (no autorizado) (sales-ai-manual)",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        100,
-        400
-      ],
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{\"ok\": false, \"error\": \"no autorizado\"}",
-        "options": {
-          "responseCode": 403
-        }
-      }
-    },
-    {
       "id": "400a6555-f646-419f-934a-a0c2d1386a92",
       "name": "🤖 OpenAI: Último Respaldo",
       "notes": "Último respaldo (08-oct): solo corre si fallan Groq y Zhipu. La credencial tiene un valor de espera; cuando haya clave de OpenAI de la plataforma, se carga ahí y queda activo en todos los flujos.",
@@ -2660,38 +2456,6 @@
           "combinator": "and"
         },
         "options": {}
-      }
-    },
-    {
-      "id": "c4b94531-1912-4d70-98a3-80a7825350cd",
-      "name": "📋 G54: Datos Actuales del Lead (Manual WA)",
-      "notes": "14-nov: G54 reemplaza datos_calificacion entero; se leen los datos que el lead ya tenía para que la pausa no los borre.",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "alwaysOutputData": true,
-      "onError": "continueRegularOutput",
-      "position": [
-        500,
-        820
-      ],
-      "parameters": {
-        "url": "=https://apigrowth.mdarthurdigital.com/api/n8n/companies/{{ $('📩 Webhook Respuesta Manual').item.json.body.company_id }}/wa/leads?phone={{ encodeURIComponent(String($('📩 Webhook Respuesta Manual').item.json.body.phone || '')) }}",
-        "options": {
-          "timeout": 8000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
-            },
-            {
-              "name": "Accept",
-              "value": "application/json"
-            }
-          ]
-        }
       }
     },
     {
@@ -3206,39 +2970,6 @@
         [
           {
             "node": "🔄 Marcar 23h Enviado",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📩 Webhook Respuesta Manual": {
-      "main": [
-        [
-          {
-            "node": "🔒 ¿Llamada autorizada? (sales-ai-manual)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "⚙️ Config WA Manual": {
-      "main": [
-        [
-          {
-            "node": "📤 Enviar Respuesta Manual WA",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📤 Enviar Respuesta Manual WA": {
-      "main": [
-        [
-          {
-            "node": "📋 G54: Datos Actuales del Lead (Manual WA)",
             "type": "main",
             "index": 0
           }
@@ -3781,29 +3512,6 @@
         ]
       ]
     },
-    "🔒 ¿Llamada autorizada? (sales-ai-manual)": {
-      "main": [
-        [
-          {
-            "node": "✅ Responder OK a G54",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "⚙️ Config WA Manual",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "⛔ Responder 403 (no autorizado) (sales-ai-manual)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "🤖 OpenAI: Último Respaldo": {
       "main": [
         [
@@ -3843,17 +3551,6 @@
           }
         ],
         []
-      ]
-    },
-    "📋 G54: Datos Actuales del Lead (Manual WA)": {
-      "main": [
-        [
-          {
-            "node": "💾 Guardar en Historial G54",
-            "type": "main",
-            "index": 0
-          }
-        ]
       ]
     },
     "🔀 ¿Hay vendedores? (Lead Caliente)": {

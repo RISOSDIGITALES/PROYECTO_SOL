@@ -2,7 +2,7 @@
   "id": "5GU89AeWsBZ86FWa",
   "name": "Marco CE — 06 Procesador de Medios",
   "active": true,
-  "updatedAt": "2026-11-14T15:55:48.221Z",
+  "updatedAt": "2026-11-16T16:35:06.446Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -348,40 +348,6 @@
       }
     },
     {
-      "id": "sw06-convert-api",
-      "name": "🔄 ConvertAPI: Office → Texto",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueRegularOutput",
-      "position": [
-        1540,
-        580
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "=https://v2.convertapi.com/convert/{{ $json.mimeType.includes('spreadsheet') || $json.mimeType.includes('excel') ? 'xlsx' : ($json.mimeType.includes('presentation') ? 'pptx' : 'docx') }}/to/txt?Secret={{ $json.convertApiKey }}",
-        "sendBody": true,
-        "contentType": "multipart-form-data",
-        "sendBinaryData": true,
-        "binaryPropertyName": "data",
-        "options": {},
-        "continueOnFail": true
-      }
-    },
-    {
-      "id": "sw06-office-result",
-      "name": "🔧 Resultado Office",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1760,
-        580
-      ],
-      "parameters": {
-        "jsCode": "const resp = $input.first().json;\nconst inp = $('🔧 Leer Binario y Tipo').first().json;\nconst filename = inp.filename || 'documento';\n\n// ConvertAPI response: { Files: [{ FileData: 'base64txt' }] }\nlet contenido = '';\ntry {\n  const fileData = resp.Files?.[0]?.FileData || '';\n  if (fileData) {\n    contenido = Buffer.from(fileData, 'base64').toString('utf8').slice(0, 3000);\n  }\n} catch(e) {}\n\nif (!contenido) {\n  contenido = 'No se pudo extraer el contenido del documento.';\n}\n\nconst texto = `[Documento Office recibido: ${filename}]: ${contenido}`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: 'document', filename, contenido },\n  media_type: 'document'\n}}];"
-      }
-    },
-    {
       "id": "sw06-video-fallback",
       "name": "🎬 Fallback Video/Desconocido",
       "type": "n8n-nodes-base.code",
@@ -392,20 +358,6 @@
       ],
       "parameters": {
         "jsCode": "const inp = $('🔧 Leer Binario y Tipo').first().json;\nconst esVideo = inp.mediaCategory === 'video';\n// Video: no hay forma real de analizar el contenido hoy (extraer un frame requeriria ffmpeg,\n// no disponible en este entorno) -- en vez de solo pedirle al cliente que re-escriba en texto\n// lo que ya mostro en el video (la mayoria no lo va a hacer), se escala directo a un especialista\n// -- el mismo marcador que ya usan audio/imagen/PDF cuando fallan.\n// Formato de archivo genuinamente no soportado (no es video): se mantiene el mensaje anterior,\n// pidiendole un formato que SI funciona (PDF o imagen) en vez de escalar de una.\nconst texto = esVideo\n  ? '[No se pudo procesar el archivo enviado]'\n  : `[Archivo recibido: ${inp.filename || 'archivo'}]: El cliente envió un archivo en formato no soportado (${inp.mimeType}). Por favor pídele que lo envíe en PDF o imagen.`;\nreturn [{ json: {\n  texto,\n  media_ref: { type: esVideo ? 'video' : 'archivo', filename: inp.filename },\n  media_type: esVideo ? 'video' : 'archivo'\n}}];"
-      }
-    },
-    {
-      "id": "sw06-merge",
-      "name": "🔀 Unir Resultados",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
-      "position": [
-        2200,
-        420
-      ],
-      "parameters": {
-        "mode": "passThrough",
-        "output": "first"
       }
     },
     {
@@ -802,28 +754,6 @@
       ]
     },
     "🔧 Resultado PDF": {
-      "main": [
-        [
-          {
-            "node": "📤 Devolver Resultado",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔄 ConvertAPI: Office → Texto": {
-      "main": [
-        [
-          {
-            "node": "🔧 Resultado Office",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔧 Resultado Office": {
       "main": [
         [
           {

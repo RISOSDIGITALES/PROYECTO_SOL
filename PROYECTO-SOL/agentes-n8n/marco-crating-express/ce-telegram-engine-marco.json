@@ -2,7 +2,7 @@
   "id": "HaSG63Q9C2tGOLH3",
   "name": "CE Telegram Engine — Marco",
   "active": true,
-  "updatedAt": "2026-11-16T15:59:12.408Z",
+  "updatedAt": "2026-11-16T16:35:15.524Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -789,203 +789,6 @@
       }
     },
     {
-      "id": "webhook-telegram-manual",
-      "name": "📩 Webhook Respuesta Manual (Telegram)",
-      "webhookId": "telegram-manual-g54",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        440,
-        1300
-      ],
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "telegram-manual-g54",
-        "responseMode": "responseNode",
-        "options": {}
-      }
-    },
-    {
-      "id": "login-manual-tg",
-      "name": "🔐 G54: Login (Manual TG)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueRegularOutput",
-      "position": [
-        660,
-        1300
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://apigrowth.mdarthurdigital.com/api/auth/login",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Accept",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ email: \"master@growth54.local\", password: \"REDACTED_G54_MASTER_PASSWORD\" }) }}",
-        "options": {}
-      }
-    },
-    {
-      "id": "cambiar-empresa-manual-tg",
-      "name": "🏢 G54: Cambiar Empresa (Manual TG)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueRegularOutput",
-      "position": [
-        880,
-        1300
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://apigrowth.mdarthurdigital.com/api/auth/switch-company",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Accept",
-              "value": "application/json"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $('🔐 G54: Login (Manual TG)').item.json.access_token }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ company_id: Number($('📩 Webhook Respuesta Manual (Telegram)').item.json.body.company_id) }) }}",
-        "options": {}
-      }
-    },
-    {
-      "id": "rutear-envio-manual-tg",
-      "name": "🔀 ¿Enviar Mensaje? (Manual TG)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        1100,
-        1300
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": false,
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "leftValue": "={{ $('📩 Webhook Respuesta Manual (Telegram)').item.json.body.mensaje }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEquals"
-              }
-            },
-            {
-              "leftValue": "={{ $('📩 Webhook Respuesta Manual (Telegram)').item.json.body.conversation_id }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEquals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "enviar-manual-tg",
-      "name": "📤 Manual: Enviar Telegram",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueRegularOutput",
-      "position": [
-        1320,
-        1200
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://apigrowth.mdarthurdigital.com/api/telegram/reply",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $('🔐 G54: Login (Manual TG)').item.json.access_token }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ conversation_id: $('📩 Webhook Respuesta Manual (Telegram)').item.json.body.conversation_id, message: $('📩 Webhook Respuesta Manual (Telegram)').item.json.body.mensaje }) }}",
-        "options": {}
-      }
-    },
-    {
-      "id": "marcar-vendedor-activo-tg",
-      "name": "💾 Marcar Vendedor Activo (Telegram)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueRegularOutput",
-      "position": [
-        1540,
-        1300
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://apigrowth.mdarthurdigital.com/api/agent/whatsapp/inbound",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Accept",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ empresa_id: Number($('📩 Webhook Respuesta Manual (Telegram)').item.json.body.company_id), phone: 'tg_' + $('📩 Webhook Respuesta Manual (Telegram)').item.json.body.chat_id, canal: 'telegram', datos_calificacion: { ...(((d) => d && typeof d === 'object' && !Array.isArray(d) ? d : {})((($json.data || [])[0] || {}).datos)), bot_pausado: true, motivo: 'Vendedor tomó control manual', fecha: new Date().toISOString() }, messages: [{ rol: 'bot', contenido: $('📩 Webhook Respuesta Manual (Telegram)').item.json.body.mensaje || '(intervención manual del vendedor, sin mensaje enviado por este medio)' }] }) }}",
-        "options": {}
-      }
-    },
-    {
-      "id": "responder-final-manual-tg",
-      "name": "✅ Responder Final (Telegram Manual)",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.2,
-      "position": [
-        1760,
-        1300
-      ],
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ ok: true }) }}"
-      }
-    },
-    {
       "id": "crm-payload-tg",
       "name": "🔧 CRM: Preparar Payload (Telegram)",
       "type": "n8n-nodes-base.code",
@@ -1157,56 +960,6 @@
       }
     },
     {
-      "id": "f41ab693-2ef8-40b2-bd1d-e898ad4ced5a",
-      "name": "🔒 ¿Llamada autorizada? (telegram-manual-g54)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        560,
-        1140
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "id": "2b533fb9-9df7-4564-95cf-9fa84e9b004b",
-              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "e07d6614-b577-469b-b479-4be3fbe44da5",
-      "name": "⛔ Responder 403 (no autorizado) (telegram-manual-g54)",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        780,
-        1040
-      ],
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{\"ok\": false, \"error\": \"no autorizado\"}",
-        "options": {
-          "responseCode": 403
-        }
-      }
-    },
-    {
       "id": "b24e33f5-87aa-4fe2-8ab5-4eb9c52bc12c",
       "name": "🔒 ¿Llamada autorizada? (telegram-marco-g54)",
       "type": "n8n-nodes-base.if",
@@ -1237,38 +990,6 @@
           "combinator": "and"
         },
         "options": {}
-      }
-    },
-    {
-      "id": "25b7820a-6216-4996-9045-82524cb83c0a",
-      "name": "📋 G54: Datos Actuales del Lead (Telegram)",
-      "notes": "14-nov: G54 reemplaza datos_calificacion entero; se leen los datos que el lead ya tenía para que la pausa no los borre.",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "alwaysOutputData": true,
-      "onError": "continueRegularOutput",
-      "position": [
-        1320,
-        1460
-      ],
-      "parameters": {
-        "url": "=https://apigrowth.mdarthurdigital.com/api/n8n/companies/{{ $('📩 Webhook Respuesta Manual (Telegram)').item.json.body.company_id }}/wa/leads?phone={{ encodeURIComponent(String('tg_' + $('📩 Webhook Respuesta Manual (Telegram)').item.json.body.chat_id || '')) }}",
-        "options": {
-          "timeout": 8000
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
-            },
-            {
-              "name": "Accept",
-              "value": "application/json"
-            }
-          ]
-        }
       }
     },
     {
@@ -1606,79 +1327,6 @@
         ]
       ]
     },
-    "📩 Webhook Respuesta Manual (Telegram)": {
-      "main": [
-        [
-          {
-            "node": "🔒 ¿Llamada autorizada? (telegram-manual-g54)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔐 G54: Login (Manual TG)": {
-      "main": [
-        [
-          {
-            "node": "🏢 G54: Cambiar Empresa (Manual TG)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🏢 G54: Cambiar Empresa (Manual TG)": {
-      "main": [
-        [
-          {
-            "node": "🔀 ¿Enviar Mensaje? (Manual TG)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔀 ¿Enviar Mensaje? (Manual TG)": {
-      "main": [
-        [
-          {
-            "node": "📤 Manual: Enviar Telegram",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "📋 G54: Datos Actuales del Lead (Telegram)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📤 Manual: Enviar Telegram": {
-      "main": [
-        [
-          {
-            "node": "📋 G54: Datos Actuales del Lead (Telegram)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "💾 Marcar Vendedor Activo (Telegram)": {
-      "main": [
-        [
-          {
-            "node": "✅ Responder Final (Telegram Manual)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "🔧 CRM: Preparar Payload (Telegram)": {
       "main": [
         [
@@ -1774,24 +1422,6 @@
         ]
       ]
     },
-    "🔒 ¿Llamada autorizada? (telegram-manual-g54)": {
-      "main": [
-        [
-          {
-            "node": "🔐 G54: Login (Manual TG)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "⛔ Responder 403 (no autorizado) (telegram-manual-g54)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "🔒 ¿Llamada autorizada? (telegram-marco-g54)": {
       "main": [
         [
@@ -1802,17 +1432,6 @@
           }
         ],
         []
-      ]
-    },
-    "📋 G54: Datos Actuales del Lead (Telegram)": {
-      "main": [
-        [
-          {
-            "node": "💾 Marcar Vendedor Activo (Telegram)",
-            "type": "main",
-            "index": 0
-          }
-        ]
       ]
     },
     "🌡️ CRM: Temperatura y notas (Telegram)": {

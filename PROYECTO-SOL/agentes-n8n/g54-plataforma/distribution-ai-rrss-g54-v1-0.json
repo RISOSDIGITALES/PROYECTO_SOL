@@ -2,7 +2,7 @@
   "id": "IRCoya91PKPjpT1T",
   "name": "📢 Distribution AI — RRSS G54 v1.0",
   "active": true,
-  "updatedAt": "2026-11-16T15:47:23.338Z",
+  "updatedAt": "2026-11-16T16:35:17.449Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -812,20 +812,6 @@
       "parameters": {}
     },
     {
-      "id": "merge-pub",
-      "name": "🔀 Merge Publicaciones",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
-      "position": [
-        2032,
-        320
-      ],
-      "parameters": {
-        "mode": "append",
-        "options": {}
-      }
-    },
-    {
       "id": "g54-pub",
       "name": "✅ G54: Estado → Publicado",
       "type": "n8n-nodes-base.httpRequest",
@@ -1245,70 +1231,6 @@
       }
     },
     {
-      "id": "if-modo-story",
-      "name": "🔀 ¿Modo Story?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        720,
-        640
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": false,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "ms1",
-              "leftValue": "={{ $('🌐 Webhook: Publicar Post').item.json.body.content_type }}",
-              "rightValue": "story",
-              "operator": {
-                "type": "string",
-                "operation": "equals",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "fetch-posts-story",
-      "name": "📥 Obtener Todos los Posts (Story)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "retryOnFail": true,
-      "maxTries": 5,
-      "waitBetweenTries": 5000,
-      "position": [
-        940,
-        720
-      ],
-      "parameters": {
-        "url": "={{ $('⚙️ Config Distribution').item.json.G54_BASE_URL }}/api/rrss/posts",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('🔐 G54: Login Sesión').item.json.access_token }}"
-            },
-            {
-              "name": "Accept",
-              "value": "application/json"
-            }
-          ]
-        },
-        "options": {}
-      }
-    },
-    {
       "id": "ig-story-wait",
       "name": "⏳ Esperar Procesamiento (IG Story)",
       "webhookId": "af2da8b6-de01-4c59-a8ce-95af3a2a6360",
@@ -1527,37 +1449,6 @@
       "parameters": {
         "mode": "runOnceForAllItems",
         "jsCode": "// Sin ningún endpoint real de G54 para resolver empresa->organización de LinkedIn, y por\n// regla de plataforma (nada específico de un cliente hardcodeado en un agente de G54), este\n// mapa queda vacío — la publicación en LinkedIn falla limpio (revierte a \"aprobado\" con motivo\n// real, mismo mecanismo que el resto de las ramas de Distribution AI) hasta que exista una\n// forma real y sin hardcode de resolver esto. Reactivar cuando G54 tenga un endpoint que\n// devuelva la organización de LinkedIn conectada por company_id.\nconst LINKEDIN_ORGS = {};\nconst companyId = String($('⚙️ Config Distribution').item.json.G54_COMPANY_ID || '');\nreturn [{ json: { linkedin_organization_id: LINKEDIN_ORGS[companyId] || '' } }];"
-      }
-    },
-    {
-      "id": "li-obtener-token",
-      "name": "🔑 Obtener Token LinkedIn (G54)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "retryOnFail": true,
-      "maxTries": 5,
-      "waitBetweenTries": 5000,
-      "onError": "continueRegularOutput",
-      "position": [
-        760,
-        900
-      ],
-      "parameters": {
-        "url": "={{ $('⚙️ Config Distribution').item.json.G54_BASE_URL + '/api/n8n/pages/' + $('🔑 Resolver LinkedIn Org (Mapa)').item.json.linkedin_organization_id }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + (($('⚙️ Config Distribution').isExecuted ? $('⚙️ Config Distribution').first().json.G54_N8N_TOKEN : '') || '') }}"
-            },
-            {
-              "name": "Accept",
-              "value": "application/json"
-            }
-          ]
-        },
-        "options": {}
       }
     },
     {
@@ -2206,17 +2097,6 @@
             "index": 0
           }
         ]
-      ]
-    },
-    "🔀 ¿Modo Story?": {
-      "main": [
-        [],
-        []
-      ]
-    },
-    "📥 Obtener Todos los Posts (Story)": {
-      "main": [
-        []
       ]
     },
     "⏳ Esperar Procesamiento (IG Story)": {

@@ -2,7 +2,7 @@
   "id": "YI9EfJYcWJN4bbM9",
   "name": "ANALYTICS MENSUAL V3-META REPORTE",
   "active": true,
-  "updatedAt": "2026-11-16T16:28:50.303Z",
+  "updatedAt": "2026-11-16T16:35:30.170Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -1623,21 +1623,6 @@
           ]
         },
         "options": {}
-      }
-    },
-    {
-      "id": "lb-comparar-otras-empresas",
-      "name": "🔧 Línea Base: Comparar Otras Empresas",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "onError": "continueRegularOutput",
-      "position": [
-        170,
-        3560
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const cfg = $('⚙️ Config Growth54').first().json;\nconst baseUrl = cfg.G54_BASE_URL;\nconst agentToken = cfg.G54_AGENT_TOKEN;\nconst companyIdActual = Number(cfg.G54_COMPANY_ID);\n\nlet hitosOtrasEmpresas = [];\n\nasync function leerLineaBase(baseUrl, token, companyId) {\n  // Primero el campo linea_base de la estrategia (30-sep); el informe viejo, de respaldo.\n  try {\n    const r = await this.helpers.httpRequest({\n      method: 'GET', url: baseUrl + '/api/n8n/companies/' + companyId + '/rrss/estrategia',\n      headers: { Authorization: 'Bearer ' + agentToken }, json: true,\n    });\n    const lb = (r && (r.data || r) || {}).linea_base;\n    if (lb && lb.version === 1 && lb.inicio) return lb.inicio;\n  } catch (e) {}\n  const listResp = await this.helpers.httpRequest({\n    method: 'GET',\n    url: baseUrl + '/api/rrss/reportes?company_id=' + companyId,\n    headers: { Authorization: 'Bearer ' + token },\n    json: true,\n  });\n  const rows = (listResp && listResp.data) || [];\n  const candidatos = rows.filter(r => r.modo === 'linea_base');\n  candidatos.sort((a, b) => new Date(b.periodo_inicio) - new Date(a.periodo_inicio));\n  if (candidatos.length === 0) return null;\n  const detalle = await this.helpers.httpRequest({\n    method: 'GET',\n    url: baseUrl + '/api/rrss/reportes/' + candidatos[0].id,\n    headers: { Authorization: 'Bearer ' + token },\n    json: true,\n  });\n  const html = (detalle && detalle.data && detalle.data.html) || '';\n  const m = html.match(/LINEA_BASE_JSON:\\s*(\\{.*?\\})\\s*-->/);\n  return m ? JSON.parse(m[1]) : null;\n}\n\ntry {\n  // Listado de empresas activas — con AGENT_TOKEN, sin necesitar sesión\n  const companiesResp = await this.helpers.httpRequest({\n    method: 'GET',\n    url: baseUrl + '/api/n8n/companies',\n    headers: { Authorization: 'Bearer ' + agentToken },\n    json: true,\n  });\n  const otras = ((companiesResp && companiesResp.data) || [])\n    .filter(c => c.is_active && Number(c.id) !== companyIdActual);\n\n  if (otras.length > 0) {\n    // Login propio y aislado — nunca toca la sesión que usa el resto de este reporte\n    const login = await this.helpers.httpRequest({\n      method: 'POST',\n      url: baseUrl + '/api/auth/login',\n      body: { email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' },\n      json: true,\n    });\n    const token = login.access_token;\n\n    for (const empresa of otras) {\n      try {\n        await this.helpers.httpRequest({\n          method: 'POST',\n          url: baseUrl + '/api/auth/switch-company',\n          body: { company_id: empresa.id },\n          headers: { Authorization: 'Bearer ' + token },\n          json: true,\n        });\n\n        const lineaBaseOtra = await leerLineaBase.call(this, baseUrl, token, empresa.id);\n        if (!lineaBaseOtra || !lineaBaseOtra.fecha) continue;\n\n        const fechaLB = new Date(lineaBaseOtra.fecha);\n\n        let primerLeadFecha = null;\n        try {\n          const conv = await this.helpers.httpRequest({\n            method: 'GET',\n            url: baseUrl + '/api/whatsapp/conversations?per_page=200',\n            headers: { Authorization: 'Bearer ' + token },\n            json: true,\n          });\n          const todos = (conv && conv.data) || [];\n          const posteriores = todos\n            .filter(c => c.created_at && new Date(c.created_at) >= fechaLB)\n            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));\n          if (posteriores.length > 0) primerLeadFecha = posteriores[0].created_at;\n        } catch (e) {}\n\n        let primeraVentaFecha = null;\n        try {\n          const board = await this.helpers.httpRequest({\n            method: 'GET',\n            url: baseUrl + '/api/crm/board',\n            headers: { Authorization: 'Bearer ' + token },\n            json: true,\n          });\n          if (board && Array.isArray(board.closed)) {\n            const cerradosPosteriores = board.closed\n              .filter(d => d.updated_at && new Date(d.updated_at) >= fechaLB && Number(d.valor_estimado) > 0)\n              .sort((a, b) => new Date(a.updated_at) - new Date(b.updated_at));\n            if (cerradosPosteriores.length > 0) primeraVentaFecha = cerradosPosteriores[0].updated_at;\n          }\n        } catch (e) {}\n\n        const diasDesde = (fechaStr) => fechaStr ? Math.max(0, Math.round((new Date(fechaStr) - fechaLB) / 86400000)) : null;\n\n        hitosOtrasEmpresas.push({\n          company_id: empresa.id,\n          nombre: empresa.name,\n          hitos: {\n            fecha_linea_base: lineaBaseOtra.fecha,\n            primer_lead_fecha: primerLeadFecha,\n            dias_a_primer_lead: diasDesde(primerLeadFecha),\n            primera_venta_fecha: primeraVentaFecha,\n            dias_a_primera_venta: diasDesde(primeraVentaFecha),\n          },\n        });\n      } catch (e) {\n        // esta empresa en particular falló — se sigue con las demás, sin cortar el reporte\n      }\n    }\n  }\n} catch (e) {\n  // sin comparación disponible — la sección simplemente no se muestra\n}\n\nreturn [{ json: { hitosOtrasEmpresas } }];\n"
       }
     },
     {

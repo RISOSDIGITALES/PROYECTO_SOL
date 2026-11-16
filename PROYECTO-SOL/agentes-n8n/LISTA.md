@@ -25,7 +25,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | 🔄 LinkedIn — Renovar token (G54) | `JsLFysLfQIxGZN5f` | sí | 2026-11-14 | [linkedin-renovar-token-g54.json](g54-plataforma/linkedin-renovar-token-g54.json) |
 | 🔍 Camila G54 — Prospección | `jg5SENgRpe2wLBTn` | sí | 2026-11-14 | [camila-g54-prospeccion.json](g54-plataforma/camila-g54-prospeccion.json) |
 | 🔗 CTA Click Tracker (G54) | `JN2vRUznkOXlej8q` | sí | 2026-11-14 | [cta-click-tracker-g54.json](g54-plataforma/cta-click-tracker-g54.json) |
-| 🖼️ Content AI — Generador de Imágenes (Pollinations) | `1rsqmFabW5PjnlHy` | sí | 2026-11-14 | [content-ai-generador-de-imagenes-pollinations.json](g54-plataforma/content-ai-generador-de-imagenes-pollinations.json) |
+| 🖼️ Content AI — Generador de Imágenes (OpenAI) | `1rsqmFabW5PjnlHy` | sí | 2026-11-16 | [content-ai-generador-de-imagenes-openai.json](g54-plataforma/content-ai-generador-de-imagenes-openai.json) |
 | 🚨 Error Reporter — Growth54 | `CKOju9JVnSMymfKv` | sí | 2026-08-05 | [error-reporter-growth54.json](g54-plataforma/error-reporter-growth54.json) |
 | 🧠 Ideas AI — RRSS G54 | `nHawWPIIu51ABBgl` | sí | 2026-11-16 | [ideas-ai-rrss-g54.json](g54-plataforma/ideas-ai-rrss-g54.json) |
 | 🧠 Strategist AI — RRSS G54 v3.0 (Tendencias) | `S62o0wcXq8Wfj67S` | sí | 2026-11-16 | [strategist-ai-rrss-g54-v3-0-tendencias.json](g54-plataforma/strategist-ai-rrss-g54-v3-0-tendencias.json) |
@@ -43,7 +43,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | Marco CE — 02 Contexto y Lead | `s1Z7jKoFzy5x7XvC` | sí | 2026-11-14 | [marco-ce-02-contexto-y-lead.json](marco-crating-express/marco-ce-02-contexto-y-lead.json) |
 | Marco CE — 03 Generador IA | `J8qbKOF7t4GnhRDT` | sí | 2026-11-14 | [marco-ce-03-generador-ia.json](marco-crating-express/marco-ce-03-generador-ia.json) |
 | Marco CE — 05 Guardar Lead | `PqbfMghL0E7xKflC` | sí | 2026-11-14 | [marco-ce-05-guardar-lead.json](marco-crating-express/marco-ce-05-guardar-lead.json) |
-| Marco CE — 06 Procesador de Medios | `5GU89AeWsBZ86FWa` | sí | 2026-11-14 | [marco-ce-06-procesador-de-medios.json](marco-crating-express/marco-ce-06-procesador-de-medios.json) |
+| Marco CE — 06 Procesador de Medios | `5GU89AeWsBZ86FWa` | sí | 2026-11-16 | [marco-ce-06-procesador-de-medios.json](marco-crating-express/marco-ce-06-procesador-de-medios.json) |
 | 📞 CE Voice Agent — Marco (Fusionado) | `FYKfTJBfgwsMpJV7` | sí | 2026-11-16 | [ce-voice-agent-marco-fusionado.json](marco-crating-express/ce-voice-agent-marco-fusionado.json) |
 | 📞→💬 VAPI → WhatsApp Handoff | `6UWT1GHKZVvCDcc6` | sí | 2026-11-14 | [vapi-whatsapp-handoff.json](marco-crating-express/vapi-whatsapp-handoff.json) |
 | 🖼️ Marco — Media Proxy (G54) | `OMZLwErubDaiGgO7` | sí | 2026-11-14 | [marco-media-proxy-g54.json](marco-crating-express/marco-media-proxy-g54.json) |
