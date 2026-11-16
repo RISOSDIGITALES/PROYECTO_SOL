@@ -2,7 +2,7 @@
   "id": "zTm4tMOV9vMfUDnG",
   "name": "👁️ Vigía G54 — Supervisor RRSS",
   "active": true,
-  "updatedAt": "2026-11-16T15:47:21.452Z",
+  "updatedAt": "2026-11-16T15:50:15.987Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -241,6 +241,7 @@
       "name": "🤖 Groq: Chequeo de Salud",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
       "position": [
         1040,
         200
@@ -249,8 +250,7 @@
         "url": "https://api.groq.com/openai/v1/models",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "groqApi",
-        "options": {},
-        "onError": "continueRegularOutput"
+        "options": {}
       },
       "credentials": {
         "groqApi": {
@@ -270,7 +270,7 @@
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const hallazgos = ($('🔧 Ejecutar Auto-Correcciones').item.json.hallazgos || []).slice();\nconst groqResp = $json;\nconst groqError = groqResp.error;\n\nif (groqError) {\n  const status = groqResp.statusCode || (groqResp.cause && groqResp.cause.statusCode) || (typeof groqError === 'object' && groqError.httpCode);\n  if (Number(status) === 429) {\n    hallazgos.push({\n      tipo: 'groq_cuota_agotada', severidad: 'atencion', clave: 'groq_cuota',\n      mensaje: 'Groq devolvió 429 (cuota agotada) en el chequeo de salud del vigía — Marco y los agentes de contenido pueden estar degradando a Modo Contingencia / fallback en cualquier momento. No se puede auto-corregir (límite de cuenta compartida), solo avisar.'\n    });\n  } else if (Number(status) === 401) {\n    hallazgos.push({\n      tipo: 'groq_credencial_invalida', severidad: 'critico', clave: 'groq_401',\n      mensaje: 'La credencial de Groq (jORffbRhRNohHT1B) parece inválida o revocada (401) — TODOS los agentes que dependen de Groq como IA primaria van a fallar. Revisar la API key cuanto antes.'\n    });\n  } else {\n    hallazgos.push({\n      tipo: 'groq_error_desconocido', severidad: 'atencion', clave: 'groq_error',\n      mensaje: `Chequeo de salud de Groq devolvió un error inesperado: ${JSON.stringify(groqError).slice(0, 200)}`\n    });\n  }\n}\n\nreturn [{ json: { hallazgos } }];"
+        "jsCode": "const hallazgos = ($('🔧 Ejecutar Auto-Correcciones').item.json.hallazgos || []).slice();\nconst groqResp = $json;\nconst groqError = groqResp.error;\n\nif (groqError) {\n  const status = groqResp.statusCode || (groqResp.cause && groqResp.cause.statusCode) || (typeof groqError === 'object' && groqError.httpCode)\n    // 16-nov: con \"seguir si falla\" n8n deja el código HTTP dentro del mensaje (\"401 - ...\").\n    || (String((groqError && groqError.message) || groqError || '').match(/^(\\d{3})\\b/) || [])[1];\n  if (Number(status) === 429) {\n    hallazgos.push({\n      tipo: 'groq_cuota_agotada', severidad: 'atencion', clave: 'groq_cuota',\n      mensaje: 'Groq devolvió 429 (cuota agotada) en el chequeo de salud del vigía — Marco y los agentes de contenido pueden estar degradando a Modo Contingencia / fallback en cualquier momento. No se puede auto-corregir (límite de cuenta compartida), solo avisar.'\n    });\n  } else if (Number(status) === 401) {\n    hallazgos.push({\n      tipo: 'groq_credencial_invalida', severidad: 'critico', clave: 'groq_401',\n      mensaje: 'La credencial de Groq (jORffbRhRNohHT1B) parece inválida o revocada (401) — TODOS los agentes que dependen de Groq como IA primaria van a fallar. Revisar la API key cuanto antes.'\n    });\n  } else {\n    hallazgos.push({\n      tipo: 'groq_error_desconocido', severidad: 'atencion', clave: 'groq_error',\n      mensaje: `Chequeo de salud de Groq devolvió un error inesperado: ${JSON.stringify(groqError).slice(0, 200)}`\n    });\n  }\n}\n\nreturn [{ json: { hallazgos } }];"
       }
     }
   ],
