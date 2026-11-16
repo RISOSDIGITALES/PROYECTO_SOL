@@ -2,7 +2,7 @@
   "id": "zAhV8gEsXD8dCrXq",
   "name": "CE WhatsApp Engine — Marco",
   "active": true,
-  "updatedAt": "2026-11-14T15:52:53.669Z",
+  "updatedAt": "2026-11-16T15:38:02.006Z",
   "tags": [
     {
       "id": "2CrVJWitAB77MgTJ",
@@ -1808,6 +1808,112 @@
           ]
         }
       }
+    },
+    {
+      "id": "f90e6550-e4a8-4c44-9fd4-3bec08d23a1c",
+      "name": "🔧 Preparar Mensaje (bot en pausa)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        564
+      ],
+      "parameters": {
+        "jsCode": "// 16-nov (revisión, punto 3): el bot no responde (pausado por un vendedor o canal en \"solo avisar\"),\n// pero el mensaje del cliente tiene que llegar igual a la bandeja de G54 y avisarse al vendedor.\nconst ex = $('🔧 Extraer Mensaje y Teléfono').item.json;\nconst lead = ($('🔍 Verificar Estado Lead').item.json?.data || [])[0] || null;\nconst cfg = $('⚙️ Config Canales (bot-config)').item.json || {};\nconst pausado = lead?.datos?.bot_pausado === true;\n\nconst etiquetas = { image: 'Foto', audio: 'Nota de voz', document: 'Documento', video: 'Video', sticker: 'Sticker', location: 'Ubicación' };\nlet texto = String(ex.texto || '').trim();\nif (ex.tipoMensaje && ex.tipoMensaje !== 'text') {\n  const et = etiquetas[ex.tipoMensaje] || ex.tipoMensaje;\n  texto = `[${et}${ex.mediaCaption ? ': ' + ex.mediaCaption : ''}] (verlo en WhatsApp)`;\n}\nif (!texto) texto = '(mensaje sin texto)';\n\nconst telefono = '+' + String(ex.telefono || '').replace(/^\\+/, '');\nconst nombre = lead?.contact_name || ex.nombreContacto || '';\n\n// Un aviso por cliente cada 15 min como máximo: si escribe 5 mensajes seguidos, llega un solo correo.\nconst st = $getWorkflowStaticData('global');\nif (!st.avisosPausa) st.avisosPausa = {};\nconst ahora = Date.now();\nObject.keys(st.avisosPausa).forEach(k => { if (ahora - st.avisosPausa[k] > 86400000) delete st.avisosPausa[k]; });\nconst avisar = !st.avisosPausa[telefono] || (ahora - st.avisosPausa[telefono] > 15 * 60000);\nif (avisar) st.avisosPausa[telefono] = ahora;\n\nconst emails = (Array.isArray(cfg.emails_vendedor) && cfg.emails_vendedor.length) ? cfg.emails_vendedor : ['risosadmi@gmail.com'];\n\nreturn [{ json: {\n  empresa_id: 1,\n  telefono,\n  nombre,\n  lead_existe: !!lead,\n  texto,\n  motivo: pausado ? 'Un vendedor tomó esta conversación (bot en pausa).' : 'WhatsApp está en \"solo avisar\": el bot no responde.',\n  avisar,\n  emails: emails.join(','),\n} }];\n"
+      }
+    },
+    {
+      "id": "5e0e67cb-b0a1-4554-8e04-f6d47cfb2ab2",
+      "name": "💾 G54: Guardar Mensaje (bot en pausa)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        820,
+        564
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://apigrowth.mdarthurdigital.com/api/agent/whatsapp/inbound",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED_G54_AGENT_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify(Object.assign({ empresa_id: $json.empresa_id, phone: $json.telefono, canal: \"whatsapp\", messages: [{ rol: \"user\", contenido: $json.texto }] }, (!$json.lead_existe && $json.nombre) ? { name: $json.nombre } : {})) }}",
+        "options": {
+          "timeout": 20000
+        }
+      }
+    },
+    {
+      "id": "33ad1339-8495-49db-a306-1ae7dc5ef76a",
+      "name": "🔀 ¿Avisar al vendedor? (bot en pausa)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1080,
+        564
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "d3546125-0a62-447f-b857-9efb7e00ea48",
+              "leftValue": "={{ $(\"🔧 Preparar Mensaje (bot en pausa)\").item.json.avisar }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "9e9ae58c-1486-4da8-ad54-850bfc3933b5",
+      "name": "📧 Avisar Vendedor (bot en pausa)",
+      "webhookId": "8f387620-8ae9-427b-a338-ee5ca8259bce",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1340,
+        564
+      ],
+      "parameters": {
+        "sendTo": "={{ $(\"🔧 Preparar Mensaje (bot en pausa)\").item.json.emails }}",
+        "subject": "={{ \"💬 \" + ($(\"🔧 Preparar Mensaje (bot en pausa)\").item.json.nombre || $(\"🔧 Preparar Mensaje (bot en pausa)\").item.json.telefono) + \" te escribió por WhatsApp (bot en pausa)\" }}",
+        "message": "={{ (() => { const d = $(\"🔧 Preparar Mensaje (bot en pausa)\").item.json; const esc = s => String(s || \"\").replace(/[&<>]/g, c => ({\"&\":\"&amp;\",\"<\":\"&lt;\",\">\":\"&gt;\"})[c]); return \"<div style=\\\"font-family:Arial,sans-serif;font-size:15px;color:#1d2420\\\"><p><b>\" + esc(d.nombre || d.telefono) + \"</b> escribió por WhatsApp y el bot no le respondió.</p><p style=\\\"background:#f1f3f0;padding:12px;border-radius:6px\\\">\" + esc(d.texto) + \"</p><p>Teléfono: \" + esc(d.telefono) + \"<br>Motivo: \" + esc(d.motivo) + \"</p><p>Respóndele desde el panel de G54 (Conversaciones). El mensaje ya está guardado ahí.</p></div>\"; })() }}",
+        "options": {
+          "contentType": "html",
+          "appendAttribution": false
+        },
+        "fromEmail": "Growth54 <risosadmi@gmail.com>"
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TESHSjzjMCpCxBBk",
+          "name": "Gmail account"
+        }
+      }
     }
   ],
   "connections": {
@@ -2183,7 +2289,13 @@
             "index": 0
           }
         ],
-        []
+        [
+          {
+            "node": "🔧 Preparar Mensaje (bot en pausa)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🔀 ¿Es medio?": {
@@ -2506,6 +2618,40 @@
             "index": 0
           }
         ]
+      ]
+    },
+    "🔧 Preparar Mensaje (bot en pausa)": {
+      "main": [
+        [
+          {
+            "node": "💾 G54: Guardar Mensaje (bot en pausa)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 G54: Guardar Mensaje (bot en pausa)": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Avisar al vendedor? (bot en pausa)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Avisar al vendedor? (bot en pausa)": {
+      "main": [
+        [
+          {
+            "node": "📧 Avisar Vendedor (bot en pausa)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
       ]
     }
   }
