@@ -7,7 +7,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 
 | Agente | ID | Activo | Última edición | Archivo |
 |---|---|---|---|---|
-| ANALYTICS MENSUAL V3-META REPORTE | `YI9EfJYcWJN4bbM9` | sí | 2026-11-14 | [analytics-mensual-v3-meta-reporte.json](g54-plataforma/analytics-mensual-v3-meta-reporte.json) |
+| ANALYTICS MENSUAL V3-META REPORTE | `YI9EfJYcWJN4bbM9` | sí | 2026-11-16 | [analytics-mensual-v3-meta-reporte.json](g54-plataforma/analytics-mensual-v3-meta-reporte.json) |
 | Community AI — G54 | `62tIvF0snsrMj0sM` | sí | 2026-11-16 | [community-ai-g54.json](g54-plataforma/community-ai-g54.json) |
 | ⏰ Distribution AI — Alarma Exacta (G54) | `sNNhTEH8IzJsOIm3` | sí | 2026-11-14 | [distribution-ai-alarma-exacta-g54.json](g54-plataforma/distribution-ai-alarma-exacta-g54.json) |
 | ✉️ Camila — Baja de correos (G54) | `FXRpSFH9ESdVah1P` | sí | 2026-11-14 | [camila-baja-de-correos-g54.json](g54-plataforma/camila-baja-de-correos-g54.json) |
@@ -27,8 +27,8 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | 🔗 CTA Click Tracker (G54) | `JN2vRUznkOXlej8q` | sí | 2026-11-14 | [cta-click-tracker-g54.json](g54-plataforma/cta-click-tracker-g54.json) |
 | 🖼️ Content AI — Generador de Imágenes (Pollinations) | `1rsqmFabW5PjnlHy` | sí | 2026-11-14 | [content-ai-generador-de-imagenes-pollinations.json](g54-plataforma/content-ai-generador-de-imagenes-pollinations.json) |
 | 🚨 Error Reporter — Growth54 | `CKOju9JVnSMymfKv` | sí | 2026-08-05 | [error-reporter-growth54.json](g54-plataforma/error-reporter-growth54.json) |
-| 🧠 Ideas AI — RRSS G54 | `nHawWPIIu51ABBgl` | sí | 2026-11-14 | [ideas-ai-rrss-g54.json](g54-plataforma/ideas-ai-rrss-g54.json) |
-| 🧠 Strategist AI — RRSS G54 v3.0 (Tendencias) | `S62o0wcXq8Wfj67S` | sí | 2026-11-14 | [strategist-ai-rrss-g54-v3-0-tendencias.json](g54-plataforma/strategist-ai-rrss-g54-v3-0-tendencias.json) |
+| 🧠 Ideas AI — RRSS G54 | `nHawWPIIu51ABBgl` | sí | 2026-11-16 | [ideas-ai-rrss-g54.json](g54-plataforma/ideas-ai-rrss-g54.json) |
+| 🧠 Strategist AI — RRSS G54 v3.0 (Tendencias) | `S62o0wcXq8Wfj67S` | sí | 2026-11-16 | [strategist-ai-rrss-g54-v3-0-tendencias.json](g54-plataforma/strategist-ai-rrss-g54-v3-0-tendencias.json) |
 | 🧾 Cotizador → CRM — G54 | `FH4xYCTaxHQnb1dm` | sí | 2026-11-14 | [cotizador-crm-g54.json](g54-plataforma/cotizador-crm-g54.json) |
 
 ## marco-crating-express

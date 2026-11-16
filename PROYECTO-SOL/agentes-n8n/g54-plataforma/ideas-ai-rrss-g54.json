@@ -2,7 +2,7 @@
   "id": "nHawWPIIu51ABBgl",
   "name": "🧠 Ideas AI — RRSS G54",
   "active": true,
-  "updatedAt": "2026-11-14T16:25:13.830Z",
+  "updatedAt": "2026-11-16T16:28:44.960Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -102,7 +102,13 @@
         "specifyBody": "json",
         "jsonBody": "={{ { \"company_id\": $json.company_id, \"modo\": \"semanal\" } }}",
         "options": {
-          "timeout": 240000
+          "timeout": 240000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 20000
+            }
+          }
         }
       }
     },
@@ -522,67 +528,6 @@
       }
     },
     {
-      "id": "ideas-gemini",
-      "name": "🧠 Gemini: Generar Ideas",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueRegularOutput",
-      "position": [
-        3720,
-        300
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={{ $('⚙️ Config G54').item.json.GEMINI_API_KEY }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":{{ JSON.stringify($json.prompt) }}}]}],\"generationConfig\":{\"temperature\":0.6,\"maxOutputTokens\":4096}}",
-        "options": {}
-      }
-    },
-    {
-      "id": "ideas-if-gemini",
-      "name": "🔀 ¿Gemini OK? (Ideas)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        3940,
-        300
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          },
-          "conditions": [
-            {
-              "id": "check-cand",
-              "leftValue": "={{ $json.candidates?.length || 0 }}",
-              "rightValue": 0,
-              "operator": {
-                "type": "number",
-                "operation": "gt"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
       "id": "ideas-groq-fallback",
       "name": "🧠 Groq: Fallback Ideas",
       "type": "n8n-nodes-base.httpRequest",
@@ -824,7 +769,7 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "loose"
           },
           "combinator": "and",
           "conditions": [
@@ -1234,35 +1179,6 @@
     },
     "🔧 Preparar Contexto Ideas": {
       "main": [
-        [
-          {
-            "node": "🧠 Gemini: Generar Ideas",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🧠 Gemini: Generar Ideas": {
-      "main": [
-        [
-          {
-            "node": "🔀 ¿Gemini OK? (Ideas)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔀 ¿Gemini OK? (Ideas)": {
-      "main": [
-        [
-          {
-            "node": "🔍 Parsear y Validar Ideas",
-            "type": "main",
-            "index": 0
-          }
-        ],
         [
           {
             "node": "🧠 Groq: Fallback Ideas",
