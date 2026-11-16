@@ -17,6 +17,7 @@ PATRONES = [(r'EAA[A-Za-z0-9]{20,}', 'REDACTED_FB_TOKEN'),
             (r'gsk_[A-Za-z0-9]{20,}', 'REDACTED_GROQ_KEY'),
             (r'AIzaSy[A-Za-z0-9_-]{20,}', 'REDACTED_GOOGLE_KEY'),
             (r'sk-[A-Za-z0-9_-]{20,}', 'REDACTED_API_KEY'),
+            (r'sk_[A-Za-z0-9]{20,}', 'REDACTED_POLLINATIONS_KEY'),
             (r'pcsk_[A-Za-z0-9_-]{20,}', 'REDACTED_PINECONE_KEY'),
             (r'\b\d{8,10}:[A-Za-z0-9_-]{30,40}\b', 'REDACTED_TELEGRAM_TOKEN'),
             (r'\b[0-9a-f]{40}\b', 'REDACTED_HEX_KEY')]
