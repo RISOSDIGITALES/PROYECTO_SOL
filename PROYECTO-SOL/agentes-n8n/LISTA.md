@@ -14,6 +14,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | 🎥 Pedidos de Grabación AI — G54 | `17mc8CJkKH2qzsdA` | sí | 2026-11-14 | [pedidos-de-grabacion-ai-g54.json](g54-plataforma/pedidos-de-grabacion-ai-g54.json) |
 | 🎨 Content AI — RRSS G54 v1.3 | `wyO1f93A66imn9qw` | sí | 2026-11-16 | [content-ai-rrss-g54-v1-3.json](g54-plataforma/content-ai-rrss-g54-v1-3.json) |
 | 🎬 Reels AI — G54 | `Xqb5sXsFDRz0Diys` | sí | 2026-11-14 | [reels-ai-g54.json](g54-plataforma/reels-ai-g54.json) |
+| 🎵 TikTok — Publicar (G54) | `fHfdlpZCHjCSrCGp` | no | 2026-11-16 | [tiktok-publicar-g54.json](g54-plataforma/tiktok-publicar-g54.json) |
 | 👁️ Vigía G54 — Supervisor RRSS | `zTm4tMOV9vMfUDnG` | sí | 2026-11-16 | [vigia-g54-supervisor-rrss.json](g54-plataforma/vigia-g54-supervisor-rrss.json) |
 | 💬 Sales AI — Motor de Conversación G54 | `otycsrxrMEMuxuwD` | sí | 2026-11-16 | [sales-ai-motor-de-conversacion-g54.json](g54-plataforma/sales-ai-motor-de-conversacion-g54.json) |
 | 📊 Analytics AI Semanal — G54 | `EX9K1AZwKeouSJ9G` | sí | 2026-11-16 | [analytics-ai-semanal-g54.json](g54-plataforma/analytics-ai-semanal-g54.json) |
