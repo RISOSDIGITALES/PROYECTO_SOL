@@ -2,7 +2,7 @@
   "id": "62tIvF0snsrMj0sM",
   "name": "Community AI — G54",
   "active": true,
-  "updatedAt": "2026-11-16T16:09:38.301Z",
+  "updatedAt": "2026-11-16T16:23:52.522Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -196,7 +196,7 @@
         560
       ],
       "parameters": {
-        "jsCode": "// Read company_id from webhook query param (?company=N)\n// Each client registers: .../webhook/community-ai-g54?company=N\nconst query = $('🔔 Webhook: FB/IG Interacción').item.json.query || {};\nconst queryCompanyId = String(query.company || '');\n// pageId already extracted by previous node for future API resolution\nconst pageId = $('🔍 Extraer Evento FB/IG').item.json.pageId || '';\nreturn [{ json: { queryCompanyId, pageId } }];"
+        "jsCode": "// Read company_id from webhook query param (?company=N)\n// Each client registers: .../webhook/community-ai-g54?company=N\nconst query = $('🔔 Webhook: FB/IG Interacción').item.json.query || {};\nconst queryCompanyId = String(query.company || '');\n// pageId already extracted by previous node for future API resolution\nlet pageId = $('🔍 Extraer Evento FB/IG').item.json.pageId || '';\nif (($('🔔 Webhook: FB/IG Interacción').item.json.body || {}).object === 'instagram') {\n  const cfgG = $('⚙️ Config Growth54').item.json;\n  pageId = await igAPagina(pageId, cfgG.G54_BASE_URL, cfgG.G54_MASTER_EMAIL, cfgG.G54_MASTER_PASSWORD, this.helpers);\n}\nreturn [{ json: { queryCompanyId, pageId } }];\n// 16-nov: en los eventos de Instagram Meta manda el id de la cuenta de Instagram, no el de la página de Facebook,\n// y G54 solo registra páginas. Se busca qué página de G54 tiene conectada esa cuenta de Instagram (recorriendo las\n// empresas con la sesión maestra) y se resuelve por esa página, como Facebook. Se guarda 6 h para no repetirlo.\nasync function igAPagina(igId, base, email, pass, helpers) {\n  if (!igId) return '';\n  const st = $getWorkflowStaticData('global');\n  st.igPaginas = st.igPaginas || {};\n  const c = st.igPaginas[igId];\n  if (c && Date.now() - c.t < 6 * 3600e3) return c.p;\n  let pagina = '';\n  try {\n    const login = await helpers.httpRequest({ method: 'POST', url: `${base}/api/auth/login`, headers: { Accept: 'application/json' }, body: { email, password: pass }, json: true, timeout: 15000 });\n    const tok = login.access_token;\n    const H = { Authorization: 'Bearer ' + tok, Accept: 'application/json' };\n    for (const co of (login.companies || [])) {\n      await helpers.httpRequest({ method: 'POST', url: `${base}/api/auth/switch-company`, headers: H, body: { company_id: co.id }, json: true, timeout: 10000 });\n      const t = await helpers.httpRequest({ method: 'GET', url: `${base}/api/rrss/tokens`, headers: H, json: true, timeout: 10000 });\n      const fila = (t.data || t || []).find(x => String(x.instagram_account_id || '') === String(igId) && x.page_id);\n      if (fila) { pagina = String(fila.page_id); break; }\n    }\n    try { await helpers.httpRequest({ method: 'POST', url: `${base}/api/auth/logout`, headers: H, json: true, timeout: 5000 }); } catch (e) {}\n  } catch (e) {\n    return ''; // sin cache: se reintenta en el próximo evento\n  }\n  st.igPaginas[igId] = { p: pagina, t: Date.now() };\n  return pagina;\n}\n"
       }
     },
     {
@@ -561,6 +561,16 @@
                 "type": "string",
                 "operation": "notEquals"
               }
+            },
+            {
+              "id": "f61fb480-d94e-4cec-8ed2-aff3ee1c39f8",
+              "leftValue": "={{ $('🔍 Extraer Evento FB/IG').item.json.usuarioId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
             }
           ],
           "combinator": "and"
@@ -601,7 +611,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  empresa_id: Number($('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID),\n  phone: 'fb_' + ($('🔍 Extraer Evento FB/IG').item.json.usuarioId || $('🔍 Extraer Evento FB/IG').item.json.comentarioId),\n  contact_name: $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre || '',\n  clasificacion: $('🔍 Parsear Respuesta Community AI').item.json.lead || 'frio',\n  ...((n) => n ? { name: n } : {})(String($('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre || '').trim()),\n  ...((e) => e ? { estado: e } : {})(({ caliente: 'hot', tibio: 'warm' })[String($('🔍 Parsear Respuesta Community AI').item.json.lead || 'frio').toLowerCase()]),\n  origen: ($('🔍 Extraer Evento FB/IG').item.json.plataforma === 'instagram' ? 'instagram' : $('🔍 Extraer Evento FB/IG').item.json.plataforma === 'facebook' ? 'facebook' : 'rrss'),\n  messages: [\n    { rol: 'user', contenido: $('🔍 Extraer Evento FB/IG').item.json.mensaje },\n    { rol: 'bot', contenido: $('🔍 Parsear Respuesta Community AI').item.json.respuestaPublica || '' }\n  ]\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  empresa_id: Number($('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID),\n  phone: (($('🔍 Extraer Evento FB/IG').item.json.plataforma === 'instagram' ? 'ig_' : 'fb_') + $('🔍 Extraer Evento FB/IG').item.json.usuarioId),\n  contact_name: $('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre || '',\n  clasificacion: $('🔍 Parsear Respuesta Community AI').item.json.lead || 'frio',\n  ...((n) => n ? { name: n } : {})(String($('🔍 Parsear Respuesta Community AI').item.json.usuarioNombre || '').trim()),\n  ...((e) => e ? { estado: e } : {})(({ caliente: 'hot', tibio: 'warm' })[String($('🔍 Parsear Respuesta Community AI').item.json.lead || 'frio').toLowerCase()]),\n  origen: ($('🔍 Extraer Evento FB/IG').item.json.plataforma === 'instagram' ? 'instagram' : $('🔍 Extraer Evento FB/IG').item.json.plataforma === 'facebook' ? 'facebook' : 'rrss'),\n  messages: [\n    { rol: 'user', contenido: $('🔍 Extraer Evento FB/IG').item.json.mensaje },\n    { rol: 'bot', contenido: $('🔍 Parsear Respuesta Community AI').item.json.respuestaPublica || '' }\n  ]\n}) }}",
         "options": {}
       }
     },
@@ -953,7 +963,7 @@
           "parameters": [
             {
               "name": "phone",
-              "value": "={{ 'fb_' + ($('🔍 Extraer Evento FB/IG').item.json.usuarioId || $('🔍 Extraer Evento FB/IG').item.json.comentarioId) }}"
+              "value": "={{ (($('🔍 Extraer Evento FB/IG').item.json.plataforma === 'instagram' ? 'ig_' : 'fb_') + $('🔍 Extraer Evento FB/IG').item.json.usuarioId) }}"
             }
           ]
         },
@@ -1408,7 +1418,7 @@
           "parameters": [
             {
               "name": "phone",
-              "value": "={{ 'fb_' + ($('🔍 Extraer Evento FB/IG').item.json.usuarioId || $('🔍 Extraer Evento FB/IG').item.json.comentarioId) }}"
+              "value": "={{ (($('🔍 Extraer Evento FB/IG').item.json.plataforma === 'instagram' ? 'ig_' : 'fb_') + $('🔍 Extraer Evento FB/IG').item.json.usuarioId) }}"
             }
           ]
         },
@@ -2176,6 +2186,7 @@
     {
       "id": "68681d02-4597-41c7-a16e-2d135e49cdde",
       "name": "📧 Avisar envío fallido (Community)",
+      "webhookId": "43d0aeea-1bc0-4535-a470-db67f281001a",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "onError": "continueRegularOutput",
@@ -2198,8 +2209,7 @@
           "id": "iWBBSSe5AWsCMo89",
           "name": "Gmail SMTP — risosadmi"
         }
-      },
-      "webhookId": "43d0aeea-1bc0-4535-a470-db67f281001a"
+      }
     }
   ],
   "connections": {
