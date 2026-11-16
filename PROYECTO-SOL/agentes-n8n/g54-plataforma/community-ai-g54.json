@@ -2,7 +2,7 @@
   "id": "62tIvF0snsrMj0sM",
   "name": "Community AI — G54",
   "active": true,
-  "updatedAt": "2026-11-16T15:59:38.062Z",
+  "updatedAt": "2026-11-16T16:02:30.024Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -209,7 +209,7 @@
         560
       ],
       "parameters": {
-        "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst resolver = $('🔍 Resolver Empresa').item.json;\nconst pageData = $('🔍 Obtener Config Página (G54)').item.json;\n\n// company_id: de la API de páginas > query param > fallback CE\nconst company_id = String(pageData.company_id || resolver.queryCompanyId || '');\n\n// Tokens: preferir el Page Access Token real (intercambiado desde el token de G54,\n// necesario porque el token guardado en G54 es de usuario, no de página — Meta rechaza\n// publicar comentarios/DMs con un token de usuario aunque sí sirva para otras acciones).\nlet fb_access_token = pageData.fb_access_token || '';\ntry {\n  const exchanged = $('🔑 Intercambiar Page Token (FB)').item.json;\n  if (exchanged && exchanged.access_token) fb_access_token = exchanged.access_token;\n} catch (e) { /* si falló el intercambio, seguimos con el token original de G54 */ }\n\nconst ig_user_id = pageData.ig_user_id || '';\nconst ig_access_token = pageData.ig_access_token || '';\n\nreturn [{ json: {\n  G54_BASE_URL: config.G54_BASE_URL,\n  G54_N8N_TOKEN: config.G54_N8N_TOKEN,\n  G54_AGENT_TOKEN: config.G54_AGENT_TOKEN,\n  G54_COMPANY_ID: company_id,\n  FB_PAGE_ID: resolver.pageId || '',\n  FB_ACCESS_TOKEN: fb_access_token,\n  IG_USER_ID: ig_user_id,\n  IG_ACCESS_TOKEN: ig_access_token,\n  GROQ_API_KEY: config.GROQ_API_KEY,\n  WA_LINK: config.WA_LINK || ''\n}}];"
+        "jsCode": "const config = $('⚙️ Config Growth54').item.json;\nconst resolver = $('🔍 Resolver Empresa').item.json;\nconst pageData = $('🔍 Obtener Config Página (G54)').item.json;\n\n// 16-nov (revisión, punto 9, igual que Sales AI el 14-nov): la empresa la decide G54 por la página.\n// Si la página no está registrada, o el ?company de la URL dice otra, el evento se descarta\n// (a Meta ya se le respondió 200 al entrar). Antes, una página desconocida con ?company=N escribía en el CRM de N.\nconst company_id = String((pageData && !pageData.error && pageData.company_id) || '');\nif (!company_id) return [];\nif (resolver.queryCompanyId && String(resolver.queryCompanyId) !== company_id) return [];\n\n// Tokens: preferir el Page Access Token real (intercambiado desde el token de G54,\n// necesario porque el token guardado en G54 es de usuario, no de página — Meta rechaza\n// publicar comentarios/DMs con un token de usuario aunque sí sirva para otras acciones).\nlet fb_access_token = pageData.fb_access_token || '';\ntry {\n  const exchanged = $('🔑 Intercambiar Page Token (FB)').item.json;\n  if (exchanged && exchanged.access_token) fb_access_token = exchanged.access_token;\n} catch (e) { /* si falló el intercambio, seguimos con el token original de G54 */ }\n\nconst ig_user_id = pageData.ig_user_id || '';\nconst ig_access_token = pageData.ig_access_token || '';\n\nreturn [{ json: {\n  G54_BASE_URL: config.G54_BASE_URL,\n  G54_N8N_TOKEN: config.G54_N8N_TOKEN,\n  G54_AGENT_TOKEN: config.G54_AGENT_TOKEN,\n  G54_COMPANY_ID: company_id,\n  FB_PAGE_ID: resolver.pageId || '',\n  FB_ACCESS_TOKEN: fb_access_token,\n  IG_USER_ID: ig_user_id,\n  IG_ACCESS_TOKEN: ig_access_token,\n  GROQ_API_KEY: config.GROQ_API_KEY,\n  WA_LINK: config.WA_LINK || ''\n}}];"
       }
     },
     {
