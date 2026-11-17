@@ -748,6 +748,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 653. **Mónica v15, paso 2: borrador y aviso al vendedor por Telegram** (2026-11-17), tarea 1c del ingeniero. Los 5 envíos directos (`reply`) pasan a borradores en el mismo hilo de Gmail, sin enviar nada, y cada borrador avisa al vendedor por Telegram (cotización con total, pedido de datos, respuesta o "el cliente APROBÓ", con enlace a Borradores). El chat del vendedor queda para pegar en `📲 Telegram al vendedor` (pasos en `v15-SOL/GUIA_v15.md`). Probado: 13 casos simulados, y en el n8n real un borrador de prueba en risosadmi quedó en el mismo hilo y se borró. Falta: el chat del vendedor y correrla con OpenAI.
 
+654. **Mónica v15, paso 3: aviso de los correos que no son cotización** (2026-11-17), tarea 1e del ingeniero. Los irrelevantes (C), los que Mónica no pudo clasificar (E) y los mensajes sin relación dentro de un hilo se marcaban leídos sin avisar a nadie, incluso los "escalados a un humano". Ahora avisan al mismo Telegram del vendedor con remitente, destinatario, asunto, motivo, un extracto y el enlace al hilo. Probado con 17 casos simulados (`js/probar_nodos_v15.js`). Queda de la tarea 1: unir pagos con su cotización (b) y analizar los correos reales de CE (a, necesita acceso a esa casilla).
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
