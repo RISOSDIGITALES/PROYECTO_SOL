@@ -2,7 +2,7 @@
   "id": "2dat4nEoi8x8iLb2",
   "name": "📤 WA Reply — Respuesta manual desde G54",
   "active": true,
-  "updatedAt": "2026-11-16T15:42:36.012Z",
+  "updatedAt": "2026-11-17T14:52:07.621Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -98,7 +98,7 @@
         -100
       ],
       "parameters": {
-        "jsCode": "// Pausa al bot en esa conversación (datos_calificacion.bot_pausado, el candado del 14-ago que leen Marco y\n// Sales AI). Va después de responder a G54 para no gastar su espera de 12 s. G54 reemplaza datos_calificacion\n// entero (comprobado el 14-nov), así que se mandan los datos que ya tenía el lead más la pausa. G54 exige al\n// menos un mensaje: va una nota de sistema, no el texto del vendedor (eso lo duplicaría).\nconst B = 'https://apigrowth.mdarthurdigital.com/api';\nconst AGENT = 'Bearer REDACTED_G54_AGENT_TOKEN';\nconst p = $input.first().json._pausa;\nconst datos = p.datos && typeof p.datos === 'object' && !Array.isArray(p.datos) ? p.datos : {};\ntry {\n  const r = await this.helpers.httpRequest({ method: 'POST', url: B + '/agent/whatsapp/inbound', json: true, timeout: 10000,\n    returnFullResponse: true, ignoreHttpStatusErrors: true,\n    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: AGENT },\n    body: { empresa_id: Number(p.companyId), phone: '+' + p.digits, canal: 'whatsapp',\n      datos_calificacion: { ...datos, bot_pausado: true, motivo: 'Vendedor tomó control manual', fecha: new Date().toISOString() },\n      messages: [{ rol: 'sys', contenido: 'El vendedor respondió desde el panel; el bot queda en pausa.' }] } });\n  return [{ json: { bot_pausado: r.statusCode < 300, g54_status: r.statusCode } }];\n} catch (err) {\n  return [{ json: { bot_pausado: false, error: err.message } }];\n}\n"
+        "jsCode": "// Pausa al bot en esa conversación (datos_calificacion.bot_pausado, el candado del 14-ago que leen Marco y\n// Sales AI). Va después de responder a G54 para no gastar su espera de 12 s. G54 reemplaza datos_calificacion\n// entero (comprobado el 14-nov), así que se mandan los datos que ya tenía el lead más la pausa. G54 exige al\n// menos un mensaje: va una nota de sistema, no el texto del vendedor (eso lo duplicaría).\nconst B = 'https://apigrowth.mdarthurdigital.com/api';\nconst AGENT = 'Bearer REDACTED_G54_AGENT_TOKEN';\nconst p = $input.first().json._pausa;\nconst datos = p.datos && typeof p.datos === 'object' && !Array.isArray(p.datos) ? p.datos : {};\ntry {\n  const r = await this.helpers.httpRequest({ method: 'POST', url: B + '/agent/whatsapp/inbound', json: true, timeout: 10000,\n    returnFullResponse: true, ignoreHttpStatusErrors: true,\n    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: AGENT },\n    body: { empresa_id: Number(p.companyId), phone: '+' + p.digits, canal: 'whatsapp',\n      datos_calificacion: { ...datos, bot_pausado: true, motivo: 'Vendedor tomó control manual', bot_pausado_en: new Date().toISOString() },\n      messages: [{ rol: 'sys', contenido: 'El vendedor respondió desde el panel; el bot queda en pausa 24 h (se renueva con cada respuesta del vendedor).' }] } });\n  return [{ json: { bot_pausado: r.statusCode < 300, g54_status: r.statusCode } }];\n} catch (err) {\n  return [{ json: { bot_pausado: false, error: err.message } }];\n}\n"
       }
     },
     {
