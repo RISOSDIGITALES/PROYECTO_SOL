@@ -1,0 +1,215 @@
+{
+  "id": "9w8UUvgYArg0m4Zk",
+  "name": "🛡️ Guardián del Vigía — G54",
+  "active": true,
+  "updatedAt": "2026-11-17T14:18:39.826Z",
+  "tags": [],
+  "settings": {
+    "errorWorkflow": "CKOju9JVnSMymfKv",
+    "executionOrder": "v1"
+  },
+  "nodes": [
+    {
+      "id": "b4b993d8-6971-42e4-968d-514d6f401e16",
+      "name": "⏰ Cada hora (minuto 20)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "20 * * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "7fac14b8-bd83-406b-b0cf-7f8265fb0bc4",
+      "name": "🔎 n8n: Estado del Vigía",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "url": "https://n8n.mdarthurdigital.com/api/v1/workflows/zTm4tMOV9vMfUDnG",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GBLSmCbCbzRirBc7",
+          "name": "n8n API — Self (Vigía)"
+        }
+      }
+    },
+    {
+      "id": "2b3f8561-0f43-42dd-b8ff-8e6da28f10e2",
+      "name": "🔎 n8n: Últimas corridas del Vigía",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "url": "https://n8n.mdarthurdigital.com/api/v1/executions?workflowId=zTm4tMOV9vMfUDnG&limit=5",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GBLSmCbCbzRirBc7",
+          "name": "n8n API — Self (Vigía)"
+        }
+      }
+    },
+    {
+      "id": "a2656669-310c-46d2-9635-34f61fcc1bc8",
+      "name": "🩺 Evaluar al Vigía",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Guardián del Vigía (17-nov): el Vigía revisa a los demás flujos, pero si él deja de correr\n// (apagado, disparador trabado o fallando seguido) nadie se enteraba. Esto lo revisa cada hora.\n// Límite conocido: si se cae n8n entero, este guardián tampoco corre (para eso hace falta un monitor externo).\nconst VIGILADO = 'zTm4tMOV9vMfUDnG';\nconst MAX_MIN_SIN_CORRER = 150;   // el Vigía corre cada 2 h\nconst REAVISO_HORAS = 6;\nconst wf = $('🔎 n8n: Estado del Vigía').first().json;\nconst ex = ($('🔎 n8n: Últimas corridas del Vigía').first().json.data || []);\nconst ahora = Date.now();\nconst problemas = [];\nif (wf.error || !wf.id) problemas.push('No se pudo leer el flujo del Vigía en n8n: ' + (wf.error?.message || wf.message || 'sin respuesta'));\nelse if (!wf.active) problemas.push('El Vigía está APAGADO en n8n.');\nconst ok = ex.filter(e => e.status === 'success');\nconst ultimaOk = ok.length ? new Date(ok[0].startedAt).getTime() : 0;\nconst minSinOk = ultimaOk ? Math.round((ahora - ultimaOk) / 60000) : null;\nif (wf.id && wf.active) {\n  if (!ultimaOk) problemas.push('No hay ninguna corrida exitosa reciente del Vigía.');\n  else if (minSinOk > MAX_MIN_SIN_CORRER) problemas.push(`La última corrida exitosa del Vigía fue hace ${Math.floor(minSinOk / 60)} h ${minSinOk % 60} min (debería correr cada 2 h).`);\n  const ultimas = ex.slice(0, 2);\n  if (ultimas.length === 2 && ultimas.every(e => e.status === 'error')) problemas.push('Las 2 últimas corridas del Vigía terminaron con error.');\n}\nconst st = $getWorkflowStaticData('global');\nlet enviar = false, asunto = '', texto = '';\nif (problemas.length) {\n  const ultimoAviso = st.ultimoAviso || 0;\n  if (ahora - ultimoAviso > REAVISO_HORAS * 3600000) {\n    enviar = true; st.ultimoAviso = ahora; st.enFalla = true;\n    asunto = '🛡️ G54: el Vigía no está funcionando';\n    texto = 'El guardián del Vigía encontró:\\n\\n- ' + problemas.join('\\n- ') +\n      '\\n\\nMientras tanto nadie revisa posts atascados, contenido cruzado ni flujos caídos.\\nRevisar en n8n el flujo ' + VIGILADO + '.\\n(Este aviso se repite cada ' + REAVISO_HORAS + ' h mientras siga igual.)';\n  }\n} else if (st.enFalla) {\n  enviar = true; st.enFalla = false; st.ultimoAviso = 0;\n  asunto = '🛡️ G54: el Vigía volvió a funcionar';\n  texto = 'El Vigía volvió a correr bien. Última corrida exitosa: hace ' + minSinOk + ' min.';\n}\nreturn [{ json: { enviar, asunto, texto, problemas, minSinOk, vigilado: VIGILADO } }];\n"
+      }
+    },
+    {
+      "id": "268de95d-5d65-4b59-9aef-e5072f48c04e",
+      "name": "🔀 ¿Avisar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "d0b8461c-be74-4d83-a99e-2d5384f10fd9",
+              "leftValue": "={{ $json.enviar }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "fbbc1418-2d9e-4453-a283-3c881883547b",
+      "name": "📧 Avisar por correo",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        280
+      ],
+      "parameters": {
+        "subject": "={{ $json.asunto }}",
+        "toEmail": "risosadmi@gmail.com",
+        "fromEmail": "Guardián del Vigía G54 <risosadmi@gmail.com>",
+        "emailFormat": "text",
+        "text": "={{ $json.texto }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "smtp": {
+          "id": "iWBBSSe5AWsCMo89",
+          "name": "Gmail SMTP — risosadmi"
+        }
+      },
+      "webhookId": "754ff353-59eb-4935-91ea-94cae9c44190"
+    }
+  ],
+  "connections": {
+    "⏰ Cada hora (minuto 20)": {
+      "main": [
+        [
+          {
+            "node": "🔎 n8n: Estado del Vigía",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔎 n8n: Estado del Vigía": {
+      "main": [
+        [
+          {
+            "node": "🔎 n8n: Últimas corridas del Vigía",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔎 n8n: Últimas corridas del Vigía": {
+      "main": [
+        [
+          {
+            "node": "🩺 Evaluar al Vigía",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🩺 Evaluar al Vigía": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Avisar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Avisar?": {
+      "main": [
+        [
+          {
+            "node": "📧 Avisar por correo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  }
+}

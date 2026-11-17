@@ -28,6 +28,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | 🔗 CTA Click Tracker (G54) | `JN2vRUznkOXlej8q` | sí | 2026-11-17 | [cta-click-tracker-g54.json](g54-plataforma/cta-click-tracker-g54.json) |
 | 🖼️ Content AI — Generador de Imágenes (OpenAI) | `1rsqmFabW5PjnlHy` | sí | 2026-11-17 | [content-ai-generador-de-imagenes-openai.json](g54-plataforma/content-ai-generador-de-imagenes-openai.json) |
 | 🚨 Error Reporter — Growth54 | `CKOju9JVnSMymfKv` | sí | 2026-08-05 | [error-reporter-growth54.json](g54-plataforma/error-reporter-growth54.json) |
+| 🛡️ Guardián del Vigía — G54 | `9w8UUvgYArg0m4Zk` | sí | 2026-11-17 | [guardian-del-vigia-g54.json](g54-plataforma/guardian-del-vigia-g54.json) |
 | 🧠 Ideas AI — RRSS G54 | `nHawWPIIu51ABBgl` | sí | 2026-11-17 | [ideas-ai-rrss-g54.json](g54-plataforma/ideas-ai-rrss-g54.json) |
 | 🧠 Strategist AI — RRSS G54 v3.0 (Tendencias) | `S62o0wcXq8Wfj67S` | sí | 2026-11-17 | [strategist-ai-rrss-g54-v3-0-tendencias.json](g54-plataforma/strategist-ai-rrss-g54-v3-0-tendencias.json) |
 | 🧾 Cotizador → CRM — G54 | `FH4xYCTaxHQnb1dm` | sí | 2026-11-14 | [cotizador-crm-g54.json](g54-plataforma/cotizador-crm-g54.json) |
