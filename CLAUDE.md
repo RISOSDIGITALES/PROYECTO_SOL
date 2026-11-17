@@ -27,7 +27,7 @@
 > **En una máquina nueva o un clon fresco del repo, el hook NO se activa solo** — correr una sola vez: `git config core.hooksPath .githooks`. Sin ese paso, el archivo existe en el repo pero git sigue mirando `.git/hooks/` y lo ignora.
 > **Actualizado 2026-09-28:** el `G54_AGENT_TOKEN` dejó de ser una excepción. Este repo es público, así que ningún secreto real vive en archivos versionados: el token de la API de n8n, el de Netlify, la key de VAPI, el `G54_AGENT_TOKEN` y la contraseña maestra de G54 están en **`.secrets.local.md`** (raíz del repo, en `.gitignore`, formato `NOMBRE=valor`). El hook también lee ese archivo y bloquea cualquier commit que contenga alguno de esos valores.
 
-## Pruebas pendientes (lista viva, actualizada el 2026-10-05)
+## Pruebas pendientes (lista viva, actualizada el 2026-11-17)
 
 Cambios ya hechos y probados por partes (código de producción con entradas simuladas o flujos temporales), que todavía no se confirmaron con un caso real de punta a punta. Al confirmar uno, sacarlo de acá y anotarlo en el ítem del changelog que corresponda.
 
@@ -44,11 +44,22 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 
 10. **Foto real a Marco por WhatsApp, otra vez** (ítem 597): la imagen ahora viaja embebida al modelo de visión. Mandar una foto al WhatsApp de Crating Express y ver que Marco la describa.
 
-## Próxima sesión — por dónde seguir (actualizado el 2026-10-23)
+11. **Marco: descuento con 2+ unidades en una conversación real** (ítems 649 a 651, 658 y 659): tipo de caja, cantidad y pregunta del correo ya probados de punta a punta en una copia sin envíos. El aviso de descuento va a cratingexpress01@gmail.com y la usuaria no quiere correos de prueba ahí: confirmarlo con el primer cliente real que pida 2 unidades o más.
+
+12. **Mónica v15 con OpenAI** (ítems 652 a 657): probada en risosadmi con Groq. Falta con OpenAI (gpt-4.1), la lectura de PDF e imágenes y la consulta general (Pinecone), con las credenciales puestas.
+
+## Próxima sesión — por dónde seguir (actualizado el 2026-11-17)
 
 **Cómo trabajar (pedido de la usuaria, 23-oct):** de a poco, un paso por vez, de lo más chico a lo más grande, enumerando qué se hace y reportando el % de uso (`mcp__ccd_session_mgmt__get_usage`) al terminar cada paso. Si el uso semanal pasa el 90 %, parar y avisar.
 
 **Para gastar menos uso (revisado el 30-oct):** este archivo se carga entero en cada sesión y en cada mensaje, así que su tamaño es lo que más pesa. (1) Aquí quedan solo los ítems del changelog de los últimos 2 días; los demás van a `PROYECTO-SOL/historial/changelog-N-....md`. (2) Cada ítem nuevo, en 5 líneas o menos: qué se hizo, por qué y qué falta; el detalle técnico va en el mensaje del commit. (3) Solo los últimos 3 reportes diarios. (4) La referencia que casi no se usa va en su propio archivo con un puntero (por ejemplo, `PROYECTO-SOL/nomify/planilla-nicaragua.md`). (5) En Bubble, su CLAUDE.md guarda solo los últimos 10 ítems; el resto, en `docs/changelog-historico.md`. (6) Una sesión larga encarece cada mensaje: un tema grande y distinto (por ejemplo, el diseño de una mascota) va en su propia sesión. (7) Capturas de pantalla chicas (zoom o escala 0,5), sin repetirlas, y los ajustes de diseño pedidos juntos en un solo mensaje cuando se pueda.
+
+**Para mañana (18-nov):**
+1. Pedirle al ingeniero, en un solo mensaje: el JSON del flujo del Tutor del cotizador (disparador `9b9cd801…`) y del chat público (`91061fae…`), los accesos de Hermes y el acceso a la casilla de CE (tarea 1a de Mónica).
+2. Mónica v15 (procesador `BPmfavlb7SaUPDpM`, receptor `cfKNcaWiS2qMRmVB`, apagados): poner credenciales (Gmail de pruebas, OpenAI, Pinecone, Telegram) y el chat del vendedor; guía en `C:\SOLANGE RESPALDOS\agente-correo-monica-SOL\v15-SOL\GUIA_v15.md`.
+3. Mirar en Borradores de risosadmi que no quede ninguno "PRUEBA SOL", y avisarle al ingeniero que en la memoria de la app de producción quedó la conversación de prueba "PRUEBA SOL 1421" (la API no tiene borrado).
+4. Que la usuaria revise el cotizador versión S en `http://127.0.0.1:8031` y decidir cuándo pasarlo a `DESARROLLO_SOL`.
+5. Lunes 23-nov: última semana de la rotación de horarios.
 
 **Orden de trabajo (lo nuestro):**
 1. ~~**Bubble — seguimiento a contactos calificados**~~: hecho el 26-oct (ítems 503 y 505 de Bubble; ítem 462 de acá). Falta probarlo con una llamada real.
@@ -56,10 +67,10 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 3. **Bubble — pendientes de seguridad del 15-oct** (sección "Pendientes" del CLAUDE.md de Bubble, punto 7). El tope de descargas CSV quedó hecho el 27-oct; el horario de las salientes ya usa la zona del cliente (ítem 462). El cifrado del resumen, la escalación y las notas quedó hecho el 27-oct (ítem 515 de Bubble; en el servidor de Walter hay que correr `python -m scripts.encrypt_existing` una vez). La conversación limpia en el panel quedó hecha el 27-oct (ítem 516 de Bubble). Bubbli fase 3 (sugerencias con datos reales) quedó hecha el 27-oct (ítem 517 de Bubble), y Bubbli en el celular, el 29-oct (ítem 537 de Bubble). Queda solo la confirmación por SMS (en espera porque cuesta plata). Comprar números: solo la agencia (decidido el 27-oct; ya estaba aplicado desde el 21-oct).
 4. **G54:** ~~revisar el informe mensual del 28-oct~~ (hecho, ítem 467). **Rotación de horarios (pedido de la usuaria, 26-oct), cada lunes hasta la semana del 30-nov:** aprobar las ideas nuevas, generar los posts y programarlos en hora de Miami (`fecha_programada` sin "Z"): martes Facebook, miércoles LinkedIn, jueves Facebook, viernes Instagram. Horas por semana: 2-nov 12/17/19/08 · 9-nov 17/19/08/12 · 16-nov 19/08/12/17 · 23-nov 08/12/17/19 · 30-nov 12/17/19/08 (mar/mié/jue/vie). Con 6 semanas, cada horario junta 6 posts. El cálculo de `sugerencia-horario` con el piso mínimo ya quedó hecho el 29-oct (ítem 487) y se activa solo cuando haya datos.
 
-**Tareas del ingeniero (reunión del 14-nov, pegadas el 16-nov desde Enfoco). En espera de accesos que todavía no tenemos:**
-1. **Agente de Gmail de CE** (el flujo "agente gmail" v14 que compartió el ingeniero; no se ve con nuestra clave de la API de n8n y la usuaria no pudo entrar a n8n el 16-nov): (a) revisar los correos de CE para analizar patrones y formas de responder de los clientes, y con eso alimentar al agente; (b) en correos de pagos, reconocer si el cliente ya cotizó y unir el hilo; (c) en vez de responder solo, crear un borrador y avisar al vendedor (por ahora por Telegram) para que lo revise y lo mande; (d) confirmar que la conversión de medidas sea correcta y se aplique bien; (e) si el correo no es de una cotización, avisar con el asunto y el destinatario.
-2. **HERMES:** leer su descripción y propósito para apoyar con las conexiones y el desarrollo de sus tareas (asignada por Walter el 14-nov). **16-nov:** reunión con el ingeniero y Don Marc para aprender sobre Hermes; el ingeniero le mostró a la usuaria cómo ejecutarlo en la máquina para empezar a trabajarlo y respondió dudas de configuración y capacidad.
-3. **Cotizador de Crating Express (cratingcotiza), modificarlo nosotros** (confirmado por la usuaria el 16-nov; hace falta acceso a su código): mejorar el Dashwork; módulo de ayuda o guía; módulo de CRM; exportar e importar clientes en CSV, filtrando campos; distintivo de clientes preferidos; columna "proveedor" con los tipos google, manual y app.online; resolver el detalle de la memoria del logo; mejorar el chat de ayuda con enlaces directos; que identifique audios, PDF, imágenes, etc. **Ojo:** el "módulo de CRM" no debería ser una segunda base de clientes: Crating Express ya tiene el CRM de G54, y desde el 12-oct existe el webhook `cotizador-lead-g54` que crea el trato en G54 con su origen (QR); falta que el cotizador lo llame (`g54/exodo/tarea-adicional-cotizador-crating-express.html`). Hacer eso primero.
+**Tareas del ingeniero (reunión del 14-nov), estado al 17-nov:**
+1. **Agente de Gmail de CE (Mónica):** (b) pagos unidos a su cotización, (c) borrador y aviso al vendedor por Telegram, (d) medidas convertidas por código y (e) aviso de lo que no es cotización, hechas en la v15 (ítems 652 a 657; además usa el factor de precio del panel). Importada apagada y probada en risosadmi con Groq. Falta: (a) analizar los correos reales de CE (sin acceso a la casilla) y encenderla con credenciales.
+2. **HERMES:** sin empezar. El 16-nov el ingeniero le mostró a la usuaria cómo ejecutarlo en la máquina; falta su descripción y los accesos.
+3. **Cotizador de Crating Express:** hecho en la versión S (ítems 640 a 648, rama `version-S`): Dashwork, ayuda, CRM propio (independiente del de G54, decisión de la usuaria), CSV, preferidos, proveedor, logo y botones de ayuda en el Tutor. Falta: que el chat responda con enlaces y que lea audios, PDF e imágenes (los flujos del chat están en el n8n del ingeniero, no en git ni con nuestra clave: pedir el JSON), y pasar la versión S a `DESARROLLO_SOL`.
 
 **Pedido del ingeniero (27-oct):** ~~animación de Jelly basada en Bubbli~~: hecha y entregada el 28-oct (ítem 469); las correcciones que hagan falta las hace el ingeniero.
 
@@ -776,6 +787,16 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-11-17 (Martes)
+
+Arranqué con la rutina de G54, todo limpio, y seguí cerrando los pendientes de la revisión de ayer: Community ya no publica enlaces ni teléfonos ajenos, todas las llamadas de los flujos tienen tope de tiempo, el Vigía tiene candado y ahora hay otro flujo que lo vigila a él, las sesiones maestras se cierran solas, Marco vuelve a marcar como leídos los WhatsApp, la pausa del bot vence a las 24 horas y los posts publicados guardan su enlace. Después pasé al cotizador de Crating Express en una copia aparte, la versión S: arreglé el logo que se perdía en cada despliegue, armé la zona de ayuda, los clientes preferidos con su proveedor y el CSV, hice más fácil de leer el Dashboard y construí un CRM propio por etapas (embudo, tareas, ficha del cliente, reportes y etapas configurables), todo subido en su propia rama sin tocar la del ingeniero.
+
+En la tarde busqué los flujos del chat del cotizador para lo de los enlaces y los archivos, y comprobé que están en el n8n del ingeniero, así que dejé en el Tutor botones de ayuda con enlaces directos y queda pedirle el flujo. Con los archivos de Mónica que me pasó el ingeniero revisé el agente de correo, y de paso encontré que Marco cotizaba todo como cajón cerrado (una cuna salía 207 en vez de 700) y siempre por una unidad; lo corregí, y decidí que desde 2 unidades el descuento lo decida un vendedor. En Mónica hice las cuatro tareas que se podían: medidas convertidas por código, borradores con aviso al vendedor por Telegram en vez de responder sola, aviso de los correos que no son cotización y pagos unidos a su cotización. También vi que cotizaba 22 % más caro por un factor fijo, y quedó con el del panel, porque los precios no los cambiamos nosotros.
+
+Al final dejé a Mónica importada y apagada, la probé de punta a punta en el correo de risos con Groq porque no hay clave de OpenAI, y probé a Marco con una conversación completa en una copia sin envíos, para que no llegara ningún correo a Crating Express. Ahí apareció que preguntaba por la cotización formal antes de dar el precio, y quedó corregido. Para mañana queda pedirle al ingeniero el flujo del chat, los accesos de Hermes y la casilla de CE, y poner las credenciales de Mónica. Todo quedó subido y el uso semanal está en 43 %.
+
+---
+
 ### 2026-11-16 (Lunes)
 
 Arranqué con la rutina de G54 y todo estaba limpio, salvo que la tarea que programa los posts del lunes no corrió sola, así que aprobé las ideas de la semana y dejé programados los cuatro posts revisando sus textos e imágenes. Pegué las tareas que me dejó el ingeniero el viernes (el agente de Gmail de Crating Express, Hermes y los cambios al cotizador), que quedan esperando accesos; intenté entrar a n8n para ver el agente de Gmail, pero no me dejó.
@@ -794,12 +815,3 @@ Después me metí a fondo con G54. Al revisar la API encontré que la respuesta 
 
 En la tarde tuve una reunión con el ingeniero, que me dejó unas tareas que anoté en Enfoco y que tomo en la próxima sesión. Ahí cerré el día, con todo subido y el uso semanal en 74 %.
 
----
-
-### 2026-11-13 (Viernes)
-
-Arranqué con la rutina de G54, casi limpia: solo hubo una falla pasajera de conexión en el chequeo de Marco de la madrugada, y el post de Instagram del viernes salió a su hora. Después seguí con lo que faltaba para llevar Bubble a 90 sin gastos: dejé la verificación en dos pasos con código del celular para agencias y negocios, mejoré el contraste de los textos y el uso con teclado de todas las ventanas, y sumé pruebas automáticas que recorren el panel con clics como una persona, tanto en la computadora como en GitHub. El inglés nuevo lo pasé por LanguageTool, corregí seis frases que sonaban raras y dejé solo 14 para que las mire un nativo.
-
-En la tarde armé una lista de revisión por vista, de agencia y de negocio, y me puse a revisar los acabados. Encontré que el servidor local estaba corriendo con código viejo y por eso varias cosas daban "Not found"; al reiniciarlo se arregló. En mi cuenta de agencia aparecían huecos vacíos entre tarjetas, así que la contraseña y la verificación pasaron a ventanas emergentes y las dos pantallas de Mi cuenta quedaron en dos columnas parejas. También corregí que el aviso rojo de Llamadas marcaba 11 para siempre: ahora se borra al entrar. Se me cerró la lista una vez y perdí las notas, así que le sumé un botón para copiarlas.
-
-Con mi única nota de la revisión, que la plantilla de la configuración guiada no se aplicaba, encontré que no cambiaba el saludo si ya había uno escrito, como el de Marco. Lo dejé para que se aplique siempre y con la opción de volver al saludo anterior. Ahí corté para el reporte. Mañana pruebo de nuevo la plantilla, reviso la contraseña de la cuenta de agencia de prueba y decido si el nombre del agente debe llenarse solo. Todo quedó subido y el uso semanal está en 59 %.
