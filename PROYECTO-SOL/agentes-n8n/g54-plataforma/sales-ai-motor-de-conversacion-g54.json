@@ -2,7 +2,7 @@
   "id": "otycsrxrMEMuxuwD",
   "name": "💬 Sales AI — Motor de Conversación G54",
   "active": true,
-  "updatedAt": "2026-11-16T16:35:22.858Z",
+  "updatedAt": "2026-11-17T14:08:07.465Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -295,7 +295,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -335,7 +337,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -362,7 +366,9 @@
             }
           ]
         },
-        "options": {},
+        "options": {
+          "timeout": 60000
+        },
         "continueOnFail": true
       }
     },
@@ -390,7 +396,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -430,7 +438,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -475,7 +485,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', status: 'read', message_id: $('🔧 Preparar Contexto IA').item.json.messageId }) }}",
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -505,7 +517,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({\n  model: 'openai/gpt-oss-120b',\n  messages: [\n    {\n      role: 'system',\n      content: $('🔧 Preparar Contexto IA').item.json.promptSistema\n    },\n    {\n      role: 'user',\n      content:\n        'HISTORIAL:\\n' + ($('🔧 Preparar Contexto IA').item.json.historial || '(primer mensaje)') +\n        '\\n\\nDATOS RECOLECTADOS HASTA AHORA (no volver a preguntar si ya están):\\n' +\n        JSON.stringify($('🔧 Preparar Contexto IA').item.json.datosRecolectados || {}) +\n        '\\n\\nMENSAJE ACTUAL: \"' + $('🔧 Preparar Contexto IA').item.json.texto + '\"' +\n        '\\nSaludo por hora: \"' + $('🔧 Preparar Contexto IA').item.json.saludoHora + '\"' +\n        '\\nCliente nuevo: ' + ($('🔧 Preparar Contexto IA').item.json.esNuevo ? 'SÍ' : 'NO') +\n        '\\nIDIOMA DEL CLIENTE (detectado automaticamente): ' + ($('🌐 Detectar Idioma').item.json.choices?.[0]?.message?.content?.trim() || 'español') + ' — tu campo \"mensaje\" DEBE estar escrito en ese idioma exacto, sin importar en que idioma esten tus otras instrucciones.' +\n        '\\n\\nResponde SOLO con JSON válido (sin markdown, sin texto extra):\\n' +\n        '{\"mensaje\":\"\",\"datos_actualizados\":{},\"clasificacion\":\"frio\",\"todos_recolectados\":false,\"resumen_lead\":\"\",\"escalada\":false}\\n' +\n        '- mensaje: tu respuesta al cliente\\n' +\n        '- datos_actualizados: objeto libre con todos los datos recolectados (incluye anteriores + nuevos del mensaje actual)\\n' +\n        '- clasificacion: \"frio\" | \"tibio\" | \"caliente\"\\n' +\n        '- todos_recolectados: true solo cuando el prompt haya confirmado todos los datos necesarios\\n' +\n        '- resumen_lead: breve descripción del lead para el vendedor (vacio si no hay datos suficientes)\\n' +\n        '- escalada: true SOLO cuando corresponda escalar a un especialista humano\\n\\n' +\n        'ESCALACION A UN ESPECIALISTA (regla de la plataforma, aplica siempre sin importar el resto de tus instrucciones):\\n' +\n        'Si no puedes responder algo con la informacion que tienes, o si el MENSAJE ACTUAL contiene el marcador \"[No se pudo procesar el archivo enviado]\", el cliente necesita ayuda de un especialista humano.\\n' +\n        'Si datos_actualizados todavia NO tiene un email de contacto: explicale al cliente que un especialista lo va a ayudar y pidele su correo primero. NO marques escalada:true todavia.\\n' +\n        'Si datos_actualizados YA tiene un email de contacto (de este turno o de turnos anteriores): confirma que un especialista lo contactara pronto y marca escalada:true en este mismo turno.\\n' +\n        'No marques escalada:true para preguntas que si supiste responder normalmente.'\n    }\n  ],\n  temperature: 0.3,\n  max_tokens: 2500,\n  response_format: { type: 'json_object' }\n}) }}",
-        "options": {}
+        "options": {
+          "timeout": 120000
+        }
       },
       "credentials": {
         "groqApi": {
@@ -741,7 +755,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({\n  recipient: { id: $json.usuarioId },\n  message: { text: $json.mensaje },\n  access_token: ($('🔑 Intercambiar Page Token (FB)').item.json.access_token || $('🏢 Aplicar Config Empresa').item.json.FB_ACCESS_TOKEN)\n}) }}",
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -773,7 +789,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.telefono, type: 'text', text: { body: $json.mensaje } }) }}",
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -837,7 +855,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({\n  empresa_id: Number($('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID),\n  phone: (($json.telefono) && !String($json.telefono).match(/[^0-9]/) ? '+' + ($json.telefono) : ($json.telefono)),\n  contact_name: $json.nombreContacto || '',\n  clasificacion: $json.clasificacion || 'frio',\n  ...((n) => n ? { name: n } : {})(String($json.nombreContacto || '').trim()),\n  ...((e) => e ? { estado: e } : {})(({ caliente: 'hot', tibio: 'warm' })[String($json.clasificacion || 'frio').toLowerCase()]),\n  // 14-nov (revisión G54, punto 7): los datos van al lead de G54, sumados a los que ya tenía (pausa, marcas de\n  // seguimiento); antes se guardaban como un mensaje [__DATOS__] que el vendedor veía en la conversación.\n  datos_calificacion: { ...(((d) => d && typeof d === 'object' && !Array.isArray(d) ? d : {})((($('📋 Buscar Lead Existente').item.json.data || [])[0] || {}).datos)), ...($json.datosRecolectados || {}) },\n  messages: ((ms) => ms.length ? ms : [{ rol: 'sys', contenido: '(Datos del lead actualizados)' }])([\n    ...($json.nuevoHistorial || '').split('\\n').filter(l => l.trim() && l.includes('] ')).map(l => {\n    const content = l.replace(/^\\[.*?\\]\\s*/, '');\n    const isBot = content.startsWith('Bot:') || content.startsWith('Agente:');\n    return { rol: isBot ? 'bot' : 'user', contenido: content.replace(/^(Bot|Agente|Cliente):\\s*/, ''), isBot };\n  }).filter(m => m.contenido && ($('🔧 Preparar Contexto IA').item.json.auto_reply !== false || !m.isBot)).map(m => ({ rol: m.rol, contenido: m.contenido }))\n  ])\n}) }}",
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -869,7 +889,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({\n  empresa_id: Number($('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID),\n  phone: (($json.telefono) && !String($json.telefono).match(/[^0-9]/) ? '+' + ($json.telefono) : ($json.telefono)),\n  contact_name: $json.nombreContacto || '',\n  clasificacion: $json.clasificacion || 'frio',\n  ...((n) => n ? { name: n } : {})(String($json.nombreContacto || '').trim()),\n  ...((e) => e ? { estado: e } : {})(({ caliente: 'hot', tibio: 'warm' })[String($json.clasificacion || 'frio').toLowerCase()]),\n  // 14-nov (revisión G54, punto 7): los datos van al lead de G54, sumados a los que ya tenía (pausa, marcas de\n  // seguimiento); antes se guardaban como un mensaje [__DATOS__] que el vendedor veía en la conversación.\n  datos_calificacion: { ...(((d) => d && typeof d === 'object' && !Array.isArray(d) ? d : {})((($('📋 Buscar Lead Existente').item.json.data || [])[0] || {}).datos)), ...($json.datosRecolectados || {}) },\n  messages: ((ms) => ms.length ? ms : [{ rol: 'sys', contenido: '(Datos del lead actualizados)' }])([\n    ...($json.nuevoHistorial || '').split('\\n').filter(l => l.trim() && l.includes('] ')).map(l => {\n    const content = l.replace(/^\\[.*?\\]\\s*/, '');\n    const isBot = content.startsWith('Bot:') || content.startsWith('Agente:');\n    return { rol: isBot ? 'bot' : 'user', contenido: content.replace(/^(Bot|Agente|Cliente):\\s*/, ''), isBot };\n  }).filter(m => m.contenido && ($('🔧 Preparar Contexto IA').item.json.auto_reply !== false || !m.isBot)).map(m => ({ rol: m.rol, contenido: m.contenido }))\n  ])\n}) }}",
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -988,7 +1010,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('🔧 Procesar Follow-ups').item.json.telefono, type: 'text', text: { body: $('🔧 Procesar Follow-ups').item.json.msg_followup_24h } }) }}",
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -1016,7 +1040,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -1088,7 +1114,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -1147,7 +1175,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -1254,7 +1284,9 @@
       ],
       "parameters": {
         "url": "https://apigrowth.mdarthurdigital.com/api/n8n/companies",
-        "options": {},
+        "options": {
+          "timeout": 60000
+        },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -1304,7 +1336,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config G54').item.json.G54_MASTER_EMAIL, password: $('⚙️ Config G54').item.json.G54_MASTER_PASSWORD }) }}",
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -1398,7 +1432,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ tipo: 'nota', contenido: $json.contenido }) }}",
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -1466,7 +1502,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ tipo: 'sistema', contenido: 'Sales AI Motor: follow-up de ' + ($('🔧 Procesar Follow-ups').item.json.tipoAccion === 'enviar_23h' ? '23h' : '72h') + ' enviado (sin respuesta del cliente).' }) }}",
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -1614,7 +1652,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -1646,7 +1686,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ company_id: Number($('🔧 Extraer Mensaje Telegram').first().json.empresaId) }) }}",
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -1678,7 +1720,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ conversation_id: $('🔧 Extraer Mensaje Telegram').first().json.conversationId, message: $('🔍 Parsear Respuesta IA').first().json.mensaje || '' }) }}",
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -1737,7 +1781,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ email: 'master@growth54.local', password: 'REDACTED_G54_MASTER_PASSWORD' }) }}",
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -1769,7 +1815,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ company_id: Number($('🏢 Aplicar Config Empresa').item.json.G54_COMPANY_ID) }) }}",
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -1797,7 +1845,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -1906,7 +1956,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -1934,7 +1986,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({\n  model: 'glm-4.5-flash',\n  messages: [\n    {\n      role: 'system',\n      content: $('🔧 Preparar Contexto IA').item.json.promptSistema\n    },\n    {\n      role: 'user',\n      content:\n        'HISTORIAL:\\n' + ($('🔧 Preparar Contexto IA').item.json.historial || '(primer mensaje)') +\n        '\\n\\nDATOS RECOLECTADOS HASTA AHORA (no volver a preguntar si ya están):\\n' +\n        JSON.stringify($('🔧 Preparar Contexto IA').item.json.datosRecolectados || {}) +\n        '\\n\\nMENSAJE ACTUAL: \"' + $('🔧 Preparar Contexto IA').item.json.texto + '\"' +\n        '\\nSaludo por hora: \"' + $('🔧 Preparar Contexto IA').item.json.saludoHora + '\"' +\n        '\\nCliente nuevo: ' + ($('🔧 Preparar Contexto IA').item.json.esNuevo ? 'SÍ' : 'NO') +\n        '\\nIDIOMA DEL CLIENTE (detectado automaticamente): ' + ($('🌐 Detectar Idioma').item.json.choices?.[0]?.message?.content?.trim() || 'español') + ' — tu campo \"mensaje\" DEBE estar escrito en ese idioma exacto, sin importar en que idioma esten tus otras instrucciones.' +\n        '\\n\\nResponde SOLO con JSON válido (sin markdown, sin texto extra):\\n' +\n        '{\"mensaje\":\"\",\"datos_actualizados\":{},\"clasificacion\":\"frio\",\"todos_recolectados\":false,\"resumen_lead\":\"\",\"escalada\":false}\\n' +\n        '- mensaje: tu respuesta al cliente\\n' +\n        '- datos_actualizados: objeto libre con todos los datos recolectados (incluye anteriores + nuevos del mensaje actual)\\n' +\n        '- clasificacion: \"frio\" | \"tibio\" | \"caliente\"\\n' +\n        '- todos_recolectados: true solo cuando el prompt haya confirmado todos los datos necesarios\\n' +\n        '- resumen_lead: breve descripción del lead para el vendedor (vacio si no hay datos suficientes)\\n' +\n        '- escalada: true SOLO cuando corresponda escalar a un especialista humano\\n\\n' +\n        'ESCALACION A UN ESPECIALISTA (regla de la plataforma, aplica siempre sin importar el resto de tus instrucciones):\\n' +\n        'Si no puedes responder algo con la informacion que tienes, o si el MENSAJE ACTUAL contiene el marcador \"[No se pudo procesar el archivo enviado]\", el cliente necesita ayuda de un especialista humano.\\n' +\n        'Si datos_actualizados todavia NO tiene un email de contacto: explicale al cliente que un especialista lo va a ayudar y pidele su correo primero. NO marques escalada:true todavia.\\n' +\n        'Si datos_actualizados YA tiene un email de contacto (de este turno o de turnos anteriores): confirma que un especialista lo contactara pronto y marca escalada:true en este mismo turno.\\n' +\n        'No marques escalada:true para preguntas que si supiste responder normalmente.'\n    }\n  ],\n  temperature: 0.3,\n  max_tokens: 2500,\n  thinking: { type: 'disabled' },\n  response_format: { type: 'json_object' }\n}) }}",
-        "options": {},
+        "options": {
+          "timeout": 120000
+        },
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth"
       },
@@ -2001,7 +2055,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -2029,7 +2085,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -2054,7 +2112,9 @@
             }
           ]
         },
-        "options": {},
+        "options": {
+          "timeout": 60000
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ email: $('⚙️ Config G54 Follow-up').item.json.G54_MASTER_EMAIL, password: $('⚙️ Config G54 Follow-up').item.json.G54_MASTER_PASSWORD }) }}"
@@ -2082,7 +2142,9 @@
             }
           ]
         },
-        "options": {},
+        "options": {
+          "timeout": 60000
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ company_id: $('⚙️ Config G54 Follow-up').item.json.G54_COMPANY_ID }) }}"
@@ -2113,7 +2175,9 @@
             }
           ]
         },
-        "options": {},
+        "options": {
+          "timeout": 60000
+        },
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
@@ -2150,7 +2214,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -2179,7 +2245,9 @@
             }
           ]
         },
-        "options": {},
+        "options": {
+          "timeout": 60000
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ (() => { const p = $('🔧 Procesar Follow-ups').item.json; const r = $json || {}; const ok = !!((r.messages && r.messages[0] && r.messages[0].id) || r.ok === true); const e = r.error; const motivo = String((e && typeof e === 'object' ? (e.message || e.description) : e) || r.description || 'sin respuesta').slice(0, 200); const ahora = new Date().toISOString(); return JSON.stringify({ empresa_id: p.empresa_id, phone: '+' + p.telefono, nombre: p.nombre, canal: 'whatsapp', datos_calificacion: { ...(p.datosCalificacionActuales || {}), ...(ok ? { followup_23h_enviado_en: ahora } : { followup_23h_fallido_en: ahora, followup_23h_motivo: motivo }) }, messages: [ok ? { rol: 'bot', contenido: String(p.msg_followup_24h || '(Seguimiento automático de 23 h)') } : { rol: 'sys', contenido: 'No se pudo enviar el seguimiento de 23 h: ' + motivo }] }); })() }}"
@@ -2211,7 +2279,9 @@
             }
           ]
         },
-        "options": {},
+        "options": {
+          "timeout": 60000
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ empresa_id: $('🔧 Procesar Follow-ups').item.json.empresa_id, phone: '+' + $('🔧 Procesar Follow-ups').item.json.telefono, nombre: $('🔧 Procesar Follow-ups').item.json.nombre, canal: 'whatsapp', datos_calificacion: { ...($('🔧 Procesar Follow-ups').item.json.datosCalificacionActuales || {}), followup_notificado: true }, messages: [{ rol: 'sys', contenido: 'Seguimiento: el cliente no respondió en 72 h; se avisó al vendedor por correo.' }] }) }}"
@@ -2301,7 +2371,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
@@ -2350,7 +2422,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify((({ notas, temperatura, ...resto }) => resto)($json)) }}",
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       }
     },
     {
