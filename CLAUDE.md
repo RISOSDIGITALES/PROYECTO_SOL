@@ -732,6 +732,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 645. **Cotizador de CE, versión S: CRM etapa 3 (ficha 360 del cliente)** (2026-11-17). `/clientes/{id}` junta en una pantalla: en juego, ganado, tasa de cierre, último contacto, empresa, contactos, tratos, estimados web (por sus tratos y por los correos de la empresa y sus contactos), tareas y actividad. Probado en local. **Siguen:** reportes de ventas y configurar las etapas.
 
+646. **Cotizador de CE, versión S: CRM etapa 4 (reportes de ventas)** (2026-11-17). `/crm/reportes` con período (mes, 3, 6, 12): ganado, tasa de cierre, ticket promedio, días hasta ganar, pronóstico, embudo actual, ganado por mes, por vendedor y por origen, y motivos de pérdida. Probado en local con tratos cerrados en distintos meses (los totales cuadran). **Falta del CRM:** configurar las etapas desde el panel; recordatorios por correo (necesitan cron, del ingeniero).
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
