@@ -750,6 +750,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 654. **Mónica v15, paso 3: aviso de los correos que no son cotización** (2026-11-17), tarea 1e del ingeniero. Los irrelevantes (C), los que Mónica no pudo clasificar (E) y los mensajes sin relación dentro de un hilo se marcaban leídos sin avisar a nadie, incluso los "escalados a un humano". Ahora avisan al mismo Telegram del vendedor con remitente, destinatario, asunto, motivo, un extracto y el enlace al hilo. Probado con 17 casos simulados (`js/probar_nodos_v15.js`). Queda de la tarea 1: unir pagos con su cotización (b) y analizar los correos reales de CE (a, necesita acceso a esa casilla).
 
+655. **Mónica v15, paso 4: pagos unidos a su cotización** (2026-11-17), tarea 1b del ingeniero. Categoría nueva P (Zelle, transferencia, comprobante): Mónica busca en Gmail los hilos del cliente, pregunta a la app por cada uno, elige la cotización más reciente con monto, le agrega el pago (sin tocar estado ni precio) y avisa al vendedor si coincide el monto. Un pago dentro del mismo hilo se destaca en el aviso. Sin cambios en la app: su API no pide contraseña y buscar por correo expondría cotizaciones. Probado con 24 casos simulados. Queda de la tarea 1: (a) analizar los correos reales de CE (sin acceso), y correr la v15 con OpenAI.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
