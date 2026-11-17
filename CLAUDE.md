@@ -752,6 +752,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 655. **Mónica v15, paso 4: pagos unidos a su cotización** (2026-11-17), tarea 1b del ingeniero. Categoría nueva P (Zelle, transferencia, comprobante): Mónica busca en Gmail los hilos del cliente, pregunta a la app por cada uno, elige la cotización más reciente con monto, le agrega el pago (sin tocar estado ni precio) y avisa al vendedor si coincide el monto. Un pago dentro del mismo hilo se destaca en el aviso. Sin cambios en la app: su API no pide contraseña y buscar por correo expondría cotizaciones. Probado con 24 casos simulados. Queda de la tarea 1: (a) analizar los correos reales de CE (sin acceso), y correr la v15 con OpenAI.
 
+656. **Mónica v15 importada en n8n, apagada** (2026-11-17). Procesador `BPmfavlb7SaUPDpM` y receptor `cfKNcaWiS2qMRmVB` ("CRATING EXPRESS — Gmail v15 … (SOL)"), el receptor ya apunta al procesador; comprobado que los 57 nodos quedaron iguales a la copia local. Para encenderla faltan las credenciales (Gmail de pruebas, OpenAI, Pinecone, Telegram) y el chat del vendedor: pasos en `C:\SOLANGE RESPALDOS\agente-correo-monica-SOL\v15-SOL\GUIA_v15.md`. `exportar-agentes.py` ya no copia al repo público los flujos "CRATING EXPRESS — Gmail…" (son del ingeniero); por eso n8n tiene 40 flujos y el repo 38.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.

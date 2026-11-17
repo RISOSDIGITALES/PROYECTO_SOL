@@ -29,6 +29,12 @@ MARCO = {'zAhV8gEsXD8dCrXq', 'HaSG63Q9C2tGOLH3', '1PXcg3dOQBt8hrrT', 's1Z7jKoFzy
 OTROS = {'2ISjIHJvjYHfoHyP'}
 
 
+def no_publicar(w):
+    """Flujos que no van al repo público: el agente de correo Mónica es del ingeniero (copia de trabajo
+    v15 importada el 17-nov); su respaldo vive fuera de git, en C:\\SOLANGE RESPALDOS\\agente-correo-monica-SOL."""
+    return w['name'].startswith('CRATING EXPRESS — Gmail')
+
+
 def grupo(w):
     if w['id'] in MARCO:
         return 'marco-crating-express'
@@ -58,7 +64,7 @@ def get(url):
         return json.loads(r.read())
 
 
-lista = get('https://n8n.mdarthurdigital.com/api/v1/workflows?limit=250')['data']
+lista = [w for w in get('https://n8n.mdarthurdigital.com/api/v1/workflows?limit=250')['data'] if not no_publicar(w)]
 if DESTINO.exists():
     # Se vacía por dentro en vez de borrar la carpeta: si una terminal está parada en ella, Windows no deja borrarla.
     for hijo in DESTINO.iterdir():
