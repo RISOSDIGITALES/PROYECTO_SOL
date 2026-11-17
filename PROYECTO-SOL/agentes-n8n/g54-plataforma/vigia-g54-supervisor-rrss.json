@@ -2,7 +2,7 @@
   "id": "zTm4tMOV9vMfUDnG",
   "name": "👁️ Vigía G54 — Supervisor RRSS",
   "active": true,
-  "updatedAt": "2026-11-17T14:08:19.322Z",
+  "updatedAt": "2026-11-17T14:12:32.493Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -278,6 +278,39 @@
         "mode": "runOnceForAllItems",
         "jsCode": "const hallazgos = ($('🔧 Ejecutar Auto-Correcciones').item.json.hallazgos || []).slice();\nconst groqResp = $json;\nconst groqError = groqResp.error;\n\nif (groqError) {\n  const status = groqResp.statusCode || (groqResp.cause && groqResp.cause.statusCode) || (typeof groqError === 'object' && groqError.httpCode)\n    // 16-nov: con \"seguir si falla\" n8n deja el código HTTP dentro del mensaje (\"401 - ...\").\n    || (String((groqError && groqError.message) || groqError || '').match(/^(\\d{3})\\b/) || [])[1];\n  if (Number(status) === 429) {\n    hallazgos.push({\n      tipo: 'groq_cuota_agotada', severidad: 'atencion', clave: 'groq_cuota',\n      mensaje: 'Groq devolvió 429 (cuota agotada) en el chequeo de salud del vigía — Marco y los agentes de contenido pueden estar degradando a Modo Contingencia / fallback en cualquier momento. No se puede auto-corregir (límite de cuenta compartida), solo avisar.'\n    });\n  } else if (Number(status) === 401) {\n    hallazgos.push({\n      tipo: 'groq_credencial_invalida', severidad: 'critico', clave: 'groq_401',\n      mensaje: 'La credencial de Groq (jORffbRhRNohHT1B) parece inválida o revocada (401) — TODOS los agentes que dependen de Groq como IA primaria van a fallar. Revisar la API key cuanto antes.'\n    });\n  } else {\n    hallazgos.push({\n      tipo: 'groq_error_desconocido', severidad: 'atencion', clave: 'groq_error',\n      mensaje: `Chequeo de salud de Groq devolvió un error inesperado: ${JSON.stringify(groqError).slice(0, 200)}`\n    });\n  }\n}\n\nreturn [{ json: { hallazgos } }];"
       }
+    },
+    {
+      "id": "e3a68e33-436f-45e1-8098-ddbe26ff5476",
+      "name": "🔒 ¿Llamada autorizada? (Vigía manual)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        320
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "db26ba11-0a8a-4ccc-9d05-ef1e00b35bfe",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
     }
   ],
   "connections": {
@@ -296,7 +329,7 @@
       "main": [
         [
           {
-            "node": "📋 Lista de Workflows RRSS",
+            "node": "🔒 ¿Llamada autorizada? (Vigía manual)",
             "type": "main",
             "index": 0
           }
@@ -423,6 +456,18 @@
             "index": 0
           }
         ]
+      ]
+    },
+    "🔒 ¿Llamada autorizada? (Vigía manual)": {
+      "main": [
+        [
+          {
+            "node": "📋 Lista de Workflows RRSS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
       ]
     }
   }
