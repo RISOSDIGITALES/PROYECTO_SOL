@@ -41,7 +41,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | CE Cotizaciones - CF7 → Airtable + Leads | `FU8QG1BVmT4r5Kjw` | sí | 2026-11-17 | [ce-cotizaciones-cf7-airtable-leads.json](marco-crating-express/ce-cotizaciones-cf7-airtable-leads.json) |
 | CE Telegram Engine — Marco | `HaSG63Q9C2tGOLH3` | sí | 2026-11-17 | [ce-telegram-engine-marco.json](marco-crating-express/ce-telegram-engine-marco.json) |
 | CE WhatsApp Engine — Marco | `zAhV8gEsXD8dCrXq` | sí | 2026-11-17 | [ce-whatsapp-engine-marco.json](marco-crating-express/ce-whatsapp-engine-marco.json) |
-| Marco CE — 01 Clasificador | `1PXcg3dOQBt8hrrT` | sí | 2026-11-14 | [marco-ce-01-clasificador.json](marco-crating-express/marco-ce-01-clasificador.json) |
+| Marco CE — 01 Clasificador | `1PXcg3dOQBt8hrrT` | sí | 2026-11-17 | [marco-ce-01-clasificador.json](marco-crating-express/marco-ce-01-clasificador.json) |
 | Marco CE — 02 Contexto y Lead | `s1Z7jKoFzy5x7XvC` | sí | 2026-11-17 | [marco-ce-02-contexto-y-lead.json](marco-crating-express/marco-ce-02-contexto-y-lead.json) |
 | Marco CE — 03 Generador IA | `J8qbKOF7t4GnhRDT` | sí | 2026-11-17 | [marco-ce-03-generador-ia.json](marco-crating-express/marco-ce-03-generador-ia.json) |
 | Marco CE — 05 Guardar Lead | `PqbfMghL0E7xKflC` | sí | 2026-11-17 | [marco-ce-05-guardar-lead.json](marco-crating-express/marco-ce-05-guardar-lead.json) |
