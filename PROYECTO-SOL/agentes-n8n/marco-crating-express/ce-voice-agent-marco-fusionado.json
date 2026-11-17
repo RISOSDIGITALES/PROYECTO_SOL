@@ -2,7 +2,7 @@
   "id": "FYKfTJBfgwsMpJV7",
   "name": "📞 CE Voice Agent — Marco (Fusionado)",
   "active": true,
-  "updatedAt": "2026-11-17T14:07:36.196Z",
+  "updatedAt": "2026-11-17T15:31:25.816Z",
   "tags": [
     {
       "id": "2CrVJWitAB77MgTJ",
@@ -592,7 +592,7 @@
           "conditions": [
             {
               "id": "97fa6bc4-49de-48a6-b1e5-7331913318a9",
-              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -665,7 +665,7 @@
         860
       ],
       "parameters": {
-        "jsCode": "// 16-nov (revisión, punto 8): G54 reemplaza notas y temperatura en cada guardado del trato.\n// El guardado anterior va sin esos dos campos; acá se completan solo si corresponde:\n// - notas: solo si el trato es nuevo (no pisa lo que escribió el vendedor ni las marcas de Camila);\n// - temperatura: solo si sube (un \"gracias\" después de aceptar no baja el trato de alto a bajo).\nconst pay = $('🔧 CRM: Preparar Payload (Voice)').item.json;\nconst resp = $json;\nconst deal = resp && resp.deal;\nif (!deal) return [{ json: resp }];\nconst rango = { bajo: 0, medio: 1, alto: 2 };\nconst extra = {};\nif (resp.created && pay.notas) extra.notas = pay.notas;\nif (pay.temperatura && (rango[pay.temperatura] ?? -1) > (rango[deal.temperatura] ?? -1)) extra.temperatura = pay.temperatura;\nif (!Object.keys(extra).length) return [{ json: resp }];\nconst { notas, temperatura, ...base } = pay;\ntry {\n  const r2 = await this.helpers.httpRequest({\n    method: 'POST',\n    url: \"https://apigrowth.mdarthurdigital.com/api/agent/crm/leads\",\n    headers: { Authorization: \"Bearer REDACTED_G54_AGENT_TOKEN\", 'Content-Type': 'application/json', Accept: 'application/json' },\n    body: { ...base, ...extra }, json: true, timeout: 15000\n  });\n  return [{ json: r2 && r2.deal ? r2 : resp }];\n} catch (e) {\n  return [{ json: resp }];\n}\n"
+        "jsCode": "const __httpConTope = (o) => this.helpers.httpRequest(Object.assign({ timeout: 120000 }, o)); // 17-nov: tope por defecto de 2 min si la llamada no trae uno\n// 16-nov (revisión, punto 8): G54 reemplaza notas y temperatura en cada guardado del trato.\n// El guardado anterior va sin esos dos campos; acá se completan solo si corresponde:\n// - notas: solo si el trato es nuevo (no pisa lo que escribió el vendedor ni las marcas de Camila);\n// - temperatura: solo si sube (un \"gracias\" después de aceptar no baja el trato de alto a bajo).\nconst pay = $('🔧 CRM: Preparar Payload (Voice)').item.json;\nconst resp = $json;\nconst deal = resp && resp.deal;\nif (!deal) return [{ json: resp }];\nconst rango = { bajo: 0, medio: 1, alto: 2 };\nconst extra = {};\nif (resp.created && pay.notas) extra.notas = pay.notas;\nif (pay.temperatura && (rango[pay.temperatura] ?? -1) > (rango[deal.temperatura] ?? -1)) extra.temperatura = pay.temperatura;\nif (!Object.keys(extra).length) return [{ json: resp }];\nconst { notas, temperatura, ...base } = pay;\ntry {\n  const r2 = await __httpConTope({\n    method: 'POST',\n    url: \"https://apigrowth.mdarthurdigital.com/api/agent/crm/leads\",\n    headers: { Authorization: \"Bearer REDACTED_G54_AGENT_TOKEN\", 'Content-Type': 'application/json', Accept: 'application/json' },\n    body: { ...base, ...extra }, json: true, timeout: 15000\n  });\n  return [{ json: r2 && r2.deal ? r2 : resp }];\n} catch (e) {\n  return [{ json: resp }];\n}\n"
       }
     }
   ],

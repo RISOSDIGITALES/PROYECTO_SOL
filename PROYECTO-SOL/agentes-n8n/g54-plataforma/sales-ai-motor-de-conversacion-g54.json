@@ -2,7 +2,7 @@
   "id": "otycsrxrMEMuxuwD",
   "name": "💬 Sales AI — Motor de Conversación G54",
   "active": true,
-  "updatedAt": "2026-11-17T14:52:01.320Z",
+  "updatedAt": "2026-11-17T15:31:57.064Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -1012,67 +1012,6 @@
         "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('🔧 Procesar Follow-ups').item.json.telefono, type: 'text', text: { body: $('🔧 Procesar Follow-ups').item.json.msg_followup_24h } }) }}",
         "options": {
           "timeout": 60000
-        }
-      }
-    },
-    {
-      "id": "salesai-check-lead-001",
-      "name": "🔍 Verificar Estado Lead",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "retryOnFail": true,
-      "maxTries": 2,
-      "waitBetweenTries": 1000,
-      "onError": "continueRegularOutput",
-      "position": [
-        820,
-        340
-      ],
-      "parameters": {
-        "method": "GET",
-        "url": "=https://apigrowth.mdarthurdigital.com/api/n8n/companies/{{ $json.company_id }}/wa/leads?phone={{ encodeURIComponent(((($json.telefono || $json.from || '')) && !String(($json.telefono || $json.from || '')).match(/[^0-9]/) ? '+' + (($json.telefono || $json.from || '')) : (($json.telefono || $json.from || '')))) }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer "
-            }
-          ]
-        },
-        "options": {
-          "timeout": 60000
-        }
-      }
-    },
-    {
-      "id": "salesai-check-if-001",
-      "name": "🔀 ¿Bot puede responder?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        1040,
-        340
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": false,
-            "leftValue": "",
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "id": "cond-bot-active",
-              "leftValue": "={{ (() => { const d = $json?.data; if (!d || !Array.isArray(d) || d.length === 0) return true; return !(d[0].datos && d[0].datos.bot_pausado === true && !(d[0].datos.bot_pausado_en && Date.now() - Date.parse(d[0].datos.bot_pausado_en) > 864e5)); })() }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true"
-              }
-            }
-          ],
-          "combinator": "and"
         }
       }
     },
@@ -2518,7 +2457,7 @@
           "conditions": [
             {
               "id": "2b533fb9-9df7-4564-95cf-9fa84e9b004b",
-              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(($json.query || {}).key || h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -2608,7 +2547,7 @@
         560
       ],
       "parameters": {
-        "jsCode": "// 16-nov (revisión, punto 8): G54 reemplaza notas y temperatura en cada guardado del trato.\n// El guardado anterior va sin esos dos campos; acá se completan solo si corresponde:\n// - notas: solo si el trato es nuevo (no pisa lo que escribió el vendedor ni las marcas de Camila);\n// - temperatura: solo si sube (un \"gracias\" después de aceptar no baja el trato de alto a bajo).\nconst pay = $('🔧 CRM: Preparar Payload').item.json;\nconst resp = $json;\nconst deal = resp && resp.deal;\nif (!deal) return [{ json: resp }];\nconst rango = { bajo: 0, medio: 1, alto: 2 };\nconst extra = {};\nif (resp.created && pay.notas) extra.notas = pay.notas;\nif (pay.temperatura && (rango[pay.temperatura] ?? -1) > (rango[deal.temperatura] ?? -1)) extra.temperatura = pay.temperatura;\nif (!Object.keys(extra).length) return [{ json: resp }];\nconst { notas, temperatura, ...base } = pay;\ntry {\n  const r2 = await this.helpers.httpRequest({\n    method: 'POST',\n    url: ($('⚙️ Config G54').item.json.G54_BASE_URL + '/api/agent/crm/leads'),\n    headers: { Authorization: ('Bearer ' + $('⚙️ Config G54').item.json.G54_AGENT_TOKEN), 'Content-Type': 'application/json', Accept: 'application/json' },\n    body: { ...base, ...extra }, json: true, timeout: 15000\n  });\n  return [{ json: r2 && r2.deal ? r2 : resp }];\n} catch (e) {\n  return [{ json: resp }];\n}\n"
+        "jsCode": "const __httpConTope = (o) => this.helpers.httpRequest(Object.assign({ timeout: 120000 }, o)); // 17-nov: tope por defecto de 2 min si la llamada no trae uno\n// 16-nov (revisión, punto 8): G54 reemplaza notas y temperatura en cada guardado del trato.\n// El guardado anterior va sin esos dos campos; acá se completan solo si corresponde:\n// - notas: solo si el trato es nuevo (no pisa lo que escribió el vendedor ni las marcas de Camila);\n// - temperatura: solo si sube (un \"gracias\" después de aceptar no baja el trato de alto a bajo).\nconst pay = $('🔧 CRM: Preparar Payload').item.json;\nconst resp = $json;\nconst deal = resp && resp.deal;\nif (!deal) return [{ json: resp }];\nconst rango = { bajo: 0, medio: 1, alto: 2 };\nconst extra = {};\nif (resp.created && pay.notas) extra.notas = pay.notas;\nif (pay.temperatura && (rango[pay.temperatura] ?? -1) > (rango[deal.temperatura] ?? -1)) extra.temperatura = pay.temperatura;\nif (!Object.keys(extra).length) return [{ json: resp }];\nconst { notas, temperatura, ...base } = pay;\ntry {\n  const r2 = await __httpConTope({\n    method: 'POST',\n    url: ($('⚙️ Config G54').item.json.G54_BASE_URL + '/api/agent/crm/leads'),\n    headers: { Authorization: ('Bearer ' + $('⚙️ Config G54').item.json.G54_AGENT_TOKEN), 'Content-Type': 'application/json', Accept: 'application/json' },\n    body: { ...base, ...extra }, json: true, timeout: 15000\n  });\n  return [{ json: r2 && r2.deal ? r2 : resp }];\n} catch (e) {\n  return [{ json: resp }];\n}\n"
       }
     },
     {
@@ -2663,7 +2602,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// 🔓 Sesiones G54 (17-nov): cada login maestro crea un token que no vence y n8n guarda la salida de cada corrida.\n// Este nodo deja pasar todo igual, anota el token nuevo y cierra los de corridas anteriores de este mismo login\n// (más de 30 min: ninguna corrida dura tanto). En reposo queda como mucho una sesión abierta por login.\nconst BASE = (() => { try { return String(($('🏢 Aplicar Config Empresa').item.json.G54_BASE_URL)).replace(/\\/+$/, ''); } catch (e) { return ''; } })();\nconst st = $getWorkflowStaticData('global');\nconst k = 'sesionesG54__' + \"\\ud83d\\udd10 G54: Login (Timezone)\";\nconst ahora = Date.now();\nconst quedan = [];\nfor (const s of (Array.isArray(st[k]) ? st[k] : [])) {\n  if (ahora - s.t > 30 * 60e3) {\n    try { await this.helpers.httpRequest({ method: 'POST', url: s.b + '/api/auth/logout', headers: { Authorization: 'Bearer ' + s.tok, Accept: 'application/json' }, json: true, timeout: 5000 }); } catch (e) {}\n  } else quedan.push(s);\n}\nconst tok = $input.item.json && $input.item.json.access_token;\nif (tok && BASE) quedan.push({ tok, b: BASE, t: ahora });\nst[k] = quedan.slice(-50);\nreturn $input.item;\n"
+        "jsCode": "const __httpConTope = (o) => this.helpers.httpRequest(Object.assign({ timeout: 120000 }, o)); // 17-nov: tope por defecto de 2 min si la llamada no trae uno\n// 🔓 Sesiones G54 (17-nov): cada login maestro crea un token que no vence y n8n guarda la salida de cada corrida.\n// Este nodo deja pasar todo igual, anota el token nuevo y cierra los de corridas anteriores de este mismo login\n// (más de 30 min: ninguna corrida dura tanto). En reposo queda como mucho una sesión abierta por login.\nconst BASE = (() => { try { return String(($('🏢 Aplicar Config Empresa').item.json.G54_BASE_URL)).replace(/\\/+$/, ''); } catch (e) { return ''; } })();\nconst st = $getWorkflowStaticData('global');\nconst k = 'sesionesG54__' + \"\\ud83d\\udd10 G54: Login (Timezone)\";\nconst ahora = Date.now();\nconst quedan = [];\nfor (const s of (Array.isArray(st[k]) ? st[k] : [])) {\n  if (ahora - s.t > 30 * 60e3) {\n    try { await __httpConTope({ method: 'POST', url: s.b + '/api/auth/logout', headers: { Authorization: 'Bearer ' + s.tok, Accept: 'application/json' }, json: true, timeout: 5000 }); } catch (e) {}\n  } else quedan.push(s);\n}\nconst tok = $input.item.json && $input.item.json.access_token;\nif (tok && BASE) quedan.push({ tok, b: BASE, t: ahora });\nst[k] = quedan.slice(-50);\nreturn $input.item;\n"
       }
     },
     {
@@ -2677,7 +2616,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// 🔓 Sesiones G54 (17-nov): cada login maestro crea un token que no vence y n8n guarda la salida de cada corrida.\n// Este nodo deja pasar todo igual, anota el token nuevo y cierra los de corridas anteriores de este mismo login\n// (más de 30 min: ninguna corrida dura tanto). En reposo queda como mucho una sesión abierta por login.\nconst BASE = (() => { try { return String(\"https://apigrowth.mdarthurdigital.com\").replace(/\\/+$/, ''); } catch (e) { return ''; } })();\nconst st = $getWorkflowStaticData('global');\nconst k = 'sesionesG54__' + \"\\ud83d\\udd10 G54: Login (Reply TG - Sales)\";\nconst ahora = Date.now();\nconst quedan = [];\nfor (const s of (Array.isArray(st[k]) ? st[k] : [])) {\n  if (ahora - s.t > 30 * 60e3) {\n    try { await this.helpers.httpRequest({ method: 'POST', url: s.b + '/api/auth/logout', headers: { Authorization: 'Bearer ' + s.tok, Accept: 'application/json' }, json: true, timeout: 5000 }); } catch (e) {}\n  } else quedan.push(s);\n}\nconst tok = $input.item.json && $input.item.json.access_token;\nif (tok && BASE) quedan.push({ tok, b: BASE, t: ahora });\nst[k] = quedan.slice(-50);\nreturn $input.item;\n"
+        "jsCode": "const __httpConTope = (o) => this.helpers.httpRequest(Object.assign({ timeout: 120000 }, o)); // 17-nov: tope por defecto de 2 min si la llamada no trae uno\n// 🔓 Sesiones G54 (17-nov): cada login maestro crea un token que no vence y n8n guarda la salida de cada corrida.\n// Este nodo deja pasar todo igual, anota el token nuevo y cierra los de corridas anteriores de este mismo login\n// (más de 30 min: ninguna corrida dura tanto). En reposo queda como mucho una sesión abierta por login.\nconst BASE = (() => { try { return String(\"https://apigrowth.mdarthurdigital.com\").replace(/\\/+$/, ''); } catch (e) { return ''; } })();\nconst st = $getWorkflowStaticData('global');\nconst k = 'sesionesG54__' + \"\\ud83d\\udd10 G54: Login (Reply TG - Sales)\";\nconst ahora = Date.now();\nconst quedan = [];\nfor (const s of (Array.isArray(st[k]) ? st[k] : [])) {\n  if (ahora - s.t > 30 * 60e3) {\n    try { await __httpConTope({ method: 'POST', url: s.b + '/api/auth/logout', headers: { Authorization: 'Bearer ' + s.tok, Accept: 'application/json' }, json: true, timeout: 5000 }); } catch (e) {}\n  } else quedan.push(s);\n}\nconst tok = $input.item.json && $input.item.json.access_token;\nif (tok && BASE) quedan.push({ tok, b: BASE, t: ahora });\nst[k] = quedan.slice(-50);\nreturn $input.item;\n"
       }
     },
     {
@@ -2691,7 +2630,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// 🔓 Sesiones G54 (17-nov): cada login maestro crea un token que no vence y n8n guarda la salida de cada corrida.\n// Este nodo deja pasar todo igual, anota el token nuevo y cierra los de corridas anteriores de este mismo login\n// (más de 30 min: ninguna corrida dura tanto). En reposo queda como mucho una sesión abierta por login.\nconst BASE = (() => { try { return String(\"https://apigrowth.mdarthurdigital.com\").replace(/\\/+$/, ''); } catch (e) { return ''; } })();\nconst st = $getWorkflowStaticData('global');\nconst k = 'sesionesG54__' + \"\\ud83d\\udd10 G54: Login (WA Config Empresa)\";\nconst ahora = Date.now();\nconst quedan = [];\nfor (const s of (Array.isArray(st[k]) ? st[k] : [])) {\n  if (ahora - s.t > 30 * 60e3) {\n    try { await this.helpers.httpRequest({ method: 'POST', url: s.b + '/api/auth/logout', headers: { Authorization: 'Bearer ' + s.tok, Accept: 'application/json' }, json: true, timeout: 5000 }); } catch (e) {}\n  } else quedan.push(s);\n}\nconst tok = $input.item.json && $input.item.json.access_token;\nif (tok && BASE) quedan.push({ tok, b: BASE, t: ahora });\nst[k] = quedan.slice(-50);\nreturn $input.item;\n"
+        "jsCode": "const __httpConTope = (o) => this.helpers.httpRequest(Object.assign({ timeout: 120000 }, o)); // 17-nov: tope por defecto de 2 min si la llamada no trae uno\n// 🔓 Sesiones G54 (17-nov): cada login maestro crea un token que no vence y n8n guarda la salida de cada corrida.\n// Este nodo deja pasar todo igual, anota el token nuevo y cierra los de corridas anteriores de este mismo login\n// (más de 30 min: ninguna corrida dura tanto). En reposo queda como mucho una sesión abierta por login.\nconst BASE = (() => { try { return String(\"https://apigrowth.mdarthurdigital.com\").replace(/\\/+$/, ''); } catch (e) { return ''; } })();\nconst st = $getWorkflowStaticData('global');\nconst k = 'sesionesG54__' + \"\\ud83d\\udd10 G54: Login (WA Config Empresa)\";\nconst ahora = Date.now();\nconst quedan = [];\nfor (const s of (Array.isArray(st[k]) ? st[k] : [])) {\n  if (ahora - s.t > 30 * 60e3) {\n    try { await __httpConTope({ method: 'POST', url: s.b + '/api/auth/logout', headers: { Authorization: 'Bearer ' + s.tok, Accept: 'application/json' }, json: true, timeout: 5000 }); } catch (e) {}\n  } else quedan.push(s);\n}\nconst tok = $input.item.json && $input.item.json.access_token;\nif (tok && BASE) quedan.push({ tok, b: BASE, t: ahora });\nst[k] = quedan.slice(-50);\nreturn $input.item;\n"
       }
     },
     {
@@ -2705,7 +2644,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// 🔓 Sesiones G54 (17-nov): cada login maestro crea un token que no vence y n8n guarda la salida de cada corrida.\n// Este nodo deja pasar todo igual, anota el token nuevo y cierra los de corridas anteriores de este mismo login\n// (más de 30 min: ninguna corrida dura tanto). En reposo queda como mucho una sesión abierta por login.\nconst BASE = (() => { try { return String(\"https://apigrowth.mdarthurdigital.com\").replace(/\\/+$/, ''); } catch (e) { return ''; } })();\nconst st = $getWorkflowStaticData('global');\nconst k = 'sesionesG54__' + \"\\ud83d\\udd10 G54: Login (Follow-up)\";\nconst ahora = Date.now();\nconst quedan = [];\nfor (const s of (Array.isArray(st[k]) ? st[k] : [])) {\n  if (ahora - s.t > 30 * 60e3) {\n    try { await this.helpers.httpRequest({ method: 'POST', url: s.b + '/api/auth/logout', headers: { Authorization: 'Bearer ' + s.tok, Accept: 'application/json' }, json: true, timeout: 5000 }); } catch (e) {}\n  } else quedan.push(s);\n}\nconst tok = $input.item.json && $input.item.json.access_token;\nif (tok && BASE) quedan.push({ tok, b: BASE, t: ahora });\nst[k] = quedan.slice(-50);\nreturn $input.item;\n"
+        "jsCode": "const __httpConTope = (o) => this.helpers.httpRequest(Object.assign({ timeout: 120000 }, o)); // 17-nov: tope por defecto de 2 min si la llamada no trae uno\n// 🔓 Sesiones G54 (17-nov): cada login maestro crea un token que no vence y n8n guarda la salida de cada corrida.\n// Este nodo deja pasar todo igual, anota el token nuevo y cierra los de corridas anteriores de este mismo login\n// (más de 30 min: ninguna corrida dura tanto). En reposo queda como mucho una sesión abierta por login.\nconst BASE = (() => { try { return String(\"https://apigrowth.mdarthurdigital.com\").replace(/\\/+$/, ''); } catch (e) { return ''; } })();\nconst st = $getWorkflowStaticData('global');\nconst k = 'sesionesG54__' + \"\\ud83d\\udd10 G54: Login (Follow-up)\";\nconst ahora = Date.now();\nconst quedan = [];\nfor (const s of (Array.isArray(st[k]) ? st[k] : [])) {\n  if (ahora - s.t > 30 * 60e3) {\n    try { await __httpConTope({ method: 'POST', url: s.b + '/api/auth/logout', headers: { Authorization: 'Bearer ' + s.tok, Accept: 'application/json' }, json: true, timeout: 5000 }); } catch (e) {}\n  } else quedan.push(s);\n}\nconst tok = $input.item.json && $input.item.json.access_token;\nif (tok && BASE) quedan.push({ tok, b: BASE, t: ahora });\nst[k] = quedan.slice(-50);\nreturn $input.item;\n"
       }
     }
   ],
@@ -2791,7 +2730,7 @@
       "main": [
         [
           {
-            "node": "🔍 Verificar Estado Lead",
+            "node": "⚙️ Config G54",
             "type": "main",
             "index": 0
           }
@@ -3104,29 +3043,6 @@
             "index": 0
           }
         ]
-      ]
-    },
-    "🔍 Verificar Estado Lead": {
-      "main": [
-        [
-          {
-            "node": "🔀 ¿Bot puede responder?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔀 ¿Bot puede responder?": {
-      "main": [
-        [
-          {
-            "node": "⚙️ Config G54",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        []
       ]
     },
     "💾 Actualizar Lead (PATCH)": {

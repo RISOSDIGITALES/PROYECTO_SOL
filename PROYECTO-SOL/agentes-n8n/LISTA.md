@@ -31,14 +31,14 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | 🛡️ Guardián del Vigía — G54 | `9w8UUvgYArg0m4Zk` | sí | 2026-11-17 | [guardian-del-vigia-g54.json](g54-plataforma/guardian-del-vigia-g54.json) |
 | 🧠 Ideas AI — RRSS G54 | `nHawWPIIu51ABBgl` | sí | 2026-11-17 | [ideas-ai-rrss-g54.json](g54-plataforma/ideas-ai-rrss-g54.json) |
 | 🧠 Strategist AI — RRSS G54 v3.0 (Tendencias) | `S62o0wcXq8Wfj67S` | sí | 2026-11-17 | [strategist-ai-rrss-g54-v3-0-tendencias.json](g54-plataforma/strategist-ai-rrss-g54-v3-0-tendencias.json) |
-| 🧾 Cotizador → CRM — G54 | `FH4xYCTaxHQnb1dm` | sí | 2026-11-14 | [cotizador-crm-g54.json](g54-plataforma/cotizador-crm-g54.json) |
+| 🧾 Cotizador → CRM — G54 | `FH4xYCTaxHQnb1dm` | sí | 2026-11-17 | [cotizador-crm-g54.json](g54-plataforma/cotizador-crm-g54.json) |
 
 ## marco-crating-express
 
 | Agente | ID | Activo | Última edición | Archivo |
 |---|---|---|---|---|
 | ?? CE Gmail Monitor - Detectar Respuestas de Leads | `cJZV7jcwlbFoW5qJ` | no | 2026-07-23 | [ce-gmail-monitor-detectar-respuestas-de-leads.json](marco-crating-express/ce-gmail-monitor-detectar-respuestas-de-leads.json) |
-| CE Cotizaciones - CF7 → Airtable + Leads | `FU8QG1BVmT4r5Kjw` | sí | 2026-10-31 | [ce-cotizaciones-cf7-airtable-leads.json](marco-crating-express/ce-cotizaciones-cf7-airtable-leads.json) |
+| CE Cotizaciones - CF7 → Airtable + Leads | `FU8QG1BVmT4r5Kjw` | sí | 2026-11-17 | [ce-cotizaciones-cf7-airtable-leads.json](marco-crating-express/ce-cotizaciones-cf7-airtable-leads.json) |
 | CE Telegram Engine — Marco | `HaSG63Q9C2tGOLH3` | sí | 2026-11-17 | [ce-telegram-engine-marco.json](marco-crating-express/ce-telegram-engine-marco.json) |
 | CE WhatsApp Engine — Marco | `zAhV8gEsXD8dCrXq` | sí | 2026-11-17 | [ce-whatsapp-engine-marco.json](marco-crating-express/ce-whatsapp-engine-marco.json) |
 | Marco CE — 01 Clasificador | `1PXcg3dOQBt8hrrT` | sí | 2026-11-14 | [marco-ce-01-clasificador.json](marco-crating-express/marco-ce-01-clasificador.json) |
