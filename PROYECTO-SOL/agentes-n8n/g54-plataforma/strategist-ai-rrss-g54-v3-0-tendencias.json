@@ -2,7 +2,7 @@
   "id": "S62o0wcXq8Wfj67S",
   "name": "🧠 Strategist AI — RRSS G54 v3.0 (Tendencias)",
   "active": true,
-  "updatedAt": "2026-11-17T14:07:50.718Z",
+  "updatedAt": "2026-11-17T14:37:16.058Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -951,6 +951,34 @@
         },
         "options": {}
       }
+    },
+    {
+      "id": "fadca376-572f-485c-a430-6f34cb64aa12",
+      "name": "🔓 Anotar sesión (Login (Plataformas))",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        980,
+        620
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 🔓 Sesiones G54 (17-nov): cada login maestro crea un token que no vence y n8n guarda la salida de cada corrida.\n// Este nodo deja pasar todo igual, anota el token nuevo y cierra los de corridas anteriores de este mismo login\n// (más de 30 min: ninguna corrida dura tanto). En reposo queda como mucho una sesión abierta por login.\nconst BASE = (() => { try { return String($('⚙️ Config G54').item.json.G54_BASE_URL).replace(/\\/+$/, ''); } catch (e) { return ''; } })();\nconst st = $getWorkflowStaticData('global');\nconst k = 'sesionesG54__' + \"\\ud83d\\udd10 G54: Login (Plataformas)\";\nconst ahora = Date.now();\nconst quedan = [];\nfor (const s of (Array.isArray(st[k]) ? st[k] : [])) {\n  if (ahora - s.t > 30 * 60e3) {\n    try { await this.helpers.httpRequest({ method: 'POST', url: s.b + '/api/auth/logout', headers: { Authorization: 'Bearer ' + s.tok, Accept: 'application/json' }, json: true, timeout: 5000 }); } catch (e) {}\n  } else quedan.push(s);\n}\nconst tok = $input.item.json && $input.item.json.access_token;\nif (tok && BASE) quedan.push({ tok, b: BASE, t: ahora });\nst[k] = quedan.slice(-50);\nreturn $input.item;\n"
+      }
+    },
+    {
+      "id": "d9c1c6a4-fc6d-4925-bfec-a2c10da0e75a",
+      "name": "🔓 Anotar sesión (Login (Evento))",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3100,
+        364
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 🔓 Sesiones G54 (17-nov): cada login maestro crea un token que no vence y n8n guarda la salida de cada corrida.\n// Este nodo deja pasar todo igual, anota el token nuevo y cierra los de corridas anteriores de este mismo login\n// (más de 30 min: ninguna corrida dura tanto). En reposo queda como mucho una sesión abierta por login.\nconst BASE = (() => { try { return String(\"https://apigrowth.mdarthurdigital.com\").replace(/\\/+$/, ''); } catch (e) { return ''; } })();\nconst st = $getWorkflowStaticData('global');\nconst k = 'sesionesG54__' + \"\\ud83d\\udd10 G54: Login (Evento)\";\nconst ahora = Date.now();\nconst quedan = [];\nfor (const s of (Array.isArray(st[k]) ? st[k] : [])) {\n  if (ahora - s.t > 30 * 60e3) {\n    try { await this.helpers.httpRequest({ method: 'POST', url: s.b + '/api/auth/logout', headers: { Authorization: 'Bearer ' + s.tok, Accept: 'application/json' }, json: true, timeout: 5000 }); } catch (e) {}\n  } else quedan.push(s);\n}\nconst tok = $input.item.json && $input.item.json.access_token;\nif (tok && BASE) quedan.push({ tok, b: BASE, t: ahora });\nst[k] = quedan.slice(-50);\nreturn $input.item;\n"
+      }
     }
   ],
   "connections": {
@@ -1106,7 +1134,7 @@
       "main": [
         [
           {
-            "node": "🏢 G54: Cambiar Empresa (Plataformas)",
+            "node": "🔓 Anotar sesión (Login (Plataformas))",
             "type": "main",
             "index": 0
           }
@@ -1212,7 +1240,7 @@
       "main": [
         [
           {
-            "node": "🏢 G54: Cambiar Empresa (Evento)",
+            "node": "🔓 Anotar sesión (Login (Evento))",
             "type": "main",
             "index": 0
           }
@@ -1292,6 +1320,28 @@
           }
         ],
         []
+      ]
+    },
+    "🔓 Anotar sesión (Login (Plataformas))": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa (Plataformas)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔓 Anotar sesión (Login (Evento))": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa (Evento)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   }

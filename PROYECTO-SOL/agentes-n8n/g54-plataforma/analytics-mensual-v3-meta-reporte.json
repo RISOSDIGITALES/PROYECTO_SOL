@@ -2,7 +2,7 @@
   "id": "YI9EfJYcWJN4bbM9",
   "name": "ANALYTICS MENSUAL V3-META REPORTE",
   "active": true,
-  "updatedAt": "2026-11-17T14:07:54.442Z",
+  "updatedAt": "2026-11-17T14:37:20.169Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -1814,6 +1814,48 @@
         },
         "options": {}
       }
+    },
+    {
+      "id": "b9308557-4de4-42ba-a6f6-e7635a4b6254",
+      "name": "🔓 Anotar sesión (Login (Gráficas))",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1852,
+        3444
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 🔓 Sesiones G54 (17-nov): cada login maestro crea un token que no vence y n8n guarda la salida de cada corrida.\n// Este nodo deja pasar todo igual, anota el token nuevo y cierra los de corridas anteriores de este mismo login\n// (más de 30 min: ninguna corrida dura tanto). En reposo queda como mucho una sesión abierta por login.\nconst BASE = (() => { try { return String(\"https://apigrowth.mdarthurdigital.com\").replace(/\\/+$/, ''); } catch (e) { return ''; } })();\nconst st = $getWorkflowStaticData('global');\nconst k = 'sesionesG54__' + \"\\ud83d\\udd10 G54: Login (Gr\\u00e1ficas)\";\nconst ahora = Date.now();\nconst quedan = [];\nfor (const s of (Array.isArray(st[k]) ? st[k] : [])) {\n  if (ahora - s.t > 30 * 60e3) {\n    try { await this.helpers.httpRequest({ method: 'POST', url: s.b + '/api/auth/logout', headers: { Authorization: 'Bearer ' + s.tok, Accept: 'application/json' }, json: true, timeout: 5000 }); } catch (e) {}\n  } else quedan.push(s);\n}\nconst tok = $input.item.json && $input.item.json.access_token;\nif (tok && BASE) quedan.push({ tok, b: BASE, t: ahora });\nst[k] = quedan.slice(-50);\nreturn $input.item;\n"
+      }
+    },
+    {
+      "id": "686ea6b9-358f-49d8-a6e0-84e4ded38a04",
+      "name": "🔓 Anotar sesión (Login (Semanal))",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2022,
+        3458
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 🔓 Sesiones G54 (17-nov): cada login maestro crea un token que no vence y n8n guarda la salida de cada corrida.\n// Este nodo deja pasar todo igual, anota el token nuevo y cierra los de corridas anteriores de este mismo login\n// (más de 30 min: ninguna corrida dura tanto). En reposo queda como mucho una sesión abierta por login.\nconst BASE = (() => { try { return String(\"https://apigrowth.mdarthurdigital.com\").replace(/\\/+$/, ''); } catch (e) { return ''; } })();\nconst st = $getWorkflowStaticData('global');\nconst k = 'sesionesG54__' + \"\\ud83d\\udd10 G54: Login (Semanal)\";\nconst ahora = Date.now();\nconst quedan = [];\nfor (const s of (Array.isArray(st[k]) ? st[k] : [])) {\n  if (ahora - s.t > 30 * 60e3) {\n    try { await this.helpers.httpRequest({ method: 'POST', url: s.b + '/api/auth/logout', headers: { Authorization: 'Bearer ' + s.tok, Accept: 'application/json' }, json: true, timeout: 5000 }); } catch (e) {}\n  } else quedan.push(s);\n}\nconst tok = $input.item.json && $input.item.json.access_token;\nif (tok && BASE) quedan.push({ tok, b: BASE, t: ahora });\nst[k] = quedan.slice(-50);\nreturn $input.item;\n"
+      }
+    },
+    {
+      "id": "5c7ad014-1a65-4e85-bd01-d27293b64bd9",
+      "name": "🔓 Anotar sesión (Login (Leads))",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        3420
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 🔓 Sesiones G54 (17-nov): cada login maestro crea un token que no vence y n8n guarda la salida de cada corrida.\n// Este nodo deja pasar todo igual, anota el token nuevo y cierra los de corridas anteriores de este mismo login\n// (más de 30 min: ninguna corrida dura tanto). En reposo queda como mucho una sesión abierta por login.\nconst BASE = (() => { try { return String(\"https://apigrowth.mdarthurdigital.com\").replace(/\\/+$/, ''); } catch (e) { return ''; } })();\nconst st = $getWorkflowStaticData('global');\nconst k = 'sesionesG54__' + \"\\ud83d\\udd10 G54: Login (Leads)\";\nconst ahora = Date.now();\nconst quedan = [];\nfor (const s of (Array.isArray(st[k]) ? st[k] : [])) {\n  if (ahora - s.t > 30 * 60e3) {\n    try { await this.helpers.httpRequest({ method: 'POST', url: s.b + '/api/auth/logout', headers: { Authorization: 'Bearer ' + s.tok, Accept: 'application/json' }, json: true, timeout: 5000 }); } catch (e) {}\n  } else quedan.push(s);\n}\nconst tok = $input.item.json && $input.item.json.access_token;\nif (tok && BASE) quedan.push({ tok, b: BASE, t: ahora });\nst[k] = quedan.slice(-50);\nreturn $input.item;\n"
+      }
     }
   ],
   "connections": {
@@ -2120,7 +2162,7 @@
       "main": [
         [
           {
-            "node": "📥 Descargar Gráfica FB",
+            "node": "🔓 Anotar sesión (Login (Gráficas))",
             "type": "main",
             "index": 0
           }
@@ -2202,7 +2244,7 @@
       "main": [
         [
           {
-            "node": "📊 G54: Métricas por Semana",
+            "node": "🔓 Anotar sesión (Login (Semanal))",
             "type": "main",
             "index": 0
           }
@@ -2270,7 +2312,7 @@
       "main": [
         [
           {
-            "node": "🏢 G54: Cambiar Empresa (Leads)",
+            "node": "🔓 Anotar sesión (Login (Leads))",
             "type": "main",
             "index": 0
           }
@@ -2473,6 +2515,39 @@
         [
           {
             "node": "⛔ Responder 403 (no autorizado) (analytics-meta-reporte)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔓 Anotar sesión (Login (Gráficas))": {
+      "main": [
+        [
+          {
+            "node": "📥 Descargar Gráfica FB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔓 Anotar sesión (Login (Semanal))": {
+      "main": [
+        [
+          {
+            "node": "📊 G54: Métricas por Semana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔓 Anotar sesión (Login (Leads))": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa (Leads)",
             "type": "main",
             "index": 0
           }

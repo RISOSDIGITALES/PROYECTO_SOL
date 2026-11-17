@@ -2,7 +2,7 @@
   "id": "62tIvF0snsrMj0sM",
   "name": "Community AI — G54",
   "active": true,
-  "updatedAt": "2026-11-17T14:25:37.155Z",
+  "updatedAt": "2026-11-17T14:36:57.414Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -1726,6 +1726,20 @@
           "name": "Gmail SMTP — risosadmi"
         }
       }
+    },
+    {
+      "id": "6ca895d6-39bc-4b63-bbe3-763b552e9a45",
+      "name": "🔓 Anotar sesión (Login CRM)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3620,
+        840
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 🔓 Sesiones G54 (17-nov): cada login maestro crea un token que no vence y n8n guarda la salida de cada corrida.\n// Este nodo deja pasar todo igual, anota el token nuevo y cierra los de corridas anteriores de este mismo login\n// (más de 30 min: ninguna corrida dura tanto). En reposo queda como mucho una sesión abierta por login.\nconst BASE = (() => { try { return String(($('⚙️ Config Growth54').item.json.G54_BASE_URL)).replace(/\\/+$/, ''); } catch (e) { return ''; } })();\nconst st = $getWorkflowStaticData('global');\nconst k = 'sesionesG54__' + \"\\ud83d\\udd10 G54: Login CRM\";\nconst ahora = Date.now();\nconst quedan = [];\nfor (const s of (Array.isArray(st[k]) ? st[k] : [])) {\n  if (ahora - s.t > 30 * 60e3) {\n    try { await this.helpers.httpRequest({ method: 'POST', url: s.b + '/api/auth/logout', headers: { Authorization: 'Bearer ' + s.tok, Accept: 'application/json' }, json: true, timeout: 5000 }); } catch (e) {}\n  } else quedan.push(s);\n}\nconst tok = $input.item.json && $input.item.json.access_token;\nif (tok && BASE) quedan.push({ tok, b: BASE, t: ahora });\nst[k] = quedan.slice(-50);\nreturn $input.item;\n"
+      }
     }
   ],
   "connections": {
@@ -2051,7 +2065,7 @@
       "main": [
         [
           {
-            "node": "🏢 G54: Cambiar Empresa (CRM)",
+            "node": "🔓 Anotar sesión (Login CRM)",
             "type": "main",
             "index": 0
           }
@@ -2394,6 +2408,17 @@
         [
           {
             "node": "📧 Avisar envío fallido (Community)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔓 Anotar sesión (Login CRM)": {
+      "main": [
+        [
+          {
+            "node": "🏢 G54: Cambiar Empresa (CRM)",
             "type": "main",
             "index": 0
           }
