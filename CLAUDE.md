@@ -730,6 +730,8 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 644. **Cotizador de CE, versión S: CRM etapa 2 (actividades y tareas)** (2026-11-17). En la ficha de cada trato se registran llamadas, correos, reuniones, WhatsApp y notas, y se crean tareas con fecha y responsable; `/crm/tareas` las agrupa en vencidas, hoy y próximas; el menú muestra en rojo las vencidas y las de hoy. Probado en local (alta, completar, permisos de vendedor). **Recordatorios por correo** quedan fuera: necesitan el programador de tareas de Laravel (cron) en el servidor, que es del ingeniero. **Siguen:** ficha 360 del cliente, reportes de ventas y configurar las etapas.
 
+645. **Cotizador de CE, versión S: CRM etapa 3 (ficha 360 del cliente)** (2026-11-17). `/clientes/{id}` junta en una pantalla: en juego, ganado, tasa de cierre, último contacto, empresa, contactos, tratos, estimados web (por sus tratos y por los correos de la empresa y sus contactos), tareas y actividad. Probado en local. **Siguen:** reportes de ventas y configurar las etapas.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
