@@ -2,7 +2,7 @@
   "id": "IRCoya91PKPjpT1T",
   "name": "📢 Distribution AI — RRSS G54 v1.0",
   "active": true,
-  "updatedAt": "2026-11-17T14:37:10.438Z",
+  "updatedAt": "2026-11-17T15:13:07.301Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -855,7 +855,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { \"external_post_id\": $('📸 IG: Publicar').isExecuted ? ($('📸 IG: Publicar').item.json.id || null) : ($('📘 FB: Publicar con Foto').isExecuted ? ($('📘 FB: Publicar con Foto').item.json.post_id || $('📘 FB: Publicar con Foto').item.json.id || null) : ($('📘 FB: Publicar Solo Texto').isExecuted ? ($('📘 FB: Publicar Solo Texto').item.json.id || null) : ($('📱 IG: Publicar (Story)').isExecuted ? ($('📱 IG: Publicar (Story)').item.json.id || null) : ($('📘 FB: Publicar Story').isExecuted ? ($('📘 FB: Publicar Story').item.json.id || null) : ($('📱 IG: Publicar (Reel)').isExecuted ? ($('📱 IG: Publicar (Reel)').item.json.id || null) : ($('📘 FB: Finalizar Reel (finish)').isExecuted ? ($('📘 FB: Iniciar Reel (start)').item.json.video_id || null) : ($('💼 LinkedIn: Publicar').isExecuted ? ($('💼 LinkedIn: Publicar').item.json.body?.id || $('💼 LinkedIn: Publicar').item.json.headers?.['x-restli-id'] || null) : ($('💼 LinkedIn: Publicar (con imagen)').isExecuted ? ($('💼 LinkedIn: Publicar (con imagen)').item.json.body?.id || $('💼 LinkedIn: Publicar (con imagen)').item.json.headers?.['x-restli-id'] || null) : null)))))))) } }}",
+        "jsonBody": "={{ { ...($('🔗 Armar Enlace del Post').item.json.link_url ? { \"link_url\": $('🔗 Armar Enlace del Post').item.json.link_url } : {}), \"external_post_id\": $('📸 IG: Publicar').isExecuted ? ($('📸 IG: Publicar').item.json.id || null) : ($('📘 FB: Publicar con Foto').isExecuted ? ($('📘 FB: Publicar con Foto').item.json.post_id || $('📘 FB: Publicar con Foto').item.json.id || null) : ($('📘 FB: Publicar Solo Texto').isExecuted ? ($('📘 FB: Publicar Solo Texto').item.json.id || null) : ($('📱 IG: Publicar (Story)').isExecuted ? ($('📱 IG: Publicar (Story)').item.json.id || null) : ($('📘 FB: Publicar Story').isExecuted ? ($('📘 FB: Publicar Story').item.json.id || null) : ($('📱 IG: Publicar (Reel)').isExecuted ? ($('📱 IG: Publicar (Reel)').item.json.id || null) : ($('📘 FB: Finalizar Reel (finish)').isExecuted ? ($('📘 FB: Iniciar Reel (start)').item.json.video_id || null) : ($('💼 LinkedIn: Publicar').isExecuted ? ($('💼 LinkedIn: Publicar').item.json.body?.id || $('💼 LinkedIn: Publicar').item.json.headers?.['x-restli-id'] || null) : ($('💼 LinkedIn: Publicar (con imagen)').isExecuted ? ($('💼 LinkedIn: Publicar (con imagen)').item.json.body?.id || $('💼 LinkedIn: Publicar (con imagen)').item.json.headers?.['x-restli-id'] || null) : null)))))))) } }}",
         "options": {
           "timeout": 60000
         }
@@ -1782,6 +1782,20 @@
         "mode": "runOnceForEachItem",
         "jsCode": "// 🔓 Sesiones G54 (17-nov): cada login maestro crea un token que no vence y n8n guarda la salida de cada corrida.\n// Este nodo deja pasar todo igual, anota el token nuevo y cierra los de corridas anteriores de este mismo login\n// (más de 30 min: ninguna corrida dura tanto). En reposo queda como mucho una sesión abierta por login.\nconst BASE = (() => { try { return String(($('⚙️ Config Distribution').item.json.G54_BASE_URL)).replace(/\\/+$/, ''); } catch (e) { return ''; } })();\nconst st = $getWorkflowStaticData('global');\nconst k = 'sesionesG54__' + \"\\ud83d\\udd10 G54: Login Sesi\\u00f3n\";\nconst ahora = Date.now();\nconst quedan = [];\nfor (const s of (Array.isArray(st[k]) ? st[k] : [])) {\n  if (ahora - s.t > 30 * 60e3) {\n    try { await this.helpers.httpRequest({ method: 'POST', url: s.b + '/api/auth/logout', headers: { Authorization: 'Bearer ' + s.tok, Accept: 'application/json' }, json: true, timeout: 5000 }); } catch (e) {}\n  } else quedan.push(s);\n}\nconst tok = $input.item.json && $input.item.json.access_token;\nif (tok && BASE) quedan.push({ tok, b: BASE, t: ahora });\nst[k] = quedan.slice(-50);\nreturn $input.item;\n"
       }
+    },
+    {
+      "id": "3dce46d0-4f76-42fe-8280-5873983f6ab2",
+      "name": "🔗 Armar Enlace del Post",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1996,
+        584
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 🔗 Enlace del post publicado (17-nov): G54 guarda link_url si se lo manda mark-published, para que el\n// cliente abra el post desde el panel. Antes no se mandaba (67 posts publicados sin enlace).\n// Facebook, LinkedIn y Reels de Facebook se arman con el id que devuelve la publicación; Instagram no se puede\n// armar con el id, así que se le pide el permalink a Meta. Si algo falla, sigue sin enlace (no frena nada).\nconst d = $('🔧 Preparar Datos Post').item.json;\nconst de = (n) => { try { return $(n).isExecuted ? ($(n).item.json || null) : null; } catch (e) { return null; } };\nlet link_url = null;\ntry {\n  const ig = de('📸 IG: Publicar') || de('📱 IG: Publicar (Reel)') || de('📱 IG: Publicar (Story)');\n  const fbFoto = de('📘 FB: Publicar con Foto');\n  const fbTexto = de('📘 FB: Publicar Solo Texto');\n  const fbReel = de('📘 FB: Finalizar Reel (finish)') ? de('📘 FB: Iniciar Reel (start)') : null;\n  const li = de('💼 LinkedIn: Publicar') || de('💼 LinkedIn: Publicar (con imagen)');\n  if (ig && ig.id) {\n    const r = await this.helpers.httpRequest({ url: `${d.IG_API_HOST}/v19.0/${ig.id}`, qs: { fields: 'permalink', access_token: d.FB_ACCESS_TOKEN }, json: true, timeout: 15000 });\n    link_url = (r && r.permalink) || null;\n  } else if (fbFoto && (fbFoto.post_id || fbFoto.id)) {\n    link_url = 'https://www.facebook.com/' + (fbFoto.post_id || fbFoto.id);\n  } else if (fbTexto && fbTexto.id) {\n    link_url = 'https://www.facebook.com/' + fbTexto.id;\n  } else if (fbReel && fbReel.video_id) {\n    link_url = 'https://www.facebook.com/reel/' + fbReel.video_id;\n  } else if (li) {\n    const urn = (li.body && li.body.id) || (li.headers && li.headers['x-restli-id']);\n    if (urn) link_url = 'https://www.linkedin.com/feed/update/' + urn;\n  }\n} catch (e) { link_url = null; }\nreturn { json: { ...$input.item.json, link_url } };\n"
+      }
     }
   ],
   "connections": {
@@ -1811,7 +1825,7 @@
       "main": [
         [
           {
-            "node": "✅ G54: Estado → Publicado",
+            "node": "🔗 Armar Enlace del Post",
             "type": "main",
             "index": 0
           }
@@ -1858,7 +1872,7 @@
       "main": [
         [
           {
-            "node": "✅ G54: Estado → Publicado",
+            "node": "🔗 Armar Enlace del Post",
             "type": "main",
             "index": 0
           }
@@ -1887,7 +1901,7 @@
       "main": [
         [
           {
-            "node": "✅ G54: Estado → Publicado",
+            "node": "🔗 Armar Enlace del Post",
             "type": "main",
             "index": 0
           }
@@ -2133,7 +2147,7 @@
       "main": [
         [
           {
-            "node": "✅ G54: Estado → Publicado",
+            "node": "🔗 Armar Enlace del Post",
             "type": "main",
             "index": 0
           }
@@ -2155,7 +2169,7 @@
       "main": [
         [
           {
-            "node": "✅ G54: Estado → Publicado",
+            "node": "🔗 Armar Enlace del Post",
             "type": "main",
             "index": 0
           }
@@ -2199,7 +2213,7 @@
       "main": [
         [
           {
-            "node": "✅ G54: Estado → Publicado",
+            "node": "🔗 Armar Enlace del Post",
             "type": "main",
             "index": 0
           }
@@ -2232,7 +2246,7 @@
       "main": [
         [
           {
-            "node": "✅ G54: Estado → Publicado",
+            "node": "🔗 Armar Enlace del Post",
             "type": "main",
             "index": 0
           }
@@ -2254,7 +2268,7 @@
       "main": [
         [
           {
-            "node": "✅ G54: Estado → Publicado",
+            "node": "🔗 Armar Enlace del Post",
             "type": "main",
             "index": 0
           }
@@ -2326,7 +2340,7 @@
       "main": [
         [
           {
-            "node": "✅ G54: Estado → Publicado",
+            "node": "🔗 Armar Enlace del Post",
             "type": "main",
             "index": 0
           }
@@ -2393,6 +2407,17 @@
         [
           {
             "node": "🏢 G54: Cambiar Empresa Activa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 Armar Enlace del Post": {
+      "main": [
+        [
+          {
+            "node": "✅ G54: Estado → Publicado",
             "type": "main",
             "index": 0
           }
