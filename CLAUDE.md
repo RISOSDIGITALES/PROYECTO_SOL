@@ -48,16 +48,16 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 
 12. **Mónica v15 con OpenAI** (ítems 652 a 657): probada en risosadmi con Groq. Falta con OpenAI (gpt-4.1), la lectura de PDF e imágenes y la consulta general (Pinecone), con las credenciales puestas.
 
-## Próxima sesión — por dónde seguir (actualizado el 2026-11-17)
+## Próxima sesión — por dónde seguir (actualizado el 2026-11-18)
 
 **Cómo trabajar (pedido de la usuaria, 23-oct):** de a poco, un paso por vez, de lo más chico a lo más grande, enumerando qué se hace y reportando el % de uso (`mcp__ccd_session_mgmt__get_usage`) al terminar cada paso. Si el uso semanal pasa el 90 %, parar y avisar.
 
 **Para gastar menos uso (revisado el 30-oct):** este archivo se carga entero en cada sesión y en cada mensaje, así que su tamaño es lo que más pesa. (1) Aquí quedan solo los ítems del changelog de los últimos 2 días; los demás van a `PROYECTO-SOL/historial/changelog-N-....md`. (2) Cada ítem nuevo, en 5 líneas o menos: qué se hizo, por qué y qué falta; el detalle técnico va en el mensaje del commit. (3) Solo los últimos 3 reportes diarios. (4) La referencia que casi no se usa va en su propio archivo con un puntero (por ejemplo, `PROYECTO-SOL/nomify/planilla-nicaragua.md`). (5) En Bubble, su CLAUDE.md guarda solo los últimos 10 ítems; el resto, en `docs/changelog-historico.md`. (6) Una sesión larga encarece cada mensaje: un tema grande y distinto (por ejemplo, el diseño de una mascota) va en su propia sesión. (7) Capturas de pantalla chicas (zoom o escala 0,5), sin repetirlas, y los ajustes de diseño pedidos juntos en un solo mensaje cuando se pueda.
 
-**Para mañana (18-nov):**
-1. Pedirle al ingeniero, en un solo mensaje: el JSON del flujo del Tutor del cotizador (disparador `9b9cd801…`) y del chat público (`91061fae…`), los accesos de Hermes y el acceso a la casilla de CE (tarea 1a de Mónica).
-2. Mónica v15 (procesador `BPmfavlb7SaUPDpM`, receptor `cfKNcaWiS2qMRmVB`, apagados): poner credenciales (Gmail de pruebas, OpenAI, Pinecone, Telegram) y el chat del vendedor; guía en `C:\SOLANGE RESPALDOS\agente-correo-monica-SOL\v15-SOL\GUIA_v15.md`.
-3. Mirar en Borradores de risosadmi que no quede ninguno "PRUEBA SOL", y avisarle al ingeniero que en la memoria de la app de producción quedó la conversación de prueba "PRUEBA SOL 1421" (la API no tiene borrado).
+**Para hoy (18-nov):**
+1. Pedirle al ingeniero, en un solo mensaje (borrador listo en el chat del 18-nov): el JSON del flujo del Tutor del cotizador (disparador `9b9cd801…`) y del chat público (`91061fae…`), los accesos de Hermes, el acceso a la casilla de CE (tarea 1a de Mónica) y el aviso de la conversación de prueba "PRUEBA SOL 1421" en la memoria de la app de producción.
+2. Mónica v15 (procesador `BPmfavlb7SaUPDpM`, receptor `cfKNcaWiS2qMRmVB`, apagados): la usuaria pone las credenciales (Gmail de pruebas, OpenAI, Pinecone, Telegram) y el chat del vendedor; guía en `C:\SOLANGE RESPALDOSgente-correo-monica-SOL15-SOL\GUIA_v15.md`.
+3. ~~Borradores "PRUEBA SOL" en risosadmi~~: revisado el 18-nov, no queda ninguno (quedan solo los 5 correos de prueba en la bandeja).
 4. Que la usuaria revise el cotizador versión S en `http://127.0.0.1:8031` y decidir cuándo pasarlo a `DESARROLLO_SOL`.
 5. Lunes 23-nov: última semana de la rotación de horarios.
 
