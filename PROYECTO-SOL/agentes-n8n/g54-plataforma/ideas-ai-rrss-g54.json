@@ -2,7 +2,7 @@
   "id": "nHawWPIIu51ABBgl",
   "name": "🧠 Ideas AI — RRSS G54",
   "active": true,
-  "updatedAt": "2026-11-17T15:31:53.089Z",
+  "updatedAt": "2026-11-18T13:42:33.583Z",
   "tags": [],
   "settings": {
     "executionOrder": "v1",
@@ -84,7 +84,7 @@
         480
       ],
       "parameters": {
-        "jsCode": "const companies = $input.first().json.data || [];\n// Empresas a las que el disparo semanal NO les genera ideas (2026-10-01):\n// Orison (6) no tiene redes propias conectadas (comparte la página de Facebook de\n// Crating Express) y nadie revisa sus ideas — tenía 22 sin revisar. Mismo criterio\n// que el despacho de los reportes de Analytics. El botón del panel sigue funcionando.\nconst PAUSADAS = [6];\nreturn companies\n  .filter(c => c.is_active && !PAUSADAS.includes(c.id))\n  .map(c => ({ json: { company_id: c.id, name: c.name } }));"
+        "jsCode": "const companies = $input.first().json.data || [];\n// Empresas a las que el disparo semanal NO les genera ideas: las que tienen redes ajenas (ver abajo),\n// mismo criterio que los informes de Analytics. Antes era una lista fija (2026-10-01). El botón del panel sigue funcionando.\nconst BASE = \"https://apigrowth.mdarthurdigital.com\";\nconst AGENT_TOKEN = \"REDACTED_G54_AGENT_TOKEN\";\n// 18-nov: empresas con \"redes ajenas\", leídas de G54 (sin ids de clientes escritos acá). Una empresa tiene redes\n// ajenas si todas sus redes listas cuelgan de una página que ya usa otra empresa registrada antes (id menor):\n// sus métricas e ideas no serían propias. Si la lectura de una empresa falla, no se la excluye.\nconst __empresasConRedesAjenas = async (ids, req, base, auth) => {\n  const redes = {};\n  for (const id of ids) {\n    try {\n      const r = await req({ method: 'GET', url: base + '/api/agent/companies/' + id + '/social-targets',\n        headers: { Authorization: auth, Accept: 'application/json' }, json: true, timeout: 60000 });\n      redes[id] = ((r && r.data) || []).filter(t => t && t.listo && t.page_id).map(t => String(t.page_id));\n    } catch (e) { redes[id] = null; }\n  }\n  const duenio = {};\n  for (const id of Object.keys(redes).map(Number).sort((a, b) => a - b))\n    for (const p of (redes[id] || [])) if (!(p in duenio)) duenio[p] = id;\n  return Object.keys(redes).map(Number).filter(id => redes[id] && redes[id].length && redes[id].every(p => duenio[p] < id));\n};\nconst activas = companies.filter(c => c.is_active);\nconst PAUSADAS = await __empresasConRedesAjenas(activas.map(c => Number(c.id)), (o) => this.helpers.httpRequest(o), BASE, \"Bearer \" + AGENT_TOKEN);\nreturn activas\n  .filter(c => !PAUSADAS.includes(Number(c.id)))\n  .map(c => ({ json: { company_id: c.id, name: c.name } }));\n"
       }
     },
     {

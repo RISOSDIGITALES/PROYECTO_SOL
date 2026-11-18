@@ -1,4 +1,4 @@
-# Agentes de n8n — copia del 2026-11-17
+# Agentes de n8n — copia del 2026-11-18
 
 Generado con `python PROYECTO-SOL/scripts/exportar-agentes.py`. Secretos tapados (`REDACTED_...`);
 los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` ni `staticData`.
@@ -7,7 +7,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 
 | Agente | ID | Activo | Última edición | Archivo |
 |---|---|---|---|---|
-| ANALYTICS MENSUAL V3-META REPORTE | `YI9EfJYcWJN4bbM9` | sí | 2026-11-17 | [analytics-mensual-v3-meta-reporte.json](g54-plataforma/analytics-mensual-v3-meta-reporte.json) |
+| ANALYTICS MENSUAL V3-META REPORTE | `YI9EfJYcWJN4bbM9` | sí | 2026-11-18 | [analytics-mensual-v3-meta-reporte.json](g54-plataforma/analytics-mensual-v3-meta-reporte.json) |
 | Community AI — G54 | `62tIvF0snsrMj0sM` | sí | 2026-11-17 | [community-ai-g54.json](g54-plataforma/community-ai-g54.json) |
 | ⏰ Distribution AI — Alarma Exacta (G54) | `sNNhTEH8IzJsOIm3` | sí | 2026-11-17 | [distribution-ai-alarma-exacta-g54.json](g54-plataforma/distribution-ai-alarma-exacta-g54.json) |
 | ✉️ Camila — Baja de correos (G54) | `FXRpSFH9ESdVah1P` | sí | 2026-11-17 | [camila-baja-de-correos-g54.json](g54-plataforma/camila-baja-de-correos-g54.json) |
@@ -15,9 +15,9 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | 🎨 Content AI — RRSS G54 v1.3 | `wyO1f93A66imn9qw` | sí | 2026-11-17 | [content-ai-rrss-g54-v1-3.json](g54-plataforma/content-ai-rrss-g54-v1-3.json) |
 | 🎬 Reels AI — G54 | `Xqb5sXsFDRz0Diys` | sí | 2026-11-17 | [reels-ai-g54.json](g54-plataforma/reels-ai-g54.json) |
 | 🎵 TikTok — Publicar (G54) | `fHfdlpZCHjCSrCGp` | no | 2026-11-16 | [tiktok-publicar-g54.json](g54-plataforma/tiktok-publicar-g54.json) |
-| 👁️ Vigía G54 — Supervisor RRSS | `zTm4tMOV9vMfUDnG` | sí | 2026-11-17 | [vigia-g54-supervisor-rrss.json](g54-plataforma/vigia-g54-supervisor-rrss.json) |
+| 👁️ Vigía G54 — Supervisor RRSS | `zTm4tMOV9vMfUDnG` | sí | 2026-11-18 | [vigia-g54-supervisor-rrss.json](g54-plataforma/vigia-g54-supervisor-rrss.json) |
 | 💬 Sales AI — Motor de Conversación G54 | `otycsrxrMEMuxuwD` | sí | 2026-11-17 | [sales-ai-motor-de-conversacion-g54.json](g54-plataforma/sales-ai-motor-de-conversacion-g54.json) |
-| 📊 Analytics AI Semanal — G54 | `EX9K1AZwKeouSJ9G` | sí | 2026-11-17 | [analytics-ai-semanal-g54.json](g54-plataforma/analytics-ai-semanal-g54.json) |
+| 📊 Analytics AI Semanal — G54 | `EX9K1AZwKeouSJ9G` | sí | 2026-11-18 | [analytics-ai-semanal-g54.json](g54-plataforma/analytics-ai-semanal-g54.json) |
 | 📢 Distribution AI — RRSS G54 v1.0 | `IRCoya91PKPjpT1T` | sí | 2026-11-17 | [distribution-ai-rrss-g54-v1-0.json](g54-plataforma/distribution-ai-rrss-g54-v1-0.json) |
 | 📤 WA Reply — Respuesta manual desde G54 | `2dat4nEoi8x8iLb2` | sí | 2026-11-17 | [wa-reply-respuesta-manual-desde-g54.json](g54-plataforma/wa-reply-respuesta-manual-desde-g54.json) |
 | 📧 Camila G54 — Nurture & Outreach | `fahn0L68z5czTocE` | sí | 2026-11-17 | [camila-g54-nurture-outreach.json](g54-plataforma/camila-g54-nurture-outreach.json) |
@@ -29,7 +29,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | 🖼️ Content AI — Generador de Imágenes (OpenAI) | `1rsqmFabW5PjnlHy` | sí | 2026-11-17 | [content-ai-generador-de-imagenes-openai.json](g54-plataforma/content-ai-generador-de-imagenes-openai.json) |
 | 🚨 Error Reporter — Growth54 | `CKOju9JVnSMymfKv` | sí | 2026-08-05 | [error-reporter-growth54.json](g54-plataforma/error-reporter-growth54.json) |
 | 🛡️ Guardián del Vigía — G54 | `9w8UUvgYArg0m4Zk` | sí | 2026-11-17 | [guardian-del-vigia-g54.json](g54-plataforma/guardian-del-vigia-g54.json) |
-| 🧠 Ideas AI — RRSS G54 | `nHawWPIIu51ABBgl` | sí | 2026-11-17 | [ideas-ai-rrss-g54.json](g54-plataforma/ideas-ai-rrss-g54.json) |
+| 🧠 Ideas AI — RRSS G54 | `nHawWPIIu51ABBgl` | sí | 2026-11-18 | [ideas-ai-rrss-g54.json](g54-plataforma/ideas-ai-rrss-g54.json) |
 | 🧠 Strategist AI — RRSS G54 v3.0 (Tendencias) | `S62o0wcXq8Wfj67S` | sí | 2026-11-17 | [strategist-ai-rrss-g54-v3-0-tendencias.json](g54-plataforma/strategist-ai-rrss-g54-v3-0-tendencias.json) |
 | 🧾 Cotizador → CRM — G54 | `FH4xYCTaxHQnb1dm` | sí | 2026-11-17 | [cotizador-crm-g54.json](g54-plataforma/cotizador-crm-g54.json) |
 
