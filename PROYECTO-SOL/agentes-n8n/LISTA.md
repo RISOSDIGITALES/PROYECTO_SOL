@@ -8,7 +8,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | Agente | ID | Activo | Última edición | Archivo |
 |---|---|---|---|---|
 | ANALYTICS MENSUAL V3-META REPORTE | `YI9EfJYcWJN4bbM9` | sí | 2026-11-18 | [analytics-mensual-v3-meta-reporte.json](g54-plataforma/analytics-mensual-v3-meta-reporte.json) |
-| Community AI — G54 | `62tIvF0snsrMj0sM` | sí | 2026-11-17 | [community-ai-g54.json](g54-plataforma/community-ai-g54.json) |
+| Community AI — G54 | `62tIvF0snsrMj0sM` | sí | 2026-11-18 | [community-ai-g54.json](g54-plataforma/community-ai-g54.json) |
 | ⏰ Distribution AI — Alarma Exacta (G54) | `sNNhTEH8IzJsOIm3` | sí | 2026-11-17 | [distribution-ai-alarma-exacta-g54.json](g54-plataforma/distribution-ai-alarma-exacta-g54.json) |
 | ✉️ Camila — Baja de correos (G54) | `FXRpSFH9ESdVah1P` | sí | 2026-11-17 | [camila-baja-de-correos-g54.json](g54-plataforma/camila-baja-de-correos-g54.json) |
 | 🎥 Pedidos de Grabación AI — G54 | `17mc8CJkKH2qzsdA` | sí | 2026-11-17 | [pedidos-de-grabacion-ai-g54.json](g54-plataforma/pedidos-de-grabacion-ai-g54.json) |

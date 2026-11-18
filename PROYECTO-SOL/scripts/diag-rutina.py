@@ -72,3 +72,14 @@ for nombre in ('api', 'rrss'):
             print(f'docs {nombre}: CAMBIÓ contra {ultima.name} (copia nueva en {nueva.name})')
     except Exception as ex:
         print(f'docs {nombre}: error', ex)
+
+# Firma de Meta (ítem 664): cuántos avisos llegaron con firma válida a cada webhook de Meta.
+# Con varios días de "valida" en avisos reales y ningún "invalida" de Meta, se puede pasar a MODO 'bloquear'.
+for wid, nombre in (('zAhV8gEsXD8dCrXq', 'Marco WA'), ('otycsrxrMEMuxuwD', 'Sales AI'), ('62tIvF0snsrMj0sM', 'Community')):
+    try:
+        w = get(f'{N8N}/workflows/{wid}', nh)
+        mf = (w.get('staticData') or {}).get('global', {}).get('metaFirma') or {}
+        modos = {n['name']: ("bloquear" if "const MODO = 'bloquear'" in n['parameters'].get('jsCode', '') else 'observar') for n in w['nodes'] if n['name'].startswith('🔏 Firma de Meta')}
+        print(f"firma meta {nombre}: secretos {len(mf.get('secretos') or [])} | conteo {mf.get('conteo') or {}} | modo {set(modos.values())}")
+    except Exception as ex:
+        print(f'firma meta {nombre}: error', ex)
