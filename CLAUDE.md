@@ -48,19 +48,20 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 
 12. **Mónica v15 con OpenAI** (ítems 652 a 657): probada en risosadmi con Groq. Falta con OpenAI (gpt-4.1), la lectura de PDF e imágenes y la consulta general (Pinecone), con las credenciales puestas.
 
-## Próxima sesión — por dónde seguir (actualizado el 2026-11-18)
+## Próxima sesión — por dónde seguir (actualizado el 2026-11-18, cierre)
 
 **Cómo trabajar (pedido de la usuaria, 23-oct):** de a poco, un paso por vez, de lo más chico a lo más grande, enumerando qué se hace y reportando el % de uso (`mcp__ccd_session_mgmt__get_usage`) al terminar cada paso. Si el uso semanal pasa el 90 %, parar y avisar.
 
 **Para gastar menos uso (revisado el 30-oct):** este archivo se carga entero en cada sesión y en cada mensaje, así que su tamaño es lo que más pesa. (1) Aquí quedan solo los ítems del changelog de los últimos 2 días; los demás van a `PROYECTO-SOL/historial/changelog-N-....md`. (2) Cada ítem nuevo, en 5 líneas o menos: qué se hizo, por qué y qué falta; el detalle técnico va en el mensaje del commit. (3) Solo los últimos 3 reportes diarios. (4) La referencia que casi no se usa va en su propio archivo con un puntero (por ejemplo, `PROYECTO-SOL/nomify/planilla-nicaragua.md`). (5) En Bubble, su CLAUDE.md guarda solo los últimos 10 ítems; el resto, en `docs/changelog-historico.md`. (6) Una sesión larga encarece cada mensaje: un tema grande y distinto (por ejemplo, el diseño de una mascota) va en su propia sesión. (7) Capturas de pantalla chicas (zoom o escala 0,5), sin repetirlas, y los ajustes de diseño pedidos juntos en un solo mensaje cuando se pueda.
 
-**Para hoy (18-nov):**
-1. Pedirle al ingeniero, en un solo mensaje (borrador listo en el chat del 18-nov): el JSON del flujo del Tutor del cotizador (disparador `9b9cd801…`) y del chat público (`91061fae…`), los accesos de Hermes, el acceso a la casilla de CE (tarea 1a de Mónica) y el aviso de la conversación de prueba "PRUEBA SOL 1421" en la memoria de la app de producción.
-2. Mónica v15 (procesador `BPmfavlb7SaUPDpM`, receptor `cfKNcaWiS2qMRmVB`, apagados): la usuaria pone las credenciales (Gmail de pruebas, OpenAI, Pinecone, Telegram) y el chat del vendedor; guía en `C:\SOLANGE RESPALDOSgente-correo-monica-SOL15-SOL\GUIA_v15.md`.
-3. ~~Borradores "PRUEBA SOL" en risosadmi~~: revisado el 18-nov, no queda ninguno (quedan solo los 5 correos de prueba en la bandeja).
-4. Que la usuaria revise el cotizador versión S en `http://127.0.0.1:8031` y decidir cuándo pasarlo a `DESARROLLO_SOL`.
-5. Lunes 23-nov: última semana de la rotación de horarios.
-6. **App Secret de Meta (ítem 664):** la usuaria lo copia de developers.facebook.com (cada app cuyo webhook apunta a n8n: la de "CRATING EXPRESS RRSS" y, si es otra, la del WhatsApp) → Configuración → Básica → "Clave secreta de la app", lo guarda como `META_APP_SECRET_CE=` en `.secrets.local.md` y se corre `python PROYECTO-SOL/scripts/cargar-meta-app-secret.py`. Después, unos días en observación y pasar a `bloquear`.
+**Para mañana (19-nov):**
+1. **Hermes (tarea del ingeniero): darle personalidad al perfil `mda`** (el del negocio, casi sin usar), tomando como modelo a Cortana (ítem 666). Antes, preguntarle al ingeniero qué tiene que hacer ese agente, con qué herramientas y por qué canal. Conexión: `ssh` con `HERMES_SSH` de `.secrets.local.md`; la contraseña la escribe la usuaria (`HERMES_SSH_PASSWORD`, vacío: lo completa ella). Desde la app solo se puede LEER la terminal: los comandos los pega ella.
+2. Avisarle al ingeniero, en un solo mensaje: el 18-nov se vieron en pantalla la contraseña del servidor y los dos tokens MCP de Cortana (EasyPanel y WxFocus), para que decida si los cambia; y pedirle el JSON del Tutor (`9b9cd801…`) y del chat público (`91061fae…`), el acceso a la casilla de CE y borrar la conversación "PRUEBA SOL 1421" de la memoria de la app de producción.
+3. **App Secret de Meta (ítem 664):** la usuaria lo copia de developers.facebook.com → app → Configuración → Básica, lo guarda como `META_APP_SECRET_CE=` en `.secrets.local.md` y se corre `python PROYECTO-SOL/scripts/cargar-meta-app-secret.py`; unos días en observación y pasar a `bloquear`.
+4. Mónica v15: poner credenciales (Gmail de pruebas, OpenAI, Pinecone, Telegram) y el chat del vendedor; guía en `C:\SOLANGE RESPALDOS\agente-correo-monica-SOL\v15-SOL\GUIA_v15.md`.
+5. Que la usuaria revise el cotizador versión S en `http://127.0.0.1:8031` y decidir cuándo pasarlo a `DESARROLLO_SOL`.
+6. Lunes 23-nov: última semana de la rotación de horarios.
+7. Avatar de la intro de Bubble: en pausa (decisión de la usuaria el 18-nov, no quedó conforme); ver ítem 667.
 
 **Orden de trabajo (lo nuestro):**
 1. ~~**Bubble — seguimiento a contactos calificados**~~: hecho el 26-oct (ítems 503 y 505 de Bubble; ítem 462 de acá). Falta probarlo con una llamada real.
@@ -70,7 +71,7 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 
 **Tareas del ingeniero (reunión del 14-nov), estado al 17-nov:**
 1. **Agente de Gmail de CE (Mónica):** (b) pagos unidos a su cotización, (c) borrador y aviso al vendedor por Telegram, (d) medidas convertidas por código y (e) aviso de lo que no es cotización, hechas en la v15 (ítems 652 a 657; además usa el factor de precio del panel). Importada apagada y probada en risosadmi con Groq. Falta: (a) analizar los correos reales de CE (sin acceso a la casilla) y encenderla con credenciales.
-2. **HERMES:** sin empezar. El 16-nov el ingeniero le mostró a la usuaria cómo ejecutarlo en la máquina; falta su descripción y los accesos.
+2. **HERMES:** analizado el 18-nov (ítem 666). La tarea es darle personalidad al perfil `mda`. Acceso: por `ssh` con contraseña (la tiene la usuaria).
 3. **Cotizador de Crating Express:** hecho en la versión S (ítems 640 a 648, rama `version-S`): Dashwork, ayuda, CRM propio (independiente del de G54, decisión de la usuaria), CSV, preferidos, proveedor, logo y botones de ayuda en el Tutor. Falta: que el chat responda con enlaces y que lea audios, PDF e imágenes (los flujos del chat están en el n8n del ingeniero, no en git ni con nuestra clave: pedir el JSON), y pasar la versión S a `DESARROLLO_SOL`.
 
 **Pedido del ingeniero (27-oct):** ~~animación de Jelly basada en Bubbli~~: hecha y entregada el 28-oct (ítem 469); las correcciones que hagan falta las hace el ingeniero.
@@ -746,6 +747,10 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 665. **Revisión del aviso de errores en todos los flujos** (2026-11-18), punto de visibilidad de la revisión del 16-nov (ítem 611). De los 40 flujos, 35 tienen `🚨 Error Reporter`. Sin aviso quedan solo: el propio Reporter y el relay de Bubble (a propósito, ítem 593), Gmail Monitor (apagado) y las 2 copias de Mónica v15 (apagadas). A estas dos se les configuró el aviso para que ya lo tengan al encenderlas (siguen apagadas), y `importar_v15.py` (fuera de git) ahora lo conserva si se vuelven a importar.
 
+666. **Hermes analizado** (2026-11-18), tarea del ingeniero. Es el Hermes Agent de Nous Research, instalado en el VPS de Walter (Contabo, usuario `mda`, `~/.hermes`). Dos perfiles: **Cortana**, la asistente técnica personal de Walter (Kimi K2.6 por OpenRouter, Telegram, MCP de EasyPanel y de WxFocus, regla "solo lectura sin permiso", prohibido tocar el n8n de Marc que corre en el mismo servidor), y **`mda`**, el del negocio, casi sin usar desde septiembre. La tarea: darle personalidad a `mda`. Conexión guardada en `.secrets.local.md` (`HERMES_SSH`; la contraseña la completa la usuaria). **Ojo:** al revisar se vieron en pantalla la contraseña del servidor y los dos tokens MCP de Cortana (mi filtro no tapaba el campo `Authorization`): avisar al ingeniero. Riesgo anotado: Cortana corre con `sudo` en producción y la única barrera es una regla de texto.
+
+667. **Avatar 3D de la intro de Bubble, en pausa** (2026-11-18). Se probaron three.js, un shader SDF, Blender con simulación de tela y, al final, Blender con un hoodie profesional ("Hoodie Black" de ioptic, Sketchfab, CC BY 4.0, cuenta de Sketchfab creada por la usuaria con Epic Games). La usuaria no quedó conforme y lo dejó para después. Todo en el repo de Bubble (`design/avatar-intro/`, ítem 613 de su CLAUDE.md); Blender 4.2 portable quedó en `C:\SOLANGE RESPALDOS\herramientas\`.
+
 ## Error conocido
 
 `API Error: 400 messages: text content blocks must be non-empty` — ocurre en la interfaz web de Claude Code (no en n8n) cuando el historial de conversación tiene bloques de texto vacíos tras llamadas a herramientas. Es un bug de la plataforma. Si ocurre: iniciar nueva sesión; este archivo CLAUDE.md proporciona todo el contexto necesario automáticamente.
@@ -759,6 +764,16 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 ## Reportes Diarios
 
 > Solo los últimos 3 reportes (regla cambiada el 2026-10-30, antes 7 días, para gastar menos uso: CLAUDE.md se carga entero en cada sesión). Al agregar uno, mover el más viejo a `PROYECTO-SOL/historial/reportes/AAAA-MM-DD.md`.
+
+---
+
+### 2026-11-18 (Miércoles)
+
+Arranqué con la rutina de G54, todo limpio, y confirmé que los posts de Facebook y LinkedIn se publicaron con su enlace. Seguí con los pendientes de la revisión: saqué a Orison de los cinco lugares donde estaba escrita a mano en los flujos, arreglé el traductor de Marco que respondía los mensajes en inglés en vez de traducirlos (hasta inventaba cotizaciones), hice que los avisos de seguimiento no se repitan cada hora si falla una marca, y dejé instalado el control de la firma de Meta en modo observación, que queda esperando que yo cargue el App Secret.
+
+Después me pidieron un avatar 3D para la página de introducción de Bubble: un robot con hoodie de la marca. Pasé gran parte del día en eso, probando varios caminos, desde código hasta Blender con simulación de tela, y al final con un hoodie profesional que bajé de Sketchfab con una cuenta que creé por Epic Games. Mejoró mucho, pero no quedé conforme con el resultado y lo dejé en pausa.
+
+Al final del día analicé Hermes, la tarea del ingeniero. Entré al servidor por SSH y vi que es el agente de Nous Research con dos perfiles: Cortana, la asistente personal de Walter, y el de MDA, casi sin usar. Mi tarea va a ser darle personalidad a ese segundo perfil. En la revisión se vieron en pantalla la contraseña y dos tokens, así que se lo voy a avisar al ingeniero. Todo quedó subido y el uso semanal está en 63 %.
 
 ---
 
