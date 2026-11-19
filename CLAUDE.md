@@ -48,20 +48,20 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 
 12. **Mónica v15 con OpenAI** (ítems 652 a 657): probada en risosadmi con Groq. Falta con OpenAI (gpt-4.1), la lectura de PDF e imágenes y la consulta general (Pinecone), con las credenciales puestas.
 
-## Próxima sesión — por dónde seguir (actualizado el 2026-11-18, cierre)
+## Próxima sesión — por dónde seguir (actualizado el 2026-11-19, cierre)
 
 **Cómo trabajar (pedido de la usuaria, 23-oct):** de a poco, un paso por vez, de lo más chico a lo más grande, enumerando qué se hace y reportando el % de uso (`mcp__ccd_session_mgmt__get_usage`) al terminar cada paso. Si el uso semanal pasa el 90 %, parar y avisar.
 
 **Para gastar menos uso (revisado el 30-oct):** este archivo se carga entero en cada sesión y en cada mensaje, así que su tamaño es lo que más pesa. (1) Aquí quedan solo los ítems del changelog de los últimos 2 días; los demás van a `PROYECTO-SOL/historial/changelog-N-....md`. (2) Cada ítem nuevo, en 5 líneas o menos: qué se hizo, por qué y qué falta; el detalle técnico va en el mensaje del commit. (3) Solo los últimos 3 reportes diarios. (4) La referencia que casi no se usa va en su propio archivo con un puntero (por ejemplo, `PROYECTO-SOL/nomify/planilla-nicaragua.md`). (5) En Bubble, su CLAUDE.md guarda solo los últimos 10 ítems; el resto, en `docs/changelog-historico.md`. (6) Una sesión larga encarece cada mensaje: un tema grande y distinto (por ejemplo, el diseño de una mascota) va en su propia sesión. (7) Capturas de pantalla chicas (zoom o escala 0,5), sin repetirlas, y los ajustes de diseño pedidos juntos en un solo mensaje cuando se pueda.
 
-**Para mañana (19-nov):**
-1. **Hermes (tarea del ingeniero): darle personalidad al perfil `mda`** (el del negocio, casi sin usar), tomando como modelo a Cortana (ítem 666). Antes, preguntarle al ingeniero qué tiene que hacer ese agente, con qué herramientas y por qué canal. Conexión: `ssh` con `HERMES_SSH` de `.secrets.local.md`; la contraseña la escribe la usuaria (`HERMES_SSH_PASSWORD`, vacío: lo completa ella). Desde la app solo se puede LEER la terminal: los comandos los pega ella.
-2. Avisarle al ingeniero, en un solo mensaje: el 18-nov se vieron en pantalla la contraseña del servidor y los dos tokens MCP de Cortana (EasyPanel y WxFocus), para que decida si los cambia; y pedirle el JSON del Tutor (`9b9cd801…`) y del chat público (`91061fae…`), el acceso a la casilla de CE y borrar la conversación "PRUEBA SOL 1421" de la memoria de la app de producción; y que `apigrowth…/docs/api` da error 500 desde el 19-nov.
-3. **App Secret de Meta (ítem 664):** la usuaria lo copia de developers.facebook.com → app → Configuración → Básica, lo guarda como `META_APP_SECRET_CE=` en `.secrets.local.md` y se corre `python PROYECTO-SOL/scripts/cargar-meta-app-secret.py`; unos días en observación y pasar a `bloquear`.
-4. Mónica v15: Pinecone, OpenAI y Gmail de pruebas (risosadmi) ya conectados (19-nov, ítem 669); faltan Telegram y el chat del vendedor. **No encender el receptor sobre risosadmi sin filtro:** toma todos los no leídos; guía en `C:\SOLANGE RESPALDOS\agente-correo-monica-SOL\v15-SOL\GUIA_v15.md`.
-5. Que la usuaria revise el cotizador versión S en `http://127.0.0.1:8031` y decidir cuándo pasarlo a `DESARROLLO_SOL`.
-6. Lunes 23-nov: última semana de la rotación de horarios.
-7. Avatar de la intro de Bubble: hecho en 3D el 19-nov (sin gorro, gorro y gorra; ítems 614-615 de Bubble). **En el reporte del 19-nov poner las imágenes** (`Bubble-54/design/avatar-intro/modelo-3d/versiones/v1/render-frente.png`, `con-gorro/v2-gorro/vistas.png`, `con-gorro/v3-gorra/vistas.png`) para que Don Marc elija.
+**Para mañana (20-nov):**
+1. **Mensaje al ingeniero, en un solo mensaje:** (a) el 18-nov se vieron en pantalla la contraseña del servidor y los dos tokens MCP de Cortana (EasyPanel y WxFocus), para que decida si los cambia; (b) pedirle el JSON del Tutor (`9b9cd801…`) y del chat público (`91061fae…`); (c) acceso a la casilla de CE; (d) borrar la conversación "PRUEBA SOL 1421" de la memoria de la app de producción; (e) `apigrowth…/docs/api` da error 500 desde el 19-nov; (f) qué tiene que hacer el perfil `mda` de Hermes, con qué herramientas y por qué canal; (g) si ya tiene un bot de Telegram para los avisos de Mónica.
+2. **Mónica v15 (ítem 669):** Pinecone, OpenAI y Gmail de pruebas ya conectados. Falta Telegram: crear un bot con @BotFather (token en `.secrets.local.md` como `TELEGRAM_BOT_MONICA=`), que el vendedor (o la usuaria, para probar) le mande `/start`, y poner el chat en `📲 Telegram al vendedor`. Antes de probar, filtrar el receptor por asunto `PRUEBA SOL` (hoy toma todos los no leídos de risosadmi). **OpenAI es paga y del cliente:** avisar cuántas llamadas antes de usarla. Guía: `C:\SOLANGE RESPALDOSgente-correo-monica-SOL15-SOL\GUIA_v15.md`.
+3. **Hermes:** darle personalidad al perfil `mda` (ítem 666), cuando responda el ingeniero. Conexión por `ssh` con `HERMES_SSH`; la contraseña la escribe la usuaria.
+4. **App Secret de Meta (ítem 664):** la usuaria lo copia de developers.facebook.com → app → Configuración → Básica, lo guarda como `META_APP_SECRET_CE=` y se corre `python PROYECTO-SOL/scripts/cargar-meta-app-secret.py`. El 19-nov ya llegó el primer aviso real de Meta y quedó `sin_secretos`.
+5. **Avatar de Bubble:** esperar qué elige Don Marc (sin gorro, gorro o gorra; imágenes en el reporte del 19-nov). Después: vistas y giro de la elegida, y ponerla en la intro (ítems 614-615 del CLAUDE.md de Bubble). El visor se abre con `preview_start bubble54-design` → `http://localhost:5180/avatar-intro/modelo-3d/visor.html` (abierto como archivo sale en blanco).
+6. Que la usuaria revise el cotizador versión S en `http://127.0.0.1:8031` y decidir cuándo pasarlo a `DESARROLLO_SOL`.
+7. Viernes 20-nov: sale el 218 de Instagram. Lunes 23-nov: última semana de la rotación de horarios (08/12/17/19).
 
 **Orden de trabajo (lo nuestro):**
 1. ~~**Bubble — seguimiento a contactos calificados**~~: hecho el 26-oct (ítems 503 y 505 de Bubble; ítem 462 de acá). Falta probarlo con una llamada real.
@@ -707,6 +707,16 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-11-19 (Jueves)
+
+Arranqué con la rutina de G54: cero errores, el post de Facebook programado para hoy salió a su hora y lo único raro fue que la página de documentación de la API de G54 da error 500, que se lo voy a avisar al ingeniero. Después pasé casi todo el día con el avatar de la intro de Bubble. Hice una muestra en 2D del robot con el hoodie y le pusimos el logo de Bubble en el pecho, con la B en la burbuja grande y el 54 en la chica. Con esa imagen generamos el modelo en 3D con una herramienta gratuita de Hugging Face y después lo fui puliendo en Blender: quitamos una capucha doble y unos cordones repetidos, dejé la tela mate, el logo más nítido y limpié unas manchas que había inventado la IA en los costados. Quedó un visor en el navegador para girarlo, con tres versiones: sin gorro, con gorro de lana y con gorra, las dos con los audífonos por fuera.
+
+Más tarde el ingeniero me pasó la clave de Pinecone de Crating Express, y con eso le conecté a Mónica la base de conocimiento, OpenAI y el Gmail de pruebas, cuidando de no gastar nada porque la clave de OpenAI es paga y no es nuestra. A Mónica solo le falta el bot de Telegram para avisarle al vendedor, que lo vemos después. Todo quedó subido y el uso semanal está en 75 %.
+
+Las tres versiones del avatar quedan abajo para que Don Marc elija la que más le guste.
+
+---
+
 ### 2026-11-18 (Miércoles)
 
 Arranqué con la rutina de G54, todo limpio, y confirmé que los posts de Facebook y LinkedIn se publicaron con su enlace. Seguí con los pendientes de la revisión: saqué a Orison de los cinco lugares donde estaba escrita a mano en los flujos, arreglé el traductor de Marco que respondía los mensajes en inglés en vez de traducirlos (hasta inventaba cotizaciones), hice que los avisos de seguimiento no se repitan cada hora si falla una marca, y dejé instalado el control de la firma de Meta en modo observación, que queda esperando que yo cargue el App Secret.
@@ -724,13 +734,3 @@ Arranqué con la rutina de G54, todo limpio, y seguí cerrando los pendientes de
 En la tarde busqué los flujos del chat del cotizador para lo de los enlaces y los archivos, y comprobé que están en el n8n del ingeniero, así que dejé en el Tutor botones de ayuda con enlaces directos y queda pedirle el flujo. Con los archivos de Mónica que me pasó el ingeniero revisé el agente de correo, y de paso encontré que Marco cotizaba todo como cajón cerrado (una cuna salía 207 en vez de 700) y siempre por una unidad; lo corregí, y decidí que desde 2 unidades el descuento lo decida un vendedor. En Mónica hice las cuatro tareas que se podían: medidas convertidas por código, borradores con aviso al vendedor por Telegram en vez de responder sola, aviso de los correos que no son cotización y pagos unidos a su cotización. También vi que cotizaba 22 % más caro por un factor fijo, y quedó con el del panel, porque los precios no los cambiamos nosotros.
 
 Al final dejé a Mónica importada y apagada, la probé de punta a punta en el correo de risos con Groq porque no hay clave de OpenAI, y probé a Marco con una conversación completa en una copia sin envíos, para que no llegara ningún correo a Crating Express. Ahí apareció que preguntaba por la cotización formal antes de dar el precio, y quedó corregido. Para mañana queda pedirle al ingeniero el flujo del chat, los accesos de Hermes y la casilla de CE, y poner las credenciales de Mónica. Todo quedó subido y el uso semanal está en 43 %.
-
----
-
-### 2026-11-16 (Lunes)
-
-Arranqué con la rutina de G54 y todo estaba limpio, salvo que la tarea que programa los posts del lunes no corrió sola, así que aprobé las ideas de la semana y dejé programados los cuatro posts revisando sus textos e imágenes. Pegué las tareas que me dejó el ingeniero el viernes (el agente de Gmail de Crating Express, Hermes y los cambios al cotizador), que quedan esperando accesos; intenté entrar a n8n para ver el agente de Gmail, pero no me dejó.
-
-Mientras tanto hice una revisión completa de G54 con cuatro revisores en paralelo. Salió 61 %, más bajo que el sábado, porque esta vez se revisó también lo que habíamos dado por arreglado. Fui punto por punto y cerré 14 de los 15: respaldos de IA que se caían, puertas sin candado, mensajes que Marco perdía con el bot en pausa, posts que podían duplicarse en Facebook, tratos que bajaban de temperatura, notas del vendedor que se borraban, avisos cuando una respuesta no le llega al cliente, el prompt completo de Content AI, comentarios de Instagram que se descartaban y 56 nodos sin uso. Quedamos en un 70 % estimado, y de paso tapé una clave que estaba a la vista en el repo.
-
-En la tarde me encargaron la cuenta de TikTok de Orison, y con eso averigüé qué haría falta para que G54 publique en TikTok como en Facebook: dejé armado y probado el flujo que manda los posts a la bandeja de TikTok, pasé al Éxodo lo que le toca al ingeniero y armé el plan en un documento. Después tuve reunión con el ingeniero y con Don Marc para aprender sobre Hermes; el ingeniero me mostró cómo ejecutarlo en la máquina para empezar a trabajarlo y me respondió dudas de configuración y capacidad. Al final levanté Bubble en local. Ahí cerré, con todo subido y el uso semanal en 19 %.
