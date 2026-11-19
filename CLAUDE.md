@@ -61,7 +61,7 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 4. Mónica v15: poner credenciales (Gmail de pruebas, OpenAI, Pinecone, Telegram) y el chat del vendedor; guía en `C:\SOLANGE RESPALDOS\agente-correo-monica-SOL\v15-SOL\GUIA_v15.md`.
 5. Que la usuaria revise el cotizador versión S en `http://127.0.0.1:8031` y decidir cuándo pasarlo a `DESARROLLO_SOL`.
 6. Lunes 23-nov: última semana de la rotación de horarios.
-7. Avatar de la intro de Bubble: en pausa (decisión de la usuaria el 18-nov, no quedó conforme); ver ítem 667.
+7. Avatar de la intro de Bubble: hecho en 3D el 19-nov (sin gorro, gorro y gorra; ítems 614-615 de Bubble). **En el reporte del 19-nov poner las imágenes** (`Bubble-54/design/avatar-intro/modelo-3d/versiones/v1/render-frente.png`, `con-gorro/v2-gorro/vistas.png`, `con-gorro/v3-gorra/vistas.png`) para que Don Marc elija.
 
 **Orden de trabajo (lo nuestro):**
 1. ~~**Bubble — seguimiento a contactos calificados**~~: hecho el 26-oct (ítems 503 y 505 de Bubble; ítem 462 de acá). Falta probarlo con una llamada real.
