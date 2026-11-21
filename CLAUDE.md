@@ -27,7 +27,7 @@
 > **En una máquina nueva o un clon fresco del repo, el hook NO se activa solo** — correr una sola vez: `git config core.hooksPath .githooks`. Sin ese paso, el archivo existe en el repo pero git sigue mirando `.git/hooks/` y lo ignora.
 > **Actualizado 2026-09-28:** el `G54_AGENT_TOKEN` dejó de ser una excepción. Este repo es público, así que ningún secreto real vive en archivos versionados: el token de la API de n8n, el de Netlify, la key de VAPI, el `G54_AGENT_TOKEN` y la contraseña maestra de G54 están en **`.secrets.local.md`** (raíz del repo, en `.gitignore`, formato `NOMBRE=valor`). El hook también lee ese archivo y bloquea cualquier commit que contenga alguno de esos valores.
 
-## Pruebas pendientes (lista viva, actualizada el 2026-11-17)
+## Pruebas pendientes (lista viva, actualizada el 2026-11-21)
 
 Cambios ya hechos y probados por partes (código de producción con entradas simuladas o flujos temporales), que todavía no se confirmaron con un caso real de punta a punta. Al confirmar uno, sacarlo de acá y anotarlo en el ítem del changelog que corresponda.
 
@@ -47,21 +47,31 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 11. **Marco: descuento con 2+ unidades en una conversación real** (ítems 649 a 651, 658 y 659): tipo de caja, cantidad y pregunta del correo ya probados de punta a punta en una copia sin envíos. El aviso de descuento va a cratingexpress01@gmail.com y la usuaria no quiere correos de prueba ahí: confirmarlo con el primer cliente real que pida 2 unidades o más.
 
 
-## Próxima sesión — por dónde seguir (actualizado el 2026-11-19, cierre)
+## Próxima sesión — por dónde seguir (actualizado el 2026-11-21)
 
 **Cómo trabajar (pedido de la usuaria, 23-oct):** de a poco, un paso por vez, de lo más chico a lo más grande, enumerando qué se hace y reportando el % de uso (`mcp__ccd_session_mgmt__get_usage`) al terminar cada paso. Si el uso semanal pasa el 90 %, parar y avisar.
 
 **Para gastar menos uso (revisado el 30-oct):** este archivo se carga entero en cada sesión y en cada mensaje, así que su tamaño es lo que más pesa. (1) Aquí quedan solo los ítems del changelog de los últimos 2 días; los demás van a `PROYECTO-SOL/historial/changelog-N-....md`. (2) Cada ítem nuevo, en 5 líneas o menos: qué se hizo, por qué y qué falta; el detalle técnico va en el mensaje del commit. (3) Solo los últimos 3 reportes diarios. (4) La referencia que casi no se usa va en su propio archivo con un puntero (por ejemplo, `PROYECTO-SOL/nomify/planilla-nicaragua.md`). (5) En Bubble, su CLAUDE.md guarda solo los últimos 10 ítems; el resto, en `docs/changelog-historico.md`. (6) Una sesión larga encarece cada mensaje: un tema grande y distinto (por ejemplo, el diseño de una mascota) va en su propia sesión. (7) Capturas de pantalla chicas (zoom o escala 0,5), sin repetirlas, y los ajustes de diseño pedidos juntos en un solo mensaje cuando se pueda.
 
-**Para la próxima sesión (desde el 20-nov):**
-0. **Responderle a Don Marc lo de la organización** (reunión del 20-nov).
-1. **Mensaje al ingeniero y a Silvia: redactados el 21-nov** en `PROYECTO-SOL/g54/mensajes/2026-11-21-silvia-y-ingeniero.md` (falta que la usuaria los mande). Don Marc (comentario del 20-nov): coordinar con Silvia cuándo activar Orison; lo de la organización «no es prioridad». Avatar: generar de nuevo (no editar) tras el reinicio del uso, viendo la tendencia de agentes que mandó Don Marc en Notion. Detalle anterior (sumar: paquete de Mónica v15 en `agente-correo-monica-SOL\v15-SOL\para-el-ingeniero\`, el pedido de `{{nombre}}`, si conectó «WtCelebration» a Orison, si hay que pasar a `api.growth54.com` y los borradores 7 y 8 de Camila pendientes desde el 28-oct): (a) el 18-nov se vieron en pantalla la contraseña del servidor y los dos tokens MCP de Cortana (EasyPanel y WxFocus), para que decida si los cambia; (b) pedirle el JSON del Tutor (`9b9cd801…`) y del chat público (`91061fae…`); (c) acceso a la casilla de CE; (d) borrar la conversación "PRUEBA SOL 1421" de la memoria de la app de producción; (e) `apigrowth…/docs/api` da error 500 desde el 19-nov; (f) qué tiene que hacer el perfil `mda` de Hermes, con qué herramientas y por qué canal; (g) si ya tiene un bot de Telegram para los avisos de Mónica.
-3. **Hermes:** la personalidad la damos nosotros (aclarado por la usuaria el 21-nov), no hay que esperar al ingeniero: **pedirle a la usuaria el dato de Notion con lo que hará cada perfil** y con eso armar el perfil `mda` (ítem 666).
-3b. **Lista de pruebas de las tareas del ingeniero (21-nov):** https://claude.ai/artifact/7SCtd5Eqqubm8CX5PA2unS (26 pruebas: capturas de correos reales de CE para la tarea 1a, que hace la usuaria a mano; Mónica v15 con OpenAI; cotizador versión S; Hermes). Los JSON que mandó el ingeniero el 21-nov (`1_Procesador_SOL`, `2_Receptor_SOL`, `GUIA_SOL`) son Mónica v14, no los chats del cotizador: los JSON del Tutor y del chat público siguen faltando. Conexión por `ssh` con `HERMES_SSH`; la contraseña la escribe la usuaria. Mónica: terminada y probada en real el 21-nov (ítems 682 a 691); solo falta que el ingeniero importe la v15.
-4. **App Secret de Meta (ítem 664):** la usuaria lo copia de developers.facebook.com → app → Configuración → Básica, lo guarda como `META_APP_SECRET_CE=` y se corre `python PROYECTO-SOL/scripts/cargar-meta-app-secret.py`. El 19-nov ya llegó el primer aviso real de Meta y quedó `sin_secretos`.
-5. **Avatar de Bubble:** esperar qué elige Don Marc (sin gorro, gorro o gorra; imágenes en el reporte del 19-nov). Después: vistas y giro de la elegida, y ponerla en la intro (ítems 614-615 del CLAUDE.md de Bubble). El visor se abre con `preview_start bubble54-design` → `http://localhost:5180/avatar-intro/modelo-3d/visor.html` (abierto como archivo sale en blanco).
-6. Que la usuaria revise el cotizador versión S en `http://127.0.0.1:8031` y decidir cuándo pasarlo a `DESARROLLO_SOL`.
-7. Viernes 20-nov: sale el 218 de Instagram. Lunes 23-nov: última semana de la rotación de horarios (08/12/17/19).
+**Para la próxima sesión (actualizado el 21-nov):**
+
+*Para hacer ya:*
+1. **Confirmar que salió el 218 de Instagram** (reprogramado para el 21-nov 17:00 Miami, ítem 681) y que CE sigue con Facebook e Instagram en `social-targets`.
+2. **Mandar al ingeniero el paquete de Mónica v15** (`C:\SOLANGE RESPALDOS\agente-correo-monica-SOL\v15-SOL\para-el-ingeniero\`, 3 archivos + `LEEME.md`): lo manda la usuaria. El mensaje de los 9 puntos ya se lo mandó el 21-nov.
+3. **Mandar a Silvia el mensaje de Orison y Meta** (`PROYECTO-SOL/g54/mensajes/2026-11-21-silvia-y-ingeniero.md`): lo manda la usuaria. Don Marc pidió coordinar con ella cuándo activar Orison.
+4. **Lunes 23-nov: rotación de horarios, última semana** (08/12/17/19, mar/mié/jue/vie): aprobar ideas, generar y programar posts.
+
+*Esperando un dato de la usuaria:*
+5. **Hermes:** la personalidad la damos nosotros; pedirle el dato de Notion con lo que hará cada perfil y armar el perfil `mda` (ítem 666).
+6. **Avatar de Bubble:** Don Marc eligió la gorra (20-nov). Generar los personajes de nuevo (no editar imágenes) viendo la tendencia de agentes que mandó Don Marc en Notion (sale vacía por la API: pedírsela a la usuaria). Detalle en el ítem 619 del CLAUDE.md de Bubble.
+7. **App Secret de Meta (ítem 664):** la usuaria lo copia de developers.facebook.com → app → Configuración → Básica, lo guarda como `META_APP_SECRET_CE=` y se corre `python PROYECTO-SOL/scripts/cargar-meta-app-secret.py`.
+8. **Cotizador versión S:** que la usuaria lo revise en `http://127.0.0.1:8031` y decidir cuándo pasarlo a `DESARROLLO_SOL`.
+9. **Mínimo de $159 por pieza:** el cotizador no lo cobra y la vendedora sí (ítem 682); lo deciden la usuaria, la vendedora y el ingeniero.
+
+*Sin prisa:*
+10. Responderle a Don Marc lo de la organización («no es prioridad», comentario del 20-nov).
+
+*Lista para tachar de las tareas del ingeniero:* https://claude.ai/artifact/7SCtd5Eqqubm8CX5PA2unS
 
 **Orden de trabajo (lo nuestro):**
 1. ~~**Bubble — seguimiento a contactos calificados**~~: hecho el 26-oct (ítems 503 y 505 de Bubble; ítem 462 de acá). Falta probarlo con una llamada real.
@@ -69,7 +79,8 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 3. **Bubble — pendientes de seguridad del 15-oct** (sección "Pendientes" del CLAUDE.md de Bubble, punto 7). El tope de descargas CSV quedó hecho el 27-oct; el horario de las salientes ya usa la zona del cliente (ítem 462). El cifrado del resumen, la escalación y las notas quedó hecho el 27-oct (ítem 515 de Bubble; en el servidor de Walter hay que correr `python -m scripts.encrypt_existing` una vez). La conversación limpia en el panel quedó hecha el 27-oct (ítem 516 de Bubble). Bubbli fase 3 (sugerencias con datos reales) quedó hecha el 27-oct (ítem 517 de Bubble), y Bubbli en el celular, el 29-oct (ítem 537 de Bubble). Queda solo la confirmación por SMS (en espera porque cuesta plata). Comprar números: solo la agencia (decidido el 27-oct; ya estaba aplicado desde el 21-oct).
 4. **G54:** ~~revisar el informe mensual del 28-oct~~ (hecho, ítem 467). **Rotación de horarios (pedido de la usuaria, 26-oct), cada lunes hasta la semana del 30-nov:** aprobar las ideas nuevas, generar los posts y programarlos en hora de Miami (`fecha_programada` sin "Z"): martes Facebook, miércoles LinkedIn, jueves Facebook, viernes Instagram. Horas por semana: 2-nov 12/17/19/08 · 9-nov 17/19/08/12 · 16-nov 19/08/12/17 · 23-nov 08/12/17/19 · 30-nov 12/17/19/08 (mar/mié/jue/vie). Con 6 semanas, cada horario junta 6 posts. El cálculo de `sugerencia-horario` con el piso mínimo ya quedó hecho el 29-oct (ítem 487) y se activa solo cuando haya datos.
 
-**Tareas del ingeniero (reunión del 14-nov), estado al 17-nov:**
+**Tareas del ingeniero (reunión del 14-nov), estado al 21-nov:**
+1. ~~**Agente de Gmail de CE (Mónica)**~~: terminada y probada en real el 21-nov (ítems 682 a 691: correos reales analizados, adjuntos, pagos, dos opciones, correo suelto unido a su cotización, saludo). Falta que el ingeniero importe la v15 y apague la v14.
 2. **HERMES:** analizado el 18-nov (ítem 666). La tarea es darle personalidad al perfil `mda`. Acceso: por `ssh` con contraseña (la tiene la usuaria).
 3. **Cotizador de Crating Express:** hecho en la versión S (ítems 640 a 648, rama `version-S`): Dashwork, ayuda, CRM propio (independiente del de G54, decisión de la usuaria), CSV, preferidos, proveedor, logo y botones de ayuda en el Tutor. Falta: que la usuaria revise la versión S y pasarla a `DESARROLLO_SOL`. (Lo de leer audios, PDF e imágenes era para Mónica, no para el chat: hecho el 21-nov, ítems 686 a 691.)
 
@@ -77,7 +88,7 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 
 **De la usuaria (no se pueden hacer desde acá):** probar "Probar mi agente" con el agente de voz encendido (lo hace ella); permisos de estadísticas de LinkedIn.
 
-**Del ingeniero:** los 15 pedidos del Éxodo (el 15.º, `rrss_reel`, sumado el 11-nov) (5-nov: 4 resueltos el 4-nov y probados en vivo) (el 5-nov, tras la reunión con el ingeniero, el cotizador y lo legal pasaron a `g54/exodo/tarea-adicional-*.html`; revisado el 27-oct contra el panel `index-wpoZAdm_.js`: se sacaron 7 resueltos; el 28-oct se sumaron 6 de Correo y 2 de Backend, ítems 479 y 480) de `PROYECTO-SOL/g54/exodo/exodo-g54-VIGENTE.html`.
+**Del ingeniero:** los 17 pedidos del Éxodo (entre ellos `rrss_reel` y el `{{nombre}}` de los correos), más el error de «Conectar con Meta» que borró la página de CE (ítem 680) y borrar las conversaciones «PRUEBA SOL» de la memoria de su app (5-nov: 4 resueltos el 4-nov y probados en vivo) (el 5-nov, tras la reunión con el ingeniero, el cotizador y lo legal pasaron a `g54/exodo/tarea-adicional-*.html`; revisado el 27-oct contra el panel `index-wpoZAdm_.js`: se sacaron 7 resueltos; el 28-oct se sumaron 6 de Correo y 2 de Backend, ítems 479 y 480) de `PROYECTO-SOL/g54/exodo/exodo-g54-VIGENTE.html`.
 
 ## Qué es este proyecto
 
