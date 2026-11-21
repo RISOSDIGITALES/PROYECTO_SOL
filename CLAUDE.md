@@ -68,10 +68,9 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 6. **Avatar de Bubble:** Don Marc eligió la gorra (20-nov). Generar los personajes de nuevo (no editar imágenes) viendo la tendencia de agentes que mandó Don Marc en Notion (sale vacía por la API: pedírsela a la usuaria). Detalle en el ítem 619 del CLAUDE.md de Bubble.
 7. **App Secret de Meta (ítem 664):** la usuaria lo copia de developers.facebook.com → app → Configuración → Básica, lo guarda como `META_APP_SECRET_CE=` y se corre `python PROYECTO-SOL/scripts/cargar-meta-app-secret.py`.
 8. **Cotizador versión S:** que la usuaria lo revise en `http://127.0.0.1:8031` y decidir cuándo pasarlo a `DESARROLLO_SOL`.
-9. **Mínimo de $159 por pieza:** el cotizador no lo cobra y la vendedora sí (ítem 682); lo deciden la usuaria, la vendedora y el ingeniero.
 
 *Sin prisa:*
-10. Responderle a Don Marc lo de la organización («no es prioridad», comentario del 20-nov).
+9. Responderle a Don Marc lo de la organización («no es prioridad», comentario del 20-nov).
 
 *Lista para tachar de las tareas del ingeniero:* https://claude.ai/artifact/7SCtd5Eqqubm8CX5PA2unS
 
