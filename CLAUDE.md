@@ -740,6 +740,16 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-11-21 (Sábado)
+
+Arranqué con la rutina de G54 y encontré que el post 218 de Instagram no había salido: Crating Express se había quedado sin Facebook ni Instagram en G54, casi seguro porque al conectar Orison con su propia página se borró la de CE. Los volví a conectar y reprogramé el 218 para hoy a las 17:00 de Miami. Leí los comentarios de Don Marc al reporte de ayer, dejé redactado un mensaje para Silvia sobre lo de Orison y le mandé al ingeniero un solo mensaje con todos los pendientes.
+
+Después me dediqué a Mónica. Pasé capturas de correos reales de Crating Express, analizamos cómo piden los clientes y cómo responde Lea, y con eso aprendió a cotizar las dos opciones cuando piden abierto y cerrado, a entender huacal, a reconocer pagos con el impuesto y a pasarle al vendedor los servicios especiales. Como el ingeniero no va a pasar los chats, entendimos que lo que quería era que Mónica leyera multimedia, así que tomamos como guía el procesador de Marco y ahora lee PDF, Excel, Word, audios y fotos. También une un correo suelto a su cotización anterior y saluda según la hora. La probamos de verdad con la casilla de pruebas y los avisos me llegaron a Telegram; en las pruebas salieron dos errores que quedaron corregidos, y el paquete quedó listo para que lo importe el ingeniero.
+
+En la tarde revisé el cotizador versión S: arreglé los signos de ayuda del Dashboard, que no abrían nada, y le agregué al CRM un historial completo con cada cambio, quién lo hizo y comentarios, además del ID de empresa en la lista de clientes. Todo quedó subido y el uso semanal llegó al 98 %, así que lo dejé ahí hasta el reinicio de mañana.
+
+---
+
 ### 2026-11-20 (Viernes)
 
 Arranqué con la rutina de G54: cero errores, el post de Facebook de ayer salió a su hora y la documentación de la API seguía caída. Revisando la API vi que a Orison le conectaron una página de Facebook propia, así que la desactivé en G54 para que siga en pausa y los agentes no la retomen el lunes. Después seguí con Mónica: le filtré el receptor para que solo tome correos de prueba, creé el bot de Telegram para avisarle al vendedor y la probé completa con OpenAI, con solo dos llamadas: clasificó, cotizó, dejó el borrador en Gmail y me llegó el aviso. Pulí ese aviso y dejé un paquete listo para el ingeniero, porque la Mónica que atiende a los clientes corre en su n8n.
@@ -757,13 +767,3 @@ Arranqué con la rutina de G54: cero errores, el post de Facebook programado par
 Más tarde el ingeniero me pasó la clave de Pinecone de Crating Express, y con eso le conecté a Mónica la base de conocimiento, OpenAI y el Gmail de pruebas, cuidando de no gastar nada porque la clave de OpenAI es paga y no es nuestra. A Mónica solo le falta el bot de Telegram para avisarle al vendedor, que lo vemos después. Todo quedó subido y el uso semanal está en 75 %.
 
 Las tres versiones del avatar quedan abajo para que Don Marc elija la que más le guste.
-
----
-
-### 2026-11-18 (Miércoles)
-
-Arranqué con la rutina de G54, todo limpio, y confirmé que los posts de Facebook y LinkedIn se publicaron con su enlace. Seguí con los pendientes de la revisión: saqué a Orison de los cinco lugares donde estaba escrita a mano en los flujos, arreglé el traductor de Marco que respondía los mensajes en inglés en vez de traducirlos (hasta inventaba cotizaciones), hice que los avisos de seguimiento no se repitan cada hora si falla una marca, y dejé instalado el control de la firma de Meta en modo observación, que queda esperando que yo cargue el App Secret.
-
-Después me pidieron un avatar 3D para la página de introducción de Bubble: un robot con hoodie de la marca. Pasé gran parte del día en eso, probando varios caminos, desde código hasta Blender con simulación de tela, y al final con un hoodie profesional que bajé de Sketchfab con una cuenta que creé por Epic Games. Mejoró mucho, pero no quedé conforme con el resultado y lo dejé en pausa.
-
-Al final del día analicé Hermes, la tarea del ingeniero. Entré al servidor por SSH y vi que es el agente de Nous Research con dos perfiles: Cortana, la asistente personal de Walter, y el de MDA, casi sin usar. Mi tarea va a ser darle personalidad a ese segundo perfil. En la revisión se vieron en pantalla la contraseña y dos tokens, así que se lo voy a avisar al ingeniero. Todo quedó subido y el uso semanal está en 63 %.
