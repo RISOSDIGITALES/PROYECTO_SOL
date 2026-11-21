@@ -17,11 +17,10 @@ Buenos días, Don Walter. Le junto en un solo mensaje lo que tengo pendiente con
 3. **`{{nombre}}` en los correos:** la IA de plantillas escribe «Hola {{nombre}},», pero G54 no lo reemplaza y el correo llega así al cliente (lo comprobé con un envío real). Le pido que G54 lo reemplace con `destinatario_nombre`, y que use un saludo neutro cuando no haya nombre.
 4. **Seguridad (18-nov):** en la revisión de Hermes se vieron en pantalla la contraseña del servidor y los dos tokens MCP de Cortana (EasyPanel y WxFocus). Usted decide si los cambia.
 5. **Hermes:** ¿qué tiene que hacer el perfil `mda`, con qué herramientas y por qué canal?
-6. **JSON del Tutor (`9b9cd801…`) y del chat público (`91061fae…`)** del cotizador, para que el chat responda con enlaces y lea audios, PDF e imágenes.
-7. **Acceso a la casilla de Crating Express**, para analizar los correos reales antes de encender Mónica.
-8. **Borrar la conversación «PRUEBA SOL 1421»** de la memoria de la app de producción.
-9. **Dominio:** `api.growth54.com` ya responde lo mismo que `apigrowth.mdarthurdigital.com`. ¿Pasamos los flujos al dominio nuevo o seguimos con el actual?
-10. **Borradores 7 y 8 de Camila** (prospectos reales, del 28-oct) siguen esperando aprobación en G54.
-11. **`rrss_reel`** sigue faltando en el catálogo de `agent-endpoints` (está en el Éxodo).
+6. **Los dos chats del cotizador**, para que respondan con enlaces y entiendan audios, PDF e imágenes. Los archivos que me mandó (`1_Procesador_SOL`, `2_Receptor_SOL`, `GUIA_SOL`) son el agente de correo v14, no los chats. Necesito, exportados de su n8n (menú `⋯` → Download): el flujo del **Tutor** (el webhook que empieza con `9b9cd801…`) y el del **chat público** (el que empieza con `91061fae…`), más cualquier subflujo que llamen. Si es fácil, dígame también qué modelo y qué credenciales usa cada uno. Los modifico en mi n8n y se los devuelvo para que los importe, igual que con Mónica.
+7. **Borrar la conversación «PRUEBA SOL 1421»** de la memoria de la app de producción.
+8. **Dominio:** `api.growth54.com` ya responde lo mismo que `apigrowth.mdarthurdigital.com`. ¿Pasamos los flujos al dominio nuevo o seguimos con el actual?
+9. **Borradores 7 y 8 de Camila** (prospectos reales, del 28-oct) siguen esperando aprobación en G54.
+10. **`rrss_reel`** sigue faltando en el catálogo de `agent-endpoints` (está en el Éxodo).
 
 ¡Gracias!
