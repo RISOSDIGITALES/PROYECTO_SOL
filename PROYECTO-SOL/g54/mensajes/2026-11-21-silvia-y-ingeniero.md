@@ -16,11 +16,10 @@ Buenos días, Don Walter. Le junto en un solo mensaje lo que tengo pendiente con
 2. **Mónica v15 lista para importar** en su n8n: paquete en `agente-correo-monica-SOL\v15-SOL\para-el-ingeniero\` (procesador, receptor y `LEEME.md` con los pasos). Antes de encender la v15, apagar la v14, porque si las dos leen la misma casilla, se contesta dos veces. Va sin credenciales; hay que ponerlas y que el vendedor le dé `/start` al bot de avisos. Si usted ya tiene un bot de Telegram para estos avisos, se usa ese.
 3. **`{{nombre}}` en los correos:** la IA de plantillas escribe «Hola {{nombre}},», pero G54 no lo reemplaza y el correo llega así al cliente (lo comprobé con un envío real). Le pido que G54 lo reemplace con `destinatario_nombre`, y que use un saludo neutro cuando no haya nombre.
 4. **Seguridad (18-nov):** en la revisión de Hermes se vieron en pantalla la contraseña del servidor y los dos tokens MCP de Cortana (EasyPanel y WxFocus). Usted decide si los cambia.
-5. **Hermes:** ¿qué tiene que hacer el perfil `mda`, con qué herramientas y por qué canal?
-6. **Los dos chats del cotizador**, para que respondan con enlaces y entiendan audios, PDF e imágenes. Los archivos que me mandó (`1_Procesador_SOL`, `2_Receptor_SOL`, `GUIA_SOL`) son el agente de correo v14, no los chats. Necesito, exportados de su n8n (menú `⋯` → Download): el flujo del **Tutor** (el webhook que empieza con `9b9cd801…`) y el del **chat público** (el que empieza con `91061fae…`), más cualquier subflujo que llamen. Si es fácil, dígame también qué modelo y qué credenciales usa cada uno. Los modifico en mi n8n y se los devuelvo para que los importe, igual que con Mónica.
-7. **Borrar la conversación «PRUEBA SOL 1421»** de la memoria de la app de producción.
-8. **Dominio:** `api.growth54.com` ya responde lo mismo que `apigrowth.mdarthurdigital.com`. ¿Pasamos los flujos al dominio nuevo o seguimos con el actual?
-9. **Borradores 7 y 8 de Camila** (prospectos reales, del 28-oct) siguen esperando aprobación en G54.
-10. **`rrss_reel`** sigue faltando en el catálogo de `agent-endpoints` (está en el Éxodo).
+5. **Los dos chats del cotizador**, para que respondan con enlaces y entiendan audios, PDF e imágenes. Los archivos que me mandó (`1_Procesador_SOL`, `2_Receptor_SOL`, `GUIA_SOL`) son el agente de correo v14, no los chats. Necesito, exportados de su n8n (menú `⋯` → Download): el flujo del **Tutor** (el webhook que empieza con `9b9cd801…`) y el del **chat público** (el que empieza con `91061fae…`), más cualquier subflujo que llamen. Si es fácil, dígame también qué modelo y qué credenciales usa cada uno. Los modifico en mi n8n y se los devuelvo para que los importe, igual que con Mónica.
+6. **Borrar la conversación «PRUEBA SOL 1421»** de la memoria de la app de producción.
+7. **Dominio:** `api.growth54.com` ya responde lo mismo que `apigrowth.mdarthurdigital.com`. ¿Pasamos los flujos al dominio nuevo o seguimos con el actual?
+8. **Borradores 7 y 8 de Camila** (prospectos reales, del 28-oct) siguen esperando aprobación en G54.
+9. **`rrss_reel`** sigue faltando en el catálogo de `agent-endpoints` (está en el Éxodo).
 
 ¡Gracias!
