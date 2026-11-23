@@ -1,4 +1,5 @@
 # Cotizador versión S — lista de pruebas (23-nov-2026)
+n**Para tachar en línea:** https://claude.ai/artifact/5aPSrmtT4NeV7iuHXFZjLg
 
 **Dónde:** http://127.0.0.1:8031/login (Laragon con MySQL encendido). Usuarios y contraseñas en `C:\SOLANGE RESPALDOS\cotizcratingexpress-wx-S\ACCESO-LOCAL.txt`: **admin** y **vendedor** (este último para probar permisos).
 

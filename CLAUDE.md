@@ -76,6 +76,8 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 
 *Lista para tachar de las tareas del ingeniero:* https://claude.ai/artifact/7SCtd5Eqqubm8CX5PA2unS
 
+*Lista para tachar de las pruebas del cotizador versión S (23-nov):* https://claude.ai/artifact/5aPSrmtT4NeV7iuHXFZjLg
+
 **Orden de trabajo (lo nuestro):**
 1. ~~**Bubble — seguimiento a contactos calificados**~~: hecho el 26-oct (ítems 503 y 505 de Bubble; ítem 462 de acá). Falta probarlo con una llamada real.
 2. ~~**Bubble — último detalle de la auditoría**~~: el #62 se cerró el 27-oct: el dato sí estaba en el perfil del negocio demo (la auditoría se equivocó), y quedó igual una regla contra inventar plazos y condiciones. Después, probar en una llamada real los puntos 5 a 7 de "Pruebas pendientes" del CLAUDE.md de Bubble.
