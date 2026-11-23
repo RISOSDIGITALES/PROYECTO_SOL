@@ -41,7 +41,7 @@ Marcar cada una con ✅ o anotar qué pasó.
 - [ ] 24. El vendedor no ve «Etapas» ni puede entrar escribiendo `/crm/etapas` (debe dar error de permiso).
 - [ ] 25. El vendedor no puede abrir ni editar un trato a cargo de otro vendedor; sí los suyos y los sin asignar.
 - [ ] 26. El vendedor no puede borrar una actividad que registró el admin.
-- [ ] 27. **Para decidir:** hoy el vendedor sí puede importar CSV con «actualizar» (cambia datos de clientes). ¿Está bien o debería ser solo del admin?
+- [ ] 27. El vendedor puede importar CSV con «actualizar» (decidido por la usuaria el 23-nov: queda así). Probar que funcione con su usuario.
 
 ## 6. Lo de siempre (que no se haya roto)
 - [ ] 28. Cotización interna: cotizar una caja y ver que dé el mismo precio que antes (mismo tipo y medidas).
