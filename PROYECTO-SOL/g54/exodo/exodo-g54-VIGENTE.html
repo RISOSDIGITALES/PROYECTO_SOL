@@ -158,11 +158,12 @@
     <h1>Éxodo — Pendientes para el ingeniero · <span>13 Oct 2026</span></h1>
     <p>Reemplaza a <code style="color:#a78bfa;background:transparent;border:none;">exodo-g54-oct09.html</code>. Este documento lista los pedidos abiertos por área — el historial de qué se confirmó resuelto y cuándo está abajo, plegado.</p>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> 17 pedidos activos</div>
+      <div class="meta-item"><div class="dot"></div> 18 pedidos activos</div>
     </div>
     <details class="header-updates">
       <summary>Historial de actualizaciones (47 entradas)</summary>
       <ul>
+        <li><strong class="upd-date">23-nov:</strong> Camila pasó al diseño de G54 (correo por partes). <strong>1 pedido nuevo en Correo:</strong> que el pie salga en el idioma del correo (hoy sale siempre en español, también en los correos en inglés). Quedan 18 pedidos.</li>
         <li><strong class="upd-date">20-nov:</strong> revisado contra la documentación nueva (volvió el 20-nov tras dar error 500 desde el 19-nov) y el panel nuevo <code>index-CGvAYEKI.js</code>, todo probado en vivo con datos de prueba ya borrados. <strong>Resueltos en parte:</strong> Métricas (bloque "Demanda" y "Leads por semana de estrategia"), el pie de los correos (la ruta ya existe; falta la vista previa en Ajustes) y editar el borrador como plantilla (plantillas por empresa, borradores por partes y "Enviarme una prueba"). <strong>1 pedido nuevo en Correo:</strong> que <code>{{nombre}}</code> se reemplace por el nombre del destinatario (hoy llega tal cual). Siguen igual: <code>rrss_reel</code> fuera del catálogo, <code>scheduled_at</code> ignorado al crear un borrador, el 500 en <code>/api/crm/deals/merge</code> y las rutas de lectura sin token. Quedan 17 pedidos.</li>
         <li><strong class="upd-date">16-nov:</strong> 1 pedido nuevo en TikTok: crear la app de G54 en TikTok, verificar el dominio de las imágenes, el botón "Conectar con TikTok", la ruta del token para n8n, TikTok como plataforma de los posts y el estado "En la bandeja de TikTok", y la pantalla de aprobación que TikTok exige para la auditoría. El flujo que publica (<code>tiktok-publish-g54</code>) ya está armado y probado contra la API de TikTok.</li>
         <li><strong class="upd-date">11-nov:</strong> 1 pedido nuevo en Backend: sumar la clave <code>rrss_reel</code> al catálogo de <code>/api/agent-endpoints</code>. Probado subiendo un video al pedido de grabación 2: G54 creó el post 214 con el video, pero el aviso a Reels AI no salió porque la clave no está en el catálogo, y al registrarla responde 422.</li>
@@ -315,7 +316,7 @@
         <li>Un botón "Enviarme una prueba" que mande el borrador al correo del usuario del panel antes de aprobarlo.</li>
       </ol>
       <p class="item-why"><strong>Ya está (20-nov), gracias:</strong> plantillas por empresa (<code>/api/email-templates</code>, con 5 predefinidas, vista previa y propuesta de la IA), borradores por partes en <code>POST /api/agent/email/drafts</code> y <code>PATCH</code>, y el botón "Enviarme una prueba". Probado en vivo con Crating Express: escapa etiquetas, descarta colores inválidos y no deja programar un correo sin enlace de baja (422). Queda abierta la tarjeta de abajo sobre <code>{{nombre}}</code>.</p>
-      <p class="item-why"><strong>De nuestro lado:</strong> Camila ya arma el correo por partes antes de convertirlo en HTML. Apenas existan los campos, los manda por separado y deja de mandar el HTML.</p>
+      <p class="item-why"><strong>En uso desde el 23-nov:</strong> Camila manda el correo por partes con su <code>enlace_baja</code> firmado y G54 lo arma con su diseño y su pie.</p>
     </div>
   </div>
 
@@ -332,6 +333,22 @@
         <li>Antes de enviar, frenar con 422 cualquier marcador <code>{{…}}</code> que quede sin reemplazar, igual que con el enlace de baja.</li>
       </ol>
       <p class="item-why"><strong>Cómo se prueba:</strong> armar un borrador por partes con "Hola {{nombre}}," y <code>destinatario_nombre</code> "Ana Prueba", y con "Enviarme una prueba" ver que llegue "Hola Ana Prueba,".</p>
+    </div>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">El pie del correo en el idioma del correo (23-nov)</div><div class="item-where">Correo · <code>POST /api/agent/email/drafts</code> por partes · <code>GET /api/n8n/companies/{id}/email/footer-html</code></div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why"><strong>Qué pasa (23-nov):</strong> un borrador por partes con <code>partes.idioma = "en"</code> sale con el cuerpo en inglés y el pie en español: "Lunes a viernes, 8:00 a.m. - 4:00 p.m." y "Si no quieres recibir más correos de Crating Express, puedes darte de baja aquí". Camila escribe en inglés a los prospectos de EE. UU., así que ese pie les llega en otro idioma. Visto en el borrador 18 de Crating Express (prueba, sin enviar).</p>
+      <p class="item-why"><strong>Pedido:</strong></p>
+      <ol class="item-why">
+        <li>Armar el pie en el idioma de <code>partes.idioma</code> (<code>es</code>, <code>en</code>, <code>pt</code>): la frase de baja y la palabra del horario.</li>
+        <li>Para el horario, aceptar un texto por idioma en el perfil de la empresa (por ejemplo <code>business_hours_en</code>) o recibirlo en el borrador; si no hay, dejar el que está cargado.</li>
+        <li>Lo mismo en <code>footer-html</code>, con un parámetro <code>?idioma=en</code>.</li>
+      </ol>
+      <p class="item-why"><strong>Cómo se prueba:</strong> crear un borrador por partes con <code>idioma</code> "en" y ver que el pie diga "If you would rather not receive more emails from Crating Express, you can unsubscribe here" y el horario en inglés.</p>
     </div>
   </div>
 
