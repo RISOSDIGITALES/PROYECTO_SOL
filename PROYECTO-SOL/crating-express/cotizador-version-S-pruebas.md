@@ -50,4 +50,4 @@ Marcar cada una con ✅ o anotar qué pasó.
 - [ ] 29. Cotizador abierto (sin sesión): cotiza y se ve bien en el celular.
 
 ## Después de probar
-Si todo sale bien: avisarle al ingeniero que lo pase a producción (respaldar la base y correr `php artisan migrate --force`; son 6 migraciones).
+Si todo sale bien: avisarle al ingeniero que lo pase a producción (respaldar la base y correr `php artisan migrate --force`; son 7 migraciones).
