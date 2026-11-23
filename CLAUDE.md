@@ -735,6 +735,24 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-11-23 (Lunes)
+
+Arranqué con la rutina: cero errores, el 218 de Instagram salió el sábado a su hora y dejé programados los cuatro posts de esta semana, la penúltima de la rotación de horarios. Leí los comentarios de Don Marc del sábado y sumé ese paso a la rutina diaria para no saltarlo. Mientras yo probaba el cotizador, pasamos los correos de Camila al diseño de G54 que ya estaba aprobado y corregimos la razón social de Crating Express a Kabendish Corp.
+
+La mayor parte del día fue el cotizador versión S. Le hice una última inspección, armé una lista de pruebas para ir tachando y, con mis notas, corregimos el nombre Kabendish, que el archivo de clientes actualice por ID en vez de crear clientes repetidos, y que la lista muestre a cada persona de contacto con su ID de cliente y el ID de su empresa, que lleva a todo lo de esa empresa. Claude corrió la revisión general y arregló detalles del celular y del logo, y yo quedé con la revisión final: la exportación ahora sale en Excel con sus columnas y cada empresa tiene su contacto principal. Lo pasé a DESARROLLO_SOL, el ingeniero lo lleva a producción y ahí lo volvemos a probar entero.
+
+Con Mónica revisé que nunca envía correos sola: siempre deja borrador y avisa por Telegram. Le agregamos la firma real de la casilla de Gmail y una línea en el aviso que resume de qué trata cada correo; lo probamos con un correo real y el paquete quedó en el repositorio. Ya se lo indiqué al ingeniero, con el aviso de que el cotizador no aplica el mínimo de $159 por pieza que cobra el vendedor, así que mientras se decide hay que revisar el precio de cada borrador. Al final leí la Base de Conocimiento de Automatización MDA; abajo dejo mis comentarios.
+
+**Comentarios sobre la Base de Conocimiento (Automatización MDA):**
+- Funciones: en general están bien.
+- A RISOS le faltan tareas que hago hoy: construir y mantener los agentes de IA en n8n (Marco, Mónica, los agentes de redes de G54, Camila y el Vigía), el cotizador de CE con su CRM, Bubble 54 y la operación semanal de G54 para CE.
+- Sin eso, el agente coordinador de RISOS se diseñaría para un trabajo de marketer que no es el que hago.
+- Caso 2: hay que corregir el texto con la aclaración (CE vende en línea y solo entrega a domicilio); hoy la página dice las dos cosas.
+- Preguntas del final: las dejo para después del inventario, como dice el documento.
+- Mientras tanto, completo el inventario de mis tareas (frecuencia, horas al mes, reglas y costo de un error). ¿Le parece bien?
+
+---
+
 ### 2026-11-21 (Sábado)
 
 Arranqué con la rutina de G54 y encontré que el post 218 de Instagram no había salido: Crating Express se había quedado sin Facebook ni Instagram en G54, casi seguro porque al conectar Orison con su propia página se borró la de CE. Los volví a conectar y reprogramé el 218 para hoy a las 17:00 de Miami. Leí los comentarios de Don Marc al reporte de ayer, dejé redactado un mensaje para Silvia sobre lo de Orison y le mandé al ingeniero un solo mensaje con todos los pendientes.
@@ -752,13 +770,3 @@ Arranqué con la rutina de G54: cero errores, el post de Facebook de ayer salió
 Cuando volvió la documentación de la API la revisé completa y probé las funciones nuevas de correo. Encontré que el marcador del nombre no se reemplaza y le llega tal cual al cliente, así que lo sumé al Éxodo, que quedó en 17 pedidos, y corregí la razón social de Crating Express, que repetía la dirección en el pie de los correos. También tuve una reunión con Don Marc donde hablamos de la organización, y me quedó de tarea responderle.
 
 En la tarde Don Marc eligió la versión del avatar con gorra, y con unas referencias nuevas armé las imágenes de tres personajes: la nueva Bubble, Jelly con su peluche y el de G54 con gorra. Quedaron mejores, pero todavía se ven como recorte, así que lo dejé así por hoy para hacerlo bien más adelante. El post 218 de Instagram sale a las 17:00 de Miami, todo quedó subido y el uso semanal está en 87 %.
-
----
-
-### 2026-11-19 (Jueves)
-
-Arranqué con la rutina de G54: cero errores, el post de Facebook programado para hoy salió a su hora y lo único raro fue que la página de documentación de la API de G54 da error 500, que se lo voy a avisar al ingeniero. Después pasé casi todo el día con el avatar de la intro de Bubble. Hice una muestra en 2D del robot con el hoodie y le pusimos el logo de Bubble en el pecho, con la B en la burbuja grande y el 54 en la chica. Con esa imagen generamos el modelo en 3D con una herramienta gratuita de Hugging Face y después lo fui puliendo en Blender: quitamos una capucha doble y unos cordones repetidos, dejé la tela mate, el logo más nítido y limpié unas manchas que había inventado la IA en los costados. Quedó un visor en el navegador para girarlo, con tres versiones: sin gorro, con gorro de lana y con gorra, las dos con los audífonos por fuera.
-
-Más tarde el ingeniero me pasó la clave de Pinecone de Crating Express, y con eso le conecté a Mónica la base de conocimiento, OpenAI y el Gmail de pruebas, cuidando de no gastar nada porque la clave de OpenAI es paga y no es nuestra. A Mónica solo le falta el bot de Telegram para avisarle al vendedor, que lo vemos después. Todo quedó subido y el uso semanal está en 75 %.
-
-Las tres versiones del avatar quedan abajo para que Don Marc elija la que más le guste.
