@@ -18,6 +18,7 @@ Lo que se movió o se borró ese día sigue en el historial de git (`git log --f
 | `g54/sops/` | Procedimientos (ciclo semanal de contenido, alta de cliente nuevo, Marco). Abrir `index.html`. |
 | `g54/datos/` | Respaldos de datos puntuales de G54. |
 | `crating-express/qr/` | Códigos QR y logo de Crating Express. |
+| `crating-express/cotizador-version-S-pruebas.md` | Lista de pruebas del cotizador versión S (23-nov). |
 | `crating-express/marco-notas/` | Notas de Marco: bugs históricos, referencia del catálogo, configuración del asistente de VAPI. |
 | `mascotas/jelly54/` y `mascotas/jargrowth/` | Las mascotas animadas. Abrir el `*-demo.html`. En JarGrowth, `v1/` y `v2/` son las versiones guardadas (la v2 es la elegida). |
 | `nomify/` | Nomify (planilla de Nicaragua) y `planilla-nicaragua.md` con su referencia. |

@@ -83,3 +83,6 @@ for wid, nombre in (('zAhV8gEsXD8dCrXq', 'Marco WA'), ('otycsrxrMEMuxuwD', 'Sale
         print(f"firma meta {nombre}: secretos {len(mf.get('secretos') or [])} | conteo {mf.get('conteo') or {}} | modo {set(modos.values())}")
     except Exception as ex:
         print(f'firma meta {nombre}: error', ex)
+
+print('
+SIGUIENTE PASO: leer los comentarios de Don Marc en Notion (RESUMEN DIARIO, entrada de ayer: negritas + Comnts Mc / VB Mc).')
