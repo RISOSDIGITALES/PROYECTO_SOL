@@ -84,5 +84,4 @@ for wid, nombre in (('zAhV8gEsXD8dCrXq', 'Marco WA'), ('otycsrxrMEMuxuwD', 'Sale
     except Exception as ex:
         print(f'firma meta {nombre}: error', ex)
 
-print('
-SIGUIENTE PASO: leer los comentarios de Don Marc en Notion (RESUMEN DIARIO, entrada de ayer: negritas + Comnts Mc / VB Mc).')
+print('\nSIGUIENTE PASO: leer los comentarios de Don Marc en Notion (RESUMEN DIARIO, entrada de ayer: negritas + Comnts Mc / VB Mc).')
