@@ -722,6 +722,16 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-11-24 (Martes)
+
+Arranqué con la rutina: cero errores, el post de Facebook de hoy salió a su hora y arreglé el diagnóstico diario, que no corría desde el sábado. Leí los comentarios de Don Marc sobre la razón social y tuvimos una llamada en la que aclaramos mejor mi rol. Después busqué en Notion la página de tendencias de avatares que él había dejado y con eso probamos versiones tiernas tipo peluche de los personajes; como se veían genéricas, decidimos que los grandes sigan siendo la identidad y que los tiernos queden para stickers. Pasé buena parte del día modelando en 3D a la Bubble grande con mis indicaciones: el azul de la marca, los hombros oscuros con su vivo rojo, el logo, Bubbli en la gorra y la coleta. Quedó mejor, pero todavía no del todo bien, así que lo dejamos en pausa.
+
+En paralelo, Mónica quedó transcribiendo los audios con OpenAI y Groq de respaldo, ya en DESARROLLO_SOL. Revisé lo que depende del ingeniero: el cotizador versión S todavía no está en producción y falta la clave de los Reels en G54, así que le dejé redactado un mensaje pidiéndole fechas. Hice un análisis general y vi que las redes de Crating Express casi no tienen alcance, mientras que la demanda real llega por correo de empresas de carga. Por eso corrí la prospección hacia forwarders de Doral y galerías y museos de Miami: entraron 16 prospectos al CRM, mejoramos la redacción de Camila y quedaron 13 borradores con el gancho de Miami Art Week, que reviso yo antes de aprobar. También armé un borrador del inventario de mis tareas recurrentes para la Base de Conocimiento.
+
+Al final el ingeniero nos dio una tarea nueva: un agente que vigile cualquier sitio web, con enlaces rotos, malware, certificado y dominio. Lo hice primero en n8n y, cuando supe que lo quería sin n8n, lo rehice como un programa independiente con Docker, que ya pasa sus pruebas y en la primera revisión encontró un enlace roto en la página de ISPM-15 de Crating Express. La versión de n8n quedó apagada, todo quedó subido y el uso semanal está en 27 %.
+
+---
+
 ### 2026-11-23 (Lunes)
 
 Arranqué con la rutina: cero errores, el 218 de Instagram salió el sábado a su hora y dejé programados los cuatro posts de esta semana, la penúltima de la rotación de horarios. Leí los comentarios de Don Marc del sábado y sumé ese paso a la rutina diaria para no saltarlo. Mientras yo probaba el cotizador, pasamos los correos de Camila al diseño de G54 que ya estaba aprobado y corregimos la razón social de Crating Express a Kabendish Corp.
@@ -747,13 +757,3 @@ Arranqué con la rutina de G54 y encontré que el post 218 de Instagram no habí
 Después me dediqué a Mónica. Pasé capturas de correos reales de Crating Express, analizamos cómo piden los clientes y cómo responde Lea, y con eso aprendió a cotizar las dos opciones cuando piden abierto y cerrado, a entender huacal, a reconocer pagos con el impuesto y a pasarle al vendedor los servicios especiales. Como el ingeniero no va a pasar los chats, entendimos que lo que quería era que Mónica leyera multimedia, así que tomamos como guía el procesador de Marco y ahora lee PDF, Excel, Word, audios y fotos. También une un correo suelto a su cotización anterior y saluda según la hora. La probamos de verdad con la casilla de pruebas y los avisos me llegaron a Telegram; en las pruebas salieron dos errores que quedaron corregidos, y el paquete quedó listo para que lo importe el ingeniero.
 
 En la tarde revisé el cotizador versión S: arreglé los signos de ayuda del Dashboard, que no abrían nada, y le agregué al CRM un historial completo con cada cambio, quién lo hizo y comentarios, además del ID de empresa en la lista de clientes. Todo quedó subido y el uso semanal llegó al 98 %, así que lo dejé ahí hasta el reinicio de mañana.
-
----
-
-### 2026-11-20 (Viernes)
-
-Arranqué con la rutina de G54: cero errores, el post de Facebook de ayer salió a su hora y la documentación de la API seguía caída. Revisando la API vi que a Orison le conectaron una página de Facebook propia, así que la desactivé en G54 para que siga en pausa y los agentes no la retomen el lunes. Después seguí con Mónica: le filtré el receptor para que solo tome correos de prueba, creé el bot de Telegram para avisarle al vendedor y la probé completa con OpenAI, con solo dos llamadas: clasificó, cotizó, dejó el borrador en Gmail y me llegó el aviso. Pulí ese aviso y dejé un paquete listo para el ingeniero, porque la Mónica que atiende a los clientes corre en su n8n.
-
-Cuando volvió la documentación de la API la revisé completa y probé las funciones nuevas de correo. Encontré que el marcador del nombre no se reemplaza y le llega tal cual al cliente, así que lo sumé al Éxodo, que quedó en 17 pedidos, y corregí la razón social de Crating Express, que repetía la dirección en el pie de los correos. También tuve una reunión con Don Marc donde hablamos de la organización, y me quedó de tarea responderle.
-
-En la tarde Don Marc eligió la versión del avatar con gorra, y con unas referencias nuevas armé las imágenes de tres personajes: la nueva Bubble, Jelly con su peluche y el de G54 con gorra. Quedaron mejores, pero todavía se ven como recorte, así que lo dejé así por hoy para hacerlo bien más adelante. El post 218 de Instagram sale a las 17:00 de Miami, todo quedó subido y el uso semanal está en 87 %.
