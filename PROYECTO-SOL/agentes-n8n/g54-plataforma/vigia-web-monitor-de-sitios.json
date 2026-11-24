@@ -1,0 +1,488 @@
+{
+  "id": "l4aOH09BdAEZ4UyP",
+  "name": "🛡️ Vigía Web — Monitor de sitios",
+  "active": true,
+  "updatedAt": "2026-11-24T20:28:03.443Z",
+  "tags": [],
+  "settings": {
+    "executionTimeout": 900,
+    "timezone": "America/New_York",
+    "executionOrder": "v1"
+  },
+  "nodes": [
+    {
+      "id": "860dfc02-e34d-4bd8-891c-46fffc7e5334",
+      "name": "🔔 Webhook Vigía Web",
+      "webhookId": "887ddfd0-5557-4f9b-827e-b6e4fa7d6213",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "path": "vigia-web",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "dddd193e-a37f-47f8-8e4a-084971ba019c",
+      "name": "🔒 ¿Llamada autorizada? (vigia-web)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "385d4bf3-3175-43aa-abc3-5167760f58f9",
+              "leftValue": "={{ (() => { const h = $json.headers || {}; const last = String(h['x-forwarded-for'] || '').split(',').pop().trim(); const interna = /^(10\\.|127\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/.test(last); const clave = String(h['x-webhook-key'] || ''); return interna || clave === 'REDACTED_N8N_WEBHOOK_KEY'; })() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "8a0caa8a-fc9c-4ef2-b6dd-87e7a526db18",
+      "name": "⛔ Responder 403 (no autorizado) (vigia-web)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        160
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\": false, \"error\": \"no autorizado\"}",
+        "options": {
+          "responseCode": 403
+        }
+      }
+    },
+    {
+      "id": "60416190-52fe-46af-8972-fee46be15a07",
+      "name": "🧭 Acción",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Vigía Web (24-nov): agente independiente que vigila cualquier sitio web. Acciones por webhook:\n//  revisar   {url, modo?: 'rapido'|'profundo', max_paginas?, avisar?, idioma?}  → revisa ya y devuelve el informe\n//  inscribir {url, avisar, nombre?, idioma?}  → lo suma a la lista que se revisa sola (cada hora rápido, cada día profundo)\n//  quitar    {url}   ·   lista {}\nconst body = $input.first().json.body || {};\nconst st = $getWorkflowStaticData('global');\nst.sitios = st.sitios || [];\n// El sandbox de n8n no tiene URL(): lectura y resolución de direcciones propias.\nconst U = {\n  parse(u) { const m = /^(https?):\\/\\/([^\\/?#:@]+)(:\\d+)?([^?#]*)(\\?[^#]*)?(#.*)?$/i.exec(String(u || '').trim()); if (!m) return null; return { protocol: m[1].toLowerCase() + ':', hostname: m[2].toLowerCase(), port: m[3] || '', pathname: m[4] || '/', search: m[5] || '', origin: m[1].toLowerCase() + '://' + m[2].toLowerCase() + (m[3] || '') }; },\n  resolve(rel, base) {\n    rel = String(rel || '').trim(); const b = U.parse(base); if (!b) return '';\n    if (/^https?:\\/\\//i.test(rel)) return rel.replace(/#.*$/, '');\n    if (/^[a-z][a-z0-9+.-]*:/i.test(rel)) return '';\n    if (rel.startsWith('//')) return b.protocol + rel.replace(/#.*$/, '');\n    rel = rel.replace(/#.*$/, ''); if (!rel) return b.origin + b.pathname + b.search;\n    if (rel.startsWith('?')) return b.origin + b.pathname + rel;\n    let path = rel.startsWith('/') ? rel : b.pathname.replace(/[^\\/]*$/, '') + rel;\n    const q = path.indexOf('?'); const query = q >= 0 ? path.slice(q) : ''; if (q >= 0) path = path.slice(0, q);\n    const out = []; for (const seg of path.split('/')) { if (seg === '..') out.pop(); else if (seg !== '.') out.push(seg); }\n    let p = out.join('/'); if (!p.startsWith('/')) p = '/' + p;\n    return b.origin + p + query;\n  },\n};\nconst norm = (u) => { u = String(u || '').trim(); if (!u) return ''; if (!/^https?:\\/\\//i.test(u)) u = 'https://' + u; const x = U.parse(u); if (!x || !/\\./.test(x.hostname)) return ''; return x.origin + (x.pathname === '/' ? '/' : x.pathname.replace(/\\/$/, '')); };\nconst correoOk = (c) => /^[^\\s@,;]+@[^\\s@,;]+\\.[^\\s@,;]+$/.test(String(c || '').trim());\nconst accion = String(body.accion || 'revisar').toLowerCase();\nconst url = norm(body.url);\nconst resp = (o) => [{ json: Object.assign({ revisar: false }, o) }];\nif (accion === 'lista') return resp({ ok: true, sitios: st.sitios });\nif (!url) return resp({ ok: false, error: 'Falta una url válida (por ejemplo, ejemplo.com).' });\nif (accion === 'quitar') {\n  const antes = st.sitios.length; st.sitios = st.sitios.filter(s => s.url !== url);\n  return resp({ ok: true, quitado: antes !== st.sitios.length, sitios: st.sitios });\n}\nconst avisar = String(body.avisar || '').split(/[,;\\s]+/).filter(correoOk).join(',');\nconst idioma = body.idioma === 'en' ? 'en' : 'es';\nif (accion === 'inscribir') {\n  if (!avisar) return resp({ ok: false, error: 'Para inscribir un sitio hace falta al menos un correo válido en \"avisar\".' });\n  const otro = st.sitios.filter(s => s.url !== url);\n  otro.push({ url, avisar, nombre: String(body.nombre || '').slice(0, 80), idioma, inscripto: new Date().toISOString() });\n  st.sitios = otro;\n  return resp({ ok: true, inscripto: url, sitios: st.sitios, nota: 'Se revisa cada hora (rápido) y cada día a las 6:00 de Miami (completo). Para una revisión ya, usar accion \"revisar\".' });\n}\nif (accion !== 'revisar') return resp({ ok: false, error: 'Acción desconocida. Usar: revisar, inscribir, quitar o lista.' });\nconst modo = body.modo === 'rapido' ? 'rapido' : 'profundo';\nconst max_paginas = Math.min(60, Math.max(1, parseInt(body.max_paginas, 10) || 25));\nreturn [{ json: { revisar: true, url, modo, max_paginas, avisar, idioma, nombre: String(body.nombre || '').slice(0, 80), origen: 'webhook' } }];\n"
+      }
+    },
+    {
+      "id": "348a7af2-7fd4-4404-8aad-64c7cc031fc8",
+      "name": "🔀 ¿Revisar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "973efdcf-4105-47e5-9887-4fb92f0c010b",
+              "leftValue": "={{ $json.revisar }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "1384bdb4-90ee-4dc7-aca2-6f49d6f9b955",
+      "name": "📤 Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        160
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "982b4907-f8df-4195-8eeb-fa6f2e955ea4",
+      "name": "⏱️ Cada hora (rápido)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        340
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1,
+              "triggerAtMinute": 17
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "1131ec48-faac-4e5a-8c94-f15b71a099e7",
+      "name": "⏰ Cada día (completo)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        500
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 6,
+              "triggerAtMinute": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "83cd04f8-61e0-4614-86c7-3ca91990930a",
+      "name": "🗂️ Sitios inscriptos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        420
+      ],
+      "parameters": {
+        "jsCode": "// Sitios inscriptos (los guarda la acción \"inscribir\" del webhook). Cada hora: revisión rápida; a las 6:00: completa.\nconst st = $getWorkflowStaticData('global');\nconst sitios = st.sitios || [];\nlet modo = 'rapido';\ntry { if ($('⏰ Cada día (completo)').isExecuted) modo = 'profundo'; } catch (e) {}\nif (!sitios.length) return [{ json: { revisar: false, motivo: 'No hay sitios inscriptos.' } }];\nreturn sitios.map(s => ({ json: { revisar: true, url: s.url, modo, max_paginas: 25, avisar: s.avisar, idioma: s.idioma || 'es', nombre: s.nombre || '', origen: 'horario' } }));\n"
+      }
+    },
+    {
+      "id": "b7561412-dba5-49e7-9eb9-fee390237b41",
+      "name": "🔎 Revisar sitios",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Revisa cada sitio. Rápido: que responda, tiempo, HTTPS, redirecciones y código sospechoso en la portada.\n// Completo: además recorre páginas (sitemap o enlaces), prueba sus enlaces, consulta Sucuri SiteCheck (malware,\n// listas negras, certificado) y RDAP (vencimiento del dominio). Todo gratis y sin claves.\n// El sandbox de n8n no tiene URL(): lectura y resolución de direcciones propias.\nconst U = {\n  parse(u) { const m = /^(https?):\\/\\/([^\\/?#:@]+)(:\\d+)?([^?#]*)(\\?[^#]*)?(#.*)?$/i.exec(String(u || '').trim()); if (!m) return null; return { protocol: m[1].toLowerCase() + ':', hostname: m[2].toLowerCase(), port: m[3] || '', pathname: m[4] || '/', search: m[5] || '', origin: m[1].toLowerCase() + '://' + m[2].toLowerCase() + (m[3] || '') }; },\n  resolve(rel, base) {\n    rel = String(rel || '').trim(); const b = U.parse(base); if (!b) return '';\n    if (/^https?:\\/\\//i.test(rel)) return rel.replace(/#.*$/, '');\n    if (/^[a-z][a-z0-9+.-]*:/i.test(rel)) return '';\n    if (rel.startsWith('//')) return b.protocol + rel.replace(/#.*$/, '');\n    rel = rel.replace(/#.*$/, ''); if (!rel) return b.origin + b.pathname + b.search;\n    if (rel.startsWith('?')) return b.origin + b.pathname + rel;\n    let path = rel.startsWith('/') ? rel : b.pathname.replace(/[^\\/]*$/, '') + rel;\n    const q = path.indexOf('?'); const query = q >= 0 ? path.slice(q) : ''; if (q >= 0) path = path.slice(0, q);\n    const out = []; for (const seg of path.split('/')) { if (seg === '..') out.pop(); else if (seg !== '.') out.push(seg); }\n    let p = out.join('/'); if (!p.startsWith('/')) p = '/' + p;\n    return b.origin + p + query;\n  },\n};\nconst UA = 'Mozilla/5.0 (compatible; VigiaWeb/1.0; +site-monitor)';\nconst req = async (url, o = {}) => {\n  const t = Date.now();\n  try {\n    const r = await this.helpers.httpRequest(Object.assign({ url, method: 'GET', timeout: 20000, returnFullResponse: true, ignoreHttpStatusErrors: true, disableFollowRedirect: true, json: false, headers: { 'User-Agent': UA, 'Accept': '*/*' } }, o));\n    return { status: r.statusCode, headers: r.headers || {}, body: typeof r.body === 'string' ? r.body : (r.body ? JSON.stringify(r.body) : ''), ms: Date.now() - t };\n  } catch (e) {\n    return { status: 0, error: String((e && (e.code || e.message)) || e).slice(0, 160), ms: Date.now() - t, headers: {}, body: '' };\n  }\n};\nconst seguir = async (url, o = {}) => {  // sigue hasta 6 redirecciones y anota la cadena\n  const cadena = []; let r, actual = url;\n  for (let i = 0; i < 7; i++) {\n    r = await req(actual, o);\n    const loc = r.headers && (r.headers.location || r.headers.Location);\n    if (r.status >= 300 && r.status < 400 && loc) { cadena.push(actual); actual = U.resolve(loc, actual); if (!actual) break; continue; }\n    break;\n  }\n  return Object.assign(r, { final: actual, cadena });\n};\nconst base = (h) => String(h || '').toLowerCase().replace(/^www\\./, '');\nconst hostDe = (u) => { const x = U.parse(u); return x ? base(x.hostname) : ''; };\nconst pool = async (lista, n, fn) => { const out = new Array(lista.length); let i = 0; await Promise.all(Array.from({ length: Math.min(n, lista.length) }, async () => { while (i < lista.length) { const k = i++; out[k] = await fn(lista[k], k); } })); return out; };\nconst dias = (f) => Math.floor((new Date(f).getTime() - Date.now()) / 86400000);\nconst SPAM = ['viagra', 'cialis', 'levitra', 'tadalafil', 'sildenafil', 'casino online', 'online casino', 'slot gacor', 'judi online', 'togel', 'payday loan', 'replica watches', 'porn', 'xxx video', 'escort service', 'buy followers', 'essay writing service', 'crypto doubler', 'bitcoin doubler'];\nconst sospechoso = (html, pagina, propio) => {\n  const p = [];\n  if (!html) return p;\n  const h = html.slice(0, 2000000);\n  if (/<iframe[^>]+(width\\s*=\\s*[\"']?0[\"'\\s>]|height\\s*=\\s*[\"']?0[\"'\\s>]|display\\s*:\\s*none|visibility\\s*:\\s*hidden)/i.test(h)) p.push({ tipo: 'iframe_oculto', nivel: 'critico', detalle: 'Hay un iframe oculto (tamaño 0 o invisible), una técnica común de malware.', donde: pagina });\n  if (/eval\\s*\\(\\s*(atob|unescape|String\\.fromCharCode|function\\s*\\(\\s*p\\s*,\\s*a\\s*,\\s*c\\s*,\\s*k\\s*,\\s*e)/i.test(h) || /document\\.write\\s*\\(\\s*unescape/i.test(h)) p.push({ tipo: 'codigo_ofuscado', nivel: 'critico', detalle: 'Hay JavaScript ofuscado (eval/unescape), típico de código inyectado.', donde: pagina });\n  // palabras completas: \"cialis\" no tiene que saltar con \"especialistas\"\n  const texto = ' ' + h.replace(/<script[\\s\\S]*?<\\/script>/gi, ' ').replace(/<style[\\s\\S]*?<\\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').toLowerCase().replace(/[^a-z0-9áéíóúñü]+/g, ' ') + ' ';\n  const enc = SPAM.filter(w => texto.includes(' ' + w + ' ') && !propio.includes(w.split(' ')[0]));\n  if (enc.length) p.push({ tipo: 'spam', nivel: enc.length >= 2 ? 'critico' : 'aviso', detalle: 'Aparecen palabras de spam: ' + enc.slice(0, 5).join(', ') + '.', donde: pagina });\n  return p;\n};\nconst enlacesDe = (html, pagina) => {\n  const out = new Set();\n  const re = /<(a|img|script|link|iframe|source)\\b[^>]*?\\s(href|src)\\s*=\\s*[\"']([^\"'#][^\"']*)[\"']/gi; let m;\n  while ((m = re.exec(html))) {\n    const tag = m[1].toLowerCase(), u = m[3].trim().replace(/&amp;/g, '&');\n    if (/^(mailto:|tel:|javascript:|data:|sms:|whatsapp:)/i.test(u)) continue;\n    if (tag === 'link' && !/rel\\s*=\\s*[\"'][^\"']*(stylesheet|icon)/i.test(m[0])) continue;\n    const x = U.resolve(u, pagina); if (x) out.add(x);\n  }\n  return [...out];\n};\nconst scriptsExternos = (html, host) => {\n  const s = new Set(); const re = /<script\\b[^>]*\\ssrc\\s*=\\s*[\"']([^\"']+)[\"']/gi; let m;\n  while ((m = re.exec(html))) { const h = hostDe(U.resolve(m[1], 'https://' + host + '/')); if (h && h !== base(host) && !h.endsWith('.' + base(host))) s.add(h); }\n  return [...s];\n};\nconst st = $getWorkflowStaticData('global'); st.scripts = st.scripts || {};\nconst salida = [];\nfor (const it of $input.all()) {\n  const s = it.json;\n  if (!s.revisar) { salida.push({ json: s }); continue; }\n  const problemas = []; const datos = {};\n  const inicio = Date.now();\n  const host = hostDe(s.url);\n  const propio = host + ' ' + String(s.nombre || '').toLowerCase();\n  // 1) portada (si HTTPS no responde y no es por el certificado, se prueba por HTTP)\n  let r = await seguir(s.url);\n  if (!r.status && /^https:/i.test(s.url) && !/CERT|SSL|TLS|self.signed|unable to verify/i.test(r.error || '')) {\n    const rh = await seguir(s.url.replace(/^https:/i, 'http:'));\n    if (rh.status) r = rh;\n  }\n  datos.status = r.status; datos.tiempo_ms = r.ms; datos.url_final = r.final; datos.redirecciones = r.cadena.length;\n  if (!r.status) {\n    const cert = /CERT|SSL|TLS|self.signed|unable to verify/i.test(r.error || '');\n    problemas.push({ tipo: cert ? 'certificado' : 'caido', nivel: 'critico', detalle: cert ? 'El certificado HTTPS no es válido (' + r.error + ').' : 'El sitio no responde (' + r.error + ').', donde: s.url });\n  } else if (r.status >= 500) problemas.push({ tipo: 'caido', nivel: 'critico', detalle: 'La portada responde con error del servidor ' + r.status + '.', donde: r.final });\n  else if (r.status >= 400) problemas.push({ tipo: 'caido', nivel: 'critico', detalle: 'La portada responde ' + r.status + ' (no se puede ver).', donde: r.final });\n  else if (r.ms > 8000) problemas.push({ tipo: 'lento', nivel: 'aviso', detalle: 'La portada tardó ' + (r.ms / 1000).toFixed(1) + ' s en responder.', donde: r.final });\n  const hostFinal = hostDe(r.final) || host;\n  if (r.status && hostFinal !== host) problemas.push({ tipo: 'redireccion', nivel: 'critico', detalle: 'La portada redirige a otro dominio: ' + hostFinal + '. Si no fue a propósito, puede ser un secuestro del sitio.', donde: s.url });\n  if (r.status && /^http:/i.test(r.final)) problemas.push({ tipo: 'sin_https', nivel: 'aviso', detalle: 'El sitio se sirve sin HTTPS.', donde: r.final });\n  const portada = r.status >= 200 && r.status < 300 ? r.body : '';\n  problemas.push(...sospechoso(portada, r.final, propio));\n  // scripts de dominios nuevos (la primera vez solo se anota la base)\n  const ext = portada ? scriptsExternos(portada, hostFinal) : [];\n  const prev = st.scripts[host];\n  if (portada) {\n    if (prev) { const nuevos = ext.filter(d => !prev.includes(d)); if (nuevos.length) problemas.push({ tipo: 'script_nuevo', nivel: 'aviso', detalle: 'La portada carga scripts de dominios nuevos: ' + nuevos.slice(0, 5).join(', ') + '. Si nadie los agregó, revisar.', donde: r.final }); }\n    st.scripts[host] = [...new Set([...(prev || []), ...ext])].slice(0, 200);\n  }\n  datos.scripts_externos = ext;\n  // 2) revisión completa\n  if (s.modo === 'profundo' && portada) {\n    const origen = U.parse(r.final).origin;\n    let paginas = [];\n    for (const sm of ['/sitemap.xml', '/sitemap_index.xml', '/wp-sitemap.xml']) {\n      const x = await seguir(origen + sm);\n      if (x.status === 200 && /<(urlset|sitemapindex)/i.test(x.body)) {\n        let locs = [...x.body.matchAll(/<loc>\\s*([^<\\s]+)\\s*<\\/loc>/gi)].map(m => m[1]);\n        if (/<sitemapindex/i.test(x.body)) {\n          const sub = await pool(locs.slice(0, 4), 4, async u => (await seguir(u)).body || '');\n          locs = sub.flatMap(b => [...b.matchAll(/<loc>\\s*([^<\\s]+)\\s*<\\/loc>/gi)].map(m => m[1]));\n        }\n        paginas = locs.filter(u => hostDe(u) === hostFinal);\n        datos.sitemap = sm; break;\n      }\n    }\n    if (!paginas.length) paginas = enlacesDe(portada, r.final).filter(u => hostDe(u) === hostFinal && !/\\.(jpe?g|png|gif|webp|svg|pdf|zip|css|js|ico|mp4|mp3)(\\?|$)/i.test(U.parse(u).pathname));\n    paginas = [...new Set([r.final, ...paginas])].slice(0, s.max_paginas);\n    const vistas = await pool(paginas, 4, async u => ({ u, r: u === r.final ? r : await seguir(u) }));\n    const enlaces = new Map();  // enlace -> página donde aparece\n    for (const v of vistas) {\n      if (v.r.status >= 400 || !v.r.status) { if (v.u !== r.final) problemas.push({ tipo: 'pagina_rota', nivel: 'aviso', detalle: 'Una página del sitio responde ' + (v.r.status || v.r.error) + '.', donde: v.u }); continue; }\n      if (v.u !== r.final) problemas.push(...sospechoso(v.r.body, v.u, propio));\n      for (const e of enlacesDe(v.r.body || '', v.r.final || v.u)) if (!enlaces.has(e) && !paginas.includes(e)) enlaces.set(e, v.u);\n    }\n    const lista = [...enlaces.keys()].sort((a, b) => (hostDe(a) === hostFinal ? 0 : 1) - (hostDe(b) === hostFinal ? 0 : 1)).slice(0, 250);\n    const NO_VERIFICABLE = [401, 403, 405, 406, 429, 999];\n    const res = await pool(lista, 8, async u => {\n      let x = await req(u, { method: 'HEAD', disableFollowRedirect: false, timeout: 15000 });\n      if (!x.status || x.status >= 400) x = await req(u, { method: 'GET', disableFollowRedirect: false, timeout: 15000 });\n      return { u, status: x.status, error: x.error };\n    });\n    const rotos = res.filter(x => (x.status >= 400 && !NO_VERIFICABLE.includes(x.status)) || (!x.status && !/ETIMEDOUT|ECONNABORTED|timeout/i.test(x.error || '')));\n    datos.paginas_revisadas = vistas.length; datos.enlaces_revisados = res.length; datos.enlaces_rotos = rotos.length;\n    for (const x of rotos.slice(0, 40)) {\n      const interno = hostDe(x.u) === hostFinal;\n      problemas.push({ tipo: interno ? 'enlace_roto_interno' : 'enlace_roto_externo', nivel: 'aviso', detalle: (interno ? 'Enlace interno roto' : 'Enlace a otro sitio roto') + ' (' + (x.status || x.error) + '): ' + x.u, donde: enlaces.get(x.u) });\n    }\n    // Sucuri SiteCheck: malware, listas negras y certificado\n    const su = await req('https://sitecheck.sucuri.net/api/v3/?scan=' + encodeURIComponent(hostFinal), { disableFollowRedirect: false, timeout: 60000 });\n    let j = null; try { j = JSON.parse(su.body); } catch (e) {}\n    if (j) {\n      const w = j.warnings || {};\n      for (const k of Object.keys(w)) {\n        const lw = Array.isArray(w[k]) ? w[k] : [w[k]];\n        for (const x of lw.slice(0, 5)) {\n          const msg = (typeof x === 'string' ? x : (x.msg || x.message || x.type || JSON.stringify(x))).slice(0, 200);\n          const grave = /malware|blacklist|spam|injected|defac|phish|iframe|redirect/i.test(k + ' ' + msg);\n          problemas.push({ tipo: 'sucuri_' + k, nivel: grave ? 'critico' : 'aviso', detalle: 'Sucuri: ' + msg, donde: hostFinal });\n        }\n      }\n      for (const b of (j.blacklists || [])) problemas.push({ tipo: 'lista_negra', nivel: 'critico', detalle: 'Figura en una lista negra: ' + String(b.vendor || b.name || JSON.stringify(b)).slice(0, 120), donde: hostFinal });\n      if (j.tls && j.tls.cert_expires) { datos.cert_vence = j.tls.cert_expires; const d = dias(j.tls.cert_expires); if (d <= 14) problemas.push({ tipo: 'certificado', nivel: d <= 3 ? 'critico' : 'aviso', detalle: 'El certificado HTTPS vence en ' + d + ' días (' + j.tls.cert_expires + ').', donde: hostFinal }); }\n      if (j.software && j.software.cms && j.software.cms[0]) datos.cms = j.software.cms[0].name + (j.software.cms[0].version ? ' ' + j.software.cms[0].version : '');\n      datos.sucuri = (j.ratings && j.ratings.total && j.ratings.total.rating) || 'ok';\n    } else datos.sucuri = 'sin respuesta';\n    // RDAP: vencimiento del dominio\n    const dom = hostFinal.split('.').slice(-2).join('.');\n    const rd = await req('https://rdap.org/domain/' + dom, { disableFollowRedirect: false, timeout: 20000 });\n    try { const jj = JSON.parse(rd.body); const ev = (jj.events || []).find(e => e.eventAction === 'expiration'); if (ev) { datos.dominio_vence = ev.eventDate.slice(0, 10); const d = dias(ev.eventDate); if (d <= 30) problemas.push({ tipo: 'dominio', nivel: d <= 7 ? 'critico' : 'aviso', detalle: 'El dominio ' + dom + ' vence en ' + d + ' días (' + ev.eventDate.slice(0, 10) + ').', donde: dom }); } } catch (e) {}\n  }\n  const nivel = problemas.some(p => p.nivel === 'critico') ? 'critico' : (problemas.length ? 'aviso' : 'ok');\n  salida.push({ json: Object.assign({}, s, { ok: true, host, nivel, problemas, datos, revisado_en: new Date().toISOString(), duracion_s: Math.round((Date.now() - inicio) / 1000) }) });\n}\nreturn salida;\n"
+      }
+    },
+    {
+      "id": "02778aa0-a641-404a-a52f-076249f9c771",
+      "name": "📨 Decidir avisos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Decide si se manda correo y lo arma. Revisión por webhook: manda el informe si vino \"avisar\".\n// Revisión automática: avisa solo problemas nuevos (o repetidos después de 24 h) y avisa cuando un problema crítico se resolvió.\nconst st = $getWorkflowStaticData('global'); st.avisados = st.avisados || {};\nconst esc = (t) => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst T = {\n  es: { titulo: 'Vigía Web', critico: 'Problema crítico', aviso: 'Avisos', ok: 'Todo en orden', resuelto: 'Resuelto', en: 'en', revisado: 'Revisado', donde: 'Dónde', resueltos: 'Ya no aparecen (resueltos)', datos: 'Datos', pie: 'Aviso automático de Vigía Web. Se repite solo si el problema sigue después de 24 horas.' },\n  en: { titulo: 'Website Watch', critico: 'Critical issue', aviso: 'Warnings', ok: 'All good', resuelto: 'Resolved', en: 'on', revisado: 'Checked', donde: 'Where', resueltos: 'No longer found (resolved)', datos: 'Data', pie: 'Automatic alert from Website Watch. It repeats only if the problem is still there after 24 hours.' },\n};\nconst salida = [];\nfor (const it of $input.all()) {\n  const r = it.json;\n  if (!r.revisar || !r.ok) { salida.push({ json: Object.assign({}, r, { enviar: false }) }); continue; }\n  const t = T[r.idioma] || T.es;\n  const clave = (p) => p.tipo + '|' + String(p.detalle).slice(0, 160);\n  const prev = st.avisados[r.host] || {};\n  const ahora = Date.now();\n  let mandar = [], resueltos = [];\n  if (r.origen === 'webhook') mandar = r.problemas;\n  else {\n    mandar = r.problemas.filter(p => { const k = clave(p); return !prev[k] || ahora - prev[k].ts > 86400000; });\n    // en la revisión rápida solo se avisa lo crítico; lo demás va en la completa\n    if (r.modo === 'rapido') mandar = mandar.filter(p => p.nivel === 'critico');\n    const actuales = new Set(r.problemas.map(clave));\n    // un problema crítico que ya no aparece en una revisión que lo podría ver (la completa ve todo; la rápida, lo de la portada)\n    resueltos = Object.entries(prev).filter(([k, v]) => v.nivel === 'critico' && !actuales.has(k) && (r.modo === 'profundo' || v.portada)).map(([k, v]) => v);\n  }\n  // memoria de lo avisado\n  if (r.origen !== 'webhook') {\n    const nuevo = {};\n    const portadaTipos = ['caido', 'certificado', 'lento', 'redireccion', 'sin_https', 'iframe_oculto', 'codigo_ofuscado', 'spam', 'script_nuevo'];\n    for (const p of r.problemas) { const k = clave(p); const enviado = mandar.some(m => clave(m) === k); nuevo[k] = { ts: enviado ? ahora : (prev[k] ? prev[k].ts : ahora), nivel: p.nivel, detalle: p.detalle, portada: portadaTipos.includes(p.tipo) && p.donde === (r.datos && r.datos.url_final) }; }\n    // lo que no se pudo ver en la rápida (enlaces, Sucuri, dominio) se conserva hasta la completa\n    if (r.modo === 'rapido') for (const [k, v] of Object.entries(prev)) if (!nuevo[k] && !v.portada) nuevo[k] = v;\n    st.avisados[r.host] = nuevo;\n  }\n  const enviar = !!r.avisar && (mandar.length > 0 || resueltos.length > 0 || (r.origen === 'webhook'));\n  const nivelMail = mandar.some(p => p.nivel === 'critico') ? 'critico' : (mandar.length ? 'aviso' : (resueltos.length ? 'resuelto' : 'ok'));\n  const color = { critico: '#c81e1e', aviso: '#b45309', resuelto: '#15803d', ok: '#15803d' }[nivelMail];\n  const etiqueta = { critico: t.critico, aviso: t.aviso, resuelto: t.resuelto, ok: t.ok }[nivelMail];\n  const nombre = r.nombre || r.host;\n  const asunto = (nivelMail === 'critico' ? '🔴 ' : nivelMail === 'aviso' ? '🟠 ' : '✅ ') + t.titulo + ': ' + etiqueta + ' ' + t.en + ' ' + nombre;\n  const fila = (p) => '<tr><td style=\"padding:6px 8px;border-bottom:1px solid #eee;vertical-align:top;\"><span style=\"display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;color:#fff;background:' + (p.nivel === 'critico' ? '#c81e1e' : '#b45309') + ';\">' + esc(p.nivel) + '</span></td><td style=\"padding:6px 8px;border-bottom:1px solid #eee;\">' + esc(p.detalle) + (p.donde ? '<br><span style=\"color:#6b7280;font-size:12px;\">' + esc(t.donde) + ': ' + esc(p.donde) + '</span>' : '') + '</td></tr>';\n  const d = r.datos || {};\n  const datosHtml = [['HTTP', d.status], ['ms', d.tiempo_ms], ['CMS', d.cms], ['SSL', d.cert_vence], ['Domain', d.dominio_vence], ['Sucuri', d.sucuri], ['Pages', d.paginas_revisadas], ['Links', d.enlaces_revisados != null ? d.enlaces_revisados + ' (' + (d.enlaces_rotos || 0) + ' ✗)' : null]].filter(x => x[1] != null && x[1] !== '').map(x => esc(x[0]) + ': <b>' + esc(x[1]) + '</b>').join(' · ');\n  const html = '<div style=\"font-family:Arial,sans-serif;max-width:640px;margin:0 auto;color:#111;\">'\n    + '<div style=\"background:' + color + ';color:#fff;padding:14px 18px;border-radius:8px 8px 0 0;\"><b style=\"font-size:16px;\">' + esc(t.titulo) + ' · ' + esc(etiqueta) + '</b><br><span style=\"font-size:13px;\">' + esc(nombre) + ' — ' + esc(r.url) + '</span></div>'\n    + '<div style=\"border:1px solid #e5e7eb;border-top:none;padding:12px 18px;border-radius:0 0 8px 8px;\">'\n    + (mandar.length ? '<table style=\"width:100%;border-collapse:collapse;font-size:14px;\">' + mandar.map(fila).join('') + '</table>' : '<p style=\"font-size:14px;\">' + esc(nivelMail === 'ok' ? t.ok : '') + '</p>')\n    + (resueltos.length ? '<p style=\"margin-top:14px;font-size:14px;\"><b>' + esc(t.resueltos) + '</b></p><ul style=\"font-size:13px;\">' + resueltos.map(v => '<li>' + esc(v.detalle) + '</li>').join('') + '</ul>' : '')\n    + '<p style=\"font-size:12px;color:#374151;margin-top:14px;\">' + esc(t.datos) + ': ' + datosHtml + '</p>'\n    + '<p style=\"font-size:11px;color:#9ca3af;\">' + esc(t.revisado) + ': ' + esc(r.revisado_en) + ' · ' + esc(r.modo) + '. ' + esc(t.pie) + '</p></div></div>';\n  salida.push({ json: Object.assign({}, r, { enviar, asunto, html, avisados: mandar.length, resueltos: resueltos.length }) });\n}\nreturn salida;\n"
+      }
+    },
+    {
+      "id": "ff4c8cb4-ec10-48d1-968f-62a774f53d2d",
+      "name": "🔀 ¿Enviar correo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "0f1ca73c-1284-4b86-a6ab-2ae27feeef31",
+              "leftValue": "={{ $json.enviar }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "dbc6d0f5-8919-4e77-bd5e-cdd442f64af5",
+      "name": "✉️ Enviar aviso",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "onError": "continueRegularOutput",
+      "position": [
+        1540,
+        -100
+      ],
+      "parameters": {
+        "sendTo": "={{ $json.avisar }}",
+        "subject": "={{ $json.asunto }}",
+        "message": "={{ $json.html }}",
+        "options": {
+          "contentType": "html",
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TESHSjzjMCpCxBBk",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "e67a823d-5e3b-47a7-b751-c6a51a78fc84"
+    },
+    {
+      "id": "e62572e9-614a-4ca9-b68a-cf94b90c8da8",
+      "name": "🔀 ¿Vino del webhook?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "executeOnce": true,
+      "position": [
+        1760,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c675b190-14c6-4ceb-a7e0-c8cd512842fe",
+              "leftValue": "={{ $('🧭 Acción').isExecuted }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e4ac6251-c0dc-42e8-9ac9-f1b9122513ba",
+      "name": "📤 Responder informe",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1980,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify((() => { const j = Object.assign({}, $('📨 Decidir avisos').first().json); delete j.html; return j; })()) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "🔔 Webhook Vigía Web": {
+      "main": [
+        [
+          {
+            "node": "🔒 ¿Llamada autorizada? (vigia-web)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔒 ¿Llamada autorizada? (vigia-web)": {
+      "main": [
+        [
+          {
+            "node": "🧭 Acción",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⛔ Responder 403 (no autorizado) (vigia-web)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧭 Acción": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Revisar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Revisar?": {
+      "main": [
+        [
+          {
+            "node": "🔎 Revisar sitios",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📤 Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏱️ Cada hora (rápido)": {
+      "main": [
+        [
+          {
+            "node": "🗂️ Sitios inscriptos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏰ Cada día (completo)": {
+      "main": [
+        [
+          {
+            "node": "🗂️ Sitios inscriptos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🗂️ Sitios inscriptos": {
+      "main": [
+        [
+          {
+            "node": "🔎 Revisar sitios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔎 Revisar sitios": {
+      "main": [
+        [
+          {
+            "node": "📨 Decidir avisos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📨 Decidir avisos": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Enviar correo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Enviar correo?": {
+      "main": [
+        [
+          {
+            "node": "✉️ Enviar aviso",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔀 ¿Vino del webhook?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✉️ Enviar aviso": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Vino del webhook?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Vino del webhook?": {
+      "main": [
+        [
+          {
+            "node": "📤 Responder informe",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  }
+}
