@@ -1,4 +1,4 @@
-# Agentes de n8n — copia del 2026-11-24
+# Agentes de n8n — copia del 2026-11-25
 
 Generado con `python PROYECTO-SOL/scripts/exportar-agentes.py`. Secretos tapados (`REDACTED_...`);
 los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` ni `staticData`.
