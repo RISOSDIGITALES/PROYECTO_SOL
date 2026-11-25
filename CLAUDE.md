@@ -722,6 +722,16 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-11-25 (Miércoles)
+
+Arranqué con la rutina: cero errores, los posts en cola a su hora y un pedido real por la web de Crating Express para la caja de un televisor; Don Marc había aprobado todo y decidí dejar la razón social como está. Enseguida llegó lo urgente del día, el saludo de Thanksgiving: armé la lista con la planilla de clientes y con las conversaciones de los últimos seis meses que me reenvié, y lo mandé yo misma desde el Gmail de Crating Express en un solo correo con copia oculta. Después repasé los pendientes de la revisión de G54 y confirmé que las redes de Crating Express no están trayendo clientes; decidí no cambiar nada hasta que G54 tenga armada esa parte. Dejé los avisos de error llegando también por Telegram, para no depender de una sola cuenta de correo.
+
+Antes de aprobar los borradores de Camila los revisé y encontré que varios iban a correos que no eran del negocio: ahora los descarta, usa el gancho de Miami Art Week y quedaron 7 borradores nuevos que reviso yo. También vi que 59 posts quedaron con la fecha de publicación cambiada al 17 de noviembre, lo que inflaba el informe semanal de G54; protegí nuestros informes y le dejé el pedido al ingeniero en el Éxodo, que desde hoy vive en un enlace fijo que se actualiza solo. Al Vigía Web le probé el reloj, ahora se puede programar por días y horas, y lo subí a la rama de desarrollo como VIGIA WEB.
+
+En la tarde busqué en Notion lo de Hermes y repasé mis notas para dejar todo en limpio: encontré la guía de git que había escrito el ingeniero, corregí que Mónica convierta exacto de centímetros a pulgadas aunque el cliente escriba la unidad de otra forma, ordené las carpetas locales y borré copias viejas, y armé el manual de usuario de Bubble en seis versiones (negocio, agencia y cuenta propia, en inglés y español), sacado directo de la ayuda de la app. Al final empezamos con Hermes: vamos a armar primero un perfil de prueba nuestro con un chat sencillo en la terminal, y quedé en decidir mañana si instalo una llave de acceso en el servidor o si trabajamos pasando comandos. Todo quedó subido y el uso semanal está en 36 %.
+
+---
+
 ### 2026-11-24 (Martes)
 
 Arranqué con la rutina: cero errores, el post de Facebook de hoy salió a su hora y arreglé el diagnóstico diario, que no corría desde el sábado. Leí los comentarios de Don Marc sobre la razón social y tuvimos una llamada en la que aclaramos mejor mi rol. Después busqué en Notion la página de tendencias de avatares que él había dejado y con eso probamos versiones tiernas tipo peluche de los personajes; como se veían genéricas, decidimos que los grandes sigan siendo la identidad y que los tiernos queden para stickers. Pasé buena parte del día modelando en 3D a la Bubble grande con mis indicaciones: el azul de la marca, los hombros oscuros con su vivo rojo, el logo, Bubbli en la gorra y la coleta. Quedó mejor, pero todavía no del todo bien, así que lo dejamos en pausa.
@@ -747,13 +757,3 @@ Con Mónica revisé que nunca envía correos sola: siempre deja borrador y avisa
 - Caso 2: hay que corregir el texto con la aclaración (CE vende en línea y solo entrega a domicilio); hoy la página dice las dos cosas.
 - Preguntas del final: las dejo para después del inventario, como dice el documento.
 - Mientras tanto, completo el inventario de mis tareas (frecuencia, horas al mes, reglas y costo de un error). ¿Le parece bien?
-
----
-
-### 2026-11-21 (Sábado)
-
-Arranqué con la rutina de G54 y encontré que el post 218 de Instagram no había salido: Crating Express se había quedado sin Facebook ni Instagram en G54, casi seguro porque al conectar Orison con su propia página se borró la de CE. Los volví a conectar y reprogramé el 218 para hoy a las 17:00 de Miami. Leí los comentarios de Don Marc al reporte de ayer, dejé redactado un mensaje para Silvia sobre lo de Orison y le mandé al ingeniero un solo mensaje con todos los pendientes.
-
-Después me dediqué a Mónica. Pasé capturas de correos reales de Crating Express, analizamos cómo piden los clientes y cómo responde Lea, y con eso aprendió a cotizar las dos opciones cuando piden abierto y cerrado, a entender huacal, a reconocer pagos con el impuesto y a pasarle al vendedor los servicios especiales. Como el ingeniero no va a pasar los chats, entendimos que lo que quería era que Mónica leyera multimedia, así que tomamos como guía el procesador de Marco y ahora lee PDF, Excel, Word, audios y fotos. También une un correo suelto a su cotización anterior y saluda según la hora. La probamos de verdad con la casilla de pruebas y los avisos me llegaron a Telegram; en las pruebas salieron dos errores que quedaron corregidos, y el paquete quedó listo para que lo importe el ingeniero.
-
-En la tarde revisé el cotizador versión S: arreglé los signos de ayuda del Dashboard, que no abrían nada, y le agregué al CRM un historial completo con cada cambio, quién lo hizo y comentarios, además del ID de empresa en la lista de clientes. Todo quedó subido y el uso semanal llegó al 98 %, así que lo dejé ahí hasta el reinicio de mañana.
