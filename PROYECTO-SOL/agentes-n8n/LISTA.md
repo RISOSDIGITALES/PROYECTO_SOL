@@ -7,7 +7,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 
 | Agente | ID | Activo | Última edición | Archivo |
 |---|---|---|---|---|
-| ANALYTICS MENSUAL V3-META REPORTE | `YI9EfJYcWJN4bbM9` | sí | 2026-11-18 | [analytics-mensual-v3-meta-reporte.json](g54-plataforma/analytics-mensual-v3-meta-reporte.json) |
+| ANALYTICS MENSUAL V3-META REPORTE | `YI9EfJYcWJN4bbM9` | sí | 2026-11-25 | [analytics-mensual-v3-meta-reporte.json](g54-plataforma/analytics-mensual-v3-meta-reporte.json) |
 | Community AI — G54 | `62tIvF0snsrMj0sM` | sí | 2026-11-18 | [community-ai-g54.json](g54-plataforma/community-ai-g54.json) |
 | ⏰ Distribution AI — Alarma Exacta (G54) | `sNNhTEH8IzJsOIm3` | sí | 2026-11-17 | [distribution-ai-alarma-exacta-g54.json](g54-plataforma/distribution-ai-alarma-exacta-g54.json) |
 | ✉️ Camila — Baja de correos (G54) | `FXRpSFH9ESdVah1P` | sí | 2026-11-17 | [camila-baja-de-correos-g54.json](g54-plataforma/camila-baja-de-correos-g54.json) |
@@ -27,7 +27,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | 🔍 Camila G54 — Prospección | `jg5SENgRpe2wLBTn` | sí | 2026-11-17 | [camila-g54-prospeccion.json](g54-plataforma/camila-g54-prospeccion.json) |
 | 🔗 CTA Click Tracker (G54) | `JN2vRUznkOXlej8q` | sí | 2026-11-17 | [cta-click-tracker-g54.json](g54-plataforma/cta-click-tracker-g54.json) |
 | 🖼️ Content AI — Generador de Imágenes (OpenAI) | `1rsqmFabW5PjnlHy` | sí | 2026-11-17 | [content-ai-generador-de-imagenes-openai.json](g54-plataforma/content-ai-generador-de-imagenes-openai.json) |
-| 🚨 Error Reporter — Growth54 | `CKOju9JVnSMymfKv` | sí | 2026-08-05 | [error-reporter-growth54.json](g54-plataforma/error-reporter-growth54.json) |
+| 🚨 Error Reporter — Growth54 | `CKOju9JVnSMymfKv` | sí | 2026-11-25 | [error-reporter-growth54.json](g54-plataforma/error-reporter-growth54.json) |
 | 🛡️ Guardián del Vigía — G54 | `9w8UUvgYArg0m4Zk` | sí | 2026-11-17 | [guardian-del-vigia-g54.json](g54-plataforma/guardian-del-vigia-g54.json) |
 | 🛡️ Vigía Web — Monitor de sitios | `l4aOH09BdAEZ4UyP` | no | 2026-11-24 | [vigia-web-monitor-de-sitios.json](g54-plataforma/vigia-web-monitor-de-sitios.json) |
 | 🧠 Ideas AI — RRSS G54 | `nHawWPIIu51ABBgl` | sí | 2026-11-18 | [ideas-ai-rrss-g54.json](g54-plataforma/ideas-ai-rrss-g54.json) |
