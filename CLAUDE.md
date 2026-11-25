@@ -60,7 +60,7 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 **Para la próxima sesión (actualizado el 25-nov):**
 
 *Para hacer ya:*
-1. **Razón social en documentos (ítem 709):** la llamada con Don Marc fue el 24-nov; si quedó decidido, aplicar «Kabendish Corp D/B/A Cratingexpress.com» donde corresponda (hoy G54 y el pie de Camila dicen «Kabendish Corp.» y el cotizador «Kabendish»). Confirmar con la usuaria qué se acordó. El inventario de tareas que se repiten y lo de RISOS siguen por WhatsApp.
+1. ~~Razón social en documentos~~: decidido por la usuaria el 25-nov, se deja como está («Kabendish Corp.» en G54 y el pie de Camila, «Kabendish» en el cotizador). El inventario de tareas que se repiten y lo de RISOS siguen por WhatsApp.
 1b. **13 borradores de Camila (Miami Art Week, ítem 712):** los revisa la usuaria en G54 › Correo › Pendientes antes de aprobar. **Trato 288** (pedido real por la web del 24-nov, ítem 714): que el vendedor confirme tipo de caja y fecha.
 2. **Paquete de Mónica v15:** está en git, en `docs/monica-v15/` de `DESARROLLO_SOL` (decidido el 23-nov: el ingeniero lo toma de ahí; copia en `C:\SOLANGE RESPALDOS\agente-correo-monica-SOL\v15-SOL\para-el-ingeniero\`).
 3. **Mandar a Silvia el mensaje de Orison y Meta** (`PROYECTO-SOL/g54/mensajes/2026-11-21-silvia-y-ingeniero.md`): lo manda la usuaria. Don Marc pidió coordinar con ella cuándo activar Orison.
