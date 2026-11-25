@@ -158,11 +158,12 @@
     <h1>Éxodo — Pendientes para el ingeniero · <span>13 Oct 2026</span></h1>
     <p>Reemplaza a <code style="color:#a78bfa;background:transparent;border:none;">exodo-g54-oct09.html</code>. Este documento lista los pedidos abiertos por área — el historial de qué se confirmó resuelto y cuándo está abajo, plegado.</p>
     <div class="header-meta">
-      <div class="meta-item"><div class="dot"></div> 18 pedidos activos</div>
+      <div class="meta-item"><div class="dot"></div> 19 pedidos activos</div>
     </div>
     <details class="header-updates">
-      <summary>Historial de actualizaciones (47 entradas)</summary>
+      <summary>Historial de actualizaciones (48 entradas)</summary>
       <ul>
+        <li><strong class="upd-date">25-nov:</strong> <strong>1 pedido nuevo en Backend:</strong> que <code>mark-published</code> conserve la fecha de un post ya publicado, y restaurar la de 59 posts de Crating Express que quedó en el 17-nov (por eso el informe semanal del 16 al 23-nov dice 63 posts). Quedan 19 pedidos.</li>
         <li><strong class="upd-date">23-nov:</strong> Camila pasó al diseño de G54 (correo por partes). <strong>1 pedido nuevo en Correo:</strong> que el pie salga en el idioma del correo (hoy sale siempre en español, también en los correos en inglés). Quedan 18 pedidos.</li>
         <li><strong class="upd-date">20-nov:</strong> revisado contra la documentación nueva (volvió el 20-nov tras dar error 500 desde el 19-nov) y el panel nuevo <code>index-CGvAYEKI.js</code>, todo probado en vivo con datos de prueba ya borrados. <strong>Resueltos en parte:</strong> Métricas (bloque "Demanda" y "Leads por semana de estrategia"), el pie de los correos (la ruta ya existe; falta la vista previa en Ajustes) y editar el borrador como plantilla (plantillas por empresa, borradores por partes y "Enviarme una prueba"). <strong>1 pedido nuevo en Correo:</strong> que <code>{{nombre}}</code> se reemplace por el nombre del destinatario (hoy llega tal cual). Siguen igual: <code>rrss_reel</code> fuera del catálogo, <code>scheduled_at</code> ignorado al crear un borrador, el 500 en <code>/api/crm/deals/merge</code> y las rutas de lectura sin token. Quedan 17 pedidos.</li>
         <li><strong class="upd-date">16-nov:</strong> 1 pedido nuevo en TikTok: crear la app de G54 en TikTok, verificar el dominio de las imágenes, el botón "Conectar con TikTok", la ruta del token para n8n, TikTok como plataforma de los posts y el estado "En la bandeja de TikTok", y la pantalla de aprobación que TikTok exige para la auditoría. El flujo que publica (<code>tiktok-publish-g54</code>) ya está armado y probado contra la API de TikTok.</li>
@@ -433,6 +434,22 @@
   <div class="cat-header">
     <span class="cat-icon">🔧</span>
     <span class="cat-title">Backend</span>
+  </div>
+
+  <div class="item-card">
+    <div class="item-header">
+      <div><div class="item-title">Que <code>mark-published</code> conserve la fecha de publicación de un post ya publicado, y restaurar la de 59 posts de Crating Express (25-nov)</div><div class="item-where">Backend · <code>POST /api/agent/rrss/posts/{id}/mark-published</code> · campo <code>fecha_publicada</code> · <code>/api/rrss/reportes</code></div></div>
+    </div>
+    <div class="item-body">
+      <p class="item-why"><strong>Qué pasa (25-nov):</strong> el 17-nov se llamó a <code>mark-published</code> con <code>link_url</code> en 59 posts que ya estaban publicados, para guardarles el enlace. G54 les puso a los 59 <code>fecha_publicada</code> = 17-nov 15:13-15:14 UTC (salieron entre septiembre y noviembre). Por eso el informe semanal del 16 al 23-nov (id 52) dice 63 posts publicados, cuando fueron 4. Los informes de n8n ya no dependen de esa fecha, pero el dato de G54 y sus informes sí.</p>
+      <p class="item-why"><strong>Pedido:</strong></p>
+      <ol class="item-why">
+        <li>En <code>mark-published</code>, si el post ya está en <code>publicado</code> y llega un <code>external_post_id</code> o un <code>link_url</code>, guardar esos datos y dejar <code>fecha_publicada</code> como estaba.</li>
+        <li>Restaurar la fecha de estos 59 posts de la empresa 1 con su <code>fecha_programada</code> (coincide con la hora real que da Meta, diferencia máxima de 36 segundos; los 10 de LinkedIn no tienen otra fuente): 130, 131, 135, 136, 137, 138, 142, 143, 144, 148, 149, 150, 151, 153, 155, 156, 161, 164, 165, 166, 169, 171, 172, 173, 175, 177, 178, 179, 181, 182, 183, 184, 185, 186, 188, 189, 190, 191, 192, 193, 194, 195, 196, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213. En SQL: <code>fecha_publicada = fecha_programada</code> para esos ids.</li>
+        <li>Volver a calcular el informe semanal 52 (16 al 23-nov), o borrarlo para que n8n lo genere otra vez.</li>
+      </ol>
+      <p class="item-why"><strong>Cómo se prueba:</strong> llamar a <code>mark-published</code> con un <code>link_url</code> sobre un post ya publicado y ver que <code>fecha_publicada</code> no cambie; en <code>GET /api/rrss/posts</code>, el post 130 debe decir 18-sep-2026 18:00 UTC.</p>
+    </div>
   </div>
 
   <div class="item-card">

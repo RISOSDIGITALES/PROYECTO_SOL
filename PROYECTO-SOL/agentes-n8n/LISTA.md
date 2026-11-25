@@ -17,7 +17,7 @@ los valores reales están en `.secrets.local.md` y en n8n. No incluye `pinData` 
 | 🎵 TikTok — Publicar (G54) | `fHfdlpZCHjCSrCGp` | no | 2026-11-16 | [tiktok-publicar-g54.json](g54-plataforma/tiktok-publicar-g54.json) |
 | 👁️ Vigía G54 — Supervisor RRSS | `zTm4tMOV9vMfUDnG` | sí | 2026-11-18 | [vigia-g54-supervisor-rrss.json](g54-plataforma/vigia-g54-supervisor-rrss.json) |
 | 💬 Sales AI — Motor de Conversación G54 | `otycsrxrMEMuxuwD` | sí | 2026-11-18 | [sales-ai-motor-de-conversacion-g54.json](g54-plataforma/sales-ai-motor-de-conversacion-g54.json) |
-| 📊 Analytics AI Semanal — G54 | `EX9K1AZwKeouSJ9G` | sí | 2026-11-18 | [analytics-ai-semanal-g54.json](g54-plataforma/analytics-ai-semanal-g54.json) |
+| 📊 Analytics AI Semanal — G54 | `EX9K1AZwKeouSJ9G` | sí | 2026-11-25 | [analytics-ai-semanal-g54.json](g54-plataforma/analytics-ai-semanal-g54.json) |
 | 📢 Distribution AI — RRSS G54 v1.0 | `IRCoya91PKPjpT1T` | sí | 2026-11-17 | [distribution-ai-rrss-g54-v1-0.json](g54-plataforma/distribution-ai-rrss-g54-v1-0.json) |
 | 📤 WA Reply — Respuesta manual desde G54 | `2dat4nEoi8x8iLb2` | sí | 2026-11-17 | [wa-reply-respuesta-manual-desde-g54.json](g54-plataforma/wa-reply-respuesta-manual-desde-g54.json) |
 | 📧 Camila G54 — Nurture & Outreach | `fahn0L68z5czTocE` | sí | 2026-11-25 | [camila-g54-nurture-outreach.json](g54-plataforma/camila-g54-nurture-outreach.json) |
