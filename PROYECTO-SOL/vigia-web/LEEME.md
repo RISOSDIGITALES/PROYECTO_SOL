@@ -6,8 +6,8 @@ Agente independiente (sin n8n) que vigila cualquier sitio web y avisa cuando alg
 
 | Revisión | Cuándo | Qué mira |
 |---|---|---|
-| **Rápida** | cada hora (minuto 17) | Que la portada responda y en cuánto; certificado HTTPS (validez y vencimiento, leído directo); redirección a otro dominio (posible secuestro); sitio sin HTTPS; código inyectado en la portada: iframes ocultos, JavaScript ofuscado, redirección automática a otro dominio, spam de farmacia/casino (palabra completa), scripts de dominios nuevos. |
-| **Completa** | una vez al día (06:05, hora de Miami) | Todo lo anterior, más: recorre hasta 25 páginas (sitemap o enlaces de la portada) buscando lo mismo, prueba hasta 250 enlaces internos y externos, consulta **Sucuri SiteCheck** (malware y listas negras, CMS y versión), **RDAP** (vencimiento del dominio) y, si hay clave, **Google Safe Browsing**. |
+| **Rápida** | cada hora (minuto 17); se cambia con `VIGIA_CADA_RAPIDA` (cada 6 h, 0 = apagada) | Que la portada responda y en cuánto; certificado HTTPS (validez y vencimiento, leído directo); redirección a otro dominio (posible secuestro); sitio sin HTTPS; código inyectado en la portada: iframes ocultos, JavaScript ofuscado, redirección automática a otro dominio, spam de farmacia/casino (palabra completa), scripts de dominios nuevos. |
+| **Completa** | una vez al día (06:05, hora de Miami); con `VIGIA_DIAS_COMPLETA=lun` solo los lunes (o `lun,jue`) | Todo lo anterior, más: recorre hasta 25 páginas (sitemap o enlaces de la portada) buscando lo mismo, prueba hasta 250 enlaces internos y externos, consulta **Sucuri SiteCheck** (malware y listas negras, CMS y versión), **RDAP** (vencimiento del dominio) y, si hay clave, **Google Safe Browsing**. |
 
 Los sitios que bloquean robots (401, 403, 405, 429, 999, como LinkedIn) no se cuentan como rotos. Todo es gratis; Safe Browsing pide una clave gratis de Google Cloud.
 
@@ -60,7 +60,9 @@ python -m vigia servir
 ```bash
 .venv/bin/pip install pytest && .venv/bin/python -m pytest -q tests
 ```
-12 pruebas sin internet, contra un sitio de prueba local con enlaces rotos, un iframe oculto, spam, una redirección a otro dominio y un sitio caído. También cubren la lógica de avisos, el guardado y la API.
+20 pruebas sin internet. 12 contra un sitio de prueba local con enlaces rotos, un iframe oculto, spam, una redirección a otro dominio y un sitio caído, más la lógica de avisos, el guardado y la API. 8 del reloj interno con un reloj simulado: completa diaria o solo ciertos días, rápida cada N horas o apagada, sin repetir en la misma hora y sin duplicar en los cambios de hora de marzo y noviembre.
+
+**Recomendación de horario:** la completa puede ser semanal (enlaces rotos, malware y dominio cambian poco), pero conviene dejar la rápida cada hora o cada pocas horas: es la que avisa si el sitio se cae, lo secuestran o vence el certificado.
 
 ## Límites conocidos
 - Revisa el HTML que devuelve el servidor: el contenido que se arma solo con JavaScript en el navegador no se ve.

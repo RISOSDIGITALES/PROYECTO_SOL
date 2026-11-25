@@ -27,20 +27,51 @@ from .store import Store
 log = logging.getLogger("vigia")
 
 
+DIAS = {"lun": 0, "mar": 1, "mie": 2, "mié": 2, "jue": 3, "vie": 4, "sab": 5, "sáb": 5, "dom": 6,
+        "mon": 0, "tue": 1, "wed": 2, "thu": 3, "fri": 4, "sat": 5, "sun": 6}
+
+
+def dias_completa(texto: str) -> set[int]:
+    """'todos' (o vacío) = los 7 días; si no, una lista como 'lun,jue' o 'mon,thu'. Un nombre desconocido se ignora."""
+    t = (texto or "").strip().lower()
+    if t in ("", "todos", "all", "*"):
+        return set(range(7))
+    dias = {DIAS[d.strip()[:3]] for d in t.split(",") if d.strip()[:3] in DIAS}
+    return dias or set(range(7))
+
+
+def que_toca(ahora: dt.datetime, cfg: Config, estado: dict) -> str | None:
+    """Decide qué revisión corresponde en este momento y anota en `estado` para no repetirla.
+
+    - Completa: a la hora de VIGIA_HORA_COMPLETA, una vez por día, solo los días de VIGIA_DIAS_COMPLETA.
+    - Rápida: cada VIGIA_CADA_RAPIDA horas (contadas desde medianoche), al minuto VIGIA_MINUTO_RAPIDA; 0 la apaga.
+      La hora en que corre la completa no hace además la rápida (la completa ya la incluye).
+    """
+    hh, mm = (int(x) for x in cfg.hora_completa.split(":"))
+    hoy = ahora.date()
+    if (ahora.weekday() in dias_completa(cfg.dias_completa) and ahora.hour == hh and ahora.minute >= mm
+            and estado.get("completa") != hoy):
+        estado["completa"] = hoy
+        estado["rapida"] = (hoy, ahora.hour)
+        return "completo"
+    cada = cfg.cada_rapida
+    if (cada > 0 and ahora.hour % cada == 0 and ahora.minute >= cfg.minuto_rapida
+            and estado.get("rapida") != (hoy, ahora.hour)):
+        estado["rapida"] = (hoy, ahora.hour)
+        return "rapido"
+    return None
+
+
 def reloj(cfg: Config, store: Store, parar: threading.Event) -> None:
     zona = ZoneInfo(cfg.zona)
-    hh, mm = (int(x) for x in cfg.hora_completa.split(":"))
-    ultima_rapida = ultima_completa = None
+    estado: dict = {}
     while not parar.is_set():
-        ahora = dt.datetime.now(zona)
-        hoy = ahora.date()
-        if ahora.hour == hh and ahora.minute >= mm and ultima_completa != hoy:
-            ultima_completa = hoy
-            ultima_rapida = (hoy, ahora.hour)
-            revisar_todos(cfg, store, "completo")
-        elif ahora.minute >= cfg.minuto_rapida and ultima_rapida != (hoy, ahora.hour):
-            ultima_rapida = (hoy, ahora.hour)
-            revisar_todos(cfg, store, "rapido")
+        modo = que_toca(dt.datetime.now(zona), cfg, estado)
+        if modo:
+            try:
+                revisar_todos(cfg, store, modo)
+            except Exception:  # una ronda que falla no puede apagar el reloj
+                log.exception("La ronda %s falló; el reloj sigue.", modo)
         parar.wait(30)
 
 
@@ -130,7 +161,8 @@ def servir(cfg: Config) -> None:
     parar = threading.Event()
     threading.Thread(target=reloj, args=(cfg, store, parar), daemon=True).start()
     srv = ThreadingHTTPServer(("0.0.0.0", cfg.puerto), crear_handler(cfg, store))
-    log.info("Vigía Web escuchando en :%d (zona %s, completa a las %s, rápida a los :%02d)", cfg.puerto, cfg.zona, cfg.hora_completa, cfg.minuto_rapida)
+    log.info("Vigía Web escuchando en :%d (zona %s; completa a las %s, días: %s; rápida cada %d h a los :%02d)",
+             cfg.puerto, cfg.zona, cfg.hora_completa, cfg.dias_completa or "todos", cfg.cada_rapida, cfg.minuto_rapida)
     try:
         srv.serve_forever()
     finally:
