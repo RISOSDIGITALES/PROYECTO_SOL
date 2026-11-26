@@ -726,6 +726,14 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-11-26 (Jueves, Thanksgiving)
+
+Arranqué con la rutina: cero errores y Don Marc aprobó todo, aunque pidió que Hermes espere a que esté aprobado el proyecto de automatización de MDA. Armé el inventario de mis tareas repetitivas en una hoja editable y le sumé las de RISOS y WaltD de Notion; es una prueba nuestra para ver cómo funciona Hermes. Revisé la API: G54 sigue sin cambios y el cotizador versión S ya está en producción. Entré a verlo y todo se ve bien, así que esperamos los comentarios del equipo. Dejé listos los avisos de Mónica por Telegram para Don Marc. Por pedido del ingeniero, saqué el Vigía Web de la rama de desarrollo y se lo pasé aparte.
+
+En la tarde hicimos referencias más reales de los personajes: me encantó el peluche de Jelly, pero a Jelly le falta el brazo y a Bubble, el logo; se terminó el cupo de imágenes y seguimos mañana. Después empezamos a poner a Marco en todos lados: va en la firma de Gmail de Crating Express (tras pelear con una imagen que no cargaba), en la portada de Facebook y en el sitio web, que además estrena el logo de las cajas en la pestaña. El pie de Camila depende de G54, así que le dejé al ingeniero en el Éxodo el pedido para mejorar el editor de plantillas de correo. Todo quedó subido y el uso semanal está en 44 %.
+
+---
+
 ### 2026-11-25 (Miércoles)
 
 Arranqué con la rutina: cero errores, los posts en cola a su hora y un pedido real por la web de Crating Express para la caja de un televisor; Don Marc había aprobado todo y decidí dejar la razón social como está. Enseguida llegó lo urgente del día, el saludo de Thanksgiving: armé la lista con la planilla de clientes y con las conversaciones de los últimos seis meses que me reenvié, y lo mandé yo misma desde el Gmail de Crating Express en un solo correo con copia oculta. Después repasé los pendientes de la revisión de G54 y confirmé que las redes de Crating Express no están trayendo clientes; decidí no cambiar nada hasta que G54 tenga armada esa parte. Dejé los avisos de error llegando también por Telegram, para no depender de una sola cuenta de correo.
