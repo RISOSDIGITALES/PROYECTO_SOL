@@ -13,11 +13,11 @@ Para la Base de Conocimiento del proyecto «Automatización MDA» (parte 1, «Lo
 |---|---|---|---|---|---|---|---|
 | 1 | **Rutina diaria de G54**: diagnóstico de los 42 flujos (errores, cola de posts, panel, documentación de la API, firma de Meta) | Diaria (lun-sáb) | 10 | Sol + Claude | Sí (`diag-rutina.py`) | Alto: un post que no sale o un agente caído pasa días sin verse (el 218 de Instagram, 21-nov) | 1 → 1 con aviso solo si hay algo raro (Telegram) |
 | 2 | **Leer los comentarios de Don Marc** del día anterior en Notion y pasarlos a pendientes | Diaria | 3 | Sol + Claude | Sí (negritas, «Comnts Mc», «VB Mc») | Medio: un pedido suyo que se pierde | 0 → 2 (resumen de sus negritas; yo decido qué se hace) |
-| 3 | **Reporte diario** en Notion y en el repo | Diaria | 6 | Sol + Claude | Sí (formato fijo, 2-3 párrafos) | Bajo-medio: Don Marc pierde visibilidad | 2 → 2 (el borrador lo hace la IA; lo apruebo yo) |
+| 3 | **Reporte diario** en Notion y en el repo | Diaria | 6 | Sol + Claude | Sí (formato fijo, 2-3 párrafos) | Alto: Don Marc pierde visibilidad; 3 faltas de reporte llevan a una sanción | 2 → 2 (el borrador lo hace la IA; lo apruebo yo) |
 | 4 | **Corte de día y orden del repo** (changelog, archivo, pendientes, subir a GitHub) | Diaria | 4 | Sol + Claude | Sí | Medio: la otra computadora trabaja sobre una copia vieja | 2 → 1 (archivo y subida automáticos) |
 | 5 | **Rotación semanal de redes de CE**: aprobar ideas, generar posts, revisar texto e imagen, programar | Semanal (lunes) | 4 | Sol + agentes G54 | Sí | Medio: sale publicado un post con un dato inventado | 2 → 2 (en pausa: las redes de CE esperan el módulo de G54, 25-nov) |
 | 6 | **Revisar los informes** semanal y mensual de Analytics | Semanal y mensual | 2 | Sol | Sí (línea base del 12-oct) | Bajo: decisiones sin datos | 1 → 1 |
-| 7 | **Pedidos al ingeniero (Éxodo)**: ver qué resolvió, mantener la lista, mandar los mensajes | Semanal | 4 | Sol | Sí (en positivo, sin Bubble) | Alto: bloqueos sin fecha (cotizador, Mónica, Reels) | 0 → 2 (la IA compara la API con la lista; yo mando) |
+| 7 | **Pedidos al ingeniero (Éxodo)**: ver qué resolvió, mantener la lista, mandar los mensajes | Semanal | 4 | Sol | Sí (en positivo, sin Bubble) | Medio: bloqueos sin fecha (cotizador, Mónica, Reels) | 0 → 2 (la IA compara la API con la lista; yo mando) |
 | 8 | **Pruebas con casos reales** de Marco, Mónica y los botones de G54 | Según los casos | 4 | Sol + Claude | Sí (lista «Pruebas pendientes») | Alto: un agente que falla con un cliente real | 0 → 0 (necesita criterio humano) |
 | 9 | **Prospección y correos de Camila**: búsqueda por segmento, revisar y aprobar borradores | Semanal o quincenal | 3 | Sol + Camila | Sí (nada sale sin aprobación) | Alto: un mal primer correo quema el contacto | 2 → 2 |
 | 10 | **Mantenimiento de agentes**: corregir lo que encuentra el diagnóstico, actualizar los paquetes del ingeniero (Mónica, cotizador, Vigía Web) | Semanal | 12 | Sol + Claude | En parte (reglas de plataforma; cada arreglo es distinto) | Alto: un cambio de plataforma que rompe otra empresa | 0 → 0 |
@@ -25,7 +25,21 @@ Para la Base de Conocimiento del proyecto «Automatización MDA» (parte 1, «Lo
 | 12 | **Saludos y campañas de temporada** a clientes de CE (Thanksgiving, fin de año) | 3-4 al año | 1 (≈ 4 h por campaña) | Sol | No (la lista de clientes está desactualizada) | Medio: un correo a un cliente equivocado o repetido | 0 → 2 (lista limpia en el CRM y borrador por IA) |
 | 13 | **Reuniones** con el ingeniero y Don Marc, y sus pendientes | Semanal | 4 | Sol | No | Medio | 0 → 0 |
 
-**Total: unas 58 horas al mes en tareas que se repiten.** El resto es construcción (agentes nuevos, Bubble, cotizador, Vigía Web): no se repite y no entra aquí.
+
+## A2. Tareas de RISOS y WaltD (estructura de MDA en Notion) que hago al menos en parte — sumadas el 26-nov
+
+| # | Unidad | Tarea | Frecuencia | Horas/mes | ¿Reglas claras? | Costo de un error | Nivel hoy → propuesto |
+|---|---|---|---|---|---|---|---|
+| 14 | RISOS | Supervisar conversaciones reales de Marco y Mónica y corregir su comportamiento | Semanal | 2 | Sí | Alto: respuesta o precio equivocado a un cliente real | 0 → 2 |
+| 15 | RISOS | Sitio web de CE (WordPress): formulario al CRM de G54, enlaces y páginas | Mensual | 1 | En parte | Medio: un formulario roto pierde pedidos | 0 → 1 |
+| 16 | RISOS | Apoyo a Orison: contenido de su TikTok | Ocasional | 1 | No | Bajo | 0 → 2 |
+| 17 | WaltD | Cuentas y claves de APIs y plataformas: renovar tokens, vigilar límites y saldos | Mensual | 3 | Sí | Alto: un token vencido calla a un agente | 0 → 1 |
+| 18 | WaltD | GitHub y protección de activos digitales: repos, bloqueo de secretos, claves locales, respaldo | Mensual | 2 | Sí | Alto: secreto expuesto (token de Telegram, septiembre) | 1 → 1 |
+| 19 | WaltD | Trámites ante plataformas para los agentes (Meta, WhatsApp, LinkedIn) | Según haga falta | 2 | No | Alto: trámite sin investigar (Caso 1) | 0 → 2 |
+| 20 | WaltD | Vigilancia de sitios y servidores (Vigía G54, avisos de error, Vigía Web) | Diaria (automática) | 1 | Sí | Alto: n8n o un sitio caen sin aviso | 1 → 1 |
+| 21 | WaltD | Ciberseguridad de los agentes (firma de Meta, cifrado en Bubble, claves expuestas) | Mensual | 2 | En parte | Alto: webhook falso o fuga de datos | 0 → 1 |
+
+**Total: unas 72 horas al mes en tareas que se repiten** (58 de RISOS en la tabla A, 4 más de RISOS y 10 de WaltD). La hoja editable de la usuaria es la versión que manda: https://claude.ai/artifact/K17GtkuUTi6vmUSuTPTeCW El resto es construcción (agentes nuevos, Bubble, cotizador, Vigía Web): no se repite y no entra aquí.
 
 ## B. Funciones MARKETER del mapa: cómo están hoy
 
