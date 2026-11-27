@@ -1,6 +1,6 @@
 # Inventario de tareas repetitivas — RISOS (versión del 26-nov)
 
-Para la Base de Conocimiento del proyecto «Automatización MDA» (parte 1, «Lo que falta para convertir este mapa en inventario»). Pedido de Don Marc del 25-nov: el inventario y las preguntas van antes que Hermes.
+Para la Base de Conocimiento del proyecto «Automatización MDA» (parte 1, «Lo que falta para convertir este mapa en inventario»). Pedido de Don Marc del 25-nov: el inventario y las preguntas van antes que Hermes. **Pasado el 27-nov a Notion** («Base de Conocimiento: Sol», sección 1b) para que Don Marc lo revise.
 
 **Alcance:** solo las tareas de RISOS, incluida la operación de G54 que hago yo para Crating Express. Las de ISX y WaltD las completan el ingeniero y Don Marc: no las estimo yo.
 **Horas:** estimadas a partir de lo que registra el repo (changelog y reportes diarios). **Las corrijo con lo real antes de entregarlo.**
