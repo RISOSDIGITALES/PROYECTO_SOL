@@ -60,6 +60,7 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 **Para la próxima sesión (actualizado el 27-nov):**
 
 *Para hacer ya:*
+0. **Reporte del 27-nov (cuando la usuaria lo pida):** en la entrada de Notion, pegar como imagen (subida, no enlace) la lámina `C:\SOLANGE RESPALDOS\Bubble-54\designvatar-intro\opciones-personajes-27nov.jpg` con las 3 variantes de personajes (normal, tierna y androide, boceto de Gemini; ítem 625 de Bubble). Sumar la línea para Don Marc sobre el inventario en «Base de Conocimiento: Sol», sección 1b.
 1. ~~Razón social en documentos~~: decidido por la usuaria el 25-nov, se deja como está («Kabendish Corp.» en G54 y el pie de Camila, «Kabendish» en el cotizador). El inventario de tareas que se repiten y lo de RISOS siguen por WhatsApp.
 1b. **7 borradores de Camila (Miami Art Week, ids 32-38, ítem 718):** ya revisados por la usuaria; **no se aprueban** hasta que G54 tenga más opciones de edición para Camila (pedido al ingeniero en el Éxodo, editor de plantillas de correo). No volver a proponerlos como tarea. **Trato 288** (pedido real por la web del 24-nov, ítem 714): que el vendedor confirme tipo de caja y fecha.
 2. **Paquete de Mónica v15:** está en git, en `docs/monica-v15/` de `DESARROLLO_SOL` (decidido el 23-nov: el ingeniero lo toma de ahí; copia en `C:\SOLANGE RESPALDOS\agente-correo-monica-SOL\v15-SOL\para-el-ingeniero\`).
