@@ -61,7 +61,7 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 
 *Para hacer ya:*
 1. ~~Razón social en documentos~~: decidido por la usuaria el 25-nov, se deja como está («Kabendish Corp.» en G54 y el pie de Camila, «Kabendish» en el cotizador). El inventario de tareas que se repiten y lo de RISOS siguen por WhatsApp.
-1b. **7 borradores de Camila (Miami Art Week, ids 32-38, ítem 718):** los revisa la usuaria en G54 › Correo › Pendientes antes de aprobar. **Trato 288** (pedido real por la web del 24-nov, ítem 714): que el vendedor confirme tipo de caja y fecha.
+1b. **7 borradores de Camila (Miami Art Week, ids 32-38, ítem 718):** ya revisados por la usuaria; **no se aprueban** hasta que G54 tenga más opciones de edición para Camila (pedido al ingeniero en el Éxodo, editor de plantillas de correo). No volver a proponerlos como tarea. **Trato 288** (pedido real por la web del 24-nov, ítem 714): que el vendedor confirme tipo de caja y fecha.
 2. **Paquete de Mónica v15:** está en git, en `docs/monica-v15/` de `DESARROLLO_SOL` (decidido el 23-nov: el ingeniero lo toma de ahí; copia en `C:\SOLANGE RESPALDOS\agente-correo-monica-SOL\v15-SOL\para-el-ingeniero\`).
 3. **Mandar a Silvia el mensaje de Orison y Meta** (`PROYECTO-SOL/g54/mensajes/2026-11-21-silvia-y-ingeniero.md`): lo manda la usuaria. Don Marc pidió coordinar con ella cuándo activar Orison.
 4. ~~Lunes 23-nov: rotación de horarios~~: hecha (ítem 695). Queda la última semana, lunes 30-nov (12/17/19/08).
