@@ -60,7 +60,6 @@ Cambios ya hechos y probados por partes (código de producción con entradas sim
 **Para la próxima sesión (actualizado el 27-nov):**
 
 *Para hacer ya:*
-0. **Reporte del 27-nov (cuando la usuaria lo pida):** en la entrada de Notion, pegar como imagen (subida, no enlace) la lámina `Bubble-54/design/avatar-intro/opciones-personajes-27nov.jpg` con las 3 variantes de personajes (normal, tierna y androide, boceto de Gemini; ítem 625 de Bubble). Sumar la línea para Don Marc sobre el inventario en «Base de Conocimiento: Sol», sección 1b.
 1. ~~Razón social en documentos~~: decidido por la usuaria el 25-nov, se deja como está («Kabendish Corp.» en G54 y el pie de Camila, «Kabendish» en el cotizador). El inventario de tareas que se repiten y lo de RISOS siguen por WhatsApp.
 1b. **7 borradores de Camila (Miami Art Week, ids 32-38, ítem 718):** ya revisados por la usuaria; **no se aprueban** hasta que G54 tenga más opciones de edición para Camila (pedido al ingeniero en el Éxodo, editor de plantillas de correo). No volver a proponerlos como tarea. **Trato 288** (pedido real por la web del 24-nov, ítem 714): que el vendedor confirme tipo de caja y fecha.
 2. **Paquete de Mónica v15:** está en git, en `docs/monica-v15/` de `DESARROLLO_SOL` (decidido el 23-nov: el ingeniero lo toma de ahí; copia en `C:\SOLANGE RESPALDOS\agente-correo-monica-SOL\v15-SOL\para-el-ingeniero\`).
@@ -718,6 +717,14 @@ El dia de hoy comencé revisando que agentes corrían hoy y que resultado había
 
 ---
 
+### 2026-11-27 (Viernes)
+
+Arranqué con la rutina: cero errores reales (los dos avisos de Community AI eran Meta avisando del cambio de portada de Marco) y el post de Instagram sale hoy a su hora. Leí los comentarios de Don Marc y pasé el inventario de tareas repetitivas a la Base de Conocimiento, en mi página «Base de Conocimiento: Sol», sección 1b marcada en amarillo, solo con la tarea y su frecuencia, junto con respuestas propuestas a las preguntas que me tocan; después lo revisé y quité lo que no hacía falta. También anoté que ya tenemos el Telegram de CE para crear el bot nuevo de avisos, y dejé en espera los borradores de Camila hasta que G54 tenga más opciones de edición.
+
+En la tarde trabajamos los personajes como pidió Don Marc, sin mucho detalle, y sumé una tercera variante: androide realista, con los colores, rasgos, logos y accesorios de cada uno. Primero lo intentamos con el modelo gratis de siempre, pero salieron con cara seria, G54 no funcionó y se acabó el cupo, así que lo hice en Gemini con indicaciones preparadas y salieron los tres juntos, sonriendo, con Bubbli en la gorra, sus logos y el peluche de Jelly. Lo dejo como primer boceto; abajo van las tres variantes (normal, tierna y androide) para elegir por estilo. Todo quedó subido y el uso semanal está en 48 %.
+
+---
+
 ### 2026-11-26 (Jueves, Thanksgiving)
 
 Arranqué con la rutina: cero errores y Don Marc aprobó todo, aunque pidió que Hermes espere a que esté aprobado el proyecto de automatización de MDA. Armé el inventario de mis tareas repetitivas en una hoja editable y le sumé las de RISOS y WaltD de Notion; es una prueba nuestra para ver cómo funciona Hermes. Revisé la API: G54 sigue sin cambios y el cotizador versión S ya está en producción. Entré a verlo y todo se ve bien, así que esperamos los comentarios del equipo. Dejé listos los avisos de Mónica por Telegram para Don Marc. Por pedido del ingeniero, saqué el Vigía Web de la rama de desarrollo y se lo pasé aparte.
@@ -733,13 +740,3 @@ Arranqué con la rutina: cero errores, los posts en cola a su hora y un pedido r
 Antes de aprobar los borradores de Camila los revisé y encontré que varios iban a correos que no eran del negocio: ahora los descarta, usa el gancho de Miami Art Week y quedaron 7 borradores nuevos que reviso yo. También vi que 59 posts quedaron con la fecha de publicación cambiada al 17 de noviembre, lo que inflaba el informe semanal de G54; protegí nuestros informes y le dejé el pedido al ingeniero en el Éxodo, que desde hoy vive en un enlace fijo que se actualiza solo. Al Vigía Web le probé el reloj, ahora se puede programar por días y horas, y lo subí a la rama de desarrollo como VIGIA WEB.
 
 En la tarde busqué en Notion lo de Hermes y repasé mis notas para dejar todo en limpio: encontré la guía de git que había escrito el ingeniero, corregí que Mónica convierta exacto de centímetros a pulgadas aunque el cliente escriba la unidad de otra forma, ordené las carpetas locales y borré copias viejas, y armé el manual de usuario de Bubble en seis versiones (negocio, agencia y cuenta propia, en inglés y español), sacado directo de la ayuda de la app. Al final empezamos con Hermes: vamos a armar primero un perfil de prueba nuestro con un chat sencillo en la terminal, y quedé en decidir mañana si instalo una llave de acceso en el servidor o si trabajamos pasando comandos. Todo quedó subido y el uso semanal está en 36 %.
-
----
-
-### 2026-11-24 (Martes)
-
-Arranqué con la rutina: cero errores, el post de Facebook de hoy salió a su hora y arreglé el diagnóstico diario, que no corría desde el sábado. Leí los comentarios de Don Marc sobre la razón social y tuvimos una llamada en la que aclaramos mejor mi rol. Después busqué en Notion la página de tendencias de avatares que él había dejado y con eso probamos versiones tiernas tipo peluche de los personajes; como se veían genéricas, decidimos que los grandes sigan siendo la identidad y que los tiernos queden para stickers. Pasé buena parte del día modelando en 3D a la Bubble grande con mis indicaciones: el azul de la marca, los hombros oscuros con su vivo rojo, el logo, Bubbli en la gorra y la coleta. Quedó mejor, pero todavía no del todo bien, así que lo dejamos en pausa.
-
-En paralelo, Mónica quedó transcribiendo los audios con OpenAI y Groq de respaldo, ya en DESARROLLO_SOL. Revisé lo que depende del ingeniero: el cotizador versión S todavía no está en producción y falta la clave de los Reels en G54, así que le dejé redactado un mensaje pidiéndole fechas. Hice un análisis general y vi que las redes de Crating Express casi no tienen alcance, mientras que la demanda real llega por correo de empresas de carga. Por eso corrí la prospección hacia forwarders de Doral y galerías y museos de Miami: entraron 16 prospectos al CRM, mejoramos la redacción de Camila y quedaron 13 borradores con el gancho de Miami Art Week, que reviso yo antes de aprobar. También armé un borrador del inventario de mis tareas recurrentes para la Base de Conocimiento.
-
-Al final el ingeniero nos dio una tarea nueva: un agente que vigile cualquier sitio web, con enlaces rotos, malware, certificado y dominio. Lo hice primero en n8n y, cuando supe que lo quería sin n8n, lo rehice como un programa independiente con Docker, que ya pasa sus pruebas y en la primera revisión encontró un enlace roto en la página de ISPM-15 de Crating Express. La versión de n8n quedó apagada, todo quedó subido y el uso semanal está en 27 %.
